@@ -1,7 +1,7 @@
+use optionstratlib::prelude::setup_logger;
 use optionstratlib::utils::read_ohlcv_from_zip_async;
 use std::error::Error;
 use tracing::{error, info};
-use optionstratlib::prelude::setup_logger;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.16.3"
+version = "0.16.4"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -117,7 +117,7 @@ members = [
 [workspace.dependencies]
 optionstratlib = { path = "." }
 tracing = "0.1"
-rust_decimal = { version = "1.40", features = ["maths", "serde"] }
+rust_decimal = { version = "1.41", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
 plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -128,11 +128,11 @@ num-traits = "0.2"
 serde_json = "1.0"
 csv = { version = "1.4"}
 serde = { version = "1.0", features = ["derive"] }
-rayon = { version = "1.11" }
+rayon = { version = "1.12" }
 itertools = "0.14"
 zip = "6.0"
 lazy_static = "1.5"
-uuid = { version = "1.19", features = ["v4", "serde"] }
+uuid = { version = "1.23", features = ["v4", "serde"] }
 approx = "0.5"
 rand_distr = "0.6"
 prettytable-rs = "0.10"
@@ -144,7 +144,7 @@ positive = { version = "0.5", features = ["utoipa"] }
 expiration_date = { version = "0.2", features = ["utoipa"] }
 financial_types = { version = "0.2", features = ["utoipa"] }
 option_type = { version = "0.1.2", features = ["utoipa"] }
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 async-trait = "0.1"
 reqwest = { version = "0.13", features = ["json"] }
 futures = "0.3"

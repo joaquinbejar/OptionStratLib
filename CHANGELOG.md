@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-04-20
+
+### Changed
+
+- Bump workspace dependencies: `rust_decimal` 1.40 → 1.41,
+  `rayon` 1.11 → 1.12, `uuid` 1.19 → 1.23, `tokio` 1.43 → 1.52.
+
+### Fixed
+
+- Repair three doctests broken by the `NonZeroUsize` migration
+  in 0.16.0: `pricing` module-level examples for `telegraph` and
+  `monte_carlo_option_pricing` now wrap literal step / simulation
+  counts with `nz!(..)`; the `utils::deterministic_rng` doctest
+  uses `rand::RngExt` for `random::<u64>()`.
+
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.4...HEAD
+[0.16.4]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.4
+
 ## [0.16.3] - 2026-04-20
 
 Hot-fix targeting the runnable-example audit.
@@ -25,7 +43,6 @@ Hot-fix targeting the runnable-example audit.
   1 000 000 to 10 000 iterations — the example is a demo, not a
   local benchmark. (#386)
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.3...HEAD
 [0.16.3]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.3
 
 ## [0.16.2] - 2026-04-19
