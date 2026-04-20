@@ -3,7 +3,8 @@ use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    println!("--- Async Option Chain Operations ---");
+    setup_logger();
+    info!("--- Async Option Chain Operations ---");
 
     let chain = OptionChain::new(
         "AAPL",
@@ -24,30 +25,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let json_path = dir.join(&filename_json);
     let csv_path = dir.join(&filename_csv);
 
-    println!("Saving chain to {} asynchronously...", json_path.display());
+    info!("Saving chain to {} asynchronously...", json_path.display());
     chain.save_to_json_async(&dir_str).await?;
-    println!("Successfully saved to JSON.");
+    info!("Successfully saved to JSON.");
 
-    println!(
+    info!(
         "Loading chain from {} asynchronously...",
         json_path.display()
     );
     let loaded_json = OptionChain::load_from_json_async(json_path.to_str().unwrap()).await?;
-    println!(
+    info!(
         "Successfully loaded from JSON. Symbol: {}",
         loaded_json.symbol
     );
 
-    println!("Saving chain to {} asynchronously...", csv_path.display());
+    info!("Saving chain to {} asynchronously...", csv_path.display());
     chain.save_to_csv_async(&dir_str).await?;
-    println!("Successfully saved to CSV.");
+    info!("Successfully saved to CSV.");
 
-    println!(
+    info!(
         "Loading chain from {} asynchronously...",
         csv_path.display()
     );
     let loaded_csv = OptionChain::load_from_csv_async(csv_path.to_str().unwrap()).await?;
-    println!(
+    info!(
         "Successfully loaded from CSV. Symbol: {}",
         loaded_csv.symbol
     );
@@ -55,6 +56,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _ = std::fs::remove_file(&json_path);
     let _ = std::fs::remove_file(&csv_path);
 
-    println!("--- Async Chain Operations Completed ---");
+    info!("--- Async Chain Operations Completed ---");
     Ok(())
 }
