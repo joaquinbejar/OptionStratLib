@@ -14,19 +14,21 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let simulator_size: usize = 35;
-    let n_steps = 10080;
+    // Demo-friendly grid: the hourly resolution keeps \`cargo run\` in
+    // debug mode under ~5 s without changing the shape of the output.
+    let simulator_size: usize = 10;
+    let n_steps = 7 * 24;
     let initial_price = pos_or_panic!(4011.0);
     let iv = pos_or_panic!(0.27);
     let walker = Box::new(Walker::new());
     let days = pos_or_panic!(7.0);
-    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
-    let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Minute, TimeFrame::Day)?;
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day);
+    let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Hour, TimeFrame::Day)?;
 
     let walk_params = WalkParams {
         size: n_steps,
         init_step: Step {
-            x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+            x: Xstep::new(Positive::ONE, TimeFrame::Hour, ExpirationDate::Days(days)),
             y: Ystep::new(0, initial_price),
         },
         walk_type: WalkType::Brownian {

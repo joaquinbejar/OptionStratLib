@@ -63,9 +63,9 @@ impl WalkTypeAble<Positive, Positive> for Walker {}
 fn main() -> Result<(), Error> {
     setup_logger();
 
-    // Simulation parameters
-    let n_simulations = 100; // Number of simulations to run
-    let n_steps = 10080; // 7 days in minutes
+    // Keep the demo fast enough to run in debug mode (hourly grid).
+    let n_simulations = 20; // Number of simulations to run
+    let n_steps = 7 * 24; // 7 days at 1-hour resolution
     let underlying_price = pos_or_panic!(4007.7);
     let days = pos_or_panic!(7.0);
     let implied_volatility = pos_or_panic!(0.16); // 27% annual volatility
@@ -120,17 +120,16 @@ fn main() -> Result<(), Error> {
 
     // Create WalkParams for the Simulator
     let walker = Box::new(Walker);
-    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day);
 
     // Adjust volatility for the specific dt in the random walk
-    let volatility_dt =
-        volatility_for_dt(implied_volatility, dt, TimeFrame::Minute, TimeFrame::Day)?;
+    let volatility_dt = volatility_for_dt(implied_volatility, dt, TimeFrame::Hour, TimeFrame::Day)?;
 
     // Custom walk parameters for varying volatility
     let walk_params = WalkParams {
         size: n_steps,
         init_step: Step {
-            x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+            x: Xstep::new(Positive::ONE, TimeFrame::Hour, ExpirationDate::Days(days)),
             y: Ystep::new(0, underlying_price),
         },
         walk_type: WalkType::Custom {

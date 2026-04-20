@@ -15,7 +15,9 @@ impl WalkTypeAble<Positive, OptionChain> for Walker {}
 
 fn main() -> Result<(), Error> {
     setup_logger();
-    let n_steps = 43_200; // 30 days in minutes
+    // Demo-friendly grid: 2 days at 1-hour resolution runs in debug mode
+    // under ~5 s and still shows the random-walk/chain interplay.
+    let n_steps = 2 * 24; // 2 days in hours
     let mut initial_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
@@ -27,11 +29,11 @@ fn main() -> Result<(), Error> {
     let walk_params = WalkParams {
         size: n_steps,
         init_step: Step {
-            x: Xstep::new(Positive::ONE, TimeFrame::Minute, ExpirationDate::Days(days)),
+            x: Xstep::new(Positive::ONE, TimeFrame::Hour, ExpirationDate::Days(days)),
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day),
             drift: dec!(0.0),
             volatility: iv,
         },

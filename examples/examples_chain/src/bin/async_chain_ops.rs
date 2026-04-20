@@ -28,7 +28,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     chain.save_to_json_async(&dir_str).await?;
     println!("Successfully saved to JSON.");
 
-    println!("Loading chain from {} asynchronously...", json_path.display());
+    println!(
+        "Loading chain from {} asynchronously...",
+        json_path.display()
+    );
     let loaded_json = OptionChain::load_from_json_async(json_path.to_str().unwrap()).await?;
     println!(
         "Successfully loaded from JSON. Symbol: {}",
@@ -39,7 +42,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     chain.save_to_csv_async(&dir_str).await?;
     println!("Successfully saved to CSV.");
 
-    println!("Loading chain from {} asynchronously...", csv_path.display());
+    println!(
+        "Loading chain from {} asynchronously...",
+        csv_path.display()
+    );
     let loaded_csv = OptionChain::load_from_csv_async(csv_path.to_str().unwrap()).await?;
     println!(
         "Successfully loaded from CSV. Symbol: {}",

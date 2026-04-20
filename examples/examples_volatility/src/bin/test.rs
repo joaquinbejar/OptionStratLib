@@ -65,7 +65,9 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     let mut best_error3 = Decimal::MAX;
     let mut best_error4 = Decimal::MAX;
 
-    for _ in 0..1000000 {
+    // Demo-friendly iteration count; the original 1_000_000 is a local
+    // benchmark more than an example.
+    for _ in 0..10_000 {
         let days_f64: f64 = thread_rng.random_range(74.34..=74.46);
         let days = pos_or_panic!(days_f64);
 
