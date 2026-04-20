@@ -86,7 +86,7 @@
 //!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
-//! let price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
+//! let price = telegraph(&option, optionstratlib::nz!(1000), Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ### Combined Model Analysis
@@ -118,8 +118,8 @@
 //!         };
 //! // Compare prices across different models
 //! let bs_price = black_scholes(&option);
-//! let mc_price = monte_carlo_option_pricing(&option, 2, 2);
-//! let tp_price = telegraph(&option, 1000, Some(dec!(0.5)), Some(dec!(0.3)));
+//! let mc_price = monte_carlo_option_pricing(&option, optionstratlib::nz!(2), optionstratlib::nz!(2));
+//! let tp_price = telegraph(&option, optionstratlib::nz!(1000), Some(dec!(0.5)), Some(dec!(0.3)));
 //! ```
 //!
 //! ## Implementation Notes

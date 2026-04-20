@@ -38,8 +38,9 @@ pub const DETERMINISTIC_RNG_DEFAULT_SEED: u64 = 0x0B_AD_C0_FF_EE_15_DE_AD;
 ///
 /// ```rust
 /// use optionstratlib::utils::deterministic_rng;
+/// use rand::RngExt;
 /// let mut rng = deterministic_rng(42);
-/// let _ = <rand::rngs::StdRng as rand::Rng>::random::<u64>(&mut rng);
+/// let _ = rng.random::<u64>();
 /// ```
 #[must_use]
 #[inline]
