@@ -15,7 +15,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-latest-blue.svg)](https://deepwiki.com/joaquinbejar/OptionStratLib)
 
 
-## OptionStratLib v0.16.4: Financial Options Library
+## OptionStratLib v0.16.5: Financial Options Library
 
 ### Table of Contents
 1. [Introduction](#introduction)
@@ -133,6 +133,96 @@ Complete pricing support for all exotic option types:
 - **Quanto**: Currency-protected options
 - **Exchange**: Margrabe's formula for asset exchange
 - **Power**: Non-linear payoff options
+
+### Quality & Discipline (0.16.x)
+
+The 0.16 line is a quality-hardening release. Every change below is
+enforced crate-wide and documented in `CHANGELOG.md`:
+
+- **Checked `Decimal` arithmetic.** Every monetary-path kernel routes
+  through `d_add` / `d_sub` / `d_mul` / `d_div` / `d_sum` /
+  `d_sum_iter` in `model::decimal`. Overflow on any monetary
+  expression surfaces `DecimalError::Overflow { operation, lhs, rhs }`
+  tagged with a static call-site string; no silent wraparound.
+- **Non-finite `f64` guards.** Every `f64 → Decimal` boundary inside
+  pricing, Greeks, volatility, and simulation is wrapped with
+  `finite_decimal(..)` and surfaces a domain-specific
+  `NonFinite { context, value }` variant
+  (`PricingError`, `GreeksError`, `VolatilityError`,
+  `SimulationError`) instead of collapsing silently to
+  `Decimal::ZERO`.
+- **`NonZeroUsize` step counts.** `price_binomial`,
+  `monte_carlo_option_pricing`, `telegraph` and related kernels take
+  `std::num::NonZeroUsize` for `steps` / `simulations`; zero is
+  structurally invalid at the type level. Use the `nz!(N)` macro
+  at literal call sites.
+- **`Positive` at every public boundary.** Monetary values,
+  strikes, quantities, volatilities are `Positive` (newtype around
+  `Decimal`). Strategy-level P&L goes through
+  `Positive::new_decimal(..)` at every point where a signed
+  `Decimal` would otherwise be clamped to `Positive`, so inverted
+  strikes or out-of-range optimizer candidates return typed
+  `StrategyError` rather than panicking.
+- **Zero unchecked indexing in production code.**
+  `#![deny(clippy::indexing_slicing)]` is enforced crate-wide with
+  scoped, documented escapes per module. Tests stay permissive via
+  `#![cfg_attr(test, allow(..))]`. Production paths use
+  `.get(..).ok_or_else(..)` with typed errors.
+- **Doc coverage floor.** `#![deny(missing_docs,
+  rustdoc::broken_intra_doc_links)]`. Every `pub` item has a `///`
+  summary; every `Result` returner documents its `# Errors`
+  contract.
+- **Structured tracing.** `#[tracing::instrument]` on the public
+  hot paths: `pricing::black_scholes`,
+  `pricing::monte_carlo_option_pricing`,
+  `pricing::price_binomial`, `volatility::implied_volatility`,
+  and the strategy optimizer entry points
+  `get_best_ratio` / `get_best_area`. No `println!` / `eprintln!`
+  / `dbg!` / `log::` anywhere in `src/`.
+- **Compiler-attribute discipline.** `#[must_use]` on every pure
+  function and builder, `#[inline]` on small hot-path helpers,
+  `#[cold] #[inline(never)]` on every error constructor,
+  `#[repr(u8)]` on small stable enums, canonical `#[derive]`
+  ordering.
+- **Deterministic simulation tests.** `utils::deterministic_rng(seed)`
+  provides a canonical seeded `StdRng` for Monte-Carlo / simulation
+  tests, so precision shifts in upstream arithmetic cannot flip
+  assertions by luck.
+- **Pricing-identity regression tests.** `tests/unit/pricing/identities_test.rs`
+  locks put-call parity on a grid, CRR binomial convergence to
+  Black-Scholes, and the Greek sanity identities
+  (`Γ_c = Γ_p`, `Vega_c = Vega_p`, `Δ_c − Δ_p ≈ e^{-qT}`).
+
+#### Arithmetic-Error Cascade
+
+```mermaid
+flowchart LR
+    subgraph Kernels["Numeric kernels (model / pricing / greeks / volatility / simulation)"]
+        DADD["d_add / d_sub / d_mul / d_div"]
+        DSUM["d_sum / d_sum_iter"]
+        FD["finite_decimal(f64)"]
+    end
+
+    subgraph Errors["Typed errors (error/*)"]
+        DOV["DecimalError::Overflow { operation, lhs, rhs }"]
+        PNF["PricingError::NonFinite { context, value }"]
+        GNF["GreeksError::NonFinite"]
+        VNF["VolatilityError::NonFinite"]
+        SNF["SimulationError::NonFinite"]
+    end
+
+    DADD -- "checked_*" --> DOV
+    DSUM -- "checked_*" --> DOV
+    FD -- "NaN / ±∞ guard" --> PNF
+    FD --> GNF
+    FD --> VNF
+    FD --> SNF
+
+    DOV -- "#[from]" --> PNF
+    DOV -- "#[from]" --> GNF
+    DOV -- "#[from]" --> VNF
+    DOV -- "#[from]" --> SNF
+```
 
 
 ### Core Modules
@@ -587,6 +677,31 @@ flowchart LR
     Surfaces --> |"3D Analysis"| Analysis
 ```
 
+### Observability
+
+Public hot paths are annotated with `#[tracing::instrument]`.
+Enable a subscriber in the consumer crate (the library itself never
+installs one) to surface structured spans:
+
+```mermaid
+flowchart LR
+    APP[Consumer application] -- "installs" --> SUB["tracing_subscriber"]
+
+    subgraph Spans["Instrumented public fns"]
+        BS["pricing::black_scholes\n(strike, style, side)"]
+        MC["pricing::monte_carlo_option_pricing\n(steps, simulations, strike, style, side)"]
+        BI["pricing::price_binomial\n(strike, asset, steps, style, side)"]
+        IV["volatility::implied_volatility\n(market_price, strike, max_iterations)"]
+        OPT["Optimizable::get_best_ratio/area\n(side, criteria)"]
+    end
+
+    BS --> SUB
+    MC --> SUB
+    BI --> SUB
+    IV --> SUB
+    OPT --> SUB
+```
+
 ### Trading Strategies
 
 OptionStratLib provides 25+ comprehensive trading strategies organized by complexity and market outlook:
@@ -668,7 +783,7 @@ All strategies implement a comprehensive trait system:
 
 #### Prerequisites
 
-- Rust 1.80 or higher (2024 edition)
+- Rust 1.85 or higher (Rust 2024 edition)
 - Cargo package manager
 
 #### Installation
@@ -677,7 +792,7 @@ Add OptionStratLib to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-optionstratlib = "0.16.4"
+optionstratlib = "0.16.5"
 ```
 
 Or use cargo to add it to your project:
@@ -692,11 +807,12 @@ The library includes optional features for enhanced functionality:
 
 ```toml
 [dependencies]
-optionstratlib = { version = "0.16.4", features = ["plotly"] }
+optionstratlib = { version = "0.16.5", features = ["plotly"] }
 ```
 
 - `plotly`: Enables interactive visualization using plotly.rs
-- `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data
+- `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
+- `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data (tokio + reqwest + futures)
 
 #### Building from Source
 
@@ -947,7 +1063,9 @@ fn main() -> Result<(), optionstratlib::error::Error> {
 
 ### Testing
 
-OptionStratLib includes a comprehensive test suite with over 3800 unit and integration tests:
+OptionStratLib ships with a large, fully deterministic test suite
+(3760 unit / integration tests + 205 doctests + property- and
+identity-based regressions):
 
 #### **Running Tests**
 
@@ -971,13 +1089,22 @@ cargo test -- --nocapture
 #### **Test Categories**
 
 - **Unit Tests**: Individual function and method testing
-- **Integration Tests**: Cross-module functionality testing
+- **Integration Tests**: Cross-module functionality under `tests/`
 - **Strategy Tests**: Comprehensive strategy validation
 - **Pricing Model Tests**: Accuracy and performance testing
 - **Greeks Tests**: Mathematical precision validation
 - **Visualization Tests**: Chart generation and export testing
 - **Property-Based Tests**: Mathematical invariant testing with `proptest`
-- **Exotic Options Tests**: Complete coverage for all 14 exotic option types
+  (`tests/property/put_call_parity_test.rs`, `greeks_bounds_test.rs`)
+- **Identity Regression Tests**: `tests/unit/pricing/identities_test.rs`
+  locks put-call parity, CRR → Black-Scholes convergence, and
+  Greek sanity (`Γ_c = Γ_p`, `Vega_c = Vega_p`,
+  `Δ_c − Δ_p ≈ e^{-qT}`).
+- **Deterministic Monte-Carlo Tests**: Seeded via
+  [`utils::deterministic_rng`] so arithmetic-precision shifts can't
+  flip assertions.
+- **Exotic Options Tests**: Complete coverage for all 14 exotic
+  option types.
 
 #### **Benchmarking**
 
@@ -993,22 +1120,45 @@ cargo tarpaulin --all-features --out Html
 
 ### Examples
 
-The library includes extensive examples organized by functionality:
+Examples live in self-contained sub-crates under `examples/`, each
+with its own `Cargo.toml`:
 
-- **`examples/examples_strategies/`**: Complete strategy examples (25+ strategies)
-- **`examples/examples_chains/`**: Option chain analysis examples
-- **`examples/examples_pricing/`**: Pricing model demonstrations
-- **`examples/examples_visualization/`**: Interactive chart examples
-- **`examples/examples_volatility/`**: Volatility analysis examples
-- **`examples/examples_simulation/`**: Monte Carlo and simulation examples
-- **`examples/examples_exotics/`**: Exotic option pricing examples
+- **`examples_strategies/`**: 25+ strategy demos
+- **`examples_strategies_best/`**: Optimizer entry points
+  (`get_best_area` / `get_best_ratio`) per strategy
+- **`examples_strategies_delta/`**: Delta-neutrality workflows
+- **`examples_chain/`**: Option chain construction, import/export,
+  and async I/O
+- **`examples_curves/`**: Greek curves (`charm`, `color`, `d1`, `d2`,
+  `delta`, `gamma`, `rho`, `theta`, …) and vector curves
+- **`examples_surfaces/`**: 3-D volatility surfaces
+- **`examples_metrics/`**: Price / risk / liquidity / stress /
+  temporal / composite metric curves and surfaces
+- **`examples_volatility/`**: Implied-volatility solver walkthroughs
+- **`examples_simulation/`**: Monte-Carlo random-walk demos for
+  `LongCall`, `ShortPut`, position / strategy simulators, and
+  random-walk-of-chain
+- **`examples_exotics/`**: Exotic option pricing (barrier,
+  cliquet, …)
+- **`examples_visualization/`**: Interactive chart wiring
 
-Run examples:
+Run any binary with the usual cargo invocation (from the repo
+root, so relative data-fixture paths resolve correctly):
+
 ```bash
-cargo run --example bull_call_spread --features plotly
-cargo run --example black_scholes_pricing
-cargo run --example volatility_surface
+cargo run --manifest-path=examples/examples_strategies/Cargo.toml \
+    --bin strategy_bull_call_spread
+cargo run --manifest-path=examples/examples_simulation/Cargo.toml \
+    --bin long_call_strategy_simulation --features plotly
+cargo run --manifest-path=examples/examples_metrics/Cargo.toml \
+    --bin implied_volatility_surface
 ```
+
+Simulation-heavy demos (`*_strategy_simulation`, `position_simulator`,
+`strategy_simulator`, `random_walk_chain`) use a demo-friendly
+hourly grid so `cargo run` finishes in a few seconds in debug mode;
+bump `n_steps` / `n_simulations` inside the binary if you want a
+finer sample.
 
 ### Contribution and Contact
 
@@ -1048,7 +1198,7 @@ cargo test --all-features
 
 ---
 
-**OptionStratLib v0.16.4** - Built with ❤️ in Rust for the financial community
+**OptionStratLib v0.16.5** - Built with ❤️ in Rust for the financial community
 
 
 
