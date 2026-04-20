@@ -52,7 +52,7 @@
 //!
 //! // Both legs can be handled uniformly via LegAble trait
 //! use optionstratlib::model::leg::LegAble;
-//! info!("Spot delta: {}", spot_leg.delta()?);
+//! tracing::info!("Spot delta: {}", spot_leg.delta()?);
 //! # Ok(())
 //! # }
 //! ```
