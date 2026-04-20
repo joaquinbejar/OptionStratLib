@@ -1032,8 +1032,8 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     ///
     /// ```ignore
     /// let greeks = strategy.portfolio_greeks()?;
-    /// println!("Portfolio delta: {}", greeks.delta);
-    /// println!("Portfolio gamma: {}", greeks.gamma);
+    /// info!("Portfolio delta: {}", greeks.delta);
+    /// info!("Portfolio gamma: {}", greeks.gamma);
     /// ```
     ///
     /// # Errors
@@ -1080,7 +1080,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// let config = AdjustmentConfig::default();
     /// let target = AdjustmentTarget::delta_neutral();
     /// let plan = strategy.optimized_adjustment_plan(config, target)?;
-    /// println!("Actions needed: {}", plan.actions.len());
+    /// info!("Actions needed: {}", plan.actions.len());
     /// ```
     ///
     /// # Errors

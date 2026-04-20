@@ -76,7 +76,7 @@ use rust_decimal::MathematicalOps;
 ///
 /// // The curve can be used for visualization or analysis
 /// for point in iv_curve.points.iter() {
-///     println!("Strike: {}, IV: {:.2}%", point.x, point.y * 100.0);
+///     info!("Strike: {}, IV: {:.2}%", point.x, point.y * 100.0);
 /// }
 /// ```
 pub trait ImpliedVolatilityCurve {

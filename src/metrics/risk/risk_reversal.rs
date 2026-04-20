@@ -76,7 +76,7 @@ use crate::error::CurveError;
 /// // Analyze market sentiment
 /// for point in rr_curve.points.iter() {
 ///     let sentiment = if point.y > Decimal::ZERO { "bullish" } else { "bearish" };
-///     println!("Strike {}: RR = {:.4} ({})", point.x, point.y, sentiment);
+///     info!("Strike {}: RR = {:.4} ({})", point.x, point.y, sentiment);
 /// }
 /// ```
 ///

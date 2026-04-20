@@ -79,7 +79,7 @@ use crate::model::OptionStyle;
 /// let max_dg = dg_curve.points.iter()
 ///     .max_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal))
 ///     .ok_or("empty dollar gamma curve")?;
-/// println!("Max dollar gamma at strike {}: ${:.2}", max_dg.x, max_dg.y);
+/// info!("Max dollar gamma at strike {}: ${:.2}", max_dg.x, max_dg.y);
 /// ```
 ///
 /// # Practical Considerations

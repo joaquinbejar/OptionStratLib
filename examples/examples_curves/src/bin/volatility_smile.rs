@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
 //                 "../../examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
 //         let smile_curve = option_chain.smile();
 //         for point in smile_curve.points.iter() {
-//             println!("x: {}, y: {}", point.x, point.y);
+//             info!("x: {}, y: {}", point.x, point.y);
 //         }
 //     }
 // }
