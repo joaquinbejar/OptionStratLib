@@ -23,6 +23,7 @@ use positive::pos_or_panic;
 use std::convert::Infallible;
 use std::fmt::Display;
 use std::ops::AddAssign;
+use tracing::info;
 
 // Simple walker implementation for demonstration
 #[derive(Clone)]
@@ -52,7 +53,8 @@ fn demo_generator(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== Unified Pricing System Example ===\n");
+    setup_logger();
+    info!("=== Unified Pricing System Example ===\n");
 
     // Create a sample European call option
     let option = Options {
@@ -70,30 +72,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         exotic_params: None,
     };
 
-    println!("Option Details:");
-    println!("  Symbol: {}", option.underlying_symbol);
-    println!("  Type: {:?} {:?}", option.option_style, option.option_type);
-    println!("  Strike: ${}", option.strike_price);
-    println!("  Underlying: ${}", option.underlying_price);
-    println!("  Volatility: {}", option.implied_volatility);
-    println!("  Days to Expiry: {:?}\n", option.expiration_date);
+    info!("Option Details:");
+    info!("  Symbol: {}", option.underlying_symbol);
+    info!("  Type: {:?} {:?}", option.option_style, option.option_type);
+    info!("  Strike: ${}", option.strike_price);
+    info!("  Underlying: ${}", option.underlying_price);
+    info!("  Volatility: {}", option.implied_volatility);
+    info!("  Days to Expiry: {:?}\n", option.expiration_date);
 
     // 1. Black-Scholes Pricing
-    println!("1. Black-Scholes Closed-Form Pricing:");
+    info!("1. Black-Scholes Closed-Form Pricing:");
     let bs_engine = PricingEngine::ClosedFormBS;
     match price_option(&option, &bs_engine) {
-        Ok(price) => println!("   Price: ${:.4}", price),
-        Err(e) => println!("   Error: {}", e),
+        Ok(price) => info!("   Price: ${:.4}", price),
+        Err(e) => info!("   Error: {}", e),
     }
 
     // Alternative using Priceable trait
     match option.price(&bs_engine) {
-        Ok(price) => println!("   Price (via trait): ${:.4}\n", price),
-        Err(e) => println!("   Error: {}\n", e),
+        Ok(price) => info!("   Price (via trait): ${:.4}\n", price),
+        Err(e) => info!("   Error: {}\n", e),
     }
 
     // 2. Monte Carlo with Geometric Brownian Motion
-    println!("2. Monte Carlo with Geometric Brownian Motion:");
+    info!("2. Monte Carlo with Geometric Brownian Motion:");
     let size = 365;
     let init_step = Step {
         x: Xstep::new(
@@ -128,12 +130,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulator: gbm_simulator,
     };
     match option.price(&mc_engine) {
-        Ok(price) => println!("   Price: ${:.4}\n", price),
-        Err(e) => println!("   Error: {}\n", e),
+        Ok(price) => info!("   Price: ${:.4}\n", price),
+        Err(e) => info!("   Error: {}\n", e),
     }
 
     // 3. Monte Carlo with Heston Model
-    println!("3. Monte Carlo with Heston Stochastic Volatility:");
+    info!("3. Monte Carlo with Heston Stochastic Volatility:");
     let heston_walk = WalkType::Heston {
         dt: Positive::ONE,
         drift: dec!(0.0),
@@ -162,12 +164,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulator: heston_simulator,
     };
     match option.price(&heston_engine) {
-        Ok(price) => println!("   Price: ${:.4}\n", price),
-        Err(e) => println!("   Error: {}\n", e),
+        Ok(price) => info!("   Price: ${:.4}\n", price),
+        Err(e) => info!("   Error: {}\n", e),
     }
 
     // 4. Monte Carlo with Jump Diffusion
-    println!("4. Monte Carlo with Jump Diffusion:");
+    info!("4. Monte Carlo with Jump Diffusion:");
     let jump_walk = WalkType::JumpDiffusion {
         dt: Positive::ONE,
         drift: dec!(0.0),
@@ -195,12 +197,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulator: jump_simulator,
     };
     match option.price(&jump_engine) {
-        Ok(price) => println!("   Price: ${:.4}\n", price),
-        Err(e) => println!("   Error: {}\n", e),
+        Ok(price) => info!("   Price: ${:.4}\n", price),
+        Err(e) => info!("   Error: {}\n", e),
     }
 
     // 5. Monte Carlo with Telegraph Process
-    println!("5. Monte Carlo with Telegraph Process:");
+    info!("5. Monte Carlo with Telegraph Process:");
     let telegraph_walk = WalkType::Telegraph {
         dt: Positive::ONE,
         drift: dec!(0.0),
@@ -229,10 +231,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simulator: telegraph_simulator,
     };
     match option.price(&telegraph_engine) {
-        Ok(price) => println!("   Price: ${:.4}\n", price),
-        Err(e) => println!("   Error: {}\n", e),
+        Ok(price) => info!("   Price: ${:.4}\n", price),
+        Err(e) => info!("   Error: {}\n", e),
     }
 
-    println!("=== Example Complete ===");
+    info!("=== Example Complete ===");
     Ok(())
 }

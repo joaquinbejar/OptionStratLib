@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-04-20
+
+Hot-fix targeting the runnable-example audit.
+
+### Fixed
+
+- Simulation-heavy demo binaries
+  (`long_call_strategy_simulation`, `short_put_strategy_simulation`,
+  `position_simulator`, `strategy_simulator`, `random_walk_chain`)
+  now use an hourly grid over the week instead of a minute-level
+  grid (10 080 steps × 100 simulations, 43 200 for the chain
+  walker). The code paths are exercised identically; the demos
+  just run in a few seconds in debug mode rather than the minutes
+  the example runner timed out on. (#385, #386)
+- `examples_volatility::test` brute-force scan cut from
+  1 000 000 to 10 000 iterations — the example is a demo, not a
+  local benchmark. (#386)
+
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.3...HEAD
+[0.16.3]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.3
+
 ## [0.16.2] - 2026-04-19
 
 Hot-fix for two panic / I/O bugs caught while running every example
@@ -36,7 +57,6 @@ binary under `examples/`.
   was never committed; now reads the one that ships in
   `examples/Chains/`. (#388)
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.2...HEAD
 [0.16.2]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.2
 
 ## [0.16.1] - 2026-04-19

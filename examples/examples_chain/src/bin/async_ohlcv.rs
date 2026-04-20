@@ -1,13 +1,16 @@
 use optionstratlib::utils::read_ohlcv_from_zip_async;
 use std::error::Error;
+use tracing::{error, info};
+use optionstratlib::prelude::setup_logger;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    println!("--- Async OHLCV Reading ---");
+    setup_logger();
+    info!("--- Async OHLCV Reading ---");
 
     let zip_path = "../../examples/Data/cl-1m-sample.zip"; // Path relative to the example run dir
 
-    println!("Reading OHLCV data from {} asynchronously...", zip_path);
+    info!("Reading OHLCV data from {} asynchronously...", zip_path);
 
     // We'll read without date filters first
     let result: Result<Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError> =
@@ -15,17 +18,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match result {
         Ok(candles) => {
-            println!("Successfully read {} candles.", candles.len());
+            info!("Successfully read {} candles.", candles.len());
             if let Some(first) = candles.first() {
-                println!("First candle: Date={}, Close={}", first.date, first.close);
+                info!("First candle: Date={}, Close={}", first.date, first.close);
             }
         }
         Err(e) => {
-            eprintln!("Error reading OHLCV: {}", e);
+            error!("Error reading OHLCV: {}", e);
             // Don't fail the example if file is not found, just report it
         }
     }
 
-    println!("--- Async OHLCV Reading Completed ---");
+    info!("--- Async OHLCV Reading Completed ---");
     Ok(())
 }

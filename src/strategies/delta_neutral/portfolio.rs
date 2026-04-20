@@ -95,7 +95,7 @@ impl PortfolioGreeks {
     /// ```ignore
     /// let positions = strategy.get_positions()?;
     /// let greeks = PortfolioGreeks::from_positions(&positions)?;
-    /// println!("Portfolio delta: {}", greeks.delta);
+    /// info!("Portfolio delta: {}", greeks.delta);
     /// ```
     ///
     /// # Errors
