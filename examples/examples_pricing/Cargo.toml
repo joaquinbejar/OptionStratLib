@@ -15,3 +15,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 [[bin]]
 name = "black_76"
 path = "src/bin/black_76.rs"
+
+[[bin]]
+name = "garman_kohlhagen"
+path = "src/bin/garman_kohlhagen.rs"

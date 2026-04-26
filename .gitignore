@@ -31,3 +31,7 @@ src/.DS_Store
 
 # Local development examples
 /examples/Local/
+
+# Local draft issue / PR bodies kept at the repo root
+/.issue-*.md
+/.pr-*.md

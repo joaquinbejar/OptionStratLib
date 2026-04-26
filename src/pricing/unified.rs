@@ -2,6 +2,7 @@ use crate::Options;
 use crate::error::{PricingError, PricingResult};
 use crate::pricing::black_76::black_76;
 use crate::pricing::black_scholes_model::black_scholes;
+use crate::pricing::garman_kohlhagen::garman_kohlhagen;
 use crate::simulation::simulator::Simulator;
 use positive::Positive;
 
@@ -11,6 +12,7 @@ use positive::Positive;
 /// - `ClosedFormBS`: Uses the Black-Scholes closed-form formula
 /// - `ClosedFormBlack76`: Uses the Black-76 closed-form formula
 /// - `MonteCarlo`: Uses Monte Carlo simulation with a configured simulator
+/// - `ClosedFormGK`: Uses the Garman-Kohlhagen closed-form formula for FX options
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum PricingEngine {
@@ -35,6 +37,14 @@ pub enum PricingEngine {
         /// The simulator configured with the desired stochastic model
         simulator: Simulator<Positive, Positive>,
     },
+
+    /// Garman–Kohlhagen closed-form pricing for European FX options.
+    ///
+    /// Fast O(1) pricing for European options on FX spot rates. Uses two
+    /// interest rates (domestic via `risk_free_rate`, foreign via
+    /// `dividend_yield`). Structurally identical to Black–Scholes–Merton
+    /// with `q = r_f`.
+    ClosedFormGK,
 }
 
 /// Prices an option using the specified pricing engine.
@@ -81,34 +91,36 @@ pub enum PricingEngine {
 ///
 /// # Errors
 ///
-/// Propagates any `PricingError` returned by the selected engine:
-/// `PricingError::ExpirationDate` or `PricingError::MethodError`
-/// from Black–Scholes and Black-76 (both surface `MethodError` for
-/// zero-volatility / non-finite intermediate values, and Black-76
-/// also returns [`PricingError::UnsupportedOptionType`] for
-/// non-European inputs); [`PricingError::BinomialNodeMissing`] or
-/// [`PricingError::SqrtFailure`] from the binomial lattice; the
-/// equivalent failures from exotic engines (barrier, binary,
-/// compound, chooser, cliquet, lookback, telegraph); and
-/// `PricingError::SimulationError` from the Monte Carlo engine.
+/// Propagates the original `PricingError` returned by the selected engine
+/// without wrapping, so callers can pattern-match on the structured
+/// variants. From the closed-form engines (Black–Scholes, Black-76,
+/// Garman–Kohlhagen) you may receive [`PricingError::ExpirationDate`],
+/// [`PricingError::Greeks`] (for example zero-volatility or non-finite
+/// intermediate values bubbled up from `d1`/`d2`), and (Black-76 and
+/// Garman–Kohlhagen) [`PricingError::UnsupportedOptionType`] for
+/// non-European inputs. From the binomial lattice you may receive
+/// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`].
+/// The Monte Carlo engine surfaces failures as
+/// [`PricingError::SimulationError`], and exotic engines surface their
+/// own variants (barrier, binary, compound, chooser, cliquet, lookback,
+/// telegraph).
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {
         PricingEngine::ClosedFormBS => {
-            let price_decimal = black_scholes(option)
-                .map_err(|e| PricingError::method_error("Black-Scholes", &e.to_string()))?;
-
-            // Convert Decimal to Positive using From trait
+            let price_decimal = black_scholes(option)?;
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::ClosedFormBlack76 => {
-            let price_decimal = black_76(option)
-                .map_err(|e| PricingError::method_error("Black-76", &e.to_string()))?;
-
+            let price_decimal = black_76(option)?;
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)
             .map_err(|e| PricingError::simulation_error(&e.to_string())),
+        PricingEngine::ClosedFormGK => {
+            let price_decimal = garman_kohlhagen(option)?;
+            Ok(Positive::new_decimal(price_decimal.abs())?)
+        }
     }
 }
 

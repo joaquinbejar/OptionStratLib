@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-04-26
+
+Minor release adding the Garman–Kohlhagen (1983) closed-form pricing
+model for European FX options. The new variant
+`PricingEngine::ClosedFormGK` is appended at the tail of the enum so
+the existing variants keep their implicit discriminants and no major
+bump is required (`PricingEngine` has been `#[non_exhaustive]` since
+0.17.0).
+
+### Added
+
+- `pricing::garman_kohlhagen`: closed-form
+  `garman_kohlhagen(option) -> Result<Decimal, PricingError>` for
+  European options on FX spot rates. Structurally identical to BSM
+  with `q = r_f`; the implementation delegates to `black_scholes`
+  after type validation, guaranteeing bit-exact equivalence (verified
+  to `1e-9` in the tests).
+- `pricing::GarmanKohlhagen` trait with default
+  `calculate_price_garman_kohlhagen` (mirrors the `BlackScholes`
+  trait pattern).
+- `pricing::PricingEngine::ClosedFormGK` variant + dispatch from
+  `price_option`.
+- `examples/examples_pricing/src/bin/garman_kohlhagen.rs`: runnable
+  demo (Hull canonical USD/GBP, ITM EUR/USD with FX parity check,
+  unified-API dispatch, symmetric-rate degenerate case).
+- `lib.rs` mermaid: new `FX / Currency` subgraph routing
+  `garman_kohlhagen -> FX Spot`.
+
+### Changed
+
+- `pricing/mod.rs` Core Models / Model Selection Guidelines /
+  Performance Considerations now include Garman–Kohlhagen with the
+  explicit field mapping `risk_free_rate -> r_d`,
+  `dividend_yield -> r_f`, `underlying_price -> S`.
+
 ## [0.17.0] - 2026-04-26
 
 Major release adding the Black-76 closed-form pricing model for European
