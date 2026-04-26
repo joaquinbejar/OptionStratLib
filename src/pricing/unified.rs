@@ -2,6 +2,7 @@ use crate::Options;
 use crate::error::{PricingError, PricingResult};
 use crate::pricing::black_76::black_76;
 use crate::pricing::black_scholes_model::black_scholes;
+use crate::pricing::garman_kohlhagen::garman_kohlhagen;
 use crate::simulation::simulator::Simulator;
 use positive::Positive;
 
@@ -11,6 +12,7 @@ use positive::Positive;
 /// - `ClosedFormBS`: Uses the Black-Scholes closed-form formula
 /// - `ClosedFormBlack76`: Uses the Black-76 closed-form formula
 /// - `MonteCarlo`: Uses Monte Carlo simulation with a configured simulator
+/// - `ClosedFormGK`: Uses the Garman-Kohlhagen closed-form formula for FX options
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum PricingEngine {
@@ -35,6 +37,14 @@ pub enum PricingEngine {
         /// The simulator configured with the desired stochastic model
         simulator: Simulator<Positive, Positive>,
     },
+
+    /// Garman–Kohlhagen closed-form pricing for European FX options.
+    ///
+    /// Fast O(1) pricing for European options on FX spot rates. Uses two
+    /// interest rates (domestic via `risk_free_rate`, foreign via
+    /// `dividend_yield`). Structurally identical to Black–Scholes–Merton
+    /// with `q = r_f`.
+    ClosedFormGK,
 }
 
 /// Prices an option using the specified pricing engine.
@@ -83,10 +93,11 @@ pub enum PricingEngine {
 ///
 /// Propagates any `PricingError` returned by the selected engine:
 /// `PricingError::ExpirationDate` or `PricingError::MethodError`
-/// from Black–Scholes and Black-76 (both surface `MethodError` for
-/// zero-volatility / non-finite intermediate values, and Black-76
-/// also returns [`PricingError::UnsupportedOptionType`] for
-/// non-European inputs); [`PricingError::BinomialNodeMissing`] or
+/// from Black–Scholes, Black-76, and Garman–Kohlhagen (all three
+/// surface `MethodError` for zero-volatility / non-finite intermediate
+/// values, and the latter two also return
+/// [`PricingError::UnsupportedOptionType`] for non-European inputs);
+/// [`PricingError::BinomialNodeMissing`] or
 /// [`PricingError::SqrtFailure`] from the binomial lattice; the
 /// equivalent failures from exotic engines (barrier, binary,
 /// compound, chooser, cliquet, lookback, telegraph); and
@@ -109,6 +120,12 @@ pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<P
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)
             .map_err(|e| PricingError::simulation_error(&e.to_string())),
+        PricingEngine::ClosedFormGK => {
+            let price_decimal = garman_kohlhagen(option)
+                .map_err(|e| PricingError::method_error("Garman-Kohlhagen", &e.to_string()))?;
+
+            Ok(Positive::new_decimal(price_decimal.abs())?)
+        }
     }
 }
 

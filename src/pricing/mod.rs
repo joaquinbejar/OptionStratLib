@@ -28,6 +28,16 @@
 //! `σ²/2` because the forward price already incorporates carry, and both legs share
 //! a single discount factor `e^(-rT)`.
 //!
+//! ### Garman–Kohlhagen Model (`garman_kohlhagen`)
+//! Implements the Garman–Kohlhagen (1983) closed-form for European FX options on a
+//! spot exchange rate `S` quoted as domestic per unit of foreign. Uses two interest
+//! rates: domestic `r_d` and foreign `r_f`. Structurally identical to
+//! Black–Scholes–Merton with `q = r_f`, so the implementation delegates to the BSM
+//! kernel after type validation. Field mapping in `Options`:
+//! - `risk_free_rate`  -> `r_d` (domestic)
+//! - `dividend_yield`  -> `r_f` (foreign)
+//! - `underlying_price` -> `S` (spot FX)
+//!
 //! ### Monte Carlo Simulations (`monte_carlo`)
 //! Provides Monte Carlo simulation capabilities for option pricing. This module
 //! supports simulation of stock price paths and uses statistical methods to estimate
@@ -143,11 +153,12 @@
 //! ## Model Selection Guidelines
 //!
 //! Choose the appropriate model based on your needs:
-//! - Black-Scholes: Quick pricing of European options on a spot underlying
-//! - Black-76:      European options on futures/forwards, swaptions, caps/floors
-//! - Binomial:      American options and early exercise
-//! - Monte Carlo:   Complex path-dependent options
-//! - Telegraph:     Regime-switching and discrete state transitions
+//! - Black-Scholes:    Quick pricing of European options on a spot underlying
+//! - Black-76:         European options on futures/forwards, swaptions, caps/floors
+//! - Garman-Kohlhagen: European FX options with domestic/foreign rates
+//! - Binomial:         American options and early exercise
+//! - Monte Carlo:      Complex path-dependent options
+//! - Telegraph:        Regime-switching and discrete state transitions
 //!
 //! ## Performance Considerations
 //!
@@ -156,6 +167,7 @@
 //! - Binomial: O(n²) where n is the number of steps
 //! - Black-Scholes: O(1) constant time calculation
 //! - Black-76: O(1) constant time calculation
+//! - Garman-Kohlhagen: O(1) constant time calculation
 //!
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
@@ -230,6 +242,19 @@ pub mod black_scholes_model;
 /// The Black-76 model is structurally similar to Black-Scholes but uses the forward/futures
 /// price F as input instead of spot S, and has no carry term because F already incorporates carry.
 pub mod black_76;
+
+/// Garman–Kohlhagen (1983) model for pricing European FX options.
+///
+/// This module implements the Garman–Kohlhagen closed-form model, the standard for pricing:
+/// - European options on FX spot rates
+/// - Currency options with two interest rates (domestic and foreign)
+///
+/// Garman–Kohlhagen is structurally identical to Black–Scholes–Merton with `q = r_f`. It
+/// reuses the existing `Options` schema with the FX field interpretation
+/// `risk_free_rate = r_d`, `dividend_yield = r_f`, `underlying_price = S`. The
+/// implementation delegates to `black_scholes` after validating the option type, which
+/// guarantees a bit-exact equivalence to the BSM kernel.
+pub mod garman_kohlhagen;
 
 /// Constants used throughout the financial models.
 ///
@@ -323,6 +348,7 @@ pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;
 pub use compound::compound_black_scholes;
 pub use exchange::exchange_black_scholes;
+pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
