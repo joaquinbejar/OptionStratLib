@@ -91,39 +91,34 @@ pub enum PricingEngine {
 ///
 /// # Errors
 ///
-/// Propagates any `PricingError` returned by the selected engine:
-/// `PricingError::ExpirationDate` or `PricingError::MethodError`
-/// from Black–Scholes, Black-76, and Garman–Kohlhagen (all three
-/// surface `MethodError` for zero-volatility / non-finite intermediate
-/// values, and the latter two also return
-/// [`PricingError::UnsupportedOptionType`] for non-European inputs);
-/// [`PricingError::BinomialNodeMissing`] or
-/// [`PricingError::SqrtFailure`] from the binomial lattice; the
-/// equivalent failures from exotic engines (barrier, binary,
-/// compound, chooser, cliquet, lookback, telegraph); and
-/// `PricingError::SimulationError` from the Monte Carlo engine.
+/// Propagates the original `PricingError` returned by the selected engine
+/// without wrapping, so callers can pattern-match on the structured
+/// variants. From the closed-form engines (Black–Scholes, Black-76,
+/// Garman–Kohlhagen) you may receive [`PricingError::ExpirationDate`],
+/// [`PricingError::Greeks`] (for example zero-volatility or non-finite
+/// intermediate values bubbled up from `d1`/`d2`), and (Black-76 and
+/// Garman–Kohlhagen) [`PricingError::UnsupportedOptionType`] for
+/// non-European inputs. From the binomial lattice you may receive
+/// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`].
+/// The Monte Carlo engine surfaces failures as
+/// [`PricingError::SimulationError`], and exotic engines surface their
+/// own variants (barrier, binary, compound, chooser, cliquet, lookback,
+/// telegraph).
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {
         PricingEngine::ClosedFormBS => {
-            let price_decimal = black_scholes(option)
-                .map_err(|e| PricingError::method_error("Black-Scholes", &e.to_string()))?;
-
-            // Convert Decimal to Positive using From trait
+            let price_decimal = black_scholes(option)?;
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::ClosedFormBlack76 => {
-            let price_decimal = black_76(option)
-                .map_err(|e| PricingError::method_error("Black-76", &e.to_string()))?;
-
+            let price_decimal = black_76(option)?;
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)
             .map_err(|e| PricingError::simulation_error(&e.to_string())),
         PricingEngine::ClosedFormGK => {
-            let price_decimal = garman_kohlhagen(option)
-                .map_err(|e| PricingError::method_error("Garman-Kohlhagen", &e.to_string()))?;
-
+            let price_decimal = garman_kohlhagen(option)?;
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
     }

@@ -17,14 +17,27 @@
 //! `Options` carries a single risk-free rate plus a `dividend_yield`. For
 //! Garman–Kohlhagen we reuse those fields with the FX interpretation:
 //!
-//! - `Options::risk_free_rate`  — domestic risk-free rate `r_d`.
-//! - `Options::dividend_yield`  — foreign risk-free rate `r_f`.
+//! - `Options::risk_free_rate`  — domestic risk-free rate `r_d`
+//!   (signed `Decimal`, may be negative).
+//! - `Options::dividend_yield`  — foreign risk-free rate `r_f`
+//!   (`Positive`, must be ≥ 0 — see *Limitations* below).
 //! - `Options::underlying_price` — spot FX rate `S`.
 //!
 //! No schema change is required. The mapping is intentional: GK is the
 //! standard textbook reduction of BSM under the FX interpretation, and
 //! delegating to [`crate::pricing::black_scholes_model::black_scholes`]
 //! guarantees a bit-exact equivalence to the BSM kernel.
+//!
+//! ## Limitations
+//!
+//! Because `Options::dividend_yield` is a [`positive::Positive`],
+//! reusing it as `r_f` constrains the foreign rate to be non-negative.
+//! Negative-rate FX regimes (e.g. CHF, JPY, EUR for parts of the
+//! 2015–2022 cycle) cannot be priced through this entry point with the
+//! current `Options` schema. Lifting that limitation requires either a
+//! dedicated signed `foreign_rate` field on `Options` (a schema change,
+//! deliberately out of scope for this addition) or a follow-up issue
+//! tracking a relaxed FX-specific input struct.
 
 use crate::Options;
 use crate::error::PricingError;
@@ -84,6 +97,13 @@ use tracing::instrument;
 /// expiration cannot be converted to a positive year fraction, and
 /// [`PricingError::MethodError`] when the underlying BSM kernel hits a
 /// numerical wall (e.g. zero volatility, non-finite intermediate value).
+///
+/// # Limitations
+///
+/// `Options::dividend_yield` is a [`positive::Positive`], so the foreign
+/// rate `r_f` mapped onto it must be ≥ 0. Negative-rate FX regimes
+/// cannot be expressed through this entry point with the current schema;
+/// see the module-level *Limitations* section.
 #[instrument(skip(option), fields(
     strike = %option.strike_price,
     style = ?option.option_style,
@@ -94,60 +114,8 @@ use tracing::instrument;
 pub fn garman_kohlhagen(option: &Options) -> Result<Decimal, PricingError> {
     match option.option_type {
         OptionType::European => black_scholes(option),
-        OptionType::American => Err(PricingError::unsupported_option_type(
-            "American",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Bermuda { .. } => Err(PricingError::unsupported_option_type(
-            "Bermuda",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Asian { .. } => Err(PricingError::unsupported_option_type(
-            "Asian",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Barrier { .. } => Err(PricingError::unsupported_option_type(
-            "Barrier",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Binary { .. } => Err(PricingError::unsupported_option_type(
-            "Binary",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Lookback { .. } => Err(PricingError::unsupported_option_type(
-            "Lookback",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Compound { .. } => Err(PricingError::unsupported_option_type(
-            "Compound",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Chooser { .. } => Err(PricingError::unsupported_option_type(
-            "Chooser",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Cliquet { .. } => Err(PricingError::unsupported_option_type(
-            "Cliquet",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Rainbow { .. } => Err(PricingError::unsupported_option_type(
-            "Rainbow",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Spread { .. } => Err(PricingError::unsupported_option_type(
-            "Spread",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Quanto { .. } => Err(PricingError::unsupported_option_type(
-            "Quanto",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Exchange { .. } => Err(PricingError::unsupported_option_type(
-            "Exchange",
-            "Garman-Kohlhagen",
-        )),
-        OptionType::Power { .. } => Err(PricingError::unsupported_option_type(
-            "Power",
+        _ => Err(PricingError::unsupported_option_type(
+            "Non-European",
             "Garman-Kohlhagen",
         )),
     }
