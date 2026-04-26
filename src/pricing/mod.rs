@@ -221,11 +221,11 @@ pub mod black_scholes_model;
 /// Black-76 (Black 1976) model for pricing options on futures and forwards.
 ///
 /// This module implements the Black-76 closed-form model, the standard for pricing:
-/// - Futures options
-/// - Forward contracts
+/// - Options on futures
+/// - Options on forward contracts
 /// - Swaptions
 /// - Caps and floors
-/// - Commodity futures options
+/// - Options on commodity futures
 ///
 /// The Black-76 model is structurally similar to Black-Scholes but uses the forward/futures
 /// price F as input instead of spot S, and has no carry term because F already incorporates carry.

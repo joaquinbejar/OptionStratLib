@@ -484,18 +484,19 @@ pub(crate) fn calculate_d_values_black_76(
 ) -> Result<(Decimal, Decimal), GreeksError> {
     // Black-76: cost of carry b = 0 (forward pricing, no carry term in d1/d2)
     let b = Decimal::ZERO;
+    let years = option.expiration_date.get_years()?;
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
         b,
-        option.expiration_date.get_years()?,
+        years,
         option.implied_volatility,
     );
     let d2_value = d2(
         option.underlying_price,
         option.strike_price,
         b,
-        option.expiration_date.get_years()?,
+        years,
         option.implied_volatility,
     );
     Ok((d1_value?, d2_value?))

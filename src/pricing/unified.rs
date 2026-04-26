@@ -83,10 +83,14 @@ pub enum PricingEngine {
 ///
 /// Propagates any `PricingError` returned by the selected engine:
 /// `PricingError::ExpirationDate` or `PricingError::MethodError`
-/// from Black–Scholes, [`PricingError::BinomialNodeMissing`] or
-/// [`PricingError::SqrtFailure`] from the binomial lattice, or the
+/// from Black–Scholes and Black-76 (both surface `MethodError` for
+/// zero-volatility / non-finite intermediate values, and Black-76
+/// also returns [`PricingError::UnsupportedOptionType`] for
+/// non-European inputs); [`PricingError::BinomialNodeMissing`] or
+/// [`PricingError::SqrtFailure`] from the binomial lattice; the
 /// equivalent failures from exotic engines (barrier, binary,
-/// compound, chooser, cliquet, lookback, telegraph, Monte Carlo).
+/// compound, chooser, cliquet, lookback, telegraph); and
+/// `PricingError::SimulationError` from the Monte Carlo engine.
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {
         PricingEngine::ClosedFormBS => {
@@ -105,10 +109,6 @@ pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<P
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)
             .map_err(|e| PricingError::simulation_error(&e.to_string())),
-        _ => Err(PricingError::method_error(
-            "Unknown pricing engine",
-            "Unrecognized or unimplemented pricing engine variant",
-        )),
     }
 }
 
