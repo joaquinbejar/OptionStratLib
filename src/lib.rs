@@ -243,6 +243,7 @@
 //! ### **Pricing Models** (`pricing/`)
 //! Advanced pricing engines for options valuation:
 //! - `black_scholes_model.rs`: European options pricing with Greeks
+//! - `black_76.rs`: European options on futures/forwards (Black 1976)
 //! - `binomial_model.rs`: American/European options with early exercise
 //! - `monte_carlo.rs`: Path-dependent and exotic options pricing
 //! - `telegraph.rs`: Jump-diffusion process modeling
@@ -556,10 +557,16 @@
 //!         CH[Chooser]
 //!     end
 //!
+//!     subgraph Forward["Forward-Priced"]
+//!         FUT[Future]
+//!         FWD[Forward]
+//!     end
+//!
 //!     BS[black_scholes] --> EU
 //!     BS --> PathDependent
 //!     BS --> MultiAsset
 //!     BS --> Special
+//!     B76[black_76] --> Forward
 //!     BAW[barone_adesi_whaley] --> AM
 //!     BIN[binomial_model] --> AM
 //!     BIN --> BE

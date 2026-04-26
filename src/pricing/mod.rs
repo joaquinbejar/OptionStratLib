@@ -143,10 +143,11 @@
 //! ## Model Selection Guidelines
 //!
 //! Choose the appropriate model based on your needs:
-//! - Black-Scholes: Quick pricing of European options
-//! - Binomial: American options and early exercise
-//! - Monte Carlo: Complex path-dependent options
-//! - Telegraph: Regime-switching and discrete state transitions
+//! - Black-Scholes: Quick pricing of European options on a spot underlying
+//! - Black-76:      European options on futures/forwards, swaptions, caps/floors
+//! - Binomial:      American options and early exercise
+//! - Monte Carlo:   Complex path-dependent options
+//! - Telegraph:     Regime-switching and discrete state transitions
 //!
 //! ## Performance Considerations
 //!
@@ -154,6 +155,7 @@
 //! - Monte Carlo: O(m*n) where m is the number of simulations
 //! - Binomial: O(n²) where n is the number of steps
 //! - Black-Scholes: O(1) constant time calculation
+//! - Black-76: O(1) constant time calculation
 //!
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
