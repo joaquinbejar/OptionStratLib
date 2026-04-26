@@ -7,16 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.17.0] - 2026-04-26
+## [0.17.2] - 2026-04-26
 
 Release adding two new closed-form pricing models:
 - **Black-76** (Black 1976) for European options on futures and forwards.
 - **Garman–Kohlhagen** (1983) for European FX options.
 
-The bump to `0.17.0` is required because `PricingEngine` is now
-`#[non_exhaustive]` (a semver-breaking change for downstream exhaustive
-matches). Both new variants are appended at the tail of the enum to
-preserve existing discriminants and avoid further major bumps.
+`0.17.0` and `0.17.1` were preparatory iterations of this work
+(`0.17.0` was never published; `0.17.1` shipped to crates.io with a
+partial subset). `0.17.2` is the first version that ships both models
+together. `PricingEngine` is `#[non_exhaustive]` (semver-major from the
+0.16.x line) and the two new variants are appended at the tail of the
+enum so existing discriminants are preserved.
 
 ### Added
 
