@@ -7,17 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.17.1] - 2026-04-26
+## [0.17.0] - 2026-04-26
 
-Minor release adding the Garman–Kohlhagen (1983) closed-form pricing
-model for European FX options. The new variant
-`PricingEngine::ClosedFormGK` is appended at the tail of the enum so
-the existing variants keep their implicit discriminants and no major
-bump is required (`PricingEngine` has been `#[non_exhaustive]` since
-0.17.0).
+Release adding two new closed-form pricing models:
+- **Black-76** (Black 1976) for European options on futures and forwards.
+- **Garman–Kohlhagen** (1983) for European FX options.
+
+The bump to `0.17.0` is required because `PricingEngine` is now
+`#[non_exhaustive]` (a semver-breaking change for downstream exhaustive
+matches). Both new variants are appended at the tail of the enum to
+preserve existing discriminants and avoid further major bumps.
 
 ### Added
 
+**Black-76 model** (Black 1976):
+- `pricing::black_76`: closed-form `black_76(option) -> Result<Decimal, PricingError>`
+  for European options on futures / forwards. Reuses the existing `d1`
+  / `d2` / `big_n` helpers; `Decimal` end-to-end via `d_mul` / `d_sub`;
+  `tracing::instrument` on the entry point. Only `OptionType::European`
+  is supported — American, Bermuda and exotics return
+  `PricingError::UnsupportedOptionType`.
+- `pricing::Black76` trait with default `calculate_price_black_76`
+  (mirrors `BlackScholes`).
+- `pricing::PricingEngine::ClosedFormBlack76` variant + dispatch from
+  `price_option`.
+- `greeks::utils::calculate_d_values_black_76` `pub(crate)` helper.
+- `examples/examples_pricing/src/bin/black_76.rs`: runnable demo
+  (Hull canonical example, ITM commodity-futures call, unified-API
+  dispatch, short-side sign convention).
+
+**Garman–Kohlhagen model** (Garman & Kohlhagen 1983):
 - `pricing::garman_kohlhagen`: closed-form
   `garman_kohlhagen(option) -> Result<Decimal, PricingError>` for
   European options on FX spot rates. Structurally identical to BSM
@@ -32,52 +51,25 @@ bump is required (`PricingEngine` has been `#[non_exhaustive]` since
 - `examples/examples_pricing/src/bin/garman_kohlhagen.rs`: runnable
   demo (Hull canonical USD/GBP, ITM EUR/USD with FX parity check,
   unified-API dispatch, symmetric-rate degenerate case).
-- `lib.rs` mermaid: new `FX / Currency` subgraph routing
-  `garman_kohlhagen -> FX Spot`.
 
-### Changed
-
-- `pricing/mod.rs` Core Models / Model Selection Guidelines /
-  Performance Considerations now include Garman–Kohlhagen with the
-  explicit field mapping `risk_free_rate -> r_d`,
-  `dividend_yield -> r_f`, `underlying_price -> S`.
-
-## [0.17.0] - 2026-04-26
-
-Major release adding the Black-76 closed-form pricing model for European
-options on futures and forwards. The bump to `0.17.0` is required because
-`PricingEngine` is now `#[non_exhaustive]` (a semver-breaking change for
-downstream exhaustive matches) and the addition of
-`PricingEngine::ClosedFormBlack76` shifts the implicit discriminant of
-`PricingEngine::MonteCarlo` from `1` to `2`.
-
-### Added
-
-- `pricing::black_76`: closed-form `black_76(option) -> Result<Decimal, PricingError>`
-  for European options on futures / forwards. Reuses the existing `d1`
-  / `d2` / `big_n` helpers; `Decimal` end-to-end via `d_mul` / `d_sub`;
-  `tracing::instrument` on the entry point. Only `OptionType::European`
-  is supported — American, Bermuda and exotics return
-  `PricingError::UnsupportedOptionType`.
-- `pricing::Black76` trait with default `calculate_price_black_76`
-  (mirrors `BlackScholes`).
-- `pricing::PricingEngine::ClosedFormBlack76` variant + dispatch from
-  `price_option`.
-- `greeks::utils::calculate_d_values_black_76` `pub(crate)` helper.
-- `examples/examples_pricing/`: new workspace member with binary
-  `black_76` (Hull canonical example, ITM commodity-futures call,
-  unified-API dispatch, short-side sign convention).
+**Infrastructure updates**:
+- `examples/examples_pricing/`: new workspace member with binaries for
+  both models.
 - `lib.rs` mermaid: `Forward-Priced` subgraph routing
-  `black_76 -> {Future, Forward}`.
+  `black_76 -> {Future, Forward}`; new `FX / Currency` subgraph routing
+  `garman_kohlhagen -> FX Spot`.
 
 ### Changed
 
 - `pricing::PricingEngine` is now `#[non_exhaustive]` so future engine
   variants do not require a new major bump.
 - `pricing::mod.rs` Core Models / Model Selection Guidelines /
-  Performance Considerations now include Black-76.
+  Performance Considerations now include both Black-76 and
+  Garman–Kohlhagen with explicit field mapping documentation.
 - `financial_types` bumped to `0.2.2` (adds `UnderlyingAssetType::Future`
   and `UnderlyingAssetType::Forward`).
+- `PricingError` and `GreeksError` pass-through in closed-form dispatch
+  (BS, Black-76, GK) for full error-variant fidelity.
 
 ## [0.16.5] - 2026-04-20
 
