@@ -17,6 +17,17 @@
 //! European-style options. This module provides tools to calculate option prices and
 //! associated Greek values.
 //!
+//! ### Black-76 Model (`black_76`)
+//! Implements the Black (1976) closed-form for European options whose underlying is a
+//! futures or forward price `F` rather than a spot price `S`. Standard model for:
+//! - Options on commodity futures (e.g. oil, gold, agricultural)
+//! - Options on equity index / interest rate futures
+//! - Swaptions, caps and floors
+//!
+//! Structurally similar to Black–Scholes but the drift in `d1`/`d2` collapses to
+//! `σ²/2` because the forward price already incorporates carry, and both legs share
+//! a single discount factor `e^(-rT)`.
+//!
 //! ### Monte Carlo Simulations (`monte_carlo`)
 //! Provides Monte Carlo simulation capabilities for option pricing. This module
 //! supports simulation of stock price paths and uses statistical methods to estimate
@@ -132,10 +143,11 @@
 //! ## Model Selection Guidelines
 //!
 //! Choose the appropriate model based on your needs:
-//! - Black-Scholes: Quick pricing of European options
-//! - Binomial: American options and early exercise
-//! - Monte Carlo: Complex path-dependent options
-//! - Telegraph: Regime-switching and discrete state transitions
+//! - Black-Scholes: Quick pricing of European options on a spot underlying
+//! - Black-76:      European options on futures/forwards, swaptions, caps/floors
+//! - Binomial:      American options and early exercise
+//! - Monte Carlo:   Complex path-dependent options
+//! - Telegraph:     Regime-switching and discrete state transitions
 //!
 //! ## Performance Considerations
 //!
@@ -143,6 +155,7 @@
 //! - Monte Carlo: O(m*n) where m is the number of simulations
 //! - Binomial: O(n²) where n is the number of steps
 //! - Black-Scholes: O(1) constant time calculation
+//! - Black-76: O(1) constant time calculation
 //!
 //! For high-frequency calculations, consider using the Black-Scholes model
 //! when applicable, as it provides the fastest computation times.
@@ -204,6 +217,19 @@ pub mod power;
 /// The Black-Scholes model provides closed-form solutions for European option prices
 /// under specific assumptions about market behavior and asset price dynamics.
 pub mod black_scholes_model;
+
+/// Black-76 (Black 1976) model for pricing options on futures and forwards.
+///
+/// This module implements the Black-76 closed-form model, the standard for pricing:
+/// - Options on futures
+/// - Options on forward contracts
+/// - Swaptions
+/// - Caps and floors
+/// - Options on commodity futures
+///
+/// The Black-76 model is structurally similar to Black-Scholes but uses the forward/futures
+/// price F as input instead of spot S, and has no carry term because F already incorporates carry.
+pub mod black_76;
 
 /// Constants used throughout the financial models.
 ///
@@ -291,6 +317,7 @@ pub use asian::asian_black_scholes;
 pub use barrier::barrier_black_scholes;
 pub use binary::binary_black_scholes;
 pub use binomial_model::{BinomialPricingParams, generate_binomial_tree, price_binomial};
+pub use black_76::{Black76, black_76};
 pub use black_scholes_model::{BlackScholes, black_scholes};
 pub use chooser::chooser_black_scholes;
 pub use cliquet::cliquet_black_scholes;

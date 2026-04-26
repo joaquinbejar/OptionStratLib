@@ -10,7 +10,7 @@
 // into, so the lint is silenced in `#[cfg(test)]` only.
 #![cfg_attr(test, allow(clippy::indexing_slicing))]
 
-//! # OptionStratLib v0.16.5: Financial Options Library
+//! # OptionStratLib v0.17.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -243,6 +243,7 @@
 //! ### **Pricing Models** (`pricing/`)
 //! Advanced pricing engines for options valuation:
 //! - `black_scholes_model.rs`: European options pricing with Greeks
+//! - `black_76.rs`: European options on futures/forwards (Black 1976)
 //! - `binomial_model.rs`: American/European options with early exercise
 //! - `monte_carlo.rs`: Path-dependent and exotic options pricing
 //! - `telegraph.rs`: Jump-diffusion process modeling
@@ -556,10 +557,16 @@
 //!         CH[Chooser]
 //!     end
 //!
+//!     subgraph Forward["Forward-Priced"]
+//!         FUT[Future]
+//!         FWD[Forward]
+//!     end
+//!
 //!     BS[black_scholes] --> EU
 //!     BS --> PathDependent
 //!     BS --> MultiAsset
 //!     BS --> Special
+//!     B76[black_76] --> Forward
 //!     BAW[barone_adesi_whaley] --> AM
 //!     BIN[binomial_model] --> AM
 //!     BIN --> BE
@@ -787,7 +794,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.16.5"
+//! optionstratlib = "0.17.0"
 //! ```
 //!
 //! Or use cargo to add it to your project:
@@ -802,7 +809,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.16.5", features = ["plotly"] }
+//! optionstratlib = { version = "0.17.0", features = ["plotly"] }
 //! ```
 //!
 //! - `plotly`: Enables interactive visualization using plotly.rs
@@ -1193,7 +1200,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.16.5** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.17.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library

@@ -1,5 +1,6 @@
 use crate::Options;
 use crate::error::{PricingError, PricingResult};
+use crate::pricing::black_76::black_76;
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::simulation::simulator::Simulator;
 use positive::Positive;
@@ -8,14 +9,22 @@ use positive::Positive;
 ///
 /// This enum allows selection between different pricing methods:
 /// - `ClosedFormBS`: Uses the Black-Scholes closed-form formula
+/// - `ClosedFormBlack76`: Uses the Black-76 closed-form formula
 /// - `MonteCarlo`: Uses Monte Carlo simulation with a configured simulator
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum PricingEngine {
     /// Black-Scholes closed-form pricing for European options.
     ///
     /// This is the fastest pricing method with O(1) complexity.
     /// Best suited for European options with constant volatility assumptions.
     ClosedFormBS,
+
+    /// Black-76 closed-form pricing for options on futures and forwards.
+    ///
+    /// Fast O(1) pricing for European options on futures, forwards, swaptions, and caps/floors.
+    /// The underlying price is the forward price F, not the spot price.
+    ClosedFormBlack76,
 
     /// Monte Carlo simulation-based pricing.
     ///
@@ -74,10 +83,14 @@ pub enum PricingEngine {
 ///
 /// Propagates any `PricingError` returned by the selected engine:
 /// `PricingError::ExpirationDate` or `PricingError::MethodError`
-/// from Black–Scholes, [`PricingError::BinomialNodeMissing`] or
-/// [`PricingError::SqrtFailure`] from the binomial lattice, or the
+/// from Black–Scholes and Black-76 (both surface `MethodError` for
+/// zero-volatility / non-finite intermediate values, and Black-76
+/// also returns [`PricingError::UnsupportedOptionType`] for
+/// non-European inputs); [`PricingError::BinomialNodeMissing`] or
+/// [`PricingError::SqrtFailure`] from the binomial lattice; the
 /// equivalent failures from exotic engines (barrier, binary,
-/// compound, chooser, cliquet, lookback, telegraph, Monte Carlo).
+/// compound, chooser, cliquet, lookback, telegraph); and
+/// `PricingError::SimulationError` from the Monte Carlo engine.
 pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<Positive> {
     match engine {
         PricingEngine::ClosedFormBS => {
@@ -85,6 +98,12 @@ pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<P
                 .map_err(|e| PricingError::method_error("Black-Scholes", &e.to_string()))?;
 
             // Convert Decimal to Positive using From trait
+            Ok(Positive::new_decimal(price_decimal.abs())?)
+        }
+        PricingEngine::ClosedFormBlack76 => {
+            let price_decimal = black_76(option)
+                .map_err(|e| PricingError::method_error("Black-76", &e.to_string()))?;
+
             Ok(Positive::new_decimal(price_decimal.abs())?)
         }
         PricingEngine::MonteCarlo { simulator } => simulator

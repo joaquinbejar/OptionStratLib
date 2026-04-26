@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-04-26
+
+Major release adding the Black-76 closed-form pricing model for European
+options on futures and forwards. The bump to `0.17.0` is required because
+`PricingEngine` is now `#[non_exhaustive]` (a semver-breaking change for
+downstream exhaustive matches) and the addition of
+`PricingEngine::ClosedFormBlack76` shifts the implicit discriminant of
+`PricingEngine::MonteCarlo` from `1` to `2`.
+
+### Added
+
+- `pricing::black_76`: closed-form `black_76(option) -> Result<Decimal, PricingError>`
+  for European options on futures / forwards. Reuses the existing `d1`
+  / `d2` / `big_n` helpers; `Decimal` end-to-end via `d_mul` / `d_sub`;
+  `tracing::instrument` on the entry point. Only `OptionType::European`
+  is supported — American, Bermuda and exotics return
+  `PricingError::UnsupportedOptionType`.
+- `pricing::Black76` trait with default `calculate_price_black_76`
+  (mirrors `BlackScholes`).
+- `pricing::PricingEngine::ClosedFormBlack76` variant + dispatch from
+  `price_option`.
+- `greeks::utils::calculate_d_values_black_76` `pub(crate)` helper.
+- `examples/examples_pricing/`: new workspace member with binary
+  `black_76` (Hull canonical example, ITM commodity-futures call,
+  unified-API dispatch, short-side sign convention).
+- `lib.rs` mermaid: `Forward-Priced` subgraph routing
+  `black_76 -> {Future, Forward}`.
+
+### Changed
+
+- `pricing::PricingEngine` is now `#[non_exhaustive]` so future engine
+  variants do not require a new major bump.
+- `pricing::mod.rs` Core Models / Model Selection Guidelines /
+  Performance Considerations now include Black-76.
+- `financial_types` bumped to `0.2.2` (adds `UnderlyingAssetType::Future`
+  and `UnderlyingAssetType::Forward`).
+
 ## [0.16.5] - 2026-04-20
 
 Documentation-only release. Refresh the crate-level rustdoc and

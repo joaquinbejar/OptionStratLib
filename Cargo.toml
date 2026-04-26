@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.16.5"
+version = "0.17.0"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -101,17 +101,18 @@ crate-type = ["cdylib", "rlib"]
 
 [workspace]
 members = [
+    "examples/examples_chain",
+    "examples/examples_curves",
+    "examples/examples_exotics",
+    "examples/examples_metrics",
+    "examples/examples_pricing",
     "examples/examples_simulation",
+    "examples/examples_strategies",
     "examples/examples_strategies_best",
     "examples/examples_strategies_delta",
-    "examples/examples_strategies",
-    "examples/examples_visualization",
-    "examples/examples_chain",
-    "examples/examples_volatility",
-    "examples/examples_curves",
     "examples/examples_surfaces",
-    "examples/examples_metrics",
-    "examples/examples_exotics",
+    "examples/examples_visualization",
+    "examples/examples_volatility",
 ]
 
 [workspace.dependencies]
