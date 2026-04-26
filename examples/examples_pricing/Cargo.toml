@@ -1,0 +1,17 @@
+[package]
+name = "examples_pricing"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+optionstratlib = { path = "../../" }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+positive = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[[bin]]
+name = "black_76"
+path = "src/bin/black_76.rs"

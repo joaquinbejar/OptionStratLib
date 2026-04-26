@@ -467,6 +467,40 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
     Ok((d1_value?, d2_value?))
 }
 
+/// Calculates d1 and d2 for the Black-76 model (options on futures/forwards).
+///
+/// For Black-76, the cost of carry `b = 0` because the forward price F already
+/// incorporates all carry. This function specializes `calculate_d_values` for
+/// that case.
+///
+/// # Arguments
+/// * `option` - The option data; `underlying_price` holds the forward price F.
+///
+/// # Returns
+/// * `Ok((d1, d2))` - The Black-76 d1 and d2 parameters.
+/// * `Err(GreeksError)` - If validation or computation fails.
+pub(crate) fn calculate_d_values_black_76(
+    option: &Options,
+) -> Result<(Decimal, Decimal), GreeksError> {
+    // Black-76: cost of carry b = 0 (forward pricing, no carry term in d1/d2)
+    let b = Decimal::ZERO;
+    let d1_value = d1(
+        option.underlying_price,
+        option.strike_price,
+        b,
+        option.expiration_date.get_years()?,
+        option.implied_volatility,
+    );
+    let d2_value = d2(
+        option.underlying_price,
+        option.strike_price,
+        b,
+        option.expiration_date.get_years()?,
+        option.implied_volatility,
+    );
+    Ok((d1_value?, d2_value?))
+}
+
 /// Calculates the optimal position sizes for two positions to achieve delta neutrality
 /// while maintaining a specified total position size.
 ///
