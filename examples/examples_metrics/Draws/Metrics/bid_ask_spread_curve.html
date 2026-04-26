@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Graph</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js" charset="utf-8"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #plotly-graph { width: 100%; height: 600px; }
+    </style>
+</head>
+<body>
+    <div id="plotly-graph"></div>
+    <script>
+        var plotJson = {"data":[{"type":"scatter","name":"Curve","mode":"lines","x":["380","400","420","430","440","445","450","455","460","470","480","500","520"],"y":["0.0277777777777777777777777778","0.0284360189573459715639810427","0.0239520958083832335329341317","0.0206185567010309278350515464","0.0185758513931888544891640867","0.0158730158730158730158730159","0.0104712041884816753926701571","0.0281690140845070422535211268","0.0392156862745098039215686275","0.1132075471698113207547169811","0.2222222222222222222222222222","0.6666666666666666666666666667","1.2"],"line":{"width":2.0,"color":"#1f77b4"}}],"layout":{"title":{"text":"Graph"},"showlegend":true,"width":1280,"height":720},"config":{},"frames":null};
+        Plotly.newPlot('plotly-graph', plotJson);
+    </script>
+</body>
+</html>

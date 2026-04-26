@@ -12,6 +12,7 @@ use positive::Positive;
 /// - `ClosedFormBlack76`: Uses the Black-76 closed-form formula
 /// - `MonteCarlo`: Uses Monte Carlo simulation with a configured simulator
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum PricingEngine {
     /// Black-Scholes closed-form pricing for European options.
     ///
@@ -104,6 +105,10 @@ pub fn price_option(option: &Options, engine: &PricingEngine) -> PricingResult<P
         PricingEngine::MonteCarlo { simulator } => simulator
             .get_mc_option_price(option)
             .map_err(|e| PricingError::simulation_error(&e.to_string())),
+        _ => Err(PricingError::method_error(
+            "Unknown pricing engine",
+            "Unrecognized or unimplemented pricing engine variant",
+        )),
     }
 }
 
