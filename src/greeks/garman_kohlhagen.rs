@@ -44,7 +44,7 @@
 //!
 //! These functions implement the carry-adjusted Garman–Kohlhagen formulas
 //! directly using the `b = r_d − r_f` cost-of-carry term in `d1`/`d2`. They
-//! do **not** delegate to [`crate::greeks::delta`] / [`gamma`] / etc.,
+//! do **not** delegate to [`crate::greeks::delta`] / [`crate::greeks::gamma`] / etc.,
 //! because those functions currently call the unadjusted `d1` (passing
 //! only `risk_free_rate`) before multiplying by `e^(-qT)` — a mismatch
 //! between the d-values and the discount factor that yields incorrect
