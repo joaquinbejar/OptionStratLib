@@ -56,8 +56,9 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::decimal::{d_div, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use tracing::{instrument, trace};
 
@@ -91,6 +92,41 @@ fn side_sign(option: &Options) -> Decimal {
 /// Cost of carry `b = r_d − r_f` for Garman–Kohlhagen.
 fn cost_of_carry(option: &Options) -> Decimal {
     option.risk_free_rate - option.dividend_yield.to_dec()
+}
+
+/// Returns `Some(time_in_years)` when the option has not expired yet, or
+/// `None` at expiration. Mirrors the `T == 0` short-circuit used by the
+/// BSM Greeks in `src/greeks/equations.rs`, where the d-values are
+/// undefined and the Greeks collapse to discrete intrinsic-state values.
+fn time_to_expiry(option: &Options) -> Result<Option<Positive>, GreeksError> {
+    let years = option.expiration_date.get_years()?;
+    if years == Positive::ZERO {
+        Ok(None)
+    } else {
+        Ok(Some(years))
+    }
+}
+
+/// Closed-form delta value at expiration. Calls pay 1 ITM / 0 OTM; puts pay
+/// −1 ITM / 0 OTM. Matches the `T == 0` branch of `crate::greeks::delta`.
+fn delta_at_expiry(option: &Options) -> Decimal {
+    let sign = side_sign(option);
+    match option.option_style {
+        OptionStyle::Call => {
+            if option.underlying_price > option.strike_price {
+                sign
+            } else {
+                Decimal::ZERO
+            }
+        }
+        OptionStyle::Put => {
+            if option.underlying_price < option.strike_price {
+                -sign
+            } else {
+                Decimal::ZERO
+            }
+        }
+    }
 }
 
 /// Computes (`d1`, `d2`) for Garman–Kohlhagen using `b = r_d − r_f` as the
@@ -144,7 +180,12 @@ fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksE
 ))]
 pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?.to_dec();
+    let Some(t_pos) = time_to_expiry(option)? else {
+        // Mirror BSM: at expiration the option is a binary intrinsic state.
+        let qty = option.quantity.to_dec();
+        return Ok(delta_at_expiry(option) * qty);
+    };
+    let t = t_pos.to_dec();
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
@@ -183,7 +224,9 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let Some(t) = time_to_expiry(option)? else {
+        return Ok(Decimal::ZERO);
+    };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
@@ -221,7 +264,9 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let Some(t) = time_to_expiry(option)? else {
+        return Ok(Decimal::ZERO);
+    };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
@@ -258,7 +303,9 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let Some(t) = time_to_expiry(option)? else {
+        return Ok(Decimal::ZERO);
+    };
     let (d1_v, d2_v) = calculate_d_values_gk(option)?;
 
     let r_d = option.risk_free_rate;
@@ -290,13 +337,15 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
             // Θ_call = common − r_d·K·e^(-r_d T)·N(d2) + r_f·S·e^(-r_f T)·N(d1)
             let minus = d_mul(r_d_k_df_d, big_n(d2_v)?, "greeks::gk::theta::call::minus")?;
             let plus = d_mul(r_f_s_df_f, big_n(d1_v)?, "greeks::gk::theta::call::plus")?;
-            d_sub(common + plus, minus, "greeks::gk::theta::call::sum")?
+            let common_plus = d_add(common, plus, "greeks::gk::theta::call::common_plus")?;
+            d_sub(common_plus, minus, "greeks::gk::theta::call::sum")?
         }
         OptionStyle::Put => {
             // Θ_put = common + r_d·K·e^(-r_d T)·N(-d2) − r_f·S·e^(-r_f T)·N(-d1)
             let plus = d_mul(r_d_k_df_d, big_n(-d2_v)?, "greeks::gk::theta::put::plus")?;
             let minus = d_mul(r_f_s_df_f, big_n(-d1_v)?, "greeks::gk::theta::put::minus")?;
-            d_sub(common + plus, minus, "greeks::gk::theta::put::sum")?
+            let common_plus = d_add(common, plus, "greeks::gk::theta::put::common_plus")?;
+            d_sub(common_plus, minus, "greeks::gk::theta::put::sum")?
         }
     };
 
@@ -329,7 +378,9 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let Some(t) = time_to_expiry(option)? else {
+        return Ok(Decimal::ZERO);
+    };
     let (_d1, d2_v) = calculate_d_values_gk(option)?;
 
     let r_d = option.risk_free_rate;
@@ -370,7 +421,9 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
 #[instrument(skip(option), fields(strike = %option.strike_price))]
 pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
-    let t = option.expiration_date.get_years()?;
+    let Some(t) = time_to_expiry(option)? else {
+        return Ok(Decimal::ZERO);
+    };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
@@ -765,5 +818,42 @@ mod tests {
         assert_eq!(q.theta_gk().unwrap(), theta_gk(&opt).unwrap());
         assert_eq!(q.rho_domestic_gk().unwrap(), rho_domestic_gk(&opt).unwrap());
         assert_eq!(q.rho_foreign_gk().unwrap(), rho_foreign_gk(&opt).unwrap());
+    }
+
+    // ---- T = 0 (expiration) handling, mirrors BSM Greeks --------------
+
+    #[test]
+    fn test_t_zero_delta_call_long_itm() {
+        let opt = create_fx_option(1.20, 1.10, dec!(0.04), 0.02, 0.0, 0.10, OptionStyle::Call);
+        assert_eq!(delta_gk(&opt).unwrap(), Decimal::ONE);
+    }
+
+    #[test]
+    fn test_t_zero_delta_call_long_otm() {
+        let opt = create_fx_option(1.05, 1.10, dec!(0.04), 0.02, 0.0, 0.10, OptionStyle::Call);
+        assert_eq!(delta_gk(&opt).unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_t_zero_delta_put_long_itm() {
+        let opt = create_fx_option(1.05, 1.10, dec!(0.04), 0.02, 0.0, 0.10, OptionStyle::Put);
+        assert_eq!(delta_gk(&opt).unwrap(), Decimal::NEGATIVE_ONE);
+    }
+
+    #[test]
+    fn test_t_zero_delta_short_call_itm() {
+        let mut opt = create_fx_option(1.20, 1.10, dec!(0.04), 0.02, 0.0, 0.10, OptionStyle::Call);
+        opt.side = Side::Short;
+        assert_eq!(delta_gk(&opt).unwrap(), Decimal::NEGATIVE_ONE);
+    }
+
+    #[test]
+    fn test_t_zero_other_greeks_zero() {
+        let opt = create_fx_option(1.10, 1.10, dec!(0.04), 0.02, 0.0, 0.10, OptionStyle::Call);
+        assert_eq!(gamma_gk(&opt).unwrap(), Decimal::ZERO);
+        assert_eq!(vega_gk(&opt).unwrap(), Decimal::ZERO);
+        assert_eq!(theta_gk(&opt).unwrap(), Decimal::ZERO);
+        assert_eq!(rho_domestic_gk(&opt).unwrap(), Decimal::ZERO);
+        assert_eq!(rho_foreign_gk(&opt).unwrap(), Decimal::ZERO);
     }
 }
