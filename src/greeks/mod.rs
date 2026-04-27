@@ -183,14 +183,16 @@ use positive::pos_or_panic;
 //! let color_surface = chain.color_time_surface(days)?;
 //! ```
 
+mod black_76;
 mod equations;
 pub mod numerical;
 mod utils;
 
+pub use black_76::{Black76Greeks, delta_b76, gamma_b76, rho_b76, theta_b76, vega_b76};
 pub use equations::{
     Greek, Greeks, GreeksSnapshot, charm, color, delta, gamma, rho, rho_d, theta, vanna, vega,
     veta, vomma,
 };
+pub(crate) use utils::calculate_d_values;
 pub use utils::calculate_delta_neutral_sizes;
-pub use utils::{big_n, d1, d2, n};
-pub(crate) use utils::{calculate_d_values, calculate_d_values_black_76};
+pub use utils::{big_n, calculate_d_values_black_76, d1, d2, n};
