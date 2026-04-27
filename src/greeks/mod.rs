@@ -185,6 +185,7 @@ use positive::pos_or_panic;
 
 mod black_76;
 mod equations;
+mod garman_kohlhagen;
 pub mod numerical;
 mod utils;
 
@@ -192,6 +193,9 @@ pub use black_76::{Black76Greeks, delta_b76, gamma_b76, rho_b76, theta_b76, vega
 pub use equations::{
     Greek, Greeks, GreeksSnapshot, charm, color, delta, gamma, rho, rho_d, theta, vanna, vega,
     veta, vomma,
+};
+pub use garman_kohlhagen::{
+    GarmanKohlhagenGreeks, delta_gk, gamma_gk, rho_domestic_gk, rho_foreign_gk, theta_gk, vega_gk,
 };
 pub(crate) use utils::calculate_d_values;
 pub use utils::calculate_delta_neutral_sizes;

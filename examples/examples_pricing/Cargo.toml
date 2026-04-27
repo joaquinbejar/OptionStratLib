@@ -23,3 +23,7 @@ path = "src/bin/black_76_greeks.rs"
 [[bin]]
 name = "garman_kohlhagen"
 path = "src/bin/garman_kohlhagen.rs"
+
+[[bin]]
+name = "garman_kohlhagen_greeks"
+path = "src/bin/garman_kohlhagen_greeks.rs"
