@@ -17,5 +17,9 @@ name = "black_76"
 path = "src/bin/black_76.rs"
 
 [[bin]]
+name = "black_76_greeks"
+path = "src/bin/black_76_greeks.rs"
+
+[[bin]]
 name = "garman_kohlhagen"
 path = "src/bin/garman_kohlhagen.rs"

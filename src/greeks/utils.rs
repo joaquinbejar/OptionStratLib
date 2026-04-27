@@ -479,9 +479,7 @@ pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal),
 /// # Returns
 /// * `Ok((d1, d2))` - The Black-76 d1 and d2 parameters.
 /// * `Err(GreeksError)` - If validation or computation fails.
-pub(crate) fn calculate_d_values_black_76(
-    option: &Options,
-) -> Result<(Decimal, Decimal), GreeksError> {
+pub fn calculate_d_values_black_76(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     // Black-76: cost of carry b = 0 (forward pricing, no carry term in d1/d2)
     let b = Decimal::ZERO;
     let years = option.expiration_date.get_years()?;
