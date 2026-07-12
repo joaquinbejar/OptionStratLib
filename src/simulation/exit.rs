@@ -441,7 +441,8 @@ pub fn check_exit_policy(
         ExitPolicy::And(policies) => {
             let mut triggered = Vec::new();
             for p in policies {
-                if let Some(triggered_policy) = check_exit_policy(
+                // All must be true for AND; `?` propagates the None.
+                let triggered_policy = check_exit_policy(
                     p,
                     initial_premium,
                     current_premium,
@@ -449,11 +450,8 @@ pub fn check_exit_policy(
                     days_left,
                     underlying_price,
                     is_long,
-                ) {
-                    triggered.push(triggered_policy);
-                } else {
-                    return None; // All must be true for AND
-                }
+                )?;
+                triggered.push(triggered_policy);
             }
             Some(ExitPolicy::And(triggered))
         }
