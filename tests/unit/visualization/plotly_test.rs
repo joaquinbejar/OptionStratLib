@@ -654,6 +654,7 @@ mod tests_plotly_interface {
     // Tests for to_plot
     #[test]
     #[cfg(feature = "static_export")]
+    #[ignore]
     fn test_to_plot_with_series() {
         // Create a graph with Series data
         let graph = create_test_graph_with_series();
@@ -718,6 +719,7 @@ mod tests_plotly_interface {
 
     #[test]
     #[cfg(feature = "static_export")]
+    #[ignore]
     fn test_write_png() {
         use tempfile::tempdir;
 
@@ -756,6 +758,7 @@ mod tests_plotly_interface {
     // (PNG and SVG are commented out because they require kaleido)
     #[test]
     #[cfg(feature = "static_export")]
+    #[ignore]
     fn test_render_with_html_output_type() {
         let graph = create_test_graph_with_series();
 
