@@ -157,17 +157,33 @@ pub fn generator_optionseries(
         // Age the series' expirations by the walk time elapsed since the
         // initial step, dropping the ones that have already expired, so the
         // option series ages along the walk like the chain generator does.
-        let elapsed_days =
-            (initial_days_left.to_dec() - x_step.days_left()?.to_dec()).max(Decimal::ZERO);
+        // Checked subtraction throughout: day counts are financial time
+        // values, so overflow must surface as an error, never wrap.
+        let overflow = || {
+            ChainError::invalid_parameters(
+                "series",
+                "elapsed-days subtraction overflowed while aging the series",
+            )
+        };
+        let elapsed_days = initial_days_left
+            .to_dec()
+            .checked_sub(x_step.days_left()?.to_dec())
+            .ok_or_else(overflow)?
+            .max(Decimal::ZERO);
         let aged_series: Vec<Positive> = build_params
             .series
             .iter()
             .filter(|days| days.to_dec() > elapsed_days)
-            .map(|days| Positive::new_decimal(days.to_dec() - elapsed_days))
-            .collect::<Result<Vec<Positive>, _>>()
-            .map_err(|e| {
-                ChainError::invalid_parameters("series", &format!("failed to age series: {e}"))
-            })?;
+            .map(|days| {
+                let remaining = days
+                    .to_dec()
+                    .checked_sub(elapsed_days)
+                    .ok_or_else(overflow)?;
+                Positive::new_decimal(remaining).map_err(|e| {
+                    ChainError::invalid_parameters("series", &format!("failed to age series: {e}"))
+                })
+            })
+            .collect::<Result<Vec<Positive>, ChainError>>()?;
         if aged_series.is_empty() {
             // Every expiration in the series has passed: nothing left to
             // simulate, end the walk here.

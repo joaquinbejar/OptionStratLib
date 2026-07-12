@@ -36,8 +36,11 @@ use tracing::debug;
 /// # Errors
 ///
 /// Propagates errors from the historical helpers (`calculate_log_returns`,
-/// `constant_volatility`, `adjust_volatility`).
-fn walk_volatility<Y>(walk_params: &WalkParams<Positive, Y>) -> Result<Option<Positive>, ChainError>
+/// `constant_volatility`, `adjust_volatility`) as [`SimulationError`], so
+/// the driver stays free of chain-layer error types.
+fn walk_volatility<Y>(
+    walk_params: &WalkParams<Positive, Y>,
+) -> Result<Option<Positive>, SimulationError>
 where
     Y: TryInto<Positive> + Display + Clone,
 {
@@ -72,11 +75,12 @@ where
 /// # Errors
 ///
 /// Propagates errors from `calculate_log_returns` / `adjust_volatility` and
-/// surfaces arithmetic overflow as `ChainError`.
+/// surfaces arithmetic overflow as [`SimulationError`], keeping the driver
+/// free of chain-layer error types.
 fn expanding_window_vols(
     prices: &[Positive],
     timeframe: TimeFrame,
-) -> Result<Option<Vec<Positive>>, ChainError> {
+) -> Result<Option<Vec<Positive>>, SimulationError> {
     let n = prices.len();
     if n < 3 {
         // Fewer than two returns anywhere: no sample variance is computable.
@@ -88,7 +92,7 @@ fn expanding_window_vols(
         .collect();
 
     let overflow =
-        |what: &str| ChainError::invalid_parameters("prices", &format!("{what} overflowed"));
+        |what: &str| SimulationError::walk_error(&format!("expanding-window {what} overflowed"));
 
     let mut sum = Decimal::ZERO;
     let mut sq_sum = Decimal::ZERO;
@@ -182,26 +186,32 @@ fn expanding_window_vols(
 /// # Returns
 ///
 /// * `Ok(Vec<Step<Positive, Y>>)` - The simulated walk.
-/// * `Err(ChainError)` - If the walker, the volatility estimation, the
-///   x-step advance, or `next_y` fail.
+/// * `Err(E)` - If the walker, the volatility estimation, the x-step
+///   advance, or `next_y` fail.
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>`
-/// conversion) if the walker returns an error — including
-/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has
-/// fewer prices than `walk_params.size` — and propagates errors from the
-/// volatility estimation and from `next_y`.
-pub fn walk_steps<Y, F>(
+/// The driver is generic over its error type: every internal failure is a
+/// [`SimulationError`] lifted into `E` via `From`, so the simulation layer
+/// carries no chain-specific error types — the chain and series generators
+/// simply instantiate `E = ChainError`. Walker errors include
+/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk
+/// has fewer prices than `walk_params.size`; `next_y` errors are returned
+/// verbatim.
+pub fn walk_steps<Y, E, F>(
     walk_params: &WalkParams<Positive, Y>,
     mut next_y: F,
-) -> Result<Vec<Step<Positive, Y>>, ChainError>
+) -> Result<Vec<Step<Positive, Y>>, E>
 where
     Y: TryInto<Positive> + Display + Clone,
-    F: FnMut(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, ChainError>,
+    E: From<SimulationError>,
+    F: FnMut(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, E>,
 {
     debug!("{}", walk_params);
-    let path = walk_params.walker.generate_with_vol(walk_params)?;
+    let path = walk_params
+        .walker
+        .generate_with_vol(walk_params)
+        .map_err(E::from)?;
     let y_steps = path.prices;
     if y_steps.len() <= 1 {
         // Preserve the init-step invariant when the walker produces no
@@ -217,14 +227,16 @@ where
     let step_vols: Option<Vec<Positive>> = match path.vols {
         Some(vols) => Some(vols),
         None => match &walk_params.walk_type {
-            WalkType::Historical { timeframe, .. } => expanding_window_vols(&y_steps, *timeframe)?,
+            WalkType::Historical { timeframe, .. } => {
+                expanding_window_vols(&y_steps, *timeframe).map_err(E::from)?
+            }
             _ => None,
         },
     };
     let constant_vol = if step_vols.is_some() {
         None
     } else {
-        walk_volatility(walk_params)?
+        walk_volatility(walk_params).map_err(E::from)?
     };
 
     let mut steps: Vec<Step<Positive, Y>> = vec![walk_params.init_step.clone()];
@@ -238,7 +250,7 @@ where
             // Reaching expiration is the normal end of a walk: truncate.
             Err(SimulationError::ExpirationReached) => break,
             // Any other step-advance failure is a real error: propagate.
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(E::from(e)),
         };
         let volatility = step_vols
             .as_ref()
@@ -280,24 +292,31 @@ where
 /// * `next_y` must be `Fn + Sync` (stateless or internally synchronized)
 ///   instead of `FnMut`.
 /// * `Ok(None)` still ends the walk at the previous step; steps past the
-///   first `None` are computed speculatively and discarded.
-/// * On failure the first error in step order is returned.
+///   first `None` are computed speculatively and their results — values AND
+///   errors — are discarded, exactly as the serial driver never evaluates
+///   them.
+/// * On failure, the first error in step order that precedes any stop
+///   signal is returned.
 ///
 /// # Errors
 ///
 /// Same as [`walk_steps`].
-pub fn walk_steps_par<Y, F>(
+pub fn walk_steps_par<Y, E, F>(
     walk_params: &WalkParams<Positive, Y>,
     next_y: F,
-) -> Result<Vec<Step<Positive, Y>>, ChainError>
+) -> Result<Vec<Step<Positive, Y>>, E>
 where
     Y: TryInto<Positive> + Display + Clone + Send,
-    F: Fn(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, ChainError> + Sync,
+    E: From<SimulationError> + Send,
+    F: Fn(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, E> + Sync,
 {
     use rayon::prelude::*;
 
     debug!("{}", walk_params);
-    let path = walk_params.walker.generate_with_vol(walk_params)?;
+    let path = walk_params
+        .walker
+        .generate_with_vol(walk_params)
+        .map_err(E::from)?;
     let y_steps = path.prices;
     if y_steps.len() <= 1 {
         // Preserve the init-step invariant when the walker produces no
@@ -310,14 +329,16 @@ where
     let step_vols: Option<Vec<Positive>> = match path.vols {
         Some(vols) => Some(vols),
         None => match &walk_params.walk_type {
-            WalkType::Historical { timeframe, .. } => expanding_window_vols(&y_steps, *timeframe)?,
+            WalkType::Historical { timeframe, .. } => {
+                expanding_window_vols(&y_steps, *timeframe).map_err(E::from)?
+            }
             _ => None,
         },
     };
     let constant_vol = if step_vols.is_some() {
         None
     } else {
-        walk_volatility(walk_params)?
+        walk_volatility(walk_params).map_err(E::from)?
     };
 
     // Precompute the x-step sequence serially, honoring the
@@ -330,20 +351,25 @@ where
             // Reaching expiration is the normal end of a walk: truncate.
             Err(SimulationError::ExpirationReached) => break,
             // Any other step-advance failure is a real error: propagate.
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(E::from(e)),
         };
         x_steps.push(current_x);
     }
 
     // Every step's inputs are known up front: build the y-values in
-    // parallel, preserving order.
-    let built: Vec<Option<Y>> = x_steps
+    // parallel, preserving order. Collect WITHOUT short-circuiting so a
+    // speculative error past a stop signal cannot mask the stop: the
+    // ordered assembly below decides what the serial driver would have
+    // observed.
+    let built: Vec<Result<Option<Y>, E>> = x_steps
         .par_iter()
         .enumerate()
         .map(|(offset, x_step)| {
             let price_index = offset + 1;
             let y_step = y_steps.get(price_index).copied().ok_or_else(|| {
-                ChainError::invalid_parameters("prices", "walker path shorter than x-steps")
+                E::from(SimulationError::walk_error(
+                    "walker path shorter than x-steps",
+                ))
             })?;
             let volatility = step_vols
                 .as_ref()
@@ -351,15 +377,20 @@ where
                 .or(constant_vol);
             next_y(&y_step, volatility, x_step)
         })
-        .collect::<Result<Vec<Option<Y>>, ChainError>>()?;
+        .collect();
 
-    // Assemble serially: stop at the first `Ok(None)` (same semantics as
-    // the serial driver) and assign contiguous y indices.
+    // Assemble serially in step order, mirroring the serial driver exactly:
+    // an `Err` is propagated only if it occurs before any `Ok(None)` stop
+    // signal; results past the stop are speculative and discarded.
     let mut steps: Vec<Step<Positive, Y>> = vec![walk_params.init_step.clone()];
     let mut y_index = *walk_params.ystep_ref().index();
-    for (x_step, y_value) in x_steps.into_iter().zip(built) {
-        let Some(y_value) = y_value else {
-            break;
+    for (x_step, y_result) in x_steps.into_iter().zip(built) {
+        let y_value = match y_result {
+            Ok(Some(y_value)) => y_value,
+            // The serial driver would have stopped here and never evaluated
+            // the remaining steps.
+            Ok(None) => break,
+            Err(e) => return Err(e),
         };
         y_index += 1;
         steps.push(Step {
@@ -412,6 +443,9 @@ where
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
+    // ChainError-typed adapter over the generic driver, kept for API
+    // compatibility with the chain/series generator family; the driver
+    // itself is error-generic and does not depend on the chains layer.
     walk_steps(walk_params, |new_price, _volatility, _x_step| {
         Ok(Some(*new_price))
     })
@@ -654,14 +688,17 @@ mod tests {
         };
 
         let mut calls = 0;
-        let steps = match walk_steps(&walk_params, |price, _vol, _x| {
-            calls += 1;
-            if calls > 3 {
-                Ok(None)
-            } else {
-                Ok(Some(*price))
-            }
-        }) {
+        let steps = match walk_steps(
+            &walk_params,
+            |price, _vol, _x| -> Result<Option<Positive>, ChainError> {
+                calls += 1;
+                if calls > 3 {
+                    Ok(None)
+                } else {
+                    Ok(Some(*price))
+                }
+            },
+        ) {
             Ok(steps) => steps,
             Err(e) => panic!("walk_steps failed: {e}"),
         };
@@ -843,5 +880,71 @@ mod tests {
             };
             assert_eq!(sd, pd, "x days differ at step {i}");
         }
+    }
+
+    /// Review regression (#419): an error from a speculative step past an
+    /// `Ok(None)` stop must be discarded (the serial driver never evaluates
+    /// those steps), while an error before the stop still propagates.
+    #[test]
+    fn test_walk_steps_par_error_after_stop_is_discarded() {
+        use crate::simulation::walk_test_support::RampWalker;
+        use rust_decimal_macros::dec;
+
+        let make_params = || WalkParams {
+            size: 8,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::ONE, // prices 100, 101, 102, ...
+            }),
+        };
+
+        // Stop at price 102 (step 2), error at price 103 (step 3): the
+        // speculative error must be discarded and the walk succeed.
+        let steps = match walk_steps_par(
+            &make_params(),
+            |price: &Positive, _vol, _x| -> Result<Option<Positive>, ChainError> {
+                if *price == pos_or_panic!(103.0) {
+                    Err(ChainError::invalid_parameters("test", "speculative error"))
+                } else if *price == pos_or_panic!(102.0) {
+                    Ok(None)
+                } else {
+                    Ok(Some(*price))
+                }
+            },
+        ) {
+            Ok(steps) => steps,
+            Err(e) => panic!("error past the stop signal must be discarded: {e}"),
+        };
+        // init + step 1 (price 101); price 102 stopped the walk.
+        assert_eq!(steps.len(), 2);
+
+        // Error at price 101 (step 1), stop at price 102 (step 2): the
+        // error precedes the stop and must propagate, as in the serial
+        // driver.
+        let result = walk_steps_par(
+            &make_params(),
+            |price: &Positive, _vol, _x| -> Result<Option<Positive>, ChainError> {
+                if *price == pos_or_panic!(101.0) {
+                    Err(ChainError::invalid_parameters("test", "early error"))
+                } else if *price == pos_or_panic!(102.0) {
+                    Ok(None)
+                } else {
+                    Ok(Some(*price))
+                }
+            },
+        );
+        assert!(result.is_err(), "error before the stop must propagate");
     }
 }

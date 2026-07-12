@@ -629,7 +629,6 @@ mod tests_plotly_interface {
     }
 
     #[test]
-    #[ignore]
     fn test_make_scatter_creates_valid_scatter() {
         // Arrange
         let mut series = Series2D {
