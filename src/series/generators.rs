@@ -1,4 +1,4 @@
-use crate::error::ChainError;
+use crate::error::{ChainError, SimulationError};
 use crate::series::{OptionSeries, OptionSeriesBuildParams};
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
@@ -8,30 +8,30 @@ use crate::volatility::{adjust_volatility, constant_volatility};
 use core::option::Option;
 use positive::Positive;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use tracing::debug;
 
 #[cfg(test)]
 use positive::pos_or_panic;
 
-/// Creates a new `OptionSeries` from a given previous `Ystep` series, a new price,
-/// and an optional volatility value.
+/// Creates a new `OptionSeries` from pre-derived build parameters, a new price,
+/// an optional volatility, and the aged series expirations.
 ///
 /// # Parameters
-/// - `previous_y_step`: A reference to the previous `Ystep` series of type `OptionSeries`.
-///   It represents the state of the series prior to this computation.
-/// - `new_price`: A reference to a `Positive` value representing the new price to use as an input
-///   for the computation.
-/// - `volatility`: An optional `Positive` value representing the volatility used in the calculation.
-///   If `None`, a default behavior or calculation is assumed.
+/// - `build_params`: Build parameters derived once from the initial `OptionSeries`.
+/// - `new_price`: A reference to a `Positive` value representing the new underlying price.
+/// - `volatility`: An optional `Positive` value representing the implied volatility to
+///   stamp on the rebuilt chains. If `None`, the volatility carried by `build_params`
+///   is kept.
+/// - `aged_series`: The series' days-to-expiration after subtracting the walk time
+///   elapsed since the initial step (already-expired entries removed), so the option
+///   series ages along the walk.
 ///
 /// # Returns
-/// Returns a `Result` that, on success, contains the newly created `OptionSeries`. On failure,
-/// it contains a boxed dynamic error with details about what went wrong.
+/// Returns a `Result` that, on success, contains the newly created `OptionSeries`.
 ///
 /// # Errors
 /// This function can return an error if:
-/// - The `previous_y_step` contains invalid or inconsistent data for creating the new series.
+/// - The `build_params` contain invalid or inconsistent data for creating the new series.
 /// - The `new_price` or optional `volatility`, if provided, result in an invalid computation.
 /// - Any other unexpected error occurs during the processing.
 ///
@@ -39,12 +39,14 @@ fn create_series_from_step(
     build_params: &OptionSeriesBuildParams,
     new_price: &Positive,
     volatility: Option<Positive>,
+    aged_series: Vec<Positive>,
 ) -> Result<OptionSeries, ChainError> {
     let mut series_params = build_params.clone();
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
         series_params.set_implied_volatility(volatility);
     }
+    series_params.series = aged_series;
     let new_chain = OptionSeries::build_series(&series_params)?;
     Ok(new_chain)
 }
@@ -64,10 +66,21 @@ fn create_series_from_step(
 /// Returns a `Vec<Step<Positive, OptionSeries>>` containing a series of steps generated based
 /// on the specified type of walk and its associated parameters. Each step combines both the
 /// progression in the x-axis and the calculated output (y-axis) using the mathematical rules
-/// of the given walk type. The returned vector always starts with
-/// `walk_params.init_step`; if the walk type cannot generate any further
-/// steps (e.g. Historical with empty / insufficient price data) only the
-/// initial step is returned.
+/// of the given walk type.
+///
+/// # Contract (shared with [`crate::chains::generator_optionchain`] and
+/// [`crate::chains::generator_positive`])
+///
+/// * The returned vector always starts with `walk_params.init_step`.
+/// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
+///   only the initial step is returned.
+/// * The walk is truncated when the x-step reaches expiration
+///   (`SimulationError::ExpirationReached`) or when every expiration in the series
+///   has passed; any other step-advance error is propagated.
+/// * The result is truncated to at most `walk_params.size` steps.
+/// * The series' days-to-expiration are aged by the walk time elapsed since the
+///   initial step (expired entries are dropped), so rebuilt series decay along
+///   the walk.
 ///
 /// # Walk Types
 ///
@@ -87,21 +100,23 @@ fn create_series_from_step(
 /// # Implementation Details
 ///
 /// - Volatility is extracted or calculated for each walk type to guide the stochastic process.
-/// - For the `Historical` walk type, log returns are calculated from the given price data.
-///   If the `prices` array is empty or has insufficient data, the
-///   resulting vector contains only the initial step.
+/// - For the `Historical` walk type, log returns are calculated from the given price data
+///   and annualized into the implied volatility stamped on the rebuilt series.
 ///
-/// - The initial step is removed from the generated steps to avoid duplication with the input
-///   initialization step (`init_step`).
+/// - The first walker value duplicates the initial step and is skipped to avoid
+///   duplication with the input initialization step (`init_step`).
 ///
 /// - The x-coordinates (`x`) and y-coordinates (`y`, i.e., `OptionSeries`) are iteratively calculated
 ///   and adjusted using the respective walk model.
 ///
 /// # Errors
 ///
-/// Returns a `ChainError` if any of the underlying simulation,
-/// volatility-estimation or chain-construction primitives fail. The
-/// returned vector is guaranteed to start with `walk_params.init_step`
+/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
+/// random-walk generator returns an error — including
+/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
+/// prices than `walk_params.size` — and propagates errors from the
+/// volatility-estimation or chain-construction primitives. The returned vector is
+/// guaranteed to start with `walk_params.init_step`
 /// (matching the contract of [`crate::chains::generator_optionchain`]).
 pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
@@ -143,21 +158,20 @@ pub fn generator_optionseries(
         WalkType::Historical {
             timeframe, prices, ..
         } => {
-            if prices.is_empty() || prices.len() < walk_params.size {
-                (Vec::new(), None)
-            } else {
-                let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
-                    .iter()
-                    .map(|p: &Positive| p.to_dec())
-                    .collect();
-                let constant_volatility = constant_volatility(&log_returns)?;
-                let implied_volatility =
-                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
-                (
-                    walk_params.walker.historical(walk_params)?,
-                    Some(implied_volatility),
-                )
-            }
+            // Let the walker validate the price history first: insufficient
+            // data surfaces as a typed
+            // `SimulationError::InsufficientHistoricalData` instead of a
+            // silent init-only walk that callers cannot distinguish from a
+            // legitimate size-1 walk.
+            let steps = walk_params.walker.historical(walk_params)?;
+            let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
+                .iter()
+                .map(|p: &Positive| p.to_dec())
+                .collect();
+            let constant_volatility = constant_volatility(&log_returns)?;
+            let implied_volatility =
+                adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
+            (steps, Some(implied_volatility))
         }
     };
     if y_steps.len() <= 1 {
@@ -175,19 +189,39 @@ pub fn generator_optionseries(
     let mut steps: Vec<Step<Positive, OptionSeries>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
     let mut y_index = *walk_params.ystep_ref().index();
-
-    let volatility =
-        volatility.unwrap_or_else(|| Positive::new_decimal(dec!(0.20)).unwrap_or(Positive::ZERO));
+    let initial_days_left = walk_params.init_step.x.days_left()?;
 
     // The first walker value duplicates the init step, so skip it.
     for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
-            Err(_) => break,
+            // Reaching expiration is the normal end of a walk: truncate.
+            Err(SimulationError::ExpirationReached) => break,
+            // Any other step-advance failure is a real error: propagate.
+            Err(e) => return Err(e.into()),
         };
+        // Age the series' expirations by the walk time elapsed since the
+        // initial step, dropping the ones that have already expired, so the
+        // option series ages along the walk like the chain generator does.
+        let elapsed_days =
+            (initial_days_left.to_dec() - previous_x_step.days_left()?.to_dec()).max(Decimal::ZERO);
+        let aged_series: Vec<Positive> = build_params
+            .series
+            .iter()
+            .filter(|days| days.to_dec() > elapsed_days)
+            .map(|days| Positive::new_decimal(days.to_dec() - elapsed_days))
+            .collect::<Result<Vec<Positive>, _>>()
+            .map_err(|e| {
+                ChainError::invalid_parameters("series", &format!("failed to age series: {e}"))
+            })?;
+        if aged_series.is_empty() {
+            // Every expiration in the series has passed: nothing left to
+            // simulate, end the walk here.
+            break;
+        }
         // convert y_step to OptionSeries
         let y_step_series: OptionSeries =
-            create_series_from_step(&build_params, y_step, Some(volatility))?;
+            create_series_from_step(&build_params, y_step, volatility, aged_series)?;
         y_index += 1;
         let step = Step {
             x: previous_x_step,
@@ -376,18 +410,20 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let Ok(steps) = generator_optionseries(&walk_params) else {
-            panic!("test fixture failed")
-        };
+        let result = generator_optionseries(&walk_params);
 
-        // Verify: contains the init step only (contract matches the
-        // chain-generator family — never silently returns an empty
-        // vector when an init_step is available).
-        assert_eq!(
-            steps.len(),
-            1,
-            "Steps should contain only the init step when historical prices are empty"
-        );
+        // Verify: insufficient historical data is a typed error, not a
+        // silent init-only walk (unified contract, #406).
+        match result {
+            Err(ChainError::Simulation(e)) => {
+                assert!(
+                    matches!(*e, SimulationError::InsufficientHistoricalData { .. }),
+                    "expected InsufficientHistoricalData, got: {e}"
+                );
+            }
+            Err(other) => panic!("expected ChainError::Simulation, got: {other}"),
+            Ok(_) => panic!("empty historical prices must not produce a silent walk"),
+        }
     }
 
     #[test]
@@ -415,17 +451,20 @@ mod tests_generator_optionseries {
         };
 
         // Execute
-        let Ok(steps) = generator_optionseries(&walk_params) else {
-            panic!("test fixture failed")
-        };
+        let result = generator_optionseries(&walk_params);
 
-        // Verify: contains the init step only (matches the new
-        // contract introduced in #320).
-        assert_eq!(
-            steps.len(),
-            1,
-            "Steps should contain only the init step when historical prices are insufficient"
-        );
+        // Verify: insufficient historical data is a typed error, not a
+        // silent init-only walk (unified contract, #406).
+        match result {
+            Err(ChainError::Simulation(e)) => {
+                assert!(
+                    matches!(*e, SimulationError::InsufficientHistoricalData { .. }),
+                    "expected InsufficientHistoricalData, got: {e}"
+                );
+            }
+            Err(other) => panic!("expected ChainError::Simulation, got: {other}"),
+            Ok(_) => panic!("insufficient historical prices must not produce a silent walk"),
+        }
     }
 
     #[test]
@@ -575,9 +614,10 @@ mod tests_generator_optionseries {
         };
         let new_price = pos_or_panic!(105.0);
         let volatility = spos!(0.22);
+        let aged_series = build_params.series.clone();
 
         // Execute
-        let result = create_series_from_step(&build_params, &new_price, volatility);
+        let result = create_series_from_step(&build_params, &new_price, volatility, aged_series);
 
         // Verify
         assert!(result.is_ok(), "create_series_from_step should succeed");

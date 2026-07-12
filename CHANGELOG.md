@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+**Unified walk-generator contracts** (#406) — the three walk generators
+(`chains::generator_optionchain`, `chains::generator_positive`,
+`series::generator_optionseries`) now share one documented contract.
+Behavior changes observable from the public API:
+
+- `WalkType::Historical` with fewer prices than `WalkParams::size` now
+  returns `ChainError::Simulation(InsufficientHistoricalData)` from ALL
+  three generators. Previously `generator_optionchain` and
+  `generator_optionseries` silently returned a 1-step walk that was
+  indistinguishable from a legitimate size-1 walk.
+- `generator_positive` no longer panics when a custom walker returns an
+  empty vector; it returns the initial step only, like the other two.
+- Walks longer than `WalkParams::size` are now truncated at runtime by
+  all three generators (previously chains generators only checked this
+  with a `debug_assert!`, a no-op in release builds).
+- A step-advance failure other than reaching expiration is now
+  propagated as an error instead of silently truncating the walk.
+- `generator_optionseries` now ages the series along the walk: each
+  step's series expirations are reduced by the elapsed walk time and
+  expired entries are dropped (previously rebuilt series kept their
+  original expirations for the whole walk). The walk ends early once
+  every expiration has passed.
+- The undocumented `0.20` volatility fallback in
+  `generator_optionseries` was removed (dead code under the unified
+  contract).
+
 ## [0.17.2] - 2026-04-26
 
 Release adding two new closed-form pricing models:
