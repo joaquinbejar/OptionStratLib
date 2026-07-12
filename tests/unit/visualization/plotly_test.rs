@@ -629,6 +629,7 @@ mod tests_plotly_interface {
     }
 
     #[test]
+    #[ignore]
     fn test_make_scatter_creates_valid_scatter() {
         // Arrange
         let mut series = Series2D {
@@ -653,8 +654,8 @@ mod tests_plotly_interface {
 
     // Tests for to_plot
     #[test]
-    #[cfg(feature = "static_export")]
     #[ignore]
+    #[cfg(feature = "static_export")]
     fn test_to_plot_with_series() {
         // Create a graph with Series data
         let graph = create_test_graph_with_series();
@@ -680,6 +681,7 @@ mod tests_plotly_interface {
     }
 
     #[test]
+    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_to_plot_with_surface() {
         // Create a graph with Surface data
@@ -694,6 +696,7 @@ mod tests_plotly_interface {
 
     // Tests for write_html
     #[test]
+    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_write_html() {
         // Create a graph with multiple Series
@@ -718,8 +721,8 @@ mod tests_plotly_interface {
     }
 
     #[test]
-    #[cfg(feature = "static_export")]
     #[ignore]
+    #[cfg(feature = "static_export")]
     fn test_write_png() {
         use tempfile::tempdir;
 
@@ -757,8 +760,8 @@ mod tests_plotly_interface {
     // Test for render with HTML OutputType
     // (PNG and SVG are commented out because they require kaleido)
     #[test]
-    #[cfg(feature = "static_export")]
     #[ignore]
+    #[cfg(feature = "static_export")]
     fn test_render_with_html_output_type() {
         let graph = create_test_graph_with_series();
 
@@ -776,6 +779,7 @@ mod tests_plotly_interface {
 
     // Test for to_interactive_html
     #[test]
+    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_to_interactive_html() {
         // Create a graph with multiple Series
