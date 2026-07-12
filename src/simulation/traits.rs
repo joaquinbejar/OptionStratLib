@@ -105,6 +105,41 @@ where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
 {
+    /// Dispatches to the walk method matching `params.walk_type`.
+    ///
+    /// This is the single authoritative variant→method dispatch: generators
+    /// call `generate` instead of matching on [`WalkType`] themselves, so
+    /// adding a new walk variant only requires extending the enum and this
+    /// trait — no generator changes.
+    ///
+    /// # Parameters
+    ///
+    /// * `params` - Walk parameters; `params.walk_type` selects the process.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Vec<Positive>, SimulationError>` - The generated path, per
+    ///   the contract of the selected walk method.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of the dispatched walk method (see each method's
+    /// documentation).
+    fn generate(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
+        match &params.walk_type {
+            WalkType::Brownian { .. } => self.brownian(params),
+            WalkType::GeometricBrownian { .. } => self.geometric_brownian(params),
+            WalkType::LogReturns { .. } => self.log_returns(params),
+            WalkType::MeanReverting { .. } => self.mean_reverting(params),
+            WalkType::JumpDiffusion { .. } => self.jump_diffusion(params),
+            WalkType::Garch { .. } => self.garch(params),
+            WalkType::Heston { .. } => self.heston(params),
+            WalkType::Custom { .. } => self.custom(params),
+            WalkType::Telegraph { .. } => self.telegraph(params),
+            WalkType::Historical { .. } => self.historical(params),
+        }
+    }
+
     /// Generates a Brownian motion (standard random walk) process.
     ///
     /// Brownian motion is a continuous-time stochastic process where changes

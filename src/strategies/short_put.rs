@@ -785,7 +785,7 @@ test_strategy_traits!(ShortPut, test_short_put_implementations);
 #[cfg(test)]
 mod tests_simulate {
     use super::*;
-    use crate::chains::generator_positive;
+    use crate::simulation::generator_positive;
     use positive::{Positive, pos_or_panic};
 
     use crate::simulation::simulator::Simulator;

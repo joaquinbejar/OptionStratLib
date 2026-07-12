@@ -82,7 +82,7 @@ where
     /// # Errors
     ///
     /// Returns the error type produced by the supplied generator. For
-    /// chain-backed generators (e.g. [`crate::chains::generator_positive`])
+    /// chain-backed generators (e.g. [`crate::simulation::generator_positive`])
     /// this is [`crate::error::ChainError`].
     pub fn new<F, E>(
         title: String,
@@ -479,8 +479,8 @@ where
 mod tests {
     use super::*;
     use crate::ExpirationDate;
-    use crate::chains::generator_positive;
     use crate::error::SimulationError;
+    use crate::simulation::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},

@@ -794,7 +794,7 @@ mod tests_get_strategy {
 #[cfg(test)]
 mod tests_simulate {
     use super::*;
-    use crate::chains::generator_positive;
+    use crate::simulation::generator_positive;
     use positive::pos_or_panic;
 
     use crate::simulation::simulator::Simulator;

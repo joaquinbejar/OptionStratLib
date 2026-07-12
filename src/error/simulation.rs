@@ -198,6 +198,16 @@ impl From<ChainError> for SimulationError {
     }
 }
 
+impl From<crate::error::VolatilityError> for SimulationError {
+    #[inline]
+    fn from(err: crate::error::VolatilityError) -> Self {
+        // Route through the existing lossless Chain wrapper: ChainError
+        // already models volatility failures and SimulationError is not
+        // extensible without a breaking change.
+        SimulationError::Chain(Box::new(ChainError::from(err)))
+    }
+}
+
 /// Type alias for Results that may return a `SimulationError`.
 ///
 /// This is a convenience type for functions that return simulation results.

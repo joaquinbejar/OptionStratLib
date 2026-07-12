@@ -1,9 +1,9 @@
 use criterion::Criterion;
 use optionstratlib::ExpirationDate;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::chains::{OptionChain, generator_optionchain, generator_positive};
+use optionstratlib::chains::{OptionChain, generator_optionchain};
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
+use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble, generator_positive};
 use optionstratlib::utils::TimeFrame;
 use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;

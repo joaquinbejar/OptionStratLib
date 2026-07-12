@@ -231,8 +231,13 @@ mod optiondata;
 
 mod generators;
 
+#[deprecated(
+    since = "0.17.4",
+    note = "moved to `optionstratlib::simulation::generator_positive`; it never depended on option chains"
+)]
+pub use crate::simulation::generator_positive;
 pub use chain::OptionChain;
-pub use generators::{generator_optionchain, generator_positive};
+pub use generators::generator_optionchain;
 pub use legs::StrategyLegs;
 pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};

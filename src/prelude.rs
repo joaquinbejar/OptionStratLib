@@ -125,15 +125,16 @@ pub use std::path::Path;
 // Simulation types and functions
 pub use crate::simulation::{
     ExitPolicy, Simulate, SimulationStats, WalkParams, WalkType, WalkTypeAble, WalkTypeAbleClone,
-    check_exit_policy,
+    check_exit_policy, generator_positive,
     randomwalk::RandomWalk,
     simulator::Simulator,
     steps::{Step, Xstep, Ystep},
+    walk_steps,
 };
 
 // Chain and series types and generators
 pub use crate::chains::{
-    OptionChainBuildParams, generator_optionchain, generator_positive, utils::OptionDataPriceParams,
+    OptionChainBuildParams, generator_optionchain, utils::OptionDataPriceParams,
 };
 pub use crate::series::{OptionSeries, OptionSeriesBuildParams, generator_optionseries};
 
