@@ -555,6 +555,72 @@ impl OptionChain {
         Ok(option_chain)
     }
 
+    /// Fits the parametric smile used by `adjust_volatility`
+    /// (`factor = 1 + slope·m + curve·m²`, `m = ln(K/S)`) to the chain's own
+    /// per-strike implied volatilities by least squares.
+    ///
+    /// This is the exact inverse of the model `build_chain` uses to generate
+    /// per-strike IVs, so feeding the fitted parameters back through
+    /// `to_build_params` → `build_chain` preserves the chain's smile shape
+    /// instead of flattening it to the `SKEW_SLOPE` / `SKEW_SMILE_CURVE`
+    /// constants.
+    ///
+    /// Returns `None` when the fit is underdetermined: fewer than three
+    /// strikes with usable IVs, a degenerate ATM IV (zero or above 100%),
+    /// or a numerically singular normal-equation system. The f64 internals
+    /// are confined to this numeric kernel; the outputs are `Decimal`.
+    fn fit_skew_smile(&self) -> Option<(Decimal, Decimal)> {
+        let atm_iv = match self.get_atm_implied_volatility() {
+            Ok(iv) if *iv > Positive::ZERO && *iv <= Positive::ONE => iv.to_f64(),
+            _ => return None,
+        };
+        let spot = self.underlying_price.to_f64();
+        if !spot.is_finite() || spot <= 0.0 {
+            return None;
+        }
+
+        // Normal equations for y = slope·m + curve·m² (no intercept):
+        //   slope·Σm² + curve·Σm³ = Σm·y
+        //   slope·Σm³ + curve·Σm⁴ = Σm²·y
+        let mut s2 = 0.0f64;
+        let mut s3 = 0.0f64;
+        let mut s4 = 0.0f64;
+        let mut sy1 = 0.0f64;
+        let mut sy2 = 0.0f64;
+        let mut count = 0usize;
+        for option in &self.options {
+            let iv = option.implied_volatility.to_f64();
+            if iv <= 0.0 {
+                continue;
+            }
+            let m = (option.strike_price.to_f64() / spot).ln();
+            if !m.is_finite() {
+                continue;
+            }
+            let y = iv / atm_iv - 1.0;
+            let m2 = m * m;
+            s2 += m2;
+            s3 += m2 * m;
+            s4 += m2 * m2;
+            sy1 += m * y;
+            sy2 += m2 * y;
+            count += 1;
+        }
+        if count < 3 {
+            return None;
+        }
+        let det = s2 * s4 - s3 * s3;
+        if !det.is_finite() || det.abs() < 1e-12 {
+            return None;
+        }
+        let slope = (sy1 * s4 - sy2 * s3) / det;
+        let curve = (s2 * sy2 - s3 * sy1) / det;
+        if !slope.is_finite() || !curve.is_finite() {
+            return None;
+        }
+        Some((Decimal::from_f64(slope)?, Decimal::from_f64(curve)?))
+    }
+
     /// Generates build parameters that would reproduce the current option chain.
     ///
     /// This method creates an `OptionChainBuildParams` object with configuration values
@@ -655,8 +721,23 @@ impl OptionChain {
             _ => default_iv,
         };
 
-        let skew_slope = SKEW_SLOPE;
-        let smile_curve = SKEW_SMILE_CURVE;
+        // Fit the smile from the chain's own per-strike IVs so round-trips
+        // preserve the smile shape; fall back to the canned constants when
+        // the fit is underdetermined.
+        let (skew_slope, smile_curve) = match self.fit_skew_smile() {
+            Some((slope, curve)) => {
+                debug!(
+                    slope = %slope,
+                    curve = %curve,
+                    "to_build_params: fitted smile from per-strike IVs"
+                );
+                (slope, curve)
+            }
+            None => {
+                debug!("to_build_params: smile fit underdetermined; using default constants");
+                (SKEW_SLOPE, SKEW_SMILE_CURVE)
+            }
+        };
 
         // Create the price parameters
         let price_params = OptionDataPriceParams::new(
@@ -11021,6 +11102,114 @@ mod tests_to_build_params_bis {
                 "strike count compounded across round-trips at {days}d: {lens:?}"
             );
         }
+    }
+
+    /// Regression for #409: a chain built from known skew/smile parameters
+    /// must recover those parameters (within tolerance) via the least-squares
+    /// fit in `to_build_params`, instead of resetting to the canned
+    /// constants.
+    #[test]
+    fn test_to_build_params_recovers_skew_smile() {
+        let true_slope = dec!(-0.3);
+        let true_curve = dec!(0.2);
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            spos!(5.0),
+            true_slope,
+            true_curve,
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(60.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("TEST".to_string()),
+            ),
+            pos_or_panic!(0.25),
+        );
+        let chain = match OptionChain::build_chain(&params) {
+            Ok(chain) => chain,
+            Err(e) => panic!("build_chain failed: {e}"),
+        };
+        let rebuilt = match chain.to_build_params() {
+            Ok(p) => p,
+            Err(e) => panic!("to_build_params failed: {e}"),
+        };
+
+        let slope_err = (rebuilt.skew_slope - true_slope).abs();
+        let curve_err = (rebuilt.smile_curve - true_curve).abs();
+        assert!(
+            slope_err < dec!(0.05),
+            "fitted slope {} too far from true {true_slope}",
+            rebuilt.skew_slope
+        );
+        assert!(
+            curve_err < dec!(0.1),
+            "fitted curve {} too far from true {true_curve}",
+            rebuilt.smile_curve
+        );
+    }
+
+    /// Regression for #409: round-tripping a chain with a real market smile
+    /// must preserve a meaningful fraction of the smile width (previously it
+    /// collapsed ~140x because `to_build_params` reset the skew to
+    /// constants).
+    #[test]
+    fn test_round_trip_preserves_smile_width() {
+        use crate::utils::time::get_x_days_formatted;
+
+        let mut chain =
+            match OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json") {
+                Ok(chain) => chain,
+                Err(e) => panic!("fixture load failed: {e}"),
+            };
+        chain.update_expiration_date(get_x_days_formatted(30));
+
+        let iv_span = |c: &OptionChain| -> Positive {
+            let ivs: Vec<Positive> = c
+                .options
+                .iter()
+                .map(|o| o.implied_volatility)
+                .filter(|iv| *iv > Positive::ZERO)
+                .collect();
+            let max = ivs.iter().max().copied().unwrap_or(Positive::ZERO);
+            let min = ivs.iter().min().copied().unwrap_or(Positive::ZERO);
+            max - min
+        };
+
+        let source_span = iv_span(&chain);
+        assert!(
+            source_span > Positive::ZERO,
+            "fixture has no smile to preserve"
+        );
+
+        let params = match chain.to_build_params() {
+            Ok(p) => p,
+            Err(e) => panic!("to_build_params failed: {e}"),
+        };
+        // Equity put skew: the fitted slope must be negative.
+        assert!(
+            params.skew_slope < Decimal::ZERO,
+            "expected negative put skew, got {}",
+            params.skew_slope
+        );
+
+        let rebuilt = match OptionChain::build_chain(&params) {
+            Ok(c) => c,
+            Err(e) => panic!("rebuild failed: {e}"),
+        };
+        let rebuilt_span = iv_span(&rebuilt);
+
+        // A quadratic fit on a real smile will not be exact, but it must
+        // retain a meaningful share of the width. Before the fit this
+        // collapsed to well under 1% of the source span.
+        assert!(
+            rebuilt_span.to_dec() >= source_span.to_dec() * dec!(0.3),
+            "smile collapsed on round-trip: source span {source_span}, rebuilt span {rebuilt_span}"
+        );
     }
 }
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+**IV smile preserved across chain rebuilds** (#409):
+
+- `OptionChain::to_build_params` now fits `skew_slope` / `smile_curve`
+  from the chain's own per-strike IVs by least squares (the exact inverse
+  of the parametric model `build_chain` uses), instead of resetting them
+  to the `SKEW_SLOPE` / `SKEW_SMILE_CURVE` constants. Round-tripping a
+  real market chain previously flattened a ~7 vol-point smile to under
+  0.1 vol-points; the smile shape now survives rebuilds (and therefore
+  survives the whole simulated walk in `generator_optionchain`). The
+  constants remain as fallback when the fit is underdetermined.
+- `adjust_volatility` now caps adjusted per-strike IVs at 200% instead of
+  100%, so legitimate high-vol wings survive; the cap logs at `debug!`
+  when it engages.
+
 ### Added
 
 **Per-step volatility paths** (#408):

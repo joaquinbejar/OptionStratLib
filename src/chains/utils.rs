@@ -615,9 +615,18 @@ pub fn adjust_volatility(
     let factor: f64 = 1.0 + skew_slope * m + smile_curve * m * m;
     let clamped = factor.clamp(0.01, 3.0);
 
-    (base_vol * clamped)
-        .clamp(Positive::ZERO, Positive::ONE)
-        .into()
+    // Deep wings can legitimately exceed 100% IV (short-dated equities,
+    // crypto); cap at 200% instead of 100% so real smiles survive, and log
+    // when the cap actually engages.
+    let adjusted = base_vol * clamped;
+    let capped = adjusted.clamp(Positive::ZERO, Positive::TWO);
+    if capped != adjusted {
+        tracing::debug!(
+            adjusted = %adjusted,
+            "adjust_volatility: adjusted IV capped at 200%"
+        );
+    }
+    Some(capped)
 }
 
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
