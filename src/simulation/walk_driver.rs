@@ -36,8 +36,11 @@ use tracing::debug;
 /// # Errors
 ///
 /// Propagates errors from the historical helpers (`calculate_log_returns`,
-/// `constant_volatility`, `adjust_volatility`).
-fn walk_volatility<Y>(walk_params: &WalkParams<Positive, Y>) -> Result<Option<Positive>, ChainError>
+/// `constant_volatility`, `adjust_volatility`) as [`SimulationError`], so
+/// the driver stays free of chain-layer error types.
+fn walk_volatility<Y>(
+    walk_params: &WalkParams<Positive, Y>,
+) -> Result<Option<Positive>, SimulationError>
 where
     Y: TryInto<Positive> + Display + Clone,
 {
@@ -86,33 +89,36 @@ where
 /// # Returns
 ///
 /// * `Ok(Vec<Step<Positive, Y>>)` - The simulated walk.
-/// * `Err(ChainError)` - If the walker, the volatility estimation, the
-///   x-step advance, or `next_y` fail.
+/// * `Err(E)` - If the walker, the volatility estimation, the x-step
+///   advance, or `next_y` fail.
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>`
-/// conversion) if the walker returns an error — including
-/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has
-/// fewer prices than `walk_params.size` — and propagates errors from the
-/// volatility estimation and from `next_y`.
-pub fn walk_steps<Y, F>(
+/// The driver is generic over its error type: every internal failure is a
+/// [`SimulationError`] lifted into `E` via `From`, so the simulation layer
+/// carries no chain-specific error types — the chain and series generators
+/// simply instantiate `E = ChainError`. Walker errors include
+/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk
+/// has fewer prices than `walk_params.size`; `next_y` errors are returned
+/// verbatim.
+pub fn walk_steps<Y, E, F>(
     walk_params: &WalkParams<Positive, Y>,
     mut next_y: F,
-) -> Result<Vec<Step<Positive, Y>>, ChainError>
+) -> Result<Vec<Step<Positive, Y>>, E>
 where
     Y: TryInto<Positive> + Display + Clone,
-    F: FnMut(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, ChainError>,
+    E: From<SimulationError>,
+    F: FnMut(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, E>,
 {
     debug!("{}", walk_params);
-    let y_steps = walk_params.walker.generate(walk_params)?;
+    let y_steps = walk_params.walker.generate(walk_params).map_err(E::from)?;
     if y_steps.len() <= 1 {
         // Preserve the init-step invariant when the walker produces no
         // values beyond the initial one; downstream consumers expect at
         // least the initial step to be present.
         return Ok(vec![walk_params.init_step.clone()]);
     }
-    let volatility = walk_volatility(walk_params)?;
+    let volatility = walk_volatility(walk_params).map_err(E::from)?;
 
     let mut steps: Vec<Step<Positive, Y>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
@@ -125,7 +131,7 @@ where
             // Reaching expiration is the normal end of a walk: truncate.
             Err(SimulationError::ExpirationReached) => break,
             // Any other step-advance failure is a real error: propagate.
-            Err(e) => return Err(e.into()),
+            Err(e) => return Err(E::from(e)),
         };
         let Some(y_value) = next_y(y_step, volatility, &previous_x_step)? else {
             break;
@@ -181,6 +187,9 @@ where
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
+    // ChainError-typed adapter over the generic driver, kept for API
+    // compatibility with the chain/series generator family; the driver
+    // itself is error-generic and does not depend on the chains layer.
     walk_steps(walk_params, |new_price, _volatility, _x_step| {
         Ok(Some(*new_price))
     })
@@ -328,14 +337,17 @@ mod tests {
         };
 
         let mut calls = 0;
-        let steps = match walk_steps(&walk_params, |price, _vol, _x| {
-            calls += 1;
-            if calls > 3 {
-                Ok(None)
-            } else {
-                Ok(Some(*price))
-            }
-        }) {
+        let steps = match walk_steps(
+            &walk_params,
+            |price, _vol, _x| -> Result<Option<Positive>, ChainError> {
+                calls += 1;
+                if calls > 3 {
+                    Ok(None)
+                } else {
+                    Ok(Some(*price))
+                }
+            },
+        ) {
             Ok(steps) => steps,
             Err(e) => panic!("walk_steps failed: {e}"),
         };
