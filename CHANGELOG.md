@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+
+**Parallel per-step chain builds** (#411): new
+`simulation::walk_steps_par` — a parallel variant of `walk_steps` with an
+identical contract that fans the per-step y-value construction out to the
+rayon thread pool (the walk itself, per-step volatilities and x-step
+sequence stay serial and deterministic). `generator_optionchain` and
+`generator_optionseries` now use it; output is identical to the serial
+driver for the same inputs. Criterion (Apple Silicon):
+`generator_optionchain` 10 steps 2.59 ms → 0.47 ms (−82%), 25 steps
+7.01 ms → 0.88 ms (−87%).
+
 ### Testing
 
 **Behavioral test coverage for the walk generators** (#410): a

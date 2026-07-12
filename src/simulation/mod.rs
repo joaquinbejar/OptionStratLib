@@ -149,4 +149,4 @@ pub use stats::SimulationStats;
 pub use traits::{
     Simulate, WalkTypeAble, WalkTypeAbleClone, custom_walk, garch_walk, heston_walk, telegraph_walk,
 };
-pub use walk_driver::{generator_positive, walk_steps};
+pub use walk_driver::{generator_positive, walk_steps, walk_steps_par};
