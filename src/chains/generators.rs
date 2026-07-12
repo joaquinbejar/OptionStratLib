@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::ExpirationDate;
 use crate::chains::OptionChain;
+use crate::chains::utils::OptionChainBuildParams;
 use crate::error::ChainError;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
@@ -18,32 +19,37 @@ use positive::pos_or_panic;
 use rust_decimal::Decimal;
 use tracing::debug;
 
-/// Creates a new `OptionChain` from a previous `Ystep` and a new price.
+/// Creates a new `OptionChain` from pre-derived build parameters and a new price.
 ///
-/// This function takes a reference to the previous `Ystep` containing an `OptionChain`,
-/// a reference to the new underlying price, and an optional new volatility. It creates a new
-/// `OptionChain` with the updated price and volatility.
+/// This function clones the provided build parameters and overrides the underlying
+/// price, and optionally the implied volatility and expiration date, before building
+/// the new chain. Deriving the parameters once (outside the simulation loop) instead
+/// of from each freshly built chain keeps every step's chain shape anchored to the
+/// initial chain and avoids re-scanning the chain on every step.
+///
+/// Greeks (delta/gamma) are computed by `OptionChain::build_chain` itself for every
+/// strike, so no separate greek pass is needed here.
 ///
 /// # Arguments
 ///
-/// * `previous_y_step` - A reference to the previous `Ystep` containing the `OptionChain`.
+/// * `build_params` - Build parameters derived from the initial `OptionChain`.
 /// * `new_price` - A reference to the new underlying price.
 /// * `volatility` - An optional new implied volatility.
+/// * `expiration_date` - An optional new expiration date.
 ///
 /// # Returns
 ///
 /// * `Ok(OptionChain)` - A new `OptionChain` with the updated parameters.
-/// * `Err(optionstratlib::error::Error)` - If an error occurs during the creation of the new `OptionChain`.
+/// * `Err(ChainError)` - If an error occurs during the creation of the new `OptionChain`.
 ///
 fn create_chain_from_step(
-    previous_y_step: &Ystep<OptionChain>,
-    new_price: Option<Box<Positive>>,
+    build_params: &OptionChainBuildParams,
+    new_price: &Positive,
     volatility: Option<Positive>,
     expiration_date: Option<ExpirationDate>,
 ) -> Result<OptionChain, ChainError> {
-    let chain = previous_y_step.value();
-    let mut chain_params = chain.to_build_params()?;
-    chain_params.set_underlying_price(new_price);
+    let mut chain_params = build_params.clone();
+    chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
         chain_params.set_implied_volatility(volatility);
     }
@@ -51,9 +57,7 @@ fn create_chain_from_step(
         chain_params.price_params.expiration_date = Some(exp_date);
     }
 
-    let mut new_chain = OptionChain::build_chain(&chain_params)?;
-    new_chain.update_greeks();
-    Ok(new_chain)
+    OptionChain::build_chain(&chain_params)
 }
 
 /// Generates a vector of `Step`s containing `Positive` x-values and `OptionChain` y-values.
@@ -82,7 +86,7 @@ pub fn generator_optionchain(
     walk_params: &WalkParams<Positive, OptionChain>,
 ) -> Result<Vec<Step<Positive, OptionChain>>, ChainError> {
     debug!("{}", walk_params);
-    let (mut y_steps, volatility) = match &walk_params.walk_type {
+    let (y_steps, volatility) = match &walk_params.walk_type {
         WalkType::Brownian { volatility, .. } => {
             (walk_params.walker.brownian(walk_params)?, Some(*volatility))
         }
@@ -135,35 +139,38 @@ pub fn generator_optionchain(
             }
         }
     };
-    if y_steps.is_empty() {
+    if y_steps.len() <= 1 {
         // Preserve the init-step invariant when the underlying walk produces
-        // no points (e.g., Historical with insufficient `prices`); downstream
-        // consumers expect at least the initial step to be present.
+        // no points beyond the initial one (e.g., Historical with
+        // insufficient `prices`, or a size-1 walk); downstream consumers
+        // expect at least the initial step to be present. Returning early
+        // also avoids deriving build params from a chain that will never be
+        // rebuilt.
         return Ok(vec![walk_params.init_step.clone()]);
     }
 
-    let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
+    // Derive the build parameters once from the initial chain; every step's
+    // chain is anchored to the initial chain's shape instead of feeding back
+    // params re-derived from the previous rebuilt chain on each iteration.
+    let build_params = walk_params.ystep_ref().value().to_build_params()?;
     let mut steps: Vec<Step<Positive, OptionChain>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
-    let mut previous_y_step = walk_params.ystep();
+    let mut y_index = *walk_params.ystep_ref().index();
 
-    for y_step in y_steps.iter() {
+    // The first walker value duplicates the init step, so skip it.
+    for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
             Err(_) => break,
         };
         // convert y_step to OptionChain with updated expiration date
         let expiration_date = *previous_x_step.datetime();
-        let y_step_chain: OptionChain = create_chain_from_step(
-            &previous_y_step,
-            Some(Box::new(*y_step)),
-            volatility,
-            Some(expiration_date),
-        )?;
-        previous_y_step = previous_y_step.next(y_step_chain).clone();
+        let y_step_chain: OptionChain =
+            create_chain_from_step(&build_params, y_step, volatility, Some(expiration_date))?;
+        y_index += 1;
         let step = Step {
             x: previous_x_step,
-            y: previous_y_step.clone(),
+            y: Ystep::new(y_index, y_step_chain),
         };
 
         steps.push(step)
@@ -200,7 +207,7 @@ pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
     debug!("{}", walk_params);
-    let mut y_steps = match &walk_params.walk_type {
+    let y_steps = match &walk_params.walk_type {
         WalkType::Brownian { .. } => walk_params.walker.brownian(walk_params)?,
         WalkType::GeometricBrownian { .. } => walk_params.walker.geometric_brownian(walk_params)?,
         WalkType::LogReturns { .. } => walk_params.walker.log_returns(walk_params)?,
@@ -213,13 +220,13 @@ pub fn generator_positive(
         WalkType::Historical { .. } => walk_params.walker.historical(walk_params)?,
     };
 
-    let _ = y_steps.remove(0);
     let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step.clone()];
 
     let mut previous_x_step = walk_params.init_step.x;
     let mut previous_y_step = walk_params.init_step.y.clone();
 
-    for y_step in y_steps.iter() {
+    // The first walker value duplicates the init step, so skip it.
+    for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
             Err(_) => break,
@@ -269,7 +276,11 @@ mod tests {
             y: Ystep::new(0, initial_price),
         };
 
-        let result = create_chain_from_step(&step.y, Some(Box::new(new_price)), None, None);
+        let build_params = match step.y.value().to_build_params() {
+            Ok(params) => params,
+            Err(e) => panic!("to_build_params failed: {e}"),
+        };
+        let result = create_chain_from_step(&build_params, &new_price, None, None);
         assert!(result.is_ok());
 
         let new_chain = result.unwrap();

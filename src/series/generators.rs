@@ -1,5 +1,5 @@
 use crate::error::ChainError;
-use crate::series::OptionSeries;
+use crate::series::{OptionSeries, OptionSeriesBuildParams};
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
@@ -36,12 +36,11 @@ use positive::pos_or_panic;
 /// - Any other unexpected error occurs during the processing.
 ///
 fn create_series_from_step(
-    previous_y_step: &Ystep<OptionSeries>,
+    build_params: &OptionSeriesBuildParams,
     new_price: &Positive,
     volatility: Option<Positive>,
 ) -> Result<OptionSeries, ChainError> {
-    let series = previous_y_step.value();
-    let mut series_params = series.to_build_params()?;
+    let mut series_params = build_params.clone();
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
         series_params.set_implied_volatility(volatility);
@@ -108,7 +107,7 @@ pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
 ) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
     debug!("{}", walk_params);
-    let (mut y_steps, volatility) = match &walk_params.walk_type {
+    let (y_steps, volatility) = match &walk_params.walk_type {
         WalkType::Brownian { volatility, .. } => {
             (walk_params.walker.brownian(walk_params)?, Some(*volatility))
         }
@@ -161,33 +160,38 @@ pub fn generator_optionseries(
             }
         }
     };
-    if y_steps.is_empty() {
+    if y_steps.len() <= 1 {
         // Preserve the contains-init-step contract used by the other
         // generators; callers iterate over Step values and expect at
-        // least the initial state.
+        // least the initial state. Returning early also avoids deriving
+        // build params from a series that will never be rebuilt.
         return Ok(vec![walk_params.init_step.clone()]);
     }
 
-    let _ = y_steps.remove(0); // remove initial step from y_steps to avoid early return
+    // Derive the build parameters once from the initial series; every step's
+    // series is anchored to the initial series' shape instead of feeding back
+    // params re-derived from the previous rebuilt series on each iteration.
+    let build_params = walk_params.ystep_ref().value().to_build_params()?;
     let mut steps: Vec<Step<Positive, OptionSeries>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
-    let mut previous_y_step = walk_params.ystep();
+    let mut y_index = *walk_params.ystep_ref().index();
 
     let volatility =
         volatility.unwrap_or_else(|| Positive::new_decimal(dec!(0.20)).unwrap_or(Positive::ZERO));
 
-    for y_step in y_steps.iter() {
+    // The first walker value duplicates the init step, so skip it.
+    for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
             Err(_) => break,
         };
         // convert y_step to OptionSeries
         let y_step_series: OptionSeries =
-            create_series_from_step(&previous_y_step, y_step, Some(volatility))?;
-        previous_y_step = previous_y_step.next(y_step_series).clone();
+            create_series_from_step(&build_params, y_step, Some(volatility))?;
+        y_index += 1;
         let step = Step {
             x: previous_x_step,
-            y: previous_y_step.clone(),
+            y: Ystep::new(y_index, y_step_series),
         };
 
         steps.push(step)
@@ -565,12 +569,15 @@ mod tests_generator_optionseries {
     fn test_create_series_from_step() {
         // Test the create_series_from_step function directly
         let initial_series = create_test_option_series();
-        let y_step = Ystep::new(0, initial_series);
+        let build_params = match initial_series.to_build_params() {
+            Ok(params) => params,
+            Err(e) => panic!("to_build_params failed: {e}"),
+        };
         let new_price = pos_or_panic!(105.0);
         let volatility = spos!(0.22);
 
         // Execute
-        let result = create_series_from_step(&y_step, &new_price, volatility);
+        let result = create_series_from_step(&build_params, &new_price, volatility);
 
         // Verify
         assert!(result.is_ok(), "create_series_from_step should succeed");

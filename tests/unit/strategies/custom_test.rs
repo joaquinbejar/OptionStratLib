@@ -271,7 +271,7 @@ mod tests {
         assert_eq!(iv_map.len(), 2);
 
         // All volatilities should be positive
-        for (_option_type, iv) in iv_map.iter() {
+        for iv in iv_map.values() {
             assert!(**iv > Positive::ZERO);
         }
     }
@@ -285,7 +285,7 @@ mod tests {
         assert_eq!(quantity_map.len(), 2);
 
         // All quantities should be positive
-        for (_option_type, quantity) in quantity_map.iter() {
+        for quantity in quantity_map.values() {
             assert!(**quantity > Positive::ZERO);
         }
     }
