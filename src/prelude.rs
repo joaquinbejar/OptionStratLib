@@ -129,7 +129,7 @@ pub use crate::simulation::{
     randomwalk::RandomWalk,
     simulator::Simulator,
     steps::{Step, Xstep, Ystep},
-    walk_steps,
+    walk_steps, walk_steps_par,
 };
 
 // Chain and series types and generators

@@ -147,4 +147,4 @@ pub use model::{WalkPath, WalkType};
 pub use params::WalkParams;
 pub use stats::SimulationStats;
 pub use traits::{Simulate, WalkTypeAble, WalkTypeAbleClone};
-pub use walk_driver::{generator_positive, walk_steps};
+pub use walk_driver::{generator_positive, walk_steps, walk_steps_par};

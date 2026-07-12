@@ -8,12 +8,13 @@ use crate::chains::OptionChain;
 use crate::chains::utils::OptionChainBuildParams;
 use crate::error::ChainError;
 use crate::simulation::steps::Step;
-use crate::simulation::{WalkParams, walk_steps};
+use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
 use rust_decimal_macros::dec;
+use std::sync::Mutex;
 
 /// Creates a new `OptionChain` from pre-derived build parameters and a new price.
 ///
@@ -112,18 +113,32 @@ pub fn generator_optionchain(
 ) -> Result<Vec<Step<Positive, OptionChain>>, ChainError> {
     // Derived lazily on the first rebuilt step so that walks that never
     // rebuild (size <= 1) do not require a parameterizable initial chain.
-    let mut build_params: Option<OptionChainBuildParams> = None;
-    walk_steps(walk_params, |new_price, volatility, x_step| {
-        let params = match &mut build_params {
-            Some(params) => params,
-            // Derive the build parameters once from the initial chain; every
-            // step's chain is anchored to the initial chain's shape instead
-            // of feeding back params re-derived from the previous rebuilt
-            // chain on each iteration.
-            none => none.insert(walk_params.ystep_ref().value().to_build_params()?),
+    // Steps are independent once the params are derived, so the per-step
+    // chain builds (the dominant cost) run on the rayon pool.
+    let build_params: Mutex<Option<OptionChainBuildParams>> = Mutex::new(None);
+    // Capture only Sync data in the closure (the boxed walker inside
+    // WalkParams is not Sync).
+    let init_ystep = walk_params.ystep_ref();
+    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+        let params = {
+            let mut guard = build_params.lock().map_err(|_| {
+                ChainError::invalid_parameters("build_params", "params cache lock poisoned")
+            })?;
+            match &*guard {
+                Some(params) => params.clone(),
+                // Derive the build parameters once from the initial chain;
+                // every step's chain is anchored to the initial chain's
+                // shape instead of feeding back params re-derived from the
+                // previous rebuilt chain on each iteration.
+                None => {
+                    let params = init_ystep.value().to_build_params()?;
+                    *guard = Some(params.clone());
+                    params
+                }
+            }
         };
         let chain =
-            create_chain_from_step(params, new_price, volatility, Some(*x_step.datetime()))?;
+            create_chain_from_step(&params, new_price, volatility, Some(*x_step.datetime()))?;
         Ok(Some(chain))
     })
 }

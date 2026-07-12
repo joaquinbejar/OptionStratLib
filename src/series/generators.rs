@@ -1,11 +1,12 @@
 use crate::error::ChainError;
 use crate::series::{OptionSeries, OptionSeriesBuildParams};
 use crate::simulation::steps::Step;
-use crate::simulation::{WalkParams, walk_steps};
+use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::sync::Mutex;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -127,18 +128,30 @@ pub fn generator_optionseries(
 ) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
     // Derived lazily on the first rebuilt step so that walks that never
     // rebuild (size <= 1) do not require a parameterizable initial series.
-    let mut context: Option<(OptionSeriesBuildParams, Positive)> = None;
-    walk_steps(walk_params, |new_price, volatility, x_step| {
-        let (build_params, initial_days_left) = match &mut context {
-            Some(context) => context,
-            // Derive the build parameters once from the initial series; every
-            // step's series is anchored to the initial series' shape instead
-            // of feeding back params re-derived from the previous rebuilt
-            // series on each iteration.
-            none => {
-                let build_params = walk_params.ystep_ref().value().to_build_params()?;
-                let initial_days_left = walk_params.init_step.x.days_left()?;
-                none.insert((build_params, initial_days_left))
+    // Steps are independent once the context is derived, so the per-step
+    // series rebuilds (one chain per expiration!) run on the rayon pool.
+    let context: Mutex<Option<(OptionSeriesBuildParams, Positive)>> = Mutex::new(None);
+    // Capture only Sync data in the closure (the boxed walker inside
+    // WalkParams is not Sync).
+    let init_ystep = walk_params.ystep_ref();
+    let init_x = walk_params.init_step.x;
+    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+        let (build_params, initial_days_left) = {
+            let mut guard = context.lock().map_err(|_| {
+                ChainError::invalid_parameters("build_params", "params cache lock poisoned")
+            })?;
+            match &*guard {
+                Some(context) => context.clone(),
+                // Derive the build parameters once from the initial series;
+                // every step's series is anchored to the initial series'
+                // shape instead of feeding back params re-derived from the
+                // previous rebuilt series on each iteration.
+                None => {
+                    let build_params = init_ystep.value().to_build_params()?;
+                    let initial_days_left = init_x.days_left()?;
+                    *guard = Some((build_params.clone(), initial_days_left));
+                    (build_params, initial_days_left)
+                }
             }
         };
         // Age the series' expirations by the walk time elapsed since the
@@ -161,7 +174,7 @@ pub fn generator_optionseries(
             return Ok(None);
         }
         let y_step_series =
-            create_series_from_step(build_params, new_price, volatility, aged_series)?;
+            create_series_from_step(&build_params, new_price, volatility, aged_series)?;
         Ok(Some(y_step_series))
     })
 }

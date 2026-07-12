@@ -265,6 +265,120 @@ where
     Ok(steps)
 }
 
+/// Parallel variant of [`walk_steps`]: identical contract and output, with
+/// the per-step `next_y` calls executed on the rayon thread pool.
+///
+/// The walk itself (walker output, per-step volatilities, x-step sequence)
+/// is computed serially and is identical to [`walk_steps`]; only the y-value
+/// construction — the dominant cost when `next_y` rebuilds an option chain
+/// or series — is fanned out. Output is deterministic and equal to the
+/// serial driver's for the same inputs because every per-step input is
+/// precomputed and order is preserved on collection.
+///
+/// Semantics notes versus the serial driver:
+///
+/// * `next_y` must be `Fn + Sync` (stateless or internally synchronized)
+///   instead of `FnMut`.
+/// * `Ok(None)` still ends the walk at the previous step; steps past the
+///   first `None` are computed speculatively and discarded.
+/// * On failure the first error in step order is returned.
+///
+/// # Errors
+///
+/// Same as [`walk_steps`].
+pub fn walk_steps_par<Y, F>(
+    walk_params: &WalkParams<Positive, Y>,
+    next_y: F,
+) -> Result<Vec<Step<Positive, Y>>, ChainError>
+where
+    Y: TryInto<Positive> + Display + Clone + Send,
+    F: Fn(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, ChainError> + Sync,
+{
+    use rayon::prelude::*;
+
+    debug!("{}", walk_params);
+    let path = walk_params.walker.generate_with_vol(walk_params)?;
+    let y_steps = path.prices;
+    if y_steps.len() <= 1 {
+        // Preserve the init-step invariant when the walker produces no
+        // values beyond the initial one; downstream consumers expect at
+        // least the initial step to be present.
+        return Ok(vec![walk_params.init_step.clone()]);
+    }
+
+    // Per-step volatilities: same policy as the serial driver.
+    let step_vols: Option<Vec<Positive>> = match path.vols {
+        Some(vols) => Some(vols),
+        None => match &walk_params.walk_type {
+            WalkType::Historical { timeframe, .. } => expanding_window_vols(&y_steps, *timeframe)?,
+            _ => None,
+        },
+    };
+    let constant_vol = if step_vols.is_some() {
+        None
+    } else {
+        walk_volatility(walk_params)?
+    };
+
+    // Precompute the x-step sequence serially, honoring the
+    // expiration-truncation contract; Xstep::next is deterministic.
+    let mut x_steps: Vec<Xstep<Positive>> = Vec::with_capacity(y_steps.len().saturating_sub(1));
+    let mut current_x = walk_params.init_step.x;
+    for _ in 1..y_steps.len() {
+        current_x = match current_x.next() {
+            Ok(x_step) => x_step,
+            // Reaching expiration is the normal end of a walk: truncate.
+            Err(SimulationError::ExpirationReached) => break,
+            // Any other step-advance failure is a real error: propagate.
+            Err(e) => return Err(e.into()),
+        };
+        x_steps.push(current_x);
+    }
+
+    // Every step's inputs are known up front: build the y-values in
+    // parallel, preserving order.
+    let built: Vec<Option<Y>> = x_steps
+        .par_iter()
+        .enumerate()
+        .map(|(offset, x_step)| {
+            let price_index = offset + 1;
+            let y_step = y_steps.get(price_index).copied().ok_or_else(|| {
+                ChainError::invalid_parameters("prices", "walker path shorter than x-steps")
+            })?;
+            let volatility = step_vols
+                .as_ref()
+                .and_then(|vols| vols.get(price_index).copied())
+                .or(constant_vol);
+            next_y(&y_step, volatility, x_step)
+        })
+        .collect::<Result<Vec<Option<Y>>, ChainError>>()?;
+
+    // Assemble serially: stop at the first `Ok(None)` (same semantics as
+    // the serial driver) and assign contiguous y indices.
+    let mut steps: Vec<Step<Positive, Y>> = vec![walk_params.init_step.clone()];
+    let mut y_index = *walk_params.ystep_ref().index();
+    for (x_step, y_value) in x_steps.into_iter().zip(built) {
+        let Some(y_value) = y_value else {
+            break;
+        };
+        y_index += 1;
+        steps.push(Step {
+            x: x_step,
+            y: Ystep::new(y_index, y_value),
+        });
+    }
+
+    if steps.len() > walk_params.size {
+        debug!(
+            "walk produced {} steps, truncating to configured size {}",
+            steps.len(),
+            walk_params.size
+        );
+        steps.truncate(walk_params.size);
+    }
+    Ok(steps)
+}
+
 /// Generates a vector of `Step`s containing `Positive` x-values and `Positive` y-values.
 ///
 /// Simulates the stochastic process selected by `walk_params.walk_type` for a plain
@@ -676,5 +790,58 @@ mod tests {
             Err(e) => panic!("size-0 walk must not error: {e}"),
         };
         assert_eq!(steps.len(), 1);
+    }
+
+    /// The parallel driver must produce exactly the serial driver's output
+    /// for identical inputs.
+    #[test]
+    fn test_walk_steps_par_matches_serial() {
+        use crate::simulation::walk_test_support::RampWalker;
+        use rust_decimal_macros::dec;
+
+        let walk_params = WalkParams {
+            size: 8,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::TWO,
+            }),
+        };
+
+        let double = |price: &Positive,
+                      _vol: Option<Positive>,
+                      _x: &Xstep<Positive>|
+         -> Result<Option<Positive>, ChainError> { Ok(Some(*price * 2.0)) };
+
+        let serial = match walk_steps(&walk_params, double) {
+            Ok(steps) => steps,
+            Err(e) => panic!("serial driver failed: {e}"),
+        };
+        let parallel = match walk_steps_par(&walk_params, double) {
+            Ok(steps) => steps,
+            Err(e) => panic!("parallel driver failed: {e}"),
+        };
+
+        assert_eq!(serial.len(), parallel.len());
+        for (i, (s, p)) in serial.iter().zip(parallel.iter()).enumerate() {
+            assert_eq!(s.y.value(), p.y.value(), "y value differs at step {i}");
+            assert_eq!(s.y.index(), p.y.index(), "y index differs at step {i}");
+            let (sd, pd) = match (s.x.days_left(), p.x.days_left()) {
+                (Ok(sd), Ok(pd)) => (sd, pd),
+                _ => panic!("days_left failed at step {i}"),
+            };
+            assert_eq!(sd, pd, "x days differ at step {i}");
+        }
     }
 }
