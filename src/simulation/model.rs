@@ -163,6 +163,26 @@ pub enum WalkType {
     },
 }
 
+/// A simulated walk that exposes the per-step volatility path alongside the
+/// price path.
+///
+/// Produced by [`crate::simulation::WalkTypeAble::generate_with_vol`]. For
+/// stochastic-volatility walk types (`Garch`, `Heston`, `Custom`,
+/// `Telegraph`) and for `Historical` walks, `vols` carries the ANNUALIZED
+/// volatility prevailing at each step, aligned index-by-index with `prices`.
+/// For constant-volatility walk types `vols` is `None` and the constant is
+/// available via [`WalkType::volatility`].
+#[derive(Debug, Clone)]
+pub struct WalkPath {
+    /// The simulated price path; the first element duplicates the walk's
+    /// initial value (same contract as the per-variant walk methods).
+    pub prices: Vec<Positive>,
+
+    /// Annualized per-step volatilities aligned with `prices` (same length),
+    /// or `None` when the walk type's volatility is constant.
+    pub vols: Option<Vec<Positive>>,
+}
+
 impl WalkType {
     /// Returns the volatility parameter carried by this walk type.
     ///
