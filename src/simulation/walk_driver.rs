@@ -572,4 +572,127 @@ mod tests {
         // init + 3 accepted steps
         assert_eq!(steps.len(), 4);
     }
+
+    /// Multi-step behavior: prices, indices and time-to-expiry must all be
+    /// exact under a deterministic ramp walker.
+    #[test]
+    fn test_generator_positive_multi_step_behavior() {
+        use crate::simulation::walk_test_support::RampWalker;
+        use rust_decimal_macros::dec;
+
+        let size = 5;
+        let walk_params = WalkParams {
+            size,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::TWO,
+            }),
+        };
+
+        let steps = match generator_positive(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_positive failed: {e}"),
+        };
+        assert_eq!(steps.len(), size);
+        for (i, step) in steps.iter().enumerate() {
+            // Price follows the ramp exactly.
+            let expected_price = Positive::HUNDRED + Positive::TWO * i as f64;
+            assert_eq!(*step.y.value(), expected_price, "price at step {i}");
+            // Y index increments from the init step's index.
+            assert_eq!(*step.y.index(), i as i32, "y index at step {i}");
+            // Time-to-expiry decreases by exactly one day per step.
+            let days = match step.x.days_left() {
+                Ok(days) => days,
+                Err(e) => panic!("days_left failed at step {i}: {e}"),
+            };
+            assert_eq!(days, pos_or_panic!(30.0 - i as f64), "days at step {i}");
+        }
+    }
+
+    /// The walk must truncate exactly at expiration: with a 3-day expiry and
+    /// daily steps, a size-10 request yields init + 3 steps.
+    #[test]
+    fn test_generator_positive_truncates_at_expiration() {
+        use crate::simulation::walk_test_support::RampWalker;
+        use rust_decimal_macros::dec;
+
+        let walk_params = WalkParams {
+            size: 10,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(3.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::ONE,
+            }),
+        };
+
+        let steps = match generator_positive(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_positive failed: {e}"),
+        };
+        // init(3d) -> 2d -> 1d -> 0d, then ExpirationReached breaks.
+        assert_eq!(steps.len(), 4);
+        match steps.last() {
+            Some(last) => match last.x.days_left() {
+                Ok(days) => assert_eq!(days, Positive::ZERO),
+                Err(e) => panic!("days_left failed: {e}"),
+            },
+            None => panic!("empty steps"),
+        }
+    }
+
+    /// size = 0 yields the init-only walk from the shared driver.
+    #[test]
+    fn test_generator_positive_size_zero() {
+        use crate::simulation::walk_test_support::RampWalker;
+        use rust_decimal_macros::dec;
+
+        let walk_params = WalkParams {
+            size: 0,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::ONE,
+            }),
+        };
+
+        let steps = match generator_positive(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("size-0 walk must not error: {e}"),
+        };
+        assert_eq!(steps.len(), 1);
+    }
 }

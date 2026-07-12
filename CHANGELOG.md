@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Testing
+
+**Behavioral test coverage for the walk generators** (#410): a
+deterministic ramp walker (`simulation::walk_test_support`, test-only)
+replaces RNG-driven size-1 smoke tests. New multi-step tests pin: exact
+price propagation, y-index increments, per-step time-to-expiry decay,
+rebuilt-chain expiration tracking, ATM IV tracking of the walk
+volatility, Historical walks replaying the provided prices with the
+expanding-window estimate, truncation exactly at expiration, series
+aging (and the walk stopping once every series expiration has passed),
+empty-walker outputs and `size = 0` across all three generators.
+
 ### Fixed
 
 **IV smile preserved across chain rebuilds** (#409):
