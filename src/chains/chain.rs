@@ -400,11 +400,14 @@ impl OptionChain {
                     &format!("failed to get days: {e}"),
                 )
             })?;
+            // `chain_size` is a per-side half-width while `strike_step`
+            // expects the TOTAL number of strikes covering ±kσ, so convert
+            // to the 2n+1 grid the builder below actually generates.
             strike_step(
                 underlying_price,
                 params.implied_volatility,
                 days,
-                params.chain_size,
+                params.chain_size * 2 + 1,
                 None,
             )
         };
@@ -600,11 +603,14 @@ impl OptionChain {
             chain_size = strikes_below.max(strikes_above);
         }
 
-        // Default to a reasonable chain size if calculation fails
+        // Default to a reasonable chain size if calculation fails.
+        // `chain_size` is the per-side half-width consumed by `build_chain`
+        // (which generates up to `chain_size` strikes above AND below ATM),
+        // so keep the computed max(strikes_below, strikes_above) instead of
+        // the total row count — feeding the total back would roughly double
+        // the strike grid on every to_build_params -> build_chain round-trip.
         if chain_size == 0 {
             chain_size = 10;
-        } else {
-            chain_size = self.len();
         }
 
         // Estimate the average bid-ask spread from the available options
@@ -10959,6 +10965,62 @@ mod tests_to_build_params_bis {
 
         let new_chain = OptionChain::build_chain(&params).unwrap();
         info!("{}", new_chain);
+    }
+
+    /// Regression for #405: `to_build_params` fed the TOTAL row count back
+    /// as the per-side `chain_size`, so each `to_build_params` ->
+    /// `build_chain` round-trip roughly doubled the strike grid until the
+    /// deep-strike price break capped it. The strike count must be stable
+    /// across round-trips after the first rebuild (the first rebuild may
+    /// symmetrize an asymmetric input, but must not compound).
+    #[test]
+    fn test_to_build_params_round_trip_strike_count_stable() {
+        for days in [30.0, 180.0] {
+            let params = OptionChainBuildParams::new(
+                "TEST".to_string(),
+                None,
+                10,
+                spos!(5.0),
+                dec!(-0.2),
+                dec!(0.1),
+                pos_or_panic!(0.02),
+                2,
+                OptionDataPriceParams::new(
+                    Some(Box::new(Positive::HUNDRED)),
+                    Some(ExpirationDate::Days(pos_or_panic!(days))),
+                    Some(dec!(0.05)),
+                    spos!(0.02),
+                    Some("TEST".to_string()),
+                ),
+                pos_or_panic!(0.2),
+            );
+            let mut current = match OptionChain::build_chain(&params) {
+                Ok(chain) => chain,
+                Err(e) => panic!("initial build_chain failed at {days}d: {e}"),
+            };
+
+            let mut lens = Vec::new();
+            for round in 0..3 {
+                let rebuilt_params = match current.to_build_params() {
+                    Ok(p) => p,
+                    Err(e) => panic!("to_build_params failed at {days}d round {round}: {e}"),
+                };
+                current = match OptionChain::build_chain(&rebuilt_params) {
+                    Ok(chain) => chain,
+                    Err(e) => panic!("rebuild failed at {days}d round {round}: {e}"),
+                };
+                lens.push(current.len());
+            }
+
+            assert_eq!(
+                lens[0], lens[1],
+                "strike count compounded across round-trips at {days}d: {lens:?}"
+            );
+            assert_eq!(
+                lens[1], lens[2],
+                "strike count compounded across round-trips at {days}d: {lens:?}"
+            );
+        }
     }
 }
 
