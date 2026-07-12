@@ -3,6 +3,7 @@ use criterion::{criterion_group, criterion_main};
 mod chains;
 mod model;
 
+use chains::generators::benchmark_chain_generators;
 use chains::optiondata::benchmark_option_data;
 use model::positive::{
     benchmark_arithmetic, benchmark_comparisons, benchmark_conversions, benchmark_creation,
@@ -22,6 +23,7 @@ use model::position::{
 
 criterion_group!(
     benches,
+    benchmark_chain_generators,
     benchmark_option_data,
     benchmark_creation,
     benchmark_arithmetic,
