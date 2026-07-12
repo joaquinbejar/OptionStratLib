@@ -163,6 +163,32 @@ pub enum WalkType {
     },
 }
 
+impl WalkType {
+    /// Returns the volatility parameter carried by this walk type.
+    ///
+    /// For the nine synthetic walk types this is the annualized `volatility`
+    /// field of the variant (the initial volatility for stochastic-volatility
+    /// models such as `Garch`, `Heston`, `Custom` and `Telegraph`).
+    ///
+    /// Returns `None` for [`WalkType::Historical`], whose volatility is not a
+    /// parameter but must be estimated from the provided price history.
+    #[must_use]
+    pub fn volatility(&self) -> Option<Positive> {
+        match self {
+            WalkType::Brownian { volatility, .. }
+            | WalkType::GeometricBrownian { volatility, .. }
+            | WalkType::LogReturns { volatility, .. }
+            | WalkType::MeanReverting { volatility, .. }
+            | WalkType::JumpDiffusion { volatility, .. }
+            | WalkType::Garch { volatility, .. }
+            | WalkType::Heston { volatility, .. }
+            | WalkType::Custom { volatility, .. }
+            | WalkType::Telegraph { volatility, .. } => Some(*volatility),
+            WalkType::Historical { .. } => None,
+        }
+    }
+}
+
 impl Display for WalkType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

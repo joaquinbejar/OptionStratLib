@@ -130,8 +130,17 @@ mod params;
 pub mod exit;
 mod stats;
 
+/// Generic walk driver shared by every step generator.
+///
+/// Contains [`walk_steps`], the single implementation of the
+/// dispatch/advance/build loop that the chain, series and positive
+/// generators share, plus [`generator_positive`] (relocated here from
+/// `chains::` — it never depended on option chains).
+mod walk_driver;
+
 pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::WalkType;
 pub use params::WalkParams;
 pub use stats::SimulationStats;
 pub use traits::{Simulate, WalkTypeAble, WalkTypeAbleClone};
+pub use walk_driver::{generator_positive, walk_steps};

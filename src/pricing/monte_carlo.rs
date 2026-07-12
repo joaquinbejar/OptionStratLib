@@ -284,8 +284,8 @@ mod tests {
 #[cfg(test)]
 mod tests_price_option_monte_carlo {
     use super::*;
-    use crate::chains::generator_positive;
     use crate::model::utils::create_sample_option;
+    use crate::simulation::generator_positive;
     use crate::simulation::simulator::Simulator;
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};

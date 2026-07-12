@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+**Single generic walk driver** (#407):
+
+- `simulation::walk_steps` — the shared dispatch/advance/build loop behind
+  all step generators; custom generators can now be written as a closure
+  over it instead of forking a 100-line function.
+- `WalkType::volatility()` — accessor for the variant's volatility
+  parameter (`None` for `Historical`).
+- `WalkTypeAble::generate()` — provided method dispatching to the walk
+  method matching `params.walk_type`; adding a new `WalkType` variant now
+  requires touching only the enum and the trait, not every generator.
+
 ### Changed
+
+**`generator_positive` relocated** (#407): it never depended on option
+chains, so it moved from `chains::` to `simulation::`. The old path
+`chains::generator_positive` remains as a deprecated re-export; the
+prelude now re-exports the new location (no deprecation warnings for
+prelude users).
 
 **Unified walk-generator contracts** (#406) — the three walk generators
 (`chains::generator_optionchain`, `chains::generator_positive`,

@@ -77,7 +77,7 @@ where
     /// # Errors
     ///
     /// Returns the error type produced by the supplied generator. For
-    /// chain-backed generators (e.g. [`crate::chains::generator_positive`])
+    /// chain-backed generators (e.g. [`crate::simulation::generator_positive`])
     /// this is [`crate::error::ChainError`].
     pub fn new<F, E>(title: String, params: &WalkParams<X, Y>, generator: F) -> Result<Self, E>
     where

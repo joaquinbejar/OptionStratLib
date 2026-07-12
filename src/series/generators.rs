@@ -1,14 +1,10 @@
-use crate::error::{ChainError, SimulationError};
+use crate::error::ChainError;
 use crate::series::{OptionSeries, OptionSeriesBuildParams};
-use crate::simulation::steps::{Step, Ystep};
-use crate::simulation::{WalkParams, WalkType};
-use crate::utils::TimeFrame;
-use crate::utils::others::calculate_log_returns;
-use crate::volatility::{adjust_volatility, constant_volatility};
+use crate::simulation::steps::Step;
+use crate::simulation::{WalkParams, walk_steps};
 use core::option::Option;
 use positive::Positive;
 use rust_decimal::Decimal;
-use tracing::debug;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -69,7 +65,7 @@ fn create_series_from_step(
 /// of the given walk type.
 ///
 /// # Contract (shared with [`crate::chains::generator_optionchain`] and
-/// [`crate::chains::generator_positive`])
+/// [`crate::simulation::generator_positive`])
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
 /// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
@@ -121,90 +117,27 @@ fn create_series_from_step(
 pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
 ) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
-    debug!("{}", walk_params);
-    let (y_steps, volatility) = match &walk_params.walk_type {
-        WalkType::Brownian { volatility, .. } => {
-            (walk_params.walker.brownian(walk_params)?, Some(*volatility))
-        }
-        WalkType::GeometricBrownian { volatility, .. } => (
-            walk_params.walker.geometric_brownian(walk_params)?,
-            Some(*volatility),
-        ),
-        WalkType::LogReturns { volatility, .. } => (
-            walk_params.walker.log_returns(walk_params)?,
-            Some(*volatility),
-        ),
-        WalkType::MeanReverting { volatility, .. } => (
-            walk_params.walker.mean_reverting(walk_params)?,
-            Some(*volatility),
-        ),
-        WalkType::JumpDiffusion { volatility, .. } => (
-            walk_params.walker.jump_diffusion(walk_params)?,
-            Some(*volatility),
-        ),
-        WalkType::Garch { volatility, .. } => {
-            (walk_params.walker.garch(walk_params)?, Some(*volatility))
-        }
-        WalkType::Heston { volatility, .. } => {
-            (walk_params.walker.heston(walk_params)?, Some(*volatility))
-        }
-        WalkType::Custom { volatility, .. } => {
-            (walk_params.walker.custom(walk_params)?, Some(*volatility))
-        }
-        WalkType::Telegraph { volatility, .. } => (
-            walk_params.walker.telegraph(walk_params)?,
-            Some(*volatility),
-        ),
-        WalkType::Historical {
-            timeframe, prices, ..
-        } => {
-            // Let the walker validate the price history first: insufficient
-            // data surfaces as a typed
-            // `SimulationError::InsufficientHistoricalData` instead of a
-            // silent init-only walk that callers cannot distinguish from a
-            // legitimate size-1 walk.
-            let steps = walk_params.walker.historical(walk_params)?;
-            let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
-                .iter()
-                .map(|p: &Positive| p.to_dec())
-                .collect();
-            let constant_volatility = constant_volatility(&log_returns)?;
-            let implied_volatility =
-                adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
-            (steps, Some(implied_volatility))
-        }
-    };
-    if y_steps.len() <= 1 {
-        // Preserve the contains-init-step contract used by the other
-        // generators; callers iterate over Step values and expect at
-        // least the initial state. Returning early also avoids deriving
-        // build params from a series that will never be rebuilt.
-        return Ok(vec![walk_params.init_step.clone()]);
-    }
-
-    // Derive the build parameters once from the initial series; every step's
-    // series is anchored to the initial series' shape instead of feeding back
-    // params re-derived from the previous rebuilt series on each iteration.
-    let build_params = walk_params.ystep_ref().value().to_build_params()?;
-    let mut steps: Vec<Step<Positive, OptionSeries>> = vec![walk_params.init_step.clone()];
-    let mut previous_x_step = walk_params.init_step.x;
-    let mut y_index = *walk_params.ystep_ref().index();
-    let initial_days_left = walk_params.init_step.x.days_left()?;
-
-    // The first walker value duplicates the init step, so skip it.
-    for y_step in y_steps.iter().skip(1) {
-        previous_x_step = match previous_x_step.next() {
-            Ok(x_step) => x_step,
-            // Reaching expiration is the normal end of a walk: truncate.
-            Err(SimulationError::ExpirationReached) => break,
-            // Any other step-advance failure is a real error: propagate.
-            Err(e) => return Err(e.into()),
+    // Derived lazily on the first rebuilt step so that walks that never
+    // rebuild (size <= 1) do not require a parameterizable initial series.
+    let mut context: Option<(OptionSeriesBuildParams, Positive)> = None;
+    walk_steps(walk_params, |new_price, volatility, x_step| {
+        let (build_params, initial_days_left) = match &mut context {
+            Some(context) => context,
+            // Derive the build parameters once from the initial series; every
+            // step's series is anchored to the initial series' shape instead
+            // of feeding back params re-derived from the previous rebuilt
+            // series on each iteration.
+            none => {
+                let build_params = walk_params.ystep_ref().value().to_build_params()?;
+                let initial_days_left = walk_params.init_step.x.days_left()?;
+                none.insert((build_params, initial_days_left))
+            }
         };
         // Age the series' expirations by the walk time elapsed since the
         // initial step, dropping the ones that have already expired, so the
         // option series ages along the walk like the chain generator does.
         let elapsed_days =
-            (initial_days_left.to_dec() - previous_x_step.days_left()?.to_dec()).max(Decimal::ZERO);
+            (initial_days_left.to_dec() - x_step.days_left()?.to_dec()).max(Decimal::ZERO);
         let aged_series: Vec<Positive> = build_params
             .series
             .iter()
@@ -217,29 +150,12 @@ pub fn generator_optionseries(
         if aged_series.is_empty() {
             // Every expiration in the series has passed: nothing left to
             // simulate, end the walk here.
-            break;
+            return Ok(None);
         }
-        // convert y_step to OptionSeries
-        let y_step_series: OptionSeries =
-            create_series_from_step(&build_params, y_step, volatility, aged_series)?;
-        y_index += 1;
-        let step = Step {
-            x: previous_x_step,
-            y: Ystep::new(y_index, y_step_series),
-        };
-
-        steps.push(step)
-    }
-
-    if steps.len() > walk_params.size {
-        debug!(
-            "generated {} steps, truncating to configured size {}",
-            steps.len(),
-            walk_params.size
-        );
-        steps.truncate(walk_params.size);
-    }
-    Ok(steps)
+        let y_step_series =
+            create_series_from_step(build_params, new_price, volatility, aged_series)?;
+        Ok(Some(y_step_series))
+    })
 }
 
 #[cfg(test)]
@@ -250,6 +166,7 @@ mod tests_generator_optionseries {
     use crate::ExpirationDate;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
+    use crate::error::SimulationError;
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
