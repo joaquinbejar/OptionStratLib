@@ -400,11 +400,29 @@ impl OptionChain {
                     &format!("failed to get days: {e}"),
                 )
             })?;
+            // `chain_size` is a per-side half-width while `strike_step`
+            // expects the TOTAL number of strikes covering ±kσ, so convert
+            // to the 2n+1 grid the builder below actually generates. The
+            // conversion is checked: a caller-supplied size near usize::MAX
+            // must surface as an error, not a wrap or debug panic.
+            let total_strikes = params
+                .chain_size
+                .checked_mul(2)
+                .and_then(|doubled| doubled.checked_add(1))
+                .ok_or_else(|| {
+                    ChainError::invalid_parameters(
+                        "chain_size",
+                        &format!(
+                            "chain_size {} overflows the 2n+1 strike-grid conversion",
+                            params.chain_size
+                        ),
+                    )
+                })?;
             strike_step(
                 underlying_price,
                 params.implied_volatility,
                 days,
-                params.chain_size,
+                total_strikes,
                 None,
             )
         };
@@ -600,11 +618,14 @@ impl OptionChain {
             chain_size = strikes_below.max(strikes_above);
         }
 
-        // Default to a reasonable chain size if calculation fails
+        // Default to a reasonable chain size if calculation fails.
+        // `chain_size` is the per-side half-width consumed by `build_chain`
+        // (which generates up to `chain_size` strikes above AND below ATM),
+        // so keep the computed max(strikes_below, strikes_above) instead of
+        // the total row count — feeding the total back would roughly double
+        // the strike grid on every to_build_params -> build_chain round-trip.
         if chain_size == 0 {
             chain_size = 10;
-        } else {
-            chain_size = self.len();
         }
 
         // Estimate the average bid-ask spread from the available options
@@ -10959,6 +10980,96 @@ mod tests_to_build_params_bis {
 
         let new_chain = OptionChain::build_chain(&params).unwrap();
         info!("{}", new_chain);
+    }
+
+    /// Regression for #405: `to_build_params` fed the TOTAL row count back
+    /// as the per-side `chain_size`, so each `to_build_params` ->
+    /// `build_chain` round-trip roughly doubled the strike grid until the
+    /// deep-strike price break capped it. The strike count must be stable
+    /// across round-trips after the first rebuild (the first rebuild may
+    /// symmetrize an asymmetric input, but must not compound).
+    #[test]
+    fn test_to_build_params_round_trip_strike_count_stable() {
+        for days in [30.0, 180.0] {
+            let params = OptionChainBuildParams::new(
+                "TEST".to_string(),
+                None,
+                10,
+                spos!(5.0),
+                dec!(-0.2),
+                dec!(0.1),
+                pos_or_panic!(0.02),
+                2,
+                OptionDataPriceParams::new(
+                    Some(Box::new(Positive::HUNDRED)),
+                    Some(ExpirationDate::Days(pos_or_panic!(days))),
+                    Some(dec!(0.05)),
+                    spos!(0.02),
+                    Some("TEST".to_string()),
+                ),
+                pos_or_panic!(0.2),
+            );
+            let mut current = match OptionChain::build_chain(&params) {
+                Ok(chain) => chain,
+                Err(e) => panic!("initial build_chain failed at {days}d: {e}"),
+            };
+
+            let mut lens = Vec::new();
+            for round in 0..3 {
+                let rebuilt_params = match current.to_build_params() {
+                    Ok(p) => p,
+                    Err(e) => panic!("to_build_params failed at {days}d round {round}: {e}"),
+                };
+                current = match OptionChain::build_chain(&rebuilt_params) {
+                    Ok(chain) => chain,
+                    Err(e) => panic!("rebuild failed at {days}d round {round}: {e}"),
+                };
+                lens.push(current.len());
+            }
+
+            assert_eq!(
+                lens[0], lens[1],
+                "strike count compounded across round-trips at {days}d: {lens:?}"
+            );
+            assert_eq!(
+                lens[1], lens[2],
+                "strike count compounded across round-trips at {days}d: {lens:?}"
+            );
+        }
+    }
+
+    /// A pathological `chain_size` must surface as a typed error from the
+    /// checked 2n+1 conversion, not wrap or panic.
+    #[test]
+    fn test_build_chain_chain_size_overflow_errors() {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            usize::MAX,
+            None, // force the strike_step path that performs the conversion
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("TEST".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+        match OptionChain::build_chain(&params) {
+            Err(e) => {
+                let message = e.to_string();
+                assert!(
+                    message.contains("chain_size") && message.contains("overflow"),
+                    "expected chain_size overflow error, got: {message}"
+                );
+            }
+            Ok(_) => panic!("usize::MAX chain_size must not build"),
+        }
     }
 }
 

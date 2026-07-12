@@ -727,11 +727,15 @@ fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
 
 /// Return the strike interval that gives ~`size` strikes around ATM.
 /// All units are in the same currency.
+///
+/// `size` is the desired TOTAL number of strikes covering the ±kσ range
+/// (not the per-side half-width used by `OptionChainBuildParams::chain_size`;
+/// callers holding a per-side count must pass `2 * chain_size + 1`).
 pub fn strike_step(
     underlying_price: Positive,
     implied_vol: Positive, // e.g. 0.25 for 25 %
     days_to_exp: Positive,
-    size: usize,         // desired number of strikes
+    size: usize,         // desired TOTAL number of strikes across the range
     k: Option<Positive>, // σ-multiplier you want to cover (2.0-3.0 typical)
 ) -> Positive {
     // Helper for compile-time-safe literal positives. Each `dec!(X.X)` is a
