@@ -402,12 +402,27 @@ impl OptionChain {
             })?;
             // `chain_size` is a per-side half-width while `strike_step`
             // expects the TOTAL number of strikes covering ±kσ, so convert
-            // to the 2n+1 grid the builder below actually generates.
+            // to the 2n+1 grid the builder below actually generates. The
+            // conversion is checked: a caller-supplied size near usize::MAX
+            // must surface as an error, not a wrap or debug panic.
+            let total_strikes = params
+                .chain_size
+                .checked_mul(2)
+                .and_then(|doubled| doubled.checked_add(1))
+                .ok_or_else(|| {
+                    ChainError::invalid_parameters(
+                        "chain_size",
+                        &format!(
+                            "chain_size {} overflows the 2n+1 strike-grid conversion",
+                            params.chain_size
+                        ),
+                    )
+                })?;
             strike_step(
                 underlying_price,
                 params.implied_volatility,
                 days,
-                params.chain_size * 2 + 1,
+                total_strikes,
                 None,
             )
         };
@@ -11210,6 +11225,40 @@ mod tests_to_build_params_bis {
             rebuilt_span.to_dec() >= source_span.to_dec() * dec!(0.3),
             "smile collapsed on round-trip: source span {source_span}, rebuilt span {rebuilt_span}"
         );
+    }
+
+    /// A pathological `chain_size` must surface as a typed error from the
+    /// checked 2n+1 conversion, not wrap or panic.
+    #[test]
+    fn test_build_chain_chain_size_overflow_errors() {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            usize::MAX,
+            None, // force the strike_step path that performs the conversion
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("TEST".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+        match OptionChain::build_chain(&params) {
+            Err(e) => {
+                let message = e.to_string();
+                assert!(
+                    message.contains("chain_size") && message.contains("overflow"),
+                    "expected chain_size overflow error, got: {message}"
+                );
+            }
+            Ok(_) => panic!("usize::MAX chain_size must not build"),
+        }
     }
 }
 

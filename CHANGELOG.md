@@ -32,10 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WalkTypeAble::generate_with_vol()` plus `garch_with_vol` /
   `heston_with_vol` / `custom_with_vol` / `telegraph_with_vol` provided
   methods. The stochastic-volatility models already simulated a vol path
-  internally and discarded it; it is now returned. The price-path methods
-  (`garch`, `heston`, `custom`, `telegraph`) delegate to their
-  `*_with_vol` sibling — implementors overriding a price-path method
-  should override the `*_with_vol` sibling too.
+  internally and discarded it; it is now returned. The built-in dynamics
+  live in public kernels (`garch_walk`, `heston_walk`, `custom_walk`,
+  `telegraph_walk`) shared by both method families; the price-path
+  methods remain standalone override points (overriding one method never
+  changes the other's default). Implementors overriding a price-path
+  method must also override the `*_with_vol` sibling (wrapping their own
+  dynamics or composing the public kernel) for the walk generators —
+  which consume `generate_with_vol` — to see their dynamics.
 
 ### Changed
 
