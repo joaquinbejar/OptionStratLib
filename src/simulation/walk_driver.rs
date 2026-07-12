@@ -21,7 +21,7 @@ use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use positive::Positive;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use std::convert::TryInto;
 use std::fmt::Display;
 use tracing::debug;
@@ -58,6 +58,93 @@ where
     }
 }
 
+/// Per-step expanding-window volatility estimates for a walked price path,
+/// free of look-ahead bias: the estimate at index `i` uses only the log
+/// returns of `prices[..=i]`.
+///
+/// Uses the same sample-variance convention as
+/// [`crate::volatility::constant_volatility`], computed incrementally with
+/// checked arithmetic, and annualizes each estimate from `timeframe`.
+/// Indices with fewer than two returns are backfilled with the first
+/// computable estimate. Returns `Ok(None)` when no index has enough data
+/// (fewer than three prices).
+///
+/// # Errors
+///
+/// Propagates errors from `calculate_log_returns` / `adjust_volatility` and
+/// surfaces arithmetic overflow as `ChainError`.
+fn expanding_window_vols(
+    prices: &[Positive],
+    timeframe: TimeFrame,
+) -> Result<Option<Vec<Positive>>, ChainError> {
+    let n = prices.len();
+    if n < 3 {
+        // Fewer than two returns anywhere: no sample variance is computable.
+        return Ok(None);
+    }
+    let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
+        .iter()
+        .map(|p| p.to_dec())
+        .collect();
+
+    let overflow =
+        |what: &str| ChainError::invalid_parameters("prices", &format!("{what} overflowed"));
+
+    let mut sum = Decimal::ZERO;
+    let mut sq_sum = Decimal::ZERO;
+    let mut raw: Vec<Option<Positive>> = Vec::with_capacity(n);
+    raw.push(None); // index 0 has no returns yet
+
+    for (i, r) in log_returns.iter().copied().enumerate() {
+        sum = sum
+            .checked_add(r)
+            .ok_or_else(|| overflow("running sum of log returns"))?;
+        let r_sq = r
+            .checked_mul(r)
+            .ok_or_else(|| overflow("squared log return"))?;
+        sq_sum = sq_sum
+            .checked_add(r_sq)
+            .ok_or_else(|| overflow("running sum of squared log returns"))?;
+
+        // `r` is the return between prices[i] and prices[i + 1]; after
+        // consuming it, `count` returns are available at price index i + 1.
+        let count = i + 1;
+        if count < 2 {
+            raw.push(None);
+            continue;
+        }
+        let count_dec = Decimal::from(count as u64);
+        let denom = count_dec - Decimal::ONE;
+        // Sample variance via prefix sums: (Σr² − (Σr)²/n) / (n − 1),
+        // algebraically identical to the two-pass form in
+        // `constant_volatility`.
+        let sum_sq = sum
+            .checked_mul(sum)
+            .ok_or_else(|| overflow("squared running sum"))?;
+        let mean_sq_total = sum_sq
+            .checked_div(count_dec)
+            .ok_or_else(|| overflow("mean projection"))?;
+        let variance = sq_sum
+            .checked_sub(mean_sq_total)
+            .ok_or_else(|| overflow("variance numerator"))?
+            .checked_div(denom)
+            .ok_or_else(|| overflow("variance"))?
+            .max(Decimal::ZERO);
+        let std_dev = variance.sqrt().ok_or_else(|| overflow("volatility sqrt"))?;
+        let std_dev = Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO);
+        let annualized = adjust_volatility(std_dev, timeframe, TimeFrame::Year)?;
+        raw.push(Some(annualized));
+    }
+
+    let first_computable = raw.iter().flatten().next().copied();
+    match first_computable {
+        None => Ok(None),
+        Some(fill) => Ok(Some(
+            raw.into_iter().map(|vol| vol.unwrap_or(fill)).collect(),
+        )),
+    }
+}
+
 /// Runs a walk and materializes it as a vector of [`Step`]s, delegating the
 /// construction of each y-value to `next_y`.
 ///
@@ -78,10 +165,19 @@ where
 /// # Parameters
 ///
 /// * `walk_params` - The walk configuration; `walk_params.walk_type` selects
-///   the stochastic process via [`crate::simulation::WalkTypeAble::generate`].
+///   the stochastic process via
+///   [`crate::simulation::WalkTypeAble::generate_with_vol`].
 /// * `next_y` - Builds the y-value for one step from `(new_price,
-///   walk_volatility, advanced_x_step)`. Returning `Ok(None)` ends the walk
+///   step_volatility, advanced_x_step)`. Returning `Ok(None)` ends the walk
 ///   gracefully at the previous step.
+///
+/// # Volatility
+///
+/// The volatility passed to `next_y` is per-step wherever the model provides
+/// one: the simulated vol path for stochastic-volatility walk types
+/// (`Garch`, `Heston`, `Custom`, `Telegraph`), an expanding-window estimate
+/// free of look-ahead bias for `Historical` walks, and the walk type's
+/// constant `volatility` parameter otherwise.
 ///
 /// # Returns
 ///
@@ -105,21 +201,38 @@ where
     F: FnMut(&Positive, Option<Positive>, &Xstep<Positive>) -> Result<Option<Y>, ChainError>,
 {
     debug!("{}", walk_params);
-    let y_steps = walk_params.walker.generate(walk_params)?;
+    let path = walk_params.walker.generate_with_vol(walk_params)?;
+    let y_steps = path.prices;
     if y_steps.len() <= 1 {
         // Preserve the init-step invariant when the walker produces no
         // values beyond the initial one; downstream consumers expect at
         // least the initial step to be present.
         return Ok(vec![walk_params.init_step.clone()]);
     }
-    let volatility = walk_volatility(walk_params)?;
+
+    // Per-step volatilities: from the walker when the model simulates a vol
+    // path (Garch/Heston/Custom/Telegraph); for Historical walks, an
+    // expanding-window estimate over the walked prices that uses no future
+    // data. Otherwise a single constant from the walk type.
+    let step_vols: Option<Vec<Positive>> = match path.vols {
+        Some(vols) => Some(vols),
+        None => match &walk_params.walk_type {
+            WalkType::Historical { timeframe, .. } => expanding_window_vols(&y_steps, *timeframe)?,
+            _ => None,
+        },
+    };
+    let constant_vol = if step_vols.is_some() {
+        None
+    } else {
+        walk_volatility(walk_params)?
+    };
 
     let mut steps: Vec<Step<Positive, Y>> = vec![walk_params.init_step.clone()];
     let mut previous_x_step = walk_params.init_step.x;
     let mut y_index = *walk_params.ystep_ref().index();
 
     // The first walker value duplicates the init step, so skip it.
-    for y_step in y_steps.iter().skip(1) {
+    for (i, y_step) in y_steps.iter().enumerate().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
             // Reaching expiration is the normal end of a walk: truncate.
@@ -127,6 +240,10 @@ where
             // Any other step-advance failure is a real error: propagate.
             Err(e) => return Err(e.into()),
         };
+        let volatility = step_vols
+            .as_ref()
+            .and_then(|vols| vols.get(i).copied())
+            .or(constant_vol);
         let Some(y_value) = next_y(y_step, volatility, &previous_x_step)? else {
             break;
         };
@@ -303,6 +420,101 @@ mod tests {
             Err(e) => panic!("empty walker output must not error: {e}"),
         };
         assert_eq!(steps.len(), 1, "empty walker output yields init-only walk");
+    }
+
+    /// Stochastic-vol walkers must expose a vol path aligned with prices
+    /// and actually varying when vol-of-vol is high.
+    #[test]
+    fn test_heston_with_vol_exposes_varying_vols() {
+        use rust_decimal_macros::dec;
+        let walker = Walker::new();
+        let params: WalkParams<Positive, Positive> = WalkParams {
+            size: 50,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(365.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::Heston {
+                dt: pos_or_panic!(0.004),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+                kappa: Positive::TWO,
+                theta: pos_or_panic!(0.04),
+                xi: Positive::TWO, // high vol-of-vol so the path must move
+                rho: dec!(-0.5),
+            },
+            walker: Box::new(Walker::new()),
+        };
+        let path = match walker.heston_with_vol(&params) {
+            Ok(path) => path,
+            Err(e) => panic!("heston_with_vol failed: {e}"),
+        };
+        let vols = match path.vols {
+            Some(vols) => vols,
+            None => panic!("heston must expose a vol path"),
+        };
+        assert_eq!(vols.len(), path.prices.len());
+        assert_eq!(vols.first(), Some(&pos_or_panic!(0.2)));
+        let varying = vols.windows(2).any(|w| w[0] != w[1]);
+        assert!(varying, "high vol-of-vol Heston vol path cannot be flat");
+    }
+
+    /// Constant-vol walk types expose no vol path.
+    #[test]
+    fn test_generate_with_vol_none_for_gbm() {
+        use rust_decimal_macros::dec;
+        let walker = Walker::new();
+        let params: WalkParams<Positive, Positive> = WalkParams {
+            size: 10,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(Walker::new()),
+        };
+        let path = match walker.generate_with_vol(&params) {
+            Ok(path) => path,
+            Err(e) => panic!("generate_with_vol failed: {e}"),
+        };
+        assert!(path.vols.is_none());
+        assert_eq!(path.prices.len(), 10);
+    }
+
+    /// The expanding-window Historical estimator must not see future data:
+    /// with a flat prefix followed by a jump, the early estimates are zero
+    /// while the post-jump estimates are strictly positive.
+    #[test]
+    fn test_expanding_window_vols_no_look_ahead() {
+        let mut prices = vec![Positive::HUNDRED; 8];
+        prices.push(pos_or_panic!(200.0));
+        prices.push(pos_or_panic!(150.0));
+
+        let vols = match expanding_window_vols(&prices, TimeFrame::Day) {
+            Ok(Some(vols)) => vols,
+            Ok(None) => panic!("estimator returned no vols"),
+            Err(e) => panic!("estimator failed: {e}"),
+        };
+        assert_eq!(vols.len(), prices.len());
+        // Index 5 sees only the flat prefix: zero variance, zero vol.
+        assert_eq!(vols.get(5), Some(&Positive::ZERO));
+        // The last index has seen the jump: strictly positive vol.
+        match vols.last() {
+            Some(last) => assert!(*last > Positive::ZERO),
+            None => panic!("empty vols"),
+        }
     }
 
     /// `next_y` returning `Ok(None)` must end the walk gracefully.

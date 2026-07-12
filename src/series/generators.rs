@@ -40,7 +40,9 @@ fn create_series_from_step(
     let mut series_params = build_params.clone();
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
-        series_params.set_implied_volatility(volatility);
+        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
+        // can spike above it, so cap at 1 to keep the walk alive.
+        series_params.set_implied_volatility(volatility.min(Positive::ONE));
     }
     series_params.series = aged_series;
     let new_chain = OptionSeries::build_series(&series_params)?;

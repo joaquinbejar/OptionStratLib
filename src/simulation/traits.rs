@@ -7,6 +7,7 @@
 use crate::backtesting::results::SimulationStatsResult;
 use crate::error::SimulationError;
 use crate::model::decimal::{decimal_normal_sample, finite_decimal};
+use crate::simulation::model::WalkPath;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
@@ -137,6 +138,41 @@ where
             WalkType::Custom { .. } => self.custom(params),
             WalkType::Telegraph { .. } => self.telegraph(params),
             WalkType::Historical { .. } => self.historical(params),
+        }
+    }
+
+    /// Like [`WalkTypeAble::generate`], but also exposes the per-step
+    /// volatility path for walk types whose volatility varies over time.
+    ///
+    /// For the stochastic-volatility variants (`Garch`, `Heston`, `Custom`,
+    /// `Telegraph`) the returned [`WalkPath::vols`] carries the ANNUALIZED
+    /// volatility prevailing at each step, aligned index-by-index with
+    /// [`WalkPath::prices`]. For every other variant `vols` is `None` — the
+    /// constant volatility is available via [`WalkType::volatility`], and
+    /// `Historical` per-step estimates are the caller's concern (see
+    /// `simulation::walk_steps`).
+    ///
+    /// # Note for implementors
+    ///
+    /// The default price-path methods (`garch`, `heston`, `custom`,
+    /// `telegraph`) delegate to their `*_with_vol` sibling and drop the vol
+    /// path. If you override a price-path method, override the matching
+    /// `*_with_vol` method too, otherwise `generate_with_vol` will not see
+    /// your dynamics.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of the dispatched walk method.
+    fn generate_with_vol(&self, params: &WalkParams<X, Y>) -> Result<WalkPath, SimulationError> {
+        match &params.walk_type {
+            WalkType::Garch { .. } => self.garch_with_vol(params),
+            WalkType::Heston { .. } => self.heston_with_vol(params),
+            WalkType::Custom { .. } => self.custom_with_vol(params),
+            WalkType::Telegraph { .. } => self.telegraph_with_vol(params),
+            _ => Ok(WalkPath {
+                prices: self.generate(params)?,
+                vols: None,
+            }),
         }
     }
 
@@ -460,6 +496,20 @@ where
     /// [`SimulationError::PositiveError`] when an intermediate
     /// variance breaches the `Positive` invariant.
     fn garch(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
+        Ok(self.garch_with_vol(params)?.prices)
+    }
+
+    /// GARCH(1,1) walk that also exposes the simulated conditional-volatility
+    /// path.
+    ///
+    /// Same dynamics as [`WalkTypeAble::garch`]; `vols[i]` is the ANNUALIZED
+    /// conditional volatility `sqrt(var_t)` that generated `prices[i]`
+    /// (`vols[0]` is the initial `volatility` parameter).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`WalkTypeAble::garch`].
+    fn garch_with_vol(&self, params: &WalkParams<X, Y>) -> Result<WalkPath, SimulationError> {
         match params.walk_type {
             WalkType::Garch {
                 dt,
@@ -473,8 +523,10 @@ where
                 }
 
                 let mut path = Vec::with_capacity(params.size + 1);
+                let mut vols = Vec::with_capacity(params.size + 1);
                 let mut price = params.ystep_as_positive()?.to_dec();
                 path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
+                vols.push(volatility);
 
                 // --- initial conditional variance (annualised) ---
                 let mut var = volatility * volatility; // σ₀²
@@ -501,11 +553,17 @@ where
                     // 4) price update
                     price *= (ret).exp();
                     path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
+                    // `var` is kept in annualized-squared units, so sqrt is
+                    // the annualized conditional volatility at this step.
+                    vols.push(var.sqrt());
 
                     // 5) store ε²
                     prev_eps2 = eps.powu(2); // εₜ²
                 }
-                Ok(path)
+                Ok(WalkPath {
+                    prices: path,
+                    vols: Some(vols),
+                })
             }
             _ => Err(SimulationError::InvalidWalkType { expected: "GARCH" }),
         }
@@ -565,6 +623,20 @@ where
     /// intermediate price or variance breaches the `Positive`
     /// invariant.
     fn heston(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
+        Ok(self.heston_with_vol(params)?.prices)
+    }
+
+    /// Heston walk that also exposes the simulated volatility path.
+    ///
+    /// Same dynamics as [`WalkTypeAble::heston`]; `vols[i]` is the ANNUALIZED
+    /// instantaneous volatility `sqrt(v_t)` prevailing after the step that
+    /// produced `prices[i]` (`vols[0]` is the initial `volatility`
+    /// parameter).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`WalkTypeAble::heston`].
+    fn heston_with_vol(&self, params: &WalkParams<X, Y>) -> Result<WalkPath, SimulationError> {
         match params.walk_type {
             WalkType::Heston {
                 dt,
@@ -581,12 +653,14 @@ where
                 }
 
                 let mut values = Vec::with_capacity(params.size);
+                let mut vols = Vec::with_capacity(params.size);
                 let mut price: Positive = params.ystep_as_positive()?;
 
                 // Initial variance is the square of initial volatility
                 let mut variance = volatility.to_dec() * volatility.to_dec();
 
                 values.push(price); // Add initial value
+                vols.push(volatility);
 
                 let dt_sqrt = dt.to_dec().sqrt().ok_or_else(|| {
                     SimulationError::walk_error("Heston: sqrt(dt) failed (overflow)")
@@ -623,9 +697,18 @@ where
                     variance = variance_new;
 
                     values.push(price);
+                    // Instantaneous annualized volatility after the step;
+                    // CIR variance is truncated at zero so sqrt always exists.
+                    let vol_step = variance.sqrt().ok_or_else(|| {
+                        SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
+                    })?;
+                    vols.push(Positive::new_decimal(vol_step).unwrap_or(Positive::ZERO));
                 }
 
-                Ok(values)
+                Ok(WalkPath {
+                    prices: values,
+                    vols: Some(vols),
+                })
             }
             _ => Err(SimulationError::InvalidWalkType { expected: "Heston" }),
         }
@@ -656,6 +739,20 @@ where
     /// process order, and [`SimulationError::PositiveError`] when a
     /// generated sample violates the `Positive` invariant.
     fn custom(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
+        Ok(self.custom_with_vol(params)?.prices)
+    }
+
+    /// Custom (mean-reverting volatility) walk that also exposes the
+    /// Ornstein-Uhlenbeck volatility path that drove the prices.
+    ///
+    /// Same dynamics as [`WalkTypeAble::custom`]; `vols[i]` is the ANNUALIZED
+    /// OU volatility used to generate `prices[i]` (`vols[0]` is the initial
+    /// `volatility` parameter).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`WalkTypeAble::custom`].
+    fn custom_with_vol(&self, params: &WalkParams<X, Y>) -> Result<WalkPath, SimulationError> {
         match params.walk_type {
             WalkType::Custom {
                 dt,
@@ -671,7 +768,9 @@ where
                 let sqrt_dt = dt.sqrt();
                 let mut price = params.ystep_as_positive()?.to_dec();
                 let mut path = Vec::with_capacity(params.size + 1);
+                let mut vols_out = Vec::with_capacity(params.size + 1);
                 path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
+                vols_out.push(volatility);
 
                 for &vol in vols.iter().take(params.size - 1) {
                     let z = decimal_normal_sample();
@@ -682,9 +781,14 @@ where
                     path.push(
                         Positive::new_decimal(price.max(Decimal::ZERO)).unwrap_or(Positive::ZERO),
                     );
+                    // The OU volatility that generated this step.
+                    vols_out.push(vol);
                 }
 
-                Ok(path)
+                Ok(WalkPath {
+                    prices: path,
+                    vols: Some(vols_out),
+                })
             }
             _ => Err(SimulationError::InvalidWalkType { expected: "Custom" }),
         }
@@ -713,6 +817,21 @@ where
     /// and [`SimulationError::PositiveError`] when an intermediate
     /// sample breaches the `Positive` invariant.
     fn telegraph(&self, params: &WalkParams<X, Y>) -> Result<Vec<Positive>, SimulationError> {
+        Ok(self.telegraph_with_vol(params)?.prices)
+    }
+
+    /// Telegraph (two-state regime switching) walk that also exposes the
+    /// regime-dependent volatility path.
+    ///
+    /// Same dynamics as [`WalkTypeAble::telegraph`]; `vols[i]` is the
+    /// ANNUALIZED regime volatility (base volatility times the active
+    /// regime's multiplier) used to generate `prices[i]` (`vols[0]` is the
+    /// base `volatility` parameter).
+    ///
+    /// # Errors
+    ///
+    /// Same as [`WalkTypeAble::telegraph`].
+    fn telegraph_with_vol(&self, params: &WalkParams<X, Y>) -> Result<WalkPath, SimulationError> {
         match params.walk_type {
             WalkType::Telegraph {
                 dt,
@@ -724,8 +843,10 @@ where
                 vol_multiplier_down,
             } => {
                 let mut values = Vec::with_capacity(params.size);
+                let mut vols = Vec::with_capacity(params.size);
                 let mut price = params.ystep_as_positive()?.to_dec();
                 values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
+                vols.push(volatility);
 
                 // Initialize telegraph state randomly
                 let mut state: i8 = if decimal_normal_sample().to_f64().unwrap_or(0.0) < 0.0 {
@@ -772,9 +893,14 @@ where
                     price *= price_change.exp();
 
                     values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
+                    // Regime volatility that generated this step.
+                    vols.push(current_vol);
                 }
 
-                Ok(values)
+                Ok(WalkPath {
+                    prices: values,
+                    vols: Some(vols),
+                })
             }
             _ => Err(SimulationError::InvalidWalkType {
                 expected: "Telegraph",

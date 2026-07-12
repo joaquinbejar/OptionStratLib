@@ -46,7 +46,9 @@ fn create_chain_from_step(
     let mut chain_params = build_params.clone();
     chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
-        chain_params.set_implied_volatility(volatility);
+        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
+        // can spike above it, so cap at 1 to keep the walk alive.
+        chain_params.set_implied_volatility(volatility.min(Positive::ONE));
     }
     if let Some(exp_date) = expiration_date {
         chain_params.price_params.expiration_date = Some(exp_date);
@@ -60,10 +62,12 @@ fn create_chain_from_step(
 /// Simulates the stochastic process selected by `walk_params.walk_type` (Brownian,
 /// GeometricBrownian, LogReturns, MeanReverting, JumpDiffusion, Garch, Heston, Custom,
 /// Telegraph, or Historical) for the underlying price and rebuilds the option chain at
-/// each step with the new price, the walk's volatility, and the decayed expiration date.
-/// For synthetic walks the chain IV is the walk type's `volatility` parameter; for
-/// `Historical` it is the annualized constant volatility estimated from the provided
-/// price history.
+/// each step with the new price, the step's volatility, and the decayed expiration date.
+/// For constant-volatility walks the chain IV is the walk type's `volatility`
+/// parameter; for stochastic-volatility walks (`Garch`, `Heston`, `Custom`,
+/// `Telegraph`) it follows the simulated per-step volatility path; for `Historical`
+/// it is an expanding-window estimate over the walked prices that uses no future
+/// data (capped at 100% before stamping the chain).
 ///
 /// Implemented on top of the shared walk driver
 /// ([`crate::simulation::walk_steps`]); this function only supplies the chain-rebuild
@@ -201,6 +205,80 @@ mod tests {
         )
         .expect("random walk construction");
         assert_eq!(random_walk.len(), n_steps);
+    }
+
+    /// Regression for #408: under a stochastic-volatility walk the rebuilt
+    /// chains must follow the simulated per-step vol path instead of being
+    /// frozen at the walk's initial volatility.
+    #[test]
+    fn test_generator_optionchain_heston_vol_reaches_chains() {
+        use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+
+        let price_params = OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(60.0))),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            Some("TEST".to_string()),
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            Some(pos_or_panic!(5.0)),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            price_params,
+            pos_or_panic!(0.2),
+        );
+        let initial_chain = match OptionChain::build_chain(&chain_params) {
+            Ok(chain) => chain,
+            Err(e) => panic!("initial chain build failed: {e}"),
+        };
+
+        let walk_params = WalkParams {
+            size: 6,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(60.0)),
+                ),
+                y: Ystep::new(0, initial_chain),
+            },
+            walk_type: WalkType::Heston {
+                dt: pos_or_panic!(0.004),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+                kappa: Positive::TWO,
+                theta: pos_or_panic!(0.04),
+                xi: Positive::TWO, // high vol-of-vol: the vol path must move
+                rho: dec!(-0.5),
+            },
+            walker: Box::new(WalkerOptionChain::new()),
+        };
+
+        let steps = match generator_optionchain(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_optionchain failed: {e}"),
+        };
+        assert_eq!(steps.len(), 6);
+
+        let atm_ivs: Vec<Positive> = steps
+            .iter()
+            .skip(1)
+            .map(|step| match step.y.value().get_atm_implied_volatility() {
+                Ok(iv) => *iv,
+                Err(e) => panic!("rebuilt chain has no ATM IV: {e}"),
+            })
+            .collect();
+        let varying = atm_ivs.windows(2).any(|w| w[0] != w[1]);
+        assert!(
+            varying,
+            "chain IVs are frozen despite a stochastic-vol walk: {atm_ivs:?}"
+        );
     }
 }
 

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**Per-step volatility paths** (#408):
+
+- `simulation::WalkPath` — walker output carrying `prices` plus optional
+  per-step ANNUALIZED `vols`.
+- `WalkTypeAble::generate_with_vol()` plus `garch_with_vol` /
+  `heston_with_vol` / `custom_with_vol` / `telegraph_with_vol` provided
+  methods. The stochastic-volatility models already simulated a vol path
+  internally and discarded it; it is now returned. The price-path methods
+  (`garch`, `heston`, `custom`, `telegraph`) delegate to their
+  `*_with_vol` sibling — implementors overriding a price-path method
+  should override the `*_with_vol` sibling too.
+
+### Changed
+
+**Chains/series rebuilt with per-step volatility** (#408):
+
+- Under `Garch` / `Heston` / `Custom` / `Telegraph` walks,
+  `generator_optionchain` and `generator_optionseries` now stamp each
+  rebuilt chain with the simulated volatility prevailing at that step
+  instead of freezing the walk's initial volatility for the whole walk.
+- `Historical` walks now use an expanding-window volatility estimate that
+  only uses prices up to each step (the previous full-sample estimate had
+  look-ahead bias). The estimate at the final step matches the old
+  full-sample value.
+- Per-step IVs are capped at 100% before stamping a chain (`build_chain`
+  rejects IV > 1; simulated vol paths can spike above it).
+
 **Single generic walk driver** (#407):
 
 - `simulation::walk_steps` — the shared dispatch/advance/build loop behind
