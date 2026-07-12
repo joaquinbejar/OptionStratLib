@@ -91,6 +91,15 @@ where
 ///
 /// Walkers that cannot be `Clone` may implement `WalkTypeAbleClone::clone_box`
 /// by hand, but doing so is rarely necessary.
+///
+/// # Output contract
+///
+/// The walk generators (`generator_optionchain`, `generator_positive`,
+/// `generator_optionseries`) treat the FIRST element of a walker's output as a
+/// duplicate of the initial value and skip it. A walker may return an empty
+/// vector or a single element; the generators then yield only the initial
+/// step. Returning fewer than `params.size` values is allowed and simply
+/// shortens the walk.
 pub trait WalkTypeAble<X, Y>: WalkTypeAbleClone<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,

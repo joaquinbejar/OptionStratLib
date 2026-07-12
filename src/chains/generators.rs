@@ -6,7 +6,7 @@
 use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::chains::utils::OptionChainBuildParams;
-use crate::error::ChainError;
+use crate::error::{ChainError, SimulationError};
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
@@ -62,9 +62,23 @@ fn create_chain_from_step(
 
 /// Generates a vector of `Step`s containing `Positive` x-values and `OptionChain` y-values.
 ///
-/// This function simulates a geometric Brownian motion walk for option chains, generating a sequence
-/// of steps with updated option chains based on the changing underlying price. It uses a fixed volatility
-/// of 0.20.
+/// Simulates the stochastic process selected by `walk_params.walk_type` (Brownian,
+/// GeometricBrownian, LogReturns, MeanReverting, JumpDiffusion, Garch, Heston, Custom,
+/// Telegraph, or Historical) for the underlying price and rebuilds the option chain at
+/// each step with the new price, the walk's volatility, and the decayed expiration date.
+/// For synthetic walks the chain IV is the walk type's `volatility` parameter; for
+/// `Historical` it is the annualized constant volatility estimated from the provided
+/// price history.
+///
+/// # Contract (shared with [`generator_positive`] and
+/// [`crate::series::generator_optionseries`])
+///
+/// * The returned vector always starts with `walk_params.init_step`.
+/// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
+///   only the initial step is returned.
+/// * The walk is truncated when the x-step reaches expiration
+///   (`SimulationError::ExpirationReached`); any other step-advance error is propagated.
+/// * The result is truncated to at most `walk_params.size` steps.
 ///
 /// # Arguments
 ///
@@ -78,10 +92,12 @@ fn create_chain_from_step(
 ///
 /// # Errors
 ///
-/// Returns `ChainError::DynError` (via the `From<SimulationError>` / `From<VolatilityError>`
-/// conversions) if the random-walk generator returns an error, the historical helpers
-/// (`calculate_log_returns`, `constant_volatility`, `adjust_volatility`) cannot complete,
-/// or `create_chain_from_step` fails to rebuild the chain.
+/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
+/// random-walk generator returns an error — including
+/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
+/// prices than `walk_params.size` — and propagates errors from the historical helpers
+/// (`calculate_log_returns`, `constant_volatility`, `adjust_volatility`) or from
+/// rebuilding the chain.
 pub fn generator_optionchain(
     walk_params: &WalkParams<Positive, OptionChain>,
 ) -> Result<Vec<Step<Positive, OptionChain>>, ChainError> {
@@ -122,21 +138,20 @@ pub fn generator_optionchain(
         WalkType::Historical {
             timeframe, prices, ..
         } => {
-            if prices.is_empty() || prices.len() < walk_params.size {
-                (Vec::new(), None)
-            } else {
-                let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
-                    .iter()
-                    .map(|p| p.to_dec())
-                    .collect();
-                let constant_volatility = constant_volatility(&log_returns)?;
-                let implied_volatility =
-                    adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
-                (
-                    walk_params.walker.historical(walk_params)?,
-                    Some(implied_volatility),
-                )
-            }
+            // Let the walker validate the price history first: insufficient
+            // data surfaces as a typed
+            // `SimulationError::InsufficientHistoricalData` instead of a
+            // silent init-only walk that callers cannot distinguish from a
+            // legitimate size-1 walk.
+            let steps = walk_params.walker.historical(walk_params)?;
+            let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
+                .iter()
+                .map(|p| p.to_dec())
+                .collect();
+            let constant_volatility = constant_volatility(&log_returns)?;
+            let implied_volatility =
+                adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
+            (steps, Some(implied_volatility))
         }
     };
     if y_steps.len() <= 1 {
@@ -161,7 +176,10 @@ pub fn generator_optionchain(
     for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
-            Err(_) => break,
+            // Reaching expiration is the normal end of a walk: truncate.
+            Err(SimulationError::ExpirationReached) => break,
+            // Any other step-advance failure is a real error: propagate.
+            Err(e) => return Err(e.into()),
         };
         // convert y_step to OptionChain with updated expiration date
         let expiration_date = *previous_x_step.datetime();
@@ -176,19 +194,31 @@ pub fn generator_optionchain(
         steps.push(step)
     }
 
-    debug_assert!(
-        steps.len() <= walk_params.size,
-        "generator_optionchain produced {} steps but WalkParams.size is {}",
-        steps.len(),
-        walk_params.size
-    );
+    if steps.len() > walk_params.size {
+        debug!(
+            "generator_optionchain produced {} steps, truncating to configured size {}",
+            steps.len(),
+            walk_params.size
+        );
+        steps.truncate(walk_params.size);
+    }
     Ok(steps)
 }
 
 /// Generates a vector of `Step`s containing `Positive` x-values and `Positive` y-values.
 ///
-/// This function simulates a geometric Brownian motion walk for positive values, generating a sequence
-/// of steps with updated positive values.
+/// Simulates the stochastic process selected by `walk_params.walk_type` for a plain
+/// positive value (typically an underlying price) without rebuilding option chains.
+///
+/// # Contract (shared with [`generator_optionchain`] and
+/// [`crate::series::generator_optionseries`])
+///
+/// * The returned vector always starts with `walk_params.init_step`.
+/// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
+///   only the initial step is returned.
+/// * The walk is truncated when the x-step reaches expiration
+///   (`SimulationError::ExpirationReached`); any other step-advance error is propagated.
+/// * The result is truncated to at most `walk_params.size` steps.
 ///
 /// # Arguments
 ///
@@ -201,8 +231,10 @@ pub fn generator_optionchain(
 ///
 /// # Errors
 ///
-/// Returns `ChainError::DynError` (via the `From<SimulationError>` conversion) if the
-/// random-walk generator returns an error.
+/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
+/// random-walk generator returns an error — including
+/// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
+/// prices than `walk_params.size`.
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
 ) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
@@ -220,6 +252,13 @@ pub fn generator_positive(
         WalkType::Historical { .. } => walk_params.walker.historical(walk_params)?,
     };
 
+    if y_steps.len() <= 1 {
+        // Preserve the init-step invariant when the walker produces no
+        // values beyond the initial one; downstream consumers expect at
+        // least the initial step to be present.
+        return Ok(vec![walk_params.init_step.clone()]);
+    }
+
     let mut steps: Vec<Step<Positive, Positive>> = vec![walk_params.init_step.clone()];
 
     let mut previous_x_step = walk_params.init_step.x;
@@ -229,7 +268,10 @@ pub fn generator_positive(
     for y_step in y_steps.iter().skip(1) {
         previous_x_step = match previous_x_step.next() {
             Ok(x_step) => x_step,
-            Err(_) => break,
+            // Reaching expiration is the normal end of a walk: truncate.
+            Err(SimulationError::ExpirationReached) => break,
+            // Any other step-advance failure is a real error: propagate.
+            Err(e) => return Err(e.into()),
         };
         previous_y_step = previous_y_step.next(*y_step);
         let step = Step {
@@ -238,12 +280,14 @@ pub fn generator_positive(
         };
         steps.push(step)
     }
-    debug_assert!(
-        steps.len() <= walk_params.size,
-        "generator_positive produced {} steps but WalkParams.size is {}",
-        steps.len(),
-        walk_params.size
-    );
+    if steps.len() > walk_params.size {
+        debug!(
+            "generator_positive produced {} steps, truncating to configured size {}",
+            steps.len(),
+            walk_params.size
+        );
+        steps.truncate(walk_params.size);
+    }
 
     Ok(steps)
 }
