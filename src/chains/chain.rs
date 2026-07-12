@@ -37,7 +37,7 @@ use positive::Positive;
 use positive::pos_or_panic;
 use pretty_simple_display::DebugSimple;
 use prettytable::{Attr, Cell, Row, Table, color, format};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
@@ -633,7 +633,17 @@ impl OptionChain {
         if !slope.is_finite() || !curve.is_finite() {
             return None;
         }
-        Some((Decimal::from_f64(slope)?, Decimal::from_f64(curve)?))
+        // Controlled f64 -> Decimal boundary: round both fitted
+        // coefficients to 8 decimal places with banker's rounding
+        // (MidpointNearestEven), well beyond the precision the smile model
+        // is sensitive to, so the conversion is explicit and reproducible.
+        let round = |value: f64| -> Option<Decimal> {
+            Some(
+                Decimal::from_f64(value)?
+                    .round_dp_with_strategy(8, RoundingStrategy::MidpointNearestEven),
+            )
+        };
+        Some((round(slope)?, round(curve)?))
     }
 
     /// Generates build parameters that would reproduce the current option chain.
