@@ -500,6 +500,11 @@ impl OptionChain {
                         "Failed to calculate prices for strike: {} error: {}",
                         strike, e
                     );
+                    // Greeks do not depend on bid/ask prices, so compute them
+                    // even when pricing failed to keep the chain's greek
+                    // coverage identical to a post-build `update_greeks` pass.
+                    option_data.calculate_delta();
+                    option_data.calculate_gamma();
                 }
             }
             Ok(option_data)
