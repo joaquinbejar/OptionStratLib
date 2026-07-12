@@ -5,6 +5,7 @@ use crate::simulation::{WalkParams, walk_steps};
 use core::option::Option;
 use positive::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -40,9 +41,14 @@ fn create_series_from_step(
     let mut series_params = build_params.clone();
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
-        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
-        // can spike above it, so cap at 1 to keep the walk alive.
-        series_params.set_implied_volatility(volatility.min(Positive::ONE));
+        // `build_chain` rejects IV > 100% and IV == 0; simulated
+        // stochastic-vol paths can spike above 100% or touch the zero
+        // boundary (CIR truncation), so clamp into (0, 1] to keep the
+        // walk alive. The floor literal is compile-time positive, so the
+        // fallback branch is unreachable.
+        let min_walk_iv = Positive::new_decimal(dec!(0.0001)).unwrap_or(Positive::ONE);
+        let volatility = volatility.min(Positive::ONE).max(min_walk_iv);
+        series_params.set_implied_volatility(volatility);
     }
     series_params.series = aged_series;
     let new_chain = OptionSeries::build_series(&series_params)?;

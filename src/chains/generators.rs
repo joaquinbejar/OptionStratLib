@@ -13,6 +13,7 @@ use core::option::Option;
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 /// Creates a new `OptionChain` from pre-derived build parameters and a new price.
 ///
@@ -46,9 +47,14 @@ fn create_chain_from_step(
     let mut chain_params = build_params.clone();
     chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
-        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
-        // can spike above it, so cap at 1 to keep the walk alive.
-        chain_params.set_implied_volatility(volatility.min(Positive::ONE));
+        // `build_chain` rejects IV > 100% and IV == 0; simulated
+        // stochastic-vol paths can spike above 100% or touch the zero
+        // boundary (CIR truncation), so clamp into (0, 1] to keep the
+        // walk alive. The floor literal is compile-time positive, so the
+        // fallback branch is unreachable.
+        let min_walk_iv = Positive::new_decimal(dec!(0.0001)).unwrap_or(Positive::ONE);
+        let volatility = volatility.min(Positive::ONE).max(min_walk_iv);
+        chain_params.set_implied_volatility(volatility);
     }
     if let Some(exp_date) = expiration_date {
         chain_params.price_params.expiration_date = Some(exp_date);
