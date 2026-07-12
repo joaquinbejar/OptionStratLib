@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-12
+
+Overhaul of the option-chain walk generators (issues #404-#411, PRs
+#412-#419): one shared, error-generic walk driver; unified generator
+contracts; per-step stochastic volatility propagated into rebuilt
+chains; smile-preserving rebuilds; rayon-parallel per-step builds
+(25-step chain walk: 12.46 ms -> 0.88 ms, ~14x); and deterministic
+multi-step behavioral test coverage.
+
 ### Performance
 
 **Parallel per-step chain builds** (#411): new
