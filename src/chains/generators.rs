@@ -13,6 +13,7 @@ use core::option::Option;
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
+use rust_decimal_macros::dec;
 
 /// Creates a new `OptionChain` from pre-derived build parameters and a new price.
 ///
@@ -46,9 +47,14 @@ fn create_chain_from_step(
     let mut chain_params = build_params.clone();
     chain_params.set_underlying_price(Some(Box::new(*new_price)));
     if let Some(volatility) = volatility {
-        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
-        // can spike above it, so cap at 1 to keep the walk alive.
-        chain_params.set_implied_volatility(volatility.min(Positive::ONE));
+        // `build_chain` rejects IV > 100% and IV == 0; simulated
+        // stochastic-vol paths can spike above 100% or touch the zero
+        // boundary (CIR truncation), so clamp into (0, 1] to keep the
+        // walk alive. The floor literal is compile-time positive, so the
+        // fallback branch is unreachable.
+        let min_walk_iv = Positive::new_decimal(dec!(0.0001)).unwrap_or(Positive::ONE);
+        let volatility = volatility.min(Positive::ONE).max(min_walk_iv);
+        chain_params.set_implied_volatility(volatility);
     }
     if let Some(exp_date) = expiration_date {
         chain_params.price_params.expiration_date = Some(exp_date);
@@ -279,6 +285,265 @@ mod tests {
             varying,
             "chain IVs are frozen despite a stochastic-vol walk: {atm_ivs:?}"
         );
+    }
+
+    /// Multi-step behavior under a deterministic ramp walker: rebuilt chains
+    /// must track the walked price, keep the walk volatility, decay their
+    /// expiration with the x-step, and increment the y index.
+    #[test]
+    fn test_generator_optionchain_multi_step_behavior() {
+        use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+        use crate::simulation::walk_test_support::RampWalker;
+
+        let init_days = 60.0;
+        let price_params = OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(init_days))),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            Some("TEST".to_string()),
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            Some(pos_or_panic!(5.0)),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            price_params,
+            pos_or_panic!(0.25),
+        );
+        let initial_chain = match OptionChain::build_chain(&chain_params) {
+            Ok(chain) => chain,
+            Err(e) => panic!("initial chain build failed: {e}"),
+        };
+
+        let size = 4;
+        let walk_params = WalkParams {
+            size,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(init_days)),
+                ),
+                y: Ystep::new(0, initial_chain),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.25),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::TWO,
+            }),
+        };
+
+        let steps = match generator_optionchain(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_optionchain failed: {e}"),
+        };
+        assert_eq!(steps.len(), size);
+
+        for (i, step) in steps.iter().enumerate().skip(1) {
+            let chain = step.y.value();
+            // Underlying tracks the deterministic ramp exactly.
+            let expected_price = Positive::HUNDRED + Positive::TWO * i as f64;
+            assert_eq!(
+                chain.underlying_price, expected_price,
+                "underlying at step {i}"
+            );
+            // Y index increments.
+            assert_eq!(*step.y.index(), i as i32, "y index at step {i}");
+            // X time-to-expiry decreases one day per step.
+            let x_days = match step.x.days_left() {
+                Ok(days) => days,
+                Err(e) => panic!("days_left failed at step {i}: {e}"),
+            };
+            assert_eq!(x_days, pos_or_panic!(init_days - i as f64));
+            // The rebuilt chain's expiration follows the x-step (parsed back
+            // from a date string, so allow a one-day rounding tolerance).
+            let chain_days = match chain.get_expiration() {
+                Some(exp) => match exp.get_days() {
+                    Ok(days) => days,
+                    Err(e) => panic!("chain expiration days failed at step {i}: {e}"),
+                },
+                None => panic!("rebuilt chain has no expiration at step {i}"),
+            };
+            let diff = (chain_days.to_dec() - x_days.to_dec()).abs();
+            assert!(
+                diff <= rust_decimal::Decimal::ONE,
+                "chain expiration {chain_days} != x-step days {x_days} at step {i}"
+            );
+            // ATM IV tracks the constant walk volatility (ATM moneyness is
+            // near zero, so the skew factor is ~1).
+            let atm_iv = match chain.get_atm_implied_volatility() {
+                Ok(iv) => *iv,
+                Err(e) => panic!("ATM IV missing at step {i}: {e}"),
+            };
+            let iv_diff = (atm_iv.to_dec() - dec!(0.25)).abs();
+            assert!(
+                iv_diff < dec!(0.01),
+                "ATM IV {atm_iv} does not track walk volatility at step {i}"
+            );
+        }
+    }
+
+    /// Historical multi-step behavior: underlying prices must replay the
+    /// provided history and the final step's IV must match the historical
+    /// estimate computed over exactly the walked prices (no look-ahead).
+    #[test]
+    fn test_generator_optionchain_historical_multi_step() {
+        use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+        use crate::simulation::walk_test_support::RampWalker;
+        use crate::utils::others::calculate_log_returns;
+        use crate::volatility::{adjust_volatility as annualize, constant_volatility};
+        use rust_decimal::Decimal;
+
+        let prices = vec![
+            Positive::HUNDRED,
+            pos_or_panic!(104.0),
+            pos_or_panic!(98.0),
+            pos_or_panic!(103.0),
+            pos_or_panic!(101.0),
+            pos_or_panic!(99.0), // beyond the walked slice: must not be used
+        ];
+        let size = 5;
+
+        let price_params = OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(60.0))),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            Some("TEST".to_string()),
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            10,
+            Some(pos_or_panic!(5.0)),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            price_params,
+            pos_or_panic!(0.25),
+        );
+        let initial_chain = match OptionChain::build_chain(&chain_params) {
+            Ok(chain) => chain,
+            Err(e) => panic!("initial chain build failed: {e}"),
+        };
+
+        let walk_params = WalkParams {
+            size,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(60.0)),
+                ),
+                y: Ystep::new(0, initial_chain),
+            },
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices: prices.clone(),
+                symbol: None,
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::ONE, // unused: Historical keeps the default
+            }),
+        };
+
+        let steps = match generator_optionchain(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_optionchain failed: {e}"),
+        };
+        assert_eq!(steps.len(), size);
+
+        // Underlying prices replay the provided history.
+        for (i, step) in steps.iter().enumerate().skip(1) {
+            let expected = match prices.get(i) {
+                Some(p) => *p,
+                None => panic!("missing price {i}"),
+            };
+            assert_eq!(
+                step.y.value().underlying_price,
+                expected,
+                "underlying at step {i}"
+            );
+        }
+
+        // Final step vol == expanding-window estimate over the WALKED slice
+        // (prices[..size]), not the full vector.
+        let walked = match prices.get(..size) {
+            Some(w) => w,
+            None => panic!("short prices"),
+        };
+        let log_returns: Vec<Decimal> = match calculate_log_returns(walked) {
+            Ok(returns) => returns.iter().map(|p| p.to_dec()).collect(),
+            Err(e) => panic!("log returns failed: {e}"),
+        };
+        let expected_vol = match constant_volatility(&log_returns) {
+            Ok(vol) => match annualize(vol, TimeFrame::Day, TimeFrame::Year) {
+                Ok(vol) => vol,
+                Err(e) => panic!("annualize failed: {e}"),
+            },
+            Err(e) => panic!("constant_volatility failed: {e}"),
+        };
+        let last_iv = match steps.last() {
+            Some(step) => match step.y.value().get_atm_implied_volatility() {
+                Ok(iv) => *iv,
+                Err(e) => panic!("last ATM IV missing: {e}"),
+            },
+            None => panic!("empty steps"),
+        };
+        let capped_expected = expected_vol.min(Positive::ONE);
+        let diff = (last_iv.to_dec() - capped_expected.to_dec()).abs();
+        assert!(
+            diff < dec!(0.02),
+            "last-step IV {last_iv} != expected historical estimate {capped_expected}"
+        );
+    }
+
+    /// Contract: an empty walker output yields the init-only walk (no panic,
+    /// no error) for the chain generator too.
+    #[test]
+    fn test_generator_optionchain_empty_walker_output() {
+        use crate::simulation::walk_test_support::EmptyWalker;
+        use crate::utils::time::get_tomorrow_formatted;
+        use positive::spos;
+
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            get_tomorrow_formatted(),
+            Some(dec!(0.05)),
+            spos!(0.02),
+        );
+        let walk_params = WalkParams {
+            size: 5,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, chain),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(EmptyWalker),
+        };
+        let steps = match generator_optionchain(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("empty walker output must not error: {e}"),
+        };
+        assert_eq!(steps.len(), 1);
     }
 }
 

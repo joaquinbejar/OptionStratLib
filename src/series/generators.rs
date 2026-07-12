@@ -5,6 +5,7 @@ use crate::simulation::{WalkParams, walk_steps};
 use core::option::Option;
 use positive::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -40,9 +41,14 @@ fn create_series_from_step(
     let mut series_params = build_params.clone();
     series_params.set_underlying_price(new_price);
     if let Some(volatility) = volatility {
-        // `build_chain` rejects IV > 100%; simulated stochastic-vol paths
-        // can spike above it, so cap at 1 to keep the walk alive.
-        series_params.set_implied_volatility(volatility.min(Positive::ONE));
+        // `build_chain` rejects IV > 100% and IV == 0; simulated
+        // stochastic-vol paths can spike above 100% or touch the zero
+        // boundary (CIR truncation), so clamp into (0, 1] to keep the
+        // walk alive. The floor literal is compile-time positive, so the
+        // fallback branch is unreachable.
+        let min_walk_iv = Positive::new_decimal(dec!(0.0001)).unwrap_or(Positive::ONE);
+        let volatility = volatility.min(Positive::ONE).max(min_walk_iv);
+        series_params.set_implied_volatility(volatility);
     }
     series_params.series = aged_series;
     let new_chain = OptionSeries::build_series(&series_params)?;
@@ -587,6 +593,132 @@ mod tests_generator_optionseries {
         assert!(
             steps.len() <= n_steps,
             "Steps length should not exceed the specified size"
+        );
+    }
+
+    /// Multi-step behavior under a deterministic ramp walker: rebuilt series
+    /// must track the walked price and their expirations must age with the
+    /// walk (issue #406/#410 behavior, pinned here).
+    #[test]
+    fn test_generator_optionseries_multi_step_aging() {
+        use crate::simulation::walk_test_support::RampWalker;
+
+        let initial_series = create_test_option_series(); // expirations 30/60/90d
+        let size = 4;
+        let walk_params = WalkParams {
+            size,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, initial_series),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::TWO,
+            }),
+        };
+
+        let steps = match generator_optionseries(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_optionseries failed: {e}"),
+        };
+        assert_eq!(steps.len(), size);
+
+        for (i, step) in steps.iter().enumerate().skip(1) {
+            let series = step.y.value();
+            // Underlying tracks the ramp.
+            let expected_price = Positive::HUNDRED + Positive::TWO * i as f64;
+            assert_eq!(
+                series.underlying_price, expected_price,
+                "underlying at step {i}"
+            );
+            // Expirations age by exactly the elapsed days.
+            let expirations = match series.get_expiration_dates() {
+                Ok(dates) => dates,
+                Err(e) => panic!("expirations missing at step {i}: {e}"),
+            };
+            let elapsed = i as f64;
+            let expected: Vec<Positive> = [30.0, 60.0, 90.0]
+                .iter()
+                .map(|d| pos_or_panic!(d - elapsed))
+                .collect();
+            assert_eq!(
+                expirations, expected,
+                "series did not age at step {i}: {expirations:?}"
+            );
+        }
+    }
+
+    /// Once every expiration in the series has passed, the walk must stop.
+    #[test]
+    fn test_generator_optionseries_stops_when_all_expired() {
+        use crate::chains::utils::OptionChainBuildParams;
+        use crate::chains::utils::OptionDataPriceParams;
+        use crate::simulation::walk_test_support::RampWalker;
+
+        // Single 2-day expiration in the series; walk x-expiry far out.
+        let price_params = OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            Some(ExpirationDate::Days(pos_or_panic!(2.0))),
+            Some(dec!(0.05)),
+            spos!(0.02),
+            Some("TEST".to_string()),
+        );
+        let chain_params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            5,
+            spos!(5.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            price_params,
+            pos_or_panic!(0.2),
+        );
+        let series_params = OptionSeriesBuildParams::new(chain_params, vec![pos_or_panic!(2.0)]);
+        let initial_series = match OptionSeries::build_series(&series_params) {
+            Ok(series) => series,
+            Err(e) => panic!("series build failed: {e}"),
+        };
+
+        let walk_params = WalkParams {
+            size: 10,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, initial_series),
+            },
+            walk_type: WalkType::GeometricBrownian {
+                dt: pos_or_panic!(0.01),
+                drift: dec!(0.0),
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(RampWalker {
+                delta: Positive::ONE,
+            }),
+        };
+
+        let steps = match generator_optionseries(&walk_params) {
+            Ok(steps) => steps,
+            Err(e) => panic!("generator_optionseries failed: {e}"),
+        };
+        // init (2d left) + step1 (1d left); at step2 the only expiration has
+        // passed, so the walk ends.
+        assert_eq!(
+            steps.len(),
+            2,
+            "walk must stop once every series expiration has passed"
         );
     }
 }

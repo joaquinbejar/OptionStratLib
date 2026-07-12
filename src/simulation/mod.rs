@@ -138,6 +138,10 @@ mod stats;
 /// `chains::` — it never depended on option chains).
 mod walk_driver;
 
+/// Deterministic walkers shared by the generator test suites.
+#[cfg(test)]
+pub(crate) mod walk_test_support;
+
 pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::{WalkPath, WalkType};
 pub use params::WalkParams;
