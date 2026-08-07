@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.18.0"
+version = "0.18.1"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -123,7 +123,7 @@ rust_decimal_macros = "1.40"
 plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10" }
-statrs = "0.18"
+statrs = "0.19"
 tracing-subscriber = { version = "0.3"}
 num-traits = "0.2"
 serde_json = "1.0"

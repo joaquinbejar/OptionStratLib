@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-08-07
+
+### Changed
+
+- `statrs` bumped `0.18` -> `0.19` (pulling `nalgebra 0.35` / `simba 0.10.2`), which
+  drops the unmaintained `paste` crate (RUSTSEC-2024-0436) from the dependency graph
+  entirely — `cargo tree -i paste --all-features` now prints nothing. The `statrs`
+  surface this crate uses (`distribution::{Normal, ContinuousCDF}`) is unchanged
+  between the two lines, so no code changes. Requested by the Layer V fleet, where
+  this chain was the only path bringing `paste` into every downstream tree (#420,
+  Layer-V/common-rs#266). (#420)
+
 ## [0.18.0] - 2026-07-12
 
 Overhaul of the option-chain walk generators (issues #404-#411, PRs
