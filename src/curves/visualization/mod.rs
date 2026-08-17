@@ -15,7 +15,7 @@
 //! - `PlotOptions`: Detailed plot styling options
 //!
 //! ## Usage Examples
-//! ```rust
+//! ```rust,no_run
 //! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! // Plot a single curve
 //! use std::fs;

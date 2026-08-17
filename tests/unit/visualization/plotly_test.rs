@@ -740,6 +740,7 @@ mod tests_plotly_interface {
 
     #[test]
     #[cfg(feature = "static_export")]
+    #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
     fn test_write_svg() {
         use tempfile::tempdir;
 

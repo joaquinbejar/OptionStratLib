@@ -60,7 +60,7 @@
 //!
 //! ## Example: Simple Line Chart
 //!
-//! ```rust
+//! ```rust,no_run
 //! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! use std::fs;
 //! use std::path::{Path, PathBuf};

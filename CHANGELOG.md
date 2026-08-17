@@ -135,6 +135,16 @@ consumers — see *Migration*.
 - The version strings in the crate-level docs (and therefore in the generated
   `README.md`) say `0.19.0`; they had been left at `0.18.0` through the 0.18.1
   release.
+- `cargo test` no longer spawns a browser. Five visualization tests needed a
+  WebDriver whose major version matches the installed browser (PNG/SVG export
+  through `plotly_static`), one really did hand a chart to the default browser
+  despite a comment claiming otherwise (`OutputType::Browser` calls
+  `Plot::show()`), and four doc examples wrote a PNG when executed. The tests
+  are now `#[ignore]`d with a reason and the doc examples are `no_run`, so they
+  still compile and are still runnable on demand: `make test-visual`, a new
+  target that runs exactly the ignored set. The `make test` recipe also passes
+  `--features static_export,plotly`; the comma was missing, so `plotly` was
+  being parsed as a test-name filter rather than a feature.
 
 ## [0.18.1] - 2026-08-07
 
