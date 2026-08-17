@@ -140,7 +140,7 @@ impl ProfitLossRange {
         risk_free_rate: Option<Decimal>,
     ) -> Result<(), ProbabilityError> {
         let lower = self.lower_bound.unwrap_or(Positive::ZERO);
-        let upper = self.upper_bound.unwrap_or(Positive::INFINITY);
+        let upper = self.upper_bound.unwrap_or(Positive::MAX);
         if lower > upper {
             return Err(ProbabilityError::PriceError(
                 PriceErrorKind::InvalidPriceRange {
@@ -162,7 +162,7 @@ impl ProfitLossRange {
         // Calculate probabilities for the upper bound
         let (prob_below_upper, _) = calculate_single_point_probability(
             current_price,
-            &self.upper_bound.unwrap_or(Positive::INFINITY),
+            &self.upper_bound.unwrap_or(Positive::MAX),
             volatility_adj,
             trend,
             expiration_date,

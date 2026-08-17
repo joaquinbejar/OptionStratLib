@@ -645,7 +645,7 @@ impl Strategies for ShortStraddle {
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY)
+        Ok(Positive::MAX)
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let strike_diff = self.break_even_points[1] - self.break_even_points[0];
@@ -1147,7 +1147,7 @@ mod tests_short_straddle {
         let strategy = setup();
         assert_eq!(
             strategy.get_max_loss().unwrap_or(Positive::ZERO),
-            Positive::INFINITY
+            Positive::MAX
         );
     }
 

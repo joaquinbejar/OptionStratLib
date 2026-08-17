@@ -102,7 +102,7 @@ pub(crate) fn benchmark_conversions(c: &mut Criterion) {
 
     group.bench_function("to_i64", |bencher| {
         let x = value;
-        bencher.iter(|| black_box(x.to_i64()))
+        bencher.iter(|| black_box(i64::try_from(x)))
     });
 
     group.finish();

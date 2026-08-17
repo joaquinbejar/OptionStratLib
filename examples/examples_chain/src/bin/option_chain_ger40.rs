@@ -54,13 +54,13 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     );
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         let path: &std::path::Path = "Draws/Chains/short_strangle_ger40_area.html".as_ref();
         strategy.write_html(path)?;
     }
     info!("Greeks:  {:#?}", strategy.greeks());
 
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         debug!("Strategy:  {:#?}", strategy);
         let file_path = "Draws/Chains/short_strangle_ger40_area.png";
         let path: &std::path::Path = file_path.as_ref();

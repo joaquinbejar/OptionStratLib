@@ -162,10 +162,9 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
                     // Calculate time at this step
                     let time_at_step = dt * Decimal::from(step as u32);
                     // Check if this step is an exercise date
-                    let is_exercise_date = exercise_dates.iter().any(|&t| {
-                        let t_dec = Decimal::try_from(t).unwrap_or(Decimal::ZERO);
-                        (time_at_step - t_dec).abs() < dt / Decimal::TWO
-                    });
+                    let is_exercise_date = exercise_dates
+                        .iter()
+                        .any(|t| (time_at_step - t.to_dec()).abs() < dt / Decimal::TWO);
                     if is_exercise_date {
                         let spot = params.asset * u.powi(i as i64) * d.powi((step - i) as i64);
                         info.spot = spot;
@@ -309,10 +308,9 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     // Calculate time at this step
                     let time_at_step = dt * Decimal::from(step as u32);
                     // Check if this step is an exercise date
-                    let is_exercise_date = exercise_dates.iter().any(|&t| {
-                        let t_dec = Decimal::try_from(t).unwrap_or(Decimal::ZERO);
-                        (time_at_step - t_dec).abs() < dt / Decimal::TWO
-                    });
+                    let is_exercise_date = exercise_dates
+                        .iter()
+                        .any(|t| (time_at_step - t.to_dec()).abs() < dt / Decimal::TWO);
                     if is_exercise_date && !((step == 0) & (node_idx == 0)) {
                         info.spot = Positive::new_decimal(asset_tree[step][node_idx])?;
                         let intrinsic_value = params.option_type.payoff(&info);
@@ -755,7 +753,7 @@ mod tests_bermuda_option {
 
         // Exercise at 3 months, 6 months, 9 months
         let bermuda_type = OptionType::Bermuda {
-            exercise_dates: vec![0.25, 0.5, 0.75],
+            exercise_dates: vec![pos_or_panic!(0.25), pos_or_panic!(0.5), pos_or_panic!(0.75)],
         };
         let bermuda_params = BinomialPricingParams {
             option_type: &bermuda_type,
@@ -784,7 +782,7 @@ mod tests_bermuda_option {
     fn test_bermuda_single_exercise_date() {
         // Single exercise date should give price between European and American
         let bermuda_type = OptionType::Bermuda {
-            exercise_dates: vec![0.5],
+            exercise_dates: vec![pos_or_panic!(0.5)],
         };
         let params = BinomialPricingParams {
             asset: Positive::HUNDRED,
@@ -826,7 +824,9 @@ mod tests_bermuda_option {
         };
 
         // Weekly exercise dates (52 dates for 1 year)
-        let exercise_dates: Vec<f64> = (1..=52).map(|i| i as f64 / 52.0).collect();
+        let exercise_dates: Vec<Positive> = (1..=52)
+            .map(|i| pos_or_panic!(f64::from(i) / 52.0))
+            .collect();
         let bermuda_type = OptionType::Bermuda { exercise_dates };
         let bermuda_params = BinomialPricingParams {
             option_type: &bermuda_type,
@@ -877,7 +877,7 @@ mod tests_bermuda_option {
     #[test]
     fn test_bermuda_call_option() {
         let bermuda_type = OptionType::Bermuda {
-            exercise_dates: vec![0.25, 0.5, 0.75],
+            exercise_dates: vec![pos_or_panic!(0.25), pos_or_panic!(0.5), pos_or_panic!(0.75)],
         };
         let params = BinomialPricingParams {
             asset: Positive::HUNDRED,

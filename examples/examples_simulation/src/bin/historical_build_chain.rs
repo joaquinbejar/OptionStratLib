@@ -21,10 +21,7 @@ fn main() -> Result<(), Error> {
         .iter()
         .filter_map(|x| Positive::new_decimal(x.close).ok())
         .collect();
-    let log_returns: Vec<Decimal> = calculate_log_returns(&prices)?
-        .iter()
-        .map(|p| p.to_dec())
-        .collect();
+    let log_returns: Vec<Decimal> = calculate_log_returns(&prices)?;
     let implied_volatility = adjust_volatility(
         constant_volatility(&log_returns)?,
         TimeFrame::Minute,

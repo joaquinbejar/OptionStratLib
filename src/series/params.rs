@@ -126,7 +126,7 @@ mod tests {
             chain_params,
             series: vec![],
         };
-        let result = r#"{"chain_params":{"symbol":"AAPL","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.2},"series":[]}"#;
+        let result = r#"{"chain_params":{"symbol":"AAPL","volume":"1000","chain_size":10,"strike_interval":"5","skew_slope":"-0.2","smile_curve":"0.1","spread":"0.02","decimal_places":2,"price_params":{"underlying_price":"100","expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":"0.02","underlying_symbol":"AAPL"},"implied_volatility":"0.2"},"series":[]}"#;
         assert_eq!(params.to_string(), result);
     }
 
@@ -160,23 +160,23 @@ mod tests {
         let result = r#"{
   "chain_params": {
     "symbol": "AAPL",
-    "volume": 1000,
+    "volume": "1000",
     "chain_size": 10,
-    "strike_interval": 5,
+    "strike_interval": "5",
     "skew_slope": "-0.2",
     "smile_curve": "0.1",
-    "spread": 0.02,
+    "spread": "0.02",
     "decimal_places": 2,
     "price_params": {
-      "underlying_price": 100,
+      "underlying_price": "100",
       "expiration_date": {
         "days": 30.0
       },
       "risk_free_rate": "0.05",
-      "dividend_yield": 0.02,
+      "dividend_yield": "0.02",
       "underlying_symbol": "AAPL"
     },
-    "implied_volatility": 0.2
+    "implied_volatility": "0.2"
   },
   "series": []
 }"#;

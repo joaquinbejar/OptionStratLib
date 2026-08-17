@@ -68,7 +68,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     info!("Delta Neutral:  {}", strategy.is_delta_neutral());
     info!("Delta Suggestions:  {:#?}", strategy.delta_adjustments()?);
 
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         debug!("Strategy:  {:#?}", strategy);
         let path: &std::path::Path = "Draws/Chains/short_strangle_chain_raw_delta.png".as_ref();
         strategy.write_png(path)?;

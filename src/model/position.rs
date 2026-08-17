@@ -733,7 +733,7 @@ impl Position {
     #[allow(dead_code)]
     pub(crate) fn max_profit(&self) -> Result<Positive, PositionError> {
         match self.option.side {
-            Side::Long => Ok(Positive::INFINITY),
+            Side::Long => Ok(Positive::MAX),
             Side::Short => self.net_premium_received(),
         }
     }
@@ -754,7 +754,7 @@ impl Position {
     pub(crate) fn max_loss(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => self.total_cost(),
-            Side::Short => Ok(Positive::INFINITY),
+            Side::Short => Ok(Positive::MAX),
         }
     }
 
@@ -2393,7 +2393,7 @@ mod tests_position_max_loss_profit {
             None,
         );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
-        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
+        assert_eq!(position.max_profit().unwrap(), Positive::MAX);
     }
 
     #[test]
@@ -2416,7 +2416,7 @@ mod tests_position_max_loss_profit {
             None,
         );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
-        assert_eq!(position.max_profit().unwrap(), Positive::INFINITY);
+        assert_eq!(position.max_profit().unwrap(), Positive::MAX);
     }
 
     #[test]
@@ -2438,7 +2438,7 @@ mod tests_position_max_loss_profit {
             None,
             None,
         );
-        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::MAX);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
             3.0,
@@ -2465,7 +2465,7 @@ mod tests_position_max_loss_profit {
             None,
             None,
         );
-        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::MAX);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
             30.0,
@@ -2493,7 +2493,7 @@ mod tests_position_max_loss_profit {
             None,
         );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 7.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::MAX);
     }
 
     #[test]
@@ -2516,7 +2516,7 @@ mod tests_position_max_loss_profit {
             None,
         );
         assert_relative_eq!(position.max_loss().unwrap().to_f64(), 70.0, epsilon = 0.001);
-        assert_relative_eq!(position.max_profit().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_profit().unwrap(), Positive::MAX);
     }
 
     #[test]
@@ -2538,7 +2538,7 @@ mod tests_position_max_loss_profit {
             None,
             None,
         );
-        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::MAX);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
             3.0,
@@ -2565,7 +2565,7 @@ mod tests_position_max_loss_profit {
             None,
             None,
         );
-        assert_relative_eq!(position.max_loss().unwrap(), Positive::INFINITY);
+        assert_relative_eq!(position.max_loss().unwrap(), Positive::MAX);
         assert_relative_eq!(
             position.max_profit().unwrap().to_f64(),
             30.0,

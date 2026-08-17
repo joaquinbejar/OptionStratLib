@@ -162,9 +162,9 @@ fn test_short_call_get_max_profit() {
 fn test_short_call_get_max_loss() {
     let short_call = create_test_short_call();
     let result = short_call.get_max_loss();
-    // Max loss for a short call is theoretically unlimited (Positive::INFINITY).
+    // Max loss for a short call is theoretically unlimited (Positive::MAX).
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Positive::INFINITY);
+    assert_eq!(result.unwrap(), Positive::MAX);
 }
 
 #[test]
@@ -291,7 +291,7 @@ fn test_short_call_get_positions() {
 fn test_short_call_get_profit_ratio() {
     let short_call = create_test_short_call();
     let ratio_result = short_call.get_profit_ratio();
-    // Max loss is Positive::INFINITY, so profit_ratio = max_profit / INFINITY * 100 ≈ 0.
+    // Max loss is Positive::MAX, so profit_ratio = max_profit / INFINITY * 100 ≈ 0.
     assert!(ratio_result.is_ok());
     let ratio = ratio_result.unwrap();
     assert!(

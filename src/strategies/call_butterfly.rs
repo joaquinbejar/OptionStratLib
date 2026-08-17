@@ -714,7 +714,7 @@ impl Strategies for CallButterfly {
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY)
+        Ok(Positive::MAX)
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -742,7 +742,7 @@ impl Strategies for CallButterfly {
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_loss = match self.get_max_loss()? {
             value if value == Positive::ZERO => spos!(1.0),
-            value if value == Positive::INFINITY => spos!(1.0),
+            value if value == Positive::MAX => spos!(1.0),
             value => Some(value),
         };
 

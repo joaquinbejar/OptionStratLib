@@ -56,6 +56,8 @@ impl Payoff for OptionType {
             OptionType::Lookback { lookback_type } => match lookback_type {
                 LookbackType::FixedStrike => standard_payoff(info),
                 LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
+                // `LookbackType` is `#[non_exhaustive]`.
+                _ => standard_payoff(info),
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
             OptionType::Chooser { .. } => (info.spot - info.strike)
@@ -71,13 +73,18 @@ impl Payoff for OptionType {
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
             | OptionType::Exchange { .. } => standard_payoff(info),
-            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate,
+            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate.to_f64(),
             OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => (info.spot.to_f64().powf(*exponent) - info.strike).max(ZERO),
-                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(*exponent))
+                OptionStyle::Call => {
+                    (info.spot.to_f64().powf(exponent.to_f64()) - info.strike).max(ZERO)
+                }
+                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(exponent.to_f64()))
                     .max(Positive::ZERO)
                     .to_f64(),
             },
+            // `OptionType` is `#[non_exhaustive]`: a variant added upstream falls
+            // back to the plain intrinsic value until it gets its own arm.
+            _ => standard_payoff(info),
         }
     }
 }
@@ -118,6 +125,9 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
                 let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
                 product.powf(1.0 / len as f64)
             }
+            // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
+            // arithmetic mean, the conventional default for Asian options.
+            _ => spot_prices.iter().sum::<f64>() / len as f64,
         },
         _ => return ZERO,
     };
@@ -159,19 +169,24 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
 /// This function does not explicitly handle errors. Ensure that the inputs are valid for the `barrier_type`, `barrier_level`, and `info` parameters.
 fn calculate_barrier_payoff(
     barrier_type: &BarrierType,
-    barrier_level: &f64,
-    rebate: &Option<f64>,
+    barrier_level: &Positive,
+    rebate: &Option<Positive>,
     info: &PayoffInfo,
 ) -> f64 {
+    let level = barrier_level.to_f64();
     let barrier_condition = match barrier_type {
         BarrierType::UpAndIn | BarrierType::UpAndOut => {
             // Use spot_max if available, otherwise just current spot
-            info.spot_max.unwrap_or(info.spot.to_f64()) >= *barrier_level
+            info.spot_max.unwrap_or(info.spot.to_f64()) >= level
         }
         BarrierType::DownAndIn | BarrierType::DownAndOut => {
             // Use spot_min if available, otherwise just current spot
-            info.spot_min.unwrap_or(info.spot.to_f64()) <= *barrier_level
+            info.spot_min.unwrap_or(info.spot.to_f64()) <= level
         }
+        // `BarrierType` is `#[non_exhaustive]`: an unknown barrier is treated as
+        // never triggered, so the "In" arms below pay nothing and the "Out" arms
+        // pay the standard payoff.
+        _ => false,
     };
     let std_payoff = standard_payoff(info);
     match barrier_type {
@@ -184,11 +199,12 @@ fn calculate_barrier_payoff(
         }
         BarrierType::UpAndOut | BarrierType::DownAndOut => {
             if barrier_condition {
-                rebate.unwrap_or(0.0)
+                rebate.map_or(0.0, |r| r.to_f64())
             } else {
                 std_payoff
             }
         }
+        _ => std_payoff,
     }
 }
 
@@ -253,6 +269,15 @@ fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
                 // For Gap options, the payoff is proportional to how far above/below the strike price
                 // the underlying asset is at expiration
                 (info.spot.to_f64() - info.strike.to_f64()).abs()
+            } else {
+                0.0
+            }
+        }
+        // `BinaryType` is `#[non_exhaustive]`: an unknown binary type pays the
+        // cash-or-nothing amount, the most conservative of the three.
+        _ => {
+            if is_in_the_money {
+                1.0
             } else {
                 0.0
             }
@@ -351,7 +376,7 @@ mod tests_payoff {
     fn test_barrier_up_and_in_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndIn,
-            barrier_level: 120.0,
+            barrier_level: pos_or_panic!(120.0),
             rebate: None,
         };
         let info = PayoffInfo {
@@ -396,7 +421,9 @@ mod tests_payoff {
 
     #[test]
     fn test_quanto_call() {
-        let option = OptionType::Quanto { exchange_rate: 1.5 };
+        let option = OptionType::Quanto {
+            exchange_rate: pos_or_panic!(1.5),
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
             strike: Positive::HUNDRED,
@@ -409,7 +436,9 @@ mod tests_payoff {
 
     #[test]
     fn test_power_call() {
-        let option = OptionType::Power { exponent: 2.0 };
+        let option = OptionType::Power {
+            exponent: pos_or_panic!(2.0),
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(10.0),
             strike: pos_or_panic!(90.0),
@@ -554,7 +583,7 @@ mod tests_option_type {
     fn test_barrier_down_and_out_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndOut,
-            barrier_level: 90.0,
+            barrier_level: pos_or_panic!(90.0),
             rebate: None,
         };
         let info = PayoffInfo {
@@ -600,7 +629,9 @@ mod tests_option_type {
 
     #[test]
     fn test_chooser_option() {
-        let option = OptionType::Chooser { choice_date: 30.0 };
+        let option = OptionType::Chooser {
+            choice_date: pos_or_panic!(30.0),
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),
             strike: Positive::HUNDRED,
@@ -613,7 +644,9 @@ mod tests_option_type {
 
     #[test]
     fn test_power_put() {
-        let option = OptionType::Power { exponent: 2.0 };
+        let option = OptionType::Power {
+            exponent: pos_or_panic!(2.0),
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(8.0),
             strike: Positive::HUNDRED,
@@ -747,7 +780,7 @@ mod test_barrier_options {
     fn test_barrier_down_and_in_put() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::DownAndIn,
-            barrier_level: 110.0,
+            barrier_level: pos_or_panic!(110.0),
             rebate: None,
         };
         let info = PayoffInfo {
@@ -765,7 +798,7 @@ mod test_barrier_options {
     fn test_barrier_up_and_out_call() {
         let option = OptionType::Barrier {
             barrier_type: BarrierType::UpAndOut,
-            barrier_level: 110.0,
+            barrier_level: pos_or_panic!(110.0),
             rebate: None,
         };
         let info = PayoffInfo {
@@ -790,7 +823,11 @@ mod test_cliquet_options {
     #[test]
     fn test_cliquet_option_with_resets() {
         let option = OptionType::Cliquet {
-            reset_dates: vec![30.0, 60.0, 90.0],
+            reset_dates: vec![
+                pos_or_panic!(30.0),
+                pos_or_panic!(60.0),
+                pos_or_panic!(90.0),
+            ],
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
@@ -855,7 +892,9 @@ mod test_exchange_options {
 
     #[test]
     fn test_exchange_option_positive_diff() {
-        let option = OptionType::Exchange { second_asset: 90.0 };
+        let option = OptionType::Exchange {
+            second_asset: pos_or_panic!(90.0),
+        };
         let info = PayoffInfo {
             spot: pos_or_panic!(120.0),
             strike: Positive::HUNDRED,
@@ -870,7 +909,7 @@ mod test_exchange_options {
     #[test]
     fn test_exchange_option_negative_diff() {
         let option = OptionType::Exchange {
-            second_asset: 110.0,
+            second_asset: pos_or_panic!(110.0),
         };
         let info = PayoffInfo {
             spot: pos_or_panic!(110.0),

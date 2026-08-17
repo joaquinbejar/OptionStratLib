@@ -14,6 +14,7 @@ use crate::error::VolatilityError;
 use crate::model::decimal::{
     d_add, d_div, d_mul, d_sub, d_sum, decimal_normal_sample, finite_decimal,
 };
+use crate::model::utils::sub_floor_zero;
 use crate::utils::time::TimeFrame;
 use crate::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -763,7 +764,7 @@ pub fn generate_ou_process(
 
     for _ in 1..steps {
         let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
-        let drift = (theta * mu.sub_or_zero(&x) * dt).to_dec(); // θ(μ−x)dt
+        let drift = (theta * sub_floor_zero(mu, &x) * dt).to_dec(); // θ(μ−x)dt
         let diffusion = dw * volatility; // σ·Z√dt (Decimal)
         x += drift + diffusion; // OU process step
         x = x.max(Decimal::ZERO); // no negative values

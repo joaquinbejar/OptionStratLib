@@ -9,6 +9,7 @@ use crate::error::ChainError;
 use crate::error::chains::OptionDataErrorKind;
 use crate::greeks::{delta, gamma};
 use crate::model::Position;
+use crate::model::utils::sub_floor_zero;
 use crate::strategies::{BasicAble, FindOptimalSide};
 use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
@@ -853,11 +854,8 @@ impl OptionData {
             (_, _, Some(call_middle)) => {
                 if call_middle > spread {
                     self.call_ask = Some((call_middle + half_spread).round_to(decimal_places));
-                    self.call_bid = Some(
-                        call_middle
-                            .sub_or_zero(&half_spread)
-                            .round_to(decimal_places),
-                    );
+                    self.call_bid =
+                        Some(sub_floor_zero(call_middle, &half_spread).round_to(decimal_places));
                 } else {
                     trace!(
                         "apply_spread: Call middle price is not greater than spread, cannot apply spread"
@@ -872,7 +870,7 @@ impl OptionData {
                     "apply_spread: Call middle price is None; recomputing from bid/ask after applying spread"
                 );
                 let new_ask = (call_ask + half_spread).round_to(decimal_places);
-                let new_bid = call_bid.sub_or_zero(&half_spread).round_to(decimal_places);
+                let new_bid = sub_floor_zero(call_bid, &half_spread).round_to(decimal_places);
                 self.call_ask = Some(new_ask);
                 self.call_bid = Some(new_bid);
                 self.call_middle =
@@ -889,11 +887,8 @@ impl OptionData {
             (_, _, Some(put_middle)) => {
                 if put_middle > spread {
                     self.put_ask = Some((put_middle + half_spread).round_to(decimal_places));
-                    self.put_bid = Some(
-                        put_middle
-                            .sub_or_zero(&half_spread)
-                            .round_to(decimal_places),
-                    );
+                    self.put_bid =
+                        Some(sub_floor_zero(put_middle, &half_spread).round_to(decimal_places));
                 } else {
                     trace!(
                         "apply_spread: Put middle price is not greater than spread, cannot apply spread"
@@ -908,7 +903,7 @@ impl OptionData {
                     "apply_spread: Put middle price is None; recomputing from bid/ask after applying spread"
                 );
                 let new_ask = (put_ask + half_spread).round_to(decimal_places);
-                let new_bid = put_bid.sub_or_zero(&half_spread).round_to(decimal_places);
+                let new_bid = sub_floor_zero(put_bid, &half_spread).round_to(decimal_places);
                 self.put_ask = Some(new_ask);
                 self.put_bid = Some(new_bid);
                 self.put_middle =

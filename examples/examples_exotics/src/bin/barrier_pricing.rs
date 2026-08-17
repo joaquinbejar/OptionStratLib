@@ -21,7 +21,7 @@ fn main() {
     let _risk_free_rate = 0.08;
     let dividend_yield = 0.04;
     let time_to_expiration = 0.5;
-    let barrier_level = 95.0;
+    let barrier_level = pos_or_panic!(95.0);
 
     let mut table = Table::new();
     table.add_row(row![

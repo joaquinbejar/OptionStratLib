@@ -247,7 +247,7 @@ where
 ///
 /// - Returns an empty vector if fewer than 2 price points are provided
 /// - For consecutive prices P₁ and P₂, the log return is ln(P₂/P₁)
-pub fn calculate_log_returns(close_prices: &[Positive]) -> Result<Vec<Positive>, DecimalError> {
+pub fn calculate_log_returns(close_prices: &[Positive]) -> Result<Vec<Decimal>, DecimalError> {
     if close_prices.len() < 2 {
         return Ok(Vec::new());
     }
@@ -656,6 +656,7 @@ mod tests_log_returns {
     use super::*;
 
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
     use positive::pos_or_panic;
 
     #[test]
@@ -688,8 +689,16 @@ mod tests_log_returns {
         // Manually calculate expected values
         // ln(110.0/100.0) ≈ ln(1.1) ≈ 0.09531
         // ln(105.0/110.0) ≈ ln(0.9545) ≈ -0.04652
-        assert_relative_eq!(result[0].to_f64(), 0.09531018, epsilon = 0.00001);
-        assert_relative_eq!(result[1].to_f64(), -0.04652, epsilon = 0.00001);
+        assert_relative_eq!(
+            result[0].to_f64().unwrap_or(f64::NAN),
+            0.09531018,
+            epsilon = 0.00001
+        );
+        assert_relative_eq!(
+            result[1].to_f64().unwrap_or(f64::NAN),
+            -0.04652,
+            epsilon = 0.00001
+        );
     }
 
     #[test]
@@ -724,10 +733,26 @@ mod tests_log_returns {
 
         assert_eq!(result.len(), 4);
 
-        assert_relative_eq!(result[0].to_f64(), 0.00829, epsilon = 0.00001);
-        assert_relative_eq!(result[1].to_f64(), -0.01161, epsilon = 0.00001);
-        assert_relative_eq!(result[2].to_f64(), 0.01656, epsilon = 0.00001);
-        assert_relative_eq!(result[3].to_f64(), 0.00491, epsilon = 0.00001);
+        assert_relative_eq!(
+            result[0].to_f64().unwrap_or(f64::NAN),
+            0.00829,
+            epsilon = 0.00001
+        );
+        assert_relative_eq!(
+            result[1].to_f64().unwrap_or(f64::NAN),
+            -0.01161,
+            epsilon = 0.00001
+        );
+        assert_relative_eq!(
+            result[2].to_f64().unwrap_or(f64::NAN),
+            0.01656,
+            epsilon = 0.00001
+        );
+        assert_relative_eq!(
+            result[3].to_f64().unwrap_or(f64::NAN),
+            0.00491,
+            epsilon = 0.00001
+        );
     }
 
     #[test]
@@ -749,9 +774,21 @@ mod tests_log_returns {
         // ln(50.0/200.0) = ln(0.25) ≈ -1.3863
         // ln(300.0/50.0) = ln(6.0) ≈ 1.7918
 
-        assert_relative_eq!(result[0].to_f64(), std::f64::consts::LN_2, epsilon = 0.0001);
-        assert_relative_eq!(result[1].to_f64(), -1.3863, epsilon = 0.0001);
-        assert_relative_eq!(result[2].to_f64(), 1.7918, epsilon = 0.0001);
+        assert_relative_eq!(
+            result[0].to_f64().unwrap_or(f64::NAN),
+            std::f64::consts::LN_2,
+            epsilon = 0.0001
+        );
+        assert_relative_eq!(
+            result[1].to_f64().unwrap_or(f64::NAN),
+            -1.3863,
+            epsilon = 0.0001
+        );
+        assert_relative_eq!(
+            result[2].to_f64().unwrap_or(f64::NAN),
+            1.7918,
+            epsilon = 0.0001
+        );
     }
 
     #[test]
@@ -762,8 +799,16 @@ mod tests_log_returns {
 
         assert_eq!(result.len(), 2);
         // ln(1.0) = 0
-        assert_relative_eq!(result[0].to_f64(), 0.0, epsilon = 0.00001);
-        assert_relative_eq!(result[1].to_f64(), 0.0, epsilon = 0.00001);
+        assert_relative_eq!(
+            result[0].to_f64().unwrap_or(f64::NAN),
+            0.0,
+            epsilon = 0.00001
+        );
+        assert_relative_eq!(
+            result[1].to_f64().unwrap_or(f64::NAN),
+            0.0,
+            epsilon = 0.00001
+        );
     }
 
     #[test]
@@ -783,10 +828,10 @@ mod tests_log_returns {
         // ln(100.001/100.000) ≈ ln(1.00001) ≈ 0.00001
         // ln(100.002/100.001) ≈ ln(1.00001) ≈ 0.00001
 
-        assert!(result[0].to_f64() > 0.0);
-        assert!(result[0].to_f64() < 0.0001);
-        assert!(result[1].to_f64() > 0.0);
-        assert!(result[1].to_f64() < 0.0001);
+        assert!(result[0].to_f64().unwrap_or(f64::NAN) > 0.0);
+        assert!(result[0].to_f64().unwrap_or(f64::NAN) < 0.0001);
+        assert!(result[1].to_f64().unwrap_or(f64::NAN) > 0.0);
+        assert!(result[1].to_f64().unwrap_or(f64::NAN) < 0.0001);
     }
 }
 

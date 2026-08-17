@@ -23,6 +23,7 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
 use crate::model::types::{OptionStyle, OptionType, Side};
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
@@ -52,14 +53,13 @@ pub fn power_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         }
     };
 
-    if exponent <= 0.0 {
+    if exponent <= Positive::ZERO {
         return Err(PricingError::other(
             "Power option exponent must be greater than 0",
         ));
     }
 
-    let n = Decimal::from_f64(exponent)
-        .ok_or_else(|| PricingError::other("Failed to convert exponent to Decimal"))?;
+    let n = exponent.to_dec();
 
     let s = Decimal::from(option.underlying_price);
     let k = Decimal::from(option.strike_price);
@@ -182,7 +182,9 @@ mod tests {
 
     fn create_power_option(exponent: f64, option_style: OptionStyle) -> Options {
         Options::new(
-            OptionType::Power { exponent },
+            OptionType::Power {
+                exponent: pos_or_panic!(exponent),
+            },
             Side::Long,
             "TEST".to_string(),
             pos_or_panic!(100.0),
@@ -249,13 +251,6 @@ mod tests {
         let option = create_power_option(0.0, OptionStyle::Call);
         let result = power_black_scholes(&option);
         assert!(result.is_err(), "Should reject exponent = 0");
-    }
-
-    #[test]
-    fn test_power_invalid_exponent_negative() {
-        let option = create_power_option(-1.0, OptionStyle::Call);
-        let result = power_black_scholes(&option);
-        assert!(result.is_err(), "Should reject negative exponent");
     }
 
     #[test]

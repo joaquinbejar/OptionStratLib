@@ -1007,12 +1007,12 @@ mod tests_step_serialization {
         // Verify x fields
         let x = &json_value["x"];
         assert_eq!(x["index"], 0);
-        assert_eq!(x["step_size_in_time"], 1.5);
+        assert_eq!(x["step_size_in_time"], "1.5");
 
         // Verify y fields
         let y = &json_value["y"];
         assert_eq!(y["index"], 0);
-        assert_eq!(y["value"], 100.0);
+        assert_eq!(y["value"], "100");
     }
 
     #[test]
@@ -1044,7 +1044,7 @@ mod tests_step_serialization {
         let serialized = serde_json::to_string(&step).unwrap();
         assert_eq!(
             serialized,
-            r#"{"x":{"index":0,"step_size_in_time":5,"time_unit":"Day","datetime":{"days":30.0}},"y":{"index":0,"value":42.5}}"#
+            r#"{"x":{"index":0,"step_size_in_time":"5","time_unit":"Day","datetime":{"days":30.0}},"y":{"index":0,"value":"42.5"}}"#
         );
     }
 
@@ -1062,7 +1062,7 @@ mod tests_step_serialization {
 
         // Make sure the content is still correct by deserializing
         let deserialized: Value = serde_json::from_str(&serialized).unwrap();
-        assert_eq!(deserialized["x"]["step_size_in_time"], 1.5);
-        assert_eq!(deserialized["y"]["value"], 100.0);
+        assert_eq!(deserialized["x"]["step_size_in_time"], "1.5");
+        assert_eq!(deserialized["y"]["value"], "100");
     }
 }

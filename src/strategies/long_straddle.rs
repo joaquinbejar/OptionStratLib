@@ -611,7 +611,7 @@ impl BasicAble for LongStraddle {
 
 impl Strategies for LongStraddle {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY) // Theoretically unlimited
+        Ok(Positive::MAX) // Theoretically unlimited
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {

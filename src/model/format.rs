@@ -327,7 +327,7 @@ mod tests_options {
         let options = Options {
             option_type: OptionType::Barrier {
                 barrier_type: BarrierType::UpAndIn,
-                barrier_level: 100.0,
+                barrier_level: pos_or_panic!(100.0),
                 rebate: None,
             },
             side: Side::Short,

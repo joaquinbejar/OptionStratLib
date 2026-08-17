@@ -24,6 +24,19 @@ fn pos_lit(value: Decimal) -> Positive {
     Positive::new_decimal(value).unwrap_or(Positive::ZERO)
 }
 
+/// Subtracts `rhs` from `lhs`, flooring the result at zero.
+///
+/// `Positive::sub_or_zero` is deprecated in positive 0.6 because saturating
+/// arithmetic hides underflow. Every call site in this crate genuinely wants
+/// the floor — a quoted price or a strike offset never goes negative — so the
+/// decision is made once, here, on top of the checked `sub_or_none`: `None`
+/// (the difference would be negative) becomes zero, and no saturating
+/// arithmetic is used on the `Decimal` itself.
+#[inline]
+pub(crate) fn sub_floor_zero(lhs: Positive, rhs: &Decimal) -> Positive {
+    lhs.sub_or_none(rhs).unwrap_or(Positive::ZERO)
+}
+
 /// Converts a vector of `Positive` values to a vector of `f64` values.
 ///
 /// This utility function transforms a collection of `Positive` type values

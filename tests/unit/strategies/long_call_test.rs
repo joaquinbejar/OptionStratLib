@@ -190,7 +190,7 @@ fn test_long_call_get_max_profit() {
     let long_call = create_test_long_call();
     let max_profit = long_call.get_max_profit().unwrap();
     // Long Call has theoretically unlimited upside
-    assert_eq!(max_profit, Positive::INFINITY);
+    assert_eq!(max_profit, Positive::MAX);
 }
 
 #[test]

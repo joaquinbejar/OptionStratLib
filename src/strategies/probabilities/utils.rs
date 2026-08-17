@@ -140,7 +140,16 @@ pub fn calculate_single_point_probability(
     let std_dev = volatility * time_to_expiry.sqrt();
 
     // Calculate z-score considering drift
-    let z_score: Decimal = f2du!((log_ratio.to_f64() - drift_rate * time_to_expiry) / std_dev)?;
+    // `Positive::ln` returns `Decimal` as of positive 0.6: the log of a
+    // positive number is not necessarily positive.
+    let log_ratio_f = log_ratio.to_f64().ok_or_else(|| {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: format!(
+                "calculate_single_point_probability: log ratio {log_ratio} not representable as f64"
+            ),
+        })
+    })?;
+    let z_score: Decimal = f2du!((log_ratio_f - drift_rate * time_to_expiry) / std_dev)?;
 
     // Calculate probabilities using the standard normal distribution
     let prob_below: Positive = Positive::new_decimal(big_n(z_score)?).unwrap_or(Positive::ZERO);

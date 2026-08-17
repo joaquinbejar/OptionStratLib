@@ -1005,9 +1005,9 @@ mod tests_pnl_metrics_serialization {
         let serialized = serde_json::to_string(&document).expect("Failed to serialize");
 
         // Verify it contains expected fields
-        assert!(serialized.contains("\"days\":30"));
+        assert!(serialized.contains("\"days\":\"30\""));
         assert!(serialized.contains("\"symbol\":\"AAPL\""));
-        assert!(serialized.contains("\"fee\":0.65"));
+        assert!(serialized.contains("\"fee\":\"0.65\""));
         assert!(serialized.contains("\"delta\":\"0.5\""));
         assert!(serialized.contains("\"delta_adjustment_at\":\"0.1\""));
         assert!(serialized.contains("\"step_number\":1"));
@@ -1056,8 +1056,8 @@ mod tests_pnl_metrics_serialization {
         // Verify it contains expected fields
         assert!(serialized.contains("\"realized\":\"123.45\""));
         assert!(serialized.contains("\"unrealized\":\"-67.89\""));
-        assert!(serialized.contains("\"initial_costs\":500"));
-        assert!(serialized.contains("\"initial_income\":250"));
+        assert!(serialized.contains("\"initial_costs\":\"500\""));
+        assert!(serialized.contains("\"initial_income\":\"250\""));
         assert!(serialized.contains("\"2023-03-15T14:30:00Z\""));
 
         // Deserialize back to struct
@@ -1150,9 +1150,9 @@ mod tests_pnl_metrics_serialization {
         let serialized = serde_json::to_string(&documents).expect("Failed to serialize");
 
         // Verify it contains data from all documents
-        assert!(serialized.contains("\"days\":30"));
-        assert!(serialized.contains("\"days\":60"));
-        assert!(serialized.contains("\"days\":90"));
+        assert!(serialized.contains("\"days\":\"30\""));
+        assert!(serialized.contains("\"days\":\"60\""));
+        assert!(serialized.contains("\"days\":\"90\""));
         assert!(serialized.contains("\"SYMBOL1\""));
         assert!(serialized.contains("\"SYMBOL2\""));
         assert!(serialized.contains("\"SYMBOL3\""));

@@ -51,7 +51,7 @@ use rust_decimal_macros::dec;
 /// chooser date (call and put side).
 pub fn chooser_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
-        OptionType::Chooser { choice_date } => simple_chooser_price(option, *choice_date),
+        OptionType::Chooser { choice_date } => simple_chooser_price(option, choice_date.to_f64()),
         _ => Err(PricingError::other(
             "chooser_black_scholes requires OptionType::Chooser",
         )),
@@ -274,7 +274,7 @@ mod tests {
     fn create_chooser_option(choice_date_days: f64) -> Options {
         Options::new(
             OptionType::Chooser {
-                choice_date: choice_date_days,
+                choice_date: pos_or_panic!(choice_date_days),
             },
             Side::Long,
             "TEST".to_string(),
