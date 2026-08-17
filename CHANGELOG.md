@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-08-17
+
+Dependency refresh: every dependency moved to its latest stable minor, and the
+three in-house crates jumped a breaking release each. It is **breaking** for
+consumers — see *Migration*.
+
+### Changed — breaking
+
+- `positive` `0.5` -> `0.6`, `expiration_date` `0.2` -> `0.3`,
+  `option_type` `0.1` -> `0.3`. All three appear throughout this crate's public
+  API, so consumers must move in the same step.
+- **JSON wire format**: `positive` 0.6 serialises `Positive` as the exact
+  decimal in a *string* (`"42.5"` instead of `42.5`), so every serialised type
+  carrying a `Positive` changes shape: `OptionData`, `OptionChainBuildParams`,
+  `OptionSeries`, `PnL`/`PnLMetricsDocument`, `Step`/`Xstep`/`Ystep`,
+  `StrategyRequest`, and the rest. Deserialisation still accepts the old
+  numeric form, so stored documents keep loading; anything asserting on the
+  serialised text has to be updated.
+- **`utils::others::calculate_log_returns` returns `Vec<Decimal>`**, not
+  `Vec<Positive>`. A log return is signed — `ln(105/110) < 0` — and the old
+  signature could not represent it. `Positive::ln` itself now returns
+  `Decimal` for the same reason.
+- **Exotic payloads are `Positive`**, following `option_type` 0.3:
+  `OptionType::Barrier { barrier_level, rebate }`,
+  `Bermuda { exercise_dates }`, `Chooser { choice_date }`,
+  `Cliquet { reset_dates }`, `Spread`/`Exchange { second_asset }`,
+  `Quanto { exchange_rate }`, `Power { exponent }`. A negative or non-finite
+  value is now unrepresentable rather than an error at pricing time, so
+  `power_black_scholes` no longer has a negative-exponent rejection path and
+  `barrier_black_scholes` no longer returns `PricingError::NonFinite` for its
+  barrier level or rebate.
+- `OptionType` and every sub-enum (`AsianAveragingType`, `BarrierType`,
+  `BinaryType`, `LookbackType`, `RainbowType`) are `#[non_exhaustive]`
+  upstream. Matches in this crate gained fallback arms: payoffs degrade to the
+  plain intrinsic value, and the Black-Scholes kernels return
+  `PricingError::UnsupportedOptionType` / `PricingError::other` rather than
+  failing to compile against a future variant.
+
+### Changed
+
+- `rust_decimal` `1.41` -> `1.42`, `itertools` `0.14` -> `0.15`,
+  `zip` `6.0` -> `8.6`, `uuid` `1.23` -> `1.24`, `utoipa` `5.4` -> `5.5`,
+  `tokio` `1.52` -> `1.53`; dev-only `mockall` `0.14` -> `0.15`,
+  `tempfile` `3.23` -> `3.27`, `proptest` `1.5` -> `1.11`. Every other
+  dependency was already at its latest stable minor.
+- `Positive::INFINITY` is deprecated upstream in favour of `Positive::MAX`
+  (the value was always `Decimal::MAX`, never an infinity). The unlimited-upside
+  strategies (`long_call`, `short_call`, the straddles and strangles,
+  `call_butterfly`) and `ProfitRange`/`Position` now use `MAX`, so an unbounded
+  max-profit renders as `79228162514264337593543950335` instead of `inf`.
+- Deprecated conversions replaced: `Positive::to_i64`/`to_u64`/`to_usize` gave
+  way to their `*_checked` forms, so an out-of-range day count, plot bound or
+  chain-size counter saturates instead of panicking.
+- `Positive::sub_or_zero` is deprecated upstream; the zero floor is now taken
+  once, in `model::utils::sub_floor_zero`, on top of the checked
+  `sub_or_none`. Behaviour is unchanged for the bid/ask spread, the skew scan
+  and the OU drift term.
+- Comparisons of the form `decimal > Positive::ZERO.into()` became
+  `decimal > Positive::ZERO`: `positive` 0.6 adds
+  `PartialOrd<Positive> for Decimal`, which made the inferred `.into()`
+  ambiguous.
+
+### Migration
+
+```rust
+// log returns are signed
+- let r: Vec<Positive> = calculate_log_returns(&prices)?;
++ let r: Vec<Decimal>  = calculate_log_returns(&prices)?;
+
+// exotic payloads carry `Positive`
+- OptionType::Barrier { barrier_type, barrier_level: 95.0, rebate: None }
++ OptionType::Barrier { barrier_type, barrier_level: pos_or_panic!(95.0), rebate: None }
+
+// unbounded profit
+- Ok(Positive::INFINITY)
++ Ok(Positive::MAX)
+
+// serialised prices are strings
+- {"strike_price": 100.0}
++ {"strike_price": "100"}
+```
+
+### Housekeeping
+
+- `.cargo/audit.toml`, mirroring the `positive` crate's policy file: it ignores
+  RUSTSEC-2026-0235 (rkyv 0.7.46) with a reachability rationale — `rkyv` is an
+  *optional* dependency of `rust_decimal` that this crate never enables, so it
+  is recorded in `Cargo.lock` but never compiled (`cargo tree --all-features
+  --target all -i rkyv` reports nothing) — and opts into reporting
+  unmaintained/unsound/notice advisories, of which two remain outstanding
+  transitively (`number_prefix` via `indicatif`, `rustls-pemfile` via
+  `reqwest`). The Security Audit workflow had been failing on every run,
+  including on `main`.
+
 ## [0.18.1] - 2026-08-07
 
 ### Changed

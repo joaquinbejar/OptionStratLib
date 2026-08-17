@@ -195,9 +195,9 @@ mod tests_serialization {
         assert!(serialized.contains("\"strategy_type\":\"BearCallSpread\""));
         assert!(serialized.contains("\"positions\":["));
         assert!(serialized.contains("\"underlying_symbol\":\"AAPL\""));
-        assert!(serialized.contains("\"premium\":4.5"));
-        assert!(serialized.contains("\"open_fee\":1"));
-        assert!(serialized.contains("\"close_fee\":1.2"));
+        assert!(serialized.contains("\"premium\":\"4.5\""));
+        assert!(serialized.contains("\"open_fee\":\"1\""));
+        assert!(serialized.contains("\"close_fee\":\"1.2\""));
     }
 
     #[test]
@@ -363,9 +363,9 @@ mod tests_strategies_build_model {
         assert!(serialized.contains("\"strategy_type\":\"BearCallSpread\""));
         assert!(serialized.contains("\"positions\":["));
         assert!(serialized.contains("\"underlying_symbol\":\"AAPL\""));
-        assert!(serialized.contains("\"premium\":4.5"));
-        assert!(serialized.contains("\"open_fee\":1"));
-        assert!(serialized.contains("\"close_fee\":1.2"));
+        assert!(serialized.contains("\"premium\":\"4.5\""));
+        assert!(serialized.contains("\"open_fee\":\"1\""));
+        assert!(serialized.contains("\"close_fee\":\"1.2\""));
     }
 
     #[test]

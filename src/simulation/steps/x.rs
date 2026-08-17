@@ -367,7 +367,7 @@ mod tests_serialize {
         // Check all fields exist and have correct types
         assert!(parsed.is_object());
         assert!(parsed.get("index").unwrap().is_i64());
-        assert!(parsed.get("step_size_in_time").unwrap().is_number());
+        assert!(parsed.get("step_size_in_time").unwrap().is_string());
         assert!(
             parsed.get("time_unit").unwrap().is_object()
                 || parsed.get("time_unit").unwrap().is_string()
@@ -376,7 +376,7 @@ mod tests_serialize {
 
         // Check field values
         assert_eq!(parsed["index"], json!(42));
-        assert_eq!(parsed["step_size_in_time"], json!(1.5));
+        assert_eq!(parsed["step_size_in_time"], json!("1.5"));
     }
 
     #[test]
@@ -405,9 +405,9 @@ mod tests_serialize {
         let parsed_positive: Value = serde_json::from_str(&json_positive).unwrap();
 
         // All should serialize to the same value
-        assert_eq!(parsed_f64["step_size_in_time"], json!(2.5));
-        assert_eq!(parsed_decimal["step_size_in_time"], json!(2.5));
-        assert_eq!(parsed_positive["step_size_in_time"], json!(2.5));
+        assert_eq!(parsed_f64["step_size_in_time"], json!("2.5"));
+        assert_eq!(parsed_decimal["step_size_in_time"], json!("2.5"));
+        assert_eq!(parsed_positive["step_size_in_time"], json!("2.5"));
     }
 
     #[test]
@@ -445,7 +445,7 @@ mod tests_serialize {
         );
         let json_zero = serde_json::to_string(&step_zero).unwrap();
         let parsed_zero: Value = serde_json::from_str(&json_zero).unwrap();
-        assert_eq!(parsed_zero["step_size_in_time"], json!(0.01));
+        assert_eq!(parsed_zero["step_size_in_time"], json!("0.01"));
 
         // Test with very small number
         let step_small = Xstep::new(
@@ -455,8 +455,22 @@ mod tests_serialize {
         );
         let json_small = serde_json::to_string(&step_small).unwrap();
         let parsed_small: Value = serde_json::from_str(&json_small).unwrap();
-        assert!(parsed_small["step_size_in_time"].as_f64().unwrap() > 0.0);
-        assert!(parsed_small["step_size_in_time"].as_f64().unwrap() < 0.0001);
+        assert!(
+            parsed_small["step_size_in_time"]
+                .as_str()
+                .unwrap()
+                .parse::<f64>()
+                .unwrap()
+                > 0.0
+        );
+        assert!(
+            parsed_small["step_size_in_time"]
+                .as_str()
+                .unwrap()
+                .parse::<f64>()
+                .unwrap()
+                < 0.0001
+        );
 
         // Test with very large number
         let step_large = Xstep::new(
@@ -466,7 +480,7 @@ mod tests_serialize {
         );
         let json_large = serde_json::to_string(&step_large).unwrap();
         let parsed_large: Value = serde_json::from_str(&json_large).unwrap();
-        assert_eq!(parsed_large["step_size_in_time"], json!(1_000_000.01));
+        assert_eq!(parsed_large["step_size_in_time"], json!("1000000.01"));
     }
 
     #[test]
@@ -483,7 +497,11 @@ mod tests_serialize {
         let parsed: Value = serde_json::from_str(&serialized).unwrap();
 
         // Check precision is maintained (to reasonable float precision)
-        let value = parsed["step_size_in_time"].as_f64().unwrap();
+        let value = parsed["step_size_in_time"]
+            .as_str()
+            .unwrap()
+            .parse::<f64>()
+            .unwrap();
         assert!((value - 1.23456789).abs() < 0.0000001);
     }
 

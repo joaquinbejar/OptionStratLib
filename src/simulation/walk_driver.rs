@@ -48,10 +48,7 @@ where
         WalkType::Historical {
             timeframe, prices, ..
         } => {
-            let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
-                .iter()
-                .map(|p| p.to_dec())
-                .collect();
+            let log_returns: Vec<Decimal> = calculate_log_returns(prices)?;
             let constant_volatility = constant_volatility(&log_returns)?;
             let implied_volatility =
                 adjust_volatility(constant_volatility, *timeframe, TimeFrame::Year)?;
@@ -86,10 +83,7 @@ fn expanding_window_vols(
         // Fewer than two returns anywhere: no sample variance is computable.
         return Ok(None);
     }
-    let log_returns: Vec<Decimal> = calculate_log_returns(prices)?
-        .iter()
-        .map(|p| p.to_dec())
-        .collect();
+    let log_returns: Vec<Decimal> = calculate_log_returns(prices)?;
 
     let overflow =
         |what: &str| SimulationError::walk_error(&format!("expanding-window {what} overflowed"));

@@ -1116,9 +1116,9 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             ));
         }
 
-        let min = strikes.iter().fold(Positive::INFINITY, |acc, &strike| {
-            Positive::min(acc, *strike)
-        });
+        let min = strikes
+            .iter()
+            .fold(Positive::MAX, |acc, &strike| Positive::min(acc, *strike));
         let max = strikes
             .iter()
             .fold(Positive::ZERO, |acc, &strike| Positive::max(acc, *strike));
@@ -1143,7 +1143,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// # Returns:
     /// * `Ok(Positive)` - The difference between the highest and lowest break-even points.  Returns
-    ///   `Positive::INFINITY` if there is only one break-even point.
+    ///   `Positive::MAX` if there is only one break-even point.
     /// * `Err(StrategyError)` - if there are no break-even points.
     ///
     /// # Errors
@@ -1157,7 +1157,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             0 => Err(StrategyError::BreakEvenError(
                 BreakEvenErrorKind::NoBreakEvenPoints,
             )),
-            1 => Ok(Positive::INFINITY),
+            1 => Ok(Positive::MAX),
             2 => Ok(break_even_points[1] - break_even_points[0]),
             _ => {
                 // sort break even points and then get last minus first
@@ -2148,7 +2148,7 @@ mod tests_range_of_profit {
     #[test]
     fn test_single_break_even_point() {
         let strategy = TestStrategy::new(vec![Positive::HUNDRED]);
-        assert_eq!(strategy.get_range_of_profit().unwrap(), Positive::INFINITY);
+        assert_eq!(strategy.get_range_of_profit().unwrap(), Positive::MAX);
     }
 
     #[test]

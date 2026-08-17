@@ -54,7 +54,7 @@ fn main() -> Result<(), Error> {
     );
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
 
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         debug!("Strategy:  {:#?}", strategy);
         let path: &std::path::Path =
             "Draws/Strategy/short_butterfly_spread_profit_loss_chart_best_area.png".as_ref();

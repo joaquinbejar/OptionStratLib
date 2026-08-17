@@ -304,8 +304,11 @@ pub fn get_x_days_formatted(days: i64) -> String {
 /// - The `Positive` type is expected to provide a `.ceiling()` method that converts it to an integer-compatible representation.
 #[must_use]
 pub fn get_x_days_formatted_pos(days: Positive) -> String {
-    let ceiling = days.ceiling().to_i64();
-    let tomorrow = Local::now().date_naive() + Duration::days(ceiling);
+    let ceiling = days.ceiling().to_i64_checked().unwrap_or(i64::MAX);
+    let today = Local::now().date_naive();
+    let tomorrow = Duration::try_days(ceiling)
+        .and_then(|delta| today.checked_add_signed(delta))
+        .unwrap_or(today);
     tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
@@ -494,8 +497,8 @@ mod tests_timeframe {
         // Test edge cases for custom periods
         assert_eq!(TimeFrame::Custom(Positive::ZERO).periods_per_year(), 0.0);
         assert_eq!(
-            TimeFrame::Custom(Positive::INFINITY).periods_per_year(),
-            Positive::INFINITY
+            TimeFrame::Custom(Positive::MAX).periods_per_year(),
+            Positive::MAX
         );
     }
 

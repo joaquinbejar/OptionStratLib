@@ -1085,7 +1085,11 @@ impl Graph for Options {
             line_width: Some(2.0),
         };
 
-        for i in range.0.to_u64()..range.1.to_u64() {
+        let (range_start, range_end) = (
+            range.0.to_u64_checked().unwrap_or_default(),
+            range.1.to_u64_checked().unwrap_or_default(),
+        );
+        for i in range_start..range_end {
             let profit = self
                 .payoff_at_price(&Positive::new(i as f64).unwrap_or(Positive::ONE))
                 .unwrap_or_default();

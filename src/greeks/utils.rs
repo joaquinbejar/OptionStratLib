@@ -122,7 +122,7 @@ pub fn d1(
     let underlying_price: Decimal = underlying_price.to_dec();
     let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
     let ln_price_ratio = match strike_price {
-        value if value == Positive::INFINITY => Decimal::MIN,
+        value if value == Positive::MAX => Decimal::MIN,
         _ => (underlying_price / strike_price).ln(),
     };
 
@@ -867,7 +867,7 @@ mod calculate_d1_values {
     #[test]
     fn test_d1_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = Positive::INFINITY; // Very high stock price
+        let underlying_price = Positive::MAX; // Very high stock price
         let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;
@@ -1228,7 +1228,7 @@ mod calculate_d2_values {
     #[test]
     fn test_d2_high_underlying_price() {
         // Case with extremely high underlying price
-        let underlying_price = Positive::INFINITY;
+        let underlying_price = Positive::MAX;
         let strike_price = Positive::HUNDRED;
         let risk_free_rate = dec!(0.05);
         let expiration_date = Positive::ONE;

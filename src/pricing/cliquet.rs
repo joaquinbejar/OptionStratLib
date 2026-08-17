@@ -33,6 +33,7 @@ use crate::greeks::big_n;
 use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
 use crate::model::types::OptionType;
 use num_traits::Inv;
+use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
@@ -55,7 +56,10 @@ use rust_decimal_macros::dec;
 /// the per-reset forward components.
 pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
-        OptionType::Cliquet { reset_dates } => price_cliquet(option, reset_dates),
+        OptionType::Cliquet { reset_dates } => {
+            let resets: Vec<f64> = reset_dates.iter().map(Positive::to_f64).collect();
+            price_cliquet(option, &resets)
+        }
         _ => Err(PricingError::other(
             "cliquet_black_scholes requires OptionType::Cliquet",
         )),
@@ -268,7 +272,7 @@ mod tests {
     fn create_cliquet_option() -> Options {
         Options::new(
             OptionType::Cliquet {
-                reset_dates: vec![90.0, 180.0],
+                reset_dates: vec![pos_or_panic!(90.0), pos_or_panic!(180.0)],
             },
             Side::Long,
             "TEST".to_string(),

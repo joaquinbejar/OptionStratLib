@@ -50,8 +50,7 @@ use rust_decimal_macros::dec;
 /// - Correlation is outside the valid range [-1, 1]
 pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let exchange_rate = match &option.option_type {
-        OptionType::Quanto { exchange_rate } => Decimal::from_f64(*exchange_rate)
-            .ok_or_else(|| PricingError::other("Failed to convert exchange_rate to Decimal"))?,
+        OptionType::Quanto { exchange_rate } => exchange_rate.to_dec(),
         _ => {
             return Err(PricingError::other(
                 "quanto_black_scholes requires OptionType::Quanto",
@@ -174,7 +173,7 @@ mod tests {
     fn create_quanto_option(option_style: OptionStyle) -> Options {
         Options::new(
             OptionType::Quanto {
-                exchange_rate: 1.25,
+                exchange_rate: pos_or_panic!(1.25),
             },
             Side::Long,
             "TEST".to_string(),
@@ -304,7 +303,7 @@ mod tests {
     fn test_quanto_missing_params() {
         let option = Options::new(
             OptionType::Quanto {
-                exchange_rate: 1.25,
+                exchange_rate: pos_or_panic!(1.25),
             },
             Side::Long,
             "TEST".to_string(),
@@ -338,10 +337,14 @@ mod tests {
     #[test]
     fn test_quanto_exchange_rate_scaling() {
         let mut option1 = create_quanto_option(OptionStyle::Call);
-        option1.option_type = OptionType::Quanto { exchange_rate: 1.0 };
+        option1.option_type = OptionType::Quanto {
+            exchange_rate: pos_or_panic!(1.0),
+        };
 
         let mut option2 = create_quanto_option(OptionStyle::Call);
-        option2.option_type = OptionType::Quanto { exchange_rate: 2.0 };
+        option2.option_type = OptionType::Quanto {
+            exchange_rate: pos_or_panic!(2.0),
+        };
 
         let price1 = quanto_black_scholes(&option1).unwrap();
         let price2 = quanto_black_scholes(&option2).unwrap();

@@ -132,6 +132,12 @@ fn price_two_asset_rainbow(
             OptionStyle::Call => price_call_on_min(s1, s2, k, r, q1, q2, sigma1, sigma2, rho, t)?,
             OptionStyle::Put => price_put_on_min(s1, s2, k, r, q1, q2, sigma1, sigma2, rho, t)?,
         },
+        // `RainbowType` is `#[non_exhaustive]`.
+        _ => {
+            return Err(PricingError::other(
+                "rainbow_black_scholes: unsupported RainbowType",
+            ));
+        }
     };
 
     Ok(apply_side(price, option))

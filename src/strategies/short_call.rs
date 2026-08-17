@@ -297,7 +297,7 @@ impl Strategies for ShortCall {
         self.get_net_premium_received()
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY) // Theoretically unlimited
+        Ok(Positive::MAX) // Theoretically unlimited
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);

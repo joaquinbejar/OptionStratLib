@@ -633,7 +633,7 @@ impl Strategies for LongStrangle {
         Ok(volume)
     }
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY) // Theoretically unlimited
+        Ok(Positive::MAX) // Theoretically unlimited
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         Ok(self.get_total_cost()?)

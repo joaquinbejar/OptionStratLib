@@ -283,7 +283,7 @@ impl BreakEvenable for LongCall {
 
 impl Strategies for LongCall {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::INFINITY) // Theoretically unlimited
+        Ok(Positive::MAX) // Theoretically unlimited
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         // Max loss for a long call is the premium paid (at any price ≤ strike).

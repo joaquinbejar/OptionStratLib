@@ -64,6 +64,10 @@ pub fn binary_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
             BinaryType::CashOrNothing => cash_or_nothing_price(option, DEFAULT_CASH_PAYOUT),
             BinaryType::AssetOrNothing => asset_or_nothing_price(option),
             BinaryType::Gap => gap_binary_price(option),
+            // `BinaryType` is `#[non_exhaustive]`.
+            _ => Err(PricingError::other(
+                "binary_black_scholes: unsupported BinaryType",
+            )),
         },
         _ => Err(PricingError::other(
             "binary_black_scholes requires OptionType::Binary",

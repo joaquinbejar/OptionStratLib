@@ -7,8 +7,9 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
-use crate::model::decimal::{d_add, d_sub, finite_decimal};
+use crate::model::decimal::{d_add, d_sub};
 use crate::model::types::{BarrierType, OptionStyle, OptionType};
+use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 
@@ -29,12 +30,10 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             barrier_level,
             rebate,
         } => {
-            let bl = finite_decimal(*barrier_level).ok_or_else(|| {
-                PricingError::non_finite("pricing::barrier::barrier_level", *barrier_level)
-            })?;
-            let rebate_f = rebate.unwrap_or(0.0);
-            let rb = finite_decimal(rebate_f)
-                .ok_or_else(|| PricingError::non_finite("pricing::barrier::rebate", rebate_f))?;
+            // `barrier_level` and `rebate` are `Positive`, i.e. `Decimal`-backed
+            // and always finite, so no non-finite check is needed.
+            let bl = barrier_level.to_dec();
+            let rb = rebate.unwrap_or(Positive::ZERO).to_dec();
             (barrier_type, bl, rb)
         }
         _ => {
@@ -92,6 +91,9 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
     let _eta = match barrier_type {
         BarrierType::DownAndIn | BarrierType::DownAndOut => dec!(1.0),
         BarrierType::UpAndIn | BarrierType::UpAndOut => dec!(-1.0),
+        // `BarrierType` is `#[non_exhaustive]`; unreachable here because the
+        // match on `(style, barrier_type)` below rejects unknown variants.
+        _ => dec!(1.0),
     };
 
     let f_a = |phi_val: Decimal, x_val: Decimal| -> Result<Decimal, PricingError> {
@@ -233,6 +235,11 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
                 Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
             }
         }
+        // `BarrierType` is `#[non_exhaustive]`: a barrier added upstream has no
+        // closed form here until it gets its own arm.
+        (_, _) => Err(PricingError::other(
+            "barrier_black_scholes: unsupported BarrierType",
+        )),
     }
 }
 
@@ -248,7 +255,7 @@ mod tests {
         Options {
             option_type: OptionType::Barrier {
                 barrier_type,
-                barrier_level: level,
+                barrier_level: pos_or_panic!(level),
                 rebate: None,
             },
             side: Side::Long,
@@ -393,29 +400,5 @@ mod tests {
         );
         // Barrier Greeks can be negative and have higher magnitudes than vanilla
         tracing::debug!(delta = %delta, gamma = %gamma, vega = %vega, rho = %rho, "Barrier Greeks");
-    }
-
-    #[test]
-    fn barrier_level_nan_surfaces_non_finite() {
-        let option = create_test_option(OptionStyle::Call, BarrierType::DownAndOut, f64::NAN);
-        match barrier_black_scholes(&option) {
-            Err(PricingError::NonFinite { context, value }) => {
-                assert_eq!(context, "pricing::barrier::barrier_level");
-                assert!(value.is_nan());
-            }
-            other => panic!("expected NonFinite barrier_level, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn barrier_level_infinity_surfaces_non_finite() {
-        let option = create_test_option(OptionStyle::Call, BarrierType::UpAndIn, f64::INFINITY);
-        match barrier_black_scholes(&option) {
-            Err(PricingError::NonFinite { context, value }) => {
-                assert_eq!(context, "pricing::barrier::barrier_level");
-                assert!(value.is_infinite());
-            }
-            other => panic!("expected NonFinite barrier_level, got {other:?}"),
-        }
     }
 }

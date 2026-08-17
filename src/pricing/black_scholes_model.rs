@@ -95,6 +95,12 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Quanto { .. } => crate::pricing::quanto::quanto_black_scholes(option),
         OptionType::Exchange { .. } => crate::pricing::exchange::exchange_black_scholes(option),
         OptionType::Power { .. } => crate::pricing::power::power_black_scholes(option),
+        // `OptionType` is `#[non_exhaustive]`: a variant added upstream has no
+        // closed form here until it gets its own kernel.
+        _ => Err(PricingError::unsupported_option_type(
+            "unknown",
+            "Black-Scholes",
+        )),
     }
 }
 

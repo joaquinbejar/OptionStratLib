@@ -1,0 +1,43 @@
+# cargo-audit configuration for the `optionstratlib` crate.
+#
+# See https://docs.rs/cargo-audit for the full schema.
+
+[advisories]
+# Advisories deliberately ignored, each with reachability rationale, owner and
+# review date. Every entry MUST be re-evaluated on or before its review date;
+# an entry whose upstream fix has shipped must be removed, not extended.
+#
+# ---------------------------------------------------------------------------
+# RUSTSEC-2026-0235 — rkyv 0.7.46, out-of-bounds read validating archives that
+#                     contain Rc/Arc. Fixed in rkyv >= 0.8.17.
+#
+# Reachability : NOT REACHABLE. `rkyv` enters Cargo.lock only as an *optional*
+#                dependency of `rust_decimal`. This crate depends on
+#                rust_decimal with `features = ["maths", "serde"]` and never
+#                enables its `rkyv` feature, so the crate is never compiled or
+#                linked. Verified with:
+#                    cargo tree --all-features --target all -i rkyv
+#                which reports "nothing to print" — no path from
+#                `optionstratlib` to `rkyv` exists under any feature or target
+#                combination. Cargo records optional dependencies in the
+#                lockfile regardless of feature selection, which is why
+#                `cargo audit` still sees it.
+# Upgrade path : Blocked upstream. rust_decimal 1.42.1 (the latest release)
+#                pins the 0.7 line for its optional `rkyv` feature; moving to
+#                rkyv 0.8 is a breaking change that must land in rust_decimal
+#                first. There is no version of rust_decimal we can select that
+#                resolves this.
+# Tracking     : https://github.com/paupino/rust-decimal/issues
+# Owner        : @joaquinbejar
+# Review by    : 2027-02-15
+# ---------------------------------------------------------------------------
+ignore = ["RUSTSEC-2026-0235"]
+
+# Report unmaintained/unsound/notice advisories instead of dropping them
+# silently. Two are currently outstanding, both transitive and both without a
+# fixed release to move to:
+#   * RUSTSEC-2025-0119 — number_prefix 0.4.0 unmaintained, via `indicatif`.
+#   * RUSTSEC-2025-0134 — rustls-pemfile 1.0.4 unmaintained, via `reqwest`
+#     (only reachable with the `async` feature enabled).
+informational_warnings = ["unmaintained", "unsound", "notice"]
+severity_threshold = "none"

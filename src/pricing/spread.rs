@@ -45,8 +45,7 @@ use rust_decimal_macros::dec;
 /// - Correlation is outside the valid range [-1, 1]
 pub fn spread_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let second_asset_price = match &option.option_type {
-        OptionType::Spread { second_asset } => Decimal::from_f64(*second_asset)
-            .ok_or_else(|| PricingError::other("Failed to convert second_asset to Decimal"))?,
+        OptionType::Spread { second_asset } => second_asset.to_dec(),
         _ => {
             return Err(PricingError::other(
                 "spread_black_scholes requires OptionType::Spread",
@@ -259,7 +258,7 @@ mod tests {
     fn create_spread_option(strike: Positive, option_style: OptionStyle) -> Options {
         Options::new(
             OptionType::Spread {
-                second_asset: 100.0,
+                second_asset: pos_or_panic!(100.0),
             },
             Side::Long,
             "TEST".to_string(),
@@ -374,7 +373,7 @@ mod tests {
     fn test_spread_missing_params() {
         let option = Options::new(
             OptionType::Spread {
-                second_asset: 100.0,
+                second_asset: pos_or_panic!(100.0),
             },
             Side::Long,
             "TEST".to_string(),

@@ -611,7 +611,15 @@ pub fn adjust_volatility(
             );
             0.0
         });
-    let m = (strike / underlying_price.to_f64()).ln();
+    let m = (strike / underlying_price.to_f64())
+        .ln()
+        .to_f64()
+        .unwrap_or_else(|| {
+            tracing::warn!(
+                "adjust_volatility: moneyness ln to_f64 returned None; defaulting to 0.0"
+            );
+            0.0
+        });
     let factor: f64 = 1.0 + skew_slope * m + smile_curve * m * m;
     let clamped = factor.clamp(0.01, 3.0);
 
@@ -1458,7 +1466,7 @@ mod tests_option_chain_build_params {
         let display = format!("{params}");
         assert_eq!(
             display,
-            r#"{"symbol":"TEST","volume":1000,"chain_size":10,"strike_interval":5,"skew_slope":"-0.2","smile_curve":"0.1","spread":0.02,"decimal_places":2,"price_params":{"underlying_price":100,"expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":0.02,"underlying_symbol":"AAPL"},"implied_volatility":0.25}"#
+            r#"{"symbol":"TEST","volume":"1000","chain_size":10,"strike_interval":"5","skew_slope":"-0.2","smile_curve":"0.1","spread":"0.02","decimal_places":2,"price_params":{"underlying_price":"100","expiration_date":{"days":30.0},"risk_free_rate":"0.05","dividend_yield":"0.02","underlying_symbol":"AAPL"},"implied_volatility":"0.25"}"#
         );
     }
 

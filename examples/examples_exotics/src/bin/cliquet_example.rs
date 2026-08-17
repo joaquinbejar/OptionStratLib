@@ -17,7 +17,11 @@ fn main() {
     setup_logger();
     // 1. Define Cliquet Option parameters
     // We want a 1-year Cliquet option with quarterly resets (every 90 days)
-    let reset_dates = vec![90.0, 180.0, 270.0];
+    let reset_dates = vec![
+        pos_or_panic!(90.0),
+        pos_or_panic!(180.0),
+        pos_or_panic!(270.0),
+    ];
     let expiration_days = 365.0;
 
     // Local cap of 5% and floor of -2% per period

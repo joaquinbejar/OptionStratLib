@@ -22,6 +22,7 @@ use crate::metrics::{
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use crate::model::decimal::d_add;
+use crate::model::utils::sub_floor_zero;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
 };
@@ -538,7 +539,7 @@ impl OptionChain {
 
         loop {
             // Check if we've reached the desired chain size
-            if counter.to_usize() > max_strikes {
+            if counter.to_usize_checked().unwrap_or(usize::MAX) > max_strikes {
                 break;
             }
 
@@ -1367,7 +1368,10 @@ impl OptionChain {
             let strike_str = field(0)?;
             let mut option_data = OptionData {
                 strike_price: strike_str.parse::<Positive>().map_err(|e| {
-                    ChainError::invalid_strike(strike_str.parse::<f64>().unwrap_or(f64::NAN), &e)
+                    ChainError::invalid_strike(
+                        strike_str.parse::<f64>().unwrap_or(f64::NAN),
+                        &e.to_string(),
+                    )
                 })?,
                 call_bid: parse(field(1)?),
                 call_ask: parse(field(2)?),
@@ -3241,13 +3245,13 @@ impl RNDAnalysis for OptionChain {
                 debug!("Call price at k+h: {:?}", self.get_call_price(k + h));
                 debug!(
                     "Call price at k-h: {:?}",
-                    self.get_call_price(k.sub_or_zero(&h))
+                    self.get_call_price(sub_floor_zero(k, &h))
                 );
             }
             if let (Some(call_price), Some(call_up), Some(call_down)) = (
                 self.get_call_price(k),
                 self.get_call_price(k + h),
-                self.get_call_price(k.sub_or_zero(&h)),
+                self.get_call_price(sub_floor_zero(k, &h)),
             ) {
                 // Calculate second derivative
                 let second_derivative = (call_up + call_down - Decimal::TWO * call_price) / (h * h);
@@ -7849,7 +7853,7 @@ mod rnd_analysis_tests {
 
             // For ATM strike (100.0), relative strike should be 1.0
             let atm_strike = result.iter().find(|(rel_strike, _)| {
-                (rel_strike.sub_or_zero(&Decimal::ONE)) < pos_or_panic!(0.0001)
+                sub_floor_zero(*rel_strike, &Decimal::ONE) < pos_or_panic!(0.0001)
             });
             assert!(atm_strike.is_some());
         }
@@ -9157,9 +9161,10 @@ mod tests_option_data_serde {
         let json_value: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert!(json_value.is_object());
         assert!(json_value.get("strike_price").is_some());
+        // positive 0.6 serialises `Positive` as the exact decimal in a string
         assert_eq!(
-            json_value.get("strike_price").unwrap().as_f64().unwrap(),
-            100.0
+            json_value.get("strike_price").unwrap().as_str().unwrap(),
+            "100"
         );
     }
 
@@ -9288,10 +9293,10 @@ mod tests_option_chain_serde {
     fn test_optionchain_special_values() {
         let mut chain = OptionChain::new(
             "SPECIAL",
-            Positive::INFINITY,
+            Positive::MAX,
             "2030-01-01".to_string(),
             Some(Decimal::MAX),
-            Some(Positive::INFINITY),
+            Some(Positive::MAX),
         );
 
         chain.add_option(

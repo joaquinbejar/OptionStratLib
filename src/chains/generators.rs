@@ -497,7 +497,7 @@ mod tests {
             None => panic!("short prices"),
         };
         let log_returns: Vec<Decimal> = match calculate_log_returns(walked) {
-            Ok(returns) => returns.iter().map(|p| p.to_dec()).collect(),
+            Ok(returns) => returns,
             Err(e) => panic!("log returns failed: {e}"),
         };
         let expected_vol = match constant_volatility(&log_returns) {

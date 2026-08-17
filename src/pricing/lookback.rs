@@ -55,6 +55,10 @@ pub fn lookback_black_scholes(option: &Options) -> Result<Decimal, PricingError>
         OptionType::Lookback { lookback_type } => match lookback_type {
             LookbackType::FloatingStrike => floating_strike_lookback(option),
             LookbackType::FixedStrike => fixed_strike_lookback(option),
+            // `LookbackType` is `#[non_exhaustive]`.
+            _ => Err(PricingError::other(
+                "lookback_black_scholes: unsupported LookbackType",
+            )),
         },
         _ => Err(PricingError::other(
             "lookback_black_scholes requires OptionType::Lookback",

@@ -49,8 +49,7 @@ use rust_decimal_macros::dec;
 /// - Correlation is outside the valid range [-1, 1]
 pub fn exchange_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let second_asset_price = match &option.option_type {
-        OptionType::Exchange { second_asset } => Decimal::from_f64(*second_asset)
-            .ok_or_else(|| PricingError::other("Failed to convert second_asset to Decimal"))?,
+        OptionType::Exchange { second_asset } => second_asset.to_dec(),
         _ => {
             return Err(PricingError::other(
                 "exchange_black_scholes requires OptionType::Exchange",
@@ -172,7 +171,7 @@ mod tests {
     fn create_exchange_option() -> Options {
         Options::new(
             OptionType::Exchange {
-                second_asset: 100.0,
+                second_asset: pos_or_panic!(100.0),
             },
             Side::Long,
             "TEST".to_string(),
@@ -225,7 +224,7 @@ mod tests {
         let mut option = create_exchange_option();
         option.underlying_price = pos_or_panic!(100.0);
         option.option_type = OptionType::Exchange {
-            second_asset: 100.0,
+            second_asset: pos_or_panic!(100.0),
         };
 
         let price = exchange_black_scholes(&option).unwrap();
@@ -271,7 +270,7 @@ mod tests {
     fn test_exchange_missing_params() {
         let option = Options::new(
             OptionType::Exchange {
-                second_asset: 100.0,
+                second_asset: pos_or_panic!(100.0),
             },
             Side::Long,
             "TEST".to_string(),
@@ -307,7 +306,7 @@ mod tests {
         let mut option = create_exchange_option();
         option.underlying_price = pos_or_panic!(150.0);
         option.option_type = OptionType::Exchange {
-            second_asset: 100.0,
+            second_asset: pos_or_panic!(100.0),
         };
 
         let price = exchange_black_scholes(&option).unwrap();
@@ -324,7 +323,7 @@ mod tests {
         let mut option = create_exchange_option();
         option.underlying_price = pos_or_panic!(50.0);
         option.option_type = OptionType::Exchange {
-            second_asset: 100.0,
+            second_asset: pos_or_panic!(100.0),
         };
 
         let price = exchange_black_scholes(&option).unwrap();

@@ -672,7 +672,7 @@ mod tests_option_series {
             assert!(displaying.contains("symbol"));
             assert!(displaying.contains("100"));
             assert!(displaying.contains("risk_free_rate\":\"0.05"));
-            assert!(displaying.contains("dividend_yield\":0.02"));
+            assert!(displaying.contains("dividend_yield\":\"0.02\""));
 
             let date = get_x_days_formatted_pos(Positive::ONE);
             let matches = date.to_string();
@@ -693,7 +693,7 @@ mod tests_option_series {
             let displaying = format!("{series}");
             // Verify the minimal display string
             assert!(displaying.contains("symbol\":\"SPY"));
-            assert!(displaying.contains("underlying_price\":450"));
+            assert!(displaying.contains("underlying_price\":\"450\""));
 
             // Should not include optional fields
             assert!(!displaying.contains("risk_free_rate"));
@@ -735,7 +735,7 @@ mod tests_option_series {
 
             // Verify serialized structure
             assert!(serialized.contains("\"symbol\":\"TEST\""));
-            assert!(serialized.contains("\"underlying_price\":100"));
+            assert!(serialized.contains("\"underlying_price\":\"100\""));
             assert!(serialized.contains("\"chains\":{}"));
 
             // Deserialize
@@ -764,7 +764,7 @@ mod tests_option_series {
             // Verify serialized structure contains expected fields
             let serialized_string = serialized.unwrap();
             assert!(serialized_string.contains("\"symbol\":\"TEST\""));
-            assert!(serialized_string.contains("\"underlying_price\":100"));
+            assert!(serialized_string.contains("\"underlying_price\":\"100\""));
             assert!(serialized_string.contains("\"chains\":{}"));
 
             // Deserialize

@@ -51,6 +51,10 @@ pub fn asian_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Asian { averaging_type } => match averaging_type {
             AsianAveragingType::Geometric => geometric_asian_price(option),
             AsianAveragingType::Arithmetic => arithmetic_asian_price(option),
+            // `AsianAveragingType` is `#[non_exhaustive]`.
+            _ => Err(PricingError::other(
+                "asian_black_scholes: unsupported AsianAveragingType",
+            )),
         },
         _ => Err(PricingError::other(
             "asian_black_scholes requires OptionType::Asian",

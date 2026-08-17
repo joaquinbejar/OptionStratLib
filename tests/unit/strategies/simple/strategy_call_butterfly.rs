@@ -54,7 +54,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         pos_or_panic!(42.319),
         pos_or_panic!(0.0001)
     );
-    assert_eq!(strategy.get_max_loss()?, Positive::INFINITY);
+    assert_eq!(strategy.get_max_loss()?, Positive::MAX);
     assert_pos_relative_eq!(
         strategy.get_total_cost()?,
         pos_or_panic!(89.57),

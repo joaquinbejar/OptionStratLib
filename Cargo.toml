@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib"
-version = "0.18.1"
+version = "0.19.0"
 edition = "2024"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
@@ -76,10 +76,10 @@ futures = { workspace = true, optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
-mockall = "0.14"
-tempfile = "3.23"
+mockall = "0.15"
+tempfile = "3.27"
 static_assertions = "1.1"
-proptest = "1.5"
+proptest = "1.11"
 
 [[test]]
 name = "tests"
@@ -118,7 +118,7 @@ members = [
 [workspace.dependencies]
 optionstratlib = { path = "." }
 tracing = "0.1"
-rust_decimal = { version = "1.41", features = ["maths", "serde"] }
+rust_decimal = { version = "1.42", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
 plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -130,22 +130,22 @@ serde_json = "1.0"
 csv = { version = "1.4"}
 serde = { version = "1.0", features = ["derive"] }
 rayon = { version = "1.12" }
-itertools = "0.14"
-zip = "6.0"
+itertools = "0.15"
+zip = "8.6"
 lazy_static = "1.5"
-uuid = { version = "1.23", features = ["v4", "serde"] }
+uuid = { version = "1.24", features = ["v4", "serde"] }
 approx = "0.5"
 rand_distr = "0.6"
 prettytable-rs = "0.10"
 pretty-simple-display = "0.1"
-utoipa = { version = "5.4", features = ["axum_extras", "chrono", "decimal"] }
+utoipa = { version = "5.5", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
-positive = { version = "0.5", features = ["utoipa"] }
-expiration_date = { version = "0.2", features = ["utoipa"] }
+positive = { version = "0.6", features = ["utoipa"] }
+expiration_date = { version = "0.3", features = ["utoipa"] }
 financial_types = { version = "0.2", features = ["utoipa"] }
-option_type = { version = "0.1.2", features = ["utoipa"] }
-tokio = { version = "1.52", features = ["full"] }
+option_type = { version = "0.3", features = ["utoipa"] }
+tokio = { version = "1.53", features = ["full"] }
 async-trait = "0.1"
 reqwest = { version = "0.13", features = ["json"] }
 futures = "0.3"

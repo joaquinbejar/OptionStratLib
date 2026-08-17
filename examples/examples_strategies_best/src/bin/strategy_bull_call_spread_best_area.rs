@@ -50,7 +50,7 @@ fn main() -> Result<(), Error> {
     );
     info!("Profit Ratio: {:.2}%", strategy.get_profit_ratio()?);
 
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         debug!("Strategy:  {:#?}", strategy);
         let path: &std::path::Path =
             "Draws/Strategy/bull_call_spread_profit_loss_chart_best_area.png".as_ref();

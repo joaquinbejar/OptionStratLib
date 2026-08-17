@@ -56,7 +56,7 @@ fn main() -> Result<(), Error> {
     );
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
-    if strategy.get_profit_ratio()? > Positive::ZERO.into() {
+    if strategy.get_profit_ratio()? > Positive::ZERO {
         debug!("Strategy:  {:#?}", strategy);
         let path: &std::path::Path =
             "Draws/Strategy/short_strangle_profit_loss_chart_best_area.png".as_ref();
