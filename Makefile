@@ -22,7 +22,16 @@ release:
 test:
 	LOGLEVEL=WARN cargo test
 	LOGLEVEL=WARN cargo test --features plotly
-	LOGLEVEL=WARN cargo test --features static_export plotly 
+	LOGLEVEL=WARN cargo test --features static_export,plotly
+
+# Run the tests that need a real browser: PNG/SVG export through a WebDriver,
+# and the one that hands a chart to the default browser. They are `#[ignore]`d
+# so `make test` never spawns a browser; run this target explicitly, with
+# WEBDRIVER_PATH pointing at a chromedriver whose major version matches the
+# installed Chrome.
+.PHONY: test-visual
+test-visual:
+	LOGLEVEL=WARN cargo test --features static_export,plotly -- --ignored
 
 # Format the code
 .PHONY: fmt

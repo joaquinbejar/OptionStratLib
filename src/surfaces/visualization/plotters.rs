@@ -15,7 +15,7 @@
 //!
 //! # Example Usage
 //!
-//! ```
+//! ```rust,no_run
 //! # fn main() -> Result<(), optionstratlib::error::Error> {
 //! # use std::fs;
 //! use std::path::PathBuf;

@@ -156,6 +156,7 @@ mod plotly_render_tests {
 
         // Test the render method with PNG output
         #[test]
+        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_render_png() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_render.png");
@@ -173,6 +174,7 @@ mod plotly_render_tests {
 
         // Test the render method with SVG output
         #[test]
+        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_render_svg() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_render.svg");
@@ -202,9 +204,12 @@ mod plotly_render_tests {
             assert!(result.is_ok(), "Render to HTML should succeed");
         }
 
-        // Test the render method with Browser output
-        // This test doesn't actually open a browser, it just calls the show method
+        // Test the render method with Browser output.
+        // `OutputType::Browser` calls `Plot::show()`, which writes a temporary
+        // HTML file and hands it to the default browser — a window really does
+        // open, so this cannot run as part of an ordinary `cargo test`.
         #[test]
+        #[ignore = "opens the default browser; run with --ignored"]
         fn test_render_browser() {
             let series = create_sample_series();
             let config = create_sample_config();
@@ -216,6 +221,7 @@ mod plotly_render_tests {
 
         // Test the write_png method directly
         #[test]
+        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_write_png() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_write.png");
@@ -233,6 +239,7 @@ mod plotly_render_tests {
 
         // Test the write_svg method directly
         #[test]
+        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_write_svg() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_write.svg");

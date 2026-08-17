@@ -19,3 +19,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/audit@v1
         name: Audit Rust Dependencies
+        with:
+          # Advisories are waived exclusively through `.cargo/audit.toml`,
+          # which carries the reachability rationale, owner and review date for
+          # each entry. Keep this input empty so that file stays the single
+          # source of truth.
+          ignore: ''
+          # Informational advisories (unmaintained / unsound / notice) must fail
+          # the run: with the three known-unreachable ones waived in
+          # `.cargo/audit.toml`, anything new is a real finding.
+          denyWarnings: 'true'
+          # Issue creation needs `issues: write`, which this workflow
+          # deliberately does not grant. A failing run is the signal.
+          createIssues: 'false'
