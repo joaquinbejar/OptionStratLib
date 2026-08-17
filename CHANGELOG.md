@@ -13,6 +13,22 @@ Dependency refresh: every dependency moved to its latest stable minor, and the
 three in-house crates jumped a breaking release each. It is **breaking** for
 consumers — see *Migration*.
 
+### Added
+
+- **`simulation::expanding_window_vols` is public** (also re-exported from the
+  prelude): the per-step, look-ahead-free volatility estimator that
+  `walk_steps` / `walk_steps_par` use for `WalkType::Historical`, whose
+  volatility is not a model parameter and has to be estimated from the series.
+  A consumer that generates a historical path itself — with
+  `WalkTypeAble::generate_with_vol`, pricing its own chains — can now use the
+  same estimate instead of falling back to a constant volatility or keeping a
+  second copy of the mathematics. The contract is documented and tested:
+  one estimate per price, element `i` a function of `prices[..=i]` only
+  (extending the series leaves earlier estimates untouched), the first two
+  indices backfilled with the first computable estimate, `Ok(None)` below three
+  prices, and the last estimate equal to whole-series `constant_volatility`.
+  (#423, downstream OptionChain-Simulator#63)
+
 ### Changed — breaking
 
 - `positive` `0.5` -> `0.6`, `expiration_date` `0.2` -> `0.3`,
@@ -89,17 +105,36 @@ consumers — see *Migration*.
 + {"strike_price": "100"}
 ```
 
+### Fixed
+
+- **The Security Audit workflow is green again** (#422). It had been red on
+  `main` since 2026-08-05 on five advisories. The dependency refresh above
+  resolves three of them outright — `crossbeam-epoch` (RUSTSEC-2026-0204),
+  `quinn-proto` (RUSTSEC-2026-0185) and `rustls-webpki` (RUSTSEC-2026-0104) now
+  resolve to patched releases. The remaining two are unreachable and carry
+  documented waivers in `.cargo/audit.toml`, each with rationale, owner and a
+  2027-02-15 review date:
+  - RUSTSEC-2026-0235 (`rkyv` 0.7.46) — lockfile-only, an optional dependency
+    of `rust_decimal` that this crate never enables.
+  - RUSTSEC-2025-0119 (`number_prefix` 0.4.0, unmaintained) — likewise
+    lockfile-only, via `indicatif`.
+  - RUSTSEC-2025-0134 (`rustls-pemfile` 1.0.4, unmaintained) — a *build*
+    dependency of `plotly_static` (through `webdriver-downloader` and
+    `reqwest` 0.11), reachable only with `static_export`; it downloads a
+    webdriver on the build machine and is never linked into the library.
+  With those waived, the workflow now runs with `denyWarnings: true`, so a new
+  unmaintained or unsound dependency fails the gate instead of passing as a
+  warning.
+
 ### Housekeeping
 
-- `.cargo/audit.toml`, mirroring the `positive` crate's policy file: it ignores
-  RUSTSEC-2026-0235 (rkyv 0.7.46) with a reachability rationale — `rkyv` is an
-  *optional* dependency of `rust_decimal` that this crate never enables, so it
-  is recorded in `Cargo.lock` but never compiled (`cargo tree --all-features
-  --target all -i rkyv` reports nothing) — and opts into reporting
-  unmaintained/unsound/notice advisories, of which two remain outstanding
-  transitively (`number_prefix` via `indicatif`, `rustls-pemfile` via
-  `reqwest`). The Security Audit workflow had been failing on every run,
-  including on `main`.
+- `.cargo/audit.toml` added, mirroring the `positive` crate's policy file: one
+  documented waiver per advisory (rationale, owner, review date) and
+  `informational_warnings` on, so unmaintained/unsound/notice advisories are
+  reported rather than dropped. See *Fixed* above for the entries.
+- The version strings in the crate-level docs (and therefore in the generated
+  `README.md`) say `0.19.0`; they had been left at `0.18.0` through the 0.18.1
+  release.
 
 ## [0.18.1] - 2026-08-07
 

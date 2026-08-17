@@ -58,23 +58,63 @@ where
     }
 }
 
-/// Per-step expanding-window volatility estimates for a walked price path,
-/// free of look-ahead bias: the estimate at index `i` uses only the log
-/// returns of `prices[..=i]`.
+/// Per-step expanding-window volatility estimates for a price path, free of
+/// look-ahead bias: the estimate at index `i` uses only the log returns of
+/// `prices[..=i]`.
+///
+/// This is the estimator [`walk_steps`] and [`walk_steps_par`] use for
+/// [`WalkType::Historical`], whose volatility is not a model parameter and has
+/// to be estimated from the series ([`WalkType::volatility`] returns `None` for
+/// it). It is public so that a consumer pricing a historical walk outside the
+/// driver — generating the path with
+/// [`crate::simulation::WalkTypeAble::generate_with_vol`] and building its own
+/// chains, say — uses the same numbers rather than a second copy of the
+/// mathematics that can drift release to release.
 ///
 /// Uses the same sample-variance convention as
 /// [`crate::volatility::constant_volatility`], computed incrementally with
 /// checked arithmetic, and annualizes each estimate from `timeframe`.
-/// Indices with fewer than two returns are backfilled with the first
-/// computable estimate. Returns `Ok(None)` when no index has enough data
-/// (fewer than three prices).
+///
+/// # Contract
+///
+/// * The result has exactly `prices.len()` elements, so it indexes in step with
+///   the price path.
+/// * Element `i` is a function of `prices[..=i]` only. Appending prices never
+///   changes an earlier element.
+/// * Indices with fewer than two returns (0 and 1) cannot carry a sample
+///   variance and are backfilled with the first computable estimate, which
+///   keeps the series usable from step 0 without inventing a number from the
+///   future.
+/// * `Ok(None)` means no index had enough data — fewer than three prices.
 ///
 /// # Errors
 ///
-/// Propagates errors from `calculate_log_returns` / `adjust_volatility` and
-/// surfaces arithmetic overflow as [`SimulationError`], keeping the driver
-/// free of chain-layer error types.
-fn expanding_window_vols(
+/// Propagates errors from [`crate::utils::others::calculate_log_returns`] /
+/// [`crate::volatility::adjust_volatility`] and surfaces arithmetic overflow as
+/// [`SimulationError`], keeping the driver free of chain-layer error types.
+///
+/// # Examples
+///
+/// ```
+/// use optionstratlib::simulation::expanding_window_vols;
+/// use optionstratlib::utils::TimeFrame;
+/// use positive::{Positive, pos_or_panic};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // A flat prefix followed by a jump: the early estimates cannot see it.
+/// let mut prices = vec![Positive::HUNDRED; 6];
+/// prices.push(pos_or_panic!(200.0));
+///
+/// let vols = expanding_window_vols(&prices, TimeFrame::Day)?
+///     .expect("seven prices are enough for a sample variance");
+///
+/// assert_eq!(vols.len(), prices.len());
+/// assert_eq!(vols[4], Positive::ZERO); // flat window so far
+/// assert!(vols[6] > Positive::ZERO); // the jump is now in the window
+/// # Ok(())
+/// # }
+/// ```
+pub fn expanding_window_vols(
     prices: &[Positive],
     timeframe: TimeFrame,
 ) -> Result<Option<Vec<Positive>>, SimulationError> {
@@ -657,6 +697,103 @@ mod tests {
             Some(last) => assert!(*last > Positive::ZERO),
             None => panic!("empty vols"),
         }
+    }
+
+    /// The public contract of the estimator: element `i` depends on
+    /// `prices[..=i]` only, so extending the series must leave every earlier
+    /// estimate byte-identical. This is the property a consumer pricing a
+    /// historical walk outside the driver relies on (#423).
+    #[test]
+    fn test_expanding_window_vols_prefix_is_stable() {
+        let prices = vec![
+            Positive::HUNDRED,
+            pos_or_panic!(101.5),
+            pos_or_panic!(99.25),
+            pos_or_panic!(104.0),
+            pos_or_panic!(97.5),
+            pos_or_panic!(110.0),
+            pos_or_panic!(108.75),
+        ];
+
+        let full = match expanding_window_vols(&prices, TimeFrame::Day) {
+            Ok(Some(vols)) => vols,
+            Ok(None) => panic!("estimator returned no vols"),
+            Err(e) => panic!("estimator failed: {e}"),
+        };
+
+        // Every prefix of length >= 3 must reproduce the head of `full`.
+        for len in 3..=prices.len() {
+            let prefix = match prices.get(..len) {
+                Some(prefix) => prefix,
+                None => panic!("prefix of len {len} missing"),
+            };
+            let vols = match expanding_window_vols(prefix, TimeFrame::Day) {
+                Ok(Some(vols)) => vols,
+                Ok(None) => panic!("prefix of len {len} returned no vols"),
+                Err(e) => panic!("estimator failed on prefix {len}: {e}"),
+            };
+            assert_eq!(vols.len(), len, "one estimate per price");
+            match full.get(..len) {
+                Some(head) => assert_eq!(vols, head, "prefix of len {len} drifted"),
+                None => panic!("full series shorter than {len}"),
+            }
+        }
+    }
+
+    /// Fewer than three prices cannot carry a sample variance, and the
+    /// estimator says so instead of inventing one.
+    #[test]
+    fn test_expanding_window_vols_needs_three_prices() {
+        for len in 0..3 {
+            let prices = vec![Positive::HUNDRED; len];
+            match expanding_window_vols(&prices, TimeFrame::Day) {
+                Ok(None) => {}
+                Ok(Some(vols)) => panic!("len {len} unexpectedly produced {vols:?}"),
+                Err(e) => panic!("estimator failed on len {len}: {e}"),
+            }
+        }
+    }
+
+    /// The final estimate must equal the whole-series constant volatility,
+    /// annualized the same way: by the last index the expanding window is the
+    /// full window, so the incremental prefix-sum form and the two-pass form in
+    /// `constant_volatility` have to agree.
+    #[test]
+    fn test_expanding_window_vols_last_matches_constant_volatility() {
+        let prices = vec![
+            Positive::HUNDRED,
+            pos_or_panic!(102.0),
+            pos_or_panic!(98.5),
+            pos_or_panic!(103.25),
+            pos_or_panic!(101.0),
+        ];
+
+        let vols = match expanding_window_vols(&prices, TimeFrame::Day) {
+            Ok(Some(vols)) => vols,
+            Ok(None) => panic!("estimator returned no vols"),
+            Err(e) => panic!("estimator failed: {e}"),
+        };
+        let last = match vols.last() {
+            Some(last) => *last,
+            None => panic!("empty vols"),
+        };
+
+        let log_returns = match calculate_log_returns(&prices) {
+            Ok(returns) => returns,
+            Err(e) => panic!("log returns failed: {e}"),
+        };
+        let expected = match constant_volatility(&log_returns)
+            .and_then(|vol| adjust_volatility(vol, TimeFrame::Day, TimeFrame::Year))
+        {
+            Ok(expected) => expected,
+            Err(e) => panic!("reference volatility failed: {e}"),
+        };
+
+        let diff = (last.to_dec() - expected.to_dec()).abs();
+        assert!(
+            diff < dec!(0.000_000_1),
+            "expanding window {last} != constant volatility {expected}"
+        );
     }
 
     /// `next_y` returning `Ok(None)` must end the walk gracefully.

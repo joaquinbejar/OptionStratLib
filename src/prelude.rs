@@ -125,7 +125,7 @@ pub use std::path::Path;
 // Simulation types and functions
 pub use crate::simulation::{
     ExitPolicy, Simulate, SimulationStats, WalkParams, WalkPath, WalkType, WalkTypeAble,
-    WalkTypeAbleClone, check_exit_policy, generator_positive,
+    WalkTypeAbleClone, check_exit_policy, expanding_window_vols, generator_positive,
     randomwalk::RandomWalk,
     simulator::Simulator,
     steps::{Step, Xstep, Ystep},

@@ -31,13 +31,48 @@
 # Owner        : @joaquinbejar
 # Review by    : 2027-02-15
 # ---------------------------------------------------------------------------
-ignore = ["RUSTSEC-2026-0235"]
+# RUSTSEC-2025-0119 — number_prefix 0.4.0, unmaintained.
+#
+# Reachability : NOT REACHABLE. Lockfile-only, exactly like the rkyv entry
+#                above: `cargo tree --all-features --target all -i
+#                number_prefix` reports that the package is not in the graph
+#                at all. It is recorded as an optional dependency of
+#                `indicatif`, whose feature this crate does not enable.
+# Upgrade path : None to take — an unmaintained advisory has no fixed release.
+#                It would disappear on its own once `indicatif` drops the
+#                dependency.
+# Tracking     : https://github.com/console-rs/indicatif
+# Owner        : @joaquinbejar
+# Review by    : 2027-02-15
+# ---------------------------------------------------------------------------
+# RUSTSEC-2025-0134 — rustls-pemfile 1.0.4, unmaintained.
+#
+# Reachability : NOT LINKED INTO THIS CRATE. It arrives through
+#                `reqwest 0.11`, which is a *build*-dependency of
+#                `plotly_static` (via `webdriver-downloader`), itself pulled in
+#                only by the `static_export` feature:
+#                    optionstratlib -> plotly -> plotly_static
+#                      -> [build-dependencies] webdriver-downloader
+#                      -> reqwest 0.11 -> rustls-pemfile 1.0.4
+#                It runs on the build machine while downloading a webdriver, is
+#                absent from the library and from every default-feature build,
+#                and never parses attacker-supplied PEM at runtime.
+# Upgrade path : Blocked upstream: it needs `plotly_static` to move off
+#                `reqwest` 0.11, which is the crate that pins the old
+#                `rustls-pemfile` line.
+# Tracking     : https://github.com/plotly/plotly.rs
+# Owner        : @joaquinbejar
+# Review by    : 2027-02-15
+# ---------------------------------------------------------------------------
+ignore = [
+    "RUSTSEC-2026-0235",
+    "RUSTSEC-2025-0119",
+    "RUSTSEC-2025-0134",
+]
 
-# Report unmaintained/unsound/notice advisories instead of dropping them
-# silently. Two are currently outstanding, both transitive and both without a
-# fixed release to move to:
-#   * RUSTSEC-2025-0119 — number_prefix 0.4.0 unmaintained, via `indicatif`.
-#   * RUSTSEC-2025-0134 — rustls-pemfile 1.0.4 unmaintained, via `reqwest`
-#     (only reachable with the `async` feature enabled).
+# Every other advisory class fails the run, so a new unmaintained or unsound
+# dependency cannot slip in as a silent warning: with these three waived, the
+# audit is expected to be clean, and `denyWarnings` in the workflow can be
+# turned on without turning the gate into noise.
 informational_warnings = ["unmaintained", "unsound", "notice"]
 severity_threshold = "none"
