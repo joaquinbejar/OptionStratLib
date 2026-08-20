@@ -36,7 +36,8 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///
 /// - `underlying_price`: The current price of the underlying asset. Must be positive.
 /// - `strike_price`: The strike price of the option. Must be greater than zero.
-/// - `risk_free_rate`: The annual risk-free interest rate, expressed as a decimal.
+/// - `carry_rate`: The cost of carry `b = r - q` (annual risk-free rate minus
+///   the continuous dividend yield; equals `r` when the underlying pays no dividends).
 /// - `expiration_date`: The time to expiration of the option, in years. Must be greater than zero.
 /// - `implied_volatility`: The implied volatility of the option, expressed as a decimal. Must be greater than zero.
 ///
@@ -67,14 +68,14 @@ use statrs::distribution::{ContinuousCDF, Normal};
 ///
 /// let underlying_price = Positive::HUNDRED;
 /// let strike_price = pos_or_panic!(95.0);
-/// let risk_free_rate = dec!(0.05);
+/// let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
 /// let expiration_date = pos_or_panic!(0.5); // 6 months
 /// let implied_volatility = pos_or_panic!(0.2);
 ///
 /// match d1(
 ///     underlying_price,
 ///     strike_price,
-///     risk_free_rate,
+///     carry_rate,
 ///     expiration_date,
 ///     implied_volatility,
 /// ) {
@@ -86,7 +87,7 @@ use statrs::distribution::{ContinuousCDF, Normal};
 pub fn d1(
     underlying_price: Positive,
     strike_price: Positive,
-    risk_free_rate: Decimal,
+    carry_rate: Decimal,
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
@@ -118,7 +119,9 @@ pub fn d1(
         }));
     }
 
-    // d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
+    // d1 = (ln(S / K) + (b + σ² / 2) * T) / (σ * sqrt(T))
+    // where b = carry_rate is the cost of carry: b = r − q for a
+    // dividend-paying underlying (r − dividend_yield), r otherwise.
     let underlying_price: Decimal = underlying_price.to_dec();
     let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
     let ln_price_ratio = match strike_price {
@@ -126,7 +129,7 @@ pub fn d1(
         _ => (underlying_price / strike_price).ln(),
     };
 
-    let rate_vol_term = risk_free_rate + implied_volatility_squared / Decimal::TWO;
+    let rate_vol_term = carry_rate + implied_volatility_squared / Decimal::TWO;
     let numerator = ln_price_ratio + rate_vol_term * expiration_date;
     let denominator = implied_volatility * expiration_date.sqrt();
 
@@ -154,7 +157,8 @@ pub fn d1(
 ///
 /// - `underlying_price`: The current price of the underlying asset. Must be positive.
 /// - `strike_price`: The strike price of the option. Must be greater than zero.
-/// - `risk_free_rate`: The annual risk-free interest rate, expressed as a decimal.
+/// - `carry_rate`: The cost of carry `b = r - q` (annual risk-free rate minus
+///   the continuous dividend yield; equals `r` when the underlying pays no dividends).
 /// - `expiration_date`: The time to expiration of the option, in years. Must be greater than zero.
 /// - `implied_volatility`: The implied volatility of the option, expressed as a decimal. Must be greater than zero.
 ///
@@ -184,14 +188,14 @@ pub fn d1(
 /// use positive::{pos_or_panic, Positive};
 /// let underlying_price = Positive::new(100.0)?;
 /// let strike_price = Positive::new(95.0)?;
-/// let risk_free_rate = dec!(0.05);
+/// let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
 /// let expiration_date = pos_or_panic!(0.5); // 6 months
 /// let implied_volatility = pos_or_panic!(0.2);
 ///
 /// match d2(
 ///     underlying_price,
 ///     strike_price,
-///     risk_free_rate,
+///     carry_rate,
 ///     expiration_date,
 ///     implied_volatility,
 /// ) {
@@ -205,7 +209,7 @@ pub fn d1(
 pub fn d2(
     underlying_price: Positive,
     strike_price: Positive,
-    risk_free_rate: Decimal,
+    carry_rate: Decimal,
     expiration_date: Positive,
     implied_volatility: Positive,
 ) -> Result<Decimal, GreeksError> {
@@ -228,7 +232,7 @@ pub fn d2(
     let d1_value = d1(
         underlying_price,
         strike_price,
-        risk_free_rate,
+        carry_rate,
         expiration_date,
         implied_volatility,
     )?;
@@ -797,7 +801,7 @@ mod calculate_d1_values {
         // Case where volatility (sigma) is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::ZERO;
 
@@ -806,7 +810,7 @@ mod calculate_d1_values {
             d1(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -819,7 +823,7 @@ mod calculate_d1_values {
         // Case where time to expiry is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ZERO;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -828,7 +832,7 @@ mod calculate_d1_values {
             d1(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -841,7 +845,7 @@ mod calculate_d1_values {
         // Case with extremely high volatility
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::HUNDRED; // Very high volatility
 
@@ -849,7 +853,7 @@ mod calculate_d1_values {
         let calculated_d1 = d1(
             underlying_price,
             strike_price,
-            risk_free_rate,
+            carry_rate,
             expiration_date,
             implied_volatility,
         )
@@ -869,7 +873,7 @@ mod calculate_d1_values {
         // Case with extremely high underlying price
         let underlying_price = Positive::MAX; // Very high stock price
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -878,7 +882,7 @@ mod calculate_d1_values {
             d1(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -891,7 +895,7 @@ mod calculate_d1_values {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos_or_panic!(0.01); // Very low stock price
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -899,7 +903,7 @@ mod calculate_d1_values {
         let calculated_d1 = d1(
             underlying_price,
             strike_price,
-            risk_free_rate,
+            carry_rate,
             expiration_date,
             implied_volatility,
         )
@@ -919,7 +923,7 @@ mod calculate_d1_values {
         // Case where strike price is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::ZERO;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -928,7 +932,7 @@ mod calculate_d1_values {
             d1(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -941,7 +945,7 @@ mod calculate_d1_values {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = Decimal::MAX; // Very high risk-free rate
+        let carry_rate = Decimal::MAX; // Very high cost of carry
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -950,7 +954,7 @@ mod calculate_d1_values {
             d1(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -1158,7 +1162,7 @@ mod calculate_d2_values {
         // Case where volatility (implied_volatility) is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::ZERO;
 
@@ -1167,7 +1171,7 @@ mod calculate_d2_values {
             d2(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -1180,7 +1184,7 @@ mod calculate_d2_values {
         // Case where time to expiration is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ZERO;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -1189,7 +1193,7 @@ mod calculate_d2_values {
             d2(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -1202,7 +1206,7 @@ mod calculate_d2_values {
         // Case with extremely high volatility
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = Positive::HUNDRED; // Very high volatility
 
@@ -1210,7 +1214,7 @@ mod calculate_d2_values {
         let calculated_d2 = d2(
             underlying_price,
             strike_price,
-            risk_free_rate,
+            carry_rate,
             expiration_date,
             implied_volatility,
         )
@@ -1230,7 +1234,7 @@ mod calculate_d2_values {
         // Case with extremely high underlying price
         let underlying_price = Positive::MAX;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -1239,7 +1243,7 @@ mod calculate_d2_values {
             d2(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -1252,7 +1256,7 @@ mod calculate_d2_values {
         // Case with extremely low underlying price (near zero)
         let underlying_price = pos_or_panic!(0.01);
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -1260,7 +1264,7 @@ mod calculate_d2_values {
         let calculated_d2 = d2(
             underlying_price,
             strike_price,
-            risk_free_rate,
+            carry_rate,
             expiration_date,
             implied_volatility,
         )
@@ -1280,7 +1284,7 @@ mod calculate_d2_values {
         // Case where strike price is zero
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::ZERO;
-        let risk_free_rate = dec!(0.05);
+        let carry_rate = dec!(0.05); // cost of carry b = r - q (r if no dividends)
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -1289,7 +1293,7 @@ mod calculate_d2_values {
             d2(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )
@@ -1302,7 +1306,7 @@ mod calculate_d2_values {
         // Case where risk-free rate is very high (infinite-like)
         let underlying_price = Positive::HUNDRED;
         let strike_price = Positive::HUNDRED;
-        let risk_free_rate = Decimal::MAX; // Very high risk-free rate
+        let carry_rate = Decimal::MAX; // Very high cost of carry
         let expiration_date = Positive::ONE;
         let implied_volatility = pos_or_panic!(0.2);
 
@@ -1311,7 +1315,7 @@ mod calculate_d2_values {
             d2(
                 underlying_price,
                 strike_price,
-                risk_free_rate,
+                carry_rate,
                 expiration_date,
                 implied_volatility,
             )

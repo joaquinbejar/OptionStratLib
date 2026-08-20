@@ -414,16 +414,16 @@ mod tests_strategies_build_model {
         let greeks_result = strategy.greeks();
         assert!(greeks_result.is_ok());
         let greeks = greeks_result.unwrap();
-        assert_decimal_eq!(greeks.delta, dec!(0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.delta, dec!(0.1581527925803475549715372372), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
-        assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
-        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.5538703856637124015693694077), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2511686561527911084852785379), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
-        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
-        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2129758899332920842988174278), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5466916419288404045805098926), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
         assert_decimal_eq!(greeks.charm, dec!(0.209293), dec!(1e-4));
-        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-6));
+        assert_decimal_eq!(greeks.color, dec!(-0.0038405632865186300729115151), dec!(1e-6));
     }
 
     #[test]
@@ -472,16 +472,16 @@ mod tests_strategies_build_model {
         let greeks = strategy
             .greeks()
             .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
-        assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.delta, dec!(-0.1581527925803475549715372372), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
-        assert_decimal_eq!(greeks.theta, dec!(-4.5486), dec!(1e-4));
-        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.5538703856637124015693694077), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2511686561527911084852785379), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
-        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
-        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2129758899332920842988174278), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5466916419288404045805098926), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
         assert_decimal_eq!(greeks.charm, dec!(0.209293), dec!(1e-4));
-        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-6));
+        assert_decimal_eq!(greeks.color, dec!(-0.0038405632865186300729115151), dec!(1e-6));
     }
 
     #[test]
@@ -530,16 +530,16 @@ mod tests_strategies_build_model {
         let greeks_result = strategy.greeks();
         assert!(greeks_result.is_ok());
         let greeks = greeks_result.unwrap();
-        assert_decimal_eq!(greeks.delta, dec!(0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.delta, dec!(0.1581527925803475549715372372), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
-        assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
-        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.3563687207554982849013080107), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2511686561527911084852785379), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
-        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
-        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2129758899332920842988174278), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5466916419288404045805098926), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
         assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-4));
-        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-6));
+        assert_decimal_eq!(greeks.color, dec!(-0.0038405632865186300729115151), dec!(1e-6));
     }
 
     #[test]
@@ -588,16 +588,16 @@ mod tests_strategies_build_model {
         let greeks = strategy
             .greeks()
             .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
-        assert_decimal_eq!(greeks.delta, dec!(-0.1579), dec!(1e-4));
+        assert_decimal_eq!(greeks.delta, dec!(-0.1581527925803475549715372372), dec!(1e-4));
         assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
-        assert_decimal_eq!(greeks.theta, dec!(-4.3511), dec!(1e-4));
-        assert_decimal_eq!(greeks.vega, dec!(0.2508), dec!(1e-4));
+        assert_decimal_eq!(greeks.theta, dec!(-4.3563687207554982849013080107), dec!(1e-4));
+        assert_decimal_eq!(greeks.vega, dec!(0.2511686561527911084852785379), dec!(1e-4));
         assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
-        assert_decimal_eq!(greeks.vanna, dec!(-1.2135), dec!(1e-4));
-        assert_decimal_eq!(greeks.vomma, dec!(0.5476), dec!(1e-4));
+        assert_decimal_eq!(greeks.vanna, dec!(-1.2129758899332920842988174278), dec!(1e-4));
+        assert_decimal_eq!(greeks.vomma, dec!(0.5466916419288404045805098926), dec!(1e-4));
         assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
-        assert_decimal_eq!(greeks.charm, dec!(0.209239), dec!(1e-5));
-        assert_decimal_eq!(greeks.color, dec!(-0.003801), dec!(1e-5));
+        assert_decimal_eq!(greeks.charm, dec!(0.2091401920964686467636671300), dec!(1e-5));
+        assert_decimal_eq!(greeks.color, dec!(-0.0038405632865186300729115151), dec!(1e-5));
     }
 
     #[test]
