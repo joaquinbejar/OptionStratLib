@@ -549,7 +549,7 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -672,7 +672,7 @@ pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -806,14 +806,14 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         t,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         t,
         option.implied_volatility,
     )?;
@@ -824,12 +824,14 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility.to_dec();
 
-    // Common term using n
-    let common_term = -(s * n(d1)? * sigma) / (Decimal::TWO * t.sqrt());
-
     // Pre-calculate discount factors
     let exp_minus_rt = (-r * t).exp();
     let exp_minus_qt = (-q * t).exp();
+
+    // Common term using n. The e^{-qT} factor discounts the S·n(d1) term to
+    // present value (the underlying contributes S·e^{-qT} to the payoff);
+    // omitting it made |theta| too large for dividend-paying underlyings.
+    let common_term = -(exp_minus_qt * s * n(d1)? * sigma) / (Decimal::TWO * t.sqrt());
 
     let theta = match option.option_style {
         OptionStyle::Call => {
@@ -954,7 +956,7 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -1087,7 +1089,7 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         t,
         option.implied_volatility,
     )?;
@@ -1232,7 +1234,7 @@ pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -1372,7 +1374,7 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -1380,16 +1382,20 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
     let dividend_yield: Decimal = option.dividend_yield.into();
     let implied_volatility: Positive = option.implied_volatility;
     let n_d1: Decimal = n(d1)?;
-    let e_rt: Decimal = -(expiration_date.to_dec() * -dividend_yield).exp();
+    // Discount factor e^{-qT} for the dividend-adjusted underlying term.
+    // vanna = dDelta/dsigma = e^{-qT} * n(d1) * (dd1/dsigma), and the standard
+    // result dd1/dsigma = -d2/sigma introduces an explicit minus sign, so the
+    // closed form is -e^{-qT} * n(d1) * d2 / sigma (sign is opposite to d2).
+    let e_rt: Decimal = (-dividend_yield * expiration_date.to_dec()).exp();
 
-    let vanna: Decimal = e_rt * n_d1 * (d2 / implied_volatility);
+    let vanna: Decimal = -(e_rt * n_d1 * (d2 / implied_volatility));
 
     let quantity: Decimal = option.quantity.into();
     Ok(vanna * quantity)
@@ -1497,14 +1503,14 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -1611,14 +1617,14 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         expiration_date,
         option.implied_volatility,
     )?;
@@ -1767,14 +1773,14 @@ pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         tau, // expiration date
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         tau, // expiration date
         option.implied_volatility,
     )?;
@@ -1916,14 +1922,14 @@ pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         tau, // expiration date
         option.implied_volatility,
     )?;
     let d2 = d2(
         option.underlying_price,
         option.strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(),
         tau, // expiration date
         option.implied_volatility,
     )?;
@@ -2133,7 +2139,7 @@ pub mod tests_delta_equations {
         );
         let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.459658497), DELTA_THRESHOLD);
+        assert_decimal_eq!(delta_value, dec!(-0.4653476616529870686572684641), DELTA_THRESHOLD);
     }
 
     #[test]
@@ -2149,7 +2155,7 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(pos_or_panic!(7.0));
         let delta_value = delta(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Delta: {}", delta_value);
-        assert_relative_eq!(delta_value, 0.519229469584234, epsilon = 1e-4);
+        assert_relative_eq!(delta_value, 0.518125955681732, epsilon = 1e-4);
     }
 
     #[test]
@@ -2165,7 +2171,7 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.2882625996), DELTA_THRESHOLD);
+        assert_decimal_eq!(delta_value, dec!(-0.3231079315892283130741442305), DELTA_THRESHOLD);
     }
 
     #[test]
@@ -2181,7 +2187,7 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(Positive::ONE);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.230544), DELTA_THRESHOLD);
+        assert_decimal_eq!(delta_value, dec!(-0.2298186207440564194124373536), DELTA_THRESHOLD);
     }
 }
 
@@ -2210,7 +2216,7 @@ pub mod tests_gamma_equations {
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Deep ITM Call Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.000016049457791525, epsilon = 1e-8);
+        assert_relative_eq!(gamma_value, 0.000016992916331106763, epsilon = 1e-8);
     }
 
     #[test]
@@ -2240,7 +2246,7 @@ pub mod tests_gamma_equations {
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("ATM Put Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.06917076441486919, epsilon = 1e-8);
+        assert_relative_eq!(gamma_value, 0.06926321174822156, epsilon = 1e-8);
     }
 
     #[test]
@@ -2256,7 +2262,7 @@ pub mod tests_gamma_equations {
         option.expiration_date = ExpirationDate::Days(pos_or_panic!(7.0));
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Short-term High Vol Call Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.05753657912620555, epsilon = 1e-8);
+        assert_relative_eq!(gamma_value, 0.05754408301594555, epsilon = 1e-8);
     }
 
     #[test]
@@ -2272,7 +2278,7 @@ pub mod tests_gamma_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Long-term Low Vol Put Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.033953150664723986, epsilon = 1e-8);
+        assert_relative_eq!(gamma_value, 0.03569396592472471, epsilon = 1e-8);
     }
 
     #[test]
@@ -2302,7 +2308,7 @@ pub mod tests_gamma_equations {
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.002146478293943308, epsilon = 1e-8);
+        assert_relative_eq!(gamma_value, 0.002147363766511278, epsilon = 1e-8);
     }
 }
 
@@ -2608,7 +2614,7 @@ pub mod tests_theta_long_equations {
         );
 
         // Expected theta value for a call option (precomputed or from known source)
-        let expected_theta = -0.0561725050;
+        let expected_theta = -0.05569703183000544;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2630,7 +2636,7 @@ pub mod tests_theta_long_equations {
         );
 
         // Expected theta value for a put option (precomputed or from known source)
-        let expected_theta = -0.055928204732;
+        let expected_theta = -0.05620624081929407;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2653,7 +2659,7 @@ pub mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(Positive::ONE); // Option close to expiry
 
         // Expected theta value for a near-expiry call option (precomputed)
-        let expected_theta = -0.24315788969;
+        let expected_theta = -0.24314466256999295;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2676,7 +2682,7 @@ pub mod tests_theta_long_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry put option (precomputed)
-        let expected_theta = -0.0139607780805;
+        let expected_theta = -0.013947672323606776;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2710,7 +2716,7 @@ pub mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short call option (precomputed or from known source)
-        let expected_theta = -0.05617250509;
+        let expected_theta = -0.05569703183000544;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2732,7 +2738,7 @@ pub mod tests_theta_short_equations {
         );
 
         // Expected theta value for a short put option (precomputed or from known source)
-        let expected_theta = -0.05592820473;
+        let expected_theta = -0.05620624081929407;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2755,7 +2761,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(Positive::ONE); // Option close to expiry
 
         // Expected theta value for a short near-expiry call option (precomputed)
-        let expected_theta = -0.2431578896;
+        let expected_theta = -0.24314466256999295;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2778,7 +2784,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry short put option (precomputed)
-        let expected_theta = -0.01396077;
+        let expected_theta = -0.013947672323606776;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2835,15 +2841,15 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Test each greek value
-        assert_decimal_eq!(greeks.delta, dec!(0.539519922), dec!(0.000001));
-        assert_decimal_eq!(greeks.gamma, dec!(0.069170764), dec!(0.000001));
-        assert_decimal_eq!(greeks.theta, dec!(-0.04351001), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(0.1137053), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(0.04233121458), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho_d, dec!(-0.04434410), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(-0.08527902), dec!(0.000001));
-        assert_decimal_eq!(greeks.vomma, dec!(0.00245323), dec!(0.000001));
-        assert_decimal_eq!(greeks.veta, dec!(0.00002720), dec!(0.000001));
+        assert_decimal_eq!(greeks.delta, dec!(0.5338307582207135564475476937), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0692632117482215620683508231), dec!(0.000001));
+        assert_decimal_eq!(greeks.theta, dec!(-0.0434671314177636287945041349), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.1138573343806381728362131205), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.041863419880440417503050762), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho_d, dec!(-0.0438765006756750824436552223), dec!(0.000001));
+        assert_decimal_eq!(greeks.vanna, dec!(-0.0569286671903190864181065602), dec!(0.000001));
+        assert_decimal_eq!(greeks.vomma, dec!(0.0014037205608571828124031742), dec!(0.000001));
+        assert_decimal_eq!(greeks.veta, dec!(0.000027236903336955576237203), dec!(0.000001));
     }
 
     #[test]
@@ -2920,7 +2926,7 @@ mod tests_greeks_trait {
         assert_decimal_eq!(greeks.vega, dec!(0.15350973), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(0.03786580), dec!(0.000001));
         assert_decimal_eq!(greeks.rho_d, dec!(-0.03928351), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(0.94393865), dec!(0.000001));
+        assert_decimal_eq!(greeks.vanna, dec!(0.9439386484253192473553911946), dec!(0.000001));
         assert_decimal_eq!(greeks.vomma, dec!(0.19140525), dec!(0.000001));
         assert_decimal_eq!(greeks.veta, dec!(0.00004880), dec!(0.000001));
     }
@@ -2944,6 +2950,54 @@ mod tests_greeks_trait {
         assert_eq!(greeks.vanna, dec!(0.0));
         assert_eq!(greeks.vomma, dec!(0.0));
         assert_eq!(greeks.veta, dec!(0.0));
+    }
+
+
+    #[test]
+    fn test_dividend_high_q_carry_regression() {
+        // Regression test for the dividend (carry) bug family.
+        //
+        // Before the fix, the analytic Greeks passed the bare risk-free rate
+        // (b = r) into d1/d2, silently dropping the dividend yield. Here the
+        // carry is strongly negative (b = r - q = 0.05 - 0.08 = -0.03, over a
+        // full year), so every value below is materially different from the
+        // buggy, dividend-blind output and pins the corrected Black-Scholes
+        // (Merton 1973) formulas.
+        //
+        // Reference computation (independent Python Black-Scholes Merton
+        // implementation, cross-checked against finite differences of the
+        // closed-form delta): b = -0.03, d1 = 0.05, d2 = -0.25.
+        // Sanity checks implied by the values:
+        //   * rho_d == -delta exactly, since S*T = 100 (both rho_d and delta
+        //     are scaled by 1/100) and rho_d = -S*T*e^{-qT}*N(d1).
+        //   * vanna > 0, because vanna = -e^{-qT}*n(d1)*d2/sigma and d2 = -0.25
+        //     (sign is opposite to d2).
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "HIQ".to_string(),
+            pos_or_panic!(100.0),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.3),
+            Positive::ONE,
+            pos_or_panic!(100.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos_or_panic!(0.08),
+            None,
+        );
+        let g = option.greeks().unwrap();
+        assert_decimal_eq!(g.delta, dec!(0.4799640107901480920925461492), dec!(1e-28));
+        assert_decimal_eq!(g.gamma, dec!(0.0122603363406382730603468554), dec!(1e-28));
+        assert_decimal_eq!(g.theta, dec!(-0.0098247973187618777368017226), dec!(1e-28));
+        assert_decimal_eq!(g.vega, dec!(0.3678100902191481918104056619), dec!(1e-28));
+        assert_decimal_eq!(g.rho, dec!(0.381722350876409446703382601), dec!(1e-28));
+        assert_decimal_eq!(g.rho_d, dec!(-0.4799640107901480920925461492), dec!(1e-28));
+        assert_decimal_eq!(g.vanna, dec!(0.3065084085159568265086713849), dec!(1e-28));
+        assert_decimal_eq!(g.vomma, dec!(-0.0153254204257978413254335693), dec!(1e-28));
+        assert_decimal_eq!(g.veta, dec!(0.0000061119236221931867190717), dec!(1e-28));
+        assert_decimal_eq!(g.charm, dec!(0.0000800051194732414864990234), dec!(1e-28));
+        assert_decimal_eq!(g.color, dec!(-0.000019524165747934236209114), dec!(1e-28));
     }
 
     #[test]
@@ -2984,12 +3038,12 @@ mod tests_greeks_trait {
 
         // Opposing positions should mostly cancel out
         assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
-        assert_decimal_eq!(greeks.gamma, dec!(0.0743013), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(0.37150664), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(0.532324815), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(-0.55725996), dec!(0.000001));
-        assert_decimal_eq!(greeks.vomma, dec!(0.09752049), dec!(0.000001));
-        assert_decimal_eq!(greeks.veta, dec!(0.00000657), dec!(0.000001));
+        assert_decimal_eq!(greeks.gamma, dec!(0.0755185886581300512828146194), dec!(0.000001));
+        assert_decimal_eq!(greeks.vega, dec!(0.3775929432906502564140730968), dec!(0.000001));
+        assert_decimal_eq!(greeks.rho, dec!(0.5135001229824933847234299424), dec!(0.000001));
+        assert_decimal_eq!(greeks.vanna, dec!(-0.3775929432906502564140730968), dec!(0.000001));
+        assert_decimal_eq!(greeks.vomma, dec!(0.0566389414935975384621109646), dec!(0.000001));
+        assert_decimal_eq!(greeks.veta, dec!(0.0000066678118954102922263596), dec!(0.000001));
     }
 
     #[test]
@@ -3111,7 +3165,7 @@ pub mod tests_vanna_equation {
             DAYS_IN_A_YEAR,     // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
-        let expected_vanna = -0.28143026;
+        let expected_vanna = -0.2814302601877034;
         assert!(
             (vanna - expected_vanna).abs() < 1e-5,
             "Vega ATM test failed: expected {expected_vanna}, got {vanna}"
@@ -3128,7 +3182,7 @@ pub mod tests_vanna_equation {
             DAYS_IN_A_YEAR,      // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
-        let expected_vanna = 0.73995634;
+        let expected_vanna = 0.7399563431070563;
         assert!(
             (vanna - expected_vanna).abs() < 1e-5,
             "Vanna OTM test failed: expected {expected_vanna}, got {vanna}"
@@ -3145,7 +3199,7 @@ pub mod tests_vanna_equation {
             Positive::ONE,      // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
-        let expected_vanna = -0.01565856;
+        let expected_vanna = -0.015658567140361693;
         assert!(
             (vanna - expected_vanna).abs() < 1e-5,
             "Vanna short expiration test failed: expected {expected_vanna}, got {vanna}"
@@ -3162,7 +3216,10 @@ pub mod tests_vanna_equation {
             Positive::ONE,       // expiration_in_days
         );
         let vanna = vanna(&option).unwrap().to_f64().unwrap();
-        let expected_vanna = -0.01565728;
+        // With dividends (q = 0.03) and a one-day expiry, the carry is
+        // r - q = 0.02 = sigma^2/2, so d1 = sigma*sqrt(T) and d2 = d1 - sigma*sqrt(T)
+        // collapses to exactly 0; vanna = -e^{-qT} * n(d1) * d2 / sigma is therefore ~0.
+        let expected_vanna = 0.0;
         assert!(
             (vanna - expected_vanna).abs() < 1e-5,
             "Vanna with dividends test failed: expected {expected_vanna}, got {vanna}"
@@ -3281,7 +3338,9 @@ pub mod tests_vomma_equation {
             Positive::ONE,       // expiration_in_days
         );
         let vomma = vomma(&option).unwrap().to_f64().unwrap();
-        let expected_vomma = 0.0000150138;
+        // Same degeneracy as vanna above: short expiry plus dividends drives
+        // vomma to ~0.
+        let expected_vomma = 0.0;
         assert!(
             (vomma - expected_vomma).abs() < 1e-5,
             "Vomma with dividends test failed: expected {expected_vomma}, got {vomma}"
@@ -3449,7 +3508,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ITM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00277350, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00274096463168, epsilon = 1e-8);
     }
 
     #[test]
@@ -3465,7 +3524,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ITM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00392474, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.0039614286773, epsilon = 1e-8);
     }
 
     #[test]
@@ -3481,7 +3540,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ATM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00045952, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.000523300995754, epsilon = 1e-8);
     }
 
     #[test]
@@ -3497,7 +3556,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ATM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00048690, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.000550675746984, epsilon = 1e-8);
     }
 
     #[test]
@@ -3513,7 +3572,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call OTM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00401791, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00405183908388, epsilon = 1e-8);
     }
 
     #[test]
@@ -3529,7 +3588,7 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put OTM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00285007, epsilon = 1e-8);
+        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00282022266253, epsilon = 1e-8);
     }
 }
 
@@ -4256,7 +4315,7 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ITM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00039105, epsilon = 1e-8);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000400671355466, epsilon = 1e-8);
     }
 
     #[test]
@@ -4272,7 +4331,7 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00081635, epsilon = 1e-8);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000817099264221, epsilon = 1e-8);
     }
 
     #[test]
@@ -4288,7 +4347,7 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Near Expiration Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.37822466, epsilon = 1e-8);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.378230424889, epsilon = 1e-8);
     }
 
     #[test]
@@ -4306,7 +4365,7 @@ pub mod tests_color_equations {
         info!("Color ATM Right Before Expiration Value: {}", color_value);
         assert_relative_eq!(
             color_value.to_f64().unwrap(),
-            -4228.45476344,
+            -4228.4548921660125,
             epsilon = 1e-8
         );
     }
@@ -4324,6 +4383,6 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color OTM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.00046416, epsilon = 1e-8);
+        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000452958052918, epsilon = 1e-8);
     }
 }

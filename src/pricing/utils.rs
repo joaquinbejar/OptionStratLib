@@ -445,7 +445,7 @@ pub fn probability_keep_under_strike(
     let d2_val = d2(
         option.underlying_price,
         strike_price,
-        option.risk_free_rate,
+        option.risk_free_rate - option.dividend_yield.to_dec(), // carry b = r - q
         years,
         option.implied_volatility,
     )
