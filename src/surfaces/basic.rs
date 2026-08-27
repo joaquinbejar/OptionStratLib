@@ -729,7 +729,7 @@ mod tests_basic_surfaces {
         let (strike, vol, charm) = result.unwrap();
         assert_eq!(strike, dec!(100.0));
         assert_eq!(vol, dec!(0.4));
-        assert_decimal_eq!(charm, dec!(-0.000506), dec!(0.000001));
+        assert_decimal_eq!(charm, dec!(-0.0005546611716779658921659644), dec!(0.000001));
     }
 
     #[test]

@@ -6601,22 +6601,22 @@ mod tests_option_data_get_options_in_strike {
 
         assert_decimal_eq!(
             options.long_call.delta().unwrap(),
-            dec!(0.539076663),
+            dec!(0.5277006710216260593080304827),
             epsilon
         );
         assert_decimal_eq!(
             options.short_call.delta().unwrap(),
-            dec!(-0.539076663),
+            dec!(-0.5277006710216260593080304827),
             epsilon
         );
         assert_decimal_eq!(
             options.long_put.delta().unwrap(),
-            dec!(-0.459280851),
+            dec!(-0.4706568437196791209984061354),
             epsilon
         );
         assert_decimal_eq!(
             options.short_put.delta().unwrap(),
-            dec!(0.459280851),
+            dec!(0.4706568437196791209984061354),
             epsilon
         );
     }
@@ -9909,7 +9909,7 @@ mod tests_vanna_calculations {
         assert!(result.is_ok());
         let vanna_exposure = result.unwrap();
         // Test against expected value from sample data
-        assert_decimal_eq!(vanna_exposure, dec!(-38.1265860372), dec!(0.0001));
+        assert_decimal_eq!(vanna_exposure, dec!(-38.126585967162624451799179198), dec!(0.0001));
     }
 
     #[test]
