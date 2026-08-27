@@ -112,6 +112,16 @@ pub fn benchmark_chain_generators(c: &mut Criterion) {
                 black_box(chain)
             })
         });
+
+        // Same build with the full twelve-greek snapshot per option style, the
+        // opt-in path used by consumers that read the snapshots.
+        let with_greeks = build_params.clone().with_greek_snapshots(true);
+        group.bench_function(format!("build_chain {strikes} strikes + greeks"), |b| {
+            b.iter(|| {
+                let chain = OptionChain::build_chain(black_box(&with_greeks));
+                black_box(chain)
+            })
+        });
     }
 
     let params_10 = chain_walk_params(10);
