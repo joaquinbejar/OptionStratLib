@@ -22,13 +22,13 @@ use statrs::distribution::{ContinuousCDF, Normal};
 /// It is computed using the formula:
 ///
 /// ```math
-/// d1 = (ln(S / K) + (r + σ² / 2) * T) / (σ * sqrt(T))
+/// d1 = (ln(S / K) + (b + σ² / 2) * T) / (σ * sqrt(T))
 /// ```
 ///
 /// Where:
 /// - `S`: Underlying price
 /// - `K`: Strike price
-/// - `r`: Risk-free rate
+/// - `b`: Cost of carry, `b = r - q` (risk-free rate minus dividend yield)
 /// - `T`: Time to expiration (in years)
 /// - `σ`: Implied volatility
 ///

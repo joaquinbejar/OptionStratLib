@@ -1514,13 +1514,13 @@ pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
         expiration_date,
         option.implied_volatility,
     )?;
+    // `vega` already carries `option.quantity`. Vomma is a first derivative of
+    // vega and is linear in position size, so the quantity must not be applied
+    // a second time here.
     let vega = vega(option)?;
     let implied_volatility: Positive = option.implied_volatility;
 
-    let vomma: Decimal = vega * (d1 * d2 / implied_volatility);
-
-    let quantity: Decimal = option.quantity.into();
-    Ok(vomma * quantity)
+    Ok(vega * (d1 * d2 / implied_volatility))
 }
 
 /// Computes the veta of an option.
@@ -1640,10 +1640,10 @@ pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     // It is common practice to divide the mathematical result of veta by
     // 100 times the number of days per year to reduce the value to the
     // percentage change in vega per one day
-    let veta_adj: Decimal = veta / (*TRADING_DAYS * Decimal::ONE_HUNDRED);
-
-    let quantity: Decimal = option.quantity.into();
-    Ok(veta_adj * quantity)
+    // `vega` already carries `option.quantity`. Veta is a first derivative of
+    // vega and is linear in position size, so the quantity must not be applied
+    // a second time here.
+    Ok(veta / (*TRADING_DAYS * Decimal::ONE_HUNDRED))
 }
 
 /// Computes the Charm of an option.
@@ -2139,7 +2139,11 @@ pub mod tests_delta_equations {
         );
         let delta_value = delta(&option).unwrap();
         info!("ATM Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.4653476616529870686572684641), DELTA_THRESHOLD);
+        assert_decimal_eq!(
+            delta_value,
+            dec!(-0.4653476616529870686572684641),
+            DELTA_THRESHOLD
+        );
     }
 
     #[test]
@@ -2171,7 +2175,11 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.3231079315892283130741442305), DELTA_THRESHOLD);
+        assert_decimal_eq!(
+            delta_value,
+            dec!(-0.3231079315892283130741442305),
+            DELTA_THRESHOLD
+        );
     }
 
     #[test]
@@ -2187,7 +2195,11 @@ pub mod tests_delta_equations {
         option.expiration_date = ExpirationDate::Days(Positive::ONE);
         let delta_value = delta(&option).unwrap();
         info!("Long-term Low Vol Put Delta: {}", delta_value);
-        assert_decimal_eq!(delta_value, dec!(-0.2298186207440564194124373536), DELTA_THRESHOLD);
+        assert_decimal_eq!(
+            delta_value,
+            dec!(-0.2298186207440564194124373536),
+            DELTA_THRESHOLD
+        );
     }
 }
 
@@ -2841,15 +2853,51 @@ mod tests_greeks_trait {
         let greeks = collection.greeks().unwrap();
 
         // Test each greek value
-        assert_decimal_eq!(greeks.delta, dec!(0.5338307582207135564475476937), dec!(0.000001));
-        assert_decimal_eq!(greeks.gamma, dec!(0.0692632117482215620683508231), dec!(0.000001));
-        assert_decimal_eq!(greeks.theta, dec!(-0.0434671314177636287945041349), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(0.1138573343806381728362131205), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(0.041863419880440417503050762), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho_d, dec!(-0.0438765006756750824436552223), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(-0.0569286671903190864181065602), dec!(0.000001));
-        assert_decimal_eq!(greeks.vomma, dec!(0.0014037205608571828124031742), dec!(0.000001));
-        assert_decimal_eq!(greeks.veta, dec!(0.000027236903336955576237203), dec!(0.000001));
+        assert_decimal_eq!(
+            greeks.delta,
+            dec!(0.5338307582207135564475476937),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(0.0692632117482215620683508231),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.theta,
+            dec!(-0.0434671314177636287945041349),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vega,
+            dec!(0.1138573343806381728362131205),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.rho,
+            dec!(0.041863419880440417503050762),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.rho_d,
+            dec!(-0.0438765006756750824436552223),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vanna,
+            dec!(-0.0569286671903190864181065602),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vomma,
+            dec!(0.0014037205608571828124031742),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(0.000027236903336955576237203),
+            dec!(0.000001)
+        );
     }
 
     #[test]
@@ -2926,7 +2974,11 @@ mod tests_greeks_trait {
         assert_decimal_eq!(greeks.vega, dec!(0.15350973), dec!(0.000001));
         assert_decimal_eq!(greeks.rho, dec!(0.03786580), dec!(0.000001));
         assert_decimal_eq!(greeks.rho_d, dec!(-0.03928351), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(0.9439386484253192473553911946), dec!(0.000001));
+        assert_decimal_eq!(
+            greeks.vanna,
+            dec!(0.9439386484253192473553911946),
+            dec!(0.000001)
+        );
         assert_decimal_eq!(greeks.vomma, dec!(0.19140525), dec!(0.000001));
         assert_decimal_eq!(greeks.veta, dec!(0.00004880), dec!(0.000001));
     }
@@ -2952,7 +3004,6 @@ mod tests_greeks_trait {
         assert_eq!(greeks.veta, dec!(0.0));
     }
 
-
     #[test]
     fn test_dividend_high_q_carry_regression() {
         // Regression test for the dividend (carry) bug family.
@@ -2967,6 +3018,15 @@ mod tests_greeks_trait {
         // Reference computation (independent Python Black-Scholes Merton
         // implementation, cross-checked against finite differences of the
         // closed-form delta): b = -0.03, d1 = 0.05, d2 = -0.25.
+        //
+        // Tolerance is 1e-12, not tighter: `big_n` evaluates the normal CDF in
+        // f64 via statrs and widens the result with `Decimal::from_f64`, so
+        // genuine precision here is ~1e-16. The digits past the 16th are
+        // Decimal rounding noise, and asserting them would turn this into a
+        // bit-pattern lock that a statrs patch release could break without
+        // changing any of the mathematics. 1e-12 still separates these values
+        // from the pre-fix dividend-blind ones, which differ in the second
+        // significant digit (delta 0.5762569743 vs 0.4799640108).
         // Sanity checks implied by the values:
         //   * rho_d == -delta exactly, since S*T = 100 (both rho_d and delta
         //     are scaled by 1/100) and rho_d = -S*T*e^{-qT}*N(d1).
@@ -2987,17 +3047,17 @@ mod tests_greeks_trait {
             None,
         );
         let g = option.greeks().unwrap();
-        assert_decimal_eq!(g.delta, dec!(0.4799640107901480920925461492), dec!(1e-28));
-        assert_decimal_eq!(g.gamma, dec!(0.0122603363406382730603468554), dec!(1e-28));
-        assert_decimal_eq!(g.theta, dec!(-0.0098247973187618777368017226), dec!(1e-28));
-        assert_decimal_eq!(g.vega, dec!(0.3678100902191481918104056619), dec!(1e-28));
-        assert_decimal_eq!(g.rho, dec!(0.381722350876409446703382601), dec!(1e-28));
-        assert_decimal_eq!(g.rho_d, dec!(-0.4799640107901480920925461492), dec!(1e-28));
-        assert_decimal_eq!(g.vanna, dec!(0.3065084085159568265086713849), dec!(1e-28));
-        assert_decimal_eq!(g.vomma, dec!(-0.0153254204257978413254335693), dec!(1e-28));
-        assert_decimal_eq!(g.veta, dec!(0.0000061119236221931867190717), dec!(1e-28));
-        assert_decimal_eq!(g.charm, dec!(0.0000800051194732414864990234), dec!(1e-28));
-        assert_decimal_eq!(g.color, dec!(-0.000019524165747934236209114), dec!(1e-28));
+        assert_decimal_eq!(g.delta, dec!(0.4799640107901480920925461492), dec!(1e-12));
+        assert_decimal_eq!(g.gamma, dec!(0.0122603363406382730603468554), dec!(1e-12));
+        assert_decimal_eq!(g.theta, dec!(-0.0098247973187618777368017226), dec!(1e-12));
+        assert_decimal_eq!(g.vega, dec!(0.3678100902191481918104056619), dec!(1e-12));
+        assert_decimal_eq!(g.rho, dec!(0.381722350876409446703382601), dec!(1e-12));
+        assert_decimal_eq!(g.rho_d, dec!(-0.4799640107901480920925461492), dec!(1e-12));
+        assert_decimal_eq!(g.vanna, dec!(0.3065084085159568265086713849), dec!(1e-12));
+        assert_decimal_eq!(g.vomma, dec!(-0.0153254204257978413254335693), dec!(1e-12));
+        assert_decimal_eq!(g.veta, dec!(0.0000061119236221931867190717), dec!(1e-12));
+        assert_decimal_eq!(g.charm, dec!(0.0000800051194732414864990234), dec!(1e-12));
+        assert_decimal_eq!(g.color, dec!(-0.000019524165747934236209114), dec!(1e-12));
     }
 
     #[test]
@@ -3038,12 +3098,36 @@ mod tests_greeks_trait {
 
         // Opposing positions should mostly cancel out
         assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
-        assert_decimal_eq!(greeks.gamma, dec!(0.0755185886581300512828146194), dec!(0.000001));
-        assert_decimal_eq!(greeks.vega, dec!(0.3775929432906502564140730968), dec!(0.000001));
-        assert_decimal_eq!(greeks.rho, dec!(0.5135001229824933847234299424), dec!(0.000001));
-        assert_decimal_eq!(greeks.vanna, dec!(-0.3775929432906502564140730968), dec!(0.000001));
-        assert_decimal_eq!(greeks.vomma, dec!(0.0566389414935975384621109646), dec!(0.000001));
-        assert_decimal_eq!(greeks.veta, dec!(0.0000066678118954102922263596), dec!(0.000001));
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(0.0755185886581300512828146194),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vega,
+            dec!(0.3775929432906502564140730968),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.rho,
+            dec!(0.5135001229824933847234299424),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vanna,
+            dec!(-0.3775929432906502564140730968),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.vomma,
+            dec!(0.0566389414935975384621109646),
+            dec!(0.000001)
+        );
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(0.0000066678118954102922263596),
+            dec!(0.000001)
+        );
     }
 
     #[test]
@@ -3508,7 +3592,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ITM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00274096463168, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            0.00274096463168,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -3524,7 +3612,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ITM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.0039614286773, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            -0.0039614286773,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -3540,7 +3632,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call ATM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.000523300995754, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            -0.000523300995754,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -3556,7 +3652,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put ATM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.000550675746984, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            -0.000550675746984,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -3572,7 +3672,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Call OTM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), -0.00405183908388, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            -0.00405183908388,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -3588,7 +3692,11 @@ pub mod tests_charm_equations {
         );
         let charm_value = charm(&option).unwrap();
         info!("Charm Put OTM Value: {}", charm_value);
-        assert_relative_eq!(charm_value.to_f64().unwrap(), 0.00282022266253, epsilon = 1e-8);
+        assert_relative_eq!(
+            charm_value.to_f64().unwrap(),
+            0.00282022266253,
+            epsilon = 1e-8
+        );
     }
 }
 
@@ -4315,7 +4423,11 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ITM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000400671355466, epsilon = 1e-8);
+        assert_relative_eq!(
+            color_value.to_f64().unwrap(),
+            -0.000400671355466,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -4331,7 +4443,11 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000817099264221, epsilon = 1e-8);
+        assert_relative_eq!(
+            color_value.to_f64().unwrap(),
+            -0.000817099264221,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -4347,7 +4463,11 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color ATM Near Expiration Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.378230424889, epsilon = 1e-8);
+        assert_relative_eq!(
+            color_value.to_f64().unwrap(),
+            -0.378230424889,
+            epsilon = 1e-8
+        );
     }
 
     #[test]
@@ -4383,6 +4503,10 @@ pub mod tests_color_equations {
         );
         let color_value = color(&option).unwrap();
         info!("Color OTM Value: {}", color_value);
-        assert_relative_eq!(color_value.to_f64().unwrap(), -0.000452958052918, epsilon = 1e-8);
+        assert_relative_eq!(
+            color_value.to_f64().unwrap(),
+            -0.000452958052918,
+            epsilon = 1e-8
+        );
     }
 }

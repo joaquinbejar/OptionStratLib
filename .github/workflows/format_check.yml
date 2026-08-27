@@ -42,4 +42,4 @@ jobs:
         run: sudo apt-get install make
 
       - name: Format check
-        run: make fmt
+        run: make fmt-check

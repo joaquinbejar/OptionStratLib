@@ -43,8 +43,8 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho, dec!(-1.796019), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(1.597057), epsilon);
     assert_decimal_eq!(greeks.vanna, dec!(5.7651822592), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(153.9868702894), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0139491695), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(76.9934351447), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.00697458475), epsilon);
     assert_decimal_eq!(greeks.charm, dec!(-0.021321), epsilon);
     assert_decimal_eq!(greeks.color, dec!(-0.0000524805), epsilon);
 

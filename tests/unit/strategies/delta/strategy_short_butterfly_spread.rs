@@ -44,8 +44,8 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.rho, dec!(1.971329081), epsilon);
     assert_decimal_eq!(greeks.rho_d, dec!(-1.997983), epsilon);
     assert_decimal_eq!(greeks.vanna, dec!(-0.4538499018), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(100.0783474574), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.3561974334), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(33.2470297275943257605818), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0816909193673865686658299), epsilon);
     assert_decimal_eq!(greeks.charm, dec!(-0.01945020), epsilon);
     assert_decimal_eq!(greeks.color, dec!(-0.00806599), epsilon);
 
