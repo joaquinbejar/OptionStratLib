@@ -511,8 +511,7 @@ impl OptionChain {
             match option_data.calculate_prices(Some(p.spread)) {
                 Ok(()) => {
                     option_data.apply_spread(p.spread, p.decimal_places);
-                    option_data.calculate_delta();
-                    option_data.calculate_gamma();
+                    option_data.calculate_greeks();
                 }
                 Err(e) => {
                     warn!(
@@ -522,8 +521,7 @@ impl OptionChain {
                     // Greeks do not depend on bid/ask prices, so compute them
                     // even when pricing failed to keep the chain's greek
                     // coverage identical to a post-build `update_greeks` pass.
-                    option_data.calculate_delta();
-                    option_data.calculate_gamma();
+                    option_data.calculate_greeks();
                 }
             }
             Ok(option_data)
@@ -1182,8 +1180,7 @@ impl OptionChain {
             .iter()
             .map(|option| {
                 let mut option = option.clone(); // Create a clone we can modify
-                option.calculate_delta();
-                option.calculate_gamma();
+                option.calculate_greeks();
                 option
             })
             .collect();
@@ -8939,6 +8936,8 @@ mod tests_serialization {
             dividend_yield: None,
             epic: None,
             extra_fields: None,
+            greeks_call: None,
+            greeks_put: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -9006,6 +9005,8 @@ mod tests_serialization {
             dividend_yield: None,
             epic: None,
             extra_fields: None,
+            greeks_call: None,
+            greeks_put: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -9047,6 +9048,8 @@ mod tests_option_data_serde {
             dividend_yield: None,
             epic: None,
             extra_fields: None,
+            greeks_call: None,
+            greeks_put: None,
         }
     }
 
@@ -9086,6 +9089,8 @@ mod tests_option_data_serde {
             dividend_yield: None,
             epic: None,
             extra_fields: None,
+            greeks_call: None,
+            greeks_put: None,
         };
 
         let serialized = serde_json::to_string(&option_data).unwrap();
@@ -9179,6 +9184,81 @@ mod tests_option_data_serde {
         let missing_strike = r#"{"call_bid": 1.0}"#;
         let result: Result<OptionData, _> = serde_json::from_str(missing_strike);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_optiondata_deserializes_legacy_payload_without_greek_snapshots() {
+        // A payload written before the snapshots existed must still load, with
+        // both new fields defaulting to None.
+        let legacy = r#"{
+            "strike_price": "100",
+            "call_bid": "9.5",
+            "call_ask": "10.0",
+            "put_bid": "8.5",
+            "put_ask": "9.0",
+            "implied_volatility": "0.2",
+            "delta_call": "0.5",
+            "gamma": "0.02"
+        }"#;
+        let data: OptionData = match serde_json::from_str(legacy) {
+            Ok(data) => data,
+            Err(e) => panic!("legacy payload should deserialize: {e}"),
+        };
+        assert_eq!(data.strike_price, Positive::HUNDRED);
+        assert_eq!(data.delta_call, Some(dec!(0.5)));
+        assert!(data.greeks_call.is_none());
+        assert!(data.greeks_put.is_none());
+    }
+
+    #[test]
+    fn test_optiondata_without_greeks_does_not_grow_its_json() {
+        // The snapshots are skipped when absent, so an ungreeked chain row
+        // must not gain two null keys.
+        let data = OptionData::default();
+        let json = match serde_json::to_string(&data) {
+            Ok(json) => json,
+            Err(e) => panic!("serialization should succeed: {e}"),
+        };
+        assert!(!json.contains("greeks_call"), "unexpected key in {json}");
+        assert!(!json.contains("greeks_put"), "unexpected key in {json}");
+    }
+
+    #[test]
+    fn test_greeks_snapshot_round_trips_through_json() {
+        let mut data = OptionData::new(
+            Positive::HUNDRED,
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            None,
+            None,
+        );
+        data.calculate_greeks();
+        assert!(data.greeks_call.is_some());
+
+        let json = match serde_json::to_string(&data) {
+            Ok(json) => json,
+            Err(e) => panic!("serialization should succeed: {e}"),
+        };
+        let restored: OptionData = match serde_json::from_str(&json) {
+            Ok(restored) => restored,
+            Err(e) => panic!("deserialization should succeed: {e}"),
+        };
+        assert_eq!(data.greeks_call, restored.greeks_call);
+        assert_eq!(data.greeks_put, restored.greeks_put);
+        assert_eq!(data, restored);
     }
 }
 
