@@ -511,7 +511,12 @@ impl OptionChain {
             match option_data.calculate_prices(Some(p.spread)) {
                 Ok(()) => {
                     option_data.apply_spread(p.spread, p.decimal_places);
-                    option_data.calculate_greeks();
+                    if p.greek_snapshots {
+                        option_data.calculate_greeks();
+                    } else {
+                        option_data.calculate_delta();
+                        option_data.calculate_gamma();
+                    }
                 }
                 Err(e) => {
                     warn!(
@@ -521,7 +526,12 @@ impl OptionChain {
                     // Greeks do not depend on bid/ask prices, so compute them
                     // even when pricing failed to keep the chain's greek
                     // coverage identical to a post-build `update_greeks` pass.
-                    option_data.calculate_greeks();
+                    if p.greek_snapshots {
+                        option_data.calculate_greeks();
+                    } else {
+                        option_data.calculate_delta();
+                        option_data.calculate_gamma();
+                    }
                 }
             }
             Ok(option_data)
@@ -1180,6 +1190,31 @@ impl OptionChain {
             .iter()
             .map(|option| {
                 let mut option = option.clone(); // Create a clone we can modify
+                option.calculate_delta();
+                option.calculate_gamma();
+                option
+            })
+            .collect();
+        self.options = modified_options;
+    }
+
+    /// Recomputes the full twelve-greek snapshot for every strike, for both
+    /// option styles.
+    ///
+    /// This is the opt-in counterpart to [`Self::update_greeks`], which only
+    /// refreshes delta and gamma. The full set costs roughly seven times a
+    /// whole chain build, because each greek re-derives `d1` and `d2` from
+    /// scratch, so it is a separate entry point rather than a widening of
+    /// `update_greeks`.
+    ///
+    /// A strike whose greeks cannot be computed keeps a `None` snapshot and
+    /// logs at `debug` level; see [`OptionData::calculate_greeks`].
+    pub fn update_greek_snapshots(&mut self) {
+        let modified_options: BTreeSet<OptionData> = self
+            .options
+            .iter()
+            .map(|option| {
+                let mut option = option.clone();
                 option.calculate_greeks();
                 option
             })

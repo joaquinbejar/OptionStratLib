@@ -127,6 +127,7 @@ impl From<Greek> for GreeksSnapshot {
     /// — see [`alpha`], which returns `Decimal::MAX` when theta is zero.
     /// Callers that publish a snapshot are responsible for mapping such
     /// sentinels to `None`.
+    #[inline]
     fn from(greek: Greek) -> Self {
         Self {
             delta: greek.delta,

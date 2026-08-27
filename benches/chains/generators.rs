@@ -95,10 +95,11 @@ pub fn benchmark_chain_generators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Chain Generators");
     group.sample_size(20);
 
-    // `build_chain` caps the generated grid at 31 strikes, so half-widths above
-    // 15 all collapse onto the same chain. Label each case by the strike count
-    // it actually produces, so a future cap change cannot silently turn this
-    // into three measurements of the same work.
+    // `build_chain` stops widening the grid once both wings stop producing
+    // priceable strikes, so half-widths above ~15 collapse onto the same chain
+    // for this fixture. Label each case by the strike count it actually
+    // produces, so a change in that cut-off cannot silently turn this into
+    // three measurements of the same work.
     for half_width in [5_usize, 10, 15] {
         let build_params = chain_build_params(half_width);
         let strikes = match OptionChain::build_chain(&build_params) {

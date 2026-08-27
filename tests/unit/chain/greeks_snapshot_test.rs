@@ -34,6 +34,7 @@ fn build_params() -> OptionChainBuildParams {
         price_params,
         pos_or_panic!(0.2),
     )
+    .with_greek_snapshots(true)
 }
 
 #[test]
@@ -78,7 +79,7 @@ fn test_built_chain_carries_greek_snapshots_on_every_strike() {
 }
 
 #[test]
-fn test_update_greeks_populates_snapshots_on_an_existing_chain() {
+fn test_update_greek_snapshots_populates_snapshots_on_an_existing_chain() {
     let mut chain = match OptionChain::build_chain(&build_params()) {
         Ok(chain) => chain,
         Err(e) => panic!("chain should build: {e}"),
@@ -91,13 +92,13 @@ fn test_update_greeks_populates_snapshots_on_an_existing_chain() {
     });
     assert!(chain.options.iter().all(|o| o.greeks_call.is_none()));
 
-    chain.update_greeks();
+    chain.update_greek_snapshots();
 
     assert!(
         chain
             .options
             .iter()
             .all(|o| o.greeks_call.is_some() && o.greeks_put.is_some()),
-        "update_greeks should repopulate every strike"
+        "update_greek_snapshots should repopulate every strike"
     );
 }

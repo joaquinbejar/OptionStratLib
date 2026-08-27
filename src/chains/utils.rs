@@ -102,6 +102,13 @@ pub enum OptionDataGroup<'a> {
 /// * `price_params` - Fundamental pricing parameters including underlying price, volatility,
 ///   expiration, and other inputs required for option pricing models.
 ///
+/// Serde predicate: skip a `bool` field when it holds the default `false`, so
+/// that opting in is additive on the wire and existing payloads stay
+/// byte-identical.
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 /// # Usage
 ///
 /// This structure is typically used as input to option chain generation functions to create
@@ -136,6 +143,17 @@ pub struct OptionChainBuildParams {
     pub(crate) price_params: OptionDataPriceParams,
 
     pub(crate) implied_volatility: Positive,
+
+    /// Whether `OptionChain::build_chain` should compute the full twelve-greek
+    /// snapshot for each strike, in addition to the delta and gamma it always
+    /// computes.
+    ///
+    /// Off by default. The full set costs roughly seven times the whole chain
+    /// build, because each greek re-derives `d1` and `d2` from scratch, so it
+    /// is opt-in for consumers that actually read the snapshots. Enable it with
+    /// [`Self::with_greek_snapshots`].
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub(crate) greek_snapshots: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -198,7 +216,24 @@ impl OptionChainBuildParams {
             decimal_places,
             price_params,
             implied_volatility,
+            greek_snapshots: false,
         }
+    }
+
+    /// Enables or disables computation of the full twelve-greek snapshot per
+    /// strike during `OptionChain::build_chain`.
+    ///
+    /// Off by default; see [`Self::greek_snapshots`] for the cost.
+    #[must_use]
+    pub fn with_greek_snapshots(mut self, enabled: bool) -> Self {
+        self.greek_snapshots = enabled;
+        self
+    }
+
+    /// Returns whether the full greek snapshots will be computed at build time.
+    #[must_use]
+    pub fn greek_snapshots(&self) -> bool {
+        self.greek_snapshots
     }
 
     /// Sets the underlying asset price.
