@@ -25,6 +25,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use crate::model::types::{AsianAveragingType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -43,9 +44,16 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns `PricingError` if:
-/// - The option type is not Asian
-/// - Required parameters are invalid (zero volatility, etc.)
+/// - [`PricingError::MethodError`] when the option type is not
+///   `OptionType::Asian`, when the averaging type is an unsupported
+///   `#[non_exhaustive]` variant, or when the expiration cannot be converted
+///   to a year fraction.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the discount factor, the forward, either
+///   Turnbull-Wakeman moment, the moment-matched variance, or the final
+///   Black legs.
+/// - [`PricingError::Positive`] when the `σ / √3` geometric adjustment is not
+///   representable as a `Positive`.
 pub fn asian_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Asian { averaging_type } => match averaging_type {
@@ -84,26 +92,64 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
-        return Ok(intrinsic_value(option));
+        return intrinsic_value(option);
     }
 
     if sigma == Positive::ZERO {
-        // Deterministic case
-        let discount = (-r * t).exp();
-        let forward = s * ((r - q) * t).exp();
+        // Deterministic case: the average of a driftless-variance path is the
+        // forward itself, so the option collapses to a discounted intrinsic.
+        let t_dec = t.to_dec();
+        let discount = d_exp(
+            d_mul(-r, t_dec, "pricing::asian::geometric::det::neg_rt")?,
+            "pricing::asian::geometric::det::discount",
+        )?;
+        let carry = d_sub(r, q, "pricing::asian::geometric::det::carry")?;
+        let forward = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(carry, t_dec, "pricing::asian::geometric::det::carry_t")?,
+                "pricing::asian::geometric::det::growth",
+            )?,
+            "pricing::asian::geometric::det::forward",
+        )?;
         let intrinsic = match option.option_style {
-            OptionStyle::Call => (forward - k).max(Positive::ZERO).to_dec(),
-            OptionStyle::Put => (k - forward).max(Positive::ZERO).to_dec(),
+            OptionStyle::Call => {
+                d_sub(forward, k.to_dec(), "pricing::asian::geometric::det::call")?
+                    .max(Decimal::ZERO)
+            }
+            OptionStyle::Put => d_sub(k.to_dec(), forward, "pricing::asian::geometric::det::put")?
+                .max(Decimal::ZERO),
         };
-        return Ok(apply_side(intrinsic * discount, option));
+        let price = d_mul(intrinsic, discount, "pricing::asian::geometric::det::price")?;
+        return Ok(apply_side(price, option));
     }
 
     // Geometric average adjustments (Kemna-Vorst)
-    let sigma_sq = sigma * sigma;
+    let sigma_sq = d_mul(
+        sigma.to_dec(),
+        sigma.to_dec(),
+        "pricing::asian::geometric::sigma_sq",
+    )?;
     let sqrt_three = Positive::new(3.0_f64.sqrt())
         .map_err(|e| PricingError::method_error("geometric_asian_price", &e.to_string()))?;
-    let sigma_adj = sigma / sqrt_three;
-    let b_adj = (r - q - sigma_sq / dec!(6)) / dec!(2);
+    let sigma_adj = Positive::new_decimal(d_div(
+        sigma.to_dec(),
+        sqrt_three.to_dec(),
+        "pricing::asian::geometric::sigma_adj",
+    )?)?;
+    let b_adj = d_div(
+        d_sub(
+            d_sub(r, q, "pricing::asian::geometric::carry")?,
+            d_div(
+                sigma_sq,
+                dec!(6),
+                "pricing::asian::geometric::variance_drag",
+            )?,
+            "pricing::asian::geometric::b_numerator",
+        )?,
+        dec!(2),
+        "pricing::asian::geometric::b_adj",
+    )?;
 
     // Calculate d1 and d2 with adjusted parameters
     let d1_val = d1(s, k, b_adj, t, sigma_adj)
@@ -111,18 +157,49 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
     let d2_val = d2(s, k, b_adj, t, sigma_adj)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
 
-    let discount = (-r * t).exp();
+    let t_dec = t.to_dec();
+    let discount = d_exp(
+        d_mul(-r, t_dec, "pricing::asian::geometric::neg_rt")?,
+        "pricing::asian::geometric::discount",
+    )?;
+    // e^((b_adj - r) T): the geometric-average carry replaces the spot drift.
+    let carry_discount = d_exp(
+        d_mul(
+            d_sub(b_adj, r, "pricing::asian::geometric::carry_spread")?,
+            t_dec,
+            "pricing::asian::geometric::carry_spread_t",
+        )?,
+        "pricing::asian::geometric::carry_discount",
+    )?;
+    let s_leg = d_mul(
+        s.to_dec(),
+        carry_discount,
+        "pricing::asian::geometric::spot_leg",
+    )?;
+    let k_leg = d_mul(
+        k.to_dec(),
+        discount,
+        "pricing::asian::geometric::strike_leg",
+    )?;
 
     let price = match option.option_style {
         OptionStyle::Call => {
             let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
             let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-            s.to_dec() * ((b_adj - r) * t).exp() * n_d1 - k.to_dec() * discount * n_d2
+            d_sub(
+                d_mul(s_leg, n_d1, "pricing::asian::geometric::call::spot")?,
+                d_mul(k_leg, n_d2, "pricing::asian::geometric::call::strike")?,
+                "pricing::asian::geometric::call",
+            )?
         }
         OptionStyle::Put => {
             let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
             let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
-            k.to_dec() * discount * n_neg_d2 - s.to_dec() * ((b_adj - r) * t).exp() * n_neg_d1
+            d_sub(
+                d_mul(k_leg, n_neg_d2, "pricing::asian::geometric::put::strike")?,
+                d_mul(s_leg, n_neg_d1, "pricing::asian::geometric::put::spot")?,
+                "pricing::asian::geometric::put",
+            )?
         }
     };
 
@@ -147,94 +224,255 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t == Positive::ZERO {
-        return Ok(intrinsic_value(option));
+        return intrinsic_value(option);
     }
 
+    let t_dec = t.to_dec();
+    let discount = d_exp(
+        d_mul(-r, t_dec, "pricing::asian::arithmetic::neg_rt")?,
+        "pricing::asian::arithmetic::discount",
+    )?;
+
     if sigma == Positive::ZERO {
-        let discount = (-r * t).exp();
-        let forward = s * ((r - q) * t).exp();
-        let intrinsic = match option.option_style {
-            OptionStyle::Call => (forward - k).max(Positive::ZERO).to_dec(),
-            OptionStyle::Put => (k - forward).max(Positive::ZERO).to_dec(),
-        };
-        return Ok(apply_side(intrinsic * discount, option));
+        let carry = d_sub(r, q, "pricing::asian::arithmetic::det::carry")?;
+        let forward = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(carry, t_dec, "pricing::asian::arithmetic::det::carry_t")?,
+                "pricing::asian::arithmetic::det::growth",
+            )?,
+            "pricing::asian::arithmetic::det::forward",
+        )?;
+        return deterministic_price(forward, k.to_dec(), discount, option);
     }
 
     // Turnbull-Wakeman approximation
-    let b = r - q; // cost of carry
-    let sigma_sq = sigma * sigma;
-    let t_dec = t.to_dec();
+    let b = d_sub(r, q, "pricing::asian::arithmetic::carry")?; // cost of carry
+    let sigma_dec = sigma.to_dec();
+    let sigma_sq = d_mul(sigma_dec, sigma_dec, "pricing::asian::arithmetic::sigma_sq")?;
+    let s_dec = s.to_dec();
+    let s_sq = d_powd(s_dec, Decimal::TWO, "pricing::asian::arithmetic::s_sq")?;
+    let t_sq = d_powd(t_dec, Decimal::TWO, "pricing::asian::arithmetic::t_sq")?;
+    let bt = d_mul(b, t_dec, "pricing::asian::arithmetic::bt")?;
+    let two_b_plus_var = d_add(
+        d_mul(dec!(2), b, "pricing::asian::arithmetic::two_b")?,
+        sigma_sq,
+        "pricing::asian::arithmetic::two_b_plus_var",
+    )?;
+    let b_plus_var = d_add(b, sigma_sq, "pricing::asian::arithmetic::b_plus_var")?;
 
     // First moment of arithmetic average (M1)
     let m1 = if b.abs() < dec!(1e-10) {
-        s.to_dec()
+        s_dec
     } else {
-        s.to_dec() * (((b * t).exp() - dec!(1)) / (b * t_dec))
+        d_mul(
+            s_dec,
+            d_div(
+                d_sub(
+                    d_exp(bt, "pricing::asian::arithmetic::m1::exp_bt")?,
+                    dec!(1),
+                    "pricing::asian::arithmetic::m1::numerator",
+                )?,
+                bt,
+                "pricing::asian::arithmetic::m1::ratio",
+            )?,
+            "pricing::asian::arithmetic::m1",
+        )?
     };
 
     // Second moment of arithmetic average (M2)
     let m2 = if b.abs() < dec!(1e-10) {
-        let term = (sigma_sq * t_dec).exp();
-        s.to_dec().powi(2) * term
+        let term = d_exp(
+            d_mul(sigma_sq, t_dec, "pricing::asian::arithmetic::m2::var_t")?,
+            "pricing::asian::arithmetic::m2::exp_var_t",
+        )?;
+        d_mul(s_sq, term, "pricing::asian::arithmetic::m2::driftless")?
     } else {
-        let term1_exp = ((dec!(2) * b + sigma_sq) * t_dec).exp();
-        let term1 = (dec!(2) * s.to_dec().powi(2) * term1_exp)
-            / ((b + sigma_sq) * (dec!(2) * b + sigma_sq) * t_dec.powi(2));
+        let term1_exp = d_exp(
+            d_mul(
+                two_b_plus_var,
+                t_dec,
+                "pricing::asian::arithmetic::m2::term1_exponent",
+            )?,
+            "pricing::asian::arithmetic::m2::term1_exp",
+        )?;
+        let term1 = d_div(
+            d_mul(
+                d_mul(dec!(2), s_sq, "pricing::asian::arithmetic::m2::two_s_sq")?,
+                term1_exp,
+                "pricing::asian::arithmetic::m2::term1_numerator",
+            )?,
+            d_mul(
+                d_mul(
+                    b_plus_var,
+                    two_b_plus_var,
+                    "pricing::asian::arithmetic::m2::term1_roots",
+                )?,
+                t_sq,
+                "pricing::asian::arithmetic::m2::term1_denominator",
+            )?,
+            "pricing::asian::arithmetic::m2::term1",
+        )?;
 
-        let term2 = (dec!(2) * s.to_dec().powi(2)) / (b * t_dec.powi(2))
-            * (dec!(1) / (dec!(2) * b + sigma_sq) - (b * t_dec).exp() / (b + sigma_sq));
+        let term2 = d_mul(
+            d_div(
+                d_mul(dec!(2), s_sq, "pricing::asian::arithmetic::m2::two_s_sq2")?,
+                d_mul(b, t_sq, "pricing::asian::arithmetic::m2::b_t_sq")?,
+                "pricing::asian::arithmetic::m2::term2_scale",
+            )?,
+            d_sub(
+                d_div(
+                    dec!(1),
+                    two_b_plus_var,
+                    "pricing::asian::arithmetic::m2::term2_first",
+                )?,
+                d_div(
+                    d_exp(bt, "pricing::asian::arithmetic::m2::exp_bt")?,
+                    b_plus_var,
+                    "pricing::asian::arithmetic::m2::term2_second",
+                )?,
+                "pricing::asian::arithmetic::m2::term2_bracket",
+            )?,
+            "pricing::asian::arithmetic::m2::term2",
+        )?;
 
-        term1 + term2
+        d_add(term1, term2, "pricing::asian::arithmetic::m2")?
     };
-
-    // Adjusted volatility from moment matching
-    let variance = (m2 / m1.powi(2)).ln() / t_dec;
-    let sigma_adj = variance.sqrt().unwrap_or(sigma.to_dec());
-    let floor_pos = Positive::new(0.0001)
-        .map_err(|e| PricingError::method_error("arithmetic_asian_price", &e.to_string()))?;
-    let sigma_adj_pos = Positive::new_decimal(sigma_adj.max(dec!(0.0001))).unwrap_or(floor_pos);
 
     // Forward price of the average
     let f_adj = m1;
 
-    // Use Black-Scholes with adjusted parameters
-    let sqrt_t = t_dec.sqrt().ok_or_else(|| {
-        PricingError::method_error("arithmetic_asian_price", "non-finite sqrt(t)")
-    })?;
-    let d1_val =
-        ((f_adj / k).ln() + sigma_adj * sigma_adj * t_dec / dec!(2)) / (sigma_adj * sqrt_t);
-    let d2_val = d1_val - sigma_adj * sqrt_t;
+    // A non-positive first moment leaves the moment matching undefined: the
+    // average is known to be `f_adj`, so the option is worth its discounted
+    // intrinsic (the σ → 0 limit of the Black formula below).
+    if f_adj <= Decimal::ZERO {
+        return deterministic_price(f_adj, k.to_dec(), discount, option);
+    }
 
-    let discount = (-r * t).exp();
+    // Adjusted volatility from moment matching
+    let m1_sq = d_powd(m1, Decimal::TWO, "pricing::asian::arithmetic::m1_sq")?;
+    let moment_ratio = d_div(m2, m1_sq, "pricing::asian::arithmetic::moment_ratio")?;
+    let variance = if moment_ratio > Decimal::ZERO {
+        d_div(
+            d_ln(moment_ratio, "pricing::asian::arithmetic::log_moment_ratio")?,
+            t_dec,
+            "pricing::asian::arithmetic::variance",
+        )?
+    } else {
+        // `M2 / M1²` collapsed below the representable scale: the matched
+        // lognormal has no spread left, which the `sqrt` fallback below maps
+        // back onto the input volatility.
+        Decimal::ZERO
+    };
+    let sigma_adj = variance.sqrt().unwrap_or(sigma_dec);
+
+    // Use Black-Scholes with adjusted parameters
+    let sqrt_t = d_sqrt(t_dec, "pricing::asian::arithmetic::sqrt_t")?;
+    let denominator = d_mul(sigma_adj, sqrt_t, "pricing::asian::arithmetic::denominator")?;
+    if denominator.is_zero() {
+        // Zero matched volatility (or zero maturity in the limit): the average
+        // is deterministic and the price is the discounted intrinsic.
+        return deterministic_price(f_adj, k.to_dec(), discount, option);
+    }
+
+    let moneyness = d_div(f_adj, k.to_dec(), "pricing::asian::arithmetic::moneyness")?;
+    let log_moneyness = if moneyness.is_zero() {
+        // `F / K` rounded below the smallest representable `Decimal`, so the
+        // logarithm diverges; `Decimal::MIN` is the representable stand-in and
+        // drives `big_n` to the same 0 / 1 saturation the limit produces.
+        Decimal::MIN
+    } else {
+        d_ln(moneyness, "pricing::asian::arithmetic::log_moneyness")?
+    };
+    let half_variance_t = d_div(
+        d_mul(
+            d_mul(
+                sigma_adj,
+                sigma_adj,
+                "pricing::asian::arithmetic::sigma_adj_sq",
+            )?,
+            t_dec,
+            "pricing::asian::arithmetic::variance_t",
+        )?,
+        dec!(2),
+        "pricing::asian::arithmetic::half_variance_t",
+    )?;
+    let d1_val = d_div(
+        d_add(
+            log_moneyness,
+            half_variance_t,
+            "pricing::asian::arithmetic::d1_numerator",
+        )?,
+        denominator,
+        "pricing::asian::arithmetic::d1",
+    )?;
+    let d2_val = d_sub(d1_val, denominator, "pricing::asian::arithmetic::d2")?;
 
     let price = match option.option_style {
         OptionStyle::Call => {
             let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
             let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-            discount * (f_adj * n_d1 - k.to_dec() * n_d2)
+            d_mul(
+                discount,
+                d_sub(
+                    d_mul(f_adj, n_d1, "pricing::asian::arithmetic::call::forward")?,
+                    d_mul(k.to_dec(), n_d2, "pricing::asian::arithmetic::call::strike")?,
+                    "pricing::asian::arithmetic::call::intrinsic",
+                )?,
+                "pricing::asian::arithmetic::call",
+            )?
         }
         OptionStyle::Put => {
             let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
             let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
-            discount * (k.to_dec() * n_neg_d2 - f_adj * n_neg_d1)
+            d_mul(
+                discount,
+                d_sub(
+                    d_mul(
+                        k.to_dec(),
+                        n_neg_d2,
+                        "pricing::asian::arithmetic::put::strike",
+                    )?,
+                    d_mul(f_adj, n_neg_d1, "pricing::asian::arithmetic::put::forward")?,
+                    "pricing::asian::arithmetic::put::intrinsic",
+                )?,
+                "pricing::asian::arithmetic::put",
+            )?
         }
     };
-
-    // Suppress unused variable warning
-    let _ = sigma_adj_pos;
 
     Ok(apply_side(price, option))
 }
 
-/// Calculates intrinsic value at expiration.
-fn intrinsic_value(option: &Options) -> Decimal {
-    let s = option.underlying_price;
-    let k = option.strike_price;
-    let value = match option.option_style {
-        OptionStyle::Call => (s - k).max(Positive::ZERO).to_dec(),
-        OptionStyle::Put => (k - s).max(Positive::ZERO).to_dec(),
+/// Discounted intrinsic on a known average, i.e. the `σ → 0` limit of the
+/// Black formula used by both Asian kernels.
+fn deterministic_price(
+    forward: Decimal,
+    strike: Decimal,
+    discount: Decimal,
+    option: &Options,
+) -> Result<Decimal, PricingError> {
+    let intrinsic = match option.option_style {
+        OptionStyle::Call => {
+            d_sub(forward, strike, "pricing::asian::deterministic::call")?.max(Decimal::ZERO)
+        }
+        OptionStyle::Put => {
+            d_sub(strike, forward, "pricing::asian::deterministic::put")?.max(Decimal::ZERO)
+        }
     };
-    apply_side(value, option)
+    let price = d_mul(intrinsic, discount, "pricing::asian::deterministic::price")?;
+    Ok(apply_side(price, option))
+}
+
+/// Calculates intrinsic value at expiration.
+fn intrinsic_value(option: &Options) -> Result<Decimal, PricingError> {
+    let s = option.underlying_price.to_dec();
+    let k = option.strike_price.to_dec();
+    let value = match option.option_style {
+        OptionStyle::Call => d_sub(s, k, "pricing::asian::intrinsic::call")?.max(Decimal::ZERO),
+        OptionStyle::Put => d_sub(k, s, "pricing::asian::intrinsic::put")?.max(Decimal::ZERO),
+    };
+    Ok(apply_side(value, option))
 }
 
 /// Applies the side (long/short) multiplier to the price.

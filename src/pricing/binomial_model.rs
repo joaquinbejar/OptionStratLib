@@ -5,12 +5,13 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::error::PricingError;
+use crate::model::decimal::{d_div, d_mul, d_powd, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
 use crate::{d2f, f2d};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
 
@@ -141,6 +142,12 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     let dt = (params.expiry / Positive::new(no_steps_raw as f64)?).to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
+    if u == d {
+        // `σ√dt` underflowed below the representable scale, so the lattice has
+        // collapsed onto a single deterministic path: same answer as the
+        // zero-volatility branch above.
+        return calculate_discounted_payoff(params);
+    }
     let p = calculate_probability(params.int_rate, dt, d, u)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
@@ -148,34 +155,60 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         .map(|i| calculate_option_price(params.clone(), u, d, i))
         .collect::<Result<Vec<_>, _>>()?;
 
+    let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::half_dt")?;
     for step in (0..no_steps_raw).rev() {
         for i in 0..=step {
-            let option_value = option_node_value(p, prices[i + 1], prices[i], discount_factor)?;
+            let price_up = *prices
+                .get(i + 1)
+                .ok_or(PricingError::BinomialNodeMissing { node: "price_up" })?;
+            let price_down = *prices
+                .get(i)
+                .ok_or(PricingError::BinomialNodeMissing { node: "price_down" })?;
+            let option_value = option_node_value(p, price_up, price_down, discount_factor)?;
+            let slot = prices
+                .get_mut(i)
+                .ok_or(PricingError::BinomialNodeMissing { node: "price_slot" })?;
             match params.option_type {
                 OptionType::American => {
-                    let spot = params.asset * u.powi(i as i64) * d.powi((step - i) as i64);
-                    info.spot = spot;
+                    info.spot = lattice_spot(params.asset, u, d, i, step)?;
                     let intrinsic_value = f2d!(params.option_type.payoff(&info));
-                    prices[i] = option_value.max(intrinsic_value);
+                    *slot = option_value.max(intrinsic_value);
                 }
                 OptionType::Bermuda { exercise_dates } => {
                     // Calculate time at this step
-                    let time_at_step = dt * Decimal::from(step as u32);
+                    let time_at_step = d_mul(
+                        dt,
+                        Decimal::from(step as u64),
+                        "pricing::binomial::time_at_step",
+                    )?;
                     // Check if this step is an exercise date
-                    let is_exercise_date = exercise_dates
-                        .iter()
-                        .any(|t| (time_at_step - t.to_dec()).abs() < dt / Decimal::TWO);
+                    let mut is_exercise_date = false;
+                    for exercise in exercise_dates {
+                        let gap = d_sub(
+                            time_at_step,
+                            exercise.to_dec(),
+                            "pricing::binomial::exercise_gap",
+                        )?;
+                        if gap.abs() < half_dt {
+                            is_exercise_date = true;
+                            break;
+                        }
+                    }
                     if is_exercise_date {
-                        let spot = params.asset * u.powi(i as i64) * d.powi((step - i) as i64);
+                        let spot = lattice_spot(params.asset, u, d, i, step)?;
+                        let slot_value = option_value;
                         info.spot = spot;
                         let intrinsic_value = f2d!(params.option_type.payoff(&info));
-                        prices[i] = option_value.max(intrinsic_value);
+                        let slot = prices
+                            .get_mut(i)
+                            .ok_or(PricingError::BinomialNodeMissing { node: "price_slot" })?;
+                        *slot = slot_value.max(intrinsic_value);
                     } else {
-                        prices[i] = option_value;
+                        *slot = option_value;
                     }
                 }
                 OptionType::European => {
-                    prices[i] = option_value;
+                    *slot = option_value;
                 }
                 _ => {
                     return Err(PricingError::other(
@@ -185,7 +218,50 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
             }
         }
     }
-    Ok(prices[0])
+    prices
+        .first()
+        .copied()
+        .ok_or(PricingError::BinomialNodeMissing { node: "root" })
+}
+
+/// Spot price at lattice node `(step, i)`: `S · u^i · d^(step - i)`.
+///
+/// # Errors
+///
+/// Returns [`PricingError::Decimal`] when either power or the product leaves
+/// the representable `Decimal` range, [`PricingError::Positive`] when the
+/// result is not a valid `Positive`, and [`PricingError::BinomialNodeMissing`]
+/// when `i` walks past `step`.
+fn lattice_spot(
+    asset: Positive,
+    u: Decimal,
+    d: Decimal,
+    i: usize,
+    step: usize,
+) -> Result<Positive, PricingError> {
+    let down_steps = step
+        .checked_sub(i)
+        .ok_or(PricingError::BinomialNodeMissing { node: "down_steps" })?;
+    let up_power = d_powd(
+        u,
+        Decimal::from(i as u64),
+        "pricing::binomial::lattice_spot::up",
+    )?;
+    let down_power = d_powd(
+        d,
+        Decimal::from(down_steps as u64),
+        "pricing::binomial::lattice_spot::down",
+    )?;
+    let spot = d_mul(
+        d_mul(
+            asset.to_dec(),
+            up_power,
+            "pricing::binomial::lattice_spot::spot_up",
+        )?,
+        down_power,
+        "pricing::binomial::lattice_spot::spot",
+    )?;
+    Ok(Positive::new_decimal(spot)?)
 }
 
 /// Generates a binomial tree for option pricing.
@@ -271,25 +347,70 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
         for (node, node_val) in step_vec.iter_mut().enumerate().take(step + 1) {
-            *node_val =
-                up_factor.powi((step - node) as i64) * down_factor.powi(node as i64) * params.asset;
+            let up_steps = step
+                .checked_sub(node)
+                .ok_or(PricingError::BinomialNodeMissing { node: "up_steps" })?;
+            let up_power = d_powd(
+                up_factor,
+                Decimal::from(up_steps as u64),
+                "pricing::binomial::tree::up_power",
+            )?;
+            let down_power = d_powd(
+                down_factor,
+                Decimal::from(node as u64),
+                "pricing::binomial::tree::down_power",
+            )?;
+            *node_val = d_mul(
+                d_mul(up_power, down_power, "pricing::binomial::tree::factor")?,
+                params.asset.to_dec(),
+                "pricing::binomial::tree::asset_price",
+            )?;
         }
     }
 
-    for (node, node_val) in asset_tree[no_steps_raw]
-        .iter()
-        .enumerate()
-        .take(no_steps_raw + 1)
-    {
+    let terminal_assets = asset_tree
+        .get(no_steps_raw)
+        .ok_or(PricingError::BinomialNodeMissing {
+            node: "terminal_step",
+        })?
+        .clone();
+    let terminal_options =
+        option_tree
+            .get_mut(no_steps_raw)
+            .ok_or(PricingError::BinomialNodeMissing {
+                node: "terminal_step",
+            })?;
+    for (node, node_val) in terminal_assets.iter().enumerate().take(no_steps_raw + 1) {
         info.spot = Positive::new_decimal(*node_val)?;
-        option_tree[no_steps_raw][node] = f2d!(params.option_type.payoff(&info));
+        let slot = terminal_options
+            .get_mut(node)
+            .ok_or(PricingError::BinomialNodeMissing {
+                node: "terminal_node",
+            })?;
+        *slot = f2d!(params.option_type.payoff(&info));
     }
 
+    let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::tree::half_dt")?;
     for step in (0..no_steps_raw).rev() {
+        let step_assets = asset_tree
+            .get(step)
+            .ok_or(PricingError::BinomialNodeMissing { node: "asset_step" })?
+            .clone();
         let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
-        for (node_idx, node_val) in current_step_arr[step].iter_mut().enumerate().take(step + 1) {
+        let current = current_step_arr
+            .get_mut(step)
+            .ok_or(PricingError::BinomialNodeMissing {
+                node: "option_step",
+            })?;
+        for (node_idx, node_val) in current.iter_mut().enumerate().take(step + 1) {
             let node_value =
                 option_node_value_wrapper(probability, next_step_arr, node_idx, discount_factor)?;
+            let node_asset = || -> Result<Positive, PricingError> {
+                let raw = step_assets
+                    .get(node_idx)
+                    .ok_or(PricingError::BinomialNodeMissing { node: "asset_node" })?;
+                Ok(Positive::new_decimal(*raw)?)
+            };
             match params.option_type {
                 OptionType::European => {
                     *node_val = node_value;
@@ -298,7 +419,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     if (step == 0) & (node_idx == 0) {
                         *node_val = node_value;
                     } else {
-                        info.spot = Positive::new_decimal(asset_tree[step][node_idx])?;
+                        info.spot = node_asset()?;
                         let intrinsic_value = params.option_type.payoff(&info);
                         let dec_node_val = d2f!(node_value);
                         *node_val = f2d!(intrinsic_value.max(dec_node_val));
@@ -306,13 +427,26 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                 }
                 OptionType::Bermuda { exercise_dates } => {
                     // Calculate time at this step
-                    let time_at_step = dt * Decimal::from(step as u32);
+                    let time_at_step = d_mul(
+                        dt,
+                        Decimal::from(step as u64),
+                        "pricing::binomial::tree::time_at_step",
+                    )?;
                     // Check if this step is an exercise date
-                    let is_exercise_date = exercise_dates
-                        .iter()
-                        .any(|t| (time_at_step - t.to_dec()).abs() < dt / Decimal::TWO);
+                    let mut is_exercise_date = false;
+                    for exercise in exercise_dates {
+                        let gap = d_sub(
+                            time_at_step,
+                            exercise.to_dec(),
+                            "pricing::binomial::tree::exercise_gap",
+                        )?;
+                        if gap.abs() < half_dt {
+                            is_exercise_date = true;
+                            break;
+                        }
+                    }
                     if is_exercise_date && !((step == 0) & (node_idx == 0)) {
-                        info.spot = Positive::new_decimal(asset_tree[step][node_idx])?;
+                        info.spot = node_asset()?;
                         let intrinsic_value = params.option_type.payoff(&info);
                         let dec_node_val = d2f!(node_value);
                         *node_val = f2d!(intrinsic_value.max(dec_node_val));
@@ -337,6 +471,7 @@ mod tests_price_binomial {
     use super::*;
     use crate::assert_decimal_eq;
     use crate::model::types::OptionType;
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);

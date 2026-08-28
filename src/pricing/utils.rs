@@ -13,7 +13,7 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
-use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sub, finite_decimal};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
@@ -59,13 +59,27 @@ pub fn simulate_returns(
         let u2 = random_decimal(rng)?;
 
         // Convert to normal distribution using Box-Muller transform
-        let r = (-Decimal::TWO * u1.ln()).sqrt().ok_or_else(|| {
+        let r = d_mul(
+            -Decimal::TWO,
+            d_ln(u1, "pricing::utils::box_muller::log_u1")?,
+            "pricing::utils::box_muller::radius_squared",
+        )?
+        .sqrt()
+        .ok_or_else(|| {
             DecimalError::arithmetic_error("sqrt", "non-finite operand in Box-Muller r")
         })?;
-        let theta = Decimal::TWO * Decimal::PI * u2;
+        let theta = d_mul(
+            d_mul(
+                Decimal::TWO,
+                Decimal::PI,
+                "pricing::utils::box_muller::two_pi",
+            )?,
+            u2,
+            "pricing::utils::box_muller::theta",
+        )?;
 
-        let x1 = r * theta.cos();
-        let x2 = r * theta.sin();
+        let x1 = d_mul(r, theta.cos(), "pricing::utils::box_muller::x1")?;
+        let x2 = d_mul(r, theta.sin(), "pricing::utils::box_muller::x2")?;
 
         Ok((x1, x2))
     }
@@ -78,11 +92,14 @@ pub fn simulate_returns(
     }
 
     // Adjust mean and standard deviation for the time step
-    let adjusted_mean = mean * time_step;
-    let adjusted_std = std_dev
-        * time_step.sqrt().ok_or_else(|| {
+    let adjusted_mean = d_mul(mean, time_step, "pricing::utils::simulate::adjusted_mean")?;
+    let adjusted_std = d_mul(
+        std_dev.to_dec(),
+        time_step.sqrt().ok_or_else(|| {
             DecimalError::arithmetic_error("sqrt", "invalid (negative or non-finite) time_step")
-        })?;
+        })?,
+        "pricing::utils::simulate::adjusted_std",
+    )?;
 
     // Special case: if std_dev is 0, return a vector of constant values
     if adjusted_std == Decimal::ZERO {
@@ -97,11 +114,19 @@ pub fn simulate_returns(
         let (n1, n2) = generate_normal_pair(&mut rng)?;
 
         // Scale the random numbers by mean and std_dev
-        let r1 = n1 * adjusted_std + adjusted_mean;
+        let r1 = d_add(
+            d_mul(n1, adjusted_std, "pricing::utils::simulate::scale_1")?,
+            adjusted_mean,
+            "pricing::utils::simulate::shift_1",
+        )?;
         returns.push(r1);
 
         if returns.len() < length {
-            let r2 = n2 * adjusted_std + adjusted_mean;
+            let r2 = d_add(
+                d_mul(n2, adjusted_std, "pricing::utils::simulate::scale_2")?,
+                adjusted_mean,
+                "pricing::utils::simulate::shift_2",
+            )?;
             returns.push(r2);
         }
     }
@@ -128,7 +153,14 @@ pub(crate) fn calculate_up_factor(
     let sqrt_dt = dt
         .sqrt()
         .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in up factor"))?;
-    Ok((sqrt_dt * volatility).exp())
+    d_exp(
+        d_mul(
+            sqrt_dt,
+            volatility.to_dec(),
+            "pricing::binomial::up_factor::exponent",
+        )?,
+        "pricing::binomial::up_factor",
+    )
 }
 
 /// Calculates the down factor for a given volatility and time step.
@@ -151,7 +183,18 @@ pub(crate) fn calculate_down_factor(
     let sqrt_dt = dt
         .sqrt()
         .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in down factor"))?;
-    Ok((dec!(-1.0) * sqrt_dt * volatility.to_dec()).exp())
+    d_exp(
+        d_mul(
+            d_mul(
+                dec!(-1.0),
+                sqrt_dt,
+                "pricing::binomial::down_factor::sqrt_dt",
+            )?,
+            volatility.to_dec(),
+            "pricing::binomial::down_factor::exponent",
+        )?,
+        "pricing::binomial::down_factor",
+    )
 }
 
 /// Calculates the probability using a given interest rate, time interval,
@@ -174,10 +217,34 @@ pub(crate) fn calculate_probability(
     down_factor: Decimal,
     up_factor: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    Ok(
-        (((int_rate * dt).exp() - down_factor) / (up_factor - down_factor))
-            .clamp(CLAMP_MIN, CLAMP_MAX),
-    )
+    let spread = d_sub(
+        up_factor,
+        down_factor,
+        "pricing::binomial::probability::spread",
+    )?;
+    if spread.is_zero() {
+        // A lattice with no spread carries no risk-neutral probability: the
+        // callers detect the collapse and take the deterministic path instead
+        // of consuming a fabricated weight.
+        return Err(DecimalError::arithmetic_error(
+            "pricing::binomial::probability",
+            "up and down factors coincide, risk-neutral probability is undefined",
+        ));
+    }
+    let growth = d_exp(
+        d_mul(int_rate, dt, "pricing::binomial::probability::rate_dt")?,
+        "pricing::binomial::probability::growth",
+    )?;
+    Ok(d_div(
+        d_sub(
+            growth,
+            down_factor,
+            "pricing::binomial::probability::numerator",
+        )?,
+        spread,
+        "pricing::binomial::probability",
+    )?
+    .clamp(CLAMP_MIN, CLAMP_MAX))
 }
 
 /// Calculates the discount factor given an interest rate and time period.
@@ -197,7 +264,14 @@ pub(crate) fn calculate_discount_factor(
     int_rate: Decimal,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    Ok((-int_rate * dt).exp())
+    d_exp(
+        d_mul(
+            -int_rate,
+            dt,
+            "pricing::binomial::discount_factor::exponent",
+        )?,
+        "pricing::binomial::discount_factor",
+    )
 }
 
 /// Calculates the value of an option node in a binomial options pricing model.
@@ -224,12 +298,16 @@ pub(crate) fn option_node_value_wrapper(
     node: usize,
     discount_factor: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    option_node_value(
-        probability,
-        next[0][node],
-        next[0][node + 1],
-        discount_factor,
-    )
+    let next_step = next
+        .first()
+        .ok_or_else(|| DecimalError::arithmetic_error("pricing::binomial::node", "missing step"))?;
+    let price_up = *next_step.get(node).ok_or_else(|| {
+        DecimalError::arithmetic_error("pricing::binomial::node", "missing up node")
+    })?;
+    let price_down = *next_step.get(node + 1).ok_or_else(|| {
+        DecimalError::arithmetic_error("pricing::binomial::node", "missing down node")
+    })?;
+    option_node_value(probability, price_up, price_down, discount_factor)
 }
 
 /// Calculates the value of an option node in a binomial tree model.
@@ -294,8 +372,36 @@ pub(crate) fn calculate_option_price(
     d: Decimal,
     i: usize,
 ) -> Result<Decimal, PricingError> {
+    // `i` is bounded by `no_steps` at every call site, but the subtraction is
+    // checked so a caller that walks past the last step reports instead of
+    // wrapping.
+    let down_steps = params.no_steps.get().checked_sub(i).ok_or_else(|| {
+        PricingError::method_error(
+            "calculate_option_price",
+            "step index exceeds the number of lattice steps",
+        )
+    })?;
+    let up_power = d_powd(
+        u,
+        Decimal::from(i as u64),
+        "pricing::binomial::option_price::up_power",
+    )?;
+    let down_power = d_powd(
+        d,
+        Decimal::from(down_steps as u64),
+        "pricing::binomial::option_price::down_power",
+    )?;
+    let spot = d_mul(
+        d_mul(
+            params.asset.to_dec(),
+            up_power,
+            "pricing::binomial::option_price::spot_up",
+        )?,
+        down_power,
+        "pricing::binomial::option_price::spot",
+    )?;
     let info = PayoffInfo {
-        spot: params.asset * u.powu(i as u64) * d.powi((params.no_steps.get() - i) as i64),
+        spot: Positive::new_decimal(spot)?,
         strike: params.strike,
         style: *params.option_style,
         side: *params.side,
@@ -340,8 +446,21 @@ pub(crate) fn calculate_option_price(
 pub(crate) fn calculate_discounted_payoff(
     params: BinomialPricingParams,
 ) -> Result<Decimal, PricingError> {
+    let growth = d_exp(
+        d_mul(
+            params.int_rate,
+            params.expiry.to_dec(),
+            "pricing::binomial::discounted_payoff::growth_exponent",
+        )?,
+        "pricing::binomial::discounted_payoff::growth",
+    )?;
+    let forward = d_mul(
+        params.asset.to_dec(),
+        growth,
+        "pricing::binomial::discounted_payoff::forward",
+    )?;
     let info = PayoffInfo {
-        spot: params.asset * (params.int_rate * params.expiry).exp(),
+        spot: Positive::new_decimal(forward)?,
         strike: params.strike,
         style: *params.option_style,
         side: *params.side,
@@ -363,7 +482,10 @@ pub(crate) fn calculate_discounted_payoff(
         params.expiry.to_dec(),
         "pricing::binomial::discounted_payoff::discount_exponent",
     )?;
-    let discount = discount_exponent.exp();
+    let discount = d_exp(
+        discount_exponent,
+        "pricing::binomial::discounted_payoff::discount",
+    )?;
     let discounted_payoff = d_mul(
         discount,
         payoff,
@@ -412,7 +534,11 @@ pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, PricingError> {
     let sqrt_dt = dt.sqrt().ok_or_else(|| {
         DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment")
     })?;
-    Ok(sample * sqrt_dt)
+    Ok(d_mul(
+        sample,
+        sqrt_dt,
+        "pricing::monte_carlo::wiener_increment::scaled",
+    )?)
 }
 
 /// Calculates the probability that the option will remain under the strike price.
@@ -445,7 +571,11 @@ pub fn probability_keep_under_strike(
     let d2_val = d2(
         option.underlying_price,
         strike_price,
-        option.risk_free_rate - option.dividend_yield.to_dec(), // carry b = r - q
+        d_sub(
+            option.risk_free_rate,
+            option.dividend_yield.to_dec(),
+            "pricing::utils::probability_keep_under_strike::carry",
+        )?, // carry b = r - q
         years,
         option.implied_volatility,
     )

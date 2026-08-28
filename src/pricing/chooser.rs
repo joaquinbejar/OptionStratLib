@@ -26,12 +26,12 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
-use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::OptionType;
 use positive::Positive;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
+use std::cmp::Ordering;
 
 /// Prices a Chooser option using Rubinstein (1991) simple chooser formula.
 ///
@@ -45,10 +45,14 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
-/// not an [`OptionType::Chooser`] variant, and propagates any
-/// `PricingError` raised by the Black–Scholes evaluation at the
-/// chooser date (call and put side).
+/// - [`PricingError::MethodError`] when `option` is not an
+///   [`OptionType::Chooser`] variant, when the expiration cannot be converted
+///   to a year fraction, when the `d1` / `d2` kernels reject the inputs, or
+///   when both the choice-date diffusion `σ√t` and the log-moneyness collapse
+///   to zero, which leaves `y1` genuinely undefined.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the discount factors, the zero-volatility
+///   forward, `y1` / `y2`, or the four price legs.
 pub fn chooser_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Chooser { choice_date } => simple_chooser_price(option, choice_date.to_f64()),
@@ -93,8 +97,22 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     if sigma == Positive::ZERO {
         // Zero vol: deterministic choice
-        let discount_t = (-r * t_big).exp();
-        let forward = s.to_dec() * ((r - q) * t_big.to_dec()).exp();
+        let discount_t = d_exp(
+            d_mul(-r, t_big.to_dec(), "pricing::chooser::zero_vol::neg_rt")?,
+            "pricing::chooser::zero_vol::discount",
+        )?;
+        let forward = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(
+                    d_sub(r, q, "pricing::chooser::zero_vol::carry")?,
+                    t_big.to_dec(),
+                    "pricing::chooser::zero_vol::carry_t",
+                )?,
+                "pricing::chooser::zero_vol::growth",
+            )?,
+            "pricing::chooser::zero_vol::forward",
+        )?;
         let call_intrinsic = d_sub(
             forward,
             k.to_dec(),
@@ -120,13 +138,13 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         return Ok(apply_side(call_val.max(put_val), option));
     }
 
-    let b = r - q;
+    let b = d_sub(r, q, "pricing::chooser::carry")?;
     let t_big_dec = t_big.to_dec();
     let t_choice_dec = t_choice.to_dec();
-    let _sqrt_t_big = t_big_dec.sqrt().unwrap_or(Decimal::ZERO);
-    let sqrt_t_choice = t_choice_dec.sqrt().unwrap_or(dec!(0.001));
+    let sqrt_t_choice = d_sqrt(t_choice_dec, "pricing::chooser::sqrt_t_choice")?;
 
-    // Standard BS d-values for the final expiration T
+    // Standard BS d-values for the final expiration T. Both reject a zero
+    // underlying or strike, so `S / K` below is a ratio of two positives.
     let d1_val = d1(s, k, b, t_big, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
     let d2_val = d2(s, k, b, t_big, sigma)
@@ -135,21 +153,85 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
     // d-values for the choice date t
     // y1 = [ln(S/K) + (b + σ²/2)*t] / (σ√t)
     // y2 = y1 - σ√t
-    let y1 = ((s.to_dec() / k.to_dec()).ln() + (b + sigma * sigma / dec!(2)) * t_choice_dec)
-        / (sigma.to_dec() * sqrt_t_choice);
-    let y2 = y1 - sigma.to_dec() * sqrt_t_choice;
+    let sigma_dec = sigma.to_dec();
+    let sigma_sqrt_t_choice = d_mul(
+        sigma_dec,
+        sqrt_t_choice,
+        "pricing::chooser::sigma_sqrt_t_choice",
+    )?;
+    let drift = d_mul(
+        d_add(
+            b,
+            d_div(
+                d_mul(sigma_dec, sigma_dec, "pricing::chooser::variance")?,
+                dec!(2),
+                "pricing::chooser::half_variance",
+            )?,
+            "pricing::chooser::drift_rate",
+        )?,
+        t_choice_dec,
+        "pricing::chooser::drift",
+    )?;
+    let moneyness = d_div(s.to_dec(), k.to_dec(), "pricing::chooser::moneyness")?;
+    // `None` carries the `ln(S / K) = -∞` limit reached when the moneyness
+    // rounds below the smallest representable `Decimal`.
+    let y1_numerator = if moneyness.is_zero() {
+        None
+    } else {
+        Some(d_add(
+            d_ln(moneyness, "pricing::chooser::log_moneyness")?,
+            drift,
+            "pricing::chooser::y1_numerator",
+        )?)
+    };
+
+    // `N(-y)` at the choice date. When the choice-date diffusion `σ√t`
+    // collapses to zero the exponents diverge and the CDF saturates at the
+    // sign of the numerator; `0 / 0` stays genuinely undefined and is
+    // reported rather than guessed.
+    let (n_neg_y1, n_neg_y2) = match (y1_numerator, sigma_sqrt_t_choice.is_zero()) {
+        (None, _) => (Decimal::ONE, Decimal::ONE),
+        (Some(numerator), true) => match numerator.cmp(&Decimal::ZERO) {
+            Ordering::Greater => (Decimal::ZERO, Decimal::ZERO),
+            Ordering::Less => (Decimal::ONE, Decimal::ONE),
+            Ordering::Equal => {
+                return Err(PricingError::method_error(
+                    "simple_chooser_price",
+                    "choice-date diffusion and log-moneyness both collapsed to zero",
+                ));
+            }
+        },
+        (Some(numerator), false) => {
+            let y1 = d_div(numerator, sigma_sqrt_t_choice, "pricing::chooser::y1")?;
+            let y2 = d_sub(y1, sigma_sqrt_t_choice, "pricing::chooser::y2")?;
+            (
+                big_n(-y1).unwrap_or(Decimal::ZERO),
+                big_n(-y2).unwrap_or(Decimal::ZERO),
+            )
+        }
+    };
 
     // Get cumulative normal values
     let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
     let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-    let n_neg_y1 = big_n(-y1).unwrap_or(Decimal::ZERO);
-    let n_neg_y2 = big_n(-y2).unwrap_or(Decimal::ZERO);
 
     // Discount factors
-    let dividend_discount_t = (-q * t_big_dec).exp();
-    let discount_t = (-r * t_big_dec).exp();
-    let dividend_discount_choice = (-q * t_choice_dec).exp();
-    let discount_choice = (-r * t_choice_dec).exp();
+    let dividend_discount_t = d_exp(
+        d_mul(-q, t_big_dec, "pricing::chooser::neg_qt")?,
+        "pricing::chooser::dividend_discount_t",
+    )?;
+    let discount_t = d_exp(
+        d_mul(-r, t_big_dec, "pricing::chooser::neg_rt")?,
+        "pricing::chooser::discount_t",
+    )?;
+    let dividend_discount_choice = d_exp(
+        d_mul(-q, t_choice_dec, "pricing::chooser::neg_qt_choice")?,
+        "pricing::chooser::dividend_discount_choice",
+    )?;
+    let discount_choice = d_exp(
+        d_mul(-r, t_choice_dec, "pricing::chooser::neg_rt_choice")?,
+        "pricing::chooser::discount_choice",
+    )?;
 
     // Rubinstein (1991) simple chooser formula:
     // V = S*e^(-qT)*N(d1) - K*e^(-rT)*N(d2) + K*e^(-rt)*N(-y2) - S*e^(-qt)*N(-y1)
@@ -228,7 +310,7 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     }
 
     // Price as call + put (straddle) since choice is at expiry
-    let b = r - q;
+    let b = d_sub(r, q, "pricing::chooser::expiry::carry")?;
     let d1_val = d1(s, k, b, t, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
     let d2_val = d2(s, k, b, t, sigma)
@@ -239,14 +321,27 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
     let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
 
-    let dividend_discount = (-q * t).exp();
-    let discount = (-r * t).exp();
+    let t_dec = t.to_dec();
+    let dividend_discount = d_exp(
+        d_mul(-q, t_dec, "pricing::chooser::expiry::neg_qt")?,
+        "pricing::chooser::expiry::dividend_discount",
+    )?;
+    let discount = d_exp(
+        d_mul(-r, t_dec, "pricing::chooser::expiry::neg_rt")?,
+        "pricing::chooser::expiry::discount",
+    )?;
 
     // Call + Put = Straddle
-    let call_s_leg = s.to_dec() * dividend_discount * n_d1;
-    let call_k_leg = k.to_dec() * discount * n_d2;
-    let put_k_leg = k.to_dec() * discount * n_neg_d2;
-    let put_s_leg = s.to_dec() * dividend_discount * n_neg_d1;
+    let s_pv = d_mul(
+        s.to_dec(),
+        dividend_discount,
+        "pricing::chooser::expiry::s_pv",
+    )?;
+    let k_pv = d_mul(k.to_dec(), discount, "pricing::chooser::expiry::k_pv")?;
+    let call_s_leg = d_mul(s_pv, n_d1, "pricing::chooser::expiry::call_s_leg")?;
+    let call_k_leg = d_mul(k_pv, n_d2, "pricing::chooser::expiry::call_k_leg")?;
+    let put_k_leg = d_mul(k_pv, n_neg_d2, "pricing::chooser::expiry::put_k_leg")?;
+    let put_s_leg = d_mul(s_pv, n_neg_d1, "pricing::chooser::expiry::put_s_leg")?;
     let call_price = d_sub(call_s_leg, call_k_leg, "pricing::chooser::expiry::call")?;
     let put_price = d_sub(put_k_leg, put_s_leg, "pricing::chooser::expiry::put")?;
     let price = d_add(call_price, put_price, "pricing::chooser::expiry::price")?;

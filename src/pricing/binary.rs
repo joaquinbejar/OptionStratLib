@@ -31,11 +31,10 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
-use crate::model::decimal::{d_mul, d_sub};
+use crate::model::decimal::{d_exp, d_mul, d_sub};
 use crate::model::types::{BinaryType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 
 /// Default cash payout for cash-or-nothing options (when not specified).
@@ -53,11 +52,15 @@ const DEFAULT_CASH_PAYOUT: Decimal = dec!(1.0);
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
-/// not an [`OptionType::Binary`] variant, and propagates any
-/// `PricingError` raised by intermediate Black–Scholes kernels
-/// (typically `PricingError::ExpirationDate` or
-/// [`PricingError::Positive`]).
+/// - [`PricingError::UnsupportedOptionType`] when `option` is not an
+///   [`OptionType::Binary`] variant.
+/// - [`PricingError::MethodError`] when the expiration cannot be converted to
+///   a year fraction, when the binary sub-type is an unsupported
+///   `#[non_exhaustive]` variant, or when the `d1` / `d2` kernels reject the
+///   inputs.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the discount factors, the zero-volatility
+///   forward, or the payout legs.
 pub fn binary_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Binary { binary_type } => match binary_type {
@@ -98,14 +101,27 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
         return Ok(intrinsic_cash_or_nothing(option, payout));
     }
 
+    let t_dec = t.to_dec();
+    let b = d_sub(r, q, "pricing::binary::cash::carry")?;
+    let discount = d_exp(
+        d_mul(-r, t_dec, "pricing::binary::cash::neg_rt")?,
+        "pricing::binary::cash::discount",
+    )?;
+
     if sigma == Positive::ZERO {
         // At zero vol, price is deterministic
-        let forward = s * ((r - q) * t).exp();
+        let forward = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(b, t_dec, "pricing::binary::cash::zero_vol::carry_t")?,
+                "pricing::binary::cash::zero_vol::growth",
+            )?,
+            "pricing::binary::cash::zero_vol::forward",
+        )?;
         let itm = match option.option_style {
-            OptionStyle::Call => forward > k,
-            OptionStyle::Put => k > forward,
+            OptionStyle::Call => forward > k.to_dec(),
+            OptionStyle::Put => k.to_dec() > forward,
         };
-        let discount = (-r * t).exp();
         let value = if itm {
             d_mul(payout, discount, "pricing::binary::cash::zero_vol")?
         } else {
@@ -115,11 +131,8 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
     }
 
     // Calculate d2 for cash-or-nothing
-    let b = r - q;
     let d2_val = d2(s, k, b, t, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
-
-    let discount = (-r * t).exp();
 
     let price = match option.option_style {
         OptionStyle::Call => {
@@ -160,26 +173,40 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
         return Ok(intrinsic_asset_or_nothing(option));
     }
 
+    let t_dec = t.to_dec();
+    let b = d_sub(r, q, "pricing::binary::asset::carry")?;
+    let dividend_discount = d_exp(
+        d_mul(-q, t_dec, "pricing::binary::asset::neg_qt")?,
+        "pricing::binary::asset::dividend_discount",
+    )?;
+
     if sigma == Positive::ZERO {
-        let forward = s * ((r - q) * t).exp();
+        let forward = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(b, t_dec, "pricing::binary::asset::zero_vol::carry_t")?,
+                "pricing::binary::asset::zero_vol::growth",
+            )?,
+            "pricing::binary::asset::zero_vol::forward",
+        )?;
         let itm = match option.option_style {
-            OptionStyle::Call => forward > k,
-            OptionStyle::Put => k > forward,
+            OptionStyle::Call => forward > k.to_dec(),
+            OptionStyle::Put => k.to_dec() > forward,
         };
-        let discount = (-q * t).exp();
         let value = if itm {
-            d_mul(s.to_dec(), discount, "pricing::binary::asset::zero_vol")?
+            d_mul(
+                s.to_dec(),
+                dividend_discount,
+                "pricing::binary::asset::zero_vol",
+            )?
         } else {
             Decimal::ZERO
         };
         return Ok(apply_side(value, option));
     }
 
-    let b = r - q;
     let d1_val = d1(s, k, b, t, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
-
-    let dividend_discount = (-q * t).exp();
 
     let price = match option.option_style {
         OptionStyle::Call => {
@@ -230,8 +257,16 @@ fn gap_binary_price(option: &Options) -> Result<Decimal, PricingError> {
     // `side_multiplier` is ±1 so the signed renormalisation cannot overflow,
     // but the strike·unit_cash product and the following subtraction must be
     // checked because they fuse two monetary flows into one.
-    let asset_unsigned = asset_price * side_multiplier;
-    let unit_cash_unsigned = unit_cash * side_multiplier;
+    let asset_unsigned = d_mul(
+        asset_price,
+        side_multiplier,
+        "pricing::binary::gap::asset_unsigned",
+    )?;
+    let unit_cash_unsigned = d_mul(
+        unit_cash,
+        side_multiplier,
+        "pricing::binary::gap::unit_cash_unsigned",
+    )?;
     let strike_cash = d_mul(
         option.strike_price.to_dec(),
         unit_cash_unsigned,
@@ -242,7 +277,11 @@ fn gap_binary_price(option: &Options) -> Result<Decimal, PricingError> {
     // Suppress unused variable warning
     let _ = cash_price;
 
-    Ok(gap_unsigned * side_multiplier)
+    Ok(d_mul(
+        gap_unsigned,
+        side_multiplier,
+        "pricing::binary::gap::signed",
+    )?)
 }
 
 /// Calculates intrinsic value for cash-or-nothing at expiration.
@@ -284,6 +323,7 @@ mod tests {
     use crate::assert_decimal_eq;
     use crate::model::types::{OptionStyle, OptionType, Side};
     use positive::pos_or_panic;
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     fn create_binary_option(style: OptionStyle, binary_type: BinaryType) -> Options {

@@ -22,6 +22,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -39,10 +40,14 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The option type is not `Spread`
-/// - Required exotic parameters are missing
-/// - Correlation is outside the valid range [-1, 1]
+/// - [`PricingError::MethodError`] when the option type is not `Spread`, when
+///   the required exotic parameters are missing, when the correlation is
+///   outside `[-1, 1]`, when the Kirk adjusted strike `S2 + K` is
+///   non-positive, or when the combined variance is negative.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the adjusted strike, the combined
+///   variance, the present values, `d1` / `d2`, or the final legs.
+/// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn spread_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let second_asset_price = match &option.option_type {
         OptionType::Spread { second_asset } => second_asset.to_dec(),
@@ -144,47 +149,141 @@ fn kirk_approximation(
     style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
-        let spread = s1 - s2;
+        let spread = d_sub(s1, s2, "pricing::spread::kirk::intrinsic::spread")?;
         return match style {
-            OptionStyle::Call => Ok((spread - k).max(dec!(0.0))),
-            OptionStyle::Put => Ok((k - spread).max(dec!(0.0))),
+            OptionStyle::Call => {
+                Ok(d_sub(spread, k, "pricing::spread::kirk::intrinsic::call")?.max(dec!(0.0)))
+            }
+            OptionStyle::Put => {
+                Ok(d_sub(k, spread, "pricing::spread::kirk::intrinsic::put")?.max(dec!(0.0)))
+            }
         };
     }
 
-    let adjusted_strike = s2 + k;
+    let adjusted_strike = d_add(s2, k, "pricing::spread::kirk::adjusted_strike")?;
     if adjusted_strike <= dec!(0.0) {
         return Err(PricingError::other(
             "Adjusted strike (S2 + K) must be positive",
         ));
     }
 
-    let s2_ratio = s2 / adjusted_strike;
+    let s2_ratio = d_div(s2, adjusted_strike, "pricing::spread::kirk::s2_ratio")?;
 
-    let sigma_sq = sigma1 * sigma1 + s2_ratio * s2_ratio * sigma2 * sigma2
-        - dec!(2.0) * rho * sigma1 * sigma2 * s2_ratio;
+    let sigma_sq = d_sub(
+        d_add(
+            d_mul(sigma1, sigma1, "pricing::spread::kirk::var1")?,
+            d_mul(
+                d_mul(s2_ratio, s2_ratio, "pricing::spread::kirk::s2_ratio_sq")?,
+                d_mul(sigma2, sigma2, "pricing::spread::kirk::var2")?,
+                "pricing::spread::kirk::weighted_var2",
+            )?,
+            "pricing::spread::kirk::variance_sum",
+        )?,
+        d_mul(
+            d_mul(
+                d_mul(
+                    d_mul(dec!(2.0), rho, "pricing::spread::kirk::two_rho")?,
+                    sigma1,
+                    "pricing::spread::kirk::two_rho_sigma1",
+                )?,
+                sigma2,
+                "pricing::spread::kirk::two_rho_sigma1_sigma2",
+            )?,
+            s2_ratio,
+            "pricing::spread::kirk::covariance",
+        )?,
+        "pricing::spread::kirk::sigma_sq",
+    )?;
 
     let sigma = sigma_sq
         .sqrt()
         .ok_or_else(|| PricingError::other("Failed to compute adjusted volatility"))?;
 
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute sqrt(t)"))?;
+    let sqrt_t = d_sqrt(t, "pricing::spread::kirk::sqrt_t")?;
+    let denominator = d_mul(sigma, sqrt_t, "pricing::spread::kirk::denominator")?;
 
-    let d1 =
-        ((s1 / adjusted_strike).ln() + (r - q1 + sigma * sigma / dec!(2.0)) * t) / (sigma * sqrt_t);
-    let d2 = d1 - sigma * sqrt_t;
+    let s1_pv = d_mul(
+        s1,
+        d_exp(
+            d_mul(-q1, t, "pricing::spread::kirk::neg_q1t")?,
+            "pricing::spread::kirk::dividend_discount",
+        )?,
+        "pricing::spread::kirk::s1_pv",
+    )?;
+    let adjusted_strike_pv = d_mul(
+        adjusted_strike,
+        d_exp(
+            d_mul(-r, t, "pricing::spread::kirk::neg_rt")?,
+            "pricing::spread::kirk::discount",
+        )?,
+        "pricing::spread::kirk::adjusted_strike_pv",
+    )?;
 
-    let s1_pv = s1 * (-q1 * t).exp();
-    let adjusted_strike_pv = adjusted_strike * (-r * t).exp();
+    let ratio = d_div(s1, adjusted_strike, "pricing::spread::kirk::moneyness")?;
+
+    // `N(d1)`, `N(d2)`, `N(-d1)`, `N(-d2)`. A collapsed `σ√T` or a moneyness
+    // that underflowed below the representable scale drives the normal
+    // arguments to `±∞`, where the CDFs saturate: those are the limits of the
+    // formula, not substitutes for it.
+    let (n_d1, n_d2, n_neg_d1, n_neg_d2) = if denominator.is_zero() {
+        // σ√T → 0: the option is worth its discounted intrinsic, i.e. the
+        // step function at the forward.
+        if ratio >= dec!(1.0) {
+            (dec!(1.0), dec!(1.0), dec!(0.0), dec!(0.0))
+        } else {
+            (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
+        }
+    } else if ratio.is_zero() {
+        (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
+    } else {
+        let d1 = d_div(
+            d_add(
+                d_ln(ratio, "pricing::spread::kirk::log_moneyness")?,
+                d_mul(
+                    d_add(
+                        d_sub(r, q1, "pricing::spread::kirk::carry")?,
+                        d_div(
+                            d_mul(sigma, sigma, "pricing::spread::kirk::variance")?,
+                            dec!(2.0),
+                            "pricing::spread::kirk::half_variance",
+                        )?,
+                        "pricing::spread::kirk::drift_rate",
+                    )?,
+                    t,
+                    "pricing::spread::kirk::drift",
+                )?,
+                "pricing::spread::kirk::d1_numerator",
+            )?,
+            denominator,
+            "pricing::spread::kirk::d1",
+        )?;
+        let d2 = d_sub(d1, denominator, "pricing::spread::kirk::d2")?;
+        (big_n(d1)?, big_n(d2)?, big_n(-d1)?, big_n(-d2)?)
+    };
 
     match style {
         OptionStyle::Call => {
-            let call = s1_pv * big_n(d1)? - adjusted_strike_pv * big_n(d2)?;
+            let call = d_sub(
+                d_mul(s1_pv, n_d1, "pricing::spread::kirk::call::spot")?,
+                d_mul(
+                    adjusted_strike_pv,
+                    n_d2,
+                    "pricing::spread::kirk::call::strike",
+                )?,
+                "pricing::spread::kirk::call",
+            )?;
             Ok(call.max(dec!(0.0)))
         }
         OptionStyle::Put => {
-            let put = adjusted_strike_pv * big_n(-d2)? - s1_pv * big_n(-d1)?;
+            let put = d_sub(
+                d_mul(
+                    adjusted_strike_pv,
+                    n_neg_d2,
+                    "pricing::spread::kirk::put::strike",
+                )?,
+                d_mul(s1_pv, n_neg_d1, "pricing::spread::kirk::put::spot")?,
+                "pricing::spread::kirk::put",
+            )?;
             Ok(put.max(dec!(0.0)))
         }
     }
@@ -216,26 +315,96 @@ fn margrabe_formula(
     t: Decimal,
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
-        return Ok((s1 - s2).max(dec!(0.0)));
+        return Ok(d_sub(s1, s2, "pricing::spread::margrabe::intrinsic")?.max(dec!(0.0)));
     }
 
-    let sigma_sq = sigma1 * sigma1 + sigma2 * sigma2 - dec!(2.0) * rho * sigma1 * sigma2;
+    let sigma_sq = d_sub(
+        d_add(
+            d_mul(sigma1, sigma1, "pricing::spread::margrabe::var1")?,
+            d_mul(sigma2, sigma2, "pricing::spread::margrabe::var2")?,
+            "pricing::spread::margrabe::variance_sum",
+        )?,
+        d_mul(
+            d_mul(
+                d_mul(dec!(2.0), rho, "pricing::spread::margrabe::two_rho")?,
+                sigma1,
+                "pricing::spread::margrabe::two_rho_sigma1",
+            )?,
+            sigma2,
+            "pricing::spread::margrabe::covariance",
+        )?,
+        "pricing::spread::margrabe::sigma_sq",
+    )?;
 
     let sigma = sigma_sq
         .sqrt()
         .ok_or_else(|| PricingError::other("Failed to compute combined volatility"))?;
 
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute sqrt(t)"))?;
+    let sqrt_t = d_sqrt(t, "pricing::spread::margrabe::sqrt_t")?;
+    let denominator = d_mul(sigma, sqrt_t, "pricing::spread::margrabe::denominator")?;
 
-    let d1 = ((s1 / s2).ln() + (q2 - q1 + sigma * sigma / dec!(2.0)) * t) / (sigma * sqrt_t);
-    let d2 = d1 - sigma * sqrt_t;
+    let s1_pv = d_mul(
+        s1,
+        d_exp(
+            d_mul(-q1, t, "pricing::spread::margrabe::neg_q1t")?,
+            "pricing::spread::margrabe::discount1",
+        )?,
+        "pricing::spread::margrabe::s1_pv",
+    )?;
+    let s2_pv = d_mul(
+        s2,
+        d_exp(
+            d_mul(-q2, t, "pricing::spread::margrabe::neg_q2t")?,
+            "pricing::spread::margrabe::discount2",
+        )?,
+        "pricing::spread::margrabe::s2_pv",
+    )?;
 
-    let s1_pv = s1 * (-q1 * t).exp();
-    let s2_pv = s2 * (-q2 * t).exp();
+    // Zero combined volatility, or a `σ√T` that underflowed below the
+    // representable scale: the exchange ratio is deterministic and the option
+    // is worth the difference of the two present values.
+    if denominator.is_zero() {
+        return Ok(d_sub(s1_pv, s2_pv, "pricing::spread::margrabe::deterministic")?.max(dec!(0.0)));
+    }
 
-    let price = s1_pv * big_n(d1)? - s2_pv * big_n(d2)?;
+    // `S2 = 0`: `N(d1) = N(d2) = 1` and the option collapses to `S1`'s
+    // present value; a ratio that rounds to zero is the mirror limit.
+    if s2.is_zero() {
+        return Ok(s1_pv.max(dec!(0.0)));
+    }
+    let ratio = d_div(s1, s2, "pricing::spread::margrabe::ratio")?;
+    if ratio.is_zero() {
+        return Ok(dec!(0.0));
+    }
+
+    let d1 = d_div(
+        d_add(
+            d_ln(ratio, "pricing::spread::margrabe::log_ratio")?,
+            d_mul(
+                d_add(
+                    d_sub(q2, q1, "pricing::spread::margrabe::carry")?,
+                    d_div(
+                        d_mul(sigma, sigma, "pricing::spread::margrabe::variance")?,
+                        dec!(2.0),
+                        "pricing::spread::margrabe::half_variance",
+                    )?,
+                    "pricing::spread::margrabe::drift_rate",
+                )?,
+                t,
+                "pricing::spread::margrabe::drift",
+            )?,
+            "pricing::spread::margrabe::d1_numerator",
+        )?,
+        denominator,
+        "pricing::spread::margrabe::d1",
+    )?;
+    let d2 = d_sub(d1, denominator, "pricing::spread::margrabe::d2")?;
+
+    let price = d_sub(
+        d_mul(s1_pv, big_n(d1)?, "pricing::spread::margrabe::leg1")?,
+        d_mul(s2_pv, big_n(d2)?, "pricing::spread::margrabe::leg2")?,
+        "pricing::spread::margrabe::price",
+    )?;
 
     Ok(price.max(dec!(0.0)))
 }

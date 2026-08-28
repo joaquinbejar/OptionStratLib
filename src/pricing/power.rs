@@ -22,6 +22,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -40,9 +41,13 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The option type is not `Power`
-/// - The exponent is less than or equal to 0
+/// - [`PricingError::MethodError`] when the option type is not `Power`, when
+///   the exponent is not strictly positive, or when any `Decimal` ↔ `f64`
+///   boundary conversion fails (a non-finite `S^n`, forward, `d1` / `d2`, or
+///   discount factor produced by the `f64` kernel).
+/// - [`PricingError::Decimal`] when the final discounted legs leave the
+///   representable `Decimal` range.
+/// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn power_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let exponent = match &option.option_type {
         OptionType::Power { exponent } => *exponent,
@@ -107,8 +112,12 @@ fn power_price(
             .ok_or_else(|| PricingError::other("Failed to compute S^n"))?;
 
         return match style {
-            OptionStyle::Call => Ok((s_power - k).max(dec!(0.0))),
-            OptionStyle::Put => Ok((k - s_power).max(dec!(0.0))),
+            OptionStyle::Call => {
+                Ok(d_sub(s_power, k, "pricing::power::intrinsic::call")?.max(dec!(0.0)))
+            }
+            OptionStyle::Put => {
+                Ok(d_sub(k, s_power, "pricing::power::intrinsic::put")?.max(dec!(0.0)))
+            }
         };
     }
 
@@ -158,8 +167,24 @@ fn power_price(
         .ok_or_else(|| PricingError::other("Failed to convert discount"))?;
 
     let price = match style {
-        OptionStyle::Call => discount_dec * (forward_dec * big_n(d1_dec)? - k * big_n(d2_dec)?),
-        OptionStyle::Put => discount_dec * (k * big_n(-d2_dec)? - forward_dec * big_n(-d1_dec)?),
+        OptionStyle::Call => d_mul(
+            discount_dec,
+            d_sub(
+                d_mul(forward_dec, big_n(d1_dec)?, "pricing::power::call::forward")?,
+                d_mul(k, big_n(d2_dec)?, "pricing::power::call::strike")?,
+                "pricing::power::call::intrinsic",
+            )?,
+            "pricing::power::call",
+        )?,
+        OptionStyle::Put => d_mul(
+            discount_dec,
+            d_sub(
+                d_mul(k, big_n(-d2_dec)?, "pricing::power::put::strike")?,
+                d_mul(forward_dec, big_n(-d1_dec)?, "pricing::power::put::forward")?,
+                "pricing::power::put::intrinsic",
+            )?,
+            "pricing::power::put",
+        )?,
     };
 
     Ok(price.max(dec!(0.0)))

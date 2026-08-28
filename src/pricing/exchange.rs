@@ -26,6 +26,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::{OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -43,10 +44,13 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The option type is not `Exchange`
-/// - Required exotic parameters are missing
-/// - Correlation is outside the valid range [-1, 1]
+/// - [`PricingError::MethodError`] when the option type is not `Exchange`,
+///   when the required exotic parameters are missing, when the correlation is
+///   outside `[-1, 1]`, or when the combined variance is negative.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the combined variance, the two present
+///   values, `d1` / `d2`, or the final leg difference.
+/// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn exchange_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let second_asset_price = match &option.option_type {
         OptionType::Exchange { second_asset } => second_asset.to_dec(),
@@ -124,30 +128,98 @@ fn margrabe_formula(
     t: Decimal,
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
-        return Ok((s1 - s2).max(dec!(0.0)));
+        return Ok(d_sub(s1, s2, "pricing::exchange::intrinsic")?.max(dec!(0.0)));
     }
 
-    let sigma_sq = sigma1 * sigma1 + sigma2 * sigma2 - dec!(2.0) * rho * sigma1 * sigma2;
+    let sigma_sq = d_sub(
+        d_add(
+            d_mul(sigma1, sigma1, "pricing::exchange::var1")?,
+            d_mul(sigma2, sigma2, "pricing::exchange::var2")?,
+            "pricing::exchange::variance_sum",
+        )?,
+        d_mul(
+            d_mul(
+                d_mul(dec!(2.0), rho, "pricing::exchange::two_rho")?,
+                sigma1,
+                "pricing::exchange::two_rho_sigma1",
+            )?,
+            sigma2,
+            "pricing::exchange::covariance",
+        )?,
+        "pricing::exchange::sigma_sq",
+    )?;
 
     let sigma = sigma_sq
         .sqrt()
         .ok_or_else(|| PricingError::other("Failed to compute combined volatility"))?;
 
-    if sigma <= dec!(0.0) {
-        return Ok((s1 * (-q1 * t).exp() - s2 * (-q2 * t).exp()).max(dec!(0.0)));
+    let s1_pv = d_mul(
+        s1,
+        d_exp(
+            d_mul(-q1, t, "pricing::exchange::neg_q1t")?,
+            "pricing::exchange::discount1",
+        )?,
+        "pricing::exchange::s1_pv",
+    )?;
+    let s2_pv = d_mul(
+        s2,
+        d_exp(
+            d_mul(-q2, t, "pricing::exchange::neg_q2t")?,
+            "pricing::exchange::discount2",
+        )?,
+        "pricing::exchange::s2_pv",
+    )?;
+
+    let sqrt_t = d_sqrt(t, "pricing::exchange::sqrt_t")?;
+    let denominator = d_mul(sigma, sqrt_t, "pricing::exchange::denominator")?;
+
+    // Zero combined volatility, or a `σ√T` that underflowed below the
+    // representable scale: the exchange ratio is deterministic and the option
+    // is worth the difference of the two present values.
+    if sigma <= dec!(0.0) || denominator.is_zero() {
+        return Ok(d_sub(s1_pv, s2_pv, "pricing::exchange::deterministic")?.max(dec!(0.0)));
     }
 
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute sqrt(t)"))?;
+    // `S2 = 0`: the exchange ratio diverges, `N(d1) = N(d2) = 1` and the
+    // option collapses to the present value of the first asset.
+    if s2.is_zero() {
+        return Ok(s1_pv.max(dec!(0.0)));
+    }
+    let ratio = d_div(s1, s2, "pricing::exchange::ratio")?;
+    // `S1 = 0` (or a ratio that rounded below the representable scale): both
+    // normal arguments diverge to `-∞`, `N(d1) = N(d2) = 0`, price zero.
+    if ratio.is_zero() {
+        return Ok(dec!(0.0));
+    }
 
-    let d1 = ((s1 / s2).ln() + (q2 - q1 + sigma * sigma / dec!(2.0)) * t) / (sigma * sqrt_t);
-    let d2 = d1 - sigma * sqrt_t;
+    let d1 = d_div(
+        d_add(
+            d_ln(ratio, "pricing::exchange::log_ratio")?,
+            d_mul(
+                d_add(
+                    d_sub(q2, q1, "pricing::exchange::carry")?,
+                    d_div(
+                        d_mul(sigma, sigma, "pricing::exchange::variance")?,
+                        dec!(2.0),
+                        "pricing::exchange::half_variance",
+                    )?,
+                    "pricing::exchange::drift_rate",
+                )?,
+                t,
+                "pricing::exchange::drift",
+            )?,
+            "pricing::exchange::d1_numerator",
+        )?,
+        denominator,
+        "pricing::exchange::d1",
+    )?;
+    let d2 = d_sub(d1, denominator, "pricing::exchange::d2")?;
 
-    let s1_pv = s1 * (-q1 * t).exp();
-    let s2_pv = s2 * (-q2 * t).exp();
-
-    let price = s1_pv * big_n(d1)? - s2_pv * big_n(d2)?;
+    let price = d_sub(
+        d_mul(s1_pv, big_n(d1)?, "pricing::exchange::leg1")?,
+        d_mul(s2_pv, big_n(d2)?, "pricing::exchange::leg2")?,
+        "pricing::exchange::price",
+    )?;
 
     Ok(price.max(dec!(0.0)))
 }
