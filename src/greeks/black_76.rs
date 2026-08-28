@@ -18,14 +18,15 @@
 //!
 //! Greek units mirror the BSM module:
 //!
-//! * `delta_b76` — per unit move in `F`, applies long/short sign.
+//! * `delta_b76` — per unit move in `F`.
 //! * `gamma_b76` — per unit move in `F` (second order).
 //! * `vega_b76`  — per **1%** change in volatility.
 //! * `theta_b76` — per **calendar day** (annual figure divided by 365).
 //! * `rho_b76`   — per **1%** change in the risk-free rate.
 //!
-//! All quantities are returned as `Decimal` and scale linearly with
-//! `option.quantity`.
+//! Every value is the sensitivity of the position: [`Side::Long`] keeps the
+//! analytic long-option sign, [`Side::Short`] negates it, and
+//! `option.quantity` scales it linearly. All values are returned as `Decimal`.
 //!
 //! See `src/pricing/black_76.rs` for the matching pricing kernel.
 
@@ -56,6 +57,7 @@ fn ensure_european(option: &Options) -> Result<(), GreeksError> {
     }
 }
 
+#[inline]
 fn side_sign(option: &Options) -> Decimal {
     if matches!(option.side, Side::Long) {
         Decimal::ONE
@@ -119,8 +121,13 @@ pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// `Γ = e^(-rT) · n(d1) / (F · σ · √T)`
 ///
-/// Gamma is identical for calls and puts and does not flip with `Side`. Result
-/// is multiplied by `option.quantity`.
+/// The long-option gamma is identical for calls and puts.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -146,8 +153,9 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let numer = d_mul(df, n(d1)?, "greeks::black_76::gamma::numer")?;
     let raw = d_div(numer, denom, "greeks::black_76::gamma::raw")?;
 
+    let signed = d_mul(side_sign(option), raw, "greeks::black_76::gamma::sign")?;
     let result = d_mul(
-        raw,
+        signed,
         option.quantity.to_dec(),
         "greeks::black_76::gamma::quantity",
     )?;
@@ -164,9 +172,15 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Formula
 ///
 /// `ν = F · e^(-rT) · n(d1) · √T`, divided by 100 to express the sensitivity per
-/// 1 percentage point of volatility, then multiplied by `option.quantity`.
+/// 1 percentage point of volatility.
 ///
-/// Vega is identical for calls and puts and does not flip with `Side`.
+/// The long-option vega is identical for calls and puts.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -188,8 +202,9 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let leg2 = d_mul(leg1, n(d1)?, "greeks::black_76::vega::times_n")?;
     let raw = d_mul(leg2, sqrt_t, "greeks::black_76::vega::times_sqrt_t")?;
 
+    let signed = d_mul(side_sign(option), raw, "greeks::black_76::vega::sign")?;
     let weighted = d_mul(
-        raw,
+        signed,
         option.quantity.to_dec(),
         "greeks::black_76::vega::quantity",
     )?;
@@ -212,10 +227,13 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// - `Θ_call_year = -F·e^(-rT)·n(d1)·σ/(2√T) + r·F·e^(-rT)·N(d1) - r·K·e^(-rT)·N(d2)`
 /// - `Θ_put_year  = -F·e^(-rT)·n(d1)·σ/(2√T) - r·F·e^(-rT)·N(-d1) + r·K·e^(-rT)·N(-d2)`
 ///
-/// The annual figure is divided by 365 to express decay per calendar day, then
-/// multiplied by `option.quantity`.
+/// The annual figure is divided by 365 to express decay per calendar day.
 ///
-/// Theta does not flip with `Side`; the sign is governed by the formula itself.
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position therefore reports a positive theta
+/// when the equivalent long position loses value to time decay.
 ///
 /// # Errors
 ///
@@ -264,8 +282,9 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
         }
     };
 
+    let signed = d_mul(side_sign(option), annual, "greeks::black_76::theta::sign")?;
     let weighted = d_mul(
-        annual,
+        signed,
         option.quantity.to_dec(),
         "greeks::black_76::theta::quantity",
     )?;
@@ -294,8 +313,13 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// And symmetrically `ρ_put = -T · P`.
 ///
 /// The annual figure is divided by 100 to express the sensitivity per 1
-/// percentage point of rate, then multiplied by `option.quantity`. Rho does not
-/// flip with `Side`.
+/// percentage point of rate.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -332,8 +356,9 @@ pub fn rho_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let neg_t_df = d_mul(-t_dec, df, "greeks::black_76::rho::neg_t_df")?;
     let annual = d_mul(neg_t_df, bracket, "greeks::black_76::rho::annual")?;
 
+    let signed = d_mul(side_sign(option), annual, "greeks::black_76::rho::sign")?;
     let weighted = d_mul(
-        annual,
+        signed,
         option.quantity.to_dec(),
         "greeks::black_76::rho::quantity",
     )?;
@@ -420,6 +445,15 @@ mod tests {
 
     fn close(a: Decimal, b: Decimal, tol: Decimal) -> bool {
         (a - b).abs() < tol
+    }
+
+    type GreekCalculator = fn(&Options) -> Result<Decimal, GreeksError>;
+
+    fn greek_value(label: &str, result: Result<Decimal, GreeksError>) -> Decimal {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("{label} failed: {error:?}"),
+        }
     }
 
     // ---- delta ----------------------------------------------------------
@@ -684,22 +718,52 @@ mod tests {
     // ---- side and quantity ---------------------------------------------
 
     #[test]
-    fn test_side_short_negates_delta() {
-        let long = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
+    fn test_side_short_negates_every_greek() {
+        let mut long = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
+        long.quantity = pos_or_panic!(3.0);
         let mut short = long.clone();
         short.side = Side::Short;
-        let dl = delta_b76(&long).unwrap();
-        let ds = delta_b76(&short).unwrap();
-        assert_eq!(dl, -ds);
+
+        let calculators: [(&str, GreekCalculator); 5] = [
+            ("delta", delta_b76),
+            ("gamma", gamma_b76),
+            ("vega", vega_b76),
+            ("theta", theta_b76),
+            ("rho", rho_b76),
+        ];
+
+        for (label, calculate) in calculators {
+            let long_value = greek_value(label, calculate(&long));
+            let short_value = greek_value(label, calculate(&short));
+            assert_eq!(
+                long_value, -short_value,
+                "{label} did not negate for Side::Short"
+            );
+        }
     }
 
     #[test]
     fn test_quantity_scales_linearly() {
-        let mut opt = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
-        let d1 = delta_b76(&opt).unwrap();
-        opt.quantity = pos_or_panic!(3.0);
-        let d3 = delta_b76(&opt).unwrap();
-        assert!(close(d3, d1 * Decimal::from(3), dec!(1e-15)));
+        let one = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
+        let mut three = one.clone();
+        three.quantity = pos_or_panic!(3.0);
+
+        let calculators: [(&str, GreekCalculator); 5] = [
+            ("delta", delta_b76),
+            ("gamma", gamma_b76),
+            ("vega", vega_b76),
+            ("theta", theta_b76),
+            ("rho", rho_b76),
+        ];
+
+        for (label, calculate) in calculators {
+            let one_value = greek_value(label, calculate(&one));
+            let three_value = greek_value(label, calculate(&three));
+            assert!(
+                close(three_value, one_value * Decimal::from(3), dec!(1e-15)),
+                "{label} did not scale linearly with quantity"
+            );
+        }
     }
 
     // ---- trait ----------------------------------------------------------

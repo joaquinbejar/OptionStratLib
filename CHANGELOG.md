@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Breaking behaviour change.** Every greek now respects `Side`. Only `delta`
-  did before, so any strategy holding a short leg reported gamma, theta, vega,
-  rho and the higher-order greeks with the sign of the equivalent long position,
-  next to a delta that was signed correctly. A short-premium position looked as
-  though it was losing to time decay when it was collecting it. `Options::
-  quantity` is `Positive` and can never carry direction, so `Side` is the only
-  carrier of it (#428).
+- **Breaking behaviour change.** Every Black-Scholes/Merton greek in
+  `greeks::equations` now respects `Side`. Only `delta` did before, so any
+  strategy holding a short leg reported gamma, theta, vega, rho and the
+  higher-order greeks with the sign of the equivalent long position, next to a
+  delta that was signed correctly. A short-premium position looked as though it
+  was losing to time decay when it was collecting it. `Options::quantity` is
+  `Positive` and can never carry direction, so `Side` is the only carrier of it
+  (#428).
 
   Migration: any consumer that was compensating for the old behaviour, by
   negating the eleven unsigned greeks itself, must stop. A long and a short of
@@ -25,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   `OptionData::greeks_call` and `greeks_put` are unaffected: they are built
   through `get_option(Side::Long, style)` and remain per-long-contract values.
+
+- **Breaking behaviour change.** The Black-76 and Garman-Kohlhagen greek
+  families now use the same position-sign convention. Previously only their
+  deltas respected `Side`; a short futures or FX option therefore reported
+  gamma, vega, theta and rho with the sign of the equivalent long. All greeks in
+  both families are now signed by `Side` exactly once and scale linearly with
+  `quantity` (#436).
+
+  Migration: consumers that negated non-delta Black-76 or Garman-Kohlhagen
+  greeks for short positions must stop doing so.
 
 ### Changed
 

@@ -26,12 +26,16 @@
 //!
 //! Mirrors the BSM module:
 //!
-//! * `delta_gk` — per unit move in `S`, applies long/short sign.
+//! * `delta_gk` — per unit move in `S`.
 //! * `gamma_gk` — per unit move in `S` (second order).
 //! * `vega_gk`  — per **1%** change in volatility.
 //! * `theta_gk` — per **calendar day** (annual figure ÷ 365).
 //! * `rho_domestic_gk` — per **1%** change in `r_d`.
 //! * `rho_foreign_gk`  — per **1%** change in `r_f`.
+//!
+//! Every value is the sensitivity of the position: [`Side::Long`] keeps the
+//! analytic long-option sign, [`Side::Short`] negates it, and
+//! `option.quantity` scales it linearly.
 //!
 //! ## Two rhos
 //!
@@ -81,6 +85,7 @@ fn ensure_european(option: &Options) -> Result<(), GreeksError> {
     }
 }
 
+#[inline]
 fn side_sign(option: &Options) -> Decimal {
     if matches!(option.side, Side::Long) {
         Decimal::ONE
@@ -212,8 +217,14 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// # Formula
 ///
-/// `Γ = e^(-r_f·T) · n(d1) / (S · σ · √T)` — identical for calls and puts,
-/// independent of `Side`. Result is multiplied by `option.quantity`.
+/// `Γ = e^(-r_f·T) · n(d1) / (S · σ · √T)` — identical for long calls and
+/// long puts.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -243,7 +254,12 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let numer = d_mul(exp_neg_rf_t, n(d1_v)?, "greeks::gk::gamma::numer")?;
     let raw = d_div(numer, denom, "greeks::gk::gamma::raw")?;
 
-    let result = d_mul(raw, option.quantity.to_dec(), "greeks::gk::gamma::quantity")?;
+    let signed = d_mul(side_sign(option), raw, "greeks::gk::gamma::sign")?;
+    let result = d_mul(
+        signed,
+        option.quantity.to_dec(),
+        "greeks::gk::gamma::quantity",
+    )?;
     Ok(result)
 }
 
@@ -252,8 +268,14 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// # Formula
 ///
-/// `ν = S · e^(-r_f·T) · n(d1) · √T`, divided by 100. Identical for calls
-/// and puts, independent of `Side`.
+/// `ν = S · e^(-r_f·T) · n(d1) · √T`, divided by 100. It is identical for
+/// long calls and long puts.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -278,7 +300,12 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let leg2 = d_mul(leg1, n(d1_v)?, "greeks::gk::vega::times_n")?;
     let raw = d_mul(leg2, sqrt_t, "greeks::gk::vega::times_sqrt_t")?;
 
-    let weighted = d_mul(raw, option.quantity.to_dec(), "greeks::gk::vega::quantity")?;
+    let signed = d_mul(side_sign(option), raw, "greeks::gk::vega::sign")?;
+    let weighted = d_mul(
+        signed,
+        option.quantity.to_dec(),
+        "greeks::gk::vega::quantity",
+    )?;
     let result = d_div(weighted, Decimal::ONE_HUNDRED, "greeks::gk::vega::per_pct")?;
     Ok(result)
 }
@@ -291,8 +318,13 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Call: `Θ_call = -S·e^(-r_f T)·n(d1)·σ/(2√T) − r_d·K·e^(-r_d T)·N(d2) + r_f·S·e^(-r_f T)·N(d1)`
 /// - Put:  `Θ_put  = -S·e^(-r_f T)·n(d1)·σ/(2√T) + r_d·K·e^(-r_d T)·N(-d2) − r_f·S·e^(-r_f T)·N(-d1)`
 ///
-/// Annual figure divided by 365 to express decay per calendar day,
-/// multiplied by `option.quantity`.
+/// Annual figure divided by 365 to express decay per calendar day.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position therefore reports a positive theta
+/// when the equivalent long position loses value to time decay.
 ///
 /// # Errors
 ///
@@ -349,8 +381,9 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
         }
     };
 
+    let signed = d_mul(side_sign(option), annual, "greeks::gk::theta::sign")?;
     let weighted = d_mul(
-        annual,
+        signed,
         option.quantity.to_dec(),
         "greeks::gk::theta::quantity",
     )?;
@@ -366,8 +399,14 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Call: `ρ_d^call =  K · T · e^(-r_d·T) · N(d2)`
 /// - Put:  `ρ_d^put  = -K · T · e^(-r_d·T) · N(-d2)`
 ///
-/// Annual figure divided by 100, multiplied by `option.quantity`. Long
-/// calls have positive domestic rho; long puts have negative.
+/// Annual figure divided by 100. Long calls have positive domestic rho; long
+/// puts have negative domestic rho.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -396,7 +435,12 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => d_mul(base, big_n(d2_v)?, "greeks::gk::rho_d::call")?,
         OptionStyle::Put => -d_mul(base, big_n(-d2_v)?, "greeks::gk::rho_d::put")?,
     };
-    let weighted = d_mul(raw, option.quantity.to_dec(), "greeks::gk::rho_d::quantity")?;
+    let signed = d_mul(side_sign(option), raw, "greeks::gk::rho_d::sign")?;
+    let weighted = d_mul(
+        signed,
+        option.quantity.to_dec(),
+        "greeks::gk::rho_d::quantity",
+    )?;
     let result = d_div(weighted, Decimal::ONE_HUNDRED, "greeks::gk::rho_d::per_pct")?;
     Ok(result)
 }
@@ -409,8 +453,14 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
 /// - Call: `ρ_f^call = -S · T · e^(-r_f·T) · N(d1)`
 /// - Put:  `ρ_f^put  =  S · T · e^(-r_f·T) · N(-d1)`
 ///
-/// Annual figure divided by 100, multiplied by `option.quantity`. Long
-/// calls have negative foreign rho; long puts have positive.
+/// Annual figure divided by 100. Long calls have negative foreign rho; long
+/// puts have positive foreign rho.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `option.quantity`. A short position reports the negative of the
+/// equivalent long.
 ///
 /// # Errors
 ///
@@ -439,7 +489,12 @@ pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
         OptionStyle::Call => -d_mul(base, big_n(d1_v)?, "greeks::gk::rho_f::call")?,
         OptionStyle::Put => d_mul(base, big_n(-d1_v)?, "greeks::gk::rho_f::put")?,
     };
-    let weighted = d_mul(raw, option.quantity.to_dec(), "greeks::gk::rho_f::quantity")?;
+    let signed = d_mul(side_sign(option), raw, "greeks::gk::rho_f::sign")?;
+    let weighted = d_mul(
+        signed,
+        option.quantity.to_dec(),
+        "greeks::gk::rho_f::quantity",
+    )?;
     let result = d_div(weighted, Decimal::ONE_HUNDRED, "greeks::gk::rho_f::per_pct")?;
     Ok(result)
 }
@@ -521,6 +576,15 @@ mod tests {
 
     fn close(a: Decimal, b: Decimal, tol: Decimal) -> bool {
         (a - b).abs() < tol
+    }
+
+    type GreekCalculator = fn(&Options) -> Result<Decimal, GreeksError>;
+
+    fn greek_value(label: &str, result: Result<Decimal, GreeksError>) -> Decimal {
+        match result {
+            Ok(value) => value,
+            Err(error) => panic!("{label} failed: {error:?}"),
+        }
     }
 
     // ---- delta range and parity ----------------------------------------
@@ -660,19 +724,33 @@ mod tests {
     /// a known issue (d1 not carry-adjusted) — covered separately.
     #[test]
     fn test_matches_bsm_greeks_when_q_is_zero() {
-        let opt = create_fx_option(
-            100.0,
-            100.0,
-            dec!(0.05),
-            0.0,
-            180.0,
-            0.20,
-            OptionStyle::Call,
-        );
-        // delta and gamma agree exactly when q=0.
-        assert_eq!(delta_gk(&opt).unwrap(), delta(&opt).unwrap());
-        assert_eq!(gamma_gk(&opt).unwrap(), gamma(&opt).unwrap());
-        assert_eq!(vega_gk(&opt).unwrap(), vega(&opt).unwrap());
+        let calculators: [(&str, GreekCalculator, GreekCalculator); 3] = [
+            ("delta", delta_gk, delta),
+            ("gamma", gamma_gk, gamma),
+            ("vega", vega_gk, vega),
+        ];
+
+        for side in [Side::Long, Side::Short] {
+            let mut option = create_fx_option(
+                100.0,
+                100.0,
+                dec!(0.05),
+                0.0,
+                180.0,
+                0.20,
+                OptionStyle::Call,
+            );
+            option.side = side;
+
+            for (label, gk_calculator, bsm_calculator) in calculators {
+                let gk_value = greek_value(label, gk_calculator(&option));
+                let bsm_value = greek_value(label, bsm_calculator(&option));
+                assert_eq!(
+                    gk_value, bsm_value,
+                    "{label} differs for position side {side:?}"
+                );
+            }
+        }
     }
 
     // ---- theta vs numerical differentiation ----------------------------
@@ -783,20 +861,55 @@ mod tests {
     // ---- side and quantity --------------------------------------------
 
     #[test]
-    fn test_side_short_negates_delta() {
-        let long = create_fx_option(1.12, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Call);
+    fn test_side_short_negates_every_greek() {
+        let mut long =
+            create_fx_option(1.12, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Call);
+        long.quantity = pos_or_panic!(3.0);
         let mut short = long.clone();
         short.side = Side::Short;
-        assert_eq!(delta_gk(&long).unwrap(), -delta_gk(&short).unwrap());
+
+        let calculators: [(&str, GreekCalculator); 6] = [
+            ("delta", delta_gk),
+            ("gamma", gamma_gk),
+            ("vega", vega_gk),
+            ("theta", theta_gk),
+            ("rho_domestic", rho_domestic_gk),
+            ("rho_foreign", rho_foreign_gk),
+        ];
+
+        for (label, calculate) in calculators {
+            let long_value = greek_value(label, calculate(&long));
+            let short_value = greek_value(label, calculate(&short));
+            assert_eq!(
+                long_value, -short_value,
+                "{label} did not negate for Side::Short"
+            );
+        }
     }
 
     #[test]
     fn test_quantity_scales_linearly() {
-        let mut opt = create_fx_option(1.12, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Call);
-        let d1_value = delta_gk(&opt).unwrap();
-        opt.quantity = pos_or_panic!(4.0);
-        let d4 = delta_gk(&opt).unwrap();
-        assert!(close(d4, d1_value * Decimal::from(4), dec!(1e-15)));
+        let one = create_fx_option(1.12, 1.10, dec!(0.04), 0.02, 90.0, 0.10, OptionStyle::Call);
+        let mut four = one.clone();
+        four.quantity = pos_or_panic!(4.0);
+
+        let calculators: [(&str, GreekCalculator); 6] = [
+            ("delta", delta_gk),
+            ("gamma", gamma_gk),
+            ("vega", vega_gk),
+            ("theta", theta_gk),
+            ("rho_domestic", rho_domestic_gk),
+            ("rho_foreign", rho_foreign_gk),
+        ];
+
+        for (label, calculate) in calculators {
+            let one_value = greek_value(label, calculate(&one));
+            let four_value = greek_value(label, calculate(&four));
+            assert!(
+                close(four_value, one_value * Decimal::from(4), dec!(1e-15)),
+                "{label} did not scale linearly with quantity"
+            );
+        }
     }
 
     // ---- trait --------------------------------------------------------
