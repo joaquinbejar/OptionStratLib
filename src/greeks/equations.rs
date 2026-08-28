@@ -5221,6 +5221,55 @@ mod tests_side_sign_convention {
         }
     }
 
+    fn binary_option(side: Side, quantity: Positive) -> Options {
+        Options::new(
+            OptionType::Binary {
+                binary_type: crate::model::types::BinaryType::CashOrNothing,
+            },
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            quantity,
+            pos_or_panic!(105.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos_or_panic!(0.02),
+            None,
+        )
+    }
+
+    /// `delta` and `gamma` fall back to the numerical engine for anything that
+    /// is not European. That path prices through `price_option`, which takes the
+    /// absolute value, so it produces a per-contract long sensitivity and used
+    /// to return it unchanged: a short exotic reported the same exposure as its
+    /// long equivalent, and any quantity above one was under-scaled.
+    #[test]
+    fn test_non_european_fallback_is_signed_and_scaled() {
+        let one_long = binary_option(Side::Long, Positive::ONE);
+        let Ok(delta_one) = delta(&one_long) else {
+            panic!("a binary option should price through the numerical fallback");
+        };
+        let Ok(gamma_one) = gamma(&one_long) else {
+            panic!("a binary option should price through the numerical fallback");
+        };
+        assert!(
+            delta_one != Decimal::ZERO,
+            "the fixture must produce a non-zero delta for this test to mean anything"
+        );
+
+        // Scaled by quantity.
+        let three_long = binary_option(Side::Long, pos_or_panic!(3.0));
+        assert_eq!(ok(delta(&three_long), "delta"), delta_one * dec!(3));
+        assert_eq!(ok(gamma(&three_long), "gamma"), gamma_one * dec!(3));
+
+        // Signed by side.
+        let three_short = binary_option(Side::Short, pos_or_panic!(3.0));
+        assert_eq!(ok(delta(&three_short), "delta"), -delta_one * dec!(3));
+        assert_eq!(ok(gamma(&three_short), "gamma"), -gamma_one * dec!(3));
+    }
+
     #[test]
     fn test_signed_quantity_carries_the_side() {
         for quantity in [Positive::ONE, Positive::TWO, pos_or_panic!(7.5)] {
