@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-08-28
+
+Correctness and housekeeping follow-up to the cost-of-carry fix in 0.19.0. No
+API changes.
+
+### Fixed
+
+- `vomma` and `veta` applied the position quantity twice, because `vega`
+  already carries it. Both are first derivatives of vega and are linear in
+  position size, so a 10-lot position reported 10x the true value and the error
+  propagated into `PortfolioGreeks`.
+- `d1`'s documentation still described its third argument as the risk-free rate
+  after it was renamed to `carry_rate`, stating two different meanings for the
+  same argument in one doc block. `d1` and `d2` are public and in the prelude,
+  so a caller following it disagreed with `option.delta()` by about 10%.
+- Four stale `charm` expectations meant two tests over the identical portfolio
+  asserted different numbers, both within 2% of their tolerance.
+- `test_dividend_high_q_carry_regression` pinned eleven greeks at `1e-28`, far
+  tighter than the f64 normal CDF behind them supports. Relaxed to `1e-12`.
+
+### Changed
+
+- The `format_check` CI job ran `make fmt`, which formats rather than checks and
+  exited 0 whatever the input, so no pull request was ever format-checked. It
+  now runs `make fmt-check`.
+
 ## [0.19.0] - 2026-08-17
 
 Dependency refresh: every dependency moved to its latest stable minor, and the
