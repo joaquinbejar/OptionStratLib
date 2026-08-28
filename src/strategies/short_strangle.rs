@@ -20,6 +20,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::StrangleStrategy;
+use crate::strategies::base::lower_break_even;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -367,8 +368,10 @@ impl BreakEvenable for ShortStrangle {
         let total_premium = self.get_net_premium_received()?;
 
         self.break_even_points.push(
-            (self.short_put.option.strike_price
-                - (total_premium / self.short_put.option.quantity).to_dec())
+            lower_break_even(
+                self.short_put.option.strike_price,
+                total_premium / self.short_put.option.quantity,
+            )
             .round_to(2),
         );
 

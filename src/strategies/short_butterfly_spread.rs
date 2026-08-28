@@ -8,6 +8,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
+use crate::strategies::base::lower_break_even;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -377,8 +378,10 @@ impl BreakEvenable for ShortButterflySpread {
         }
 
         if right_net_value >= Decimal::ZERO {
-            self.break_even_points
-                .push((self.short_call_high.option.strike_price - right_net_value).round_to(2));
+            self.break_even_points.push(
+                lower_break_even(self.short_call_high.option.strike_price, right_net_value)
+                    .round_to(2),
+            );
         }
 
         self.break_even_points.sort();

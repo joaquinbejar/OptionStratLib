@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`OptionData::apply_spread` widens a thin quote instead of withdrawing it**
+  (#439). A contract whose mid sat below one full spread used to lose `bid`,
+  `ask` **and** `middle`. Both sides are now quoted around the mid — `mid ±
+  half_spread` — and floored at one tick (`10^-decimal_places`); a supplied mid
+  is kept, held inside the widened quote rather than cleared. Only a quote with
+  no mid and no two-sided book is still erased.
+- **Chains keep their cheap strikes, so row counts change.**
+  `OptionChain::build_chain` stops generating strikes once both wings come back
+  unpriced, so the erasure above also truncated the chain: a build with
+  `chain_size = n` returned `n + 1` rows and now returns the full `2n + 1`.
+  Downstream assertions on row counts, and anything iterating a chain, will see
+  the wings that used to disappear as they decayed.
+- `apply_spread` no longer changes the previous quote for a mid at or above the
+  tick. Below the tick it does deviate deliberately: a bid that used to round
+  to `0.00` is now floored at one tick, since a zero bid is not a market.
+- A `decimal_places` beyond `Decimal`'s maximum scale used to panic through
+  `Positive::round_to`; `apply_spread` now leaves the quotes untouched and logs.
+
+### Fixed
+
+- **Reachable panic in the lower break-even of eight strategies.**
+  `strike - credit` was computed with the raw `Positive - Decimal` operator,
+  which panics when the credit (or, on a long structure, the debit) exceeds the
+  strike — reachable from the optimizers as soon as a chain keeps its cheap
+  wings. `ShortStraddle`, `ShortStrangle`, `IronCondor`, `IronButterfly`,
+  `LongStraddle`, `LongStrangle`, `BearPutSpread` and `ShortButterflySpread` now
+  share `lower_break_even`, which floors at zero. A lower break-even of `0.00`
+  means the strategy has none (#439).
+
 ## [0.20.0] - 2026-08-28
 
 Two things land together. The option chain now carries the full twelve-greek set

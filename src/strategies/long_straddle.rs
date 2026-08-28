@@ -19,6 +19,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::StraddleStrategy;
+use crate::strategies::base::lower_break_even;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -365,8 +366,11 @@ impl BreakEvenable for LongStraddle {
         let total_cost = self.get_total_cost()?;
 
         self.break_even_points.push(
-            (self.long_put.option.strike_price - (total_cost / self.long_put.option.quantity))
-                .round_to(2),
+            lower_break_even(
+                self.long_put.option.strike_price,
+                total_cost / self.long_put.option.quantity,
+            )
+            .round_to(2),
         );
 
         self.break_even_points.push(

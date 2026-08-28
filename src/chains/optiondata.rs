@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 use utoipa::ToSchema;
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
@@ -208,6 +208,99 @@ pub struct OptionData {
     /// Same convention and the same `None` semantics as [`Self::greeks_call`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub greeks_put: Option<GreeksSnapshot>,
+}
+
+/// One tick at `decimal_places`: `0.01` for two decimals, `1` for zero.
+///
+/// The tick is the floor a widened quote is held at, so that a contract worth
+/// less than half a spread is still quoted rather than withdrawn.
+///
+/// Returns `None` for a scale `Decimal` cannot represent, so the caller stops
+/// rather than silently quoting on a `1.00` tick.
+#[inline]
+#[must_use]
+fn tick_size(decimal_places: u32) -> Option<Positive> {
+    Decimal::try_new(1, decimal_places)
+        .ok()
+        .and_then(|tick| Positive::new_decimal(tick).ok())
+}
+
+/// Widens a quote around `anchor` by half a spread on each side, flooring both
+/// sides at `tick` and keeping the bid at or below the ask.
+///
+/// The ask is floored too: without it, an anchor small enough that
+/// `anchor + half_spread` rounds down to zero would produce a bid above the
+/// ask.
+///
+/// Returns `None` when the widened ask leaves the representable `Decimal`
+/// range, or when `decimal_places` is a scale `Decimal` cannot round to.
+#[must_use]
+fn widen_around(
+    anchor: Positive,
+    half_spread: Decimal,
+    tick: Positive,
+    decimal_places: u32,
+) -> Option<(Positive, Positive)> {
+    let ask = anchor
+        .checked_add_dec(half_spread)
+        .ok()?
+        .checked_round_to(decimal_places)
+        .ok()?
+        .max(tick);
+    let bid = sub_floor_zero(anchor, &half_spread)
+        .checked_round_to(decimal_places)
+        .ok()?
+        .max(tick)
+        .min(ask);
+    Some((bid, ask))
+}
+
+/// Widens an existing two-sided book: the ask moves up half a spread, the bid
+/// down half a spread, both floored at `tick` and kept ordered.
+///
+/// Returns `None` on the same conditions as [`widen_around`].
+#[must_use]
+fn widen_book(
+    bid: Positive,
+    ask: Positive,
+    half_spread: Decimal,
+    tick: Positive,
+    decimal_places: u32,
+) -> Option<(Positive, Positive)> {
+    let new_ask = ask
+        .checked_add_dec(half_spread)
+        .ok()?
+        .checked_round_to(decimal_places)
+        .ok()?
+        .max(tick);
+    let new_bid = sub_floor_zero(bid, &half_spread)
+        .checked_round_to(decimal_places)
+        .ok()?
+        .max(tick)
+        .min(new_ask);
+    Some((new_bid, new_ask))
+}
+
+/// The mid of a two-sided quote, or `None` when it is not representable.
+#[inline]
+#[must_use]
+fn mid_of(bid: Positive, ask: Positive, decimal_places: u32) -> Option<Positive> {
+    bid.checked_add(&ask)
+        .ok()
+        .and_then(|sum| sum.checked_div(&Positive::TWO).ok())
+        .and_then(|mid| mid.checked_round_to(decimal_places).ok())
+}
+
+/// Holds a supplied mid inside the quote it belongs to.
+///
+/// Widening floors the bid at a tick and rounds both sides, so an anchor far
+/// below the tick — or merely one that rounds — would otherwise leave the row
+/// carrying a mid outside its own book. Clamping keeps the mid the caller
+/// supplied wherever it is still inside the quote, and never clears it.
+#[inline]
+#[must_use]
+fn mid_within(anchor: Positive, bid: Positive, ask: Positive) -> Positive {
+    anchor.max(bid).min(ask)
 }
 
 impl OptionData {
@@ -899,59 +992,82 @@ impl OptionData {
         Ok(())
     }
 
-    /// Applies a spread to the bid and ask prices of call and put options, then recalculates mid prices.
+    /// Widens the call and put quotes by the given spread, quoting around the
+    /// mid where there is one.
     ///
-    /// This method adjusts the bid and ask prices by half of the specified spread value,
-    /// subtracting from bid prices and adding to ask prices. It also ensures that all prices
-    /// are rounded to the specified number of decimal places. If any price becomes negative
-    /// after applying the spread, it is set to `None`.
+    /// Each side is moved half a spread away from the anchor — `mid + half`
+    /// for the ask, `mid - half` for the bid — and both are floored at one
+    /// tick, where a tick is `10^-decimal_places`. A contract cheaper than
+    /// half a spread is therefore quoted a tick bid against a widened ask,
+    /// which is what a thin market looks like; it is not withdrawn. The mid
+    /// is never cleared here: a mid that arrived is a mid, and dropping it
+    /// destroys information the caller supplied.
+    ///
+    /// A quote is erased only when there is nothing to quote: no mid, and no
+    /// two-sided book. A one-sided book with no mid is erased too — half a
+    /// market is not a market.
     ///
     /// # Arguments
     ///
     /// * `spread` - A positive decimal value representing the total spread to apply
-    /// * `decimal_places` - The number of decimal places to round the adjusted prices to
-    ///
-    /// # Inner Function
-    ///
-    /// The method contains an inner function `round_to_decimal` that handles the rounding
-    /// of prices after applying a shift (half the spread).
+    /// * `decimal_places` - The number of decimal places to round the adjusted
+    ///   prices to; it also fixes the tick. A scale `Decimal` cannot represent
+    ///   (above 28) leaves the quotes untouched.
     ///
     /// # Side Effects
     ///
-    /// * Updates `call_ask`, `call_bid`, `put_ask`, and `put_bid` fields with adjusted values
-    /// * Sets adjusted prices to `None` if they would become negative after applying the spread
-    /// * Calls `set_mid_prices()` to recalculate the mid prices based on the new bid/ask values
+    /// * Updates `call_ask`, `call_bid`, `put_ask` and `put_bid`
+    /// * Holds a supplied `call_middle` / `put_middle` inside the widened
+    ///   quote, and recomputes it from the sides for a quote that had none
+    /// * Leaves a side untouched, with a warning, when widening it would leave
+    ///   the representable `Decimal` range: this method returns `()`, so there
+    ///   is nowhere to report an arithmetic failure
     pub fn apply_spread(&mut self, spread: Positive, decimal_places: u32) {
         let half_spread: Decimal = (spread / Positive::TWO).into();
+        let Some(tick) = tick_size(decimal_places) else {
+            warn!(
+                decimal_places,
+                "apply_spread: no tick at this scale; quotes left unchanged"
+            );
+            return;
+        };
 
         match (self.call_ask, self.call_bid, self.call_middle) {
             (_, _, Some(call_middle)) => {
-                if call_middle > spread {
-                    self.call_ask = Some((call_middle + half_spread).round_to(decimal_places));
-                    self.call_bid =
-                        Some(sub_floor_zero(call_middle, &half_spread).round_to(decimal_places));
-                } else {
-                    trace!(
-                        "apply_spread: Call middle price is not greater than spread, cannot apply spread"
-                    );
-                    self.call_ask = None;
-                    self.call_bid = None;
-                    self.call_middle = None;
+                match widen_around(call_middle, half_spread, tick, decimal_places) {
+                    Some((bid, ask)) => {
+                        self.call_bid = Some(bid);
+                        self.call_ask = Some(ask);
+                        // The mid is kept, not cleared — but a mid below the
+                        // tick-floored bid would leave the row incoherent, and
+                        // `OptionData` is the serialized wire type.
+                        self.call_middle = Some(mid_within(call_middle, bid, ask));
+                    }
+                    None => warn!(
+                        mid = %call_middle,
+                        "apply_spread: widening the call quote overflows; quote left unchanged"
+                    ),
                 }
             }
             (Some(call_ask), Some(call_bid), None) => {
                 trace!(
                     "apply_spread: Call middle price is None; recomputing from bid/ask after applying spread"
                 );
-                let new_ask = (call_ask + half_spread).round_to(decimal_places);
-                let new_bid = sub_floor_zero(call_bid, &half_spread).round_to(decimal_places);
-                self.call_ask = Some(new_ask);
-                self.call_bid = Some(new_bid);
-                self.call_middle =
-                    Some(((new_ask + new_bid) / Positive::TWO).round_to(decimal_places));
+                match widen_book(call_bid, call_ask, half_spread, tick, decimal_places) {
+                    Some((bid, ask)) => {
+                        self.call_bid = Some(bid);
+                        self.call_ask = Some(ask);
+                        self.call_middle = mid_of(bid, ask, decimal_places);
+                    }
+                    None => warn!(
+                        bid = %call_bid,
+                        ask = %call_ask,
+                        "apply_spread: widening the call book overflows; quote left unchanged"
+                    ),
+                }
             }
             _ => {
-                trace!("apply_spread: Missing call ask or bid prices, cannot apply spread");
+                trace!("apply_spread: nothing to quote on the call side");
                 self.call_ask = None;
                 self.call_bid = None;
             }
@@ -959,32 +1075,40 @@ impl OptionData {
 
         match (self.put_ask, self.put_bid, self.put_middle) {
             (_, _, Some(put_middle)) => {
-                if put_middle > spread {
-                    self.put_ask = Some((put_middle + half_spread).round_to(decimal_places));
-                    self.put_bid =
-                        Some(sub_floor_zero(put_middle, &half_spread).round_to(decimal_places));
-                } else {
-                    trace!(
-                        "apply_spread: Put middle price is not greater than spread, cannot apply spread"
-                    );
-                    self.put_ask = None;
-                    self.put_bid = None;
-                    self.put_middle = None;
+                match widen_around(put_middle, half_spread, tick, decimal_places) {
+                    Some((bid, ask)) => {
+                        self.put_bid = Some(bid);
+                        self.put_ask = Some(ask);
+                        // The mid is kept, not cleared — but a mid below the
+                        // tick-floored bid would leave the row incoherent, and
+                        // `OptionData` is the serialized wire type.
+                        self.put_middle = Some(mid_within(put_middle, bid, ask));
+                    }
+                    None => warn!(
+                        mid = %put_middle,
+                        "apply_spread: widening the put quote overflows; quote left unchanged"
+                    ),
                 }
             }
             (Some(put_ask), Some(put_bid), None) => {
                 trace!(
                     "apply_spread: Put middle price is None; recomputing from bid/ask after applying spread"
                 );
-                let new_ask = (put_ask + half_spread).round_to(decimal_places);
-                let new_bid = sub_floor_zero(put_bid, &half_spread).round_to(decimal_places);
-                self.put_ask = Some(new_ask);
-                self.put_bid = Some(new_bid);
-                self.put_middle =
-                    Some(((new_ask + new_bid) / Positive::TWO).round_to(decimal_places));
+                match widen_book(put_bid, put_ask, half_spread, tick, decimal_places) {
+                    Some((bid, ask)) => {
+                        self.put_bid = Some(bid);
+                        self.put_ask = Some(ask);
+                        self.put_middle = mid_of(bid, ask, decimal_places);
+                    }
+                    None => warn!(
+                        bid = %put_bid,
+                        ask = %put_ask,
+                        "apply_spread: widening the put book overflows; quote left unchanged"
+                    ),
+                }
             }
             _ => {
-                trace!("apply_spread: Missing put ask or bid prices, cannot apply spread");
+                trace!("apply_spread: nothing to quote on the put side");
                 self.put_ask = None;
                 self.put_bid = None;
             }
@@ -1419,13 +1543,14 @@ mod optiondata_coverage_tests {
         assert_ne!(option_data.call_bid, original_call_bid);
         assert_ne!(option_data.call_ask, original_call_ask);
 
-        // Test with a spread that would make bid negative (should set to None)
+        // A bid that would go negative is floored at one tick, not withdrawn:
+        // a thin market is still a market.
         let mut option_data = create_test_option_data();
         option_data.call_bid = spos!(0.1);
         option_data.apply_spread(Positive::ONE, 2);
 
-        // Bid should be None as it would be negative
-        assert_eq!(option_data.call_bid, Some(Positive::ZERO));
+        assert_eq!(option_data.call_bid, spos!(0.01));
+        assert!(option_data.call_ask.unwrap() >= option_data.call_bid.unwrap());
     }
 
     #[test]
@@ -1442,13 +1567,14 @@ mod optiondata_coverage_tests {
         assert_ne!(option_data.put_bid, original_put_bid);
         assert_ne!(option_data.put_ask, original_put_ask);
 
-        // Test with a spread that would make bid negative (should set to None)
+        // A bid that would go negative is floored at one tick, not withdrawn:
+        // a thin market is still a market.
         let mut option_data = create_test_option_data();
         option_data.put_bid = spos!(0.1);
         option_data.apply_spread(Positive::ONE, 2);
 
-        // Bid should be None as it would be negative
-        assert_eq!(option_data.put_bid, Some(Positive::ZERO));
+        assert_eq!(option_data.put_bid, spos!(0.01));
+        assert!(option_data.put_ask.unwrap() >= option_data.put_bid.unwrap());
     }
 
     #[test]
@@ -3529,5 +3655,164 @@ mod tests_validate_option_data {
         // Option data is not valid because the put ask price is not provided
         let is_valid = option_data.validate();
         assert!(!is_valid);
+    }
+}
+
+#[cfg(test)]
+mod tests_apply_spread_widen_and_floor {
+    use super::*;
+    use positive::{pos_or_panic, spos};
+    use rust_decimal_macros::dec;
+
+    /// A quote with a mid and no bid/ask, which is what `build_chain` produces
+    /// before `apply_spread` runs.
+    fn quote_with_mid(call_middle: Positive, put_middle: Positive) -> OptionData {
+        let mut option_data = OptionData::new(
+            Positive::HUNDRED,
+            None,
+            None,
+            None,
+            None,
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("TEST".to_string()),
+            Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            None,
+            None,
+        );
+        option_data.call_middle = Some(call_middle);
+        option_data.put_middle = Some(put_middle);
+        option_data
+    }
+
+    #[test]
+    fn test_cheap_contract_is_quoted_not_erased() {
+        // The case from the issue: a six-cent option against a ten-cent
+        // spread used to lose its quotes and its mid.
+        let mut option_data = quote_with_mid(pos_or_panic!(0.06), pos_or_panic!(0.06));
+        option_data.apply_spread(pos_or_panic!(0.10), 2);
+
+        let call_bid = option_data.call_bid.expect("call bid is quoted");
+        let call_ask = option_data.call_ask.expect("call ask is quoted");
+        assert!(call_bid >= pos_or_panic!(0.01), "bid floored at a tick");
+        assert!(call_ask > pos_or_panic!(0.06), "ask widened above the mid");
+        assert!(call_bid <= call_ask);
+
+        let put_bid = option_data.put_bid.expect("put bid is quoted");
+        let put_ask = option_data.put_ask.expect("put ask is quoted");
+        assert!(put_bid >= pos_or_panic!(0.01));
+        assert!(put_ask > pos_or_panic!(0.06));
+        assert!(put_bid <= put_ask);
+    }
+
+    #[test]
+    fn test_mid_is_never_cleared_when_it_was_supplied() {
+        for mid in [0.001, 0.01, 0.06, 1.0, 100.0] {
+            let mid = Positive::new(mid).expect("test literal is positive");
+            let mut option_data = quote_with_mid(mid, mid);
+            option_data.apply_spread(pos_or_panic!(0.10), 2);
+
+            let call_middle = option_data.call_middle.expect("call mid was cleared");
+            let call_bid = option_data.call_bid.expect("call bid is quoted");
+            let call_ask = option_data.call_ask.expect("call ask is quoted");
+            assert!(
+                call_middle >= call_bid && call_middle <= call_ask,
+                "mid {call_middle} outside the quote {call_bid}/{call_ask}"
+            );
+            assert!(option_data.put_middle.is_some(), "put mid was cleared");
+
+            // A mid at or above the tick is inside its widened quote, so it
+            // survives untouched. One below the tick is lifted to the bid
+            // rather than left dangling under its own book.
+            if mid >= pos_or_panic!(0.01) {
+                assert_eq!(call_middle, mid, "mid inside the quote was moved");
+            } else {
+                assert_eq!(call_middle, call_bid, "sub-tick mid lifted to the bid");
+            }
+        }
+    }
+
+    #[test]
+    fn test_sub_tick_corner_at_and_above_the_old_threshold() {
+        // #439's criterion is that a contract whose mid exceeds the spread is
+        // unchanged. It holds down to the tick; below it the tick floor is the
+        // deliberate deviation, since a sub-tick bid is not a quote.
+        let mut at_threshold = quote_with_mid(pos_or_panic!(0.05), pos_or_panic!(0.05));
+        at_threshold.apply_spread(pos_or_panic!(0.04), 2);
+        assert_eq!(at_threshold.call_bid, spos!(0.03));
+        assert_eq!(at_threshold.call_ask, spos!(0.07));
+        assert_eq!(at_threshold.call_middle, spos!(0.05));
+
+        // Sub-tick mid against a sub-tick spread: the bid used to round to
+        // zero, which is not a price anyone trades at.
+        let mut sub_tick = quote_with_mid(pos_or_panic!(0.005), pos_or_panic!(0.005));
+        sub_tick.apply_spread(pos_or_panic!(0.004), 2);
+        assert_eq!(sub_tick.call_bid, spos!(0.01));
+        assert!(sub_tick.call_ask.unwrap() >= sub_tick.call_bid.unwrap());
+    }
+
+    #[test]
+    fn test_expensive_contract_keeps_its_previous_behaviour() {
+        // A mid above the spread quoted mid +/- half the spread before this
+        // change, and still does.
+        let mut option_data = quote_with_mid(pos_or_panic!(9.5), pos_or_panic!(8.5));
+        option_data.apply_spread(pos_or_panic!(0.6), 2);
+
+        assert_eq!(option_data.call_ask, spos!(9.8));
+        assert_eq!(option_data.call_bid, spos!(9.2));
+        assert_eq!(option_data.put_ask, spos!(8.8));
+        assert_eq!(option_data.put_bid, spos!(8.2));
+    }
+
+    #[test]
+    fn test_nothing_to_quote_is_still_erased() {
+        let mut option_data = OptionData::new(
+            Positive::HUNDRED,
+            None,
+            None,
+            None,
+            None,
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        option_data.apply_spread(pos_or_panic!(0.10), 2);
+
+        assert_eq!(option_data.call_bid, None);
+        assert_eq!(option_data.call_ask, None);
+        assert_eq!(option_data.put_bid, None);
+        assert_eq!(option_data.put_ask, None);
+    }
+
+    #[test]
+    fn test_tick_follows_decimal_places() {
+        for (decimal_places, tick) in [(0_u32, 1.0), (1, 0.1), (2, 0.01), (4, 0.0001)] {
+            let tick = Positive::new(tick).expect("test literal is positive");
+            let mut option_data = quote_with_mid(pos_or_panic!(0.000001), pos_or_panic!(0.000001));
+            option_data.apply_spread(pos_or_panic!(0.10), decimal_places);
+
+            assert_eq!(
+                option_data.call_bid,
+                Some(tick),
+                "bid floored at the {decimal_places}-decimal tick"
+            );
+        }
     }
 }

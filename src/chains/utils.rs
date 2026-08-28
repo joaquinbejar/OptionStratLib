@@ -938,7 +938,11 @@ mod tests_strike_step {
             implied_volatility,
         );
         let initial_chain = OptionChain::build_chain(&build_params).unwrap();
-        assert_eq!(initial_chain.len() - 1, chain_size);
+        // `chain_size` is a per-side half-width, so a chain that keeps every
+        // strike holds the ATM plus `chain_size` on each side. It used to hold
+        // `chain_size + 1` because the cheap side was withdrawn by
+        // `apply_spread` and the builder stopped generating strikes there.
+        assert_eq!(initial_chain.len(), 2 * chain_size + 1);
     }
 }
 

@@ -21,6 +21,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
+use crate::strategies::base::lower_break_even;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -456,7 +457,7 @@ impl BreakEvenable for IronButterfly {
             .push((self.short_call.option.strike_price + net_credit).round_to(2));
 
         self.break_even_points
-            .push((self.short_call.option.strike_price - net_credit).round_to(2));
+            .push(lower_break_even(self.short_call.option.strike_price, net_credit).round_to(2));
 
         self.break_even_points.sort();
         Ok(())
