@@ -12,6 +12,7 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{OptionData, chain::OptionChain},
@@ -333,7 +334,7 @@ impl CustomStrategy {
             }
         } else {
             // Multiple break-even points
-            let test_point = break_even_points[0] - pos_lit(dec!(0.01));
+            let test_point = price_gap(break_even_points[0], pos_lit(dec!(0.01)));
             let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
             let is_first_zone_profit = is_profit_below;
 

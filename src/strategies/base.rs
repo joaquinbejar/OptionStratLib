@@ -5,6 +5,7 @@
 use crate::chains::OptionData;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::model::utils::sub_floor_zero;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -1230,10 +1231,44 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     }
 }
 
+/// The lower break-even of a strategy: `strike - offset`, floored at zero.
+///
+/// A credit (or a debit, on a long structure) larger than the strike puts the
+/// break-even at or below zero, where the underlying cannot trade. The raw
+/// `Positive - Decimal` operator panics there, and that combination is
+/// reachable from the optimizers as soon as a chain keeps its cheap wings.
+///
+/// A returned `Positive::ZERO` therefore means "no lower break-even": the
+/// position cannot be losing on the downside at any attainable price.
+#[inline]
+#[must_use]
+pub(crate) fn lower_break_even(strike: Positive, offset: impl Into<Decimal>) -> Positive {
+    sub_floor_zero(strike, &offset.into())
+}
+
+/// The non-negative distance from `low` up to `high`.
+///
+/// Prices are [`Positive`], so subtracting the larger from the smaller panics.
+/// Every width in this module — a profit-area base, the start of a plot range —
+/// is a distance, and a distance that would come out negative is a region with
+/// no width, not an error and certainly not an abort. That case is reachable
+/// whenever a strategy has no lower break-even (see [`lower_break_even`]) and
+/// the width is measured against a real strike.
+#[inline]
+#[must_use]
+pub(crate) fn price_gap(high: Positive, low: Positive) -> Positive {
+    sub_floor_zero(high, &low.to_dec())
+}
+
 /// Trait for strategies that can calculate and update break-even points.
 ///
 /// This trait provides methods for retrieving and updating break-even points, which are
 /// crucial for determining profitability in various trading scenarios.
+///
+/// A lower break-even of `Positive::ZERO` means the strategy has none: the
+/// credit taken in (or, on a long structure, the debit paid) exceeds the
+/// strike, so no attainable price of the underlying puts the position in a
+/// loss on that side. See [`lower_break_even`].
 pub trait BreakEvenable {
     /// Retrieves the break-even points for the strategy.
     ///
@@ -2520,5 +2555,39 @@ mod tests_strategy_net_operations {
 
         let result = strategy.get_fees().unwrap();
         assert!(result > Positive::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_lower_break_even {
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_offset_below_the_strike_subtracts_normally() {
+        let break_even = lower_break_even(pos_or_panic!(100.0), dec!(12.5));
+        assert_eq!(break_even, pos_or_panic!(87.5));
+    }
+
+    #[test]
+    fn test_offset_equal_to_the_strike_is_zero() {
+        let break_even = lower_break_even(pos_or_panic!(100.0), dec!(100.0));
+        assert_eq!(break_even, Positive::ZERO);
+    }
+
+    #[test]
+    fn test_offset_above_the_strike_floors_at_zero_instead_of_panicking() {
+        // The raw `Positive - Decimal` operator panics here. A credit larger
+        // than the strike means there is no lower break-even: the position
+        // cannot lose on the downside at any attainable price.
+        let break_even = lower_break_even(pos_or_panic!(5.0), dec!(42.0));
+        assert_eq!(break_even, Positive::ZERO);
+    }
+
+    #[test]
+    fn test_positive_offset_is_accepted_without_a_conversion_at_the_call_site() {
+        let break_even = lower_break_even(pos_or_panic!(50.0), pos_or_panic!(60.0));
+        assert_eq!(break_even, Positive::ZERO);
     }
 }

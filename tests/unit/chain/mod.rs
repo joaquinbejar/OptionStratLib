@@ -13,3 +13,4 @@ mod random_walk_chain;
 mod risk_metrics_test;
 mod stress_metrics_test;
 mod temporal_metrics_test;
+mod wide_spread_chain_test;

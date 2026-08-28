@@ -25,6 +25,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::SpreadStrategy;
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -621,7 +622,11 @@ impl Strategies for BearCallSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
-        let base = (self.break_even_points[0] - self.short_call.option.strike_price).to_f64();
+        let base = price_gap(
+            self.break_even_points[0],
+            self.short_call.option.strike_price,
+        )
+        .to_f64();
         Ok(Decimal::from_f64(high * base / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {

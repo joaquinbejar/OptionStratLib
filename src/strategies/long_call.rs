@@ -23,6 +23,7 @@ use crate::pricing::payoff::Profit;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, Simulate};
 use crate::strategies::base::Optimizable;
+use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
@@ -291,7 +292,10 @@ impl Strategies for LongCall {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = self.long_call.option.strike_price - self.break_even_points[0];
+        let base = price_gap(
+            self.long_call.option.strike_price,
+            self.break_even_points[0],
+        );
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {

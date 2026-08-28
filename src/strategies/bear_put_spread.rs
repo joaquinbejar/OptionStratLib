@@ -26,6 +26,8 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::SpreadStrategy;
+use crate::strategies::base::lower_break_even;
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -344,9 +346,11 @@ impl BreakEvenable for BearPutSpread {
         self.break_even_points = Vec::new();
 
         self.break_even_points.push(
-            (self.long_put.option.strike_price
-                - self.get_net_cost()? / self.long_put.option.quantity)
-                .round_to(2),
+            lower_break_even(
+                self.long_put.option.strike_price,
+                self.get_net_cost()? / self.long_put.option.quantity,
+            )
+            .round_to(2),
         );
 
         Ok(())
@@ -615,7 +619,10 @@ impl Strategies for BearPutSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = self.break_even_points[0] - self.short_put.option.strike_price;
+        let base = price_gap(
+            self.break_even_points[0],
+            self.short_put.option.strike_price,
+        );
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {

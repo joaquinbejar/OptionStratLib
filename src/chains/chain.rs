@@ -5419,16 +5419,33 @@ mod tests_chain_base {
         info!("{}", chain);
         assert!(chain.options.len() > 1);
         assert_eq!(chain.underlying_price, pos_or_panic!(5878.10));
+        // `chain_size` is a per-side half-width: the ATM strike plus 25 on
+        // each side. The wings used to be withdrawn by `apply_spread` — their
+        // mid sat below one spread — which also stopped the builder from
+        // generating past them.
+        assert_eq!(chain.options.len(), 51);
+
         let first = chain.options.iter().next().unwrap();
-        assert_eq!(first.call_ask.unwrap(), 480.20);
-        assert_eq!(first.call_bid.unwrap(), 480.18);
-        assert_eq!(first.put_ask, None);
-        assert_eq!(first.put_bid, None);
+        assert_eq!(first.strike_price, pos_or_panic!(5250.0));
+        assert_eq!(first.call_ask, spos!(630.09));
+        assert_eq!(first.call_bid, spos!(630.07));
+        // Deep out-of-the-money put: quoted at the tick, not withdrawn.
+        // Deep out-of-the-money put: quoted at the tick, not withdrawn. The ask
+        // sits one tick above the bid because the spread is applied more than
+        // once per row — `OptionData::calculate_prices` applies it and
+        // `build_chain` applies it again — and a mid held at the tick widens by
+        // one more tick on the second pass before settling.
+        assert_eq!(first.put_bid, spos!(0.01));
+        assert_eq!(first.put_ask, spos!(0.02));
+        assert_eq!(first.put_middle, spos!(0.01));
+
         let last = chain.options.iter().next_back().unwrap();
-        assert_eq!(last.call_ask, None);
-        assert_eq!(last.call_bid, None);
-        assert_eq!(last.put_ask, spos!(469.19));
-        assert_eq!(last.put_bid, spos!(469.17));
+        assert_eq!(last.strike_price, pos_or_panic!(6500.0));
+        assert_eq!(last.call_bid, spos!(0.01));
+        assert_eq!(last.call_ask, spos!(0.02));
+        assert_eq!(last.call_middle, spos!(0.01));
+        assert_eq!(last.put_ask, spos!(619.07));
+        assert_eq!(last.put_bid, spos!(619.05));
     }
 
     #[test]
