@@ -1199,8 +1199,16 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-27.244276204109831381546317238), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
-        assert_decimal_eq!(vanna, dec!(-0.4905170891818293972168486173), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2569425433351718484053752895), dec!(0.00000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.4905170891818293972168486173),
+            dec!(0.0000001)
+        );
+        assert_decimal_eq!(
+            vomma,
+            dec!(6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
         assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1695474991264431915978503078), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
@@ -1246,8 +1254,16 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.001));
         assert_decimal_eq!(theta, dec!(-30.127616013684725380529216795), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
-        assert_decimal_eq!(vanna, dec!(-0.4905170891818293972168486173), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2569425433351718484053752895), dec!(0.00000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.4905170891818293972168486173),
+            dec!(0.0000001)
+        );
+        assert_decimal_eq!(
+            vomma,
+            dec!(6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
         assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1694105225826541109000514178), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
@@ -1310,8 +1326,16 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-27.244276204109831381546317238), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
-        assert_decimal_eq!(vanna, dec!(-0.4905170891818293972168486173), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2569425433351718484053752895), dec!(0.00000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.4905170891818293972168486173),
+            dec!(0.0000001)
+        );
+        assert_decimal_eq!(
+            vomma,
+            dec!(6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
         assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1695474991264431915978503078), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
@@ -1357,8 +1381,16 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.001));
         assert_decimal_eq!(theta, dec!(-30.127616013684725380529216795), dec!(0.001));
         assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
-        assert_decimal_eq!(vanna, dec!(-0.4905170891818293972168486173), dec!(0.0000001));
-        assert_decimal_eq!(vomma, dec!(6.2569425433351718484053752895), dec!(0.00000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.4905170891818293972168486173),
+            dec!(0.0000001)
+        );
+        assert_decimal_eq!(
+            vomma,
+            dec!(6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
         assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.1694105225826541109000514178), dec!(0.0000001));
         assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
@@ -1421,7 +1453,11 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.0105), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-0.64997), dec!(0.002));
         assert_decimal_eq!(rho, dec!(-0.000083), dec!(0.002));
-        assert_decimal_eq!(vanna, dec!(-0.0144632755644302251546856722), dec!(0.0000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.0144632755644302251546856722),
+            dec!(0.0000001)
+        );
         assert_decimal_eq!(vomma, dec!(0.3275301270), dec!(0.0000000001));
         assert_decimal_eq!(veta, dec!(0.0031824), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.0088981), dec!(0.0000001));
@@ -1481,7 +1517,11 @@ mod tests_implied_volatility {
         assert_decimal_eq!(vega, dec!(0.02255), dec!(0.002));
         assert_decimal_eq!(theta, dec!(-1.25733), dec!(0.002));
         assert_decimal_eq!(rho, dec!(0.204), dec!(0.002));
-        assert_decimal_eq!(vanna, dec!(-0.0274529936439301097044284653), dec!(0.0000001));
+        assert_decimal_eq!(
+            vanna,
+            dec!(-0.0274529936439301097044284653),
+            dec!(0.0000001)
+        );
         assert_decimal_eq!(vomma, dec!(0.6094669204), dec!(0.0000000001));
         assert_decimal_eq!(veta, dec!(0.0054321), dec!(0.0000001));
         assert_decimal_eq!(charm, dec!(0.0153063), dec!(0.0000001));

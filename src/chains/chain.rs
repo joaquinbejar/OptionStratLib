@@ -9909,7 +9909,11 @@ mod tests_vanna_calculations {
         assert!(result.is_ok());
         let vanna_exposure = result.unwrap();
         // Test against expected value from sample data
-        assert_decimal_eq!(vanna_exposure, dec!(-38.126585967162624451799179198), dec!(0.0001));
+        assert_decimal_eq!(
+            vanna_exposure,
+            dec!(-38.126585967162624451799179198),
+            dec!(0.0001)
+        );
     }
 
     #[test]

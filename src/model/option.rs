@@ -1911,98 +1911,158 @@ mod tests_greeks {
     fn test_delta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.delta().unwrap(), dec!(1.0676615164414271128950953874), EPSILON);
+        assert_decimal_eq!(
+            option.delta().unwrap(),
+            dec!(1.0676615164414271128950953874),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_gamma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.0692632117482215620683508231), EPSILON);
+        assert_decimal_eq!(
+            option.gamma().unwrap(),
+            dec!(0.0692632117482215620683508231),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_gamma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.gamma().unwrap(), dec!(0.1385264234964431241367016462), EPSILON);
+        assert_decimal_eq!(
+            option.gamma().unwrap(),
+            dec!(0.1385264234964431241367016462),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_theta() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.theta().unwrap(), dec!(-0.0434671314177636287945041349), EPSILON);
+        assert_decimal_eq!(
+            option.theta().unwrap(),
+            dec!(-0.0434671314177636287945041349),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_theta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.theta().unwrap(), dec!(-0.0869342628355272575890082697), EPSILON);
+        assert_decimal_eq!(
+            option.theta().unwrap(),
+            dec!(-0.0869342628355272575890082697),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vega() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.vega().unwrap(), dec!(0.1138573343806381728362131205), EPSILON);
+        assert_decimal_eq!(
+            option.vega().unwrap(),
+            dec!(0.1138573343806381728362131205),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vega_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.vega().unwrap(), dec!(0.2277146687612763456724262410), EPSILON);
+        assert_decimal_eq!(
+            option.vega().unwrap(),
+            dec!(0.2277146687612763456724262410),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_rho() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.rho().unwrap(), dec!(0.041863419880440417503050762), EPSILON);
+        assert_decimal_eq!(
+            option.rho().unwrap(),
+            dec!(0.041863419880440417503050762),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_rho_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.rho().unwrap(), dec!(0.0837268397608808350061015239), EPSILON);
+        assert_decimal_eq!(
+            option.rho().unwrap(),
+            dec!(0.0837268397608808350061015239),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_rho_d() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0438765006756750824436552223), EPSILON);
+        assert_decimal_eq!(
+            option.rho_d().unwrap(),
+            dec!(-0.0438765006756750824436552223),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_rho_d_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.rho_d().unwrap(), dec!(-0.0877530013513501648873104446), EPSILON);
+        assert_decimal_eq!(
+            option.rho_d().unwrap(),
+            dec!(-0.0877530013513501648873104446),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vanna() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.vanna().unwrap(), dec!(-0.0569286671903190864181065602), EPSILON);
+        assert_decimal_eq!(
+            option.vanna().unwrap(),
+            dec!(-0.0569286671903190864181065602),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vanna_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.vanna().unwrap(), dec!(-0.1138573343806381728362131204), EPSILON);
+        assert_decimal_eq!(
+            option.vanna().unwrap(),
+            dec!(-0.1138573343806381728362131204),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vomma() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.vomma().unwrap(), dec!(0.0014037205608571828124031742), EPSILON);
+        assert_decimal_eq!(
+            option.vomma().unwrap(),
+            dec!(0.0014037205608571828124031742),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_vomma_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.vomma().unwrap(), dec!(0.0056148822434287312496126966), EPSILON);
+        assert_decimal_eq!(
+            option.vomma().unwrap(),
+            dec!(0.0028074411217143656248063484),
+            EPSILON
+        );
     }
 
     #[test]
@@ -2015,33 +2075,67 @@ mod tests_greeks {
     fn test_veta_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000108824758), EPSILON);
+        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000054412378), EPSILON);
+    }
+
+    #[test]
+    fn test_vomma_and_veta_scale_linearly_in_quantity() {
+        // `vega` already carries the position size, so `vomma` and `veta` must
+        // not apply it a second time. Both are first derivatives of vega and
+        // are therefore linear, not quadratic, in quantity.
+        let single = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let vomma_per_lot = single.vomma().unwrap();
+        let veta_per_lot = single.veta().unwrap();
+
+        for lots in [2u64, 5, 10] {
+            let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+            option.quantity = pos_or_panic!(lots as f64);
+            let scale = Decimal::from(lots);
+            assert_decimal_eq!(option.vomma().unwrap(), vomma_per_lot * scale, EPSILON);
+            assert_decimal_eq!(option.veta().unwrap(), veta_per_lot * scale, EPSILON);
+        }
     }
 
     #[test]
     fn test_charm() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.charm().unwrap(), dec!(-0.0005546611716779658921659644), EPSILON);
+        assert_decimal_eq!(
+            option.charm().unwrap(),
+            dec!(-0.0005546611716779658921659644),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_charm_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.charm().unwrap(), dec!(-0.0011093223433559317843319287), EPSILON);
+        assert_decimal_eq!(
+            option.charm().unwrap(),
+            dec!(-0.0011093223433559317843319287),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_color() {
         let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.color().unwrap(), dec!(-0.0011648237847885846501315451), EPSILON);
+        assert_decimal_eq!(
+            option.color().unwrap(),
+            dec!(-0.0011648237847885846501315451),
+            EPSILON
+        );
     }
 
     #[test]
     fn test_color_size() {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.color().unwrap(), dec!(-0.0023296475695771693002630901), EPSILON);
+        assert_decimal_eq!(
+            option.color().unwrap(),
+            dec!(-0.0023296475695771693002630901),
+            EPSILON
+        );
     }
 }
 
