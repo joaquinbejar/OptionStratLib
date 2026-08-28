@@ -2783,8 +2783,11 @@ impl OptionChain {
     /// # Effects
     ///
     /// * Updates the `expiration_date` field of the option chain.
-    /// * Calls `update_greeks()` to recalculate and update the Greek values for all options
+    /// * Calls `update_greeks()` to recalculate delta and gamma for all options
     ///   in the chain based on the new expiration date.
+    /// * Drops any stored twelve-greek snapshots, which were computed against
+    ///   the old expiry. Call [`Self::update_greek_snapshots`] afterwards to
+    ///   repopulate them.
     ///
     /// # Example
     ///
@@ -2806,6 +2809,10 @@ impl OptionChain {
         let mut updated_options = BTreeSet::new();
         for mut option in self.options.iter().cloned() {
             option.expiration_date = expiration;
+            // Writing the field directly bypasses `set_extra_params`, so the
+            // stored greek snapshots would survive with the old expiry baked
+            // in. Drop them; `update_greek_snapshots` repopulates on demand.
+            option.invalidate_greek_snapshots();
             updated_options.insert(option);
         }
 

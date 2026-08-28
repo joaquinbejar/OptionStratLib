@@ -102,3 +102,34 @@ fn test_update_greek_snapshots_populates_snapshots_on_an_existing_chain() {
         "update_greek_snapshots should repopulate every strike"
     );
 }
+
+#[test]
+fn test_update_expiration_date_drops_stale_snapshots() {
+    // The expiry is written straight onto each row, bypassing set_extra_params,
+    // and update_greeks refreshes only delta and gamma. Without explicit
+    // invalidation the snapshots would survive with the old expiry baked in.
+    let mut chain = match OptionChain::build_chain(&build_params()) {
+        Ok(chain) => chain,
+        Err(e) => panic!("chain should build: {e}"),
+    };
+    assert!(chain.options.iter().all(|o| o.greeks_call.is_some()));
+
+    chain.update_expiration_date("2027-12-17".to_string());
+
+    assert!(
+        chain
+            .options
+            .iter()
+            .all(|o| o.greeks_call.is_none() && o.greeks_put.is_none()),
+        "changing the expiry must not leave snapshots from the old one"
+    );
+
+    chain.update_greek_snapshots();
+    assert!(
+        chain
+            .options
+            .iter()
+            .all(|o| o.greeks_call.is_some() && o.greeks_put.is_some()),
+        "update_greek_snapshots should repopulate against the new expiry"
+    );
+}

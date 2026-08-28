@@ -173,18 +173,28 @@ pub struct OptionData {
     /// # Sign and size convention
     ///
     /// The snapshot is computed for **one long contract**: the option is built
-    /// with [`Side::Long`] and `quantity: Positive::ONE`. A consumer holding a
-    /// short position must negate `delta` and **must not** negate the other
-    /// eleven, because the greek functions apply the long/short sign in `delta`
-    /// alone (see issue #428). Scaling by position size is likewise the
-    /// consumer's job.
+    /// with [`Side::Long`] and `quantity: Positive::ONE`. Every value is
+    /// therefore a derivative of the *long* position value.
+    ///
+    /// To turn it into the exposure of a short position, negate **all twelve**,
+    /// not just `delta`: a short is worth `-V`, so every derivative of `V`
+    /// flips sign with it. Scaling by position size is likewise the consumer's
+    /// job.
+    ///
+    /// Note this is deliberately *not* what [`crate::greeks::Greeks`] does when
+    /// aggregating a position today: it applies the long/short sign in `delta`
+    /// and nowhere else, which is the bug tracked in issue #428. These fields
+    /// are per-long-contract values and do not inherit that asymmetry.
     ///
     /// # When this is `None`
     ///
-    /// Populated by [`Self::calculate_greeks`], which the chain build path and
-    /// `OptionChain::update_greeks` call. It stays `None` when the greeks
+    /// Populated by [`Self::calculate_greeks`] and by
+    /// `OptionChain::update_greek_snapshots`. It stays `None` when the greeks
     /// cannot be computed for these inputs — most commonly a zero implied
-    /// volatility, or a missing symbol, expiration or underlying price.
+    /// volatility, or a missing symbol, expiration or underlying price — and is
+    /// cleared whenever the pricing inputs change underneath it, so a stored
+    /// snapshot is never stale. `OptionChain::update_greeks` refreshes only the
+    /// mirror fields and leaves this one alone.
     ///
     /// The relationship with [`Self::delta_call`] is one-directional: a chain
     /// ingested from a broker feed carries `delta_call` and `gamma` from the
@@ -437,7 +447,11 @@ impl OptionData {
     /// The mirror fields are deliberately left alone: they are also populated
     /// from broker feeds, where clearing them would discard data this crate
     /// never computed.
-    fn invalidate_greek_snapshots(&mut self) {
+    ///
+    /// Every field on this struct is public, so a caller writing one directly
+    /// bypasses this. Call it by hand after such a mutation, or recompute with
+    /// [`Self::calculate_greeks`].
+    pub(crate) fn invalidate_greek_snapshots(&mut self) {
         self.greeks_call = None;
         self.greeks_put = None;
     }
