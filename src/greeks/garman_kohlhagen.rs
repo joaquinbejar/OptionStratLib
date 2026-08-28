@@ -60,10 +60,12 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
+#[cfg(test)]
+use rust_decimal::MathematicalOps;
 use tracing::{instrument, trace};
 
 /// Reject any option type that is not European; Garman–Kohlhagen prices
@@ -194,7 +196,10 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t, "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     let raw = match option.option_style {
         OptionStyle::Call => d_mul(exp_neg_rf_t, big_n(d1_v)?, "greeks::gk::delta::call")?,
@@ -241,10 +246,13 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
     let s = option.underlying_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     let denom = d_mul(
         s,
@@ -292,9 +300,12 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
     let s = option.underlying_price.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     let leg1 = d_mul(s, exp_neg_rf_t, "greeks::gk::vega::s_df")?;
     let leg2 = d_mul(leg1, n(d1_v)?, "greeks::gk::vega::times_n")?;
@@ -345,9 +356,15 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let s = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
-    let exp_neg_rd_t = (-r_d * t.to_dec()).exp();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
+    let exp_neg_rd_t = d_exp(
+        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+        "greeks::gk::discount_domestic",
+    )?;
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     // Volatility decay term: -S·e^(-r_f T)·n(d1)·σ/(2√T)
     let two_sqrt_t = d_mul(Decimal::TWO, sqrt_t, "greeks::gk::theta::two_sqrt_t")?;
@@ -424,7 +441,10 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_d = option.risk_free_rate;
     let k = option.strike_price.to_dec();
-    let exp_neg_rd_t = (-r_d * t.to_dec()).exp();
+    let exp_neg_rd_t = d_exp(
+        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+        "greeks::gk::discount_domestic",
+    )?;
 
     let base = d_mul(
         k,
@@ -478,7 +498,10 @@ pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_f = option.dividend_yield.to_dec();
     let s = option.underlying_price.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     let base = d_mul(
         s,

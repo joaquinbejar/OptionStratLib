@@ -59,7 +59,25 @@ clean:
 
 # Pre-push checks
 .PHONY: check
-check: test fmt-check lint
+check: test fmt-check lint scan-banned
+
+# Fails when a panicking construct reappears in production code (test modules
+# and doc comments are skipped). A reviewed exception carries a trailing
+# `// scan-banned: allow -- <reason>` marker on the same line.
+.PHONY: scan-banned
+scan-banned:
+	@found=$$(for f in $$(find src -name '*.rs'); do \
+		awk -v file="$$f" '/#\[cfg\(test\)\]/ { exit } { print file ":" NR ":" $$0 }' "$$f"; \
+	done \
+		| grep -E '\.unwrap\(\)|\.expect\(' \
+		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*)' \
+		| grep -v 'scan-banned: allow' || true); \
+	if [ -n "$$found" ]; then \
+		echo "Banned patterns found in production code:"; \
+		echo "$$found"; \
+		exit 1; \
+	fi; \
+	echo "OK: no .unwrap()/.expect() in production code"
 
 # Run the project
 .PHONY: run

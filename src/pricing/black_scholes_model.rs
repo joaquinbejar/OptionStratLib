@@ -6,9 +6,9 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, calculate_d_values};
-use crate::model::decimal::{d_mul, d_sub};
+use crate::model::decimal::{d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use tracing::{instrument, trace};
 
 /// Computes the price of an option using the Black-Scholes model.
@@ -209,13 +209,18 @@ fn calculate_call_option_price(
         t,
         "pricing::black_scholes::call::rt",
     )?;
+    // `Decimal::exp` panics on overflow and on underflow; the checked
+    // helper flushes an underflowing discount factor to zero, which is its
+    // limit, and reports a genuine overflow as an error.
+    let discount_q = d_exp(qt, "pricing::black_scholes::call::exp_qt")?;
+    let discount_r = d_exp(rt, "pricing::black_scholes::call::exp_rt")?;
     let s_discounted = d_mul(
         option.underlying_price.to_dec(),
-        qt.exp(),
+        discount_q,
         "pricing::black_scholes::call::discount_s",
     )?;
     let k_discounted = d_mul(
-        rt.exp(),
+        discount_r,
         option.strike_price.to_dec(),
         "pricing::black_scholes::call::discount_k",
     )?;
@@ -233,11 +238,7 @@ fn calculate_call_option_price(
     let result = d_sub(s_leg, k_leg, "pricing::black_scholes::call::price")?;
     trace!(
         "Call Option Price: {} - {} * {} * {} = {}",
-        option.underlying_price,
-        option.strike_price,
-        rt.exp(),
-        big_n_d2,
-        result
+        option.underlying_price, option.strike_price, discount_r, big_n_d2, result
     );
     Ok(result)
 }
@@ -288,14 +289,16 @@ fn calculate_put_option_price(
         "pricing::black_scholes::put::qt",
     )?;
     let rt = d_mul(-option.risk_free_rate, t, "pricing::black_scholes::put::rt")?;
+    let discount_q = d_exp(qt, "pricing::black_scholes::put::exp_qt")?;
+    let discount_r = d_exp(rt, "pricing::black_scholes::put::exp_rt")?;
     let s_discounted = d_mul(
         option.underlying_price.to_dec(),
-        qt.exp(),
+        discount_q,
         "pricing::black_scholes::put::discount_s",
     )?;
     let k_discounted = d_mul(
         option.strike_price.to_dec(),
-        rt.exp(),
+        discount_r,
         "pricing::black_scholes::put::discount_k",
     )?;
 
@@ -1030,6 +1033,7 @@ mod tests_black_scholes_bis {
     use crate::model::types::{OptionStyle, Side};
     use crate::{ExpirationDate, assert_decimal_eq};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     fn create_base_option(side: Side, style: OptionStyle) -> Options {

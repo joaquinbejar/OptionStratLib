@@ -34,9 +34,11 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, calculate_d_values_black_76, n};
-use crate::model::decimal::{d_div, d_mul, d_sub};
+use crate::model::decimal::{d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
+#[cfg(test)]
+use rust_decimal::MathematicalOps;
 use tracing::{instrument, trace};
 
 /// Reject any option type that is not European; Black-76 only prices European
@@ -66,8 +68,14 @@ fn side_sign(option: &Options) -> Decimal {
     }
 }
 
-fn discount_factor(option: &Options, t: Decimal) -> Decimal {
-    (-option.risk_free_rate * t).exp()
+/// `e^(-rT)`, shared by every Black-76 greek.
+///
+/// Fallible because `Decimal::exp` panics on overflow and on underflow; a
+/// discount factor below the representable scale flushes to zero, which is
+/// its limit.
+fn discount_factor(option: &Options, t: Decimal) -> Result<Decimal, GreeksError> {
+    let exponent = d_mul(-option.risk_free_rate, t, "greeks::b76::discount::exponent")?;
+    Ok(d_exp(exponent, "greeks::b76::discount")?)
 }
 
 /// Computes the delta of an option under the Black-76 model.
@@ -95,7 +103,7 @@ pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?.to_dec();
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
-    let df = discount_factor(option, t);
+    let df = discount_factor(option, t)?;
     let raw = match option.option_style {
         OptionStyle::Call => d_mul(df, big_n(d1)?, "greeks::black_76::delta::call")?,
         OptionStyle::Put => -d_mul(df, big_n(-d1)?, "greeks::black_76::delta::put")?,
@@ -140,10 +148,10 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
-    let df = discount_factor(option, t.to_dec());
+    let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     let denom = d_mul(
         f,
@@ -193,9 +201,9 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     let (d1, _d2) = calculate_d_values_black_76(option)?;
 
-    let df = discount_factor(option, t.to_dec());
+    let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     // F * e^(-rT) * n(d1) * √T
     let leg1 = d_mul(f, df, "greeks::black_76::vega::f_df")?;
@@ -246,12 +254,12 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     let (d1, d2) = calculate_d_values_black_76(option)?;
 
-    let df = discount_factor(option, t.to_dec());
+    let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let r = option.risk_free_rate;
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     // Common (volatility-decay) term, negative: -F·e^(-rT)·n(d1)·σ/(2·√T)
     let two_sqrt_t = d_mul(Decimal::TWO, sqrt_t, "greeks::black_76::theta::two_sqrt_t")?;
@@ -332,7 +340,7 @@ pub fn rho_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     let (d1, d2) = calculate_d_values_black_76(option)?;
 
-    let df = discount_factor(option, t.to_dec());
+    let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let t_dec = t.to_dec();

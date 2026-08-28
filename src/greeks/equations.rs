@@ -6,12 +6,12 @@
 use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, n};
-use crate::model::decimal::{d_div, d_mul};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType};
 use crate::{Options, Side};
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::cell::OnceCell;
 use utoipa::ToSchema;
@@ -514,8 +514,14 @@ impl BlackScholesKernels {
     /// re-derived because every caller has already obtained it to test its own
     /// degenerate branch.
     fn new(option: &Options, t: Positive) -> Result<Self, GreeksError> {
-        let carry_rate = option.risk_free_rate - option.dividend_yield.to_dec();
-        let sqrt_t = t.sqrt();
+        let carry_rate = d_sub(
+            option.risk_free_rate,
+            option.dividend_yield.to_dec(),
+            "greeks::kernels::carry_rate",
+        )?;
+        // `Positive::sqrt` panics on overflow; the checked counterpart
+        // surfaces it as a `PositiveError` instead.
+        let sqrt_t = t.checked_sqrt()?;
         let d1 = d1(
             option.underlying_price,
             option.strike_price,
@@ -557,8 +563,18 @@ impl BlackScholesKernels {
     }
 
     /// `d2 = d1 - sigma * sqrt(T)`, exactly as [`crate::greeks::d2`] derives it.
-    fn d2(&self) -> Decimal {
-        *self.d2.get_or_init(|| self.d1 - self.sigma * self.sqrt_t)
+    ///
+    /// Fallible because `sigma * sqrt(T)` overflows for extreme inputs, and
+    /// the raw operator panics rather than reporting it.
+    fn d2(&self) -> Result<Decimal, GreeksError> {
+        cached(&self.d2, || {
+            let vol_time = d_mul(
+                self.sigma.to_dec(),
+                self.sqrt_t.to_dec(),
+                "greeks::kernels::d2::vol_time",
+            )?;
+            Ok(d_sub(self.d1, vol_time, "greeks::kernels::d2")?)
+        })
     }
 
     /// Normal pdf at `d1`; the most expensive single kernel.
@@ -575,23 +591,40 @@ impl BlackScholesKernels {
     }
 
     fn big_n_d2(&self) -> Result<Decimal, GreeksError> {
-        cached(&self.big_n_d2, || Ok(big_n(self.d2())?))
+        cached(&self.big_n_d2, || Ok(big_n(self.d2()?)?))
     }
 
     fn big_n_neg_d2(&self) -> Result<Decimal, GreeksError> {
-        cached(&self.big_n_neg_d2, || Ok(big_n(-self.d2())?))
+        cached(&self.big_n_neg_d2, || Ok(big_n(-self.d2()?)?))
     }
 
     /// `exp(-qT)`, the dividend discount factor.
-    fn exp_minus_qt(&self) -> Decimal {
-        *self
-            .exp_minus_qt
-            .get_or_init(|| (-self.t.to_dec() * self.q).exp())
+    ///
+    /// Fallible because both the exponent and the exponential overflow for
+    /// extreme inputs, where `Decimal`'s operators panic. An exponent so
+    /// negative that the factor is below the representable scale flushes to
+    /// zero, which is the discount factor's limit.
+    fn exp_minus_qt(&self) -> Result<Decimal, GreeksError> {
+        cached(&self.exp_minus_qt, || {
+            let exponent = d_mul(
+                -self.t.to_dec(),
+                self.q,
+                "greeks::kernels::exp_minus_qt::exponent",
+            )?;
+            Ok(d_exp(exponent, "greeks::kernels::exp_minus_qt")?)
+        })
     }
 
-    /// `exp(-rT)`, the risk-free discount factor.
-    fn exp_minus_rt(&self) -> Decimal {
-        *self.exp_minus_rt.get_or_init(|| (-self.r * self.t).exp())
+    /// `exp(-rT)`, the risk-free discount factor. See [`Self::exp_minus_qt`].
+    fn exp_minus_rt(&self) -> Result<Decimal, GreeksError> {
+        cached(&self.exp_minus_rt, || {
+            let exponent = d_mul(
+                -self.r,
+                self.t.to_dec(),
+                "greeks::kernels::exp_minus_rt::exponent",
+            )?;
+            Ok(d_exp(exponent, "greeks::kernels::exp_minus_rt")?)
+        })
     }
 }
 
@@ -663,7 +696,7 @@ fn greeks_for(option: &Options) -> Result<Greek, GreeksError> {
             vega: vega(option)?,
             rho: rho(option)?,
             rho_d: rho_d(option)?,
-            alpha: alpha_from(gamma, theta),
+            alpha: alpha_from(gamma, theta)?,
             vanna: vanna(option)?,
             vomma: vomma(option)?,
             veta: veta(option)?,
@@ -682,7 +715,7 @@ fn greeks_for(option: &Options) -> Result<Greek, GreeksError> {
         rho: rho_with(option, &kernels)?,
         rho_d: rho_d_with(option, &kernels)?,
         // Reuses the gamma and theta above instead of recomputing both.
-        alpha: alpha_from(gamma, theta),
+        alpha: alpha_from(gamma, theta)?,
         vanna: vanna_with(option, &kernels)?,
         vomma: vomma_with(option, &kernels)?,
         veta: veta_with(option, &kernels)?,
@@ -873,14 +906,20 @@ fn delta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     } else {
         Decimal::NEGATIVE_ONE
     };
-    let div_date = k.exp_minus_qt();
+    let div_date = k.exp_minus_qt()?;
+    let n_d1 = k.big_n_d1()?;
     let delta = match option.option_style {
-        OptionStyle::Call => sign * k.big_n_d1()? * div_date,
-        OptionStyle::Put => sign * (k.big_n_d1()? - Decimal::ONE) * div_date,
+        OptionStyle::Call => d_mul(sign, n_d1, "greeks::delta::call_sign")?,
+        OptionStyle::Put => d_mul(
+            sign,
+            d_sub(n_d1, Decimal::ONE, "greeks::delta::put_shift")?,
+            "greeks::delta::put_sign",
+        )?,
     };
+    let delta = d_mul(delta, div_date, "greeks::delta::discounted")?;
     let delta: Decimal = delta.clamp(Decimal::NEGATIVE_ONE, Decimal::ONE);
     let quantity: Decimal = option.quantity.into();
-    Ok(delta * quantity)
+    Ok(d_mul(delta, quantity, "greeks::delta::position_weighted")?)
 }
 
 /// Computes the gamma of an option.
@@ -1008,8 +1047,22 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let underlying_price: Decimal = option.underlying_price.into();
     let implied_volatility: Positive = option.implied_volatility;
 
-    let gamma: Decimal = k.exp_minus_qt() * k.n_d1()?
-        / (underlying_price * implied_volatility * k.sqrt_t().to_dec());
+    let numerator = d_mul(
+        k.exp_minus_qt()?,
+        k.n_d1()?,
+        "greeks::gamma::discounted_pdf",
+    )?;
+    let denominator = d_mul(
+        underlying_price,
+        implied_volatility.to_dec(),
+        "greeks::gamma::price_vol",
+    )?;
+    let denominator = d_mul(
+        denominator,
+        k.sqrt_t().to_dec(),
+        "greeks::gamma::price_vol_time",
+    )?;
+    let gamma: Decimal = d_div(numerator, denominator, "greeks::gamma")?;
 
     Ok(d_mul(
         gamma,
@@ -1151,23 +1204,48 @@ fn theta_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility.to_dec();
 
-    let exp_minus_rt = kernels.exp_minus_rt();
-    let exp_minus_qt = kernels.exp_minus_qt();
+    let exp_minus_rt = kernels.exp_minus_rt()?;
+    let exp_minus_qt = kernels.exp_minus_qt()?;
 
     // Common term using n. The e^{-qT} factor discounts the S·n(d1) term to
     // present value (the underlying contributes S·e^{-qT} to the payoff);
     // omitting it made |theta| too large for dividend-paying underlyings.
-    let common_term =
-        -(exp_minus_qt * s * kernels.n_d1()? * sigma) / (Decimal::TWO * kernels.sqrt_t());
+    let decay = d_mul(exp_minus_qt, s, "greeks::theta::decay_spot")?;
+    let decay = d_mul(decay, kernels.n_d1()?, "greeks::theta::decay_pdf")?;
+    let decay = d_mul(decay, sigma, "greeks::theta::decay_vol")?;
+    let decay_denominator = d_mul(
+        Decimal::TWO,
+        kernels.sqrt_t().to_dec(),
+        "greeks::theta::decay_time",
+    )?;
+    let common_term = -d_div(decay, decay_denominator, "greeks::theta::decay")?;
+
+    // Rate term: r · K · e^{-rT} · N(±d2); carry term: q · S · e^{-qT} · N(±d1).
+    let rate_term = d_mul(r, k, "greeks::theta::rate_strike")?;
+    let rate_term = d_mul(rate_term, exp_minus_rt, "greeks::theta::rate_discounted")?;
+    let carry_term = d_mul(q, s, "greeks::theta::carry_spot")?;
+    let carry_term = d_mul(carry_term, exp_minus_qt, "greeks::theta::carry_discounted")?;
 
     let theta = match option.option_style {
         OptionStyle::Call => {
-            common_term - r * k * exp_minus_rt * kernels.big_n_d2()?
-                + q * s * exp_minus_qt * kernels.big_n_d1()?
+            let rate = d_mul(rate_term, kernels.big_n_d2()?, "greeks::theta::call_rate")?;
+            let carry = d_mul(carry_term, kernels.big_n_d1()?, "greeks::theta::call_carry")?;
+            let theta = d_sub(common_term, rate, "greeks::theta::call_decay_rate")?;
+            d_add(theta, carry, "greeks::theta::call")?
         }
         OptionStyle::Put => {
-            common_term + r * k * exp_minus_rt * kernels.big_n_neg_d2()?
-                - q * s * exp_minus_qt * kernels.big_n_neg_d1()?
+            let rate = d_mul(
+                rate_term,
+                kernels.big_n_neg_d2()?,
+                "greeks::theta::put_rate",
+            )?;
+            let carry = d_mul(
+                carry_term,
+                kernels.big_n_neg_d1()?,
+                "greeks::theta::put_carry",
+            )?;
+            let theta = d_add(common_term, rate, "greeks::theta::put_decay_rate")?;
+            d_sub(theta, carry, "greeks::theta::put")?
         }
     };
 
@@ -1295,8 +1373,15 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
 fn vega_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, GreeksError> {
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
-    let vega: Decimal =
-        underlying_price * k.exp_minus_qt() * k.n_d1()? * k.sqrt_t() / Decimal::ONE_HUNDRED; // percentage of change in volatility
+    let vega = d_mul(
+        underlying_price,
+        k.exp_minus_qt()?,
+        "greeks::vega::discounted_spot",
+    )?;
+    let vega = d_mul(vega, k.n_d1()?, "greeks::vega::pdf")?;
+    let vega = d_mul(vega, k.sqrt_t().to_dec(), "greeks::vega::sqrt_time")?;
+    // percentage of change in volatility
+    let vega: Decimal = d_div(vega, Decimal::ONE_HUNDRED, "greeks::vega::per_percent")?;
 
     Ok(d_mul(
         vega,
@@ -1431,12 +1516,13 @@ fn rho_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal, 
     let k = option.strike_price.to_dec();
 
     // Base rho without sign; the discount uses the risk-free rate, not the carry.
-    let base_rho = k * t * kernels.exp_minus_rt();
+    let base_rho = d_mul(k, t.to_dec(), "greeks::rho::strike_time")?;
+    let base_rho = d_mul(base_rho, kernels.exp_minus_rt()?, "greeks::rho::discounted")?;
 
     // Calculate final rho based on option type
     let rho = match option.option_style {
-        OptionStyle::Call => base_rho * kernels.big_n_d2()?,
-        OptionStyle::Put => -base_rho * kernels.big_n_neg_d2()?,
+        OptionStyle::Call => d_mul(base_rho, kernels.big_n_d2()?, "greeks::rho::call")?,
+        OptionStyle::Put => d_mul(-base_rho, kernels.big_n_neg_d2()?, "greeks::rho::put")?,
     };
 
     // Adjust for quantity and convert to basis points (banker's rounding).
@@ -1573,13 +1659,16 @@ fn rho_d_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let expiration_date = k.t();
     let underlying_price: Decimal = option.underlying_price.to_dec();
 
+    let base = d_mul(
+        expiration_date.to_dec(),
+        underlying_price,
+        "greeks::rho_d::time_spot",
+    )?;
+    let base = d_mul(base, k.exp_minus_qt()?, "greeks::rho_d::discounted")?;
+
     let rhod = match option.option_style {
-        OptionStyle::Call => {
-            -expiration_date.to_dec() * underlying_price * k.exp_minus_qt() * k.big_n_d1()?
-        }
-        OptionStyle::Put => {
-            expiration_date.to_dec() * underlying_price * k.exp_minus_qt() * k.big_n_neg_d1()?
-        }
+        OptionStyle::Call => d_mul(-base, k.big_n_d1()?, "greeks::rho_d::call")?,
+        OptionStyle::Put => d_mul(base, k.big_n_neg_d1()?, "greeks::rho_d::put")?,
     };
 
     let weighted = d_mul(
@@ -1618,7 +1707,7 @@ fn rho_d_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
     let gamma = gamma(option)?;
     let theta = theta(option)?;
-    Ok(alpha_from(gamma, theta))
+    alpha_from(gamma, theta)
 }
 
 /// Alpha from a gamma and a theta that have already been computed.
@@ -1629,11 +1718,16 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// Returns `Decimal::MAX` as a sentinel when theta vanishes but gamma does not.
 /// Callers that publish the value are responsible for mapping it to something
 /// meaningful; see `OptionData::calculate_greeks`.
-fn alpha_from(gamma: Decimal, theta: Decimal) -> Decimal {
+///
+/// # Errors
+///
+/// Returns [`GreeksError`] when `gamma / theta` overflows the `Decimal`
+/// range; the raw operator would panic instead.
+fn alpha_from(gamma: Decimal, theta: Decimal) -> Result<Decimal, GreeksError> {
     match (gamma, theta) {
-        (val, _) if val == Decimal::ZERO => Decimal::ZERO,
-        (_, val) if val == Decimal::ZERO => Decimal::MAX,
-        _ => gamma / theta,
+        (val, _) if val == Decimal::ZERO => Ok(Decimal::ZERO),
+        (_, val) if val == Decimal::ZERO => Ok(Decimal::MAX),
+        _ => Ok(d_div(gamma, theta, "greeks::alpha")?),
     }
 }
 
@@ -1754,7 +1848,17 @@ fn vanna_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     // vanna = dDelta/dsigma = e^{-qT} * n(d1) * (dd1/dsigma), and the standard
     // result dd1/dsigma = -d2/sigma introduces an explicit minus sign, so the
     // closed form is -e^{-qT} * n(d1) * d2 / sigma (sign is opposite to d2).
-    let vanna: Decimal = -(k.exp_minus_qt() * k.n_d1()? * (k.d2() / implied_volatility));
+    let standardised_d2 = d_div(
+        k.d2()?,
+        implied_volatility.to_dec(),
+        "greeks::vanna::d2_over_sigma",
+    )?;
+    let vanna = d_mul(
+        k.exp_minus_qt()?,
+        k.n_d1()?,
+        "greeks::vanna::discounted_pdf",
+    )?;
+    let vanna: Decimal = -d_mul(vanna, standardised_d2, "greeks::vanna")?;
 
     Ok(d_mul(
         vanna,
@@ -1880,7 +1984,17 @@ fn vomma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let vega = vega_with(option, k)?;
     let implied_volatility: Positive = option.implied_volatility;
 
-    Ok(vega * (k.d1() * k.d2() / implied_volatility))
+    // `d1 · d2 / sigma` is the site that aborted a live request: a volatility
+    // approaching zero pushes the quotient out of `Decimal`'s range, and both
+    // the multiplication and the division panic there.
+    let d1_d2 = d_mul(k.d1(), k.d2()?, "greeks::vomma::d1_d2")?;
+    let scaled = d_div(
+        d1_d2,
+        implied_volatility.to_dec(),
+        "greeks::vomma::d1_d2_over_sigma",
+    )?;
+
+    Ok(d_mul(vega, scaled, "greeks::vomma")?)
 }
 
 /// Computes the veta of an option.
@@ -1991,17 +2105,39 @@ fn veta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
     let implied_volatility: Positive = option.implied_volatility;
     let dividend_yield: Decimal = option.dividend_yield.into();
     let risk_free_rate: Decimal = option.risk_free_rate;
-    let add1 = (risk_free_rate - dividend_yield) * k.d1() / (implied_volatility * k.sqrt_t());
-    let add2 = (Decimal::ONE + k.d1() * k.d2()) / (Decimal::TWO * expiration_date);
+    let carry = d_sub(risk_free_rate, dividend_yield, "greeks::veta::carry")?;
+    let add1_numerator = d_mul(carry, k.d1(), "greeks::veta::carry_d1")?;
+    let add1_denominator = d_mul(
+        implied_volatility.to_dec(),
+        k.sqrt_t().to_dec(),
+        "greeks::veta::vol_time",
+    )?;
+    let add1 = d_div(add1_numerator, add1_denominator, "greeks::veta::carry_term")?;
 
-    let veta: Decimal = -vega * (dividend_yield + add1 - add2);
+    let d1_d2 = d_mul(k.d1(), k.d2()?, "greeks::veta::d1_d2")?;
+    let add2_numerator = d_add(Decimal::ONE, d1_d2, "greeks::veta::one_plus_d1_d2")?;
+    let add2_denominator = d_mul(
+        Decimal::TWO,
+        expiration_date.to_dec(),
+        "greeks::veta::two_tau",
+    )?;
+    let add2 = d_div(add2_numerator, add2_denominator, "greeks::veta::time_term")?;
+
+    let bracket = d_add(dividend_yield, add1, "greeks::veta::bracket_carry")?;
+    let bracket = d_sub(bracket, add2, "greeks::veta::bracket")?;
+    let veta: Decimal = d_mul(-vega, bracket, "greeks::veta")?;
     // It is common practice to divide the mathematical result of veta by
     // 100 times the number of days per year to reduce the value to the
     // percentage change in vega per one day
     // `vega` already carries `option.quantity`. Veta is a first derivative of
     // vega and is linear in position size, so the quantity must not be applied
     // a second time here.
-    Ok(veta / (*TRADING_DAYS * Decimal::ONE_HUNDRED))
+    let scale = d_mul(
+        TRADING_DAYS.to_dec(),
+        Decimal::ONE_HUNDRED,
+        "greeks::veta::scale",
+    )?;
+    Ok(d_div(veta, scale, "greeks::veta::per_day_percent")?)
 }
 
 /// Computes the Charm of an option.
@@ -2143,15 +2279,36 @@ fn charm_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let exp_minus_qt = k.exp_minus_qt();
-    let common_term = (Decimal::TWO * (r - q) * tau - k.d2() * sigma * k.sqrt_t())
-        / (Decimal::TWO * tau * sigma * k.sqrt_t());
+    let exp_minus_qt = k.exp_minus_qt()?;
+
+    // common_term = (2(r-q)τ − d2·σ·√τ) / (2τ·σ·√τ)
+    let carry = d_sub(r, q, "greeks::charm::carry")?;
+    let carry_term = d_mul(Decimal::TWO, carry, "greeks::charm::two_carry")?;
+    let carry_term = d_mul(carry_term, tau.to_dec(), "greeks::charm::carry_tau")?;
+    let vol_time = d_mul(
+        sigma.to_dec(),
+        k.sqrt_t().to_dec(),
+        "greeks::charm::vol_time",
+    )?;
+    let d2_term = d_mul(k.d2()?, vol_time, "greeks::charm::d2_vol_time")?;
+    let numerator = d_sub(carry_term, d2_term, "greeks::charm::numerator")?;
+    let denominator = d_mul(Decimal::TWO, tau.to_dec(), "greeks::charm::two_tau")?;
+    let denominator = d_mul(denominator, vol_time, "greeks::charm::denominator")?;
+    let common_term = d_div(numerator, denominator, "greeks::charm::common_term")?;
+
+    let pdf_term = d_mul(exp_minus_qt, k.n_d1()?, "greeks::charm::discounted_pdf")?;
+    let pdf_term = d_mul(pdf_term, common_term, "greeks::charm::pdf_common")?;
+
     let charm = match option.option_style {
         OptionStyle::Call => {
-            (q * exp_minus_qt * k.big_n_d1()?) - (exp_minus_qt * k.n_d1()? * common_term)
+            let carry_leg = d_mul(q, exp_minus_qt, "greeks::charm::call_carry")?;
+            let carry_leg = d_mul(carry_leg, k.big_n_d1()?, "greeks::charm::call_carry_cdf")?;
+            d_sub(carry_leg, pdf_term, "greeks::charm::call")?
         }
         OptionStyle::Put => {
-            (-q * exp_minus_qt * k.big_n_neg_d1()?) - (exp_minus_qt * k.n_d1()? * common_term)
+            let carry_leg = d_mul(-q, exp_minus_qt, "greeks::charm::put_carry")?;
+            let carry_leg = d_mul(carry_leg, k.big_n_neg_d1()?, "greeks::charm::put_carry_cdf")?;
+            d_sub(carry_leg, pdf_term, "greeks::charm::put")?
         }
     };
     // Adjust for quantity and convert to daily value.
@@ -2291,11 +2448,31 @@ fn color_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let s = option.underlying_price;
     let q = option.dividend_yield.to_dec();
     let sigma = option.implied_volatility;
-    let exp_minus_qt = k.exp_minus_qt();
-    let factor1 = k.n_d1()? / (Decimal::TWO * s * tau * sigma * k.sqrt_t());
-    let numerator = (Decimal::TWO * (r - q) * tau) - (k.d2() * sigma * k.sqrt_t());
-    let denominator = sigma * k.sqrt_t();
-    let factor2 = (Decimal::TWO * q * tau) + Decimal::ONE + ((numerator / denominator) * k.d1());
+    let exp_minus_qt = k.exp_minus_qt()?;
+
+    // factor1 = n(d1) / (2·S·τ·σ·√τ)
+    let scale = d_mul(Decimal::TWO, s.to_dec(), "greeks::color::two_spot")?;
+    let scale = d_mul(scale, tau.to_dec(), "greeks::color::two_spot_tau")?;
+    let vol_time = d_mul(
+        sigma.to_dec(),
+        k.sqrt_t().to_dec(),
+        "greeks::color::vol_time",
+    )?;
+    let scale = d_mul(scale, vol_time, "greeks::color::factor1_denominator")?;
+    let factor1 = d_div(k.n_d1()?, scale, "greeks::color::factor1")?;
+
+    // factor2 = 2qτ + 1 + d1·(2(r-q)τ − d2·σ·√τ) / (σ·√τ)
+    let carry = d_sub(r, q, "greeks::color::carry")?;
+    let carry_term = d_mul(Decimal::TWO, carry, "greeks::color::two_carry")?;
+    let carry_term = d_mul(carry_term, tau.to_dec(), "greeks::color::carry_tau")?;
+    let d2_term = d_mul(k.d2()?, vol_time, "greeks::color::d2_vol_time")?;
+    let numerator = d_sub(carry_term, d2_term, "greeks::color::factor2_numerator")?;
+    let ratio = d_div(numerator, vol_time, "greeks::color::factor2_ratio")?;
+    let ratio = d_mul(ratio, k.d1(), "greeks::color::factor2_ratio_d1")?;
+    let dividend_term = d_mul(Decimal::TWO, q, "greeks::color::two_q")?;
+    let dividend_term = d_mul(dividend_term, tau.to_dec(), "greeks::color::two_q_tau")?;
+    let factor2 = d_add(dividend_term, Decimal::ONE, "greeks::color::factor2_base")?;
+    let factor2 = d_add(factor2, ratio, "greeks::color::factor2")?;
     // Build the color numerator with checked multiplications so an
     // overflow on `-exp(-qt) * factor1 * factor2 * quantity` surfaces
     // a tagged `DecimalError::Overflow` instead of silently saturating
@@ -5161,7 +5338,7 @@ mod tests_shared_kernel_equivalence {
         };
 
         assert_eq!(kernels.d1(), fresh_d1, "d1");
-        assert_eq!(kernels.d2(), fresh_d2, "d2 derived from d1");
+        assert_eq!(kernels.d2().ok(), Some(fresh_d2), "d2 derived from d1");
         assert_eq!(kernels.sqrt_t(), t.sqrt(), "sqrt(T)");
         assert_eq!(kernels.n_d1().ok(), n(fresh_d1).ok(), "n(d1)");
         assert_eq!(kernels.big_n_d1().ok(), big_n(fresh_d1).ok(), "big_n(d1)");
@@ -5177,13 +5354,13 @@ mod tests_shared_kernel_equivalence {
             "big_n(-d2)"
         );
         assert_eq!(
-            kernels.exp_minus_qt(),
-            (-t.to_dec() * option.dividend_yield).exp(),
+            kernels.exp_minus_qt().ok(),
+            d_exp(-t.to_dec() * option.dividend_yield, "test::exp_minus_qt").ok(),
             "exp(-qT)"
         );
         assert_eq!(
-            kernels.exp_minus_rt(),
-            (-option.risk_free_rate * t).exp(),
+            kernels.exp_minus_rt().ok(),
+            d_exp(-option.risk_free_rate * t, "test::exp_minus_rt").ok(),
             "exp(-rT)"
         );
     }

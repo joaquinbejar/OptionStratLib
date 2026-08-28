@@ -31,7 +31,7 @@ use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
-use chrono::{NaiveDate, Utc};
+use chrono::{Duration, NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 #[cfg(test)]
@@ -253,6 +253,35 @@ impl<'de> Deserialize<'de> for OptionChain {
     }
 }
 
+/// Rejects a relative expiration that no calendar date can represent.
+///
+/// [`ExpirationDate::get_date_string`] resolves `Days(n)` as `now + n days`
+/// with `DateTime + TimeDelta`, which panics on overflow instead of
+/// reporting it. A chain built from a caller-supplied day count reaches that
+/// addition directly, so the span is validated here first.
+///
+/// # Errors
+///
+/// Returns [`ChainError::invalid_parameters`] when the day count is outside
+/// the range a `DateTime<Utc>` can hold.
+fn reject_unrepresentable_expiration(expiration_date: &ExpirationDate) -> Result<(), ChainError> {
+    let ExpirationDate::Days(days) = expiration_date else {
+        return Ok(());
+    };
+    let out_of_range = || {
+        ChainError::invalid_parameters(
+            "expiration_date",
+            &format!("expiration of {days} days is outside the representable calendar range"),
+        )
+    };
+    let whole_days = days.to_dec().trunc().to_i64().ok_or_else(out_of_range)?;
+    let span = Duration::try_days(whole_days).ok_or_else(out_of_range)?;
+    Utc::now()
+        .checked_add_signed(span)
+        .ok_or_else(out_of_range)?;
+    Ok(())
+}
+
 impl OptionChain {
     /// Creates a new `OptionChain` for a specific underlying instrument and expiration date.
     ///
@@ -391,6 +420,7 @@ impl OptionChain {
                 "missing expiration date in price params",
             )
         })?;
+        reject_unrepresentable_expiration(&expiration_date)?;
 
         let strike_interval = if let Some(strike_interval) = params.strike_interval {
             strike_interval
@@ -551,16 +581,36 @@ impl OptionChain {
                 break;
             }
 
-            let next_upper_strike = atm_strike + (strike_interval * counter);
+            // `Positive`'s operators panic on overflow, and both the offset
+            // and the upper strike overflow once the ATM strike sits near the
+            // top of the `Decimal` range. A grid that cannot be represented
+            // is a bad parameter set, not a chain to truncate silently.
+            let offset = strike_interval.checked_mul(&counter).map_err(|e| {
+                ChainError::invalid_parameters(
+                    "strike_interval",
+                    &format!("strike offset overflows at step {counter}: {e}"),
+                )
+            })?;
+            let next_upper_strike = atm_strike.checked_add(&offset).map_err(|e| {
+                ChainError::invalid_parameters(
+                    "underlying_price",
+                    &format!("strike {atm_strike} + {offset} is not representable: {e}"),
+                )
+            })?;
             let next_upper_option_data =
                 create_chain_data(&next_upper_strike, params, underlying_price)?;
             option_chain.options.insert(next_upper_option_data.clone());
 
-            let strike_step = (strike_interval * counter).to_dec();
+            let strike_step = offset.to_dec();
             if strike_step > atm_strike.to_dec() {
                 break;
             }
-            let next_lower_strike = atm_strike - (strike_interval * counter).to_dec();
+            let next_lower_strike = atm_strike.checked_sub(&offset).map_err(|e| {
+                ChainError::invalid_parameters(
+                    "strike_interval",
+                    &format!("strike {atm_strike} - {offset} is not representable: {e}"),
+                )
+            })?;
             if next_lower_strike == Positive::ZERO {
                 break;
             }

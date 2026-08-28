@@ -420,6 +420,94 @@ pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
     Ok(raw.round_dp_with_strategy(DIV_DEFAULT_SCALE, RoundingStrategy::MidpointNearestEven))
 }
 
+/// Checked `e^x` with underflow flushed to zero.
+///
+/// Crate-private helper used by every kernel in place of
+/// [`MathematicalOps::exp`], which panics with `Exp overflowed` /
+/// `Exp underflowed` instead of reporting the failure.
+///
+/// A negative argument whose exponential is smaller than the smallest
+/// representable `Decimal` (`1e-28`) returns `Decimal::ZERO`: that is the
+/// value the discount factor takes at the limit, and it is the only
+/// representable answer. A positive argument that overflows is a real
+/// failure and is reported as such — the caller asked for a number the type
+/// cannot hold.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when `x` is positive and `e^x` is
+/// outside the representable `Decimal` range.
+#[inline]
+pub(crate) fn d_exp(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    if let Some(value) = x.checked_exp() {
+        return Ok(value);
+    }
+    if x.is_sign_negative() {
+        // e^x < 1e-28 for x <= -65: zero is the representable limit.
+        return Ok(Decimal::ZERO);
+    }
+    Err(DecimalError::overflow(op, x, Decimal::ZERO))
+}
+
+/// Checked natural logarithm.
+///
+/// Crate-private helper used in place of [`MathematicalOps::ln`], which
+/// panics on zero and on negative inputs. Note that a ratio such as `S / K`
+/// can round down to exactly zero for extreme operands, so the zero case is
+/// reachable from ordinary-looking code.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ArithmeticError`] when `x` is zero or negative,
+/// or when the series evaluation fails to converge to a representable
+/// value.
+#[inline]
+pub(crate) fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    if x <= Decimal::ZERO {
+        return Err(DecimalError::arithmetic_error(
+            op,
+            "logarithm of a non-positive value",
+        ));
+    }
+    x.checked_ln()
+        .ok_or_else(|| DecimalError::arithmetic_error(op, "logarithm is not representable"))
+}
+
+/// Checked `base^exponent`.
+///
+/// Crate-private helper used in place of [`MathematicalOps::powd`], which
+/// panics with `Pow overflowed` both when the result is too large and when
+/// it underflows below the representable scale.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when the power is outside the
+/// representable `Decimal` range.
+#[inline]
+pub(crate) fn d_powd(
+    base: Decimal,
+    exponent: Decimal,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    base.checked_powd(exponent)
+        .ok_or_else(|| DecimalError::overflow(op, base, exponent))
+}
+
+/// Checked square root.
+///
+/// Crate-private helper wrapping [`MathematicalOps::sqrt`], which returns
+/// `None` for negative inputs rather than panicking, so this only has to
+/// give the failure a typed shape.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ArithmeticError`] when `x` is negative.
+#[inline]
+pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    x.sqrt()
+        .ok_or_else(|| DecimalError::arithmetic_error(op, "square root of a negative value"))
+}
+
 /// Converts a Decimal value to f64 without error checking.
 ///
 /// This macro converts a Decimal type to an f64 floating-point value.

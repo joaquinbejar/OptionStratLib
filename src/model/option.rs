@@ -5,6 +5,7 @@ use crate::error::{
     GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
 };
 use crate::greeks::Greeks;
+use crate::model::decimal::d_sub;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -616,7 +617,10 @@ impl Options {
     pub fn time_value(&self) -> OptionsResult<Decimal> {
         let option_price = self.calculate_price_black_scholes()?.abs();
         let intrinsic_value = self.intrinsic_value(self.underlying_price)?;
-        Ok((option_price - intrinsic_value).max(Decimal::ZERO))
+        // `Decimal`'s `-` panics on overflow, which a price near the top of
+        // the range against a negative intrinsic value reaches.
+        let time_value = d_sub(option_price, intrinsic_value, "model::option::time_value")?;
+        Ok(time_value.max(Decimal::ZERO))
     }
 
     /// Validates that the option parameters are in a valid state for calculations.

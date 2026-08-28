@@ -7,12 +7,14 @@
 use crate::Options;
 use crate::error::decimal::DecimalError;
 use crate::error::greeks::{DeltaNeutralityErrorKind, GreeksError, InputErrorKind, MathErrorKind};
-use crate::model::decimal::{d_div, d_mul, d_sub, f64_to_decimal};
+use crate::model::decimal::{
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, f64_to_decimal,
+};
 use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
 use num_traits::ToPrimitive;
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use statrs::distribution::{ContinuousCDF, Normal};
 
@@ -122,18 +124,47 @@ pub fn d1(
     // d1 = (ln(S / K) + (b + σ² / 2) * T) / (σ * sqrt(T))
     // where b = carry_rate is the cost of carry: b = r − q for a
     // dividend-paying underlying (r − dividend_yield), r otherwise.
+    // Every step below goes through the checked helpers: the raw `Decimal`
+    // and `Positive` operators panic on overflow, and `ln` panics on zero,
+    // both of which are reachable from ordinary-looking inputs (a tiny
+    // strike, a huge underlying, a volatility at the edge of the scale).
     let underlying_price: Decimal = underlying_price.to_dec();
-    let implied_volatility_squared = implied_volatility.powd(Decimal::TWO);
+    let strike: Decimal = strike_price.to_dec();
+    let sigma: Decimal = implied_volatility.to_dec();
+    let time_to_expiry: Decimal = expiration_date.to_dec();
+
+    let implied_volatility_squared = d_powd(sigma, Decimal::TWO, "greeks::d1::sigma_squared")?;
     let ln_price_ratio = match strike_price {
         value if value == Positive::MAX => Decimal::MIN,
-        _ => (underlying_price / strike_price).ln(),
+        _ => {
+            let moneyness = d_div(underlying_price, strike, "greeks::d1::moneyness")?;
+            if moneyness.is_zero() {
+                // `S / K` fell below the smallest representable `Decimal`, so
+                // `ln` is `-inf`. Represented the same way as the
+                // `Positive::MAX` strike branch above.
+                Decimal::MIN
+            } else {
+                d_ln(moneyness, "greeks::d1::log_moneyness")?
+            }
+        }
     };
 
-    let rate_vol_term = carry_rate + implied_volatility_squared / Decimal::TWO;
-    let numerator = ln_price_ratio + rate_vol_term * expiration_date;
-    let denominator = implied_volatility * expiration_date.sqrt();
+    let half_variance = d_div(
+        implied_volatility_squared,
+        Decimal::TWO,
+        "greeks::d1::half_variance",
+    )?;
+    let rate_vol_term = d_add(carry_rate, half_variance, "greeks::d1::carry_term")?;
+    let drift = d_mul(rate_vol_term, time_to_expiry, "greeks::d1::drift")?;
+    let numerator = d_add(ln_price_ratio, drift, "greeks::d1::numerator")?;
+    let sqrt_time = d_sqrt(time_to_expiry, "greeks::d1::sqrt_time")?;
+    let denominator = d_mul(sigma, sqrt_time, "greeks::d1::denominator")?;
 
-    match numerator.checked_div(denominator.into()) {
+    if denominator.is_zero() {
+        return Err(GreeksError::MathError(MathErrorKind::DivisionByZero));
+    }
+
+    match numerator.checked_div(denominator) {
         Some(result) => Ok(result),
         None => Err(GreeksError::MathError(MathErrorKind::Overflow)),
     }
@@ -237,7 +268,13 @@ pub fn d2(
         implied_volatility,
     )?;
 
-    Ok(d1_value - implied_volatility * expiration_date.sqrt())
+    let sqrt_time = d_sqrt(expiration_date.to_dec(), "greeks::d2::sqrt_time")?;
+    let vol_time = d_mul(
+        implied_volatility.to_dec(),
+        sqrt_time,
+        "greeks::d2::vol_time",
+    )?;
+    Ok(d_sub(d1_value, vol_time, "greeks::d2::adjustment")?)
 }
 
 /// Computes the probability density function (PDF) of the standard normal distribution
@@ -301,15 +338,25 @@ pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
     // 1 / sqrt(2π) — standard normal PDF normalisation constant.
     // Precomputed so we avoid the runtime fallible sqrt on Decimal.
     const NORM_FACTOR: Decimal = dec!(0.3989422804014326779399461);
-    let pre_pdf = -x.powd(Decimal::TWO) / Decimal::TWO;
+
+    // `x²` overflows the `Decimal` range for a large `|x|`, and `powd`
+    // panics rather than reporting it. The pdf is already flushed to zero
+    // below `|x| = 4.84` (the `-11.7` cut-off underneath), so anything past
+    // 5 returns zero without ever squaring it.
+    if x.abs() > dec!(5) {
+        return Ok(Decimal::ZERO);
+    }
+
+    let x_squared = d_powd(x, Decimal::TWO, "greeks::n::x_squared")?;
+    let pre_pdf = -d_div(x_squared, Decimal::TWO, "greeks::n::half_x_squared")?;
 
     // avoid Exp underflowed
     if pre_pdf < dec!(-11.7) {
         return Ok(Decimal::ZERO);
     }
 
-    let pdf = pre_pdf.exp();
-    Ok(NORM_FACTOR * pdf) // N(x) = [1 / sqrt(2 * PI)] * e^(-x^2 / 2)
+    let pdf = d_exp(pre_pdf, "greeks::n::exp")?;
+    Ok(d_mul(NORM_FACTOR, pdf, "greeks::n::normalisation")?) // N(x) = [1 / sqrt(2 * PI)] * e^(-x^2 / 2)
 }
 
 /// Calculate the derivative of the function `n` at a given point `x`.
@@ -453,7 +500,13 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
 ///
 #[inline]
 pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
-    let b = option.risk_free_rate - option.dividend_yield.to_dec();
+    // `Decimal`'s `-` panics on overflow, which a rate at the edge of the
+    // range reaches (`Decimal::MIN` minus any positive yield).
+    let b = d_sub(
+        option.risk_free_rate,
+        option.dividend_yield.to_dec(),
+        "greeks::carry_rate",
+    )?;
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
