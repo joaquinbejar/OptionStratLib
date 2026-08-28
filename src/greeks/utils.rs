@@ -60,6 +60,10 @@ use statrs::distribution::{ContinuousCDF, Normal};
 /// - **InvalidVolatility**: Triggered when `implied_volatility` is zero.
 /// - **InvalidTime**: Triggered when `expiration_date` is zero or less.
 ///
+/// Returns `GreeksError::MathError` or a `DecimalError` when an intermediate
+/// step leaves the representable `Decimal` range: `sigma²`, the moneyness
+/// `S / K`, the drift, or the final quotient.
+///
 /// # Example
 ///
 /// ```rust
