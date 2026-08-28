@@ -20,6 +20,7 @@ use super::base::{
 };
 use super::shared::StrangleStrategy;
 use crate::strategies::base::lower_break_even;
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -681,7 +682,9 @@ impl Strategies for LongStrangle {
             "First break even point: {} Last break even point: {}",
             first_option, last_option
         );
-        let start_price = first_option - diff.to_dec();
+        // No lower break-even puts `first_option` at zero, and the plot range
+        // cannot start below it.
+        let start_price = price_gap(first_option, diff);
         debug!("Start price: {}", start_price);
         let end_price = last_option + diff;
         debug!("End price: {}", end_price);

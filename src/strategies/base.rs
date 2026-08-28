@@ -1246,6 +1246,20 @@ pub(crate) fn lower_break_even(strike: Positive, offset: impl Into<Decimal>) -> 
     sub_floor_zero(strike, &offset.into())
 }
 
+/// The non-negative distance from `low` up to `high`.
+///
+/// Prices are [`Positive`], so subtracting the larger from the smaller panics.
+/// Every width in this module — a profit-area base, the start of a plot range —
+/// is a distance, and a distance that would come out negative is a region with
+/// no width, not an error and certainly not an abort. That case is reachable
+/// whenever a strategy has no lower break-even (see [`lower_break_even`]) and
+/// the width is measured against a real strike.
+#[inline]
+#[must_use]
+pub(crate) fn price_gap(high: Positive, low: Positive) -> Positive {
+    sub_floor_zero(high, &low.to_dec())
+}
+
 /// Trait for strategies that can calculate and update break-even points.
 ///
 /// This trait provides methods for retrieving and updating break-even points, which are

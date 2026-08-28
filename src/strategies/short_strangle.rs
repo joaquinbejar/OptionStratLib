@@ -21,6 +21,7 @@ use super::base::{
 };
 use super::shared::StrangleStrategy;
 use crate::strategies::base::lower_break_even;
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -740,7 +741,9 @@ impl Strategies for ShortStrangle {
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
         let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
-        let start_price = first_option - max_profit.to_dec();
+        // No lower break-even puts `first_option` at zero, and the plot range
+        // cannot start below it.
+        let start_price = price_gap(first_option, max_profit);
         let end_price = last_option + max_profit;
         Ok(calculate_price_range(start_price, end_price, step))
     }
