@@ -31,7 +31,6 @@ use crate::error::GreeksError;
 use crate::greeks::Greeks;
 use crate::model::position::Position;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use utoipa::ToSchema;
@@ -108,19 +107,14 @@ impl PortfolioGreeks {
         let mut greeks = Self::default();
 
         for pos in positions {
-            let qty = pos.option.quantity.to_dec();
-            let sign = if pos.option.is_long() {
-                dec!(1)
-            } else {
-                dec!(-1)
-            };
-            let mult = qty * sign;
-
-            greeks.delta += pos.option.delta()? * mult;
-            greeks.gamma += pos.option.gamma()? * mult;
-            greeks.theta += pos.option.theta()? * mult;
-            greeks.vega += pos.option.vega()? * mult;
-            greeks.rho += pos.option.rho()? * mult;
+            // `Position` implements `Greeks`, and every greek already carries
+            // the leg's `Side` and `quantity`. Re-applying a `quantity * sign`
+            // multiplier here squared the size and cancelled the sign.
+            greeks.delta += pos.delta()?;
+            greeks.gamma += pos.gamma()?;
+            greeks.theta += pos.theta()?;
+            greeks.vega += pos.vega()?;
+            greeks.rho += pos.rho()?;
         }
 
         Ok(greeks)
@@ -483,6 +477,103 @@ impl fmt::Display for AdjustmentTarget {
 #[cfg(test)]
 mod tests_portfolio_greeks {
     use super::*;
+    use crate::model::types::{OptionStyle, OptionType};
+    use crate::{ExpirationDate, Options, Side};
+    use chrono::Utc;
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    fn position(side: Side, quantity: Positive) -> Position {
+        let option = Options::new(
+            OptionType::European,
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            quantity,
+            pos_or_panic!(105.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            pos_or_panic!(0.02),
+            None,
+        );
+        Position::new(
+            option,
+            pos_or_panic!(3.5),
+            Utc::now(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        )
+    }
+
+    /// The aggregate must be the plain sum of the per-position greeks. Each one
+    /// already carries its `Side` and `quantity`, so re-applying a
+    /// `quantity * sign` multiplier squared the size and cancelled the sign.
+    #[test]
+    fn test_from_positions_sums_signed_greeks_without_rescaling() {
+        let long = position(Side::Long, Positive::TWO);
+        let short = position(Side::Short, pos_or_panic!(3.0));
+        let positions = vec![long.clone(), short.clone()];
+
+        let Ok(portfolio) = PortfolioGreeks::from_positions(&positions) else {
+            panic!("portfolio greeks should compute");
+        };
+
+        for (name, aggregate, a, b) in [
+            ("delta", portfolio.delta, long.delta(), short.delta()),
+            ("gamma", portfolio.gamma, long.gamma(), short.gamma()),
+            ("theta", portfolio.theta, long.theta(), short.theta()),
+            ("vega", portfolio.vega, long.vega(), short.vega()),
+            ("rho", portfolio.rho, long.rho(), short.rho()),
+        ] {
+            let (Ok(a), Ok(b)) = (a, b) else {
+                panic!("{name} should compute for both legs");
+            };
+            assert_eq!(aggregate, a + b, "{name} must be the unscaled sum");
+        }
+    }
+
+    /// Offsetting legs are a closed position, so every aggregate greek is zero.
+    #[test]
+    fn test_from_positions_offsetting_legs_net_to_zero() {
+        let positions = vec![
+            position(Side::Long, pos_or_panic!(4.0)),
+            position(Side::Short, pos_or_panic!(4.0)),
+        ];
+        let Ok(portfolio) = PortfolioGreeks::from_positions(&positions) else {
+            panic!("portfolio greeks should compute");
+        };
+        assert_eq!(portfolio.delta, Decimal::ZERO);
+        assert_eq!(portfolio.gamma, Decimal::ZERO);
+        assert_eq!(portfolio.theta, Decimal::ZERO);
+        assert_eq!(portfolio.vega, Decimal::ZERO);
+        assert_eq!(portfolio.rho, Decimal::ZERO);
+    }
+
+    /// A short leg must reduce, not inflate, the portfolio's gamma.
+    #[test]
+    fn test_from_positions_short_leg_subtracts_gamma() {
+        let long_only = vec![position(Side::Long, Positive::TWO)];
+        let hedged = vec![
+            position(Side::Long, Positive::TWO),
+            position(Side::Short, Positive::ONE),
+        ];
+        let (Ok(a), Ok(b)) = (
+            PortfolioGreeks::from_positions(&long_only),
+            PortfolioGreeks::from_positions(&hedged),
+        ) else {
+            panic!("portfolio greeks should compute");
+        };
+        assert!(
+            b.gamma < a.gamma,
+            "adding a short leg must lower gamma, got {} against {}",
+            b.gamma,
+            a.gamma
+        );
+    }
 
     #[test]
     fn test_portfolio_greeks_default() {
@@ -560,6 +651,7 @@ mod tests_portfolio_greeks {
 #[cfg(test)]
 mod tests_adjustment_target {
     use super::*;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_delta_neutral() {

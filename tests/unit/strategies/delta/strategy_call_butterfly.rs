@@ -40,16 +40,16 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(0.0559), epsilon);
-    assert_decimal_eq!(greeks.gamma, dec!(0.0133), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-20.840295476), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(4.40736684), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(0.402857), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-0.407342), epsilon);
-    assert_decimal_eq!(greeks.vanna, dec!(0.9512896496), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(6.9207844661), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0205704707), epsilon);
-    assert_decimal_eq!(greeks.charm, dec!(-0.053395), epsilon);
-    assert_decimal_eq!(greeks.color, dec!(-0.002376), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(-0.0039746331152597696741583943), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(5.8556287094413654835998710868), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(-1.3105235532067897906001598274), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(0.0166909119956756638654876337), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-0.0177115404599258070268733513), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(-2.6752468799657139996070988074), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(-3.6581444543486345463360272344), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(-0.0074340773385041131160062564), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(0.1235341714774240128543034519), epsilon);
+    assert_decimal_eq!(greeks.color, dec!(0.0004306809265636565888984281), epsilon);
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

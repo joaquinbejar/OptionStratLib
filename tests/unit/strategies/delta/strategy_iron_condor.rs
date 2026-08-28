@@ -38,15 +38,15 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-0.1148), epsilon);
-    assert_decimal_eq!(greeks.gamma, dec!(0.0165), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-3.90507682), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(14.7753319330), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(0.558247), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-0.633206), epsilon);
-    assert_decimal_eq!(greeks.vanna, dec!(0.2487598459), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(85.4665240035), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0067443472), epsilon);
-    assert_decimal_eq!(greeks.charm, dec!(-0.00665184), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(-0.0044922742303612076044442920), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(1.0685790479558744337067630488), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(-4.0044297052940157702093505004), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-0.2126171039401095488090749438), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.2497753760518621913676678743), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(0.8624792976070731709569689606), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(25.790042134363725565478760424), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0000503123683495174417515131), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(-0.0005963471822997996326018446), epsilon);
     assert_decimal_eq!(greeks.color, dec!(-0.00003014), epsilon);
 
     assert_decimal_eq!(

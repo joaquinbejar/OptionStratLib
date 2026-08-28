@@ -1321,24 +1321,30 @@ mod tests_implied_volatility {
         let veta = option.veta().unwrap();
         let charm = option.charm().unwrap();
         let color = option.color().unwrap();
+        // Short position, so every greek carries the negative of the equivalent
+        // long one; see #428. Theta is positive because the short collects decay.
         assert_decimal_eq!(delta, dec!(-0.946), dec!(0.002));
-        assert_decimal_eq!(gamma, dec!(0.00038), dec!(0.002));
-        assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.002));
-        assert_decimal_eq!(theta, dec!(-27.244276204109831381546317238), dec!(0.002));
-        assert_decimal_eq!(rho, dec!(0.277), dec!(0.002));
+        assert_decimal_eq!(gamma, dec!(-0.00038), dec!(0.002));
+        assert_decimal_eq!(vega, dec!(-0.8735285922867751407644169906), dec!(0.002));
+        assert_decimal_eq!(theta, dec!(27.244276204109831381546317238), dec!(0.002));
+        assert_decimal_eq!(rho, dec!(-0.277), dec!(0.002));
+        assert_decimal_eq!(vanna, dec!(0.4905170891818293972168486173), dec!(0.0000001));
         assert_decimal_eq!(
-            vanna,
-            dec!(-0.4905170891818293972168486173),
+            vomma,
+            dec!(-6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
+        assert_decimal_eq!(veta, dec!(-0.0434650505282011247018063025), dec!(0.0000001));
+        assert_decimal_eq!(
+            charm,
+            dec!(-0.1695474991264431915978503078),
             dec!(0.0000001)
         );
         assert_decimal_eq!(
-            vomma,
-            dec!(6.2569425433351718484053752895),
-            dec!(0.00000001)
+            color,
+            dec!(-0.0005864547013714062753140932),
+            dec!(0.0000001)
         );
-        assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
-        assert_decimal_eq!(charm, dec!(0.1695474991264431915978503078), dec!(0.0000001));
-        assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
 
         let market_price = option.calculate_price_black_scholes().unwrap().abs();
         assert_decimal_eq!(market_price, dec!(454.917), dec!(0.002));
@@ -1376,24 +1382,29 @@ mod tests_implied_volatility {
         let veta = option.veta().unwrap();
         let charm = option.charm().unwrap();
         let color = option.color().unwrap();
+        // Still the same short position, now as a put; see #428.
         assert_decimal_eq!(delta, dec!(0.0541909521971111839091560979), dec!(0.001));
         assert_decimal_eq!(gamma, dec!(0.0), dec!(0.001));
-        assert_decimal_eq!(vega, dec!(0.8735285922867751407644169906), dec!(0.001));
-        assert_decimal_eq!(theta, dec!(-30.127616013684725380529216795), dec!(0.001));
-        assert_decimal_eq!(rho, dec!(-0.016), dec!(0.001));
+        assert_decimal_eq!(vega, dec!(-0.8735285922867751407644169906), dec!(0.001));
+        assert_decimal_eq!(theta, dec!(30.127616013684725380529216795), dec!(0.001));
+        assert_decimal_eq!(rho, dec!(0.016), dec!(0.001));
+        assert_decimal_eq!(vanna, dec!(0.4905170891818293972168486173), dec!(0.0000001));
         assert_decimal_eq!(
-            vanna,
-            dec!(-0.4905170891818293972168486173),
+            vomma,
+            dec!(-6.2569425433351718484053752895),
+            dec!(0.00000001)
+        );
+        assert_decimal_eq!(veta, dec!(-0.0434650505282011247018063025), dec!(0.0000001));
+        assert_decimal_eq!(
+            charm,
+            dec!(-0.1694105225826541109000514178),
             dec!(0.0000001)
         );
         assert_decimal_eq!(
-            vomma,
-            dec!(6.2569425433351718484053752895),
-            dec!(0.00000001)
+            color,
+            dec!(-0.0005864547013714062753140932),
+            dec!(0.0000001)
         );
-        assert_decimal_eq!(veta, dec!(0.0434650505282011247018063025), dec!(0.0000001));
-        assert_decimal_eq!(charm, dec!(0.1694105225826541109000514178), dec!(0.0000001));
-        assert_decimal_eq!(color, dec!(0.0005864547013714062753140932), dec!(0.0000001));
 
         let market_price = option.calculate_price_black_scholes().unwrap().abs();
         assert_decimal_eq!(market_price, dec!(6.537), dec!(0.002));

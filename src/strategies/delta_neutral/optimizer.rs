@@ -202,13 +202,10 @@ impl<'a> AdjustmentOptimizer<'a> {
             .enumerate()
             .filter_map(|(i, p)| {
                 p.option.delta().ok().map(|d| {
-                    let sign = if p.option.is_long() {
-                        dec!(1)
-                    } else {
-                        dec!(-1)
-                    };
+                    // `delta` already carries the leg's `Side`; applying the
+                    // sign again here cancelled it.
                     let delta_per_contract = d / p.option.quantity.to_dec();
-                    (i, d * sign, delta_per_contract * sign)
+                    (i, d, delta_per_contract)
                 })
             })
             .collect();

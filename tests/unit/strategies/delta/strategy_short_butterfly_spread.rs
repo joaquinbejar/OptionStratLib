@@ -38,16 +38,19 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     let epsilon = dec!(0.001);
 
     assert_decimal_eq!(greeks.delta, dec!(-0.0593), epsilon);
-    assert_decimal_eq!(greeks.gamma, dec!(0.0503), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-79.624412818), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(16.59913113683), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(1.971329081), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(-1.997983), epsilon);
-    assert_decimal_eq!(greeks.vanna, dec!(-0.4538499018), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(33.2470297275943257605818), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0816909193673865686658299), epsilon);
-    assert_decimal_eq!(greeks.charm, dec!(-0.01945020), epsilon);
-    assert_decimal_eq!(greeks.color, dec!(-0.00806599), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0117158224334441273467339536), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-17.349522936631938224385044096), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(3.8629631462760898341060554328), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(-0.0135244886441871056177996109), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(0.0188176328168945065953874032), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(-0.5636159156577169179006960252), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(-33.022191072577642750667870994), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(-0.0076078027469015844621148210), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(0.0160833354632983691810448494), epsilon);
+    // The old -0.00806599 was the unsigned sum and slipped under the shared
+    // 1e-3 tolerance by 6.2e-4. Re-derived at 40 digits against the Merton
+    // closed forms, and pinned tightly so it cannot hide again.
+    assert_decimal_eq!(greeks.color, dec!(-0.0074509235423), dec!(1e-10));
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

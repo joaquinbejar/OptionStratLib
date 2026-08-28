@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Breaking behaviour change.** Every greek now respects `Side`. Only `delta`
+  did before, so any strategy holding a short leg reported gamma, theta, vega,
+  rho and the higher-order greeks with the sign of the equivalent long position,
+  next to a delta that was signed correctly. A short-premium position looked as
+  though it was losing to time decay when it was collecting it. `Options::
+  quantity` is `Positive` and can never carry direction, so `Side` is the only
+  carrier of it (#428).
+
+  Migration: any consumer that was compensating for the old behaviour, by
+  negating the eleven unsigned greeks itself, must stop. A long and a short of
+  the same contract now net to exactly zero across all twelve. `alpha` is the
+  one exception and is unchanged, being the ratio `gamma / theta`, which a short
+  negates in both terms.
+
+  `OptionData::greeks_call` and `greeks_put` are unaffected: they are built
+  through `get_option(Side::Long, style)` and remain per-long-contract values.
+
+### Changed
+
+- `Greeks::greeks()` computes the shared Black-Scholes intermediates once per
+  option rather than once per greek, which makes it about 6.5x faster and cuts
+  the cost of a chain build with greek snapshots by about 4.7x. Every value is
+  unchanged (#431).
+- `alpha` is now re-exported from `crate::greeks`, alongside the other eleven.
+
+
 ## [0.20.0] - 2026-08-28
 
 Adds the full twelve-greek set to the option chain data. **Breaking** for
