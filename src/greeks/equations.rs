@@ -4792,3 +4792,284 @@ pub mod tests_color_equations {
         );
     }
 }
+
+#[cfg(test)]
+mod tests_shared_kernel_equivalence {
+    use super::*;
+    use crate::greeks::utils::d2 as fresh_d2_fn;
+    use crate::model::types::OptionType;
+    use crate::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    /// Every branch `kernels_for` distinguishes, so the fast path and the
+    /// per-greek fallbacks are both exercised.
+    fn branches() -> Vec<(&'static str, OptionType, Positive, Positive)> {
+        vec![
+            // name, type, time to expiry in days, implied volatility
+            (
+                "live european",
+                OptionType::European,
+                pos_or_panic!(30.0),
+                pos_or_panic!(0.2),
+            ),
+            (
+                "at expiry",
+                OptionType::European,
+                Positive::ZERO,
+                pos_or_panic!(0.2),
+            ),
+            (
+                "zero volatility",
+                OptionType::European,
+                pos_or_panic!(30.0),
+                Positive::ZERO,
+            ),
+            (
+                "non european",
+                OptionType::American,
+                pos_or_panic!(30.0),
+                pos_or_panic!(0.2),
+            ),
+        ]
+    }
+
+    fn option_for(
+        option_type: OptionType,
+        days: Positive,
+        implied_volatility: Positive,
+        style: OptionStyle,
+        side: Side,
+        quantity: Positive,
+    ) -> Options {
+        Options::new(
+            option_type,
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(days),
+            implied_volatility,
+            quantity,
+            pos_or_panic!(105.0),
+            dec!(0.05),
+            style,
+            pos_or_panic!(0.02),
+            None,
+        )
+    }
+
+    /// The aggregate shares one set of kernels across the twelve greeks and
+    /// reuses gamma and theta for alpha, while the public functions each build
+    /// their own. The two must agree exactly, in every branch, for both styles
+    /// and both sides — including on failure, so the fast path can neither
+    /// succeed where an individual greek errors nor error where they all
+    /// succeed.
+    ///
+    /// The zero-volatility branch is the one that fails today: seven of the
+    /// twelve have no guard for it, so `greeks()` errors there while `delta`
+    /// and `gamma` still return their discrete values.
+    #[test]
+    fn test_greeks_matches_the_individual_functions_exactly() {
+        for (name, option_type, days, iv) in branches() {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                for side in [Side::Long, Side::Short] {
+                    let option = option_for(
+                        option_type.clone(),
+                        days,
+                        iv,
+                        style,
+                        side,
+                        pos_or_panic!(3.0),
+                    );
+                    let label = format!("{name} {style:?} {side:?}");
+
+                    let individual = [
+                        ("delta", delta(&option)),
+                        ("gamma", gamma(&option)),
+                        ("theta", theta(&option)),
+                        ("vega", vega(&option)),
+                        ("rho", rho(&option)),
+                        ("rho_d", rho_d(&option)),
+                        ("alpha", alpha(&option)),
+                        ("vanna", vanna(&option)),
+                        ("vomma", vomma(&option)),
+                        ("veta", veta(&option)),
+                        ("charm", charm(&option)),
+                        ("color", color(&option)),
+                    ];
+                    let all_ok = individual.iter().all(|(_, r)| r.is_ok());
+
+                    match (option.greeks(), all_ok) {
+                        (Ok(aggregate), true) => {
+                            let values = [
+                                aggregate.delta,
+                                aggregate.gamma,
+                                aggregate.theta,
+                                aggregate.vega,
+                                aggregate.rho,
+                                aggregate.rho_d,
+                                aggregate.alpha,
+                                aggregate.vanna,
+                                aggregate.vomma,
+                                aggregate.veta,
+                                aggregate.charm,
+                                aggregate.color,
+                            ];
+                            for ((greek, single), aggregated) in
+                                individual.iter().zip(values.iter())
+                            {
+                                assert_eq!(
+                                    aggregated,
+                                    &expect(single, &label),
+                                    "{greek} disagrees for {label}"
+                                );
+                            }
+                        }
+                        (Err(_), false) => {
+                            // Both paths reject these inputs, which is the
+                            // contract for the zero-volatility branch.
+                        }
+                        (Ok(_), false) => {
+                            panic!("greeks() succeeded for {label} where an individual greek fails")
+                        }
+                        (Err(e), true) => panic!(
+                            "greeks() failed for {label} where every individual greek succeeds: {e}"
+                        ),
+                    }
+                }
+            }
+        }
+    }
+
+    fn expect(result: &Result<Decimal, GreeksError>, label: &str) -> Decimal {
+        match result {
+            Ok(value) => *value,
+            Err(e) => panic!("individual greek failed for {label}: {e}"),
+        }
+    }
+
+    /// The aggregate now sums option by option rather than greek by greek.
+    /// `Decimal` addition is exact, so a multi-leg position must match the sum
+    /// of the per-option aggregates term by term.
+    #[test]
+    fn test_greeks_aggregation_is_order_independent() {
+        struct Legs(Vec<Options>);
+        impl Greeks for Legs {
+            fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+                Ok(self.0.iter().collect())
+            }
+        }
+
+        let legs = Legs(vec![
+            option_for(
+                OptionType::European,
+                pos_or_panic!(30.0),
+                pos_or_panic!(0.2),
+                OptionStyle::Call,
+                Side::Long,
+                pos_or_panic!(2.0),
+            ),
+            option_for(
+                OptionType::European,
+                pos_or_panic!(45.0),
+                pos_or_panic!(0.35),
+                OptionStyle::Put,
+                Side::Short,
+                pos_or_panic!(3.0),
+            ),
+            // A degenerate leg alongside live ones, so the mixed path is covered.
+            option_for(
+                OptionType::European,
+                Positive::ZERO,
+                pos_or_panic!(0.2),
+                OptionStyle::Call,
+                Side::Short,
+                Positive::ONE,
+            ),
+        ]);
+
+        let Ok(total) = legs.greeks() else {
+            panic!("aggregate greeks should succeed");
+        };
+
+        let mut delta_sum = Decimal::ZERO;
+        let mut charm_sum = Decimal::ZERO;
+        let mut alpha_sum = Decimal::ZERO;
+        for option in &legs.0 {
+            delta_sum += expect(&delta(option), "leg");
+            charm_sum += expect(&charm(option), "leg");
+            alpha_sum += expect(&alpha(option), "leg");
+        }
+        assert_eq!(total.delta, delta_sum);
+        assert_eq!(total.charm, charm_sum);
+        assert_eq!(total.alpha, alpha_sum);
+    }
+
+    /// Each cached kernel must equal the value the pre-refactor code derived
+    /// from scratch, which is what makes the sharing value-preserving rather
+    /// than an approximation.
+    #[test]
+    fn test_cached_kernels_match_freshly_derived_values() {
+        let option = option_for(
+            OptionType::European,
+            pos_or_panic!(30.0),
+            pos_or_panic!(0.2),
+            OptionStyle::Call,
+            Side::Long,
+            Positive::ONE,
+        );
+        let Ok(t) = option.expiration_date.get_years() else {
+            panic!("expiration should resolve");
+        };
+        let Ok(kernels) = BlackScholesKernels::new(&option, t) else {
+            panic!("kernels should build for a live european option");
+        };
+        let carry = option.risk_free_rate - option.dividend_yield.to_dec();
+
+        let Ok(fresh_d1) = d1(
+            option.underlying_price,
+            option.strike_price,
+            carry,
+            t,
+            option.implied_volatility,
+        ) else {
+            panic!("d1 should compute");
+        };
+        let Ok(fresh_d2) = fresh_d2_fn(
+            option.underlying_price,
+            option.strike_price,
+            carry,
+            t,
+            option.implied_volatility,
+        ) else {
+            panic!("d2 should compute");
+        };
+
+        assert_eq!(kernels.d1(), fresh_d1, "d1");
+        assert_eq!(kernels.d2(), fresh_d2, "d2 derived from d1");
+        assert_eq!(kernels.sqrt_t(), t.sqrt(), "sqrt(T)");
+        assert_eq!(kernels.n_d1().ok(), n(fresh_d1).ok(), "n(d1)");
+        assert_eq!(kernels.big_n_d1().ok(), big_n(fresh_d1).ok(), "big_n(d1)");
+        assert_eq!(
+            kernels.big_n_neg_d1().ok(),
+            big_n(-fresh_d1).ok(),
+            "big_n(-d1)"
+        );
+        assert_eq!(kernels.big_n_d2().ok(), big_n(fresh_d2).ok(), "big_n(d2)");
+        assert_eq!(
+            kernels.big_n_neg_d2().ok(),
+            big_n(-fresh_d2).ok(),
+            "big_n(-d2)"
+        );
+        assert_eq!(
+            kernels.exp_minus_qt(),
+            (-t.to_dec() * option.dividend_yield).exp(),
+            "exp(-qT)"
+        );
+        assert_eq!(
+            kernels.exp_minus_rt(),
+            (-option.risk_free_rate * t).exp(),
+            "exp(-rT)"
+        );
+    }
+}
