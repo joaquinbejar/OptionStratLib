@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-28
+
+Two things land together. The option chain now carries the full twelve-greek set
+per strike, and every greek in the crate returns the sensitivity of the
+**position** rather than of one long contract. Both are **breaking**: the first
+for anyone constructing `OptionData` with an exhaustive struct literal, the
+second for anyone who was compensating for the old unsigned behaviour. See
+*Migration*.
+
+### Added
+
+- `OptionData::greeks_call` and `OptionData::greeks_put`, each an
+  `Option<GreeksSnapshot>` carrying all twelve greeks for that option style, so
+  consumers no longer convert through `TryFrom<&OptionData> for Options` and
+  recompute on every read. Both are computed for **one long contract**: a
+  consumer holding a short negates all twelve, since every value is a derivative
+  of the long position value.
+- `OptionData::calculate_greeks`, which populates both snapshots and refreshes
+  the `delta_call`, `delta_put` and `gamma` mirror fields together.
+- `OptionChain::update_greek_snapshots`, the full-set counterpart to
+  `update_greeks`.
+- `OptionChainBuildParams::with_greek_snapshots`, opting a chain build into the
+  snapshots. Off by default.
+- `impl From<Greek> for GreeksSnapshot`.
+- `alpha` is now re-exported from `crate::greeks`, alongside the other eleven.
+
 ### Fixed
 
 - **Breaking behaviour change.** Every Black-Scholes/Merton greek in
@@ -17,25 +43,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was losing to time decay when it was collecting it. `Options::quantity` is
   `Positive` and can never carry direction, so `Side` is the only carrier of it
   (#428).
-
-  Migration: any consumer that was compensating for the old behaviour, by
-  negating the eleven unsigned greeks itself, must stop. A long and a short of
-  the same contract now net to exactly zero across all twelve. `alpha` is the
-  one exception and is unchanged, being the ratio `gamma / theta`, which a short
-  negates in both terms.
-
-  `OptionData::greeks_call` and `greeks_put` are unaffected: they are built
-  through `get_option(Side::Long, style)` and remain per-long-contract values.
-
 - **Breaking behaviour change.** The Black-76 and Garman-Kohlhagen greek
   families now use the same position-sign convention. Previously only their
   deltas respected `Side`; a short futures or FX option therefore reported
   gamma, vega, theta and rho with the sign of the equivalent long. All greeks in
   both families are now signed by `Side` exactly once and scale linearly with
   `quantity` (#436).
-
-  Migration: consumers that negated non-delta Black-76 or Garman-Kohlhagen
-  greeks for short positions must stop doing so.
+- `PortfolioGreeks::from_positions` re-applied `quantity * sign` to greeks that
+  already carried both, which squared the position size and cancelled the sign.
+  `DeltaAdjustment` applied the same second sign to delta.
+- `rho_d` and `vanna` returned an error at expiry where their ten siblings
+  returned zero, so `Greeks::greeks()` lost the entire set for any expired
+  option. Both now return zero.
+- The non-European fallbacks in `delta` and `gamma` returned a per-contract long
+  value, dropping both side and quantity, because the numerical engine prices
+  through an absolute value.
 
 ### Changed
 
@@ -43,44 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   option rather than once per greek, which makes it about 6.5x faster and cuts
   the cost of a chain build with greek snapshots by about 4.7x. Every value is
   unchanged (#431).
-- `alpha` is now re-exported from `crate::greeks`, alongside the other eleven.
-
-
-## [0.20.0] - 2026-08-28
-
-Adds the full twelve-greek set to the option chain data. **Breaking** for
-consumers that construct `OptionData` with an exhaustive struct literal — see
-*Migration*.
-
-### Added
-
-- `OptionData::greeks_call` and `OptionData::greeks_put`, each an
-  `Option<GreeksSnapshot>` carrying all twelve greeks for that option style, so
-  consumers no longer convert through `TryFrom<&OptionData> for Options` and
-  recompute on every read. Both are computed for **one long contract**: a
-  consumer holding a short negates `delta` and nothing else.
-- `OptionData::calculate_greeks`, which populates both snapshots and refreshes
-  the `delta_call`, `delta_put` and `gamma` mirror fields together.
-- `OptionChain::update_greek_snapshots`, the full-set counterpart to
-  `update_greeks`.
-- `OptionChainBuildParams::with_greek_snapshots`, opting a chain build into the
-  snapshots. Off by default: computing twelve greeks per style costs roughly
-  seven times a chain build, so existing build paths keep their current speed.
-- `impl From<Greek> for GreeksSnapshot`.
-
-### Fixed
-
-- `rho_d` and `vanna` returned an error at expiry where their ten siblings
-  returned zero, so `Greeks::greeks()` lost the entire set for any expired
-  option. Both now return zero.
-
-### Changed
-
 - `GreeksSnapshot` no longer sets `#[serde(deny_unknown_fields)]`. It is a wire
   type now, and adding a thirteenth greek must not break deserialization for
   consumers built against an older version.
 - `OptionData::set_volatility` and `set_extra_params` drop the stored snapshots
-  rather than leave them stale against changed pricing inputs.
+  rather than leave them stale against changed pricing inputs, and
+  `OptionChain::update_expiration_date` does the same.
 
 ### Migration
 
@@ -89,6 +79,14 @@ consumers that construct `OptionData` with an exhaustive struct literal — see
 needs no edit. Serialized chains are unaffected in both directions: the new
 fields are skipped when absent, and a payload written before this release
 deserializes with both set to `None`.
+
+On the sign convention, any consumer that was compensating by negating the
+unsigned greeks itself must stop, in all three families. A long and a short of
+the same contract now net to exactly zero. `alpha` is the one exception and is
+unchanged, being the ratio `gamma / theta`, which a short negates in both terms.
+`OptionData::greeks_call` and `greeks_put` are also unaffected, being built
+through `get_option(Side::Long, style)` and so per-long-contract by
+construction.
 
 ## [0.19.1] - 2026-08-28
 
