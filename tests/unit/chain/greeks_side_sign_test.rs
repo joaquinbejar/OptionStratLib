@@ -22,9 +22,12 @@ use std::error::Error;
 
 const EPSILON: Decimal = dec!(1e-20);
 
-/// `Σ greek(leg) * (if leg.is_long() { 1 } else { -1 })`, computed here rather
-/// than taken from the library, so this is an independent check of the
-/// aggregate rather than a restatement of it.
+/// `Σ greek(leg)`, since each per-leg function already carries its own `Side`.
+///
+/// This checks the aggregate against the individual functions rather than
+/// against an outside reference, so it catches the aggregate drifting from the
+/// per-leg path. The genuinely independent assertion in this file is
+/// `test_short_premium_strategy_collects_decay`.
 fn signed_sum(
     legs: &[&Options],
     greek: fn(&Options) -> Result<Decimal, optionstratlib::error::greeks::GreeksError>,

@@ -47,7 +47,10 @@ fn test_short_butterfly_spread_integration() -> Result<(), Box<dyn Error>> {
     assert_decimal_eq!(greeks.vomma, dec!(-33.022191072577642750667870994), epsilon);
     assert_decimal_eq!(greeks.veta, dec!(-0.0076078027469015844621148210), epsilon);
     assert_decimal_eq!(greeks.charm, dec!(0.0160833354632983691810448494), epsilon);
-    assert_decimal_eq!(greeks.color, dec!(-0.00806599), epsilon);
+    // The old -0.00806599 was the unsigned sum and slipped under the shared
+    // 1e-3 tolerance by 6.2e-4. Re-derived at 40 digits against the Merton
+    // closed forms, and pinned tightly so it cannot hide again.
+    assert_decimal_eq!(greeks.color, dec!(-0.0074509235423), dec!(1e-10));
 
     assert_decimal_eq!(
         strategy.delta_neutrality().unwrap().net_delta,

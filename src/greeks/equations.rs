@@ -620,6 +620,7 @@ where
 ///
 /// Negating a `Decimal` is exact, so this needs no checked multiplication.
 #[inline]
+#[must_use]
 fn signed_quantity(option: &Options) -> Decimal {
     let quantity = option.quantity.to_dec();
     if option.is_long() {
@@ -779,7 +780,14 @@ fn greeks_for(option: &Options) -> Result<Greek, GreeksError> {
 /// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     if !matches!(option.option_type, OptionType::European) {
-        return crate::greeks::numerical::numerical_delta(option);
+        // The numerical fallback prices through `price_option`, which takes the
+        // absolute value, so it returns a per-contract long sensitivity. Sign
+        // and scale it here to keep the documented convention.
+        return Ok(d_mul(
+            crate::greeks::numerical::numerical_delta(option)?,
+            signed_quantity(option),
+            "greeks::delta::numerical_position_weighted",
+        )?);
     }
     let expiration_date = option.expiration_date.get_years()?;
 
@@ -804,24 +812,27 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     // This happens because at expiration, the option effectively becomes a direct position in the
     // underlying asset (**delta = 1 or -1**) if it is ITM, or has no value (**delta = 0**) if it is OTM.
     if expiration_date == Decimal::ZERO {
-        return match (
+        // These arms already carry the side, so they scale by the bare quantity
+        // rather than by `signed_quantity`, which would apply it twice.
+        let per_contract = match (
             &option.option_style,
             &option.side,
             &option.strike_price,
             &option.underlying_price,
         ) {
             // Call Options
-            (OptionStyle::Call, Side::Long, strike, price) if price > strike => Ok(Decimal::ONE),
-            (OptionStyle::Call, Side::Long, _, _) => Ok(Decimal::ZERO),
-            (OptionStyle::Call, Side::Short, strike, price) if price > strike => Ok(-Decimal::ONE),
-            (OptionStyle::Call, Side::Short, _, _) => Ok(Decimal::ZERO),
+            (OptionStyle::Call, Side::Long, strike, price) if price > strike => Decimal::ONE,
+            (OptionStyle::Call, Side::Long, _, _) => Decimal::ZERO,
+            (OptionStyle::Call, Side::Short, strike, price) if price > strike => -Decimal::ONE,
+            (OptionStyle::Call, Side::Short, _, _) => Decimal::ZERO,
 
             // Put Options
-            (OptionStyle::Put, Side::Long, strike, price) if price < strike => Ok(-Decimal::ONE),
-            (OptionStyle::Put, Side::Long, _, _) => Ok(Decimal::ZERO),
-            (OptionStyle::Put, Side::Short, strike, price) if price < strike => Ok(Decimal::ONE),
-            (OptionStyle::Put, Side::Short, _, _) => Ok(Decimal::ZERO),
+            (OptionStyle::Put, Side::Long, strike, price) if price < strike => -Decimal::ONE,
+            (OptionStyle::Put, Side::Long, _, _) => Decimal::ZERO,
+            (OptionStyle::Put, Side::Short, strike, price) if price < strike => Decimal::ONE,
+            (OptionStyle::Put, Side::Short, _, _) => Decimal::ZERO,
         };
+        return Ok(per_contract * option.quantity.to_dec());
     }
 
     let sign = if option.is_long() {
@@ -830,22 +841,24 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
         Decimal::NEGATIVE_ONE
     };
     if option.implied_volatility == ZERO {
-        return match option.option_style {
+        // `sign` is already applied here, so scale by the bare quantity.
+        let per_contract = match option.option_style {
             OptionStyle::Call => {
                 if option.underlying_price >= option.strike_price {
-                    Ok(sign) // Delta is 1 for Call in-the-money
+                    sign // Delta is 1 for Call in-the-money
                 } else {
-                    Ok(Decimal::ZERO) // Delta is 0 for Call out-of-the-money
+                    Decimal::ZERO // Delta is 0 for Call out-of-the-money
                 }
             }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
-                    Ok(sign * Decimal::NEGATIVE_ONE) // Delta is -1 for Put in-the-money
+                    sign * Decimal::NEGATIVE_ONE // Delta is -1 for Put in-the-money
                 } else {
-                    Ok(Decimal::ZERO) // Delta is 0 for Put out-of-the-money
+                    Decimal::ZERO // Delta is 0 for Put out-of-the-money
                 }
             }
         };
+        return Ok(per_contract * option.quantity.to_dec());
     }
 
     let kernels = BlackScholesKernels::new(option, expiration_date)?;
@@ -969,7 +982,12 @@ fn delta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if !matches!(option.option_type, OptionType::European) {
-        return crate::greeks::numerical::numerical_gamma(option);
+        // Same per-contract long value as the delta fallback; see there.
+        return Ok(d_mul(
+            crate::greeks::numerical::numerical_gamma(option)?,
+            signed_quantity(option),
+            "greeks::gamma::numerical_position_weighted",
+        )?);
     }
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
@@ -993,7 +1011,11 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let gamma: Decimal = k.exp_minus_qt() * k.n_d1()?
         / (underlying_price * implied_volatility * k.sqrt_t().to_dec());
 
-    Ok(gamma * signed_quantity(option))
+    Ok(d_mul(
+        gamma,
+        signed_quantity(option),
+        "greeks::gamma::position_weighted",
+    )?)
 }
 
 /// Computes the Theta of an option.
@@ -1276,7 +1298,11 @@ fn vega_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
     let vega: Decimal =
         underlying_price * k.exp_minus_qt() * k.n_d1()? * k.sqrt_t() / Decimal::ONE_HUNDRED; // percentage of change in volatility
 
-    Ok(vega * signed_quantity(option))
+    Ok(d_mul(
+        vega,
+        signed_quantity(option),
+        "greeks::vega::position_weighted",
+    )?)
 }
 
 /// Computes the rho of an options contract.
@@ -1730,7 +1756,11 @@ fn vanna_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     // closed form is -e^{-qT} * n(d1) * d2 / sigma (sign is opposite to d2).
     let vanna: Decimal = -(k.exp_minus_qt() * k.n_d1()? * (k.d2() / implied_volatility));
 
-    Ok(vanna * signed_quantity(option))
+    Ok(d_mul(
+        vanna,
+        signed_quantity(option),
+        "greeks::vanna::position_weighted",
+    )?)
 }
 
 /// Computes the vomma of an option.

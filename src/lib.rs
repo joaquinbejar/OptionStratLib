@@ -881,7 +881,11 @@
 //!     let price = option.calculate_price_black_scholes()?;
 //!     tracing::info!("Option price: ${:.2}", price);
 //!
-//!     // Calculate Greeks for risk management
+//!     // Calculate Greeks for risk management. Every greek is the sensitivity
+//!     // of the *position*: signed by its `Side` and scaled by its `quantity`,
+//!     // so a short reports the negative of the equivalent long. `alpha` is the
+//!     // one exception, being the ratio `gamma / theta`, which a short negates
+//!     // in both terms.
 //!     let delta = option.delta()?;
 //!     let gamma = option.gamma()?;
 //!     let theta = option.theta()?;
