@@ -11,9 +11,10 @@ use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
 use crate::model::ExpirationDate;
+use crate::model::decimal::f64_to_decimal;
 use crate::model::utils::ToRound;
 use num_traits::ToPrimitive;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -646,13 +647,19 @@ pub fn adjust_volatility(
             );
             0.0
         });
-    let m = (strike / underlying_price.to_f64())
-        .ln()
-        .to_f64()
+    // `Positive / f64` panics when the quotient underflows the positivity
+    // invariant (a huge underlying against an ordinary strike), and `ln`
+    // panics on a ratio that rounded to zero. Both are reachable from a
+    // chain build, so the log-moneyness is computed on the checked path and
+    // degrades to a flat 0.0 — no skew — exactly like the branches above.
+    let m = strike
+        .to_dec()
+        .checked_div(underlying_price.to_dec())
+        .filter(|ratio| *ratio > Decimal::ZERO)
+        .and_then(|ratio| ratio.checked_ln())
+        .and_then(|log_moneyness| log_moneyness.to_f64())
         .unwrap_or_else(|| {
-            tracing::warn!(
-                "adjust_volatility: moneyness ln to_f64 returned None; defaulting to 0.0"
-            );
+            tracing::warn!("adjust_volatility: moneyness is not representable; defaulting to 0.0");
             0.0
         });
     let factor: f64 = 1.0 + skew_slope * m + smile_curve * m * m;
@@ -661,7 +668,16 @@ pub fn adjust_volatility(
     // Deep wings can legitimately exceed 100% IV (short-dated equities,
     // crypto); cap at 200% instead of 100% so real smiles survive, and log
     // when the cap actually engages.
-    let adjusted = base_vol * clamped;
+    let adjusted = match f64_to_decimal(clamped)
+        .ok()
+        .and_then(|factor| base_vol.to_dec().checked_mul(factor))
+        .and_then(|value| Positive::new_decimal(value).ok())
+    {
+        Some(value) => value,
+        // The product left the `Decimal` range, which puts it far above the
+        // 200% cap applied on the next line, so the cap is the answer.
+        None => Positive::TWO,
+    };
     let capped = adjusted.clamp(Positive::ZERO, Positive::TWO);
     if capped != adjusted {
         tracing::debug!(

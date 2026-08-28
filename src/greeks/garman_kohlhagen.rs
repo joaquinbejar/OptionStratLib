@@ -60,10 +60,12 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, d1, d2, n};
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
+#[cfg(test)]
+use rust_decimal::MathematicalOps;
 use tracing::{instrument, trace};
 
 /// Reject any option type that is not European; Garman–Kohlhagen prices
@@ -95,8 +97,20 @@ fn side_sign(option: &Options) -> Decimal {
 }
 
 /// Cost of carry `b = r_d − r_f` for Garman–Kohlhagen.
-fn cost_of_carry(option: &Options) -> Decimal {
-    option.risk_free_rate - option.dividend_yield.to_dec()
+///
+/// Fallible because the raw `Decimal` subtraction panics on overflow, which a
+/// domestic rate at the edge of the range against any foreign rate reaches.
+///
+/// # Errors
+///
+/// Returns [`GreeksError`] when `r_d − r_f` leaves the representable
+/// `Decimal` range.
+fn cost_of_carry(option: &Options) -> Result<Decimal, GreeksError> {
+    Ok(d_sub(
+        option.risk_free_rate,
+        option.dividend_yield.to_dec(),
+        "greeks::gk::cost_of_carry",
+    )?)
 }
 
 /// Returns `Some(time_in_years)` when the option has not expired yet, or
@@ -138,7 +152,7 @@ fn delta_at_expiry(option: &Options) -> Decimal {
 /// drift term, mirroring the helper used by the GK pricing kernel.
 fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     let years = option.expiration_date.get_years()?;
-    let b = cost_of_carry(option);
+    let b = cost_of_carry(option)?;
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -194,7 +208,10 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t, "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     let raw = match option.option_style {
         OptionStyle::Call => d_mul(exp_neg_rf_t, big_n(d1_v)?, "greeks::gk::delta::call")?,
@@ -241,10 +258,13 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
     let s = option.underlying_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     let denom = d_mul(
         s,
@@ -292,9 +312,12 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
     let s = option.underlying_price.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
 
     let leg1 = d_mul(s, exp_neg_rf_t, "greeks::gk::vega::s_df")?;
     let leg2 = d_mul(leg1, n(d1_v)?, "greeks::gk::vega::times_n")?;
@@ -345,9 +368,15 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let s = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = t.sqrt().to_dec();
-    let exp_neg_rd_t = (-r_d * t.to_dec()).exp();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let sqrt_t = t.checked_sqrt()?.to_dec();
+    let exp_neg_rd_t = d_exp(
+        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+        "greeks::gk::discount_domestic",
+    )?;
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     // Volatility decay term: -S·e^(-r_f T)·n(d1)·σ/(2√T)
     let two_sqrt_t = d_mul(Decimal::TWO, sqrt_t, "greeks::gk::theta::two_sqrt_t")?;
@@ -424,7 +453,10 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_d = option.risk_free_rate;
     let k = option.strike_price.to_dec();
-    let exp_neg_rd_t = (-r_d * t.to_dec()).exp();
+    let exp_neg_rd_t = d_exp(
+        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+        "greeks::gk::discount_domestic",
+    )?;
 
     let base = d_mul(
         k,
@@ -478,7 +510,10 @@ pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_f = option.dividend_yield.to_dec();
     let s = option.underlying_price.to_dec();
-    let exp_neg_rf_t = (-r_f * t.to_dec()).exp();
+    let exp_neg_rf_t = d_exp(
+        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+        "greeks::gk::discount_foreign",
+    )?;
 
     let base = d_mul(
         s,
@@ -968,5 +1003,78 @@ mod tests {
         assert_eq!(theta_gk(&opt).unwrap(), Decimal::ZERO);
         assert_eq!(rho_domestic_gk(&opt).unwrap(), Decimal::ZERO);
         assert_eq!(rho_foreign_gk(&opt).unwrap(), Decimal::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_gk_extreme_rates {
+    use super::*;
+    use crate::ExpirationDate;
+    use positive::{Positive, pos_or_panic};
+
+    /// An FX option whose domestic rate sits at the edge of the `Decimal`
+    /// range: `r_d - r_f` overflows, which the raw operator turns into an
+    /// abort rather than an error.
+    fn extreme_rate_option(style: OptionStyle) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "EURUSD".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::MIN,
+            style,
+            Positive::ONE,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_every_gk_greek_reports_a_carry_overflow_instead_of_aborting() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let option = extreme_rate_option(style);
+            let greeks: [(&str, Result<Decimal, GreeksError>); 6] = [
+                ("delta_gk", delta_gk(&option)),
+                ("gamma_gk", gamma_gk(&option)),
+                ("vega_gk", vega_gk(&option)),
+                ("theta_gk", theta_gk(&option)),
+                ("rho_domestic_gk", rho_domestic_gk(&option)),
+                ("rho_foreign_gk", rho_foreign_gk(&option)),
+            ];
+            for (label, result) in greeks {
+                assert!(
+                    result.is_err(),
+                    "{label} returned a value for a cost of carry that is not representable"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_ordinary_rates_still_price_the_gk_greeks() {
+        // The guard above must not have cost the normal path its answer.
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "EURUSD".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::new(5, 2),
+            OptionStyle::Call,
+            pos_or_panic!(0.02),
+            None,
+        );
+        assert!(delta_gk(&option).is_ok());
+        assert!(gamma_gk(&option).is_ok());
+        assert!(vega_gk(&option).is_ok());
+        assert!(theta_gk(&option).is_ok());
+        assert!(rho_domestic_gk(&option).is_ok());
+        assert!(rho_foreign_gk(&option).is_ok());
     }
 }

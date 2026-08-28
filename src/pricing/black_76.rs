@@ -6,9 +6,11 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, calculate_d_values_black_76};
-use crate::model::decimal::{d_mul, d_sub};
+use crate::model::decimal::{d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
+#[cfg(test)]
+use rust_decimal::MathematicalOps;
 use tracing::{instrument, trace};
 
 /// Computes the price of an option on a futures contract using the Black-76 model.
@@ -157,7 +159,7 @@ fn calculate_call_option_price(
 
     // e^(-rT) * [F * N(d1) - K * N(d2)]
     let rt = d_mul(-option.risk_free_rate, t, "pricing::black_76::call::rt")?;
-    let discount_factor = rt.exp();
+    let discount_factor = d_exp(rt, "pricing::black_76::call::discount")?;
 
     let f_leg = d_mul(
         option.underlying_price.to_dec(),
@@ -194,7 +196,7 @@ fn calculate_put_option_price(
 
     // e^(-rT) * [K * N(-d2) - F * N(-d1)]
     let rt = d_mul(-option.risk_free_rate, t, "pricing::black_76::put::rt")?;
-    let discount_factor = rt.exp();
+    let discount_factor = d_exp(rt, "pricing::black_76::put::discount")?;
 
     let k_leg = d_mul(
         option.strike_price.to_dec(),

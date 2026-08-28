@@ -53,3 +53,6 @@ jobs:
 
       - name: Lint
         run: make lint
+
+      - name: Scan banned constructs
+        run: make scan-banned

@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 4071547f72cdad8478547737ea0b05ba5f39c89128393483ca7ddae76754f4ac # shrinks to spot = 0, strike = 0, volatility = 0, days = 0, quantity = 0, dividend_yield = 1, rate = -79228162514264337593543950335, style = OptionStyle::Call, side = Side::Long
+cc a68696c1ce14319236d0941bc881a843f7476f1061ef4fa2c454dd0db9de0af1 # shrinks to spot = 30, volatility = 0.000000000000000000000000001, days = 0.000000000000000000000000001, dividend_yield = 30, rate = -79228162514264337593543950335, greek_snapshots = false
+cc 75865739d475859105ad9647b57e984c4dbcb2ff9bf6fc680bf68d9730ca02f9 # shrinks to spot = 79228162514264337593543950335, strike = 30, volatility = 0.0000000000001, days = 1, quantity = 0.0000000000001, dividend_yield = 0.000000000000000000000000001, rate = 0, style = OptionStyle::Call, side = Side::Short
