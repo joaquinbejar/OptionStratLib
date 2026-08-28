@@ -64,10 +64,41 @@
 # Owner        : @joaquinbejar
 # Review by    : 2027-02-15
 # ---------------------------------------------------------------------------
+# RUSTSEC-2026-0258 — h2 0.3.27, unbounded empty DATA frames. A hostile HTTP/2
+#                     peer can keep a connection busy with empty DATA frames.
+#                     Fixed in h2 >= 0.4.16.
+#
+# Reachability : NOT LINKED INTO THIS CRATE, and not present at all in a
+#                default-feature build. `cargo tree -i h2@0.3.27` reports the
+#                package is not in the graph; it appears only under
+#                `--all-features`, on the same build-machine path as the
+#                `rustls-pemfile` entry above:
+#                    optionstratlib -> plotly -> plotly_static
+#                      -> [build-dependencies] webdriver-downloader
+#                      -> fantoccini / reqwest 0.11 -> hyper 0.14 -> h2 0.3.27
+#                It is the HTTP/2 client used to download a webdriver while
+#                building with `static_export`, talking to a known release
+#                endpoint. It never serves connections, never faces an
+#                untrusted peer, and is absent from the shipped library.
+# Upgrade path : Blocked upstream. The fix is in the 0.4 line, so escaping it
+#                requires `plotly_static` to move off `reqwest` 0.11 /
+#                `hyper` 0.14; there is no h2 0.3.x release that resolves it.
+#                Note this crate ships no Cargo.lock, so a fresh resolution
+#                already selects a fixed h2 for the 0.4 copy in the graph
+#                (0.4.19 at the time of writing, above the 0.4.16 fix). Only
+#                the build-time 0.3 copy, which cannot move, is waived here —
+#                if the 0.4 copy ever regresses below 0.4.16 this entry would
+#                hide it, since cargo-audit ignores by advisory ID and not by
+#                version.
+# Tracking     : https://github.com/plotly/plotly.rs
+# Owner        : @joaquinbejar
+# Review by    : 2026-11-28
+# ---------------------------------------------------------------------------
 ignore = [
     "RUSTSEC-2026-0235",
     "RUSTSEC-2025-0119",
     "RUSTSEC-2025-0134",
+    "RUSTSEC-2026-0258",
 ]
 
 # Every other advisory class fails the run, so a new unmaintained or unsound
