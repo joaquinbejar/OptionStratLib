@@ -178,6 +178,17 @@ impl From<Greek> for GreeksSnapshot {
 /// references to option contracts. The trait will handle aggregating the Greek values across
 /// all options in the collection.
 ///
+/// # Sign convention
+///
+/// Every method here returns the sensitivity of the **aggregate position**: each
+/// leg is signed by its [`Side`] and scaled by its `quantity`, then summed. A
+/// short leg contributes the negative of the equivalent long one, so a
+/// short-premium strategy reports a positive theta when it collects decay.
+///
+/// The single exception is [`Greeks::alpha`], which sums per-leg `gamma / theta`
+/// ratios. A short negates both terms, so each ratio is invariant under `Side`
+/// by construction.
+///
 /// # Errors
 ///
 /// Methods return `Result<T, GreeksError>` to handle various calculation errors that may
@@ -601,6 +612,23 @@ where
     Ok(value)
 }
 
+/// The position's signed size, `+quantity` when long and `-quantity` when short.
+///
+/// [`Options::quantity`] is [`Positive`] and can never carry direction, so
+/// [`Side`] is the only carrier of it. Every greek is the sensitivity of the
+/// *position*, so the sign belongs wherever the size is applied.
+///
+/// Negating a `Decimal` is exact, so this needs no checked multiplication.
+#[inline]
+fn signed_quantity(option: &Options) -> Decimal {
+    let quantity = option.quantity.to_dec();
+    if option.is_long() {
+        quantity
+    } else {
+        -quantity
+    }
+}
+
 /// Builds the shared kernels when `option` is a live European contract.
 ///
 /// Returns `None` for the degenerate cases — a non-European type, a zero time to
@@ -744,6 +772,11 @@ fn greeks_for(option: &Options) -> Result<Greek, GreeksError> {
 ///     Err(e) => error!("Error calculating delta: {:?}", e),
 /// }
 /// ```
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
     if !matches!(option.option_type, OptionType::European) {
         return crate::greeks::numerical::numerical_delta(option);
@@ -929,6 +962,11 @@ fn delta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// [`GreeksError`] surfaced by `numerical_gamma` for non-European
 /// options (typically [`GreeksError::Pricing`] when the perturbation
 /// evaluation fails).
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn gamma(option: &Options) -> Result<Decimal, GreeksError> {
     if !matches!(option.option_type, OptionType::European) {
         return crate::greeks::numerical::numerical_gamma(option);
@@ -955,8 +993,7 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let gamma: Decimal = k.exp_minus_qt() * k.n_d1()?
         / (underlying_price * implied_volatility * k.sqrt_t().to_dec());
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(gamma * quantity)
+    Ok(gamma * signed_quantity(option))
 }
 
 /// Computes the Theta of an option.
@@ -1068,6 +1105,12 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by `numerical_theta` for non-European
 /// options.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position therefore reports a positive theta when it
+/// collects decay.
 pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     if t == Decimal::ZERO {
@@ -1109,7 +1152,7 @@ fn theta_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal
     // Adjust for quantity and convert to daily value (banker's-rounded annualisation).
     let weighted = d_mul(
         theta,
-        option.quantity.to_dec(),
+        signed_quantity(option),
         "greeks::theta::position_weighted",
     )?;
     Ok(d_div(
@@ -1211,6 +1254,11 @@ fn theta_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by `numerical_vega` for non-European
 /// options.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1228,8 +1276,7 @@ fn vega_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
     let vega: Decimal =
         underlying_price * k.exp_minus_qt() * k.n_d1()? * k.sqrt_t() / Decimal::ONE_HUNDRED; // percentage of change in volatility
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(vega * quantity)
+    Ok(vega * signed_quantity(option))
 }
 
 /// Computes the rho of an options contract.
@@ -1336,6 +1383,11 @@ fn vega_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by `numerical_rho` for non-European
 /// options.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
     // Get time to expiration first and validate
     let t = option.expiration_date.get_years()?;
@@ -1364,7 +1416,7 @@ fn rho_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal, 
     // Adjust for quantity and convert to basis points (banker's rounding).
     let weighted = d_mul(
         rho,
-        option.quantity.to_dec(),
+        signed_quantity(option),
         "greeks::rho::position_weighted",
     )?;
     Ok(d_div(
@@ -1475,6 +1527,11 @@ fn rho_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal, 
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by intermediate Black–Scholes kernels
 /// (typically [`GreeksError::Pricing`] on numerical failure).
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1499,8 +1556,11 @@ fn rho_d_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
         }
     };
 
-    let quantity: Decimal = option.quantity.into();
-    let weighted = d_mul(rhod, quantity, "greeks::rho_d::position_weighted")?;
+    let weighted = d_mul(
+        rhod,
+        signed_quantity(option),
+        "greeks::rho_d::position_weighted",
+    )?;
     Ok(d_div(
         weighted,
         Decimal::from(100),
@@ -1508,6 +1568,27 @@ fn rho_d_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     )?)
 }
 
+/// Computes the alpha of an option, the ratio of gamma to theta.
+///
+/// Alpha expresses how much convexity a position buys per unit of time decay,
+/// so it is the natural way to compare two positions that trade one against the
+/// other.
+///
+/// # Sign convention
+///
+/// Unlike the other eleven, this one is **invariant** under [`Side`]. It is the
+/// ratio `gamma / theta`, and a short position negates both, so the ratio is
+/// unchanged. That is the correct result, not a missing case.
+///
+/// # Returns
+///
+/// `Decimal::ZERO` when gamma vanishes, and the `Decimal::MAX` sentinel when
+/// theta vanishes but gamma does not. Callers that publish the value are
+/// responsible for mapping that sentinel to something meaningful.
+///
+/// # Errors
+///
+/// Propagates any [`GreeksError`] surfaced by [`gamma`] or [`theta`].
 pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
     let gamma = gamma(option)?;
     let theta = theta(option)?;
@@ -1620,6 +1701,11 @@ fn alpha_from(gamma: Decimal, theta: Decimal) -> Decimal {
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by the underlying Black–Scholes
 /// evaluation (typically [`GreeksError::Pricing`]).
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     if option.implied_volatility == ZERO {
         return Ok(Decimal::ZERO);
@@ -1644,8 +1730,7 @@ fn vanna_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     // closed form is -e^{-qT} * n(d1) * d2 / sigma (sign is opposite to d2).
     let vanna: Decimal = -(k.exp_minus_qt() * k.n_d1()? * (k.d2() / implied_volatility));
 
-    let quantity: Decimal = option.quantity.into();
-    Ok(vanna * quantity)
+    Ok(vanna * signed_quantity(option))
 }
 
 /// Computes the vomma of an option.
@@ -1741,6 +1826,12 @@ fn vanna_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by the underlying Black–Scholes
 /// evaluation.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**. The sign and the size are
+/// inherited from [`vega`], which this is a derivative of, so neither is
+/// applied a second time here.
 pub fn vomma(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1847,6 +1938,12 @@ fn vomma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by the underlying Black–Scholes
 /// evaluation.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**. The sign and the size are
+/// inherited from [`vega`], which this is a derivative of, so neither is
+/// applied a second time here.
 pub fn veta(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
     if expiration_date == Decimal::ZERO {
@@ -1994,6 +2091,11 @@ fn veta_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Greek
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by intermediate Black–Scholes kernels.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn charm(option: &Options) -> Result<Decimal, GreeksError> {
     let tau = option.expiration_date.get_years()?;
     // if DTE is zero we can assume Charm is also zero
@@ -2025,7 +2127,7 @@ fn charm_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     // Adjust for quantity and convert to daily value.
     let weighted = d_mul(
         charm,
-        option.quantity.to_dec(),
+        signed_quantity(option),
         "greeks::charm::position_weighted",
     )?;
     Ok(d_div(
@@ -2136,6 +2238,11 @@ fn charm_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
 /// [`GreeksError`] surfaced by intermediate Black–Scholes kernels.
+///
+/// # Sign convention
+///
+/// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
+/// by `quantity`. A short position reports the negative of the equivalent long.
 pub fn color(option: &Options) -> Result<Decimal, GreeksError> {
     let tau = option.expiration_date.get_years()?;
     // if DTE is zero we can assume Color is also zero
@@ -2171,7 +2278,7 @@ fn color_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
     let numerator = d_mul(numerator, factor2, "greeks::color::numerator_factor2")?;
     let numerator = d_mul(
         numerator,
-        option.quantity.to_dec(),
+        signed_quantity(option),
         "greeks::color::numerator_quantity",
     )?;
     let color = d_div(numerator, Decimal::from(365), "greeks::color::per_day")?;
@@ -2537,7 +2644,8 @@ pub mod tests_gamma_equations {
         );
         let gamma_value = gamma(&option).unwrap().to_f64().unwrap();
         info!("Extreme High Volatility Put Gamma: {}", gamma_value);
-        assert_relative_eq!(gamma_value, 0.002147363766511278, epsilon = 1e-8);
+        // Short position, so gamma carries the negative sign; see #428.
+        assert_relative_eq!(gamma_value, -0.002147363766511278, epsilon = 1e-8);
     }
 }
 
@@ -2944,8 +3052,8 @@ pub mod tests_theta_short_equations {
             pos_or_panic!(0.20),  // implied volatility
         );
 
-        // Expected theta value for a short call option (precomputed or from known source)
-        let expected_theta = -0.05569703183000544;
+        // A short call collects decay, so its theta is positive; see #428.
+        let expected_theta = 0.05569703183000544;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2966,8 +3074,8 @@ pub mod tests_theta_short_equations {
             pos_or_panic!(0.25),  // implied volatility
         );
 
-        // Expected theta value for a short put option (precomputed or from known source)
-        let expected_theta = -0.05620624081929407;
+        // A short put collects decay, so its theta is positive; see #428.
+        let expected_theta = 0.05620624081929407;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -2990,7 +3098,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(Positive::ONE); // Option close to expiry
 
         // Expected theta value for a short near-expiry call option (precomputed)
-        let expected_theta = -0.24314466256999295;
+        let expected_theta = 0.24314466256999295;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -3013,7 +3121,7 @@ pub mod tests_theta_short_equations {
         option.expiration_date = ExpirationDate::Days(DAYS_IN_A_YEAR); // Option far from expiry
 
         // Expected theta value for a far-expiry short put option (precomputed)
-        let expected_theta = -0.013947672323606776;
+        let expected_theta = 0.013947672323606776;
 
         // Compute the theta value using the function
         let calculated_theta = theta(&option).unwrap().to_f64().unwrap();
@@ -3192,43 +3300,36 @@ mod tests_greeks_trait {
 
         let greeks = collection.greeks().unwrap();
 
-        // Test aggregated greek values
-        assert!(
-            greeks.delta.abs() > dec!(0.0),
-            "Delta should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.gamma.abs() > dec!(0.0),
-            "Gamma should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.theta.abs() > dec!(0.0),
-            "Theta should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.vega.abs() > dec!(0.0),
-            "Vega should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.rho.abs() > dec!(0.0),
-            "Rho should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.rho_d.abs() > dec!(0.0),
-            "Rho_d should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.vanna.abs() > dec!(0.0),
-            "Vanna should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.vomma.abs() > dec!(0.0),
-            "Vomma should be non-zero for multiple options"
-        );
-        assert!(
-            greeks.veta.abs() > dec!(0.0),
-            "Veta should be non-zero for multiple options"
-        );
+        // A long call and a short put at the same strike and expiry is a
+        // synthetic long forward. The greeks that carry no `option_style` branch
+        // are identical for the two legs, so signing them cancels those exactly;
+        // the ones that do branch survive.
+        for (name, value) in [
+            ("gamma", greeks.gamma),
+            ("vega", greeks.vega),
+            ("vanna", greeks.vanna),
+            ("vomma", greeks.vomma),
+            ("veta", greeks.veta),
+            ("color", greeks.color),
+        ] {
+            assert_eq!(
+                value,
+                Decimal::ZERO,
+                "{name} has no style branch, so a synthetic forward cancels it"
+            );
+        }
+        for (name, value) in [
+            ("delta", greeks.delta),
+            ("theta", greeks.theta),
+            ("rho", greeks.rho),
+            ("rho_d", greeks.rho_d),
+            ("charm", greeks.charm),
+        ] {
+            assert!(
+                value.abs() > Decimal::ZERO,
+                "{name} branches on style, so it must survive the synthetic forward"
+            );
+        }
     }
 
     #[test]
@@ -3378,38 +3479,20 @@ mod tests_greeks_trait {
 
         let greeks = collection.greeks().unwrap();
 
-        // Opposing positions should mostly cancel out
-        assert_decimal_eq!(greeks.delta, Decimal::ZERO, dec!(0.000001));
-        assert_decimal_eq!(
-            greeks.gamma,
-            dec!(0.0755185886581300512828146194),
-            dec!(0.000001)
-        );
-        assert_decimal_eq!(
-            greeks.vega,
-            dec!(0.3775929432906502564140730968),
-            dec!(0.000001)
-        );
-        assert_decimal_eq!(
-            greeks.rho,
-            dec!(0.5135001229824933847234299424),
-            dec!(0.000001)
-        );
-        assert_decimal_eq!(
-            greeks.vanna,
-            dec!(-0.3775929432906502564140730968),
-            dec!(0.000001)
-        );
-        assert_decimal_eq!(
-            greeks.vomma,
-            dec!(0.0566389414935975384621109646),
-            dec!(0.000001)
-        );
-        assert_decimal_eq!(
-            greeks.veta,
-            dec!(0.0000066678118954102922263596),
-            dec!(0.000001)
-        );
+        // A long and a short of the identical contract is a closed position, so
+        // every greek cancels exactly. Before #428 only delta did, and the other
+        // eleven summed as though both legs were long.
+        assert_eq!(greeks.delta, Decimal::ZERO);
+        assert_eq!(greeks.gamma, Decimal::ZERO);
+        assert_eq!(greeks.theta, Decimal::ZERO);
+        assert_eq!(greeks.vega, Decimal::ZERO);
+        assert_eq!(greeks.rho, Decimal::ZERO);
+        assert_eq!(greeks.rho_d, Decimal::ZERO);
+        assert_eq!(greeks.vanna, Decimal::ZERO);
+        assert_eq!(greeks.vomma, Decimal::ZERO);
+        assert_eq!(greeks.veta, Decimal::ZERO);
+        assert_eq!(greeks.charm, Decimal::ZERO);
+        assert_eq!(greeks.color, Decimal::ZERO);
     }
 
     #[test]
@@ -3431,16 +3514,18 @@ mod tests_greeks_trait {
         let vomma = collection.vomma().unwrap();
         let veta = collection.veta().unwrap();
 
-        // Verify each value is non-zero (actual values depend on input parameters)
-        assert!(delta.abs() > dec!(0.0), "Delta calculation failed");
-        assert!(gamma.abs() > dec!(0.0), "Gamma calculation failed");
-        assert!(theta.abs() > dec!(0.0), "Theta calculation failed");
-        assert!(vega.abs() > dec!(0.0), "Vega calculation failed");
-        assert!(rho.abs() > dec!(0.0), "Rho calculation failed");
-        assert!(rho_d.abs() > dec!(0.0), "Rho_d calculation failed");
-        assert!(vanna.abs() > dec!(0.0), "Vanna calculation failed");
-        assert!(vomma.abs() > dec!(0.0), "Vomma calculation failed");
-        assert!(veta.abs() > dec!(0.0), "Veta calculation failed");
+        // Same synthetic long forward as `test_greeks_multiple_options`: the
+        // style-independent greeks cancel once the short leg is signed, and the
+        // style-dependent ones survive.
+        assert_eq!(gamma, Decimal::ZERO, "gamma should cancel");
+        assert_eq!(vega, Decimal::ZERO, "vega should cancel");
+        assert_eq!(vanna, Decimal::ZERO, "vanna should cancel");
+        assert_eq!(vomma, Decimal::ZERO, "vomma should cancel");
+        assert_eq!(veta, Decimal::ZERO, "veta should cancel");
+        assert!(delta.abs() > Decimal::ZERO, "Delta calculation failed");
+        assert!(theta.abs() > Decimal::ZERO, "Theta calculation failed");
+        assert!(rho.abs() > Decimal::ZERO, "Rho calculation failed");
+        assert!(rho_d.abs() > Decimal::ZERO, "Rho_d calculation failed");
     }
 
     #[test]
@@ -5070,6 +5155,138 @@ mod tests_shared_kernel_equivalence {
             kernels.exp_minus_rt(),
             (-option.risk_free_rate * t).exp(),
             "exp(-rT)"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_side_sign_convention {
+    use super::*;
+    use crate::model::types::OptionType;
+    use crate::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    fn option(style: OptionStyle, side: Side, quantity: Positive) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            quantity,
+            pos_or_panic!(105.0),
+            dec!(0.05),
+            style,
+            pos_or_panic!(0.02),
+            None,
+        )
+    }
+
+    fn ok(result: Result<Decimal, GreeksError>, what: &str) -> Decimal {
+        match result {
+            Ok(value) => value,
+            Err(e) => panic!("{what} should compute: {e}"),
+        }
+    }
+
+    #[test]
+    fn test_signed_quantity_carries_the_side() {
+        for quantity in [Positive::ONE, Positive::TWO, pos_or_panic!(7.5)] {
+            let long = option(OptionStyle::Call, Side::Long, quantity);
+            let short = option(OptionStyle::Call, Side::Short, quantity);
+            assert_eq!(signed_quantity(&long), quantity.to_dec());
+            assert_eq!(signed_quantity(&short), -quantity.to_dec());
+        }
+    }
+
+    /// Flipping the side must negate eleven of the twelve. `alpha` is the
+    /// exception by construction, being the ratio `gamma / theta`.
+    #[test]
+    fn test_flipping_the_side_negates_every_greek_except_alpha() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let long = option(style, Side::Long, pos_or_panic!(3.0));
+            let short = option(style, Side::Short, pos_or_panic!(3.0));
+
+            for (name, l, s) in [
+                ("delta", delta(&long), delta(&short)),
+                ("gamma", gamma(&long), gamma(&short)),
+                ("theta", theta(&long), theta(&short)),
+                ("vega", vega(&long), vega(&short)),
+                ("rho", rho(&long), rho(&short)),
+                ("rho_d", rho_d(&long), rho_d(&short)),
+                ("vanna", vanna(&long), vanna(&short)),
+                ("vomma", vomma(&long), vomma(&short)),
+                ("veta", veta(&long), veta(&short)),
+                ("charm", charm(&long), charm(&short)),
+                ("color", color(&long), color(&short)),
+            ] {
+                let long_value = ok(l, name);
+                assert_eq!(
+                    ok(s, name),
+                    -long_value,
+                    "{name} should negate when the side flips, for {style:?}"
+                );
+            }
+
+            // The ratio is invariant: a short negates numerator and denominator.
+            assert_eq!(
+                ok(alpha(&short), "alpha"),
+                ok(alpha(&long), "alpha"),
+                "alpha is a ratio and must not change with the side"
+            );
+        }
+    }
+
+    /// A long and a short of the same contract are a closed position, so every
+    /// greek must net to zero.
+    #[test]
+    fn test_offsetting_legs_net_to_zero() {
+        struct Legs(Vec<Options>);
+        impl Greeks for Legs {
+            fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+                Ok(self.0.iter().collect())
+            }
+        }
+
+        let legs = Legs(vec![
+            option(OptionStyle::Call, Side::Long, pos_or_panic!(4.0)),
+            option(OptionStyle::Call, Side::Short, pos_or_panic!(4.0)),
+        ]);
+        let Ok(g) = legs.greeks() else {
+            panic!("aggregate should compute");
+        };
+
+        for (name, value) in [
+            ("delta", g.delta),
+            ("gamma", g.gamma),
+            ("theta", g.theta),
+            ("vega", g.vega),
+            ("rho", g.rho),
+            ("rho_d", g.rho_d),
+            ("vanna", g.vanna),
+            ("vomma", g.vomma),
+            ("veta", g.veta),
+            ("charm", g.charm),
+            ("color", g.color),
+        ] {
+            assert_eq!(value, Decimal::ZERO, "{name} should net to zero");
+        }
+    }
+
+    /// A short premium position collects decay, so its theta is positive.
+    #[test]
+    fn test_short_premium_theta_is_positive() {
+        let short_call = option(OptionStyle::Call, Side::Short, Positive::ONE);
+        assert!(
+            ok(theta(&short_call), "theta").is_sign_positive(),
+            "a short call collects decay, so theta must be positive"
+        );
+        let long_call = option(OptionStyle::Call, Side::Long, Positive::ONE);
+        assert!(
+            ok(theta(&long_call), "theta").is_sign_negative(),
+            "a long call pays decay, so theta must be negative"
         );
     }
 }

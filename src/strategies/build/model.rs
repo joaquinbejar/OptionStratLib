@@ -419,33 +419,45 @@ mod tests_strategies_build_model {
             dec!(0.1581527925803475549715372372),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(-0.0083145207388161162095837985),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.theta,
-            dec!(-4.5538703856637124015693694077),
+            dec!(1.1661006475280848039640271479),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vega,
-            dec!(0.2511686561527911084852785379),
+            dec!(-0.0674820170867640005374723859),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(0.0037641936907908711830937891), dec!(1e-4));
         assert_decimal_eq!(
             greeks.vanna,
-            dec!(-1.2129758899332920842988174278),
+            dec!(-0.0910934609396018233276697490),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vomma,
-            dec!(0.5466916419288404045805098926),
+            dec!(0.2162187229901720187343681980),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
-        assert_decimal_eq!(greeks.charm, dec!(0.2091949851158175385267637), dec!(1e-5));
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(0.0000581489888845782729032393),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.charm,
+            dec!(0.0167839745441953523259637898),
+            dec!(1e-5)
+        );
         assert_decimal_eq!(
             greeks.color,
-            dec!(-0.0038405632865186300729115151),
+            dec!(0.0088091718729949492796589761),
             dec!(1e-6)
         );
     }
@@ -501,33 +513,49 @@ mod tests_strategies_build_model {
             dec!(-0.1581527925803475549715372372),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(0.0083145207388161162095837985),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.theta,
-            dec!(-4.5538703856637124015693694077),
+            dec!(-1.1661006475280848039640271479),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vega,
-            dec!(0.2511686561527911084852785379),
+            dec!(0.0674820170867640005374723859),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.rho, dec!(0.0398), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.rho,
+            dec!(-0.0037641936907908711830937891),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.vanna,
-            dec!(-1.2129758899332920842988174278),
+            dec!(0.0910934609396018233276697490),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vomma,
-            dec!(0.5466916419288404045805098926),
+            dec!(-0.2162187229901720187343681980),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
-        assert_decimal_eq!(greeks.charm, dec!(0.2091949851158175385267637), dec!(1e-5));
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(-0.0000581489888845782729032393),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.charm,
+            dec!(-0.0167839745441953523259637898),
+            dec!(1e-5)
+        );
         assert_decimal_eq!(
             greeks.color,
-            dec!(-0.0038405632865186300729115151),
+            dec!(-0.0088091718729949492796589761),
             dec!(1e-6)
         );
     }
@@ -583,37 +611,45 @@ mod tests_strategies_build_model {
             dec!(0.1581527925803475549715372372),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(-0.0083145207388161162095837985),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.theta,
-            dec!(-4.3563687207554982849013080107),
+            dec!(1.1647309721540014524854918129),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vega,
-            dec!(0.2511686561527911084852785379),
+            dec!(-0.0674820170867640005374723859),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+        assert_decimal_eq!(greeks.rho, dec!(0.0040381287656075429636946826), dec!(1e-4));
         assert_decimal_eq!(
             greeks.vanna,
-            dec!(-1.2129758899332920842988174278),
+            dec!(-0.0910934609396018233276697490),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vomma,
-            dec!(0.5466916419288404045805098926),
+            dec!(0.2162187229901720187343681980),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(0.0000581489888845782729032393),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.charm,
-            dec!(0.2091401920964686467636671300),
+            dec!(0.0167839745441953523341827428),
             dec!(1e-5)
         );
         assert_decimal_eq!(
             greeks.color,
-            dec!(-0.0038405632865186300729115151),
+            dec!(0.0088091718729949492796589761),
             dec!(1e-6)
         );
     }
@@ -669,37 +705,49 @@ mod tests_strategies_build_model {
             dec!(-0.1581527925803475549715372372),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.gamma, dec!(0.0309), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(0.0083145207388161162095837985),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.theta,
-            dec!(-4.3563687207554982849013080107),
+            dec!(-1.1647309721540014524854918129),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vega,
-            dec!(0.2511686561527911084852785379),
+            dec!(0.0674820170867640005374723859),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.rho, dec!(-0.0097), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.rho,
+            dec!(-0.0040381287656075429636946826),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.vanna,
-            dec!(-1.2129758899332920842988174278),
+            dec!(0.0910934609396018233276697490),
             dec!(1e-4)
         );
         assert_decimal_eq!(
             greeks.vomma,
-            dec!(0.5466916419288404045805098926),
+            dec!(-0.2162187229901720187343681980),
             dec!(1e-4)
         );
-        assert_decimal_eq!(greeks.veta, dec!(0.0031), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(-0.0000581489888845782729032393),
+            dec!(1e-4)
+        );
         assert_decimal_eq!(
             greeks.charm,
-            dec!(0.2091401920964686467636671300),
+            dec!(-0.0167839745441953523341827428),
             dec!(1e-5)
         );
         assert_decimal_eq!(
             greeks.color,
-            dec!(-0.0038405632865186300729115151),
+            dec!(-0.0088091718729949492796589761),
             dec!(1e-5)
         );
     }

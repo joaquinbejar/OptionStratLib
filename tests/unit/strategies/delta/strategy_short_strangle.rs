@@ -37,15 +37,15 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
     let epsilon = DELTA_THRESHOLD;
 
     assert_decimal_eq!(greeks.delta, dec!(0.00001), epsilon);
-    assert_decimal_eq!(greeks.gamma, dec!(0.0008), epsilon);
-    assert_decimal_eq!(greeks.theta, dec!(-8.06459200), epsilon);
-    assert_decimal_eq!(greeks.vega, dec!(19.569191489), epsilon);
-    assert_decimal_eq!(greeks.rho, dec!(-0.7052940734), epsilon);
-    assert_decimal_eq!(greeks.rho_d, dec!(0.00073528), epsilon);
-    assert_decimal_eq!(greeks.vanna, dec!(0.2742684839), epsilon);
-    assert_decimal_eq!(greeks.vomma, dec!(2.3016267940), epsilon);
-    assert_decimal_eq!(greeks.veta, dec!(0.0032881122), epsilon);
-    assert_decimal_eq!(greeks.charm, dec!(-0.00195436), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(-0.0008312506548070177682126771), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(8.064592005817847147001604890), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(-19.569191488864943003335299952), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(0.7052940734385944826090595496), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-0.0007352819715194783511293371), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(-0.2742684839381314127381931021), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(-2.3016267939924681954653119310), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(-0.0032881122228448042811767833), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(0.0019543614202870773736805913), epsilon);
     assert_decimal_eq!(greeks.color, dec!(-0.00000882), epsilon);
 
     assert_decimal_eq!(

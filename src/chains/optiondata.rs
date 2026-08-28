@@ -181,10 +181,10 @@ pub struct OptionData {
     /// flips sign with it. Scaling by position size is likewise the consumer's
     /// job.
     ///
-    /// Note this is deliberately *not* what [`crate::greeks::Greeks`] does when
-    /// aggregating a position today: it applies the long/short sign in `delta`
-    /// and nowhere else, which is the bug tracked in issue #428. These fields
-    /// are per-long-contract values and do not inherit that asymmetry.
+    /// [`crate::greeks::Greeks`] signs an aggregate position by each leg's
+    /// [`Side`] for you. These fields do not, by construction: they are built
+    /// through `get_option(Side::Long, style)`, so they stay per-long-contract
+    /// and the caller owns both the sign and the size.
     ///
     /// # When this is `None`
     ///
