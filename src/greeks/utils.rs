@@ -2348,3 +2348,34 @@ mod tests_edge_cases_and_errors {
         assert!(n_result.to_f64().unwrap() == 0.0);
     }
 }
+
+#[cfg(test)]
+mod tests_delta_neutral_extremes {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_large_deltas_on_a_large_size_report_the_overflow() {
+        // `size · delta` leaves the `Decimal` range for a large book against
+        // large deltas. The raw operator aborts; the caller must get an error.
+        let result = calculate_delta_neutral_sizes(dec!(10), dec!(-10), Positive::MAX);
+        assert!(result.is_err(), "expected an error, got {result:?}");
+    }
+
+    #[test]
+    fn test_ordinary_deltas_still_size_the_pair() {
+        let (size1, size2) = match calculate_delta_neutral_sizes(
+            dec!(0.5),
+            dec!(-0.5),
+            Positive::new(10.0).expect("literal is positive"),
+        ) {
+            Ok(sizes) => sizes,
+            Err(e) => panic!("sizing should succeed: {e:?}"),
+        };
+        assert_eq!(size1, size2);
+        assert_eq!(
+            size1 + size2,
+            Positive::new(10.0).expect("literal is positive")
+        );
+    }
+}

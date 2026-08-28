@@ -61,13 +61,61 @@ clean:
 .PHONY: check
 check: test fmt-check lint scan-banned
 
-# Fails when a panicking construct reappears in production code (test modules
-# and doc comments are skipped). A reviewed exception carries a trailing
+# Fails when a panicking construct reappears in production code. A bare
+# `#[cfg(test)]` never truncates the scan; only the braced body of the item
+# it actually gates is skipped, brace counted (files may carry several):
+# `mod`/`fn`/`impl`/`trait`/`struct`/`enum`/`union` (any `pub(..)` visibility,
+# `async`/`unsafe`, generics or return type before the `{`, spanning multiple
+# signature lines if needed), and a bare `#[cfg(test)] { ... }` block. A
+# body-less item behind `#[cfg(test)]` (`use`, `const`, `static`, `type`
+# alias, or a `;`-terminated declaration such as a tuple struct or a trait
+# method signature) skips nothing; scanning resumes right after it as usual.
+# Doc comments are skipped too. A reviewed exception carries a trailing
 # `// scan-banned: allow -- <reason>` marker on the same line.
 .PHONY: scan-banned
 scan-banned:
 	@found=$$(for f in $$(find src -name '*.rs'); do \
-		awk -v file="$$f" '/#\[cfg\(test\)\]/ { exit } { print file ":" NR ":" $$0 }' "$$f"; \
+		awk -v file="$$f" ' \
+			BEGIN { skip = 0; depth = 0; pending = 0; awaiting = 0 } \
+			function braces(line,   tmp, o, c) { \
+				tmp = line; o = gsub(/{/, "{", tmp); \
+				tmp = line; c = gsub(/}/, "}", tmp); \
+				return o - c; \
+			} \
+			{ \
+				raw = $$0; \
+				if (skip) { \
+					depth += braces(raw); \
+					if (depth <= 0) { skip = 0; depth = 0 } \
+					next; \
+				} \
+				if (awaiting) { \
+					depth += braces(raw); \
+					if (depth > 0) { awaiting = 0; skip = 1; next } \
+					if (raw ~ /;[[:space:]]*$$/) { awaiting = 0; depth = 0 } \
+					next; \
+				} \
+				if (pending) { \
+					if (raw ~ /^[[:space:]]*#\[/) { next } \
+					pending = 0; \
+					trimmed = raw; sub(/^[[:space:]]+/, "", trimmed); \
+					if (trimmed ~ /^\{/) { \
+						depth = braces(raw); \
+						if (depth > 0) { skip = 1 } \
+						next; \
+					} \
+					if (trimmed ~ /^(pub([[:space:]]*\([^)]*\))?[[:space:]]+)?(async[[:space:]]+)?(unsafe[[:space:]]+)?(mod|fn|impl|trait|struct|enum|union)([[:space:]<(]|$$)/) { \
+						depth = braces(raw); \
+						if (depth > 0) { skip = 1 } \
+						else if (raw ~ /;[[:space:]]*$$/) { depth = 0 } \
+						else { awaiting = 1; depth = 0 } \
+						next; \
+					} \
+				} \
+				if (raw ~ /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$$/) { pending = 1; next } \
+				print file ":" NR ":" raw; \
+			} \
+		' "$$f"; \
 	done \
 		| grep -E '\.unwrap\(\)|\.expect\(' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*)' \

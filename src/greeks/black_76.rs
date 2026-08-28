@@ -34,7 +34,7 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::{big_n, calculate_d_values_black_76, n};
-use crate::model::decimal::{d_div, d_exp, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 #[cfg(test)]
@@ -280,13 +280,15 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
             // Θ_call = common + r·F·e^(-rT)·N(d1) − r·K·e^(-rT)·N(d2)
             let plus = d_mul(r_f_df, big_n(d1)?, "greeks::black_76::theta::call::plus")?;
             let minus = d_mul(r_k_df, big_n(d2)?, "greeks::black_76::theta::call::minus")?;
-            d_sub(common + plus, minus, "greeks::black_76::theta::call::sum")?
+            let sum = d_add(common, plus, "greeks::black_76::theta::call::common_plus")?;
+            d_sub(sum, minus, "greeks::black_76::theta::call::sum")?
         }
         OptionStyle::Put => {
             // Θ_put = common − r·F·e^(-rT)·N(−d1) + r·K·e^(-rT)·N(−d2)
             let minus = d_mul(r_f_df, big_n(-d1)?, "greeks::black_76::theta::put::minus")?;
             let plus = d_mul(r_k_df, big_n(-d2)?, "greeks::black_76::theta::put::plus")?;
-            d_sub(common + plus, minus, "greeks::black_76::theta::put::sum")?
+            let sum = d_add(common, plus, "greeks::black_76::theta::put::common_plus")?;
+            d_sub(sum, minus, "greeks::black_76::theta::put::sum")?
         }
     };
 
@@ -810,5 +812,65 @@ mod tests {
             d,
             expected
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_b76_extreme_inputs {
+    use super::*;
+    use crate::ExpirationDate;
+    use positive::{Positive, pos_or_panic};
+
+    /// A forward and a strike near the top of the  range against a
+    /// large negative rate: the intermediate  inside theta
+    /// overflows, which the raw operator turns into an abort.
+    fn near_max_option(style: OptionStyle) -> Options {
+        let near_max = Positive::new_decimal(Decimal::MAX * Decimal::new(98, 2))
+            .expect("98% of Decimal::MAX is positive");
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "CL".to_string(),
+            near_max,
+            ExpirationDate::Days(pos_or_panic!(3.65)),
+            pos_or_panic!(0.3),
+            Positive::ONE,
+            near_max,
+            Decimal::new(-9, 1),
+            style,
+            Positive::ZERO,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_theta_reports_the_overflow_instead_of_aborting() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let option = near_max_option(style);
+            assert!(
+                theta_b76(&option).is_err(),
+                "theta_b76 returned a value for a sum that is not representable"
+            );
+        }
+    }
+
+    #[test]
+    fn test_ordinary_inputs_still_price_theta() {
+        // The guard above must not have cost the normal path its answer.
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "CL".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(180.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::new(5, 2),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        assert!(theta_b76(&option).is_ok());
     }
 }

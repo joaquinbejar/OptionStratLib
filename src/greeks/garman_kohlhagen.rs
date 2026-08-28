@@ -97,8 +97,20 @@ fn side_sign(option: &Options) -> Decimal {
 }
 
 /// Cost of carry `b = r_d − r_f` for Garman–Kohlhagen.
-fn cost_of_carry(option: &Options) -> Decimal {
-    option.risk_free_rate - option.dividend_yield.to_dec()
+///
+/// Fallible because the raw `Decimal` subtraction panics on overflow, which a
+/// domestic rate at the edge of the range against any foreign rate reaches.
+///
+/// # Errors
+///
+/// Returns [`GreeksError`] when `r_d − r_f` leaves the representable
+/// `Decimal` range.
+fn cost_of_carry(option: &Options) -> Result<Decimal, GreeksError> {
+    Ok(d_sub(
+        option.risk_free_rate,
+        option.dividend_yield.to_dec(),
+        "greeks::gk::cost_of_carry",
+    )?)
 }
 
 /// Returns `Some(time_in_years)` when the option has not expired yet, or
@@ -140,7 +152,7 @@ fn delta_at_expiry(option: &Options) -> Decimal {
 /// drift term, mirroring the helper used by the GK pricing kernel.
 fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     let years = option.expiration_date.get_years()?;
-    let b = cost_of_carry(option);
+    let b = cost_of_carry(option)?;
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
@@ -991,5 +1003,78 @@ mod tests {
         assert_eq!(theta_gk(&opt).unwrap(), Decimal::ZERO);
         assert_eq!(rho_domestic_gk(&opt).unwrap(), Decimal::ZERO);
         assert_eq!(rho_foreign_gk(&opt).unwrap(), Decimal::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_gk_extreme_rates {
+    use super::*;
+    use crate::ExpirationDate;
+    use positive::{Positive, pos_or_panic};
+
+    /// An FX option whose domestic rate sits at the edge of the `Decimal`
+    /// range: `r_d - r_f` overflows, which the raw operator turns into an
+    /// abort rather than an error.
+    fn extreme_rate_option(style: OptionStyle) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "EURUSD".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::MIN,
+            style,
+            Positive::ONE,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_every_gk_greek_reports_a_carry_overflow_instead_of_aborting() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let option = extreme_rate_option(style);
+            let greeks: [(&str, Result<Decimal, GreeksError>); 6] = [
+                ("delta_gk", delta_gk(&option)),
+                ("gamma_gk", gamma_gk(&option)),
+                ("vega_gk", vega_gk(&option)),
+                ("theta_gk", theta_gk(&option)),
+                ("rho_domestic_gk", rho_domestic_gk(&option)),
+                ("rho_foreign_gk", rho_foreign_gk(&option)),
+            ];
+            for (label, result) in greeks {
+                assert!(
+                    result.is_err(),
+                    "{label} returned a value for a cost of carry that is not representable"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_ordinary_rates_still_price_the_gk_greeks() {
+        // The guard above must not have cost the normal path its answer.
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "EURUSD".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::new(5, 2),
+            OptionStyle::Call,
+            pos_or_panic!(0.02),
+            None,
+        );
+        assert!(delta_gk(&option).is_ok());
+        assert!(gamma_gk(&option).is_ok());
+        assert!(vega_gk(&option).is_ok());
+        assert!(theta_gk(&option).is_ok());
+        assert!(rho_domestic_gk(&option).is_ok());
+        assert!(rho_foreign_gk(&option).is_ok());
     }
 }
