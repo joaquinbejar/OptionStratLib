@@ -7,7 +7,7 @@ use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_st
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::ChainError;
 use crate::error::chains::OptionDataErrorKind;
-use crate::greeks::{delta, gamma};
+use crate::greeks::{Greeks, GreeksSnapshot, delta, gamma};
 use crate::model::Position;
 use crate::model::utils::sub_floor_zero;
 use crate::strategies::{BasicAble, FindOptimalSide};
@@ -26,7 +26,7 @@ use utoipa::ToSchema;
 ///
 /// This struct encapsulates the complete market data for an options contract at a specific
 /// strike price, including bid/ask prices for both call and put options, implied volatility,
-/// the Greeks (delta, gamma), volume, and open interest. It provides all the essential
+/// the Greeks, volume, and open interest. It provides all the essential
 /// information needed for options analysis and trading decision-making.
 ///
 /// # Fields
@@ -118,14 +118,24 @@ pub struct OptionData {
     pub implied_volatility: Positive,
 
     /// The delta of the call option, measuring price sensitivity to underlying changes.
+    ///
+    /// Convenience mirror of [`Self::greeks_call`]`.delta`, kept for backward
+    /// compatibility. It is also populated directly from broker feeds, where
+    /// the snapshots are absent — see [`Self::greeks_call`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delta_call: Option<Decimal>,
 
     /// The delta of the put option, measuring price sensitivity to underlying changes.
+    ///
+    /// Convenience mirror of [`Self::greeks_put`]`.delta`; see [`Self::delta_call`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delta_put: Option<Decimal>,
 
     /// The gamma of the option, measuring the rate of change in delta.
+    ///
+    /// Convenience mirror of [`Self::greeks_call`]`.gamma`; see
+    /// [`Self::delta_call`]. Gamma does not depend on the option style, so this
+    /// equals the put snapshot's gamma as well.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gamma: Option<Decimal>,
 
@@ -157,6 +167,47 @@ pub struct OptionData {
     /// Additional fields that may be included in the option data.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_fields: Option<Value>,
+
+    /// The full twelve-greek set for the call at this strike.
+    ///
+    /// # Sign and size convention
+    ///
+    /// The snapshot is computed for **one long contract**: the option is built
+    /// with [`Side::Long`] and `quantity: Positive::ONE`. Every value is
+    /// therefore a derivative of the *long* position value.
+    ///
+    /// To turn it into the exposure of a short position, negate **all twelve**,
+    /// not just `delta`: a short is worth `-V`, so every derivative of `V`
+    /// flips sign with it. Scaling by position size is likewise the consumer's
+    /// job.
+    ///
+    /// Note this is deliberately *not* what [`crate::greeks::Greeks`] does when
+    /// aggregating a position today: it applies the long/short sign in `delta`
+    /// and nowhere else, which is the bug tracked in issue #428. These fields
+    /// are per-long-contract values and do not inherit that asymmetry.
+    ///
+    /// # When this is `None`
+    ///
+    /// Populated by [`Self::calculate_greeks`] and by
+    /// `OptionChain::update_greek_snapshots`. It stays `None` when the greeks
+    /// cannot be computed for these inputs — most commonly a zero implied
+    /// volatility, or a missing symbol, expiration or underlying price — and is
+    /// cleared whenever the pricing inputs change underneath it, so a stored
+    /// snapshot is never stale. `OptionChain::update_greeks` refreshes only the
+    /// mirror fields and leaves this one alone.
+    ///
+    /// The relationship with [`Self::delta_call`] is one-directional: a chain
+    /// ingested from a broker feed carries `delta_call` and `gamma` from the
+    /// wire with this field still `None`, so a missing snapshot does not mean
+    /// no greeks are available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub greeks_call: Option<GreeksSnapshot>,
+
+    /// The full twelve-greek set for the put at this strike.
+    ///
+    /// Same convention and the same `None` semantics as [`Self::greeks_call`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub greeks_put: Option<GreeksSnapshot>,
 }
 
 impl OptionData {
@@ -183,7 +234,8 @@ impl OptionData {
     /// # Returns
     ///
     /// A new `OptionData` instance with the specified parameters and with `call_middle`, `put_middle`,
-    /// and `options` fields initialized to `None`.
+    /// `greeks_call` and `greeks_put` initialized to `None`. The greek snapshots
+    /// are populated by [`Self::calculate_greeks`], never supplied here.
     ///
     /// # Note
     ///
@@ -232,6 +284,10 @@ impl OptionData {
             dividend_yield,
             epic,
             extra_fields,
+            // Snapshots are computed by `calculate_greeks`, never supplied by
+            // the caller: this constructor already takes 18 arguments.
+            greeks_call: None,
+            greeks_put: None,
         }
     }
 
@@ -382,6 +438,22 @@ impl OptionData {
     #[inline]
     pub fn set_volatility(&mut self, volatility: &Positive) {
         self.implied_volatility = *volatility;
+        self.invalidate_greek_snapshots();
+    }
+
+    /// Drops any stored greek snapshots, because the inputs they were computed
+    /// from have changed.
+    ///
+    /// The mirror fields are deliberately left alone: they are also populated
+    /// from broker feeds, where clearing them would discard data this crate
+    /// never computed.
+    ///
+    /// Every field on this struct is public, so a caller writing one directly
+    /// bypasses this. Call it by hand after such a mutation, or recompute with
+    /// [`Self::calculate_greeks`].
+    pub(crate) fn invalidate_greek_snapshots(&mut self) {
+        self.greeks_call = None;
+        self.greeks_put = None;
     }
 
     /// Sets additional pricing parameters for this option contract.
@@ -411,6 +483,8 @@ impl OptionData {
         if let Some(dividend_yield) = params.dividend_yield {
             self.dividend_yield = Some(dividend_yield);
         };
+
+        self.invalidate_greek_snapshots();
     }
 
     /// Validates the option data to ensure it meets the required criteria for calculations.
@@ -977,6 +1051,69 @@ impl OptionData {
         }
     }
 
+    /// Computes the full twelve-greek set for both option styles and stores it
+    /// in [`Self::greeks_call`] and [`Self::greeks_put`].
+    ///
+    /// This also refreshes the [`Self::delta_call`], [`Self::delta_put`] and
+    /// [`Self::gamma`] mirror fields, so a caller cannot compute the snapshots
+    /// and their mirrors against different pricing parameters by interleaving a
+    /// [`Self::set_extra_params`] call between two separate calls. Mutating the
+    /// pricing inputs afterwards drops the snapshots rather than leaving them
+    /// stale; see [`Self::set_extra_params`] and [`Self::set_volatility`].
+    ///
+    /// The mirrors are computed independently rather than read back out of the
+    /// snapshots. `delta` and `gamma` return a value at expiry and at zero
+    /// volatility where the full set does not, so routing them through the
+    /// snapshot would turn fields that are populated today into `None`.
+    ///
+    /// Failures are not propagated: a style whose greeks cannot be computed
+    /// leaves its snapshot `None` and logs at `debug` level, matching
+    /// [`Self::calculate_delta`].
+    pub fn calculate_greeks(&mut self) {
+        self.calculate_delta();
+        self.calculate_gamma();
+        self.greeks_call = self.greeks_snapshot(OptionStyle::Call);
+        self.greeks_put = self.greeks_snapshot(OptionStyle::Put);
+    }
+
+    /// Builds the greek snapshot for one option style, or `None` if it cannot
+    /// be computed.
+    ///
+    /// `alpha` is mapped to `None` when the underlying [`crate::greeks::alpha`]
+    /// returns its `Decimal::MAX` sentinel. Publishing that sentinel would put
+    /// a 29-digit number on the wire that consumers would read as a real
+    /// value. The guard is defensive: `alpha` tests gamma first and returns
+    /// zero when it vanishes, so reaching `Decimal::MAX` needs a non-zero
+    /// gamma alongside an exactly cancelling theta.
+    fn greeks_snapshot(&self, option_style: OptionStyle) -> Option<GreeksSnapshot> {
+        let option: Options = match self.get_option(Side::Long, option_style) {
+            Ok(option) => option,
+            Err(e) => {
+                debug!(
+                    "Failed to get option for greeks snapshot: strike {} style {:?}: {}",
+                    self.strike_price, option_style, e
+                );
+                return None;
+            }
+        };
+        match option.greeks() {
+            Ok(greek) => {
+                let mut snapshot = GreeksSnapshot::from(greek);
+                if snapshot.alpha == Some(Decimal::MAX) {
+                    snapshot.alpha = None;
+                }
+                Some(snapshot)
+            }
+            Err(e) => {
+                debug!(
+                    "Greeks snapshot failed: strike {} style {:?}: {}",
+                    self.strike_price, option_style, e
+                );
+                None
+            }
+        }
+    }
+
     /// Retrieves delta values for options at the current strike price.
     ///
     /// Delta measures the rate of change of the option price with respect to changes
@@ -1158,6 +1295,8 @@ impl Default for OptionData {
             dividend_yield: None,
             epic: None,
             extra_fields: None,
+            greeks_call: None,
+            greeks_put: None,
         }
     }
 }
@@ -1340,6 +1479,161 @@ mod optiondata_coverage_tests {
         assert!(deltas.short_call != dec!(0.0));
         assert!(deltas.long_put != dec!(0.0));
         assert!(deltas.short_put != dec!(0.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_greeks_snapshot {
+    use super::*;
+    use positive::{pos_or_panic, spos};
+    use rust_decimal_macros::dec;
+
+    fn option_data_with_expiry(expiration_date: ExpirationDate) -> OptionData {
+        OptionData::new(
+            Positive::HUNDRED,
+            spos!(9.5),
+            spos!(10.0),
+            spos!(8.5),
+            spos!(9.0),
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            spos!(1000.0),
+            Some(500),
+            Some("TEST".to_string()),
+            Some(expiration_date),
+            Some(Box::new(Positive::HUNDRED)),
+            Some(dec!(0.05)),
+            Some(pos_or_panic!(0.02)),
+            None,
+            None,
+        )
+    }
+
+    fn option_data() -> OptionData {
+        option_data_with_expiry(ExpirationDate::Days(pos_or_panic!(30.0)))
+    }
+
+    #[test]
+    fn test_calculate_greeks_populates_both_styles() {
+        let mut data = option_data();
+        assert!(data.greeks_call.is_none());
+        assert!(data.greeks_put.is_none());
+
+        data.calculate_greeks();
+
+        let (Some(call), Some(put)) = (data.greeks_call.as_ref(), data.greeks_put.as_ref()) else {
+            panic!("both snapshots should be populated for a live expiry");
+        };
+        for (name, value) in [
+            ("delta", call.delta),
+            ("gamma", call.gamma),
+            ("theta", call.theta),
+            ("vega", call.vega),
+            ("vanna", call.vanna),
+            ("vomma", call.vomma),
+            ("veta", call.veta),
+            ("charm", call.charm),
+            ("color", call.color),
+        ] {
+            assert!(
+                value != Decimal::MAX && value != Decimal::MIN,
+                "call {name} is a sentinel, not a value"
+            );
+        }
+        assert!(call.rho.is_some());
+        assert!(call.rho_d.is_some());
+        assert!(put.rho.is_some());
+        assert!(put.alpha.is_some());
+    }
+
+    #[test]
+    fn test_calculate_greeks_keeps_mirror_fields_consistent() {
+        let mut data = option_data();
+        data.calculate_greeks();
+
+        let (Some(call), Some(put)) = (data.greeks_call.as_ref(), data.greeks_put.as_ref()) else {
+            panic!("both snapshots should be populated for a live expiry");
+        };
+        assert_eq!(Some(call.delta), data.delta_call);
+        assert_eq!(Some(put.delta), data.delta_put);
+        assert_eq!(Some(call.gamma), data.gamma);
+        // `gamma` has no option-style branch, so both snapshots must agree.
+        assert_eq!(call.gamma, put.gamma);
+    }
+
+    #[test]
+    fn test_calculate_greeks_snapshots_are_per_style_not_a_copy() {
+        let mut data = option_data();
+        data.calculate_greeks();
+
+        let (Some(call), Some(put)) = (data.greeks_call.as_ref(), data.greeks_put.as_ref()) else {
+            panic!("both snapshots should be populated for a live expiry");
+        };
+        assert_ne!(call.charm, put.charm, "charm must differ between styles");
+        let (Some(rho_call), Some(rho_put)) = (call.rho, put.rho) else {
+            panic!("rho should be present for a live expiry");
+        };
+        assert!(
+            rho_call.is_sign_positive() != rho_put.is_sign_positive(),
+            "call and put rho must have opposite signs, got {rho_call} and {rho_put}"
+        );
+    }
+
+    #[test]
+    fn test_calculate_greeks_at_expiry_is_zero_not_missing() {
+        // rho_d and vanna used to reach `d1` unguarded and fail with
+        // InvalidTime at expiry, which lost the whole snapshot.
+        let mut data = option_data_with_expiry(ExpirationDate::Days(Positive::ZERO));
+        data.calculate_greeks();
+
+        let Some(call) = data.greeks_call.as_ref() else {
+            panic!("snapshot should still be produced at expiry");
+        };
+        assert_eq!(call.gamma, Decimal::ZERO);
+        assert_eq!(call.theta, Decimal::ZERO);
+        assert_eq!(call.vega, Decimal::ZERO);
+        assert_eq!(call.vanna, Decimal::ZERO);
+        assert_eq!(call.rho_d, Some(Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_calculate_greeks_without_underlying_price_leaves_snapshots_none() {
+        let mut data = option_data();
+        data.underlying_price = None;
+        data.calculate_greeks();
+
+        assert!(data.greeks_call.is_none());
+        assert!(data.greeks_put.is_none());
+    }
+
+    #[test]
+    fn test_calculate_greeks_never_publishes_the_alpha_sentinel() {
+        // `alpha` tests gamma before theta, so at expiry it returns zero rather
+        // than its `Decimal::MAX` sentinel. Pin that, and pin that no snapshot
+        // on either a live or an expired strike carries the sentinel.
+        for expiry in [
+            ExpirationDate::Days(Positive::ZERO),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        ] {
+            let mut data = option_data_with_expiry(expiry);
+            data.calculate_greeks();
+
+            let (Some(call), Some(put)) = (data.greeks_call.as_ref(), data.greeks_put.as_ref())
+            else {
+                panic!("snapshot should be produced for {expiry:?}");
+            };
+            assert_ne!(call.alpha, Some(Decimal::MAX));
+            assert_ne!(put.alpha, Some(Decimal::MAX));
+        }
+
+        let mut expired = option_data_with_expiry(ExpirationDate::Days(Positive::ZERO));
+        expired.calculate_greeks();
+        let Some(call) = expired.greeks_call.as_ref() else {
+            panic!("snapshot should still be produced at expiry");
+        };
+        assert_eq!(call.alpha, Some(Decimal::ZERO));
     }
 }
 

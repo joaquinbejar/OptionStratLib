@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-28
+
+Adds the full twelve-greek set to the option chain data. **Breaking** for
+consumers that construct `OptionData` with an exhaustive struct literal — see
+*Migration*.
+
+### Added
+
+- `OptionData::greeks_call` and `OptionData::greeks_put`, each an
+  `Option<GreeksSnapshot>` carrying all twelve greeks for that option style, so
+  consumers no longer convert through `TryFrom<&OptionData> for Options` and
+  recompute on every read. Both are computed for **one long contract**: a
+  consumer holding a short negates `delta` and nothing else.
+- `OptionData::calculate_greeks`, which populates both snapshots and refreshes
+  the `delta_call`, `delta_put` and `gamma` mirror fields together.
+- `OptionChain::update_greek_snapshots`, the full-set counterpart to
+  `update_greeks`.
+- `OptionChainBuildParams::with_greek_snapshots`, opting a chain build into the
+  snapshots. Off by default: computing twelve greeks per style costs roughly
+  seven times a chain build, so existing build paths keep their current speed.
+- `impl From<Greek> for GreeksSnapshot`.
+
+### Fixed
+
+- `rho_d` and `vanna` returned an error at expiry where their ten siblings
+  returned zero, so `Greeks::greeks()` lost the entire set for any expired
+  option. Both now return zero.
+
+### Changed
+
+- `GreeksSnapshot` no longer sets `#[serde(deny_unknown_fields)]`. It is a wire
+  type now, and adding a thirteenth greek must not break deserialization for
+  consumers built against an older version.
+- `OptionData::set_volatility` and `set_extra_params` drop the stored snapshots
+  rather than leave them stale against changed pricing inputs.
+
+### Migration
+
+`OptionData` gained two public fields. Any exhaustive struct literal needs
+`..Default::default()` or the two new fields; `OptionData::new` is unchanged and
+needs no edit. Serialized chains are unaffected in both directions: the new
+fields are skipped when absent, and a payload written before this release
+deserializes with both set to `None`.
+
 ## [0.19.1] - 2026-08-28
 
 Correctness and housekeeping follow-up to the cost-of-carry fix in 0.19.0. No

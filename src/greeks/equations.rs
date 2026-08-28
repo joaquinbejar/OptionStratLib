@@ -74,8 +74,23 @@ pub struct Greek {
 /// or volatility, affect the theoretical value of derivatives. This struct supports serialization
 /// and deserialization for storage or communication purposes, and implements common traits like
 /// `Debug`, `Clone`, and `PartialEq`.
+///
+/// # Wire compatibility
+///
+/// This type crosses REST boundaries (it is carried by [`crate::chains::OptionData`]
+/// and by `TradeRecord`), so it deliberately does **not** set
+/// `#[serde(deny_unknown_fields)]`. With that attribute in place, adding a
+/// thirteenth greek would break deserialization of new payloads by consumers
+/// built against an older version. Keep new fields additive.
+///
+/// # Meaning of the optional fields
+///
+/// `rho`, `rho_d` and `alpha` are `Option<Decimal>`. `None` means **not
+/// computed or not meaningful for these inputs** — it is never a stand-in for
+/// zero, and must not be defaulted to one. They serialize as an explicit
+/// `null` rather than being skipped, so that "not meaningful" stays
+/// distinguishable from "field absent" on the wire.
 #[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
 pub struct GreeksSnapshot {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
     pub delta: Decimal,
@@ -101,6 +116,34 @@ pub struct GreeksSnapshot {
     pub charm: Decimal,
     /// Measures the rate of change of gamma in relation to changes in time
     pub color: Decimal,
+}
+
+impl From<Greek> for GreeksSnapshot {
+    /// Widens a [`Greek`] into a [`GreeksSnapshot`].
+    ///
+    /// The conversion is lossless: [`Greek`] holds the same twelve values with
+    /// `rho`, `rho_d` and `alpha` as plain `Decimal`, so they are wrapped in
+    /// `Some`. This deliberately performs no interpretation of sentinel values
+    /// — see [`alpha`], which returns `Decimal::MAX` when theta is zero.
+    /// Callers that publish a snapshot are responsible for mapping such
+    /// sentinels to `None`.
+    #[inline]
+    fn from(greek: Greek) -> Self {
+        Self {
+            delta: greek.delta,
+            gamma: greek.gamma,
+            theta: greek.theta,
+            vega: greek.vega,
+            rho: Some(greek.rho),
+            rho_d: Some(greek.rho_d),
+            alpha: Some(greek.alpha),
+            vanna: greek.vanna,
+            vomma: greek.vomma,
+            veta: greek.veta,
+            charm: greek.charm,
+            color: greek.color,
+        }
+    }
 }
 
 /// Trait that provides option Greeks calculation functionality for financial instruments.
@@ -1231,6 +1274,10 @@ pub fn rho(option: &Options) -> Result<Decimal, GreeksError> {
 /// (typically [`GreeksError::Pricing`] on numerical failure).
 pub fn rho_d(option: &Options) -> Result<Decimal, GreeksError> {
     let expiration_date: Positive = option.expiration_date.get_years()?;
+    if expiration_date == Decimal::ZERO {
+        // At expiration the dividend yield can no longer move the value.
+        return Ok(Decimal::ZERO);
+    }
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
@@ -1371,6 +1418,11 @@ pub fn vanna(option: &Options) -> Result<Decimal, GreeksError> {
     }
 
     let expiration_date: Positive = option.expiration_date.get_years()?;
+    if expiration_date == Decimal::ZERO {
+        // At expiration delta is a step function and no longer responds to
+        // volatility, so vanna is zero.
+        return Ok(Decimal::ZERO);
+    }
     let d1 = d1(
         option.underlying_price,
         option.strike_price,
@@ -2822,6 +2874,71 @@ mod tests_greeks_trait {
     impl Greeks for TestOptionCollection {
         fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
             Ok(self.options.iter().collect())
+        }
+    }
+
+    // Helper function to create a test option
+    fn create_test_option_at(
+        side: Side,
+        style: OptionStyle,
+        quantity: Positive,
+        expiration_date: ExpirationDate,
+    ) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            expiration_date,
+            pos_or_panic!(0.2),
+            quantity,
+            Positive::HUNDRED,
+            dec!(0.05),
+            style,
+            pos_or_panic!(0.01),
+            None,
+        )
+    }
+
+    #[test]
+    fn test_rho_d_and_vanna_are_zero_at_expiry() {
+        // Both used to reach `d1` unguarded and fail with InvalidTime, while
+        // their ten siblings returned zero. That asymmetry made the whole
+        // twelve-greek set unobtainable at expiry.
+        let option = create_test_option_at(
+            Side::Long,
+            OptionStyle::Call,
+            Positive::ONE,
+            ExpirationDate::Days(Positive::ZERO),
+        );
+        match rho_d(&option) {
+            Ok(value) => assert_eq!(value, Decimal::ZERO),
+            Err(e) => panic!("rho_d should be zero at expiry, got {e}"),
+        }
+        match vanna(&option) {
+            Ok(value) => assert_eq!(value, Decimal::ZERO),
+            Err(e) => panic!("vanna should be zero at expiry, got {e}"),
+        }
+    }
+
+    #[test]
+    fn test_greeks_succeeds_at_expiry() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let option = create_test_option_at(
+                Side::Long,
+                style,
+                Positive::ONE,
+                ExpirationDate::Days(Positive::ZERO),
+            );
+            let greek = match option.greeks() {
+                Ok(greek) => greek,
+                Err(e) => panic!("greeks() should succeed at expiry for {style:?}: {e}"),
+            };
+            assert_eq!(greek.gamma, Decimal::ZERO);
+            assert_eq!(greek.theta, Decimal::ZERO);
+            assert_eq!(greek.vega, Decimal::ZERO);
+            assert_eq!(greek.rho_d, Decimal::ZERO);
+            assert_eq!(greek.vanna, Decimal::ZERO);
         }
     }
 
