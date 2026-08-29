@@ -10,6 +10,7 @@ use crate::error::probability::{
 use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
+use crate::model::utils::sub_floor_zero;
 use num_traits::ToPrimitive;
 use positive::Positive;
 #[cfg(test)]
@@ -60,10 +61,15 @@ pub struct PriceTrend {
 ///
 /// # Errors
 ///
-/// Returns an error string if:
+/// Returns an error if:
+/// - `current_price` is zero, which leaves the log price ratio undefined
+///   ([`ProbabilityError::PriceError`] with
+///   [`PriceErrorKind::InvalidUnderlyingPrice`]).
 /// - `time_to_expiry` is not positive, indicating the expiration date has passed or is invalid.
 /// - `volatility_adj.base_volatility` is non-positive.
 /// - `trend.confidence` is not between 0 and 1.
+/// - the price ratio, its logarithm, or the volatility scaling leaves the
+///   representable range ([`ProbabilityError::PositiveError`]).
 ///
 pub fn calculate_single_point_probability(
     current_price: &Positive,
@@ -75,6 +81,18 @@ pub fn calculate_single_point_probability(
 ) -> Result<(Positive, Positive), ProbabilityError> {
     if *target_price == Positive::ZERO {
         return Ok((Positive::ZERO, Positive::ONE));
+    }
+    // The log-normal model is built on the ratio `target / current`. A spot of
+    // zero has no ratio and no return distribution around it, so it is
+    // rejected here rather than dividing by it below.
+    if *current_price == Positive::ZERO {
+        return Err(ProbabilityError::PriceError(
+            PriceErrorKind::InvalidUnderlyingPrice {
+                price: 0.0,
+                reason: "current price must be strictly positive to form the log price ratio"
+                    .to_string(),
+            },
+        ));
     }
     let time_to_expiry = expiration_date.get_years()?;
     if time_to_expiry <= 0.0 {
@@ -98,7 +116,8 @@ pub fn calculate_single_point_probability(
                     },
                 ));
             }
-            adj.base_volatility * (1.0 + adj.std_dev_adjustment)
+            adj.base_volatility
+                .checked_mul_f64(1.0 + adj.std_dev_adjustment)?
         }
         None => Positive::new_decimal(dec!(0.2)).unwrap_or(Positive::ZERO), // Default volatility if not provided
     };
@@ -135,9 +154,12 @@ pub fn calculate_single_point_probability(
         })?,
     };
 
-    // Calculate parameters for the log-normal distribution
-    let log_ratio = (*target_price / *current_price).ln();
-    let std_dev = volatility * time_to_expiry.sqrt();
+    // Calculate parameters for the log-normal distribution. A spot far below
+    // the target overflows the ratio, and a spot far above it rounds the ratio
+    // to zero, where the logarithm is undefined; both are reported rather than
+    // aborting.
+    let log_ratio = target_price.checked_div(current_price)?.checked_ln()?;
+    let std_dev = volatility.checked_mul(&time_to_expiry.checked_sqrt()?)?;
 
     // Calculate z-score considering drift
     // `Positive::ln` returns `Decimal` as of positive 0.6: the log of a
@@ -222,9 +244,12 @@ pub fn calculate_price_probability(
         risk_free_rate,
     )?;
 
-    // Calculate the three required probabilities
+    // Calculate the three required probabilities. The normal CDF is monotone,
+    // so the mass in the range is non-negative by construction; flooring
+    // absorbs the rounding of the two independent `Decimal -> f64 -> Decimal`
+    // round trips rather than aborting on a difference of one ulp.
     let prob_below_range = prob_below_lower;
-    let prob_in_range = prob_below_upper - prob_below_lower;
+    let prob_in_range = sub_floor_zero(prob_below_upper, prob_below_lower.to_dec_ref());
     let prob_above_range = prob_above_upper;
 
     Ok((prob_below_range, prob_in_range, prob_above_range))

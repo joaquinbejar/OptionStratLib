@@ -5,6 +5,7 @@
 use crate::chains::OptionData;
 use crate::constants::{STRIKE_PRICE_LOWER_BOUND_MULTIPLIER, STRIKE_PRICE_UPPER_BOUND_MULTIPLIER};
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::model::decimal::d_add;
 use crate::model::utils::sub_floor_zero;
 use crate::{
     ExpirationDate, Options,
@@ -681,21 +682,23 @@ pub trait BasicAble {
     ///
     /// # Panics
     /// The default implementation panics because there is no graceful fallback
-    /// for a borrowed `&Options` return. Every strategy that owns options
-    /// must override this method.
+    /// for a borrowed `&Options` return, and returning a fabricated `Options`
+    /// would answer every downstream getter with a price nobody quoted. Every
+    /// strategy this crate ships overrides this method.
     ///
     /// # Note
     /// This is a placeholder implementation and must be overridden in any
     /// concrete strategy that holds option positions.
     fn one_option(&self) -> &Options {
         // INVARIANT: a `&Options` return type admits no default — we cannot
-        // materialise a safe reference out of thin air. Every strategy that
-        // owns positions overrides this; the panic fires only when a caller
-        // dispatches through the trait default on a type with no options,
-        // which is a programmer error.
-        panic!(
-            "one_option not implemented for this strategy — every strategy with options must override"
-        )
+        // materialise a safe reference out of thin air, and fabricating one
+        // would answer `get_underlying_price` with a price nobody quoted.
+        // Every strategy this crate ships overrides this method; `Collar`,
+        // `CoveredCall` and `ProtectivePut` did not, which made a plain
+        // getter abort, and they now do. Reaching the default is a
+        // downstream type that forgot the override.
+        const MSG: &str = "one_option not implemented for this strategy — every strategy with options must override";
+        panic!("{MSG}") // scan-banned: allow -- no safe `&Options` exists to return, and no shipped strategy reaches it
     }
     /// Provides a mutable reference to the strategy's primary `Options` value.
     ///
@@ -712,10 +715,10 @@ pub trait BasicAble {
     fn one_option_mut(&mut self) -> &mut Options {
         // INVARIANT: same rationale as `one_option` — `&mut Options` has no
         // safe default value, so every strategy with positions must override
-        // this method. Reaching the panic is a programmer error.
-        panic!(
-            "one_option_mut not implemented for this strategy — every strategy with options must override"
-        )
+        // this method. Reaching the panic is a downstream type that forgot
+        // the override; no strategy this crate ships does.
+        const MSG: &str = "one_option_mut not implemented for this strategy — every strategy with options must override";
+        panic!("{MSG}") // scan-banned: allow -- no safe `&mut Options` exists to return, and no shipped strategy reaches it
     }
 
     /// Sets the expiration date for the strategy.
@@ -906,7 +909,9 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let positions = self.get_positions()?;
         let mut total = Positive::ZERO;
         for p in positions {
-            total += p.total_cost()?;
+            total = total
+                .checked_add(&p.total_cost()?)
+                .map_err(|e| PositionError::invalid_position(&e.to_string()))?;
         }
         Ok(total)
     }
@@ -928,7 +933,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let positions = self.get_positions()?;
         let mut total = Decimal::ZERO;
         for p in positions {
-            total += p.net_cost()?;
+            total = d_add(total, p.net_cost()?, "Strategies::get_net_cost")
+                .map_err(|e| PositionError::invalid_position(&e.to_string()))?;
         }
         Ok(total)
     }
@@ -951,13 +957,17 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let mut premiums = Positive::ZERO;
         for p in positions {
             if p.option.side == Side::Long {
-                costs += p.net_cost()?;
+                costs = d_add(
+                    costs,
+                    p.net_cost()?,
+                    "Strategies::get_net_premium_received/costs",
+                )?;
             } else if p.option.side == Side::Short {
-                premiums += p.net_premium_received()?;
+                premiums = premiums.checked_add(&p.net_premium_received()?)?;
             }
         }
         match premiums > costs {
-            true => Ok(premiums - costs),
+            true => Ok(premiums.checked_sub_dec(costs)?),
             false => Ok(Positive::ZERO),
         }
     }
@@ -987,7 +997,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             }
         };
         for position in positions {
-            fee += position.fees()?;
+            fee = fee.checked_add(&position.fees()?)?;
         }
         Ok(fee)
     }
@@ -1045,7 +1055,10 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// Propagates any [`StrategyError`] returned by
     /// `Strategable::get_break_even_points` or
-    /// `Strategable::get_max_min_strikes`.
+    /// `Strategable::get_max_min_strikes`, and
+    /// [`StrategyError::PositiveError`] when widening the range by the
+    /// strike distance, or applying the display bound multipliers, leaves the
+    /// `Positive` range.
     fn get_range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.get_max_min_strikes()?;
@@ -1056,13 +1069,12 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             .abs()
             .max((first_strike.value() - underlying_price.value()).abs());
 
-        // Expand range by max_diff
-        all_points.push(
-            (*underlying_price - max_diff)
-                .max(Positive::ZERO)
-                .min(first_strike),
-        );
-        all_points.push((*underlying_price + max_diff).max(last_strike));
+        // Expand range by max_diff. A strike further below the spot than the
+        // spot itself — a penny strike against a ten dollar underlying — puts
+        // the lower bound under zero, where the underlying cannot trade; that
+        // floors at zero rather than aborting.
+        all_points.push(sub_floor_zero(*underlying_price, &max_diff).min(first_strike));
+        all_points.push(underlying_price.checked_add_dec(max_diff)?.max(last_strike));
 
         // Sort to find min and max
         // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
@@ -1074,8 +1086,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let last = all_points.last().ok_or_else(|| {
             StrategyError::empty_collection("get_range_to_show: all_points is empty")
         })?;
-        let start_price = *first * STRIKE_PRICE_LOWER_BOUND_MULTIPLIER;
-        let end_price = *last * STRIKE_PRICE_UPPER_BOUND_MULTIPLIER;
+        let start_price = first.checked_mul_f64(STRIKE_PRICE_LOWER_BOUND_MULTIPLIER)?;
+        let end_price = last.checked_mul_f64(STRIKE_PRICE_UPPER_BOUND_MULTIPLIER)?;
         Ok((start_price, end_price))
     }
 
@@ -1088,10 +1100,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// Propagates any [`StrategyError`] returned by
-    /// `Strategable::get_range_to_show`.
+    /// `Strategable::get_range_to_show`, and the
+    /// [`OperationErrorKind::InvalidParameters`] raised by the price-range
+    /// walk for a zero `step` or a range that would need more samples than the
+    /// walk allows.
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (start_price, end_price) = self.get_range_to_show()?;
-        Ok(calculate_price_range(start_price, end_price, step))
+        calculate_price_range(start_price, end_price, step)
     }
 
     /// Returns the minimum and maximum strike prices from the positions in the strategy.
@@ -1159,7 +1174,13 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
                 BreakEvenErrorKind::NoBreakEvenPoints,
             )),
             1 => Ok(Positive::MAX),
-            2 => Ok(break_even_points[1] - break_even_points[0]),
+            // The width of the profitable region, not a signed difference:
+            // nothing orders a two-point break-even vector, and the three-plus
+            // branch below sorts before subtracting for exactly that reason.
+            2 => {
+                let (a, b) = (break_even_points[0], break_even_points[1]);
+                Ok(price_gap(a.max(b), a.min(b)))
+            }
             _ => {
                 // sort break even points and then get last minus first
                 // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort

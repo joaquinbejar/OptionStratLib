@@ -4,6 +4,7 @@
    Date: 2/10/24
 ******************************************************************************/
 use crate::error::PricingError;
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::position::Position;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -35,6 +36,24 @@ pub struct SPANMargin {
     /// usually expressed as a percentage. Controls how much implied volatility might
     /// increase or decrease in the risk analysis.
     volatility_scan_range: Decimal,
+}
+
+/// Scales `value` by `factor`, flooring at zero when the factor is negative.
+///
+/// A scan range past 100% makes one of the SPAN factors negative, and a
+/// negative price or volatility is outside the domain rather than a number to
+/// report. The multiplication itself is left untouched so a representable
+/// scenario keeps exactly the value the raw operator produced.
+///
+/// # Errors
+///
+/// Returns [`PricingError::Positive`] when the scaled value leaves the
+/// representable range.
+fn scale_or_floor(value: Positive, factor: Decimal) -> Result<Positive, PricingError> {
+    if factor <= Decimal::ZERO {
+        return Ok(Positive::ZERO);
+    }
+    Ok(value.checked_mul_dec(factor)?)
 }
 
 #[allow(dead_code)]
@@ -116,7 +135,7 @@ impl SPANMargin {
     /// cannot be computed.
     pub fn calculate_margin(&self, position: &Position) -> Result<Decimal, PricingError> {
         let risk_array = self.calculate_risk_array(position)?;
-        let short_option_minimum = self.calculate_short_option_minimum(position);
+        let short_option_minimum = self.calculate_short_option_minimum(position)?;
         // risk_array is structurally non-empty (price_scenarios x
         // volatility_scenarios is at least 1x1) so the max_by is
         // expected to succeed; the fallback to ZERO + warn is a
@@ -161,8 +180,8 @@ impl SPANMargin {
     fn calculate_risk_array(&self, position: &Position) -> Result<Vec<Decimal>, PricingError> {
         let mut risk_array = Vec::new();
         let option = &position.option;
-        let price_scenarios = self.generate_price_scenarios(option.underlying_price);
-        let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility);
+        let price_scenarios = self.generate_price_scenarios(option.underlying_price)?;
+        let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility)?;
         for &price in &price_scenarios {
             for &volatility in &volatility_scenarios {
                 let scenario_loss = self.calculate_scenario_loss(position, price, volatility)?;
@@ -189,13 +208,39 @@ impl SPANMargin {
     /// # Returns
     ///
     /// A vector of three `Positive` values representing the price scenarios
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when the upside scenario leaves the
+    /// representable range.
     #[inline]
-    fn generate_price_scenarios(&self, underlying_price: Positive) -> Vec<Positive> {
-        vec![
-            underlying_price * (Decimal::ONE - self.price_scan_range),
+    fn generate_price_scenarios(
+        &self,
+        underlying_price: Positive,
+    ) -> Result<Vec<Positive>, PricingError> {
+        // A scan range past 100% shocks the underlying below zero, where it
+        // cannot trade: zero is the floor of the price domain, not an abort.
+        // The factor is applied in one multiplication, exactly as before, so
+        // every representable scenario keeps its last digit.
+        Ok(vec![
+            scale_or_floor(
+                underlying_price,
+                d_sub(
+                    Decimal::ONE,
+                    self.price_scan_range,
+                    "SPANMargin::price_scenario_down",
+                )?,
+            )?,
             underlying_price,
-            underlying_price * (Decimal::ONE + self.price_scan_range),
-        ]
+            scale_or_floor(
+                underlying_price,
+                d_add(
+                    Decimal::ONE,
+                    self.price_scan_range,
+                    "SPANMargin::price_scenario_up",
+                )?,
+            )?,
+        ])
     }
 
     /// Generates a vector of implied volatility scenarios for risk analysis.
@@ -215,13 +260,37 @@ impl SPANMargin {
     /// # Returns
     ///
     /// A vector of three `Positive` values representing the volatility scenarios
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when the upside scenario leaves the
+    /// representable range.
     #[inline]
-    fn generate_volatility_scenarios(&self, implied_volatility: Positive) -> Vec<Positive> {
-        vec![
-            implied_volatility * (Decimal::ONE - self.volatility_scan_range),
+    fn generate_volatility_scenarios(
+        &self,
+        implied_volatility: Positive,
+    ) -> Result<Vec<Positive>, PricingError> {
+        // Same floor as the price scenarios: a scan range past 100% would
+        // shock volatility below zero, which no option carries.
+        Ok(vec![
+            scale_or_floor(
+                implied_volatility,
+                d_sub(
+                    Decimal::ONE,
+                    self.volatility_scan_range,
+                    "SPANMargin::volatility_scenario_down",
+                )?,
+            )?,
             implied_volatility,
-            implied_volatility * (Decimal::ONE + self.volatility_scan_range),
-        ]
+            scale_or_floor(
+                implied_volatility,
+                d_add(
+                    Decimal::ONE,
+                    self.volatility_scan_range,
+                    "SPANMargin::volatility_scenario_up",
+                )?,
+            )?,
+        ])
     }
 
     /// Calculates the potential profit or loss for a position in a given price and volatility scenario.
@@ -254,13 +323,25 @@ impl SPANMargin {
         scenario_option.underlying_price = scenario_price;
         scenario_option.implied_volatility = scenario_volatility;
         let scenario_price = scenario_option.calculate_price_black_scholes()?;
-        Ok((scenario_price - current_price)
-            * option.quantity
-            * if option.is_short() {
-                Decimal::NEGATIVE_ONE
-            } else {
-                Decimal::ONE
-            })
+        let move_in_value = d_sub(
+            scenario_price,
+            current_price,
+            "SPANMargin::scenario_value_move",
+        )?;
+        let sign = if option.is_short() {
+            Decimal::NEGATIVE_ONE
+        } else {
+            Decimal::ONE
+        };
+        Ok(d_mul(
+            d_mul(
+                move_in_value,
+                option.quantity.to_dec(),
+                "SPANMargin::scenario_loss",
+            )?,
+            sign,
+            "SPANMargin::scenario_loss",
+        )?)
     }
 
     /// Calculates the minimum margin requirement for short option positions.
@@ -282,13 +363,26 @@ impl SPANMargin {
     /// `short_option_minimum * underlying_price * quantity`
     ///
     /// For long options, the function returns zero as the short option minimum doesn't apply.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the product leaves the `Decimal`
+    /// range.
     #[inline]
-    fn calculate_short_option_minimum(&self, position: &Position) -> Decimal {
+    fn calculate_short_option_minimum(&self, position: &Position) -> Result<Decimal, PricingError> {
         let option = &position.option;
         if option.is_short() {
-            self.short_option_minimum * option.underlying_price * option.quantity
+            Ok(d_mul(
+                d_mul(
+                    self.short_option_minimum,
+                    option.underlying_price.to_dec(),
+                    "SPANMargin::short_option_minimum",
+                )?,
+                option.quantity.to_dec(),
+                "SPANMargin::short_option_minimum",
+            )?)
         } else {
-            Decimal::ZERO
+            Ok(Decimal::ZERO)
         }
     }
 }

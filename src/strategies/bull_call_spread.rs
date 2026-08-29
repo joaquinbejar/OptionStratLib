@@ -24,6 +24,8 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::SpreadStrategy;
+use crate::model::decimal::d_div;
+use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
@@ -341,10 +343,17 @@ impl BreakEvenable for BullCallSpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // `lower_break_even` measures a distance below the strike and floors
+        // at zero; the debit sits above it, hence the negated offset. A leg
+        // with no contracts has no per-contract debit at all.
+        let per_contract = d_div(
+            self.get_net_cost()?,
+            self.long_call.option.quantity.to_dec(),
+            "BullCallSpread::update_break_even_points",
+        )?;
         self.break_even_points.push(
-            (self.long_call.option.strike_price
-                + self.get_net_cost()? / self.long_call.option.quantity)
-                .round_to(2),
+            lower_break_even(self.long_call.option.strike_price, -per_contract)
+                .checked_round_to(2)?,
         );
 
         Ok(())

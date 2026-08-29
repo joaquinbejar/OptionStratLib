@@ -25,18 +25,21 @@ use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
 use crate::greeks::Greeks;
 use crate::model::ExpirationDate;
 use crate::model::ProfitLossRange;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::leg::{Leg, SpotPosition};
 use crate::model::position::Position;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::pnl::PnLCalculator;
 use crate::pricing::payoff::Profit;
+use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use positive::Positive;
+use positive::PositiveError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -90,6 +93,28 @@ impl ProtectivePut {
         put_open_fee: Positive,
         put_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        // Every per-share figure this strategy reports — the effective cost
+        // basis, the break-even, the premium per share — divides by the size
+        // of the spot leg. A protective put with no shares is not a position, and
+        // rejecting it here keeps those divisors non-zero.
+        if quantity == Positive::ZERO {
+            return Err(StrategyError::invalid_parameters(
+                "ProtectivePut::new",
+                "quantity must be strictly positive: a protective put with no shares has no per-share basis",
+            ));
+        }
+
+        // `protection_level` measures the strike against this price, so a
+        // zero spot leaves it dividing by zero. The method stays fallible for
+        // a deserialized position, which reaches the struct without passing
+        // through here, but a position built by this constructor is sound.
+        if underlying_price == Positive::ZERO {
+            return Err(StrategyError::invalid_parameters(
+                "ProtectivePut::new",
+                "underlying price must be strictly positive: the protection level is measured against it",
+            ));
+        }
+
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
             quantity,
@@ -184,7 +209,7 @@ impl ProtectivePut {
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
-        Ok(spot_delta + put_delta)
+        Ok(d_add(spot_delta, put_delta, "ProtectivePut::net_delta")?)
     }
 
     /// Calculates the maximum loss potential.
@@ -202,34 +227,84 @@ impl ProtectivePut {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let put_premium = self.long_put.premium * self.long_put.option.quantity;
-        let total_fees = self.total_fees();
+        let put_premium = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
+        let total_fees = self.total_fees()?;
 
         if cost_basis >= put_strike {
-            let capital_loss = (cost_basis - put_strike) * quantity;
-            let total_loss = capital_loss.to_dec() + put_premium.to_dec() + total_fees.to_dec();
+            let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
+            let total_loss = d_add(
+                d_add(
+                    capital_loss.to_dec(),
+                    put_premium.to_dec(),
+                    "ProtectivePut::max_loss",
+                )?,
+                total_fees.to_dec(),
+                "ProtectivePut::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
-            let capital_gain = (put_strike - cost_basis) * quantity;
-            let total_loss = put_premium.to_dec() + total_fees.to_dec() - capital_gain.to_dec();
+            let capital_gain = price_gap(put_strike, cost_basis).checked_mul(&quantity)?;
+            let total_loss = d_sub(
+                d_add(
+                    put_premium.to_dec(),
+                    total_fees.to_dec(),
+                    "ProtectivePut::max_loss",
+                )?,
+                capital_gain.to_dec(),
+                "ProtectivePut::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
 
     /// Calculates total fees for all positions.
-    #[must_use]
-    pub fn total_fees(&self) -> Positive {
-        self.spot_leg.open_fee
-            + self.spot_leg.close_fee
-            + (self.long_put.open_fee + self.long_put.close_fee) * self.long_put.option.quantity
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError`] when the running total leaves the `Positive`
+    /// range. A fee at `Positive::MAX` used to abort inside the raw sum.
+    pub fn total_fees(&self) -> Result<Positive, PositiveError> {
+        let put_fees = self
+            .long_put
+            .open_fee
+            .checked_add(&self.long_put.close_fee)?
+            .checked_mul(&self.long_put.option.quantity)?;
+        self.spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_add(&put_fees)
     }
 
     /// Returns the protection level as a percentage below current price.
-    #[must_use]
-    pub fn protection_level(&self) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError`] when the spot leg's cost basis is zero, which
+    /// [`ProtectivePut::new`] rejects but a deserialized position can still
+    /// carry, and when the difference or the ratio leaves the representable
+    /// `Decimal` range.
+    pub fn protection_level(&self) -> Result<Decimal, StrategyError> {
         let current_price = self.spot_leg.cost_basis.to_dec();
         let put_strike = self.long_put.option.strike_price.to_dec();
-        ((current_price - put_strike) / current_price) * Decimal::ONE_HUNDRED
+        let below = d_sub(
+            current_price,
+            put_strike,
+            "ProtectivePut::protection_level/below",
+        )?;
+        let ratio = d_div(
+            below,
+            current_price,
+            "ProtectivePut::protection_level/ratio",
+        )?;
+        d_mul(
+            ratio,
+            Decimal::ONE_HUNDRED,
+            "ProtectivePut::protection_level",
+        )
+        .map_err(Into::into)
     }
 
     /// Calculates the effective cost basis (Price paid for spot + Premium paid for put).
@@ -279,10 +354,18 @@ impl BreakEvenable for ProtectivePut {
         let entry_price = self.spot_leg.cost_basis.to_dec();
         let put_premium = self.long_put.premium.to_dec();
         let quantity = self.spot_leg.quantity.to_dec();
-        let total_fees = self.total_fees();
-        let break_even = entry_price + put_premium + (total_fees.to_dec() / quantity);
+        let total_fees = self.total_fees()?;
+        let break_even = d_add(
+            d_add(entry_price, put_premium, "ProtectivePut::break_even")?,
+            d_div(
+                total_fees.to_dec(),
+                quantity,
+                "ProtectivePut::break_even/fees_per_share",
+            )?,
+            "ProtectivePut::break_even",
+        )?;
         if let Ok(be) = Positive::new_decimal(break_even) {
-            self.break_even_points.push(be.round_to(2));
+            self.break_even_points.push(be.checked_round_to(2)?);
         }
         Ok(())
     }
@@ -348,6 +431,19 @@ impl Strategable for ProtectivePut {
 }
 
 impl BasicAble for ProtectivePut {
+    // Without this override the trait default aborts the process, and it is
+    // reached from `get_underlying_price`, `get_max_min_strikes`,
+    // `delta_neutrality` and every probability method. The long put carries the
+    // same underlying, expiration and rate as the spot leg, so it answers for
+    // the strategy.
+    fn one_option(&self) -> &Options {
+        self.long_put.one_option()
+    }
+
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.long_put.one_option_mut()
+    }
+
     fn get_title(&self) -> String {
         format!(
             "Protective Put Strategy:\n\t{} {} {} @ {}\n\t{}",
@@ -419,7 +515,11 @@ impl Profit for ProtectivePut {
             .long_put
             .pnl_at_expiration(&Some(price))
             .unwrap_or(Decimal::ZERO);
-        Ok(spot_pnl + put_pnl)
+        Ok(d_add(
+            spot_pnl,
+            put_pnl,
+            "ProtectivePut::pnl_at_expiration",
+        )?)
     }
 }
 
@@ -449,11 +549,14 @@ impl PnLCalculator for ProtectivePut {
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
         let spot_cost = self.spot_leg.total_cost();
-        let put_cost = self.long_put.premium * self.long_put.option.quantity;
+        let put_cost = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
         Ok(crate::pnl::utils::PnL {
             realized: None,
             unrealized: Some(profit),
-            initial_costs: spot_cost + put_cost,
+            initial_costs: spot_cost.checked_add(&put_cost)?,
             initial_income: Positive::ZERO,
             date_time: Utc::now(),
         })
@@ -534,7 +637,10 @@ impl std::fmt::Display for ProtectivePut {
         writeln!(f, "Put Premium: ${:.2}", self.long_put.premium)?;
         writeln!(f, "Quantity: {}", self.spot_leg.quantity)?;
         writeln!(f, "Expiration: {}", self.long_put.option.expiration_date)?;
-        writeln!(f, "Protection Level: {:.2}%", self.protection_level())?;
+        match self.protection_level() {
+            Ok(level) => writeln!(f, "Protection Level: {level:.2}%")?,
+            Err(_) => writeln!(f, "Protection Level: n/a")?,
+        }
         if let Ok(break_evens) = self.get_break_even_points() {
             writeln!(f, "Break-even: ${:.2}", break_evens[0])?;
         }
@@ -637,7 +743,7 @@ mod tests {
     #[test]
     fn test_protection_level() {
         let pp = create_test_protective_put();
-        let protection = pp.protection_level();
+        let protection = pp.protection_level().unwrap();
         assert!(protection > Decimal::ZERO);
     }
 
@@ -653,7 +759,7 @@ mod tests {
     #[test]
     fn test_total_fees() {
         let pp = create_test_protective_put();
-        let fees = pp.total_fees();
+        let fees = pp.total_fees().unwrap();
         assert!(fees > Positive::ZERO);
     }
 

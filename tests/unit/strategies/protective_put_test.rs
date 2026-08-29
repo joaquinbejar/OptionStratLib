@@ -177,7 +177,7 @@ fn test_protective_put_effective_cost_basis() {
 #[test]
 fn test_protective_put_protection_level() {
     let pp = create_test_protective_put();
-    let protection = pp.protection_level();
+    let protection = pp.protection_level().unwrap();
     // (150 - 145) / 150 = 5 / 150 = 0.0333... = 3.33%
     assert_relative_eq!(
         protection.to_f64().unwrap(),

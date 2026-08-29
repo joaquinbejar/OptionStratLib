@@ -29,6 +29,7 @@
 
 use crate::error::GreeksError;
 use crate::greeks::Greeks;
+use crate::model::decimal::d_add;
 use crate::model::position::Position;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -102,7 +103,9 @@ impl PortfolioGreeks {
     /// Propagates any [`GreeksError`] returned by [`Greeks::delta`],
     /// [`Greeks::gamma`], [`Greeks::theta`], [`Greeks::vega`] or
     /// [`Greeks::rho`] on the input positions — typically
-    /// [`GreeksError::Pricing`] when Black–Scholes fails on a leg.
+    /// [`GreeksError::Pricing`] when Black–Scholes fails on a leg — and
+    /// [`GreeksError::CalculationError`] with [`crate::error::greeks::CalculationErrorKind::DecimalError`] when the running total of a greek leaves
+    /// the `Decimal` range.
     pub fn from_positions(positions: &[Position]) -> Result<Self, GreeksError> {
         let mut greeks = Self::default();
 
@@ -110,11 +113,11 @@ impl PortfolioGreeks {
             // `Position` implements `Greeks`, and every greek already carries
             // the leg's `Side` and `quantity`. Re-applying a `quantity * sign`
             // multiplier here squared the size and cancelled the sign.
-            greeks.delta += pos.delta()?;
-            greeks.gamma += pos.gamma()?;
-            greeks.theta += pos.theta()?;
-            greeks.vega += pos.vega()?;
-            greeks.rho += pos.rho()?;
+            greeks.delta = d_add(greeks.delta, pos.delta()?, "PortfolioGreeks::delta")?;
+            greeks.gamma = d_add(greeks.gamma, pos.gamma()?, "PortfolioGreeks::gamma")?;
+            greeks.theta = d_add(greeks.theta, pos.theta()?, "PortfolioGreeks::theta")?;
+            greeks.vega = d_add(greeks.vega, pos.vega()?, "PortfolioGreeks::vega")?;
+            greeks.rho = d_add(greeks.rho, pos.rho()?, "PortfolioGreeks::rho")?;
         }
 
         Ok(greeks)
@@ -133,16 +136,20 @@ impl PortfolioGreeks {
     ///
     /// # Errors
     ///
-    /// Same failure surface as [`PortfolioGreeks::from_positions`] —
-    /// only the option legs can fail; the underlying adjustment is pure
-    /// arithmetic and does not introduce new error paths.
+    /// Same failure surface as [`PortfolioGreeks::from_positions`], plus
+    /// [`GreeksError::CalculationError`] with [`crate::error::greeks::CalculationErrorKind::DecimalError`] when adding the underlying delta leaves
+    /// the `Decimal` range.
     pub fn from_positions_with_underlying(
         positions: &[Position],
         underlying_quantity: Decimal,
     ) -> Result<Self, GreeksError> {
         let mut greeks = Self::from_positions(positions)?;
         // Each share of underlying has delta = 1
-        greeks.delta += underlying_quantity;
+        greeks.delta = d_add(
+            greeks.delta,
+            underlying_quantity,
+            "PortfolioGreeks::from_positions_with_underlying",
+        )?;
         Ok(greeks)
     }
 

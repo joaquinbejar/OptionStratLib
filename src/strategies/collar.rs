@@ -76,18 +76,21 @@ use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
 use crate::greeks::Greeks;
 use crate::model::ExpirationDate;
 use crate::model::ProfitLossRange;
+use crate::model::decimal::{d_add, d_div, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::leg::{Leg, SpotPosition};
 use crate::model::position::Position;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::pnl::PnLCalculator;
 use crate::pricing::payoff::Profit;
+use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use positive::Positive;
+use positive::PositiveError;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -204,6 +207,17 @@ impl Collar {
         call_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
         // Create the spot position (long underlying)
+        // Every per-share figure this strategy reports — the effective cost
+        // basis, the break-even, the premium per share — divides by the size
+        // of the spot leg. A collar with no shares is not a position, and
+        // rejecting it here keeps those divisors non-zero.
+        if quantity == Positive::ZERO {
+            return Err(StrategyError::invalid_parameters(
+                "Collar::new",
+                "quantity must be strictly positive: a collar with no shares has no per-share basis",
+            ));
+        }
+
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
             quantity,
@@ -331,9 +345,12 @@ impl Collar {
     }
 
     /// Returns the collar width (distance between put and call strikes).
+    ///
+    /// A put struck above the call inverts the collar; the width of that
+    /// region is zero, not a negative price.
     #[must_use]
     pub fn collar_width(&self) -> Positive {
-        self.call_strike() - self.put_strike()
+        price_gap(self.call_strike(), self.put_strike())
     }
 
     /// Calculates the net premium (credit if positive, debit if negative).
@@ -370,7 +387,11 @@ impl Collar {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
         let call_delta = self.short_call.delta()?;
-        Ok(spot_delta + put_delta + call_delta)
+        Ok(d_add(
+            d_add(spot_delta, put_delta, "Collar::net_delta")?,
+            call_delta,
+            "Collar::net_delta",
+        )?)
     }
 
     /// Calculates the maximum profit potential.
@@ -392,16 +413,24 @@ impl Collar {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
         let net_premium = self.net_premium();
-        let total_fees = self.total_fees();
+        let total_fees = self.total_fees()?;
 
         if call_strike >= cost_basis {
-            let capital_gain = (call_strike - cost_basis) * quantity;
-            let total_profit = capital_gain.to_dec() + net_premium - total_fees.to_dec();
+            let capital_gain = price_gap(call_strike, cost_basis).checked_mul(&quantity)?;
+            let total_profit = d_sub(
+                d_add(capital_gain.to_dec(), net_premium, "Collar::max_profit")?,
+                total_fees.to_dec(),
+                "Collar::max_profit",
+            )?;
             Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
             // Call strike below cost basis
-            let capital_loss = (cost_basis - call_strike) * quantity;
-            let total_profit = net_premium - capital_loss.to_dec() - total_fees.to_dec();
+            let capital_loss = price_gap(cost_basis, call_strike).checked_mul(&quantity)?;
+            let total_profit = d_sub(
+                d_sub(net_premium, capital_loss.to_dec(), "Collar::max_profit")?,
+                total_fees.to_dec(),
+                "Collar::max_profit",
+            )?;
             Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
@@ -425,27 +454,42 @@ impl Collar {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
         let net_premium = self.net_premium();
-        let total_fees = self.total_fees();
+        let total_fees = self.total_fees()?;
 
         if cost_basis >= put_strike {
-            let capital_loss = (cost_basis - put_strike) * quantity;
-            let total_loss = capital_loss.to_dec() - net_premium + total_fees.to_dec();
+            let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
+            let total_loss = d_add(
+                d_sub(capital_loss.to_dec(), net_premium, "Collar::max_loss")?,
+                total_fees.to_dec(),
+                "Collar::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
             // Put strike above cost basis (unusual but possible)
-            let capital_gain = (put_strike - cost_basis) * quantity;
-            let total_loss = total_fees.to_dec() - net_premium - capital_gain.to_dec();
+            let capital_gain = price_gap(put_strike, cost_basis).checked_mul(&quantity)?;
+            let total_loss = d_sub(
+                d_sub(total_fees.to_dec(), net_premium, "Collar::max_loss")?,
+                capital_gain.to_dec(),
+                "Collar::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
 
     /// Calculates total fees for all positions.
-    fn total_fees(&self) -> Positive {
-        self.spot_leg.fees()
-            + self.long_put.open_fee
-            + self.long_put.close_fee
-            + self.short_call.open_fee
-            + self.short_call.close_fee
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError`] when the running total leaves the `Positive`
+    /// range.
+    fn total_fees(&self) -> Result<Positive, PositiveError> {
+        self.spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_add(&self.long_put.open_fee)?
+            .checked_add(&self.long_put.close_fee)?
+            .checked_add(&self.short_call.open_fee)?
+            .checked_add(&self.short_call.close_fee)
     }
 
     /// Checks if the put is currently in-the-money.
@@ -516,13 +560,33 @@ impl BreakEvenable for Collar {
         self.break_even_points.clear();
 
         // Break-even = Cost Basis - Net Premium per Share
-        let net_premium_per_share = self.net_premium() / self.spot_leg.quantity.to_dec();
-        let fees_per_share = self.total_fees().to_dec() / self.spot_leg.quantity.to_dec();
+        let net_premium_per_share = d_div(
+            self.net_premium(),
+            self.spot_leg.quantity.to_dec(),
+            "Collar::update_break_even_points",
+        )?;
+        let fees_per_share = d_div(
+            self.total_fees()?.to_dec(),
+            self.spot_leg.quantity.to_dec(),
+            "Collar::update_break_even_points",
+        )?;
 
-        let break_even = self.spot_leg.cost_basis.to_dec() - net_premium_per_share + fees_per_share;
+        // The credit lowers the break-even and the fees raise it. A net credit
+        // larger than the cost basis puts the break-even below zero, where the
+        // underlying cannot trade, and the collar records no break-even at
+        // all — the same outcome the unchecked arithmetic produced before.
+        let break_even = d_add(
+            d_sub(
+                self.spot_leg.cost_basis.to_dec(),
+                net_premium_per_share,
+                "Collar::update_break_even_points",
+            )?,
+            fees_per_share,
+            "Collar::update_break_even_points",
+        )?;
 
         if let Ok(be) = Positive::new_decimal(break_even) {
-            self.break_even_points.push(be.round_to(2));
+            self.break_even_points.push(be.checked_round_to(2)?);
         }
 
         Ok(())
@@ -610,6 +674,19 @@ impl Strategable for Collar {
 }
 
 impl BasicAble for Collar {
+    // Without this override the trait default aborts the process, and it is
+    // reached from `get_underlying_price`, `get_max_min_strikes`,
+    // `delta_neutrality` and every probability method. The short call carries the
+    // same underlying, expiration and rate as the spot leg, so it answers for
+    // the strategy.
+    fn one_option(&self) -> &Options {
+        self.short_call.one_option()
+    }
+
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.short_call.one_option_mut()
+    }
+
     fn get_title(&self) -> String {
         format!(
             "Collar Strategy:\n\t{} {} {} @ {}\n\t{}\n\t{}",
@@ -728,7 +805,11 @@ impl Profit for Collar {
             .pnl_at_expiration(&Some(price))
             .unwrap_or(Decimal::ZERO);
 
-        Ok(spot_pnl + put_pnl + call_pnl)
+        Ok(d_add(
+            d_add(spot_pnl, put_pnl, "Collar::pnl_at_expiration")?,
+            call_pnl,
+            "Collar::pnl_at_expiration",
+        )?)
     }
 }
 
@@ -758,13 +839,19 @@ impl PnLCalculator for Collar {
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
         let spot_cost = self.spot_leg.total_cost();
-        let put_cost = self.long_put.premium * self.long_put.option.quantity;
-        let call_income = self.short_call.premium * self.short_call.option.quantity;
+        let put_cost = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
+        let call_income = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?;
 
         Ok(crate::pnl::utils::PnL {
             realized: None,
             unrealized: Some(profit),
-            initial_costs: spot_cost + put_cost,
+            initial_costs: spot_cost.checked_add(&put_cost)?,
             initial_income: call_income,
             date_time: Utc::now(),
         })

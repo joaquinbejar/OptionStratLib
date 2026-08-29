@@ -12,7 +12,9 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use crate::model::decimal::{d_div, d_mul};
 use crate::strategies::base::price_gap;
+use crate::strategies::utils::calculate_price_range_bounded;
 use crate::{
     ExpirationDate, Options,
     chains::{OptionData, chain::OptionChain},
@@ -205,21 +207,24 @@ impl CustomStrategy {
         let max_strike = strikes.iter().max().unwrap_or(&self.underlying_price);
 
         // Use a much more focused range calculation for better visualization
-        let strike_range = *max_strike - *min_strike;
+        let strike_range = price_gap(*max_strike, *min_strike);
 
         // For strategies with small strike ranges, use a very focused approach
-        let base_extension = if strike_range < self.underlying_price * pos_lit(dec!(0.05)) {
-            // Very tight strikes (< 5% of underlying) - use minimal extension
-            strike_range * pos_lit(dec!(1.5)) // 150% of strike range
-        } else {
-            // Wider strikes - use moderate extension
-            strike_range * Positive::ONE // 100% of strike range
-        };
+        let base_extension =
+            if strike_range < self.underlying_price.checked_mul(&pos_lit(dec!(0.05)))? {
+                // Very tight strikes (< 5% of underlying) - use minimal extension
+                strike_range.checked_mul(&pos_lit(dec!(1.5)))? // 150% of strike range
+            } else {
+                // Wider strikes - use moderate extension
+                strike_range.checked_mul(&Positive::ONE)? // 100% of strike range
+            };
 
-        // Center around the underlying price for better focus
+        // Center around the underlying price for better focus. Strikes spread
+        // wider than the spot itself push the lower edge below zero, where the
+        // underlying cannot trade.
         let center_price = self.underlying_price;
-        let min_price = center_price - base_extension;
-        let max_price = center_price + base_extension;
+        let min_price = price_gap(center_price, base_extension);
+        let max_price = center_price.checked_add(&base_extension)?;
 
         Ok((min_price, max_price))
     }
@@ -227,16 +232,9 @@ impl CustomStrategy {
     /// Get the best range to show for visualization
     #[allow(dead_code)]
     fn best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
-        let mut prices = Vec::new();
-        let mut current_price = self.underlying_price * pos_lit(dec!(0.5));
-        let max_price = self.underlying_price * pos_lit(dec!(1.5));
-
-        while current_price <= max_price {
-            prices.push(current_price);
-            current_price += step;
-        }
-
-        Ok(prices)
+        let start = self.underlying_price.checked_mul(&pos_lit(dec!(0.5)))?;
+        let end = self.underlying_price.checked_mul(&pos_lit(dec!(1.5)))?;
+        calculate_price_range_bounded(start, end, step)
     }
 
     /// Refine a break-even point guess using Newton-Raphson method.
@@ -257,8 +255,11 @@ impl CustomStrategy {
             }
 
             // Calculate derivative numerically with smaller step
-            let h = self.epsilon.sqrt();
-            let f_x_h = self.calculate_profit_at(&(x + h)).ok()?.to_f64()?;
+            let h = self.epsilon.checked_sqrt().ok()?;
+            let f_x_h = self
+                .calculate_profit_at(&x.checked_add(&h).ok()?)
+                .ok()?
+                .to_f64()?;
             let derivative = (f_x_h - f_x) / h;
 
             // Avoid division by very small numbers
@@ -266,8 +267,9 @@ impl CustomStrategy {
                 break;
             }
 
-            // Newton-Raphson step
-            let next_x = x - f_x / derivative;
+            // Newton-Raphson step. A step below zero leaves the price domain,
+            // so the refinement gives up rather than aborting.
+            let next_x = x.checked_sub_f64(f_x / derivative).ok()?;
 
             // Check for convergence with absolute difference
             if (next_x.to_f64() - x.to_f64()).abs() < self.epsilon {
@@ -306,7 +308,10 @@ impl CustomStrategy {
 
         if break_even_points.len() == 1 {
             let break_even = break_even_points[0];
-            let test_point = break_even - pos_lit(dec!(0.01));
+            // A break-even inside the first cent has no probe point below it;
+            // zero is the floor of the price domain, and the multi-point
+            // branch below already measures the same distance that way.
+            let test_point = price_gap(break_even, pos_lit(dec!(0.01)));
             let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
 
             if is_profit_below {
@@ -392,19 +397,20 @@ impl BreakEvenable for CustomStrategy {
         self.break_even_points.clear();
 
         // Get a reasonable price range
-        let min_price = self.underlying_price * pos_lit(dec!(0.5));
-        let max_price = self.underlying_price * pos_lit(dec!(1.5));
+        let min_price = self.underlying_price.checked_mul(&pos_lit(dec!(0.5)))?;
+        let max_price = self.underlying_price.checked_mul(&pos_lit(dec!(1.5)))?;
         let step = pos_lit(dec!(0.01));
 
-        let mut current_price = min_price;
-        while current_price <= max_price {
+        // The scan advances one cent at a time, so an underlying in the
+        // billions asks for more samples than any machine will finish. That is
+        // reported rather than walked.
+        for current_price in calculate_price_range_bounded(min_price, max_price, step)? {
             if let Ok(profit) = self.calculate_profit_at(&current_price)
                 && profit.abs() < rust_decimal::Decimal::new(1, 2)
             {
                 // Close to zero
                 self.break_even_points.push(current_price);
             }
-            current_price += step;
         }
 
         Ok(())
@@ -634,7 +640,7 @@ impl Strategies for CustomStrategy {
     fn get_volume(&mut self) -> Result<Positive, StrategyError> {
         let mut total_volume = Positive::ZERO;
         for position in &self.positions {
-            total_volume += position.option.quantity;
+            total_volume = total_volume.checked_add(&position.option.quantity)?;
         }
         Ok(total_volume)
     }
@@ -659,7 +665,7 @@ impl Strategies for CustomStrategy {
             {
                 max_profit = current_profit;
             }
-            current_price += step;
+            current_price = current_price.checked_add(&step)?;
             iterations += 1;
         }
 
@@ -691,7 +697,7 @@ impl Strategies for CustomStrategy {
             {
                 max_loss = current_profit;
             }
-            current_price += step;
+            current_price = current_price.checked_add(&step)?;
             iterations += 1;
         }
 
@@ -721,13 +727,23 @@ impl Strategies for CustomStrategy {
             if let Ok(current_profit) = self.calculate_profit_at(&current_price)
                 && current_profit > Decimal::ZERO
             {
-                total_profit += current_profit;
+                total_profit = d_add(
+                    total_profit,
+                    current_profit,
+                    "CustomStrategy::get_profit_area",
+                )?;
             }
-            current_price += step;
+            current_price = current_price.checked_add(&step)?;
             iterations += 1;
         }
 
-        Ok(total_profit / self.underlying_price.to_dec())
+        // The area is expressed as a fraction of the spot, which a zero
+        // underlying leaves undefined.
+        Ok(d_div(
+            total_profit,
+            self.underlying_price.to_dec(),
+            "CustomStrategy::get_profit_area",
+        )?)
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -742,21 +758,21 @@ impl Strategies for CustomStrategy {
             return Ok(Decimal::ZERO);
         }
 
-        let ratio = (max_profit.to_dec() / max_loss.to_dec()) * Decimal::from(100);
+        let ratio = d_mul(
+            d_div(
+                max_profit.to_dec(),
+                max_loss.to_dec(),
+                "CustomStrategy::get_profit_ratio",
+            )?,
+            Decimal::from(100),
+            "CustomStrategy::get_profit_ratio",
+        )?;
         Ok(ratio)
     }
 
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let (start_price, end_price) = self.range_to_show()?;
-        let mut prices = Vec::new();
-        let mut current_price = start_price;
-
-        while current_price <= end_price {
-            prices.push(current_price);
-            current_price += step;
-        }
-
-        Ok(prices)
+        calculate_price_range_bounded(start_price, end_price, step)
     }
 
     fn roll_in(&mut self, _position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {
@@ -977,8 +993,11 @@ impl PnLCalculator for CustomStrategy {
     ) -> Result<PnL, PricingError> {
         let mut total = PnL::default();
         for position in &self.positions {
-            total = total
-                + position.calculate_pnl(market_price, expiration_date, implied_volatility)?;
+            total = total.try_add(&position.calculate_pnl(
+                market_price,
+                expiration_date,
+                implied_volatility,
+            )?)?;
         }
         Ok(total)
     }
@@ -989,7 +1008,7 @@ impl PnLCalculator for CustomStrategy {
     ) -> Result<PnL, PricingError> {
         let mut total = PnL::default();
         for position in &self.positions {
-            total = total + position.calculate_pnl_at_expiration(underlying_price)?;
+            total = total.try_add(&position.calculate_pnl_at_expiration(underlying_price)?)?;
         }
         Ok(total)
     }
@@ -999,7 +1018,7 @@ impl PnLCalculator for CustomStrategy {
 
         for position in &self.positions {
             let position_pnl = position.adjustments_pnl(adjustment)?;
-            total_pnl = total_pnl + position_pnl;
+            total_pnl = total_pnl.try_add(&position_pnl)?;
         }
 
         Ok(total_pnl)

@@ -4,7 +4,10 @@
    Date: 16/8/24
 ******************************************************************************/
 
+use crate::error::DecimalError;
+use crate::error::PricingError;
 use crate::model::Trade;
+use crate::model::decimal::d_add;
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -140,11 +143,52 @@ impl PnL {
     #[must_use]
     pub fn total_pnl(&self) -> Option<Decimal> {
         match (self.realized, self.unrealized) {
-            (Some(r), Some(u)) => Some(r + u),
+            // `checked_add` keeps the `Option` honest: a total outside the
+            // `Decimal` range is not a number this type can report, and `None`
+            // already means "no total available" to every caller.
+            (Some(r), Some(u)) => r.checked_add(u),
             (Some(r), None) => Some(r),
             (None, Some(u)) => Some(u),
             (None, None) => None,
         }
+    }
+
+    /// Checked counterpart of the `Add` operator.
+    ///
+    /// `impl Add for PnL` returns `Self`, so it has nowhere to report an
+    /// overflow and aborts instead. Every accumulation inside the library goes
+    /// through this method, which reports it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when either running cost total
+    /// leaves the `Positive` range, and [`PricingError::Decimal`] when a
+    /// realized or unrealized total leaves the `Decimal` range.
+    pub(crate) fn try_add(&self, other: &PnL) -> Result<PnL, PricingError> {
+        fn add_leg(
+            a: Option<Decimal>,
+            b: Option<Decimal>,
+            op: &'static str,
+        ) -> Result<Option<Decimal>, DecimalError> {
+            match (a, b) {
+                (Some(a), Some(b)) => Ok(Some(d_add(a, b, op)?)),
+                (Some(a), None) => Ok(Some(a)),
+                (None, Some(b)) => Ok(Some(b)),
+                (None, None) => Ok(None),
+            }
+        }
+
+        Ok(PnL {
+            realized: add_leg(self.realized, other.realized, "PnL::try_add/realized")?,
+            unrealized: add_leg(self.unrealized, other.unrealized, "PnL::try_add/unrealized")?,
+            initial_costs: self.initial_costs.checked_add(&other.initial_costs)?,
+            initial_income: self.initial_income.checked_add(&other.initial_income)?,
+            date_time: if self.date_time > other.date_time {
+                self.date_time
+            } else {
+                other.date_time
+            },
+        })
     }
 }
 

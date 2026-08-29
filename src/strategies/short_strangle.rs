@@ -745,7 +745,7 @@ impl Strategies for ShortStrangle {
         // cannot start below it.
         let start_price = price_gap(first_option, max_profit);
         let end_price = last_option + max_profit;
-        Ok(calculate_price_range(start_price, end_price, step))
+        calculate_price_range(start_price, end_price, step)
     }
 
     fn roll_in(&mut self, position: &Position) -> Result<HashMap<Action, Trade>, StrategyError> {

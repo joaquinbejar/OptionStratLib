@@ -423,6 +423,25 @@ impl From<PositionError> for StrategyError {
     }
 }
 
+/// Lifts a checked-arithmetic failure into the strategy error surface.
+///
+/// The `d_*` helpers in [`crate::model::decimal`] carry a `&'static str`
+/// operation tag; that tag is preserved in `operation` so the site that
+/// overflowed is named in the message rather than lost behind a generic
+/// "arithmetic error".
+impl From<crate::error::DecimalError> for StrategyError {
+    fn from(err: crate::error::DecimalError) -> Self {
+        let operation = match &err {
+            crate::error::DecimalError::ArithmeticError { operation, .. } => operation.clone(),
+            _ => "Decimal".to_string(),
+        };
+        StrategyError::OperationError(OperationErrorKind::InvalidParameters {
+            operation,
+            reason: err.to_string(),
+        })
+    }
+}
+
 impl From<OptionsError> for StrategyError {
     fn from(err: OptionsError) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
