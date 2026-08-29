@@ -627,7 +627,8 @@ mod tests {
         );
         let put_price = crate::pricing::black_scholes_model::black_scholes(&put).unwrap();
 
-        assert_decimal_eq!(chooser_price, call_price + put_price, dec!(1e-6));
+        let parity = d_add(call_price, put_price, "test::chooser::parity").unwrap();
+        assert_decimal_eq!(chooser_price, parity, dec!(1e-6));
     }
 
     /// Same identity with a dividend yield, so the `e^(-q(T-t))` scale on the
@@ -657,7 +658,9 @@ mod tests {
         let put_price = crate::pricing::black_scholes_model::black_scholes(&put).unwrap();
         let scale = f64_to_decimal((-q * gap_years).exp()).unwrap();
 
-        assert_decimal_eq!(chooser_price, call_price + put_price * scale, dec!(1e-6));
+        let scaled_put = d_mul(put_price, scale, "test::chooser::scaled_put").unwrap();
+        let parity = d_add(call_price, scaled_put, "test::chooser::parity").unwrap();
+        assert_decimal_eq!(chooser_price, parity, dec!(1e-6));
     }
 
     /// A choice horizon of zero leaves no diffusion, so `σ√t` collapses and
@@ -731,7 +734,8 @@ mod tests {
         let put = european(s, k, expiry_days, sigma, r, 0.0, OptionStyle::Put);
         let put_price = crate::pricing::black_scholes_model::black_scholes(&put).unwrap();
 
-        assert_decimal_eq!(price, call_price + put_price, dec!(1e-8));
+        let straddle = d_add(call_price, put_price, "test::chooser::straddle").unwrap();
+        assert_decimal_eq!(price, straddle, dec!(1e-8));
     }
 
     /// The closed form and the `price_at_choice_equals_expiry` branch have to
