@@ -3,22 +3,18 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::curves::Point2D;
 use crate::curves::traits::StatisticalCurve;
 use crate::curves::utils::detect_peaks_and_valleys;
+use crate::error::decimal::DecimalError;
 use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
-    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
 use crate::utils::Len;
 use crate::visualization::{Graph, GraphData};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -129,6 +125,157 @@ impl Curve {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
         Curve { points, x_range }
     }
+
+    /// Fetches the point at `index` without going through the panicking
+    /// [`Index`] contract.
+    ///
+    /// `kind` selects the [`InterpolationError`] variant so each algorithm
+    /// reports an out-of-bounds window under its own name.
+    fn point_at(
+        &self,
+        index: usize,
+        kind: fn(String) -> InterpolationError,
+    ) -> Result<&Point2D, InterpolationError> {
+        self.points.iter().nth(index).ok_or_else(|| {
+            kind(format!(
+                "point index {index} is out of bounds for a curve of {} points",
+                self.points.len()
+            ))
+        })
+    }
+}
+
+/// Wraps a checked-arithmetic failure raised while building or transforming a
+/// curve.
+fn construction_err(err: DecimalError) -> CurveError {
+    CurveError::ConstructionError(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure raised while analysing a curve.
+fn analysis_err(err: DecimalError) -> CurveError {
+    CurveError::AnalysisError(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure in the interpolation variant of the
+/// algorithm that raised it.
+fn interp_err(
+    kind: fn(String) -> InterpolationError,
+) -> impl Fn(DecimalError) -> InterpolationError {
+    move |err| kind(err.to_string())
+}
+
+/// Reads one sample of a sorted metric series, naming the statistic on the
+/// out-of-bounds path instead of panicking.
+fn sample_at(
+    values: &[Decimal],
+    index: usize,
+    what: &'static str,
+) -> Result<Decimal, MetricsError> {
+    values.get(index).copied().ok_or_else(|| {
+        MetricsError::BasicError(format!(
+            "{what}: sample {index} is out of bounds for {} values",
+            values.len()
+        ))
+    })
+}
+
+/// Arithmetic mean of a sample. Errors on an empty sample, where the mean is
+/// undefined, and on a sum that leaves the representable range.
+fn mean_of(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
+    let sum = d_sum_iter(values.iter().copied(), op)?;
+    d_div(sum, Decimal::from(values.len()), op)
+}
+
+/// Population variance of a sample about `mean`.
+fn variance_of(
+    values: &[Decimal],
+    mean: Decimal,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    let mut acc = Decimal::ZERO;
+    for &value in values {
+        let centered = d_sub(value, mean, op)?;
+        let squared = powu_checked(centered, 2, op)?;
+        acc = d_add(acc, squared, op)?;
+    }
+    d_div(acc, Decimal::from(values.len()), op)
+}
+
+/// Mean of `(centered / std_dev)^order` over a pre-centered sample: the
+/// standardized moment behind skewness (`order = 3`) and kurtosis
+/// (`order = 4`).
+fn standardized_moment(
+    centered: &[Decimal],
+    std_dev: Decimal,
+    order: u64,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    let mut acc = Decimal::ZERO;
+    for &value in centered {
+        let z = d_div(value, std_dev, op)?;
+        let moment = powu_checked(z, order, op)?;
+        acc = d_add(acc, moment, op)?;
+    }
+    d_div(acc, Decimal::from(centered.len()), op)
+}
+
+/// Reads one slot of a spline working band, naming the band on the
+/// out-of-bounds path instead of panicking.
+fn band_at(
+    band: &[Decimal],
+    index: usize,
+    name: &'static str,
+) -> Result<Decimal, InterpolationError> {
+    band.get(index).copied().ok_or_else(|| {
+        InterpolationError::Spline(format!(
+            "spline band `{name}` has no slot {index} (len {})",
+            band.len()
+        ))
+    })
+}
+
+/// Mutable counterpart of [`band_at`].
+fn band_at_mut<'a>(
+    band: &'a mut [Decimal],
+    index: usize,
+    name: &'static str,
+) -> Result<&'a mut Decimal, InterpolationError> {
+    let len = band.len();
+    band.get_mut(index).ok_or_else(|| {
+        InterpolationError::Spline(format!(
+            "spline band `{name}` has no slot {index} (len {len})"
+        ))
+    })
+}
+
+/// Evaluates `moment * d^3 / six_h`, the cubic half of a natural-spline
+/// segment, one checked step at a time.
+fn cube_scaled(
+    moment: Decimal,
+    d: Decimal,
+    six_h: Decimal,
+    op: &'static str,
+) -> Result<Decimal, InterpolationError> {
+    let scaled = d_mul(moment, d, op).map_err(interp_err(InterpolationError::Spline))?;
+    let scaled = d_mul(scaled, d, op).map_err(interp_err(InterpolationError::Spline))?;
+    let scaled = d_mul(scaled, d, op).map_err(interp_err(InterpolationError::Spline))?;
+    d_div(scaled, six_h, op).map_err(interp_err(InterpolationError::Spline))
+}
+
+/// Evaluates `(y / h - moment * h / 6) * d`, the linear half of a
+/// natural-spline segment, one checked step at a time.
+fn linear_term(
+    y: Decimal,
+    moment: Decimal,
+    h: Decimal,
+    d: Decimal,
+    op: &'static str,
+) -> Result<Decimal, InterpolationError> {
+    let level = d_div(y, h, op).map_err(interp_err(InterpolationError::Spline))?;
+    let bend = d_mul(moment, h, op).map_err(interp_err(InterpolationError::Spline))?;
+    let bend = d_div(bend, dec!(6), op).map_err(interp_err(InterpolationError::Spline))?;
+    let slope = d_sub(level, bend, op).map_err(interp_err(InterpolationError::Spline))?;
+    d_mul(slope, d, op).map_err(interp_err(InterpolationError::Spline))
 }
 
 impl Len for Curve {
@@ -198,12 +345,22 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                         ));
                     }
                 };
-                let step_size = (t_end - t_start) / Decimal::from(steps);
+                if steps == 0 {
+                    return Err(CurveError::ConstructionError(
+                        "Parametric construction needs at least one step".to_string(),
+                    ));
+                }
+                let op = "Curve::construct::step_size";
+                let span = d_sub(t_end, t_start, op).map_err(construction_err)?;
+                let step_size = d_div(span, Decimal::from(steps), op).map_err(construction_err)?;
 
                 let points: Result<BTreeSet<Point2D>, CurveError> = (0..=steps)
                     .into_par_iter()
                     .map(|i| {
-                        let t = t_start + step_size * Decimal::from(i);
+                        let offset = d_mul(step_size, Decimal::from(i), "Curve::construct::offset")
+                            .map_err(construction_err)?;
+                        let t = d_add(t_start, offset, "Curve::construct::t")
+                            .map_err(construction_err)?;
                         f(t).map_err(|e| CurveError::ConstructionError(e.to_string()))
                     })
                     .collect();
@@ -284,6 +441,10 @@ impl Index<usize> for Curve {
         // and is documented above.
         match self.points.iter().nth(index) {
             Some(p) => p,
+            // scan-banned: allow -- `std::ops::Index` returns `&Self::Output`
+            // and has no fallible channel; the contract mirrors `Vec::index`.
+            // No library code reaches this arm: every internal lookup goes
+            // through `Curve::point_at`.
             None => panic!(
                 "Curve::index: out of bounds (index = {index}, len = {})",
                 self.points.len()
@@ -394,11 +555,29 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
     fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
         let (i, j) = self.find_bracket_points(x)?;
 
-        let p1 = &self[i];
-        let p2 = &self[j];
+        let p1 = self.point_at(i, InterpolationError::Linear)?;
+        let p2 = self.point_at(j, InterpolationError::Linear)?;
+
+        // `Point2D` orders on (x, y) but compares equal on x alone, so a
+        // `BTreeSet<Point2D>` legitimately holds two points sharing an
+        // abscissa; the slope is then undefined rather than infinite.
+        let run = d_sub(p2.x, p1.x, "Curve::linear_interpolate::run")
+            .map_err(interp_err(InterpolationError::Linear))?;
+        if run.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
 
         // Linear interpolation for y value
-        let y = p1.y + (x - p1.x) * (p2.y - p1.y) / (p2.x - p1.x);
+        let dx = d_sub(x, p1.x, "Curve::linear_interpolate::dx")
+            .map_err(interp_err(InterpolationError::Linear))?;
+        let rise = d_sub(p2.y, p1.y, "Curve::linear_interpolate::rise")
+            .map_err(interp_err(InterpolationError::Linear))?;
+        let scaled = d_mul(dx, rise, "Curve::linear_interpolate::scaled")
+            .map_err(interp_err(InterpolationError::Linear))?;
+        let ratio = d_div(scaled, run, "Curve::linear_interpolate::ratio")
+            .map_err(interp_err(InterpolationError::Linear))?;
+        let y = d_add(p1.y, ratio, "Curve::linear_interpolate::y")
+            .map_err(interp_err(InterpolationError::Linear))?;
 
         Ok(Point2D::new(x, y))
     }
@@ -534,23 +713,49 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
 
         let (i, _j) = self.find_bracket_points(x)?;
 
-        // Get four points forming a grid by using Index implementation on self
-        let p11 = &self[i]; // Bottom left
-        let p12 = &self[i + 1]; // Bottom right
-        let p21 = &self[i + 2]; // Top left
-        let p22 = &self[i + 3]; // Top right
+        // The grid is the four consecutive points starting at the lower
+        // bracket index. `find_bracket_points` only guarantees `i + 1`, so any
+        // `x` in the last three intervals leaves the window past the end.
+        let p11 = self.point_at(i, InterpolationError::Bilinear)?; // Bottom left
+        let p12 = self.point_at(i + 1, InterpolationError::Bilinear)?; // Bottom right
+        let p21 = self.point_at(i + 2, InterpolationError::Bilinear)?; // Top left
+        let p22 = self.point_at(i + 3, InterpolationError::Bilinear)?; // Top right
+
+        let span = d_sub(p12.x, p11.x, "Curve::bilinear_interpolate::span")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        if span.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
 
         // Normalize x to [0,1] interval
-        let dx = (x - p11.x) / (p12.x - p11.x);
+        let offset = d_sub(x, p11.x, "Curve::bilinear_interpolate::offset")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let dx = d_div(offset, span, "Curve::bilinear_interpolate::dx")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
 
         // Interpolate along bottom edge
-        let bottom = p11.y + dx * (p12.y - p11.y);
+        let bottom_rise = d_sub(p12.y, p11.y, "Curve::bilinear_interpolate::bottom_rise")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let bottom_step = d_mul(dx, bottom_rise, "Curve::bilinear_interpolate::bottom_step")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let bottom = d_add(p11.y, bottom_step, "Curve::bilinear_interpolate::bottom")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
 
         // Interpolate along top edge
-        let top = p21.y + dx * (p22.y - p21.y);
+        let top_rise = d_sub(p22.y, p21.y, "Curve::bilinear_interpolate::top_rise")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let top_step = d_mul(dx, top_rise, "Curve::bilinear_interpolate::top_step")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let top = d_add(p21.y, top_step, "Curve::bilinear_interpolate::top")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
 
         // Final interpolation in y direction
-        let y = bottom + (top - bottom) / dec!(2);
+        let edge_gap = d_sub(top, bottom, "Curve::bilinear_interpolate::edge_gap")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let half_gap = d_div(edge_gap, dec!(2), "Curve::bilinear_interpolate::half_gap")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
+        let y = d_add(bottom, half_gap, "Curve::bilinear_interpolate::y")
+            .map_err(interp_err(InterpolationError::Bilinear))?;
 
         Ok(Point2D::new(x, y))
     }
@@ -703,31 +908,87 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
 
         // Select four points for interpolation
         // Ensuring we always have enough points before and after
-        let (p0, p1, p2, p3) = if i == 0 {
-            (&self[0], &self[1], &self[2], &self[3])
+        let window = if i == 0 {
+            [0, 1, 2, 3]
         } else if i == len - 2 {
-            (
-                &self[len - 4],
-                &self[len - 3],
-                &self[len - 2],
-                &self[len - 1],
-            )
+            [len - 4, len - 3, len - 2, len - 1]
         } else {
-            (&self[i - 1], &self[i], &self[i + 1], &self[i + 2])
+            [i - 1, i, i + 1, i + 2]
         };
+        let p0 = self.point_at(window[0], InterpolationError::Cubic)?;
+        let p1 = self.point_at(window[1], InterpolationError::Cubic)?;
+        let p2 = self.point_at(window[2], InterpolationError::Cubic)?;
+        let p3 = self.point_at(window[3], InterpolationError::Cubic)?;
+
+        let span = d_sub(p2.x, p1.x, "Curve::cubic_interpolate::span")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        if span.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
 
         // Calculate t parameter (normalized x position between p1 and p2)
-        let t = (x - p1.x) / (p2.x - p1.x);
+        let offset = d_sub(x, p1.x, "Curve::cubic_interpolate::offset")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let t = d_div(offset, span, "Curve::cubic_interpolate::t")
+            .map_err(interp_err(InterpolationError::Cubic))?;
 
         // Cubic interpolation using Catmull-Rom spline
-        let t2 = t * t;
-        let t3 = t2 * t;
+        let t2 = d_mul(t, t, "Curve::cubic_interpolate::t2")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let t3 = d_mul(t2, t, "Curve::cubic_interpolate::t3")
+            .map_err(interp_err(InterpolationError::Cubic))?;
 
-        let y = dec!(0.5)
-            * (dec!(2) * p1.y
-                + (-p0.y + p2.y) * t
-                + (dec!(2) * p0.y - dec!(5) * p1.y + dec!(4) * p2.y - p3.y) * t2
-                + (-p0.y + dec!(3) * p1.y - dec!(3) * p2.y + p3.y) * t3);
+        let term0 = d_mul(dec!(2), p1.y, "Curve::cubic_interpolate::term0")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+
+        let linear_coeff = d_sub(p2.y, p0.y, "Curve::cubic_interpolate::linear_coeff")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let term1 = d_mul(linear_coeff, t, "Curve::cubic_interpolate::term1")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+
+        let two_p0 = d_mul(dec!(2), p0.y, "Curve::cubic_interpolate::two_p0")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let five_p1 = d_mul(dec!(5), p1.y, "Curve::cubic_interpolate::five_p1")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let four_p2 = d_mul(dec!(4), p2.y, "Curve::cubic_interpolate::four_p2")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let quad_coeff = d_sub(two_p0, five_p1, "Curve::cubic_interpolate::quad_coeff_a")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let quad_coeff = d_add(
+            quad_coeff,
+            four_p2,
+            "Curve::cubic_interpolate::quad_coeff_b",
+        )
+        .map_err(interp_err(InterpolationError::Cubic))?;
+        let quad_coeff = d_sub(quad_coeff, p3.y, "Curve::cubic_interpolate::quad_coeff_c")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let term2 = d_mul(quad_coeff, t2, "Curve::cubic_interpolate::term2")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+
+        let three_p1 = d_mul(dec!(3), p1.y, "Curve::cubic_interpolate::three_p1")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let three_p2 = d_mul(dec!(3), p2.y, "Curve::cubic_interpolate::three_p2")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let cubic_coeff = d_sub(three_p1, p0.y, "Curve::cubic_interpolate::cubic_coeff_a")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let cubic_coeff = d_sub(
+            cubic_coeff,
+            three_p2,
+            "Curve::cubic_interpolate::cubic_coeff_b",
+        )
+        .map_err(interp_err(InterpolationError::Cubic))?;
+        let cubic_coeff = d_add(cubic_coeff, p3.y, "Curve::cubic_interpolate::cubic_coeff_c")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+        let term3 = d_mul(cubic_coeff, t3, "Curve::cubic_interpolate::term3")
+            .map_err(interp_err(InterpolationError::Cubic))?;
+
+        let sum = d_sum_iter(
+            [term0, term1, term2, term3],
+            "Curve::cubic_interpolate::sum",
+        )
+        .map_err(interp_err(InterpolationError::Cubic))?;
+        let y = d_mul(dec!(0.5), sum, "Curve::cubic_interpolate::y")
+            .map_err(interp_err(InterpolationError::Cubic))?;
 
         Ok(Point2D::new(x, y))
     }
@@ -897,7 +1158,9 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         }
 
         // Check if x is within the valid range
-        if x < self[0].x || x > self[len - 1].x {
+        let first = self.point_at(0, InterpolationError::Spline)?;
+        let last = self.point_at(len - 1, InterpolationError::Spline)?;
+        if x < first.x || x > last.x {
             return Err(InterpolationError::Spline(
                 "x is outside the range of points".to_string(),
             ));
@@ -909,47 +1172,128 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         }
 
         let n = len;
+        let pts: Vec<&Point2D> = self.points.iter().collect();
+        let at = |index: usize| -> Result<&Point2D, InterpolationError> {
+            pts.get(index).copied().ok_or_else(|| {
+                InterpolationError::Spline(format!(
+                    "point index {index} is out of bounds for a curve of {n} points"
+                ))
+            })
+        };
 
-        // Calculate second derivatives
-        let mut a = vec![Decimal::ZERO; n];
-        let mut b = vec![Decimal::ZERO; n];
-        let mut c = vec![Decimal::ZERO; n];
-        let mut r = vec![Decimal::ZERO; n];
+        // Calculate second derivatives. The three interior bands and the
+        // right-hand side are built in order, with the natural-spline
+        // boundary rows (`b[0] = b[n-1] = 1`) pushed at the ends.
+        let mut a = vec![Decimal::ZERO];
+        let mut b = vec![Decimal::ONE];
+        let mut c = vec![Decimal::ZERO];
+        let mut r = vec![Decimal::ZERO];
 
         // Fill the matrices
         for i in 1..n - 1 {
-            let hi = self[i].x - self[i - 1].x;
-            let hi1 = self[i + 1].x - self[i].x;
+            let prev = at(i - 1)?;
+            let curr = at(i)?;
+            let next = at(i + 1)?;
 
-            a[i] = hi;
-            b[i] = dec!(2) * (hi + hi1);
-            c[i] = hi1;
+            let hi = d_sub(curr.x, prev.x, "Curve::spline_interpolate::hi")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let hi1 = d_sub(next.x, curr.x, "Curve::spline_interpolate::hi1")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            // A repeated abscissa collapses a knot interval; the second
+            // derivative there is undefined rather than infinite.
+            if hi.is_zero() || hi1.is_zero() {
+                return Err(InterpolationError::DegenerateInterval);
+            }
 
-            r[i] = dec!(6) * ((self[i + 1].y - self[i].y) / hi1 - (self[i].y - self[i - 1].y) / hi);
+            let band = d_add(hi, hi1, "Curve::spline_interpolate::band")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let diag = d_mul(dec!(2), band, "Curve::spline_interpolate::diag")
+                .map_err(interp_err(InterpolationError::Spline))?;
+
+            let rise_next = d_sub(next.y, curr.y, "Curve::spline_interpolate::rise_next")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let slope_next = d_div(rise_next, hi1, "Curve::spline_interpolate::slope_next")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let rise_prev = d_sub(curr.y, prev.y, "Curve::spline_interpolate::rise_prev")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let slope_prev = d_div(rise_prev, hi, "Curve::spline_interpolate::slope_prev")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let curvature = d_sub(
+                slope_next,
+                slope_prev,
+                "Curve::spline_interpolate::curvature",
+            )
+            .map_err(interp_err(InterpolationError::Spline))?;
+            let rhs = d_mul(dec!(6), curvature, "Curve::spline_interpolate::rhs")
+                .map_err(interp_err(InterpolationError::Spline))?;
+
+            a.push(hi);
+            b.push(diag);
+            c.push(hi1);
+            r.push(rhs);
         }
 
         // Add boundary conditions (natural spline)
-        b[0] = dec!(1);
-        b[n - 1] = dec!(1);
+        a.push(Decimal::ZERO);
+        b.push(Decimal::ONE);
+        c.push(Decimal::ZERO);
+        r.push(Decimal::ZERO);
 
         // Solve tridiagonal system using Thomas algorithm
         let mut m = vec![Decimal::ZERO; n];
 
         for i in 1..n - 1 {
-            let w = a[i] / b[i - 1];
-            b[i] -= w * c[i - 1];
-            r[i] = r[i] - w * r[i - 1];
+            let a_i = band_at(&a, i, "a")?;
+            let b_prev = band_at(&b, i - 1, "b")?;
+            if b_prev.is_zero() {
+                return Err(InterpolationError::DegenerateInterval);
+            }
+            let w = d_div(a_i, b_prev, "Curve::spline_interpolate::w")
+                .map_err(interp_err(InterpolationError::Spline))?;
+
+            let c_prev = band_at(&c, i - 1, "c")?;
+            let wc = d_mul(w, c_prev, "Curve::spline_interpolate::wc")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let b_i = band_at(&b, i, "b")?;
+            *band_at_mut(&mut b, i, "b")? = d_sub(b_i, wc, "Curve::spline_interpolate::b_i")
+                .map_err(interp_err(InterpolationError::Spline))?;
+
+            let r_prev = band_at(&r, i - 1, "r")?;
+            let wr = d_mul(w, r_prev, "Curve::spline_interpolate::wr")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let r_i = band_at(&r, i, "r")?;
+            *band_at_mut(&mut r, i, "r")? = d_sub(r_i, wr, "Curve::spline_interpolate::r_i")
+                .map_err(interp_err(InterpolationError::Spline))?;
         }
 
-        m[n - 1] = r[n - 1] / b[n - 1];
+        let b_last = band_at(&b, n - 1, "b")?;
+        if b_last.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let r_last = band_at(&r, n - 1, "r")?;
+        *band_at_mut(&mut m, n - 1, "m")? =
+            d_div(r_last, b_last, "Curve::spline_interpolate::m_last")
+                .map_err(interp_err(InterpolationError::Spline))?;
         for i in (1..n - 1).rev() {
-            m[i] = (r[i] - c[i] * m[i + 1]) / b[i];
+            let c_i = band_at(&c, i, "c")?;
+            let m_next = band_at(&m, i + 1, "m")?;
+            let cm = d_mul(c_i, m_next, "Curve::spline_interpolate::cm")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let r_i = band_at(&r, i, "r")?;
+            let numerator = d_sub(r_i, cm, "Curve::spline_interpolate::m_numerator")
+                .map_err(interp_err(InterpolationError::Spline))?;
+            let b_i = band_at(&b, i, "b")?;
+            if b_i.is_zero() {
+                return Err(InterpolationError::DegenerateInterval);
+            }
+            *band_at_mut(&mut m, i, "m")? = d_div(numerator, b_i, "Curve::spline_interpolate::m_i")
+                .map_err(interp_err(InterpolationError::Spline))?;
         }
 
         // Find segment for interpolation
         let mut segment = None;
         for i in 0..n - 1 {
-            if self[i].x <= x && x <= self[i + 1].x {
+            if at(i)?.x <= x && x <= at(i + 1)?.x {
                 segment = Some(i);
                 break;
             }
@@ -960,14 +1304,34 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         })?;
 
         // Calculate interpolated value
-        let h = self[segment + 1].x - self[segment].x;
-        let dx = self[segment + 1].x - x;
-        let dx1 = x - self[segment].x;
+        let left = at(segment)?;
+        let right = at(segment + 1)?;
+        let h = d_sub(right.x, left.x, "Curve::spline_interpolate::h")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        if h.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let dx = d_sub(right.x, x, "Curve::spline_interpolate::dx")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let dx1 = d_sub(x, left.x, "Curve::spline_interpolate::dx1")
+            .map_err(interp_err(InterpolationError::Spline))?;
 
-        let y = m[segment] * dx * dx * dx / (dec!(6) * h)
-            + m[segment + 1] * dx1 * dx1 * dx1 / (dec!(6) * h)
-            + (self[segment].y / h - m[segment] * h / dec!(6)) * dx
-            + (self[segment + 1].y / h - m[segment + 1] * h / dec!(6)) * dx1;
+        let m_left = band_at(&m, segment, "m")?;
+        let m_right = band_at(&m, segment + 1, "m")?;
+        let six_h = d_mul(dec!(6), h, "Curve::spline_interpolate::six_h")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let left_cube = cube_scaled(m_left, dx, six_h, "Curve::spline_interpolate::left_cube")?;
+        let right_cube = cube_scaled(m_right, dx1, six_h, "Curve::spline_interpolate::right_cube")?;
+        let left_linear = linear_term(left.y, m_left, h, dx, "Curve::spline_interpolate::left")?;
+        let right_linear =
+            linear_term(right.y, m_right, h, dx1, "Curve::spline_interpolate::right")?;
+
+        let y = d_sum_iter(
+            [left_cube, right_cube, left_linear, right_linear],
+            "Curve::spline_interpolate::y",
+        )
+        .map_err(interp_err(InterpolationError::Spline))?;
 
         Ok(Point2D::new(x, y))
     }
@@ -1003,16 +1367,27 @@ impl MetricsExtractor for Curve {
         }
 
         // Mean
-        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+        let mean = mean_of(&y_values, "Curve::compute_basic_metrics::mean")
+            .map_err(|e| MetricsError::BasicError(e.to_string()))?;
 
         // Median
         let mut sorted_values = y_values.clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let mid = sorted_values.len() / 2;
         let median = if sorted_values.len().is_multiple_of(2) {
-            (sorted_values[sorted_values.len() / 2 - 1] + sorted_values[sorted_values.len() / 2])
-                / Decimal::TWO
+            let below = mid.checked_sub(1).ok_or_else(|| {
+                MetricsError::BasicError(
+                    "median: empty sample after the emptiness guard".to_string(),
+                )
+            })?;
+            let lower = sample_at(&sorted_values, below, "median")?;
+            let upper = sample_at(&sorted_values, mid, "median")?;
+            let pair = d_add(lower, upper, "Curve::compute_basic_metrics::median_pair")
+                .map_err(|e| MetricsError::BasicError(e.to_string()))?;
+            d_div(pair, Decimal::TWO, "Curve::compute_basic_metrics::median")
+                .map_err(|e| MetricsError::BasicError(e.to_string()))?
         } else {
-            sorted_values[sorted_values.len() / 2]
+            sample_at(&sorted_values, mid, "median")?
         };
 
         // Mode (most frequent value)
@@ -1029,11 +1404,8 @@ impl MetricsExtractor for Curve {
         };
 
         // Standard Deviation
-        let variance = y_values
-            .iter()
-            .map(|&x| (x - mean).powu(2))
-            .sum::<Decimal>()
-            / Decimal::from(y_values.len());
+        let variance = variance_of(&y_values, mean, "Curve::compute_basic_metrics::variance")
+            .map_err(|e| MetricsError::BasicError(e.to_string()))?;
         let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
@@ -1059,14 +1431,19 @@ impl MetricsExtractor for Curve {
         }
 
         // Mean and Standard Deviation
-        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
+        let mean = mean_of(&y_values, "Curve::compute_shape_metrics::mean")
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         // Compute centered and scaled values
-        let centered_values: Vec<Decimal> = y_values.iter().map(|&x| x - mean).collect();
+        let centered_values: Vec<Decimal> = y_values
+            .iter()
+            .map(|&x| d_sub(x, mean, "Curve::compute_shape_metrics::centered"))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         // Compute variance
-        let variance = centered_values.iter().map(|&x| x.powu(2)).sum::<Decimal>()
-            / Decimal::from(y_values.len());
+        let variance = variance_of(&y_values, mean, "Curve::compute_shape_metrics::variance")
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
         let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
         if std_dev.is_zero() || std_dev < dec!(1e-9) {
             return Err(MetricsError::ShapeError(format!(
@@ -1075,20 +1452,28 @@ impl MetricsExtractor for Curve {
         }
 
         // Skewness calculation (Fisher-Pearson standardized moment)
-        let skewness = centered_values
-            .iter()
-            .map(|&x| (x / std_dev).powu(3))
-            .sum::<Decimal>()
-            // / (Decimal::from(y_values.len()) * Decimal::ONE_HUNDRED);
-            / (Decimal::from(y_values.len()));
+        let skewness = standardized_moment(
+            &centered_values,
+            std_dev,
+            3,
+            "Curve::compute_shape_metrics::skewness",
+        )
+        .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         // Kurtosis calculation (Fisher's definition - adjust to excess kurtosis)
-        let kurtosis = centered_values
-            .iter()
-            .map(|&x| (x / std_dev).powu(4))
-            .sum::<Decimal>()
-            / Decimal::from(y_values.len())
-            - Decimal::from(3);
+        let raw_kurtosis = standardized_moment(
+            &centered_values,
+            std_dev,
+            4,
+            "Curve::compute_shape_metrics::kurtosis",
+        )
+        .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let kurtosis = d_sub(
+            raw_kurtosis,
+            Decimal::from(3),
+            "Curve::compute_shape_metrics::excess_kurtosis",
+        )
+        .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         // Peaks and Valleys detection
         let (peaks, valleys) = detect_peaks_and_valleys(&self.points, dec!(0.1), 2);
@@ -1131,14 +1516,20 @@ impl MetricsExtractor for Curve {
             .cloned()
             .ok_or_else(|| MetricsError::BasicError("empty curve in max_point".to_string()))?;
 
-        let range = max_point.y - min_point.y;
+        let range = d_sub(
+            max_point.y,
+            min_point.y,
+            "Curve::compute_range_metrics::range",
+        )
+        .map_err(|e| MetricsError::RangeError(e.to_string()))?;
 
         // Quartiles
-        let q1 = y_values[len / 4];
-        let q2 = y_values[len / 2];
-        let q3 = y_values[3 * len / 4];
+        let q1 = sample_at(&y_values, len / 4, "first quartile")?;
+        let q2 = sample_at(&y_values, len / 2, "median")?;
+        let q3 = sample_at(&y_values, 3 * len / 4, "third quartile")?;
 
-        let interquartile_range = q3 - q1;
+        let interquartile_range = d_sub(q3, q1, "Curve::compute_range_metrics::iqr")
+            .map_err(|e| MetricsError::RangeError(e.to_string()))?;
 
         Ok(RangeMetrics {
             min: min_point,
@@ -1167,54 +1558,70 @@ impl MetricsExtractor for Curve {
         let x_vals: Vec<Decimal> = points.iter().map(|p| p.x).collect();
         let y_vals: Vec<Decimal> = points.iter().map(|p| p.y).collect();
 
-        let sum_x: Decimal = x_vals.iter().sum();
-        let sum_y: Decimal = y_vals.iter().sum();
-        let sum_xy: Decimal = x_vals.iter().zip(&y_vals).map(|(x, y)| *x * *y).sum();
-        let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
+        let trend = || -> Result<(Decimal, Decimal, Decimal), DecimalError> {
+            let op = "Curve::compute_trend_metrics";
+            let sum_x = d_sum_iter(x_vals.iter().copied(), op)?;
+            let sum_y = d_sum_iter(y_vals.iter().copied(), op)?;
+            let mut sum_xy = Decimal::ZERO;
+            let mut sum_xx = Decimal::ZERO;
+            for (x, y) in x_vals.iter().zip(&y_vals) {
+                sum_xy = d_add(sum_xy, d_mul(*x, *y, op)?, op)?;
+                sum_xx = d_add(sum_xx, d_mul(*x, *x, op)?, op)?;
+            }
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
-        let intercept = (sum_y - slope * sum_x) / n;
+            let numerator = d_sub(d_mul(n, sum_xy, op)?, d_mul(sum_x, sum_y, op)?, op)?;
+            let denominator = d_sub(d_mul(n, sum_xx, op)?, d_mul(sum_x, sum_x, op)?, op)?;
+            let slope = d_div(numerator, denominator, op)?;
+            let intercept = d_div(d_sub(sum_y, d_mul(slope, sum_x, op)?, op)?, n, op)?;
 
-        // R-squared Calculation
-        let mean_y = sum_y / n;
-        let sst: Decimal = y_vals.iter().map(|y| (*y - mean_y).powu(2)).sum();
+            // R-squared Calculation
+            let mean_y = d_div(sum_y, n, op)?;
+            let mut sst = Decimal::ZERO;
+            for y in &y_vals {
+                let centered = d_sub(*y, mean_y, op)?;
+                sst = d_add(sst, powu_checked(centered, 2, op)?, op)?;
+            }
 
-        let ssr: Decimal = y_vals
-            .iter()
-            .zip(&x_vals)
-            .map(|(y, x)| {
-                let y_predicted = slope * *x + intercept;
-                (*y - y_predicted).powu(2)
-            })
-            .sum();
+            let mut ssr = Decimal::ZERO;
+            for (y, x) in y_vals.iter().zip(&x_vals) {
+                let y_predicted = d_add(d_mul(slope, *x, op)?, intercept, op)?;
+                let residual = d_sub(*y, y_predicted, op)?;
+                ssr = d_add(ssr, powu_checked(residual, 2, op)?, op)?;
+            }
 
-        let r_squared = if sst == Decimal::ZERO {
-            Decimal::ONE
-        } else {
-            Decimal::ONE - (ssr / sst)
+            let r_squared = if sst == Decimal::ZERO {
+                Decimal::ONE
+            } else {
+                d_sub(Decimal::ONE, d_div(ssr, sst, op)?, op)?
+            };
+
+            Ok((slope, intercept, r_squared))
         };
+
+        // A sample whose abscissas all collapse to one value (or whose squares
+        // underflow the `Decimal` scale) leaves the ordinary-least-squares
+        // denominator at zero, where the slope is undefined rather than
+        // infinite.
+        let (slope, intercept, r_squared) =
+            trend().map_err(|e| MetricsError::TrendError(e.to_string()))?;
 
         // Moving Average Calculation
         let window_sizes = [3, 5, 7];
-        let moving_average: Vec<Point2D> = window_sizes
-            .iter()
-            .flat_map(|&window| {
-                if window > points.len() {
-                    vec![]
-                } else {
-                    points
-                        .windows(window)
-                        .map(|window_points| {
-                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>()
-                                / Decimal::from(window_points.len());
-                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>()
-                                / Decimal::from(window_points.len());
-                            Point2D::new(avg_x, avg_y)
-                        })
-                        .collect::<Vec<Point2D>>()
-                }
-            })
-            .collect();
+        let mut moving_average: Vec<Point2D> = Vec::new();
+        for window in window_sizes {
+            if window > points.len() {
+                continue;
+            }
+            for window_points in points.windows(window) {
+                let xs: Vec<Decimal> = window_points.iter().map(|p| p.x).collect();
+                let ys: Vec<Decimal> = window_points.iter().map(|p| p.y).collect();
+                let avg_x = mean_of(&xs, "Curve::compute_trend_metrics::moving_average_x")
+                    .map_err(|e| MetricsError::TrendError(e.to_string()))?;
+                let avg_y = mean_of(&ys, "Curve::compute_trend_metrics::moving_average_y")
+                    .map_err(|e| MetricsError::TrendError(e.to_string()))?;
+                moving_average.push(Point2D::new(avg_x, avg_y));
+            }
+        }
 
         Ok(TrendMetrics {
             slope,
@@ -1237,43 +1644,62 @@ impl MetricsExtractor for Curve {
             });
         }
 
-        let mean = y_values.iter().sum::<Decimal>() / Decimal::from(y_values.len());
-        let volatility = y_values
-            .iter()
-            .map(|&x| (x - mean).powu(2))
-            .sum::<Decimal>()
-            / Decimal::from(y_values.len())
-                .sqrt()
-                .unwrap_or(Decimal::ZERO);
-
-        if volatility == Decimal::ZERO {
-            return Ok(RiskMetrics {
-                volatility,
-                value_at_risk: Decimal::ZERO,
-                expected_shortfall: Decimal::ZERO,
-                beta: Decimal::ZERO,
-                sharpe_ratio: Decimal::ZERO,
-            });
+        let op = "Curve::compute_risk_metrics";
+        let mean = mean_of(&y_values, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+        // Note the grouping: the sum of squared deviations is divided by
+        // `sqrt(n)`, not by `sqrt(sum / n)`. Preserved as-is; only the
+        // arithmetic is made checked.
+        let mut squared_deviations = Decimal::ZERO;
+        for &value in &y_values {
+            let centered =
+                d_sub(value, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+            let squared = powu_checked(centered, 2, op)
+                .map_err(|e| MetricsError::RiskError(e.to_string()))?;
+            squared_deviations = d_add(squared_deviations, squared, op)
+                .map_err(|e| MetricsError::RiskError(e.to_string()))?;
         }
+        let sqrt_n = Decimal::from(y_values.len())
+            .sqrt()
+            .unwrap_or(Decimal::ZERO);
+        // `d_div` rejects the zero denominator, which the emptiness guard
+        // above already rules out.
+        let volatility = d_div(squared_deviations, sqrt_n, op)
+            .map_err(|e| MetricsError::RiskError(e.to_string()))?;
 
+        // Value at Risk (95% confidence) using parametric method. At zero
+        // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
+        // rather than an absence of value, so it is computed from the formula
+        // on every path instead of being short-circuited to zero.
         let z_score = dec!(1.645);
-        let var = mean - z_score * volatility;
+        let scaled_vol =
+            d_mul(z_score, volatility, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+        let var =
+            d_sub(mean, scaled_vol, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
 
-        let below_var_count = y_values.iter().filter(|&&x| x < var).count();
-        let expected_shortfall = if below_var_count > 0 {
-            y_values.iter().filter(|&&x| x < var).sum::<Decimal>()
-                / Decimal::from(below_var_count as u64)
-        } else {
+        let tail: Vec<Decimal> = y_values.iter().copied().filter(|&x| x < var).collect();
+        let expected_shortfall = if tail.is_empty() {
             Decimal::ZERO
+        } else {
+            mean_of(&tail, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         };
 
+        // `volatility / mean` is already zero at zero dispersion, so this
+        // guard only covers the undefined `x / 0`.
         let beta = if mean != Decimal::ZERO {
-            volatility / mean
+            d_div(volatility, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         } else {
             Decimal::ZERO
         };
 
-        let sharpe_ratio = mean / volatility;
+        // Sharpe Ratio (assuming risk-free rate of 0). A flat curve has no
+        // dispersion to divide by, which makes this the one field that is
+        // genuinely undefined at `volatility == 0`; the others keep their
+        // deterministic limits.
+        let sharpe_ratio = if volatility.is_zero() {
+            Decimal::ZERO
+        } else {
+            d_div(mean, volatility, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
+        };
 
         Ok(RiskMetrics {
             volatility,
@@ -1359,8 +1785,8 @@ impl Arithmetic<Curve> for Curve {
         }
 
         // If only one curve, return a clone
-        if curves.len() == 1 {
-            return Ok(curves[0].clone());
+        if let [only] = curves {
+            return Ok((*only).clone());
         }
 
         // Find the intersection of x-ranges
@@ -1386,13 +1812,16 @@ impl Arithmetic<Curve> for Curve {
 
         // Determine number of interpolation steps
         let steps = 100; // Configurable number of interpolation points
-        let step_size = (max_x - min_x) / Decimal::from(steps);
+        let op = "Curve::merge";
+        let span = d_sub(max_x, min_x, op).map_err(construction_err)?;
+        let step_size = d_div(span, Decimal::from(steps), op).map_err(construction_err)?;
 
         // Interpolate and perform operation using parallel iterator
         let result_points: Result<Vec<Point2D>, CurveError> = (0..=steps)
             .into_par_iter()
             .map(|i| {
-                let x = min_x + step_size * Decimal::from(i);
+                let offset = d_mul(step_size, Decimal::from(i), op).map_err(construction_err)?;
+                let x = d_add(min_x, offset, op).map_err(construction_err)?;
 
                 // Interpolate y values for each curve
                 let y_values: Result<Vec<Decimal>, CurveError> = curves
@@ -1409,29 +1838,38 @@ impl Arithmetic<Curve> for Curve {
 
                 // Perform the specified operation on interpolated y values
                 let result_y: Decimal = match operation {
-                    MergeOperation::Add => y_values.par_iter().sum(),
-                    MergeOperation::Subtract => {
-                        // Use Rayon's fold to parallelize subtraction
-                        y_values
-                            .par_iter()
-                            .enumerate()
-                            .map(|(i, &val)| if i == 0 { val } else { -val })
-                            .reduce(|| Decimal::ZERO, |a, b| a + b)
+                    MergeOperation::Add => {
+                        d_sum_iter(y_values.iter().copied(), op).map_err(construction_err)?
                     }
-                    MergeOperation::Multiply => y_values.par_iter().product(),
+                    MergeOperation::Subtract => {
+                        let signed = y_values
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &val)| if i == 0 { val } else { -val });
+                        d_sum_iter(signed, op).map_err(construction_err)?
+                    }
+                    MergeOperation::Multiply => y_values.par_iter().copied().map(Ok).reduce(
+                        || Ok(Decimal::ONE),
+                        |a, b| d_mul(a?, b?, op).map_err(construction_err),
+                    )?,
                     MergeOperation::Divide => y_values
                         .par_iter()
                         .enumerate()
                         .map(|(i, &val)| {
+                            // `Decimal::MAX` is the pre-existing sentinel for a
+                            // zero divisor; only the arithmetic is made checked.
                             if i == 0 {
-                                val
+                                Ok(val)
                             } else if val == Decimal::ZERO {
-                                Decimal::MAX
+                                Ok(Decimal::MAX)
                             } else {
-                                Decimal::ONE / val
+                                d_div(Decimal::ONE, val, op).map_err(construction_err)
                             }
                         })
-                        .reduce(|| Decimal::ONE, |a, b| a * b),
+                        .reduce(
+                            || Ok(Decimal::ONE),
+                            |a, b| d_mul(a?, b?, op).map_err(construction_err),
+                        )?,
                     MergeOperation::Max => y_values
                         .par_iter()
                         .cloned()
@@ -1509,15 +1947,24 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     }
 
     fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
-        self.points
-            .iter()
-            .min_by(|a, b| {
-                let dist_a = (a.x - *x).abs();
-                let dist_b = (b.x - *x).abs();
-                dist_a
-                    .partial_cmp(&dist_b)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
+        // The distance is folded explicitly rather than computed inside a
+        // comparator: `a.x - x` overflows for abscissas at opposite ends of
+        // the `Decimal` range, and `min_by` has no channel for that.
+        let mut closest: Option<(&Point2D, Decimal)> = None;
+        for point in &self.points {
+            let distance = d_sub(point.x, *x, "Curve::get_closest_point")
+                .map_err(analysis_err)?
+                .abs();
+            // `min_by` keeps the first of several equal minima; `<=` here
+            // preserves that.
+            match closest {
+                Some((_, best)) if best <= distance => {}
+                _ => closest = Some((point, distance)),
+            }
+        }
+
+        closest
+            .map(|(point, _)| point)
             .ok_or(CurveError::Point2DError {
                 reason: "No points available",
             })
@@ -1593,11 +2040,23 @@ impl GeometricTransformations<Point2D> for Curve {
             ));
         }
 
+        let (Some(dx), Some(dy)) = (deltas.first(), deltas.get(1)) else {
+            return Err(CurveError::invalid_parameters(
+                "translate",
+                "Expected 2 deltas for 2D translation",
+            ));
+        };
+
         let translated_points = self
             .points
             .iter()
-            .map(|point| Point2D::new(point.x + deltas[0], point.y + deltas[1]))
-            .collect();
+            .map(|point| {
+                let x = d_add(point.x, **dx, "Curve::translate::x")?;
+                let y = d_add(point.y, **dy, "Curve::translate::y")?;
+                Ok(Point2D::new(x, y))
+            })
+            .collect::<Result<BTreeSet<Point2D>, DecimalError>>()
+            .map_err(construction_err)?;
 
         Ok(Curve::new(translated_points))
     }
@@ -1610,25 +2069,45 @@ impl GeometricTransformations<Point2D> for Curve {
             ));
         }
 
+        let (Some(fx), Some(fy)) = (factors.first(), factors.get(1)) else {
+            return Err(CurveError::invalid_parameters(
+                "scale",
+                "Expected 2 factors for 2D scaling",
+            ));
+        };
+
         let scaled_points = self
             .points
             .iter()
-            .map(|point| Point2D::new(point.x * factors[0], point.y * factors[1]))
-            .collect();
+            .map(|point| {
+                let x = d_mul(point.x, **fx, "Curve::scale::x")?;
+                let y = d_mul(point.y, **fy, "Curve::scale::y")?;
+                Ok(Point2D::new(x, y))
+            })
+            .collect::<Result<BTreeSet<Point2D>, DecimalError>>()
+            .map_err(construction_err)?;
 
         Ok(Curve::new(scaled_points))
     }
 
     fn intersect_with(&self, other: &Self) -> Result<Vec<Point2D>, Self::Error> {
         let mut intersections = Vec::new();
+        let epsilon = Decimal::new(1, 6);
 
         // Use existing pairs iterator for efficiency
         for p1 in self.get_points() {
             for p2 in other.get_points() {
                 // Find points with small distance between them
-                if (p1.x - p2.x).abs() < Decimal::new(1, 6)
-                    && (p1.y - p2.y).abs() < Decimal::new(1, 6)
-                {
+                let dx = d_sub(p1.x, p2.x, "Curve::intersect_with::dx")
+                    .map_err(analysis_err)?
+                    .abs();
+                if dx >= epsilon {
+                    continue;
+                }
+                let dy = d_sub(p1.y, p2.y, "Curve::intersect_with::dy")
+                    .map_err(analysis_err)?
+                    .abs();
+                if dy < epsilon {
                     intersections.push(*p1);
                 }
             }
@@ -1640,11 +2119,26 @@ impl GeometricTransformations<Point2D> for Curve {
     fn derivative_at(&self, point: &Point2D) -> Result<Vec<Decimal>, Self::Error> {
         let (i, j) = self.find_bracket_points(point.x)?;
 
-        let p0 = &self[i];
-        let p1 = &self[j];
+        let p0 = self.point_at(i, InterpolationError::Linear)?;
+        let p1 = self.point_at(j, InterpolationError::Linear)?;
 
-        let a = (p1.y - p0.y) / (p1.x * p1.x - p0.x * p0.x);
-        let derivative = dec!(2.0) * a * point.x;
+        let op = "Curve::derivative_at";
+        let rise = d_sub(p1.y, p0.y, op).map_err(analysis_err)?;
+        let x1_sq = d_mul(p1.x, p1.x, op).map_err(analysis_err)?;
+        let x0_sq = d_mul(p0.x, p0.x, op).map_err(analysis_err)?;
+        let run = d_sub(x1_sq, x0_sq, op).map_err(analysis_err)?;
+        if run.is_zero() {
+            // The parabola fitted through the bracket is degenerate when the
+            // two abscissas have the same square, so its coefficient is
+            // undefined rather than infinite.
+            return Err(CurveError::AnalysisError(
+                "derivative_at: bracketing abscissas have equal squares".to_string(),
+            ));
+        }
+
+        let a = d_div(rise, run, op).map_err(analysis_err)?;
+        let slope = d_mul(dec!(2.0), a, op).map_err(analysis_err)?;
+        let derivative = d_mul(slope, point.x, op).map_err(analysis_err)?;
 
         Ok(vec![derivative])
     }
@@ -1686,11 +2180,22 @@ impl GeometricTransformations<Point2D> for Curve {
         let mut area = Decimal::ZERO;
         let points: Vec<_> = self.points.iter().collect();
 
+        let op = "Curve::measure_under";
+
         // Approximate area using trapezoidal rule
         for pair in points.windows(2) {
-            let width = pair[1].x - pair[0].x;
-            let height = ((pair[0].y - base_value) + (pair[1].y - base_value)) / Decimal::TWO;
-            area += width * height;
+            let (Some(left), Some(right)) = (pair.first(), pair.get(1)) else {
+                return Err(CurveError::AnalysisError(
+                    "measure_under: trapezoid window is shorter than two points".to_string(),
+                ));
+            };
+            let width = d_sub(right.x, left.x, op).map_err(analysis_err)?;
+            let left_height = d_sub(left.y, *base_value, op).map_err(analysis_err)?;
+            let right_height = d_sub(right.y, *base_value, op).map_err(analysis_err)?;
+            let sum_heights = d_add(left_height, right_height, op).map_err(analysis_err)?;
+            let height = d_div(sum_heights, Decimal::TWO, op).map_err(analysis_err)?;
+            let slice = d_mul(width, height, op).map_err(analysis_err)?;
+            area = d_add(area, slice, op).map_err(analysis_err)?;
         }
 
         Ok(area.abs())
@@ -1765,7 +2270,7 @@ mod tests_curves {
 
     #[test]
     fn test_create_constant_curve() {
-        let curve = create_constant_curve(dec!(1.0), dec!(2.0), dec!(5.0));
+        let curve = create_constant_curve(dec!(1.0), dec!(2.0), dec!(5.0)).unwrap();
         assert_eq!(curve.get_points().len(), 11);
         for point in curve.get_points() {
             assert_eq!(point.y, dec!(5.0));
@@ -1774,7 +2279,7 @@ mod tests_curves {
 
     #[test]
     fn test_create_linear_curve() {
-        let curve = create_linear_curve(dec!(1.0), dec!(2.0), dec!(2.0));
+        let curve = create_linear_curve(dec!(1.0), dec!(2.0), dec!(2.0)).unwrap();
         assert_eq!(curve.get_points().len(), 11);
         let mut slope = dec!(2.0);
         for point in curve.get_points() {
@@ -2260,13 +2765,13 @@ mod tests_spline_interpolate {
 #[cfg(test)]
 mod tests_curve_arithmetic {
     use super::*;
-    use crate::curves::utils::create_linear_curve;
+    use crate::curves::utils::{create_constant_curve, create_linear_curve};
     use crate::geometrics::InterpolationType;
 
     #[test]
     fn test_merge_curves_add() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
 
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add).unwrap();
 
@@ -2289,8 +2794,8 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_curves_subtract() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0)).unwrap();
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Subtract).unwrap();
         // Check result at some sample points
         let test_points = [dec!(0.0), dec!(5.0), dec!(10.0)];
@@ -2311,8 +2816,8 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_curves_multiply() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
 
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Multiply).unwrap();
 
@@ -2335,8 +2840,8 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_curves_divide() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(6.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Divide).unwrap();
 
         // Check result at some sample points
@@ -2362,10 +2867,32 @@ mod tests_curve_arithmetic {
         }
     }
 
+    /// Division is not associative, so every divisor has to reach the result.
+    /// `Curve::merge` reaches them by turning each element after the first
+    /// into its reciprocal and folding the whole set with a combining
+    /// reducer, so no partial is discarded. Three curves at 8, 2 and 2 must
+    /// give `8 / 2 / 2 = 2`, never `8 / 2` and never 8.
+    #[test]
+    fn test_merge_curves_divide_folds_every_divisor() {
+        let eight = create_constant_curve(dec!(0.0), dec!(10.0), dec!(8.0)).unwrap();
+        let two_a = create_constant_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let two_b = create_constant_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+
+        let result = Curve::merge(&[&eight, &two_a, &two_b], MergeOperation::Divide).unwrap();
+
+        for x in [dec!(0.0), dec!(5.0), dec!(10.0)] {
+            let y = result.interpolate(x, InterpolationType::Cubic).unwrap().y;
+            assert!(
+                (y - dec!(2)).abs() < dec!(0.0001),
+                "expected 8 / 2 / 2 = 2 at x = {x}, got {y}"
+            );
+        }
+    }
+
     #[test]
     fn test_merge_curves_max() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
 
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Max).unwrap();
 
@@ -2389,8 +2916,8 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_curves_min() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
 
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Min).unwrap();
 
@@ -2414,8 +2941,8 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_with_single_operation() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
 
         let result = curve1.merge_with(&curve2, MergeOperation::Add).unwrap();
 
@@ -2438,8 +2965,8 @@ mod tests_curve_arithmetic {
         assert!(result.is_err());
 
         // Test with curves of incompatible ranges
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
-        let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(2.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(2.0)).unwrap();
 
         // Verify that the merge operation works even with partially overlapping ranges
         let result = Curve::merge(&[&curve1, &curve2], MergeOperation::Add);
@@ -2448,9 +2975,9 @@ mod tests_curve_arithmetic {
 
     #[test]
     fn test_merge_multiple_curves() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0));
-        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0));
-        let curve3 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(1.0)).unwrap();
+        let curve2 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let curve3 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(3.0)).unwrap();
 
         let result = Curve::merge(&[&curve1, &curve2, &curve3], MergeOperation::Add).unwrap();
 
@@ -2776,6 +3303,43 @@ mod tests_curve_metrics {
         assert_eq!(risk_metrics.sharpe_ratio, dec!(0.0));
     }
 
+    /// A flat curve has no uncertainty, but it is not worthless. Only the
+    /// fields that are genuinely undefined at zero dispersion may be zeroed;
+    /// the parametric VaR still has its deterministic limit at the mean.
+    #[test]
+    fn test_risk_metrics_flat_curve_keeps_deterministic_var() {
+        let curve = create_constant_curve();
+        let metrics = curve.compute_risk_metrics().unwrap();
+
+        // Measured, and genuinely zero.
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        // `mean - 1.645 * 0` is the mean, not zero: the curve is worth 5.
+        assert_eq!(metrics.value_at_risk, dec!(5));
+        // No sample falls below the VaR, so the conditional mean has an empty
+        // tail and the function's own empty-tail rule gives zero.
+        assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
+        // `volatility / mean` is already zero here; no special case needed.
+        assert_eq!(metrics.beta, Decimal::ZERO);
+        // `mean / 0` is the one genuinely undefined field.
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
+    }
+
+    /// The same shape with a negative mean: the VaR limit follows the mean
+    /// wherever it sits, so a sign error cannot hide behind a positive value.
+    #[test]
+    fn test_risk_metrics_flat_negative_curve_keeps_deterministic_var() {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(-2.5)),
+            Point2D::new(dec!(1.0), dec!(-2.5)),
+            Point2D::new(dec!(2.0), dec!(-2.5)),
+        ]);
+        let metrics = Curve::new(points).compute_risk_metrics().unwrap();
+
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        assert_eq!(metrics.value_at_risk, dec!(-2.5));
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
+    }
+
     #[test]
     fn test_risk_metrics() {
         // Curva lineal
@@ -2847,8 +3411,8 @@ mod tests_merge_axis_interpolate {
     #[test]
     fn test_merge_axis_interpolate_linear() {
         // Create two curves with different x ranges and points
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
-        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5)).unwrap();
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0)).unwrap();
 
         // Merge and interpolate using linear interpolation
         let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Linear);
@@ -2873,8 +3437,8 @@ mod tests_merge_axis_interpolate {
     #[test]
     fn test_merge_axis_interpolate_cubic() {
         // Create two curves with different x ranges and points
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
-        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5)).unwrap();
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0)).unwrap();
 
         // Merge and interpolate using cubic interpolation
         let result = curve1.merge_axis_interpolate(&curve2, InterpolationType::Cubic);

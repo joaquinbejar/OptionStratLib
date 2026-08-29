@@ -298,8 +298,8 @@ mod tests_merge_indexes {
 
     #[test]
     fn test_merge_indexes_normal() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
-        let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(1.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5)).unwrap();
+        let curve2 = create_linear_curve(dec!(5.0), dec!(15.0), dec!(1.0)).unwrap();
         let merged_indexes = curve1.merge_indexes(curve2.get_index_values());
 
         assert_eq!(merged_indexes.len(), 6);
@@ -309,8 +309,8 @@ mod tests_merge_indexes {
 
     #[test]
     fn test_merge_indexes_normal_bis() {
-        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5));
-        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0));
+        let curve1 = create_linear_curve(dec!(0.0), dec!(10.0), dec!(0.5)).unwrap();
+        let curve2 = create_linear_curve(dec!(4.0), dec!(20.0), dec!(1.0)).unwrap();
         let merged_indexes = curve1.merge_indexes(curve2.get_index_values());
 
         assert_eq!(merged_indexes.len(), 10);

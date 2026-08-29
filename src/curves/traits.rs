@@ -3,15 +3,10 @@
    Email: jb@taunais.com
    Date: 23/2/25
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::curves::{Curve, Point2D};
 use crate::error::{CurveError, OperationErrorKind};
 use crate::geometrics::{BasicMetrics, MetricsExtractor, RangeMetrics, ShapeMetrics, TrendMetrics};
+use crate::model::decimal::d_sub;
 use num_traits::ToPrimitive;
 use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
@@ -140,6 +135,22 @@ pub trait StatisticalCurve: MetricsExtractor {
                 },
             ));
         }
+
+        // Every generated sample is placed on one of the curve's own
+        // abscissas, so the request cannot exceed how many there are.
+        let x_values: Vec<Decimal> = self.get_x_values();
+        if num_points > x_values.len() {
+            return Err(CurveError::OperationError(
+                OperationErrorKind::InvalidParameters {
+                    operation: "generate_statistical_curve".to_string(),
+                    reason: format!(
+                        "Number of points ({num_points}) exceeds the {} x-values available on the curve",
+                        x_values.len()
+                    ),
+                },
+            ));
+        }
+
         // Initialize random number generator with optional seed
         let seed_value = seed.unwrap_or_else(rand::random);
         let mut rng = StdRng::seed_from_u64(seed_value);
@@ -191,20 +202,24 @@ pub trait StatisticalCurve: MetricsExtractor {
             }
         }
 
-        let x_values: Vec<Decimal> = self.get_x_values();
-
         // Apply trend (slope and intercept)
         let slope = trend_metrics.slope.to_f64().unwrap_or(0.0);
         if slope.abs() > 0.001 {
             let intercept = trend_metrics.intercept.to_f64().unwrap_or(0.0);
-            for i in 0..y_values.len() {
-                let x_f = x_values[i].to_f64().ok_or_else(|| {
+            for (i, y) in y_values.iter_mut().enumerate() {
+                let x = x_values.get(i).ok_or_else(|| {
+                    CurveError::invalid_parameters(
+                        "generate_statistical_curve",
+                        "fewer x-values than generated samples",
+                    )
+                })?;
+                let x_f = x.to_f64().ok_or_else(|| {
                     CurveError::invalid_parameters(
                         "to_f64",
                         "Decimal out of range / non-representable as f64 in regression x-input",
                     )
                 })?;
-                y_values[i] += slope * x_f + intercept;
+                *y += slope * x_f + intercept;
             }
         }
 
@@ -227,19 +242,21 @@ pub trait StatisticalCurve: MetricsExtractor {
         // Ensure mode value is included
         if num_points > 3 {
             let index = rng.random_range(0..(num_points / 3));
-            y_values[index] = basic_metrics.mode.to_f64().unwrap_or(y_values[index]);
+            if let Some(slot) = y_values.get_mut(index) {
+                *slot = basic_metrics.mode.to_f64().unwrap_or(*slot);
+            }
         }
 
         // Create points and construct curve
         let mut points = BTreeSet::new();
-        for i in 0..num_points {
-            let x_f = x_values[i].to_f64().ok_or_else(|| {
+        for (x, y) in x_values.iter().zip(&y_values).take(num_points) {
+            let x_f = x.to_f64().ok_or_else(|| {
                 CurveError::invalid_parameters(
                     "to_f64",
                     "Decimal out of range / non-representable as f64 in regression x-input",
                 )
             })?;
-            let point = Point2D::from_f64_tuple(x_f, y_values[i])?;
+            let point = Point2D::from_f64_tuple(x_f, *y)?;
             points.insert(point);
         }
 
@@ -334,7 +351,9 @@ pub trait StatisticalCurve: MetricsExtractor {
     /// [`CurveError::ConstructionError`] raised while recomputing the
     /// curve's actual metrics (typically when the curve contains
     /// non-finite samples or lacks the density required for the
-    /// requested metric).
+    /// requested metric). Returns [`CurveError::AnalysisError`] when the gap
+    /// between an actual and a target metric leaves the representable
+    /// `Decimal` range.
     fn verify_curve_metrics(
         &self,
         curve: &Curve,
@@ -345,9 +364,24 @@ pub trait StatisticalCurve: MetricsExtractor {
             .compute_basic_metrics()
             .map_err(|e| CurveError::MetricsError(format!("Failed to compute metrics: {e}")))?;
 
-        // Check if the key metrics are within tolerance
-        let mean_diff = (actual_metrics.mean - target_metrics.mean).abs();
-        let std_dev_diff = (actual_metrics.std_dev - target_metrics.std_dev).abs();
+        // Check if the key metrics are within tolerance. A target sitting at
+        // the far end of the `Decimal` range makes the gap itself
+        // unrepresentable, which is a comparison failure rather than a
+        // silently large difference.
+        let mean_diff = d_sub(
+            actual_metrics.mean,
+            target_metrics.mean,
+            "StatisticalCurve::verify_curve_metrics::mean_diff",
+        )
+        .map_err(|e| CurveError::AnalysisError(e.to_string()))?
+        .abs();
+        let std_dev_diff = d_sub(
+            actual_metrics.std_dev,
+            target_metrics.std_dev,
+            "StatisticalCurve::verify_curve_metrics::std_dev_diff",
+        )
+        .map_err(|e| CurveError::AnalysisError(e.to_string()))?
+        .abs();
 
         Ok(mean_diff <= tolerance && std_dev_diff <= tolerance)
     }
