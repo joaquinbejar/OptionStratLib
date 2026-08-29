@@ -31,13 +31,28 @@ jobs:
         with:
           toolchain: stable
 
-      # cargo-public-api builds rustdoc JSON, which requires nightly. It does
-      # not need to be the active toolchain (rust-toolchain.toml keeps
-      # `stable` selected for everything else), it just needs to be
-      # installed so `cargo public-api` can find and use it.
-      - name: Install a nightly toolchain for rustdoc JSON
-        run: rustup toolchain install nightly --profile minimal
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
 
+      # The Makefile is the single source of truth for both pins, so CI and a
+      # local `make public-api-check` always run the same producer.
+      - name: Resolve pinned public API tooling
+        id: pins
+        run: make -s print-public-api-pins >> "$GITHUB_OUTPUT"
+
+      # cargo-public-api builds rustdoc JSON, which requires nightly, and the
+      # JSON schema is unstable and versioned, so the nightly is pinned to a
+      # date rather than tracking the channel. It does not need to be the
+      # active toolchain (rust-toolchain.toml keeps `stable` selected for
+      # everything else), it just needs to be installed so
+      # `cargo +<nightly> public-api` can use it.
+      - name: Install the pinned nightly for rustdoc JSON
+        run: rustup toolchain install ${{ steps.pins.outputs.public_api_nightly }} --profile minimal
+
+      # Both pins are part of the key: the cache carries ~/.cargo/bin, so a
+      # key on Cargo.lock alone could restore a cargo-public-api built for a
+      # different pin. The restore-keys fall back only within the same pins.
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:
@@ -47,13 +62,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-public-api-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-public-api-${{ steps.pins.outputs.cargo_public_api_version }}-${{ steps.pins.outputs.public_api_nightly }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-public-api-
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+            ${{ runner.os }}-cargo-public-api-${{ steps.pins.outputs.cargo_public_api_version }}-${{ steps.pins.outputs.public_api_nightly }}-
 
       - name: Check public API against the checked-in snapshot
         run: make public-api-check
