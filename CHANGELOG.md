@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `2.2e-8`. A forward-priced or fully-carried underlying is an ordinary
   contract, so every pinned `r = q` Asian value moves.
 - **A zero-volatility Asian option priced off the terminal forward instead of
-  the average** (#454). Both kernels short-circuited `σ = 0` to
+  the average** (#447). Both kernels short-circuited `σ = 0` to
   `(S e^{bT} − K)⁺ e^{−rT}`, but a deterministic path still has to be
   averaged: the geometric mean of `S e^{b t}` over the window is `S e^{bT/2}`
   and the arithmetic mean is `S (e^{bT} − 1) / (bT)`, which are also the
