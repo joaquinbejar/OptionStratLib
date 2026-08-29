@@ -28,6 +28,7 @@
 
 use crate::chains::chain::OptionChain;
 use crate::greeks::Greeks;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::position::Position;
 use crate::model::types::Side;
 use num_traits::Signed;
@@ -201,11 +202,18 @@ impl<'a> AdjustmentOptimizer<'a> {
             .iter()
             .enumerate()
             .filter_map(|(i, p)| {
-                p.option.delta().ok().map(|d| {
+                p.option.delta().ok().and_then(|d| {
                     // `delta` already carries the leg's `Side`; applying the
-                    // sign again here cancelled it.
-                    let delta_per_contract = d / p.option.quantity.to_dec();
-                    (i, d, delta_per_contract)
+                    // sign again here cancelled it. A leg with no contracts
+                    // has no per-contract delta and cannot be resized, so it
+                    // drops out of the candidate list instead of aborting.
+                    d_div(
+                        d,
+                        p.option.quantity.to_dec(),
+                        "optimize_existing_legs::delta_per_contract",
+                    )
+                    .ok()
+                    .map(|delta_per_contract| (i, d, delta_per_contract))
                 })
             })
             .collect();
@@ -227,21 +235,47 @@ impl<'a> AdjustmentOptimizer<'a> {
                 continue;
             }
 
-            let current_qty = self.positions[idx].option.quantity.to_dec();
-            let adjustment_qty = remaining_delta / delta_per_contract;
+            let Some(position) = self.positions.get(idx) else {
+                continue;
+            };
+            let current_qty = position.option.quantity.to_dec();
+            let Ok(adjustment_qty) = d_div(
+                remaining_delta,
+                delta_per_contract,
+                "optimize_existing_legs::adjustment_qty",
+            ) else {
+                continue;
+            };
 
             // Calculate new quantity
-            let new_qty = current_qty + adjustment_qty;
+            let Ok(new_qty) = d_add(
+                current_qty,
+                adjustment_qty,
+                "optimize_existing_legs::new_qty",
+            ) else {
+                continue;
+            };
 
             // Can't have negative quantity
             if new_qty > Decimal::ZERO
                 && let Ok(new_quantity) = Positive::new_decimal(new_qty)
             {
+                let consumed = d_mul(
+                    adjustment_qty,
+                    delta_per_contract,
+                    "optimize_existing_legs::consumed_delta",
+                )
+                .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
+                remaining_delta = d_sub(
+                    remaining_delta,
+                    consumed,
+                    "optimize_existing_legs::remaining_delta",
+                )
+                .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
                 actions.push(AdjustmentAction::ModifyQuantity {
                     leg_index: idx,
                     new_quantity,
                 });
-                remaining_delta -= adjustment_qty * delta_per_contract;
             }
         }
 
@@ -283,7 +317,18 @@ impl<'a> AdjustmentOptimizer<'a> {
                 quantity,
             });
 
-            remaining_delta -= option_delta * quantity.to_dec();
+            let consumed = d_mul(
+                option_delta,
+                quantity.to_dec(),
+                "optimize_with_new_legs::consumed_delta",
+            )
+            .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
+            remaining_delta = d_sub(
+                remaining_delta,
+                consumed,
+                "optimize_with_new_legs::remaining_delta",
+            )
+            .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
         }
 
         self.build_plan(actions, remaining_delta)
@@ -337,9 +382,17 @@ impl<'a> AdjustmentOptimizer<'a> {
                     if let Ok(option_delta) = option.delta() {
                         // Check if this option helps reduce the gap
                         if option_delta.signum() == target_delta_sign {
-                            let quantity_needed =
-                                (delta_gap.abs() / option_delta.abs()).min(dec!(100));
-                            if let Ok(qty) = Positive::new_decimal(quantity_needed) {
+                            // A zero-delta candidate cannot close any gap, and
+                            // `signum` puts it in this branch whenever the gap
+                            // is itself zero.
+                            let Ok(quantity_needed) = d_div(
+                                delta_gap.abs(),
+                                option_delta.abs(),
+                                "optimize_with_new_legs::quantity_needed",
+                            ) else {
+                                continue;
+                            };
+                            if let Ok(qty) = Positive::new_decimal(quantity_needed.min(dec!(100))) {
                                 candidates.push((option, qty, option_delta));
                             }
                         }
@@ -350,16 +403,21 @@ impl<'a> AdjustmentOptimizer<'a> {
 
         // Sort by efficiency (delta per dollar cost)
         candidates.sort_by(|a, b| {
-            let eff_a = a.2.abs()
-                / a.0
-                    .calculate_price_black_scholes()
-                    .unwrap_or(dec!(1))
-                    .max(dec!(0.01));
-            let eff_b = b.2.abs()
-                / b.0
-                    .calculate_price_black_scholes()
-                    .unwrap_or(dec!(1))
-                    .max(dec!(0.01));
+            // Sort key only: a candidate whose delta-per-dollar is not
+            // representable sorts last rather than aborting the comparator,
+            // which has no error channel.
+            let efficiency = |c: &(crate::Options, Positive, Decimal)| {
+                d_div(
+                    c.2.abs(),
+                    c.0.calculate_price_black_scholes()
+                        .unwrap_or(dec!(1))
+                        .max(dec!(0.01)),
+                    "optimize_with_new_legs::efficiency",
+                )
+                .unwrap_or(Decimal::ZERO)
+            };
+            let eff_a = efficiency(a);
+            let eff_b = efficiency(b);
             // SAFETY: total order on Decimal; f64 fallback to Equal is safe for stable sort
             eff_b
                 .partial_cmp(&eff_a)
@@ -398,6 +456,9 @@ impl<'a> AdjustmentOptimizer<'a> {
 
     /// Estimates the cost of a set of actions.
     fn estimate_cost(&self, actions: &[AdjustmentAction]) -> Result<Decimal, AdjustmentError> {
+        fn add_cost(cost: Decimal, item: Decimal) -> Result<Decimal, AdjustmentError> {
+            Ok(d_add(cost, item, "estimate_cost::running_total")?)
+        }
         let mut cost = Decimal::ZERO;
 
         for action in actions {
@@ -408,7 +469,7 @@ impl<'a> AdjustmentOptimizer<'a> {
                     let price = option
                         .calculate_price_black_scholes()
                         .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
-                    cost += price * quantity.to_dec();
+                    cost = add_cost(cost, d_mul(price, quantity.to_dec(), "estimate_cost::leg")?)?;
                 }
                 AdjustmentAction::AddUnderlying { quantity } => {
                     let spot = self
@@ -416,7 +477,10 @@ impl<'a> AdjustmentOptimizer<'a> {
                         .first()
                         .map(|p| p.option.underlying_price.to_dec())
                         .unwrap_or(Decimal::ZERO);
-                    cost += (spot * quantity).abs();
+                    cost = add_cost(
+                        cost,
+                        d_mul(spot, *quantity, "estimate_cost::underlying")?.abs(),
+                    )?;
                 }
                 AdjustmentAction::RollStrike {
                     leg_index,
@@ -429,18 +493,47 @@ impl<'a> AdjustmentOptimizer<'a> {
                             .option
                             .calculate_price_black_scholes()
                             .unwrap_or(Decimal::ZERO);
-                        // Approximate new price (simplified)
-                        let new_price = old_price
-                            * (dec!(1)
-                                + (new_strike.to_dec() - pos.option.strike_price.to_dec())
-                                    / pos.option.underlying_price.to_dec()
-                                    * dec!(0.5));
-                        cost += (new_price - old_price).abs() * quantity.to_dec();
+                        // Approximate new price (simplified). A zero
+                        // underlying leaves the relative strike move
+                        // undefined, so the roll is not costed rather than
+                        // dividing by it.
+                        let strike_move = d_sub(
+                            new_strike.to_dec(),
+                            pos.option.strike_price.to_dec(),
+                            "estimate_cost::strike_move",
+                        )?;
+                        let relative_move = d_mul(
+                            d_div(
+                                strike_move,
+                                pos.option.underlying_price.to_dec(),
+                                "estimate_cost::relative_strike_move",
+                            )?,
+                            dec!(0.5),
+                            "estimate_cost::relative_strike_move_damped",
+                        )?;
+                        let new_price = d_mul(
+                            old_price,
+                            d_add(dec!(1), relative_move, "estimate_cost::roll_factor")?,
+                            "estimate_cost::rolled_price",
+                        )?;
+                        let delta_price =
+                            d_sub(new_price, old_price, "estimate_cost::roll_price_delta")?.abs();
+                        cost = add_cost(
+                            cost,
+                            d_mul(delta_price, quantity.to_dec(), "estimate_cost::roll")?,
+                        )?;
                     }
                 }
                 AdjustmentAction::RollExpiration { quantity, .. } => {
                     // Approximate cost for rolling expiration
-                    cost += quantity.to_dec() * dec!(0.10); // Simplified estimate
+                    cost = add_cost(
+                        cost,
+                        d_mul(
+                            quantity.to_dec(),
+                            dec!(0.10),
+                            "estimate_cost::roll_expiration",
+                        )?,
+                    )?; // Simplified estimate
                 }
                 _ => {}
             }

@@ -52,6 +52,7 @@ use crate::error::{GreeksError, PositionError, StrategyError};
 /// based on the delta exposure of the strategy.
 use crate::greeks::Greeks;
 use crate::greeks::calculate_delta_neutral_sizes;
+use crate::model::decimal::{d_div, d_sub};
 use crate::model::types::{Action, OptionStyle};
 use crate::model::{Trade, TradeStatusAble};
 use crate::prelude::OperationErrorKind;
@@ -373,9 +374,17 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         let mut individual_deltas: Vec<DeltaPositionInfo> = Vec::with_capacity(options.len());
         for option in options.iter() {
             let delta = option.delta()?;
+            // A leg with no contracts has no per-contract delta: the quotient
+            // is 0/0, and inventing a zero there would report a hedge ratio
+            // for a position that does not exist.
+            let delta_per_contract = d_div(
+                delta,
+                option.quantity.to_dec(),
+                "delta_neutrality::delta_per_contract",
+            )?;
             individual_deltas.push(DeltaPositionInfo {
                 delta,
-                delta_per_contract: delta / option.quantity,
+                delta_per_contract,
                 quantity: option.quantity,
                 strike: option.strike_price,
                 option_style: option.option_style,
@@ -504,7 +513,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         }
 
         // Calculate how many contracts are needed to neutralize the net delta
-        let total_contracts_needed = (net_delta / option_delta_per_contract).abs();
+        let total_contracts_needed = d_div(
+            net_delta,
+            option_delta_per_contract,
+            "generate_delta_adjustments::total_contracts_needed",
+        )?
+        .abs();
         if total_contracts_needed == option.quantity.to_dec() {
             return Ok(DeltaAdjustment::NoAdjustmentNeeded);
         }
@@ -628,8 +642,12 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         let mut total_size: Positive = Positive::ZERO;
         // Calculate adjustments for each option
         for option in &options {
-            let option_delta_per_contract = option.delta()? / option.quantity.to_dec();
-            total_size += option.quantity;
+            let option_delta_per_contract = d_div(
+                option.delta()?,
+                option.quantity.to_dec(),
+                "delta_adjustments::delta_per_contract",
+            )?;
+            total_size = total_size.checked_add(&option.quantity)?;
             if option_delta_per_contract.abs() > DELTA_THRESHOLD / dec!(10.0) {
                 // Try to generate delta adjustments, but skip if not possible
                 match self.generate_delta_adjustments(net_delta, option_delta_per_contract, option)
@@ -654,8 +672,16 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             )?;
 
             // Calculate size differences (how much to adjust each position)
-            let size_diff1: Decimal = delta_neutral_size1.to_dec() - options[0].quantity.to_dec();
-            let size_diff2: Decimal = delta_neutral_size2.to_dec() - options[1].quantity.to_dec();
+            let size_diff1: Decimal = d_sub(
+                delta_neutral_size1.to_dec(),
+                options[0].quantity.to_dec(),
+                "delta_adjustments::size_diff1",
+            )?;
+            let size_diff2: Decimal = d_sub(
+                delta_neutral_size2.to_dec(),
+                options[1].quantity.to_dec(),
+                "delta_adjustments::size_diff2",
+            )?;
 
             // Create adjustment for the first option
             let adjustment1 = if size_diff1.is_sign_positive() {
@@ -907,7 +933,10 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         let mut binding = self.get_position(option_type, side, strike)?;
         if let Some(current_position) = binding.first_mut() {
             let mut updated_position = (*current_position).clone();
-            updated_position.option.quantity += quantity;
+            // A negative adjustment larger than the leg would take the size
+            // below zero, which is not a position anyone can hold.
+            updated_position.option.quantity =
+                updated_position.option.quantity.checked_add_dec(quantity)?;
             self.modify_position(&updated_position)?;
         } else {
             return Err(PositionError::ValidationError(
@@ -1179,7 +1208,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// [`GreeksError::Pricing`] for option-leg Black–Scholes failures).
     fn delta_gap(&self, target_delta: Decimal) -> Result<Decimal, GreeksError> {
         let current_delta = self.delta()?;
-        Ok(target_delta - current_delta)
+        Ok(d_sub(target_delta, current_delta, "delta_gap")?)
     }
 }
 

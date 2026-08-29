@@ -688,7 +688,7 @@ impl Strategies for LongStrangle {
         debug!("Start price: {}", start_price);
         let end_price = last_option + diff;
         debug!("End price: {}", end_price);
-        Ok(calculate_price_range(start_price, end_price, step))
+        calculate_price_range(start_price, end_price, step)
     }
 }
 

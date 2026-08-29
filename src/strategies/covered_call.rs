@@ -58,12 +58,15 @@ use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
 use crate::greeks::Greeks;
 use crate::model::ExpirationDate;
 use crate::model::ProfitLossRange;
+use crate::model::decimal::{d_add, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::leg::{Leg, SpotPosition};
 use crate::model::position::Position;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
+use crate::model::utils::sub_floor_zero;
 use crate::pnl::PnLCalculator;
 use crate::pricing::payoff::Profit;
+use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
@@ -173,6 +176,17 @@ impl CoveredCall {
         call_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
         // Create the spot position (long underlying)
+        // Every per-share figure this strategy reports — the effective cost
+        // basis, the break-even, the premium per share — divides by the size
+        // of the spot leg. A covered call with no shares is not a position, and
+        // rejecting it here keeps those divisors non-zero.
+        if quantity == Positive::ZERO {
+            return Err(StrategyError::invalid_parameters(
+                "CoveredCall::new",
+                "quantity must be strictly positive: a covered call with no shares has no per-share basis",
+            ));
+        }
+
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
             quantity,
@@ -272,7 +286,7 @@ impl CoveredCall {
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let option_delta = self.short_call.delta()?;
-        Ok(spot_delta + option_delta)
+        Ok(d_add(spot_delta, option_delta, "CoveredCall::net_delta")?)
     }
 
     /// Calculates the effective cost basis after receiving premium.
@@ -311,13 +325,20 @@ impl CoveredCall {
             self.spot_leg.fees() + self.short_call.open_fee + self.short_call.close_fee;
 
         if strike >= cost_basis {
-            let capital_gain = (strike - cost_basis) * quantity;
-            Ok(capital_gain + premium_received - total_fees)
+            let capital_gain = price_gap(strike, cost_basis).checked_mul(&quantity)?;
+            // Fees larger than the gain plus the credit make the best case a
+            // loss, which this `Positive` return reports as zero — the same
+            // answer the branch below already gives.
+            Ok(sub_floor_zero(
+                capital_gain.checked_add(&premium_received)?,
+                total_fees.to_dec_ref(),
+            ))
         } else {
             // Strike below cost basis - max profit is just premium minus loss
-            let capital_loss = (cost_basis - strike) * quantity;
-            if premium_received > capital_loss + total_fees {
-                Ok(premium_received - capital_loss - total_fees)
+            let capital_loss = price_gap(cost_basis, strike).checked_mul(&quantity)?;
+            let downside = capital_loss.checked_add(&total_fees)?;
+            if premium_received > downside {
+                Ok(premium_received.checked_sub(&downside)?)
             } else {
                 Ok(Positive::ZERO)
             }
@@ -345,9 +366,10 @@ impl CoveredCall {
         let total_fees =
             self.spot_leg.fees() + self.short_call.open_fee + self.short_call.close_fee;
 
-        let total_investment = cost_basis * quantity;
-        if total_investment + total_fees > premium_received {
-            Ok(total_investment + total_fees - premium_received)
+        let total_investment = cost_basis.checked_mul(&quantity)?;
+        let gross_outlay = total_investment.checked_add(&total_fees)?;
+        if gross_outlay > premium_received {
+            Ok(gross_outlay.checked_sub(&premium_received)?)
         } else {
             Ok(Positive::ZERO)
         }
@@ -409,17 +431,24 @@ impl BreakEvenable for CoveredCall {
         self.break_even_points.clear();
 
         // Break-even = Cost Basis - Premium Received per Share
-        let premium_per_share =
-            self.short_call.premium * self.short_call.option.quantity / self.spot_leg.quantity;
-        let fees_per_share = self.spot_leg.fees() / self.spot_leg.quantity;
+        let premium_per_share = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?
+            .checked_div(&self.spot_leg.quantity)?;
+        let fees_per_share = self.spot_leg.fees().checked_div(&self.spot_leg.quantity)?;
 
-        let break_even = if self.spot_leg.cost_basis > premium_per_share - fees_per_share {
-            self.spot_leg.cost_basis - premium_per_share + fees_per_share
-        } else {
-            Positive::ZERO
-        };
+        // Net credit per share, which is negative when the fees swallow the
+        // premium. `lower_break_even` floors the result at zero, the sentinel
+        // for "the shares cannot be losing at any attainable price".
+        let net_credit_per_share = d_sub(
+            premium_per_share.to_dec(),
+            fees_per_share.to_dec(),
+            "CoveredCall::update_break_even_points",
+        )?;
+        let break_even = lower_break_even(self.spot_leg.cost_basis, net_credit_per_share);
 
-        self.break_even_points.push(break_even.round_to(2));
+        self.break_even_points.push(break_even.checked_round_to(2)?);
         Ok(())
     }
 }
@@ -495,6 +524,19 @@ impl Strategable for CoveredCall {
 }
 
 impl BasicAble for CoveredCall {
+    // Without this override the trait default aborts the process, and it is
+    // reached from `get_underlying_price`, `get_max_min_strikes`,
+    // `delta_neutrality` and every probability method. The short call carries the
+    // same underlying, expiration and rate as the spot leg, so it answers for
+    // the strategy.
+    fn one_option(&self) -> &Options {
+        self.short_call.one_option()
+    }
+
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.short_call.one_option_mut()
+    }
+
     fn get_title(&self) -> String {
         format!(
             "CoveredCall Strategy:\n\t{} {} {} @ {}\n\t{}",
@@ -570,7 +612,11 @@ impl Profit for CoveredCall {
             .pnl_at_expiration(&Some(price))
             .unwrap_or(Decimal::ZERO);
 
-        Ok(spot_pnl + option_pnl)
+        Ok(d_add(
+            spot_pnl,
+            option_pnl,
+            "CoveredCall::pnl_at_expiration",
+        )?)
     }
 }
 
@@ -600,7 +646,10 @@ impl PnLCalculator for CoveredCall {
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
         let spot_cost = self.spot_leg.total_cost();
-        let premium_received = self.short_call.premium * self.short_call.option.quantity;
+        let premium_received = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?;
 
         Ok(crate::pnl::utils::PnL {
             realized: None,

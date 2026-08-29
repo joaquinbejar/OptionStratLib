@@ -14,6 +14,7 @@ use positive::pos_or_panic;
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::StrategyError;
 use crate::model::ProfitLossRange;
+use crate::model::utils::sub_floor_zero;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
@@ -186,7 +187,11 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 None,
             )?;
 
-            let marginal_prob = prob.0 - last_prob;
+            // The CDF is monotone over an ascending price range, so the
+            // marginal mass is non-negative; flooring absorbs the rounding of
+            // the `Decimal -> f64 -> Decimal` round trip inside `big_n`
+            // instead of aborting on a difference of one ulp.
+            let marginal_prob = sub_floor_zero(prob.0, &last_prob);
             probabilities.push(marginal_prob);
             last_prob = prob.0.to_dec();
         }
@@ -254,7 +259,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 &expiration,
                 Some(risk_free_rate),
             )?;
-            sum_of_probabilities += range.probability;
+            sum_of_probabilities = sum_of_probabilities.checked_add(&range.probability)?;
         }
         Ok(sum_of_probabilities)
     }
@@ -298,7 +303,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 &expiration,
                 Some(risk_free_rate),
             )?;
-            sum_of_probabilities += range.probability;
+            sum_of_probabilities = sum_of_probabilities.checked_add(&range.probability)?;
         }
         Ok(sum_of_probabilities)
     }

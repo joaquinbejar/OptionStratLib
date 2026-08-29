@@ -25,12 +25,14 @@ use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
 use crate::greeks::Greeks;
 use crate::model::ExpirationDate;
 use crate::model::ProfitLossRange;
+use crate::model::decimal::{d_add, d_div, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::leg::{Leg, SpotPosition};
 use crate::model::position::Position;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::pnl::PnLCalculator;
 use crate::pricing::payoff::Profit;
+use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
@@ -90,6 +92,17 @@ impl ProtectivePut {
         put_open_fee: Positive,
         put_close_fee: Positive,
     ) -> Result<Self, StrategyError> {
+        // Every per-share figure this strategy reports — the effective cost
+        // basis, the break-even, the premium per share — divides by the size
+        // of the spot leg. A protective put with no shares is not a position, and
+        // rejecting it here keeps those divisors non-zero.
+        if quantity == Positive::ZERO {
+            return Err(StrategyError::invalid_parameters(
+                "ProtectivePut::new",
+                "quantity must be strictly positive: a protective put with no shares has no per-share basis",
+            ));
+        }
+
         let spot_leg = SpotPosition::new(
             underlying_symbol.clone(),
             quantity,
@@ -184,7 +197,7 @@ impl ProtectivePut {
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let put_delta = self.long_put.delta()?;
-        Ok(spot_delta + put_delta)
+        Ok(d_add(spot_delta, put_delta, "ProtectivePut::net_delta")?)
     }
 
     /// Calculates the maximum loss potential.
@@ -202,16 +215,35 @@ impl ProtectivePut {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let put_premium = self.long_put.premium * self.long_put.option.quantity;
+        let put_premium = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
         let total_fees = self.total_fees();
 
         if cost_basis >= put_strike {
-            let capital_loss = (cost_basis - put_strike) * quantity;
-            let total_loss = capital_loss.to_dec() + put_premium.to_dec() + total_fees.to_dec();
+            let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
+            let total_loss = d_add(
+                d_add(
+                    capital_loss.to_dec(),
+                    put_premium.to_dec(),
+                    "ProtectivePut::max_loss",
+                )?,
+                total_fees.to_dec(),
+                "ProtectivePut::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         } else {
-            let capital_gain = (put_strike - cost_basis) * quantity;
-            let total_loss = put_premium.to_dec() + total_fees.to_dec() - capital_gain.to_dec();
+            let capital_gain = price_gap(put_strike, cost_basis).checked_mul(&quantity)?;
+            let total_loss = d_sub(
+                d_add(
+                    put_premium.to_dec(),
+                    total_fees.to_dec(),
+                    "ProtectivePut::max_loss",
+                )?,
+                capital_gain.to_dec(),
+                "ProtectivePut::max_loss",
+            )?;
             Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
         }
     }
@@ -280,9 +312,17 @@ impl BreakEvenable for ProtectivePut {
         let put_premium = self.long_put.premium.to_dec();
         let quantity = self.spot_leg.quantity.to_dec();
         let total_fees = self.total_fees();
-        let break_even = entry_price + put_premium + (total_fees.to_dec() / quantity);
+        let break_even = d_add(
+            d_add(entry_price, put_premium, "ProtectivePut::break_even")?,
+            d_div(
+                total_fees.to_dec(),
+                quantity,
+                "ProtectivePut::break_even/fees_per_share",
+            )?,
+            "ProtectivePut::break_even",
+        )?;
         if let Ok(be) = Positive::new_decimal(break_even) {
-            self.break_even_points.push(be.round_to(2));
+            self.break_even_points.push(be.checked_round_to(2)?);
         }
         Ok(())
     }
@@ -348,6 +388,19 @@ impl Strategable for ProtectivePut {
 }
 
 impl BasicAble for ProtectivePut {
+    // Without this override the trait default aborts the process, and it is
+    // reached from `get_underlying_price`, `get_max_min_strikes`,
+    // `delta_neutrality` and every probability method. The long put carries the
+    // same underlying, expiration and rate as the spot leg, so it answers for
+    // the strategy.
+    fn one_option(&self) -> &Options {
+        self.long_put.one_option()
+    }
+
+    fn one_option_mut(&mut self) -> &mut Options {
+        self.long_put.one_option_mut()
+    }
+
     fn get_title(&self) -> String {
         format!(
             "Protective Put Strategy:\n\t{} {} {} @ {}\n\t{}",
@@ -419,7 +472,11 @@ impl Profit for ProtectivePut {
             .long_put
             .pnl_at_expiration(&Some(price))
             .unwrap_or(Decimal::ZERO);
-        Ok(spot_pnl + put_pnl)
+        Ok(d_add(
+            spot_pnl,
+            put_pnl,
+            "ProtectivePut::pnl_at_expiration",
+        )?)
     }
 }
 
@@ -449,11 +506,14 @@ impl PnLCalculator for ProtectivePut {
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
         let spot_cost = self.spot_leg.total_cost();
-        let put_cost = self.long_put.premium * self.long_put.option.quantity;
+        let put_cost = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
         Ok(crate::pnl::utils::PnL {
             realized: None,
             unrealized: Some(profit),
-            initial_costs: spot_cost + put_cost,
+            initial_costs: spot_cost.checked_add(&put_cost)?,
             initial_income: Positive::ZERO,
             date_time: Utc::now(),
         })

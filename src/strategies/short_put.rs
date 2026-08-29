@@ -6,6 +6,8 @@
 
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
+use crate::strategies::base::lower_break_even;
 
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
@@ -274,10 +276,18 @@ impl BreakEvenable for ShortPut {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // `lower_break_even` measures a distance below the strike and floors at
+        // zero. A credit larger than the strike puts the break-even where the
+        // underlying cannot trade, and `Positive::ZERO` is this layer's
+        // sentinel for "no lower break-even" rather than an abort.
+        let per_contract = d_div(
+            self.get_net_cost()?,
+            self.short_put.option.quantity.to_dec(),
+            "ShortPut::update_break_even_points",
+        )?;
         self.break_even_points.push(
-            (self.short_put.option.strike_price
-                + self.get_net_cost()? / self.short_put.option.quantity)
-                .round_to(2),
+            lower_break_even(self.short_put.option.strike_price, -per_contract)
+                .checked_round_to(2)?,
         );
 
         Ok(())
@@ -304,10 +314,10 @@ impl Strategies for ShortPut {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = price_gap(
-            self.short_put.option.strike_price,
-            self.break_even_points[0],
-        );
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("ShortPut::get_profit_area: no break-even points")
+        })?;
+        let base = price_gap(self.short_put.option.strike_price, *break_even);
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -622,7 +632,11 @@ where
                 // Track premium statistics
                 max_premium = max_premium.max(current_premium);
                 min_premium = min_premium.min(current_premium);
-                premium_sum += current_premium;
+                premium_sum = d_add(
+                    premium_sum,
+                    current_premium,
+                    "ShortPut::simulate/premium_sum",
+                )?;
                 premium_count += 1;
                 holding_period = index;
 
@@ -640,7 +654,20 @@ where
 
                     // Check if it's take profit or stop loss
                     // For short: profit when current < initial, loss when current > initial
-                    let pnl_percent = (initial_premium - current_premium) / initial_premium;
+                    // A leg that opened at a zero premium has no
+                    // percentage to move by; the exit still fires, it just
+                    // does not classify as a take-profit or a stop-loss.
+                    let move_from_open = d_sub(
+                        initial_premium,
+                        current_premium,
+                        "ShortPut::simulate/pnl_move",
+                    )?;
+                    let pnl_percent = d_div(
+                        move_from_open,
+                        initial_premium,
+                        "ShortPut::simulate/pnl_percent",
+                    )
+                    .unwrap_or(Decimal::ZERO);
                     if pnl_percent >= dec!(0.5) {
                         hit_take_profit = true;
                     } else if pnl_percent <= dec!(-1.0) {
@@ -652,7 +679,7 @@ where
                     // We use direct premium calculation instead of calculate_pnl() to avoid discrepancies
                     // from recalculating the initial premium
                     let pnl = PnL {
-                        realized: Some(initial_premium - current_premium),
+                        realized: Some(move_from_open),
                         unrealized: None,
                         initial_costs: Positive::ZERO,
                         initial_income: Positive::ZERO,
@@ -720,7 +747,8 @@ where
         let profitable_count = pnl_values.iter().filter(|&&pnl| pnl > dec!(0.0)).count();
         let loss_count = pnl_values.iter().filter(|&&pnl| pnl < dec!(0.0)).count();
 
-        let sum_pnl: Decimal = pnl_values.iter().sum();
+        let sum_pnl: Decimal =
+            d_sum_iter(pnl_values.iter().copied(), "ShortPut::simulate/sum_pnl")?;
         let average_pnl = if total_simulations > 0 {
             sum_pnl / Decimal::from(total_simulations)
         } else {
@@ -729,21 +757,49 @@ where
 
         let median_pnl = if !pnl_values.is_empty() {
             let mid = pnl_values.len() / 2;
+            let at = |i: usize| {
+                pnl_values.get(i).copied().ok_or_else(|| {
+                    SimulationError::invalid_parameters(
+                        "ShortPut::simulate: median index out of range",
+                    )
+                })
+            };
             if pnl_values.len().is_multiple_of(2) {
-                (pnl_values[mid - 1] + pnl_values[mid]) / dec!(2.0)
+                d_div(
+                    d_add(
+                        at(mid.checked_sub(1).ok_or_else(|| {
+                            SimulationError::invalid_parameters(
+                                "ShortPut::simulate: even sample count with no lower median",
+                            )
+                        })?)?,
+                        at(mid)?,
+                        "ShortPut::simulate/median",
+                    )?,
+                    dec!(2.0),
+                    "ShortPut::simulate/median",
+                )?
             } else {
-                pnl_values[mid]
+                at(mid)?
             }
         } else {
             dec!(0.0)
         };
 
         let variance = if total_simulations > 1 {
-            let sum_squared_diff: Decimal = pnl_values
-                .iter()
-                .map(|&pnl| (pnl - average_pnl).powi(2))
-                .sum();
-            sum_squared_diff / Decimal::from(total_simulations - 1)
+            let mut sum_squared_diff = Decimal::ZERO;
+            for &pnl in &pnl_values {
+                let diff = d_sub(pnl, average_pnl, "ShortPut::simulate/variance_diff")?;
+                sum_squared_diff = d_add(
+                    sum_squared_diff,
+                    d_mul(diff, diff, "ShortPut::simulate/variance_square")?,
+                    "ShortPut::simulate/variance_sum",
+                )?;
+            }
+            d_div(
+                sum_squared_diff,
+                Decimal::from(total_simulations - 1),
+                "ShortPut::simulate/variance",
+            )?
         } else {
             dec!(0.0)
         };

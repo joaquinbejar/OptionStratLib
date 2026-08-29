@@ -1,9 +1,11 @@
 use crate::error::TransactionError;
 use crate::model::TradeStatus;
+use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::pnl::utils::PnL;
 use crate::{OptionStyle, OptionType, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 /// # Transaction
@@ -242,10 +244,7 @@ impl Transaction {
             ));
         }
 
-        let realized = match self.side {
-            Side::Long => -(self.premium + self.fees).to_dec() * self.quantity,
-            Side::Short => (self.premium - self.fees).to_dec() * self.quantity,
-        };
+        let realized = self.realized_cash_flow(Side::Long)?;
 
         Ok(PnL::new(
             Some(realized),
@@ -254,6 +253,42 @@ impl Transaction {
             self.fees,
             Utc::now(),
         ))
+    }
+
+    /// The signed cash flow of the transaction.
+    ///
+    /// `paying_side` is the side that pays the premium away; the other side
+    /// collects it net of fees. Fees larger than the premium make that
+    /// collection negative, which is a real cash flow on a sub-tick quote and
+    /// not something the `Positive` operator can hold — hence the `Decimal`
+    /// arithmetic here.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError::Other`] when combining premium, fees and
+    /// quantity leaves the `Decimal` range.
+    fn realized_cash_flow(&self, paying_side: Side) -> Result<Decimal, TransactionError> {
+        let per_contract = if self.side == paying_side {
+            -d_add(
+                self.premium.to_dec(),
+                self.fees.to_dec(),
+                "Transaction::realized_cash_flow/outlay",
+            )
+            .map_err(|e| TransactionError::other(e.to_string()))?
+        } else {
+            d_sub(
+                self.premium.to_dec(),
+                self.fees.to_dec(),
+                "Transaction::realized_cash_flow/net_credit",
+            )
+            .map_err(|e| TransactionError::other(e.to_string()))?
+        };
+        d_mul(
+            per_contract,
+            self.quantity.to_dec(),
+            "Transaction::realized_cash_flow",
+        )
+        .map_err(|e| TransactionError::other(e.to_string()))
     }
 
     /// Calculates PnL for a closed position.
@@ -272,10 +307,7 @@ impl Transaction {
             ));
         }
 
-        let realized = match self.side {
-            Side::Short => -(self.premium + self.fees).to_dec() * self.quantity,
-            Side::Long => (self.premium - self.fees).to_dec() * self.quantity,
-        };
+        let realized = self.realized_cash_flow(Side::Short)?;
 
         Ok(PnL::new(
             Some(realized),

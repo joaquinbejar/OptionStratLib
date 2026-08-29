@@ -361,7 +361,13 @@ impl AdjustmentPlan {
         resulting_greeks: PortfolioGreeks,
         residual_delta: Decimal,
     ) -> Self {
-        let quality_score = residual_delta.abs() + estimated_cost * dec!(0.01);
+        // Ranking key, not a price: lower is better, so a combination that
+        // does not fit in a `Decimal` ranks last instead of aborting the
+        // infallible constructor.
+        let quality_score = estimated_cost
+            .checked_mul(dec!(0.01))
+            .and_then(|weighted| residual_delta.abs().checked_add(weighted))
+            .unwrap_or(Decimal::MAX);
         Self {
             actions,
             estimated_cost,
@@ -440,6 +446,12 @@ impl fmt::Display for AdjustmentError {
 }
 
 impl std::error::Error for AdjustmentError {}
+
+impl From<crate::error::DecimalError> for AdjustmentError {
+    fn from(error: crate::error::DecimalError) -> Self {
+        AdjustmentError::GreeksError(error.to_string())
+    }
+}
 
 impl From<GreeksError> for AdjustmentError {
     fn from(err: GreeksError) -> Self {

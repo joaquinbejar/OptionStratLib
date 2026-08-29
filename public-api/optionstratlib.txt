@@ -1399,6 +1399,10 @@ impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optio
 pub fn optionstratlib::error::greeks::GreeksError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::probability::ProbabilityError
 pub fn optionstratlib::error::probability::ProbabilityError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 pub type optionstratlib::error::decimal::DecimalResult<T> = core::result::Result<T, optionstratlib::error::decimal::DecimalError>
 pub mod optionstratlib::error::greeks
 pub enum optionstratlib::error::greeks::CalculationErrorKind
@@ -1739,6 +1743,8 @@ pub fn optionstratlib::error::strategies::StrategyError::numeric_conversion(f64)
 pub fn optionstratlib::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
 impl core::convert::From<optionstratlib::error::OptionsError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::OptionsError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::position::PositionError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::position::PositionError) -> Self
 impl core::convert::From<optionstratlib::error::pricing::PricingError> for optionstratlib::error::strategies::StrategyError
@@ -1915,6 +1921,10 @@ impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optio
 pub fn optionstratlib::error::greeks::GreeksError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::probability::ProbabilityError
 pub fn optionstratlib::error::probability::ProbabilityError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 pub enum optionstratlib::error::Error
 pub optionstratlib::error::Error::Chain(optionstratlib::error::chains::ChainError)
 pub optionstratlib::error::Error::Curve(optionstratlib::error::curves::CurveError)
@@ -2239,6 +2249,8 @@ pub fn optionstratlib::error::strategies::StrategyError::numeric_conversion(f64)
 pub fn optionstratlib::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
 impl core::convert::From<optionstratlib::error::OptionsError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::OptionsError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::position::PositionError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::position::PositionError) -> Self
 impl core::convert::From<optionstratlib::error::pricing::PricingError> for optionstratlib::error::strategies::StrategyError
@@ -5629,6 +5641,8 @@ pub optionstratlib::prelude::AdjustmentError::GreeksError(alloc::string::String)
 pub optionstratlib::prelude::AdjustmentError::InvalidLegIndex(usize)
 pub optionstratlib::prelude::AdjustmentError::NoPositions
 pub optionstratlib::prelude::AdjustmentError::NoViablePlan
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::greeks::GreeksError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
 pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::greeks::GreeksError) -> Self
 impl core::error::Error for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
@@ -5796,6 +5810,10 @@ impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optio
 pub fn optionstratlib::error::greeks::GreeksError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::probability::ProbabilityError
 pub fn optionstratlib::error::probability::ProbabilityError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 pub enum optionstratlib::prelude::Error
 pub optionstratlib::prelude::Error::Chain(optionstratlib::error::chains::ChainError)
 pub optionstratlib::prelude::Error::Curve(optionstratlib::error::curves::CurveError)
@@ -6136,6 +6154,8 @@ pub fn optionstratlib::error::strategies::StrategyError::numeric_conversion(f64)
 pub fn optionstratlib::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
 impl core::convert::From<optionstratlib::error::OptionsError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::OptionsError) -> Self
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::error::strategies::StrategyError
+pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::position::PositionError> for optionstratlib::error::strategies::StrategyError
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::position::PositionError) -> Self
 impl core::convert::From<optionstratlib::error::pricing::PricingError> for optionstratlib::error::strategies::StrategyError
@@ -18175,6 +18195,8 @@ pub optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::Gree
 pub optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::InvalidLegIndex(usize)
 pub optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::NoPositions
 pub optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::NoViablePlan
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::greeks::GreeksError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
 pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::greeks::GreeksError) -> Self
 impl core::error::Error for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
@@ -18316,6 +18338,8 @@ pub optionstratlib::strategies::delta_neutral::AdjustmentError::GreeksError(allo
 pub optionstratlib::strategies::delta_neutral::AdjustmentError::InvalidLegIndex(usize)
 pub optionstratlib::strategies::delta_neutral::AdjustmentError::NoPositions
 pub optionstratlib::strategies::delta_neutral::AdjustmentError::NoViablePlan
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::greeks::GreeksError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
 pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::greeks::GreeksError) -> Self
 impl core::error::Error for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
@@ -21260,6 +21284,8 @@ pub optionstratlib::strategies::AdjustmentError::GreeksError(alloc::string::Stri
 pub optionstratlib::strategies::AdjustmentError::InvalidLegIndex(usize)
 pub optionstratlib::strategies::AdjustmentError::NoPositions
 pub optionstratlib::strategies::AdjustmentError::NoViablePlan
+impl core::convert::From<optionstratlib::error::decimal::DecimalError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
+pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib::error::greeks::GreeksError> for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
 pub fn optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib::error::greeks::GreeksError) -> Self
 impl core::error::Error for optionstratlib::strategies::delta_neutral::adjustment::AdjustmentError
