@@ -13,6 +13,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use utoipa::ToSchema;
 
 /// Represents a point in three-dimensional space with `x`, `y` and `z` coordinates.
@@ -61,13 +62,31 @@ impl Display for Point3D {
     }
 }
 
+/// Two points are equal when all three coordinates are equal.
+///
+/// `PartialEq`, `Ord` and `Hash` all read the full `(x, y, z)` triple, so
+/// `a == b` holds exactly when `a.cmp(&b)` is [`Ordering::Equal`], and equal
+/// points hash alike, as `Ord` requires.
+///
+/// The "one `z` per `(x, y)`" rule is a property of a *surface*, not of a
+/// point; [`crate::surfaces::Surface`] enforces it at construction.
 impl PartialEq for Point3D {
     fn eq(&self, other: &Self) -> bool {
-        self.x == other.x && self.y == other.y
+        self.x == other.x && self.y == other.y && self.z == other.z
     }
 }
 
 impl Eq for Point3D {}
+
+impl Hash for Point3D {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Delegate to `Decimal`'s own `Hash`, which normalizes first, so that
+        // `dec!(1.0)` and `dec!(1.00)` — which compare equal — hash alike.
+        self.x.hash(state);
+        self.y.hash(state);
+        self.z.hash(state);
+    }
+}
 
 impl PartialOrd for Point3D {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -75,6 +94,9 @@ impl PartialOrd for Point3D {
     }
 }
 
+/// Orders on `(x, y, z)`, lexicographically: the same triple [`PartialEq`]
+/// reads, so `cmp` returns [`Ordering::Equal`] exactly when the points are
+/// equal.
 impl Ord for Point3D {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.x.cmp(&other.x) {
@@ -368,6 +390,11 @@ mod tests {
         assert_eq!(point.z, dec!(3.0));
     }
 
+    /// Ordering is lexicographic on `(x, y, z)`.
+    ///
+    /// The assertions are unchanged; `p1 < p2` used to contradict
+    /// `test_equal`, which asserted `p1 == p2` on those same values. Only
+    /// `PartialEq` moved.
     #[test]
     fn test_point3d_ordering() {
         let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
@@ -378,6 +405,12 @@ mod tests {
         assert!(p1 < p2); // Same x,y, different z
         assert!(p1 < p3); // Same x, different y
         assert!(p1 < p4); // Different x
+
+        // ... and none of them is equal, which is what `Ord` demands of a
+        // strict ordering.
+        assert_ne!(p1, p2);
+        assert_ne!(p1, p3);
+        assert_ne!(p1, p4);
     }
 
     #[test]
@@ -403,6 +436,13 @@ mod tests {
         }
     }
 
+    /// Equality reads all three coordinates.
+    ///
+    /// This test used to assert `p1 == p3` — that two points sharing an
+    /// xy-coordinate were equal whatever their height. `test_point3d_ordering`
+    /// asserts `p1 < p3` on those same two values, so a point was both equal
+    /// to and less than another, which `Ord` forbids. `PartialEq` now reads
+    /// `z` as well and the two tests agree.
     #[test]
     fn test_equal() {
         let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
@@ -410,10 +450,46 @@ mod tests {
         let p3 = Point3D::from_f64_tuple(1.0, 2.0, 4.0).unwrap();
         let p4 = Point3D::from_f64_tuple(1.0, 3.0, 3.0).unwrap();
         let p5 = Point3D::from_f64_tuple(2.0, 2.0, 3.0).unwrap();
+
+        // All three coordinates equal.
         assert_eq!(p1, p2);
-        assert_eq!(p1, p3);
+        // Same xy-coordinate, different height: distinct points.
+        assert_ne!(p1, p3);
         assert_ne!(p1, p4);
         assert_ne!(p1, p5);
+    }
+
+    /// `Eq` and `Ord` agree, which is what `Ord` requires of an implementor.
+    #[test]
+    fn test_eq_agrees_with_ord() {
+        let p1 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p2 = Point3D::from_f64_tuple(1.0, 2.0, 3.0).unwrap();
+        let p3 = Point3D::from_f64_tuple(1.0, 2.0, 4.0).unwrap();
+
+        assert_eq!(p1.cmp(&p2), Ordering::Equal);
+        assert_eq!(p1 == p2, p1.cmp(&p2) == Ordering::Equal);
+        assert_eq!(p1 == p3, p1.cmp(&p3) == Ordering::Equal);
+    }
+
+    /// `Hash` agrees with `Eq`, including across `Decimal` scales. `Point3D`
+    /// had no `Hash` impl at all before, so it could not be used as a hash
+    /// key; this pins the contract now that it can.
+    #[test]
+    fn test_hash_agrees_with_eq() {
+        use std::collections::HashSet;
+
+        let p1 = Point3D::new(dec!(1.0), dec!(2.0), dec!(3.0));
+        let scaled = Point3D::new(dec!(1.00), dec!(2.000), dec!(3.0000));
+        let other_z = Point3D::new(dec!(1.0), dec!(2.0), dec!(4.0));
+
+        assert_eq!(p1, scaled);
+        assert_ne!(p1, other_z);
+
+        let set: HashSet<Point3D> = [p1, scaled, other_z].into_iter().collect();
+        // `p1` and `scaled` are one entry; `other_z` is a second.
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&p1));
+        assert!(set.contains(&other_z));
     }
 }
 

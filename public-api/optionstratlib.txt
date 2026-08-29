@@ -9516,6 +9516,8 @@ impl core::convert::From<&optionstratlib::surfaces::Point3D> for optionstratlib:
 pub fn optionstratlib::surfaces::Point3D::from(&optionstratlib::surfaces::Point3D) -> Self
 impl core::fmt::Display for optionstratlib::surfaces::Point3D
 pub fn optionstratlib::surfaces::Point3D::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for optionstratlib::surfaces::Point3D
+pub fn optionstratlib::surfaces::Point3D::hash<H: core::hash::Hasher>(&self, &mut H)
 impl optionstratlib::geometrics::AxisOperations<optionstratlib::surfaces::Point3D, optionstratlib::curves::Point2D> for optionstratlib::surfaces::Surface
 pub type optionstratlib::surfaces::Surface::Error = optionstratlib::error::SurfaceError
 pub fn optionstratlib::surfaces::Surface::contains_point(&self, &optionstratlib::curves::Point2D) -> bool
@@ -26152,6 +26154,8 @@ impl core::convert::From<&optionstratlib::surfaces::Point3D> for optionstratlib:
 pub fn optionstratlib::surfaces::Point3D::from(&optionstratlib::surfaces::Point3D) -> Self
 impl core::fmt::Display for optionstratlib::surfaces::Point3D
 pub fn optionstratlib::surfaces::Point3D::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for optionstratlib::surfaces::Point3D
+pub fn optionstratlib::surfaces::Point3D::hash<H: core::hash::Hasher>(&self, &mut H)
 impl optionstratlib::geometrics::AxisOperations<optionstratlib::surfaces::Point3D, optionstratlib::curves::Point2D> for optionstratlib::surfaces::Surface
 pub type optionstratlib::surfaces::Surface::Error = optionstratlib::error::SurfaceError
 pub fn optionstratlib::surfaces::Surface::contains_point(&self, &optionstratlib::curves::Point2D) -> bool

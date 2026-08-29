@@ -120,6 +120,19 @@ impl Curve {
     ///
     /// - [`Point2D`]: The type of points used to define the curve.
     /// - [`crate::curves::Curve::calculate_range`]: Computes the x-range of a set of points.
+    /// # Duplicate abscissae
+    ///
+    /// [`Point2D`] orders on the full `(x, y)` pair, so `points` may hold
+    /// several ordinates for one abscissa and `new` stores them all. Most of
+    /// the crate treats a curve as single-valued in `x` —
+    /// [`Curve::get_point`] returns the first match, [`Curve::merge`]
+    /// resamples onto one shared x-grid — and the interpolators reject a
+    /// repeated abscissa with [`InterpolationError::DegenerateInterval`],
+    /// since the slope over a zero-width interval is undefined.
+    ///
+    /// Whether such a curve should be rejected, normalized or supported is
+    /// unresolved: [`crate::surfaces::Surface::get_curve`] produces one
+    /// legitimately, by projecting a grid. See issue #466.
     #[must_use]
     pub fn new(points: BTreeSet<Point2D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));

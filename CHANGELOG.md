@@ -31,6 +31,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `S = 110`, `K = 100` is unchanged at `14.877057549928595`, since a call on
   a non-dividend-paying forward is never exercised early while `r > 0`; flip
   the rate to `r = −5%` and it moves from `4.872890362397602` to `10`.
+- **`Point2D` and `Point3D` compare, order and hash on all their coordinates**
+  (#450). Both types broke the `Ord` contract, which requires `a == b` exactly
+  when `a.cmp(&b)` is `Ordering::Equal`: `Point2D` compared equal on `x` alone
+  while ordering on `(x, y)`, and `Point3D` compared equal on `(x, y)` while
+  ordering on `(x, y, z)`. Two points could be equal *and* strictly ordered.
+  `PartialEq` now reads every coordinate on both types, and `Point3D` gains a
+  `Hash` impl (it had none). Ordering is unchanged.
+- **A surface no longer loses half its grid when its axes are merged.**
+  `Surface` indexes itself by `Point2D` through `AxisOperations<Point3D,
+  Point2D>`, and `merge_indexes` deduplicates those indices in a `HashSet`.
+  With `Point2D` hashing on `x` alone, every column of the grid collapsed onto
+  a single cell: merging a 2x2 surface with itself produced **two** indices
+  instead of four, and `merge_axis_interpolate` then worked from the truncated
+  axis. It now keeps all of them. Anything asserting the narrow result will
+  see more indices, and more interpolated points, than before.
+- **A `BTreeSet` of points no longer depends on how it was built.**
+  `BTreeSet::from_iter` (and therefore `collect`) sorts and then deduplicates
+  adjacent elements with `PartialEq`, while `insert` deduplicates with `Ord`.
+  While those two disagreed, the same points produced different sets by
+  different routes: four `Point3D` stacked on one xy-coordinate collected to a
+  set of **one** and inserted to a set of **four**. Collecting now keeps every
+  distinct point, so `Surface::get_curve` returns the whole projection — an
+  `n`-by-`m` grid yields up to `n * m` points where it used to yield `n`,
+  having silently dropped all but the greatest ordinate per abscissa. Curves
+  collected from an option chain are unaffected, their abscissae being unique
+  strikes.
+- `Surface::bilinear_interpolate` now reports `"Invalid quadrilateral"` for
+  points stacked on one xy-coordinate. That check existed but was unreachable:
+  the collapse above reduced such a set to a single point first, so the
+  `"Need at least four points"` guard answered instead.
+- Membership probes against `Point2D` / `Point3D` are now exact. Code doing
+  `points.contains(&probe)`, `points.iter().any(|p| p == &probe)` or
+  `HashSet`/`BTreeSet` lookups used to match any point sharing the probe's
+  leading coordinates; it now matches only the point itself. Nothing in the
+  crate relied on the loose behaviour except `merge_indexes` above, but a
+  downstream caller might.
 - **`OptionData::apply_spread` widens a thin quote instead of withdrawing it**
   (#439). A contract whose mid sat below one full spread used to lose `bid`,
   `ask` **and** `middle`. Both sides are now quoted around the mid — `mid ±
