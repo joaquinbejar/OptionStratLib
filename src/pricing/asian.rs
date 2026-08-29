@@ -51,7 +51,9 @@ use rust_decimal_macros::dec;
 /// - [`PricingError::Decimal`] when an intermediate step leaves the
 ///   representable `Decimal` range: the discount factor, the forward, either
 ///   Turnbull-Wakeman moment, the moment-matched variance, or the final
-///   Black legs.
+///   Black legs. The two removable singularities of the Turnbull-Wakeman
+///   second moment, `b = -σ²` and `b = -σ²/2`, are evaluated at their limits
+///   and never raise.
 /// - [`PricingError::Positive`] when the `σ / √3` geometric adjustment is not
 ///   representable as a `Positive`.
 pub fn asian_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
@@ -280,13 +282,114 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         )?
     };
 
-    // Second moment of arithmetic average (M2)
+    // Second moment of arithmetic average (M2).
+    //
+    // Writing `a = b + σ²` and `c = 2b + σ²`, the Turnbull-Wakeman second
+    // moment is the double integral of `E[S_t S_u] = S² e^{b(t+u)+σ² min(t,u)}`
+    // over the averaging window,
+    //
+    //     M2 = (2 S² / T²) ∫₀^T e^{b u} ∫₀^u e^{a t} dt du
+    //        = (2 S² / (a T²)) [ (e^{c T} - 1) / c - (e^{b T} - 1) / b ],
+    //
+    // which is the closed form expanded in the `else` branch below. Two of its
+    // three denominators are removable: at `a = 0` (`b = -σ²`) and at `c = 0`
+    // (`b = -σ²/2`) the vanishing factor is cancelled by a bracket that
+    // vanishes with it, and M2 stays finite. Both limits below were taken by
+    // going back to the integral and evaluating the degenerate exponential
+    // directly instead of dividing by its rate — `∫₀^u e^{0·t} dt = u` for
+    // `a = 0`, `∫₀^T e^{0·u} du = T` for `c = 0` — which is the same value as
+    // differentiating the bracket at the zero. They are exact, not
+    // approximations. `r = 0, q = 4%, σ = 20%, T = 1` lands exactly on `a = 0`
+    // and is an ordinary contract, so neither boundary may raise.
     let m2 = if b.abs() < dec!(1e-10) {
         let term = d_exp(
             d_mul(sigma_sq, t_dec, "pricing::asian::arithmetic::m2::var_t")?,
             "pricing::asian::arithmetic::m2::exp_var_t",
         )?;
         d_mul(s_sq, term, "pricing::asian::arithmetic::m2::driftless")?
+    } else if b_plus_var.abs() < dec!(1e-10) {
+        // `a → 0`, i.e. `b = -σ²`. The inner integral degenerates to
+        // `∫₀^u dt = u`, leaving
+        //
+        //     M2 = (2 S² / T²) [ T e^{b T} / b - (e^{b T} - 1) / b² ].
+        //
+        // `b ≈ -σ²` is non-zero here: the driftless branch above owns `b = 0`,
+        // and `σ = 0` returned long before this point.
+        let exp_bt = d_exp(bt, "pricing::asian::arithmetic::m2::a_limit::exp_bt")?;
+        let b_sq = d_mul(b, b, "pricing::asian::arithmetic::m2::a_limit::b_sq")?;
+        let bracket = d_sub(
+            d_div(
+                d_mul(
+                    t_dec,
+                    exp_bt,
+                    "pricing::asian::arithmetic::m2::a_limit::t_exp_bt",
+                )?,
+                b,
+                "pricing::asian::arithmetic::m2::a_limit::first",
+            )?,
+            d_div(
+                d_sub(
+                    exp_bt,
+                    dec!(1),
+                    "pricing::asian::arithmetic::m2::a_limit::exp_bt_less_one",
+                )?,
+                b_sq,
+                "pricing::asian::arithmetic::m2::a_limit::second",
+            )?,
+            "pricing::asian::arithmetic::m2::a_limit::bracket",
+        )?;
+        d_mul(
+            d_div(
+                d_mul(
+                    dec!(2),
+                    s_sq,
+                    "pricing::asian::arithmetic::m2::a_limit::two_s_sq",
+                )?,
+                t_sq,
+                "pricing::asian::arithmetic::m2::a_limit::scale",
+            )?,
+            bracket,
+            "pricing::asian::arithmetic::m2::a_limit",
+        )?
+    } else if two_b_plus_var.abs() < dec!(1e-10) {
+        // `c → 0`, i.e. `b = -σ²/2`. The outer integral's growth term
+        // degenerates to `∫₀^T du = T`, leaving
+        //
+        //     M2 = (2 S² / (a T²)) [ T - (e^{b T} - 1) / b ].
+        //
+        // `a ≈ σ²/2` and `b ≈ -σ²/2` are both non-zero here for the same
+        // reason as in the branch above.
+        let exp_bt = d_exp(bt, "pricing::asian::arithmetic::m2::c_limit::exp_bt")?;
+        let bracket = d_sub(
+            t_dec,
+            d_div(
+                d_sub(
+                    exp_bt,
+                    dec!(1),
+                    "pricing::asian::arithmetic::m2::c_limit::exp_bt_less_one",
+                )?,
+                b,
+                "pricing::asian::arithmetic::m2::c_limit::second",
+            )?,
+            "pricing::asian::arithmetic::m2::c_limit::bracket",
+        )?;
+        d_mul(
+            d_div(
+                d_mul(
+                    dec!(2),
+                    s_sq,
+                    "pricing::asian::arithmetic::m2::c_limit::two_s_sq",
+                )?,
+                d_mul(
+                    b_plus_var,
+                    t_sq,
+                    "pricing::asian::arithmetic::m2::c_limit::denominator",
+                )?,
+                "pricing::asian::arithmetic::m2::c_limit::scale",
+            )?,
+            bracket,
+            "pricing::asian::arithmetic::m2::c_limit",
+        )?
     } else {
         let term1_exp = d_exp(
             d_mul(
@@ -507,6 +610,126 @@ mod tests {
             Positive::ZERO, // dividend yield
             None,
         )
+    }
+
+    /// `S = K = 100`, `T = 1`, `σ = 20%`, `r = 0`, so the Turnbull-Wakeman
+    /// carry is `b = -q` and the dividend yield alone selects the boundary:
+    /// `q = 4%` puts `b` on `-σ²`, `q = 2%` puts it on `-σ² / 2`.
+    fn create_turnbull_wakeman_boundary_option(dividend_yield: Decimal) -> Options {
+        Options::new(
+            OptionType::Asian {
+                averaging_type: AsianAveragingType::Arithmetic,
+            },
+            Side::Long,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            Positive::new_decimal(dec!(0.2)).unwrap(),
+            Positive::ONE,
+            Positive::HUNDRED,
+            Decimal::ZERO,
+            OptionStyle::Call,
+            Positive::new_decimal(dividend_yield).unwrap(),
+            None,
+        )
+    }
+
+    /// `b = -σ²` zeroes the `b + σ²` factor of the Turnbull-Wakeman second
+    /// moment. The singularity is removable, so an ordinary contract must
+    /// price rather than raise.
+    #[test]
+    fn test_arithmetic_asian_carry_at_negative_variance_prices() {
+        let option = create_turnbull_wakeman_boundary_option(dec!(0.04));
+        let price = asian_black_scholes(&option).unwrap();
+
+        assert_decimal_eq!(price, dec!(3.6245129), dec!(1e-6));
+
+        let mut geometric = option.clone();
+        geometric.option_type = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        let geometric_price = asian_black_scholes(&geometric).unwrap();
+        assert!(
+            geometric_price < price,
+            "geometric {} should sit below arithmetic {}",
+            geometric_price,
+            price
+        );
+    }
+
+    /// `b = -σ² / 2` zeroes the `2b + σ²` factor of the Turnbull-Wakeman
+    /// second moment. Removable for the same reason.
+    #[test]
+    fn test_arithmetic_asian_carry_at_half_negative_variance_prices() {
+        let option = create_turnbull_wakeman_boundary_option(dec!(0.02));
+        let price = asian_black_scholes(&option).unwrap();
+
+        assert_decimal_eq!(price, dec!(4.0977699), dec!(1e-6));
+
+        let mut geometric = option.clone();
+        geometric.option_type = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        let geometric_price = asian_black_scholes(&geometric).unwrap();
+        assert!(
+            geometric_price < price,
+            "geometric {} should sit below arithmetic {}",
+            geometric_price,
+            price
+        );
+    }
+
+    /// The limit branch has to agree with the general formula evaluated a hair
+    /// off the boundary, otherwise it is merely a value and not the limit.
+    ///
+    /// The tolerance is `1e-7`. A `1e-9` shift in `q` moves the price by about
+    /// `2.3e-8` through the genuine `dP/dq` sensitivity, and the general
+    /// branch still carries roughly seventeen significant digits at
+    /// `|b + σ²| = 1e-9` despite the cancellation between its two terms, so
+    /// `1e-7` clears the real sensitivity with room to spare while a wrong
+    /// limiting expression would miss by order one.
+    #[test]
+    fn test_arithmetic_asian_negative_variance_boundary_is_continuous() {
+        let at = asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.04))).unwrap();
+        let below =
+            asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.039999999)))
+                .unwrap();
+        let above =
+            asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.040000001)))
+                .unwrap();
+
+        assert_decimal_eq!(at, below, dec!(1e-7));
+        assert_decimal_eq!(at, above, dec!(1e-7));
+        assert!(
+            above < at && at < below,
+            "the price must stay monotone in q across the boundary: {} {} {}",
+            below,
+            at,
+            above
+        );
+    }
+
+    /// Same continuity check at the second removable singularity, same
+    /// tolerance and same reasoning.
+    #[test]
+    fn test_arithmetic_asian_half_negative_variance_boundary_is_continuous() {
+        let at = asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.02))).unwrap();
+        let below =
+            asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.019999999)))
+                .unwrap();
+        let above =
+            asian_black_scholes(&create_turnbull_wakeman_boundary_option(dec!(0.020000001)))
+                .unwrap();
+
+        assert_decimal_eq!(at, below, dec!(1e-7));
+        assert_decimal_eq!(at, above, dec!(1e-7));
+        assert!(
+            above < at && at < below,
+            "the price must stay monotone in q across the boundary: {} {} {}",
+            below,
+            at,
+            above
+        );
     }
 
     #[test]

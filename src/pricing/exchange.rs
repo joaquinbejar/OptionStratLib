@@ -49,7 +49,8 @@ use rust_decimal_macros::dec;
 ///   outside `[-1, 1]`, or when the combined variance is negative.
 /// - [`PricingError::Decimal`] when an intermediate step leaves the
 ///   representable `Decimal` range: the combined variance, the two present
-///   values, `d1` / `d2`, or the final leg difference.
+///   values, either spot logarithm, `d1` / `d2`, or the final leg
+///   difference.
 /// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn exchange_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let second_asset_price = match &option.option_type {
@@ -185,16 +186,29 @@ fn margrabe_formula(
     if s2.is_zero() {
         return Ok(s1_pv.max(dec!(0.0)));
     }
-    let ratio = d_div(s1, s2, "pricing::exchange::ratio")?;
-    // `S1 = 0` (or a ratio that rounded below the representable scale): both
-    // normal arguments diverge to `-∞`, `N(d1) = N(d2) = 0`, price zero.
-    if ratio.is_zero() {
+    // `S1 = 0`: the payoff `max(S1 - S2, 0)` is identically zero, and so is
+    // `S1`'s present value.
+    if s1.is_zero() {
         return Ok(dec!(0.0));
     }
 
+    // Log-moneyness as `ln(S1) - ln(S2)`, never as `ln(S1 / S2)`: the quotient
+    // underflows to zero below `1e-28` and drags the `(q2 - q1)T` carry down
+    // with it. A tiny-but-nonzero `S1` against a `q2` large enough to wipe out
+    // `S2`'s present value is worth `S1`'s present value, not zero, and only
+    // the carry knows that. The difference of the two logarithms is exact
+    // where the quotient is not, and both logarithms exist: the two spot
+    // branches above are the only non-positive inputs `d_ln` could see. Same
+    // convention as `pricing::asian`'s log-moneyness.
+    let log_ratio = d_sub(
+        d_ln(s1, "pricing::exchange::log_s1")?,
+        d_ln(s2, "pricing::exchange::log_s2")?,
+        "pricing::exchange::log_ratio",
+    )?;
+
     let d1 = d_div(
         d_add(
-            d_ln(ratio, "pricing::exchange::log_ratio")?,
+            log_ratio,
             d_mul(
                 d_add(
                     d_sub(q2, q1, "pricing::exchange::carry")?,
@@ -432,6 +446,67 @@ mod tests {
         assert!(
             price > dec!(0.0),
             "Exchange option with zero dividends should have positive value"
+        );
+    }
+
+    /// `S1` small enough that `S1 / S2` rounds below the representable
+    /// `Decimal` scale, against a `q2` large enough that `S2`'s present value
+    /// has vanished. The `(q2 - q1)T` carry offsets the log-moneyness, so both
+    /// CDFs saturate at one and the option is worth `S1`'s present value, not
+    /// zero.
+    #[test]
+    fn test_exchange_underflowing_ratio_with_offsetting_carry_prices_first_pv() {
+        let mut option = create_exchange_option();
+        option.underlying_price = Positive::new_decimal(Decimal::new(1, 27)).unwrap();
+        option.option_type = OptionType::Exchange {
+            second_asset: pos_or_panic!(100.0),
+        };
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(365.0));
+        option.implied_volatility = pos_or_panic!(0.2);
+        option.dividend_yield = Positive::ZERO;
+        if let Some(ref mut params) = option.exotic_params {
+            params.exchange_second_asset_volatility = Some(pos_or_panic!(0.2));
+            params.exchange_second_asset_dividend = Some(pos_or_panic!(100.0));
+            params.exchange_correlation = Some(dec!(0.5));
+        }
+
+        let price = exchange_black_scholes(&option).unwrap();
+
+        // `S2 e^{-100} = 0` at `Decimal` scale and `N(d1) = N(d2) = 1`, so the
+        // price is `S1 e^{-q1 T} = 1e-27`.
+        assert_eq!(
+            price,
+            Decimal::new(1, 27),
+            "vanished S2 present value should leave S1's present value, got {}",
+            price
+        );
+    }
+
+    /// The mirror case: with no carry to offset it, the same underflowing
+    /// ratio really does drive both CDFs to zero and the option is worthless.
+    #[test]
+    fn test_exchange_underflowing_ratio_without_carry_is_zero() {
+        let mut option = create_exchange_option();
+        option.underlying_price = Positive::new_decimal(Decimal::new(1, 27)).unwrap();
+        option.option_type = OptionType::Exchange {
+            second_asset: pos_or_panic!(100.0),
+        };
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(365.0));
+        option.implied_volatility = pos_or_panic!(0.2);
+        option.dividend_yield = Positive::ZERO;
+        if let Some(ref mut params) = option.exotic_params {
+            params.exchange_second_asset_volatility = Some(pos_or_panic!(0.2));
+            params.exchange_second_asset_dividend = Some(Positive::ZERO);
+            params.exchange_correlation = Some(dec!(0.5));
+        }
+
+        let price = exchange_black_scholes(&option).unwrap();
+
+        assert_eq!(
+            price,
+            Decimal::ZERO,
+            "a ratio that vanishes in the limit should still price at zero, got {}",
+            price
         );
     }
 
