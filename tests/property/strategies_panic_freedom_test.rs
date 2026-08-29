@@ -35,8 +35,7 @@ use optionstratlib::strategies::probabilities::{
     calculate_single_point_probability,
 };
 use optionstratlib::strategies::{
-    BullCallSpread, Collar, CoveredCall, LongCall, LongPut, ProtectivePut, ShortCall, ShortPut,
-    StrategyConstructor,
+    BullCallSpread, Collar, CoveredCall, LongCall, ProtectivePut, ShortPut,
 };
 use optionstratlib::visualization::Graph;
 use positive::Positive;
@@ -344,29 +343,15 @@ proptest! {
             let _ = strategy.update_break_even_points();
         }
 
-        // `ShortCall::new` and `LongPut::new` are private; the reachable path
-        // is the constructor that recognises a leg pattern.
-        let leg = |style: OptionStyle, side: Side| {
-            Position::new(
-                Options::new(
-                    OptionType::European, side, "PROP".to_string(), strike, expiration,
-                    volatility, quantity, underlying, rate, style, Positive::ZERO, None,
-                ),
-                premium, chrono::Utc::now(), fee, fee, None, None,
-            )
-        };
-        if let Ok(mut strategy) =
-            <ShortCall as StrategyConstructor>::get_strategy(&[leg(OptionStyle::Call, Side::Short)])
-        {
-            exercise(&strategy, probe);
-            let _ = strategy.update_break_even_points();
-        }
-        if let Ok(mut strategy) =
-            <LongPut as StrategyConstructor>::get_strategy(&[leg(OptionStyle::Put, Side::Long)])
-        {
-            exercise(&strategy, probe);
-            let _ = strategy.update_break_even_points();
-        }
+        // `ShortCall` and `LongPut` are deliberately absent from this
+        // property. Their `new` is private and their
+        // `StrategyConstructor::get_strategy` always returns
+        // `OperationNotSupported`, so nothing an integration test can write
+        // constructs one: an earlier version of this file wrapped
+        // `get_strategy` in `if let Ok(..)`, and that branch never executed.
+        // Dead code shaped like coverage is worse than none, because it reads
+        // as tested. Their coverage lives in-file, beside the private
+        // constructor — see `tests_long_put_break_even` in `long_put.rs`.
     }
 
     /// The three strategies that carry a spot leg. Every per-share figure they
