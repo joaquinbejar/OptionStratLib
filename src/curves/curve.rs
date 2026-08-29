@@ -1666,16 +1666,10 @@ impl MetricsExtractor for Curve {
         let volatility = d_div(squared_deviations, sqrt_n, op)
             .map_err(|e| MetricsError::RiskError(e.to_string()))?;
 
-        if volatility == Decimal::ZERO {
-            return Ok(RiskMetrics {
-                volatility,
-                value_at_risk: Decimal::ZERO,
-                expected_shortfall: Decimal::ZERO,
-                beta: Decimal::ZERO,
-                sharpe_ratio: Decimal::ZERO,
-            });
-        }
-
+        // Value at Risk (95% confidence) using parametric method. At zero
+        // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
+        // rather than an absence of value, so it is computed from the formula
+        // on every path instead of being short-circuited to zero.
         let z_score = dec!(1.645);
         let scaled_vol =
             d_mul(z_score, volatility, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
@@ -1689,14 +1683,23 @@ impl MetricsExtractor for Curve {
             mean_of(&tail, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         };
 
+        // `volatility / mean` is already zero at zero dispersion, so this
+        // guard only covers the undefined `x / 0`.
         let beta = if mean != Decimal::ZERO {
             d_div(volatility, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         } else {
             Decimal::ZERO
         };
 
-        let sharpe_ratio =
-            d_div(mean, volatility, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+        // Sharpe Ratio (assuming risk-free rate of 0). A flat curve has no
+        // dispersion to divide by, which makes this the one field that is
+        // genuinely undefined at `volatility == 0`; the others keep their
+        // deterministic limits.
+        let sharpe_ratio = if volatility.is_zero() {
+            Decimal::ZERO
+        } else {
+            d_div(mean, volatility, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
+        };
 
         Ok(RiskMetrics {
             volatility,
@@ -2762,7 +2765,7 @@ mod tests_spline_interpolate {
 #[cfg(test)]
 mod tests_curve_arithmetic {
     use super::*;
-    use crate::curves::utils::create_linear_curve;
+    use crate::curves::utils::{create_constant_curve, create_linear_curve};
     use crate::geometrics::InterpolationType;
 
     #[test]
@@ -2860,6 +2863,28 @@ mod tests_curve_arithmetic {
                 x,
                 expected_y,
                 result_point.y
+            );
+        }
+    }
+
+    /// Division is not associative, so every divisor has to reach the result.
+    /// `Curve::merge` reaches them by turning each element after the first
+    /// into its reciprocal and folding the whole set with a combining
+    /// reducer, so no partial is discarded. Three curves at 8, 2 and 2 must
+    /// give `8 / 2 / 2 = 2`, never `8 / 2` and never 8.
+    #[test]
+    fn test_merge_curves_divide_folds_every_divisor() {
+        let eight = create_constant_curve(dec!(0.0), dec!(10.0), dec!(8.0)).unwrap();
+        let two_a = create_constant_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+        let two_b = create_constant_curve(dec!(0.0), dec!(10.0), dec!(2.0)).unwrap();
+
+        let result = Curve::merge(&[&eight, &two_a, &two_b], MergeOperation::Divide).unwrap();
+
+        for x in [dec!(0.0), dec!(5.0), dec!(10.0)] {
+            let y = result.interpolate(x, InterpolationType::Cubic).unwrap().y;
+            assert!(
+                (y - dec!(2)).abs() < dec!(0.0001),
+                "expected 8 / 2 / 2 = 2 at x = {x}, got {y}"
             );
         }
     }
@@ -3276,6 +3301,43 @@ mod tests_curve_metrics {
         assert_eq!(risk_metrics.volatility, dec!(0.0));
         assert_eq!(risk_metrics.beta, dec!(0.0));
         assert_eq!(risk_metrics.sharpe_ratio, dec!(0.0));
+    }
+
+    /// A flat curve has no uncertainty, but it is not worthless. Only the
+    /// fields that are genuinely undefined at zero dispersion may be zeroed;
+    /// the parametric VaR still has its deterministic limit at the mean.
+    #[test]
+    fn test_risk_metrics_flat_curve_keeps_deterministic_var() {
+        let curve = create_constant_curve();
+        let metrics = curve.compute_risk_metrics().unwrap();
+
+        // Measured, and genuinely zero.
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        // `mean - 1.645 * 0` is the mean, not zero: the curve is worth 5.
+        assert_eq!(metrics.value_at_risk, dec!(5));
+        // No sample falls below the VaR, so the conditional mean has an empty
+        // tail and the function's own empty-tail rule gives zero.
+        assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
+        // `volatility / mean` is already zero here; no special case needed.
+        assert_eq!(metrics.beta, Decimal::ZERO);
+        // `mean / 0` is the one genuinely undefined field.
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
+    }
+
+    /// The same shape with a negative mean: the VaR limit follows the mean
+    /// wherever it sits, so a sign error cannot hide behind a positive value.
+    #[test]
+    fn test_risk_metrics_flat_negative_curve_keeps_deterministic_var() {
+        let points = BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(-2.5)),
+            Point2D::new(dec!(1.0), dec!(-2.5)),
+            Point2D::new(dec!(2.0), dec!(-2.5)),
+        ]);
+        let metrics = Curve::new(points).compute_risk_metrics().unwrap();
+
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        assert_eq!(metrics.value_at_risk, dec!(-2.5));
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
     }
 
     #[test]

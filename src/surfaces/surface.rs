@@ -37,9 +37,7 @@ use crate::utils::Len;
 
 use crate::visualization::{Graph, GraphData, Surface3D};
 use num_traits::ToPrimitive;
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -1548,19 +1546,10 @@ impl MetricsExtractor for Surface {
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op).map_err(risk_err)?;
         let volatility = variance.sqrt().unwrap_or(Decimal::ZERO);
 
-        // A flat surface has no dispersion, so the Sharpe ratio is undefined;
-        // mirror the zeroed answer `Curve::compute_risk_metrics` returns.
-        if volatility == Decimal::ZERO {
-            return Ok(RiskMetrics {
-                volatility,
-                value_at_risk: Decimal::ZERO,
-                expected_shortfall: Decimal::ZERO,
-                beta: Decimal::ZERO,
-                sharpe_ratio: Decimal::ZERO,
-            });
-        }
-
-        // Value at Risk (95% confidence) using parametric method
+        // Value at Risk (95% confidence) using parametric method. At zero
+        // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
+        // rather than an absence of value, so it is computed from the formula
+        // on every path instead of being short-circuited to zero.
         let z_score = dec!(1.645); // 95% confidence interval
         let scaled_vol = d_mul(z_score, volatility, op).map_err(risk_err)?;
         let var = d_sub(mean, scaled_vol, op).map_err(risk_err)?;
@@ -1577,8 +1566,15 @@ impl MetricsExtractor for Surface {
         // Beta calculation with optional market volatility
         let beta = Decimal::ZERO; // TODO: Implement beta calculation
 
-        // Sharpe Ratio (assuming risk-free rate of 0)
-        let sharpe_ratio = d_div(mean, volatility, op).map_err(risk_err)?;
+        // Sharpe Ratio (assuming risk-free rate of 0). A flat surface has no
+        // dispersion to divide by, which makes this the one field that is
+        // genuinely undefined at `volatility == 0`; the others keep their
+        // deterministic limits.
+        let sharpe_ratio = if volatility.is_zero() {
+            Decimal::ZERO
+        } else {
+            d_div(mean, volatility, op).map_err(risk_err)?
+        };
 
         Ok(RiskMetrics {
             volatility,
@@ -1682,22 +1678,22 @@ impl Arithmetic<Surface> for Surface {
                             |a, b| d_mul(a?, b?, op).map_err(construction_err),
                         )?,
                         MergeOperation::Divide => {
-                            let first = z_values.first().cloned().unwrap_or(Decimal::ONE);
-                            z_values
-                                .par_iter()
-                                .skip(1)
-                                .fold(
-                                    || Ok(first),
-                                    |acc: Result<Decimal, SurfaceError>, &val| {
-                                        let acc = acc?;
-                                        if val == Decimal::ZERO {
-                                            Ok(acc)
-                                        } else {
-                                            d_div(acc, val, op).map_err(construction_err)
-                                        }
-                                    },
-                                )
-                                .reduce(|| Ok(first), |a, _b| a)?
+                            // Division is neither associative nor commutative,
+                            // so the divisors are folded in sequence from the
+                            // first value. A parallel fold produces one partial
+                            // per chunk and its reducer would have to discard
+                            // all but one of them, dropping both the trailing
+                            // divisors and any checked-arithmetic error raised
+                            // inside a discarded chunk.
+                            let mut divisors = z_values.iter().copied();
+                            let first = divisors.next().unwrap_or(Decimal::ONE);
+                            divisors.try_fold(first, |acc, val| {
+                                if val == Decimal::ZERO {
+                                    Ok(acc)
+                                } else {
+                                    d_div(acc, val, op).map_err(construction_err)
+                                }
+                            })?
                         }
                         MergeOperation::Max => z_values
                             .par_iter()
@@ -3215,6 +3211,55 @@ mod tests_surface_arithmetic {
         assert_eq!(mid_point.z, dec!(0.0));
     }
 
+    fn constant_surface(height: Decimal) -> Surface {
+        let points =
+            BTreeSet::from_iter([dec!(0.0), dec!(0.5), dec!(1.0)].into_iter().flat_map(|x| {
+                [dec!(0.0), dec!(0.5), dec!(1.0)]
+                    .into_iter()
+                    .map(move |y| Point3D::new(x, y, height))
+            }));
+        Surface::new(points)
+    }
+
+    /// Division is not associative, so the divisors have to be folded in
+    /// sequence. Three surfaces at 8, 2 and 2 must give `8 / 2 / 2 = 2`; a
+    /// reducer that keeps only its left input drops the trailing divisors and
+    /// lands somewhere between 4 and 8.
+    #[test]
+    fn test_merge_divide_folds_every_divisor() {
+        let eight = constant_surface(dec!(8));
+        let two_a = constant_surface(dec!(2));
+        let two_b = constant_surface(dec!(2));
+
+        let result = Surface::merge(&[&eight, &two_a, &two_b], MergeOperation::Divide).unwrap();
+
+        let mid_point = result
+            .interpolate(Point2D::new(dec!(0.5), dec!(0.5)), InterpolationType::Cubic)
+            .unwrap();
+        assert!(
+            (mid_point.z - dec!(2)).abs() < dec!(0.0001),
+            "expected 8 / 2 / 2 = 2, got {}",
+            mid_point.z
+        );
+    }
+
+    /// A divisor that fails the checked division has to surface as an error
+    /// rather than being discarded together with the fold result that
+    /// produced it. `1e20 / 1e-20` is `1e40`, well past `Decimal::MAX`, while
+    /// both operands stay far enough inside the range that the interpolation
+    /// feeding the fold cannot fail first.
+    #[test]
+    fn test_merge_divide_reports_overflow_instead_of_dropping_it() {
+        let tiny = constant_surface(Decimal::new(1, 20));
+        let big = constant_surface(dec!(100000000000000000000));
+
+        let result = Surface::merge(&[&big, &tiny], MergeOperation::Divide);
+        assert!(
+            matches!(result, Err(SurfaceError::ConstructionError(_))),
+            "a quotient outside the Decimal range must be reported, got {result:?}"
+        );
+    }
+
     #[test]
     fn test_incompatible_ranges() {
         let surface1 = Surface::new(BTreeSet::from_iter(vec![
@@ -3388,6 +3433,45 @@ mod tests_metrics {
         // We have a linear trend with slope 2.0
         assert!((metrics.slope - dec!(2.0)).abs() < dec!(0.001));
         assert!((metrics.intercept - dec!(2.0)).abs() < dec!(0.001));
+    }
+
+    /// A flat surface has no uncertainty, but it is not worthless. Only the
+    /// fields that are genuinely undefined at zero dispersion may be zeroed;
+    /// the parametric VaR still has its deterministic limit at the mean.
+    #[test]
+    fn test_risk_metrics_flat_surface_keeps_deterministic_var() {
+        let points = BTreeSet::from_iter((0..3i64).flat_map(|i| {
+            (0..3i64).map(move |j| Point3D::new(Decimal::from(i), Decimal::from(j), dec!(5)))
+        }));
+        let surface = Surface::new(points);
+        let metrics = surface.compute_risk_metrics().unwrap();
+
+        // Measured, and genuinely zero.
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        // `mean - 1.645 * 0` is the mean, not zero: the surface is worth 5.
+        assert_eq!(metrics.value_at_risk, dec!(5));
+        // No sample falls below the VaR, so the conditional mean has an empty
+        // tail and the function's own empty-tail rule gives zero.
+        assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
+        // Not implemented yet, zero either way.
+        assert_eq!(metrics.beta, Decimal::ZERO);
+        // `mean / 0` is the one genuinely undefined field.
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
+    }
+
+    /// The same shape with a negative mean: the VaR limit follows the mean
+    /// wherever it sits, so a sign error cannot hide behind a positive value.
+    #[test]
+    fn test_risk_metrics_flat_negative_surface_keeps_deterministic_var() {
+        let points = BTreeSet::from_iter((0..3i64).flat_map(|i| {
+            (0..3i64).map(move |j| Point3D::new(Decimal::from(i), Decimal::from(j), dec!(-2.5)))
+        }));
+        let surface = Surface::new(points);
+        let metrics = surface.compute_risk_metrics().unwrap();
+
+        assert_eq!(metrics.volatility, Decimal::ZERO);
+        assert_eq!(metrics.value_at_risk, dec!(-2.5));
+        assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
     }
 }
 
