@@ -280,7 +280,7 @@ impl BreakEvenable for LongPut {
             "LongPut::update_break_even_points",
         )?;
         self.break_even_points.push(
-            lower_break_even(self.long_put.option.strike_price, -per_contract)
+            lower_break_even(self.long_put.option.strike_price, per_contract)
                 .checked_round_to(2)?,
         );
 
@@ -833,6 +833,41 @@ where
 impl Strategable for LongPut {}
 
 test_strategy_traits!(LongPut, test_long_put_implementations);
+
+#[cfg(test)]
+mod tests_break_even {
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// A long put pays a debit, so its lower break-even sits *below* the
+    /// strike: a 100 strike bought for 5 breaks even at 95. Negating the
+    /// per-contract cost moved it the other way and reported 105. The
+    /// `StrategyConstructor` property cannot reach this, since `LongPut`
+    /// answers `OperationNotSupported` and that branch never runs.
+    #[test]
+    fn test_long_put_lower_break_even_sits_below_the_strike() {
+        let mut long_put = LongPut::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(5.0),
+            Positive::ZERO,
+            Positive::ZERO,
+        )
+        .unwrap();
+        long_put.update_break_even_points().unwrap();
+
+        let break_evens = long_put.get_break_even_points().unwrap();
+        assert_eq!(break_evens.len(), 1);
+        assert_eq!(break_evens[0], pos_or_panic!(95.0));
+    }
+}
 
 #[cfg(test)]
 mod tests_simulate {

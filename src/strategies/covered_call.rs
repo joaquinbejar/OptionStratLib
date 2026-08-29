@@ -321,8 +321,12 @@ impl CoveredCall {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
         let premium_received = self.short_call.premium * self.short_call.option.quantity;
-        let total_fees =
-            self.spot_leg.fees() + self.short_call.open_fee + self.short_call.close_fee;
+        let total_fees = self
+            .spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_add(&self.short_call.open_fee)?
+            .checked_add(&self.short_call.close_fee)?;
 
         if strike >= cost_basis {
             let capital_gain = price_gap(strike, cost_basis).checked_mul(&quantity)?;
@@ -363,8 +367,12 @@ impl CoveredCall {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
         let premium_received = self.short_call.premium * self.short_call.option.quantity;
-        let total_fees =
-            self.spot_leg.fees() + self.short_call.open_fee + self.short_call.close_fee;
+        let total_fees = self
+            .spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_add(&self.short_call.open_fee)?
+            .checked_add(&self.short_call.close_fee)?;
 
         let total_investment = cost_basis.checked_mul(&quantity)?;
         let gross_outlay = total_investment.checked_add(&total_fees)?;
@@ -436,7 +444,11 @@ impl BreakEvenable for CoveredCall {
             .premium
             .checked_mul(&self.short_call.option.quantity)?
             .checked_div(&self.spot_leg.quantity)?;
-        let fees_per_share = self.spot_leg.fees().checked_div(&self.spot_leg.quantity)?;
+        let fees_per_share = self
+            .spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_div(&self.spot_leg.quantity)?;
 
         // Net credit per share, which is negative when the fees swallow the
         // premium. `lower_break_even` floors the result at zero, the sentinel

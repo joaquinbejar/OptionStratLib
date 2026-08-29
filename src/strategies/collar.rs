@@ -484,7 +484,8 @@ impl Collar {
     /// range.
     fn total_fees(&self) -> Result<Positive, PositiveError> {
         self.spot_leg
-            .fees()
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
             .checked_add(&self.long_put.open_fee)?
             .checked_add(&self.long_put.close_fee)?
             .checked_add(&self.short_call.open_fee)?
