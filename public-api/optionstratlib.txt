@@ -9867,10 +9867,10 @@ pub fn optionstratlib::strategies::protective_put::ProtectivePut::is_put_otm(&se
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::quantity(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::underlying_price(&self) -> positive::positive::Positive
 impl core::fmt::Display for optionstratlib::strategies::protective_put::ProtectivePut
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -20251,10 +20251,10 @@ pub fn optionstratlib::strategies::protective_put::ProtectivePut::is_put_otm(&se
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::quantity(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::underlying_price(&self) -> positive::positive::Positive
 impl core::fmt::Display for optionstratlib::strategies::protective_put::ProtectivePut
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -23677,10 +23677,10 @@ pub fn optionstratlib::strategies::protective_put::ProtectivePut::is_put_otm(&se
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::protection_level(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::quantity(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::total_fees(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::underlying_price(&self) -> positive::positive::Positive
 impl core::fmt::Display for optionstratlib::strategies::protective_put::ProtectivePut
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
