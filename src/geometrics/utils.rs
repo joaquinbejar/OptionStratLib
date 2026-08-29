@@ -3,9 +3,30 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
+use crate::error::decimal::DecimalError;
 use crate::geometrics::ConstructionMethod;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::BTreeSet;
+
+/// Checked counterpart of [`MathematicalOps::powu`], which aborts with
+/// `Pow overflowed` on the operator path.
+///
+/// `powu` is `checked_powu` plus an `unwrap`, so routing through the checked
+/// call keeps the digits identical while turning the abort into a
+/// [`DecimalError::Overflow`] tagged with `op`.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when `base^exp` leaves the
+/// representable `Decimal` range.
+pub(crate) fn powu_checked(
+    base: Decimal,
+    exp: u64,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    base.checked_powu(exp)
+        .ok_or_else(|| DecimalError::overflow(op, base, Decimal::from(exp)))
+}
 
 /// Defines a geometric object constructed from a set of points.
 /// Provides methods for creating, accessing, and manipulating these objects.

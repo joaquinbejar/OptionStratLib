@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 //! This module provides functionality for visualizing and plotting 3D surfaces.
 //! It leverages the `plotters` crate for rendering and offers a flexible API for
 //! customizing plot appearance and saving outputs.  It supports plotting single
@@ -28,13 +22,15 @@
 //!
 
 use crate::curves::{Curve, Point2D};
+use crate::error::decimal::DecimalError;
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
-    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
@@ -229,35 +225,87 @@ impl Surface {
             ));
         }
 
+        let missing = |index: usize| {
+            InterpolationError::Spline(format!(
+                "spline knot {index} is out of bounds for {} samples",
+                sorted_points.len()
+            ))
+        };
+
         // Handle out-of-range cases
-        if target <= x_selector(&sorted_points[0]) {
-            return Ok(z_selector(&sorted_points[0]));
+        let first = sorted_points.first().ok_or_else(|| missing(0))?;
+        if target <= x_selector(first) {
+            return Ok(z_selector(first));
         }
 
-        if target >= x_selector(&sorted_points[sorted_points.len() - 1]) {
-            return Ok(z_selector(&sorted_points[sorted_points.len() - 1]));
+        let last_index = sorted_points.len() - 1;
+        let last = sorted_points.last().ok_or_else(|| missing(last_index))?;
+        if target >= x_selector(last) {
+            return Ok(z_selector(last));
         }
 
-        // Find the segment where the target falls
+        // Find the segment where the target falls. The `target <= first`
+        // branch above already returned, so the first match is never at index
+        // 0 and `index - 1` cannot underflow; the `checked_sub` states it.
         let (left_index, right_index) = match sorted_points
             .iter()
             .enumerate()
             .find(|(_, p)| x_selector(p) > target)
         {
-            Some((index, _)) => (index - 1, index),
-            None => (sorted_points.len() - 2, sorted_points.len() - 1),
+            Some((index, _)) => (
+                index.checked_sub(1).ok_or_else(|| {
+                    InterpolationError::Spline(
+                        "spline bracket starts before the first knot".to_string(),
+                    )
+                })?,
+                index,
+            ),
+            None => (
+                last_index.checked_sub(1).ok_or_else(|| {
+                    InterpolationError::Spline(
+                        "spline bracket needs at least two knots".to_string(),
+                    )
+                })?,
+                last_index,
+            ),
         };
 
         // Get the points for interpolation
-        let x0 = x_selector(&sorted_points[left_index]);
-        let x1 = x_selector(&sorted_points[right_index]);
-        let z0 = z_selector(&sorted_points[left_index]);
-        let z1 = z_selector(&sorted_points[right_index]);
+        let left = sorted_points
+            .get(left_index)
+            .ok_or_else(|| missing(left_index))?;
+        let right = sorted_points
+            .get(right_index)
+            .ok_or_else(|| missing(right_index))?;
+        let x0 = x_selector(left);
+        let x1 = x_selector(right);
+        let z0 = z_selector(left);
+        let z1 = z_selector(right);
 
         // Linear interpolation
-        let interpolated_z = z0 + (z1 - z0) * ((target - x0) / (x1 - x0));
+        let op = "Surface::one_dimensional_spline_interpolation";
+        let run = d_sub(x1, x0, op).map_err(interp_err(InterpolationError::Spline))?;
+        if run.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let rise = d_sub(z1, z0, op).map_err(interp_err(InterpolationError::Spline))?;
+        let offset = d_sub(target, x0, op).map_err(interp_err(InterpolationError::Spline))?;
+        let ratio = d_div(offset, run, op).map_err(interp_err(InterpolationError::Spline))?;
+        let step = d_mul(rise, ratio, op).map_err(interp_err(InterpolationError::Spline))?;
+        let interpolated_z = d_add(z0, step, op).map_err(interp_err(InterpolationError::Spline))?;
 
         Ok(interpolated_z)
+    }
+
+    /// Fetches the point at `index` without going through the panicking
+    /// [`Index`] contract.
+    fn point_at(&self, index: usize) -> Result<&Point3D, SurfaceError> {
+        self.points.iter().nth(index).ok_or_else(|| {
+            SurfaceError::AnalysisError(format!(
+                "point index {index} is out of bounds for a surface of {} points",
+                self.points.len()
+            ))
+        })
     }
 
     /// Converts the surface points from Decimal to f64 format, with swapped y and z coordinates.
@@ -304,6 +352,121 @@ impl Surface {
             })
             .collect()
     }
+}
+
+/// Wraps a checked-arithmetic failure in the interpolation variant of the
+/// algorithm that raised it.
+fn interp_err(
+    kind: fn(String) -> InterpolationError,
+) -> impl Fn(DecimalError) -> InterpolationError {
+    move |err| kind(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure raised while building a surface.
+fn construction_err(err: DecimalError) -> SurfaceError {
+    SurfaceError::ConstructionError(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure raised while analysing a surface.
+fn analysis_err(err: DecimalError) -> SurfaceError {
+    SurfaceError::AnalysisError(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure raised while fitting a surface trend.
+fn trend_err(err: DecimalError) -> MetricsError {
+    MetricsError::TrendError(err.to_string())
+}
+
+/// Wraps a checked-arithmetic failure raised while computing surface risk.
+fn risk_err(err: DecimalError) -> MetricsError {
+    MetricsError::RiskError(err.to_string())
+}
+
+/// Squared euclidean distance from `point` to `(x, y)`, computed with checked
+/// arithmetic so a coordinate at the edge of the `Decimal` range reports
+/// instead of aborting.
+fn squared_distance(
+    point: &Point3D,
+    x: Decimal,
+    y: Decimal,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    let dx = d_sub(point.x, x, op)?;
+    let dy = d_sub(point.y, y, op)?;
+    d_add(powu_checked(dx, 2, op)?, powu_checked(dy, 2, op)?, op)
+}
+
+/// Orders `points` by their squared distance to `(x, y)`, keeping the stable
+/// ordering `sort_by` produced while moving the arithmetic out of the
+/// comparator, which has no channel for an overflow.
+fn sort_by_distance<'a>(
+    points: &mut [&'a Point3D],
+    x: Decimal,
+    y: Decimal,
+    op: &'static str,
+) -> Result<(), DecimalError> {
+    let mut keyed: Vec<(Decimal, &'a Point3D)> = Vec::with_capacity(points.len());
+    for point in points.iter() {
+        keyed.push((squared_distance(point, x, y, op)?, point));
+    }
+    keyed.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    for (slot, (_, point)) in points.iter_mut().zip(keyed) {
+        *slot = point;
+    }
+    Ok(())
+}
+
+/// Reads one entry of a nearest-neighbour window, naming the slot on the
+/// out-of-bounds path instead of panicking.
+fn nth<'a>(
+    points: &[&'a Point3D],
+    index: usize,
+    kind: fn(String) -> InterpolationError,
+) -> Result<&'a Point3D, InterpolationError> {
+    points.get(index).copied().ok_or_else(|| {
+        kind(format!(
+            "neighbour {index} is out of bounds for a window of {} points",
+            points.len()
+        ))
+    })
+}
+
+/// Reads one sample of a sorted metric series, naming the statistic on the
+/// out-of-bounds path instead of panicking.
+fn sample_at(
+    values: &[Decimal],
+    index: usize,
+    what: &'static str,
+) -> Result<Decimal, MetricsError> {
+    values.get(index).copied().ok_or_else(|| {
+        MetricsError::BasicError(format!(
+            "{what}: sample {index} is out of bounds for {} values",
+            values.len()
+        ))
+    })
+}
+
+/// Arithmetic mean of a sample. Errors on an empty sample, where the mean is
+/// undefined, and on a sum that leaves the representable range.
+fn mean_of(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
+    let sum = d_sum_iter(values.iter().copied(), op)?;
+    d_div(sum, Decimal::from(values.len()), op)
+}
+
+/// Sum of `(value - mean)^order` over a sample: the raw central moment behind
+/// the variance (`order = 2`), skewness (`3`) and kurtosis (`4`).
+fn central_moment(
+    values: &[Decimal],
+    mean: Decimal,
+    order: u64,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    let mut acc = Decimal::ZERO;
+    for &value in values {
+        let centered = d_sub(value, mean, op)?;
+        acc = d_add(acc, powu_checked(centered, order, op)?, op)?;
+    }
+    Ok(acc)
 }
 
 impl Default for Surface {
@@ -530,8 +693,16 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                         ));
                     }
                 };
-                let x_step = (x_end - x_start) / Decimal::from(x_steps);
-                let y_step = (y_end - y_start) / Decimal::from(y_steps);
+                if x_steps == 0 || y_steps == 0 {
+                    return Err(SurfaceError::ConstructionError(
+                        "Parametric construction needs at least one step on each axis".to_string(),
+                    ));
+                }
+                let op = "Surface::construct::step";
+                let x_span = d_sub(x_end, x_start, op).map_err(construction_err)?;
+                let x_step = d_div(x_span, Decimal::from(x_steps), op).map_err(construction_err)?;
+                let y_span = d_sub(y_end, y_start, op).map_err(construction_err)?;
+                let y_step = d_div(y_span, Decimal::from(y_steps), op).map_err(construction_err)?;
 
                 // Wrap f in an Arc so it can be shared across threads
                 let f = Arc::new(f);
@@ -539,10 +710,14 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                 let points: Result<BTreeSet<Point3D>, SurfaceError> = (0..=x_steps)
                     .into_par_iter()
                     .flat_map(|i| {
-                        let x = x_start + x_step * Decimal::from(i);
                         let f = Arc::clone(&f);
                         (0..=y_steps).into_par_iter().map(move |j| {
-                            let y = y_start + y_step * Decimal::from(j);
+                            let x_offset =
+                                d_mul(x_step, Decimal::from(i), op).map_err(construction_err)?;
+                            let x = d_add(x_start, x_offset, op).map_err(construction_err)?;
+                            let y_offset =
+                                d_mul(y_step, Decimal::from(j), op).map_err(construction_err)?;
+                            let y = d_add(y_start, y_offset, op).map_err(construction_err)?;
                             let t = Point2D::new(x, y);
                             f(t).map_err(|e| SurfaceError::ConstructionError(e.to_string()))
                         })
@@ -588,6 +763,10 @@ impl Index<usize> for Surface {
         // so panic on out-of-bounds is the documented contract.
         match self.points.iter().nth(index) {
             Some(p) => p,
+            // scan-banned: allow -- `std::ops::Index` returns `&Self::Output`
+            // and has no fallible channel; the contract mirrors `Vec::index`.
+            // No library code reaches this arm: every internal lookup goes
+            // through `Surface::point_at`.
             None => panic!(
                 "Surface::index: out of bounds (index = {index}, len = {})",
                 self.points.len()
@@ -713,25 +892,77 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
             return Ok(*point);
         }
 
+        // Barycentric interpolation needs a triangle, so a surface with fewer
+        // than three points has no answer to give.
+        if self.points.len() < 3 {
+            return Err(InterpolationError::Linear(
+                "Need at least three points for linear interpolation".to_string(),
+            ));
+        }
+
+        let op = "Surface::linear_interpolate";
         let mut nearest_points: Vec<&Point3D> = self.points.iter().collect();
-        nearest_points.sort_by(|a, b| {
-            let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
-            let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a
-                .partial_cmp(&dist_b)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        sort_by_distance(&mut nearest_points, xy.x, xy.y, op)
+            .map_err(interp_err(InterpolationError::Linear))?;
 
-        let p1 = nearest_points[0];
-        let p2 = nearest_points[1];
-        let p3 = nearest_points[2];
+        let p1 = nth(&nearest_points, 0, InterpolationError::Linear)?;
+        let p2 = nth(&nearest_points, 1, InterpolationError::Linear)?;
+        let p3 = nth(&nearest_points, 2, InterpolationError::Linear)?;
 
-        let denominator = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
-        let w1 = ((p2.y - p3.y) * (xy.x - p3.x) + (p3.x - p2.x) * (xy.y - p3.y)) / denominator;
-        let w2 = ((p3.y - p1.y) * (xy.x - p3.x) + (p1.x - p3.x) * (xy.y - p3.y)) / denominator;
-        let w3 = Decimal::ONE - w1 - w2;
+        let y23 = d_sub(p2.y, p3.y, op).map_err(interp_err(InterpolationError::Linear))?;
+        let x13 = d_sub(p1.x, p3.x, op).map_err(interp_err(InterpolationError::Linear))?;
+        let x32 = d_sub(p3.x, p2.x, op).map_err(interp_err(InterpolationError::Linear))?;
+        let y13 = d_sub(p1.y, p3.y, op).map_err(interp_err(InterpolationError::Linear))?;
+        let denominator = d_add(
+            d_mul(y23, x13, op).map_err(interp_err(InterpolationError::Linear))?,
+            d_mul(x32, y13, op).map_err(interp_err(InterpolationError::Linear))?,
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Linear))?;
+        if denominator.is_zero() {
+            // Three collinear (or coincident) neighbours span no area, so the
+            // barycentric weights are undefined rather than infinite.
+            return Err(InterpolationError::Linear(
+                "Degenerate triangle detected: the three nearest points are collinear".to_string(),
+            ));
+        }
 
-        let z = w1 * p1.z + w2 * p2.z + w3 * p3.z;
+        let qx3 = d_sub(xy.x, p3.x, op).map_err(interp_err(InterpolationError::Linear))?;
+        let qy3 = d_sub(xy.y, p3.y, op).map_err(interp_err(InterpolationError::Linear))?;
+        let y31 = d_sub(p3.y, p1.y, op).map_err(interp_err(InterpolationError::Linear))?;
+
+        let w1_num = d_add(
+            d_mul(y23, qx3, op).map_err(interp_err(InterpolationError::Linear))?,
+            d_mul(x32, qy3, op).map_err(interp_err(InterpolationError::Linear))?,
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Linear))?;
+        let w1 = d_div(w1_num, denominator, op).map_err(interp_err(InterpolationError::Linear))?;
+
+        let w2_num = d_add(
+            d_mul(y31, qx3, op).map_err(interp_err(InterpolationError::Linear))?,
+            d_mul(x13, qy3, op).map_err(interp_err(InterpolationError::Linear))?,
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Linear))?;
+        let w2 = d_div(w2_num, denominator, op).map_err(interp_err(InterpolationError::Linear))?;
+
+        let w3 = d_sub(
+            d_sub(Decimal::ONE, w1, op).map_err(interp_err(InterpolationError::Linear))?,
+            w2,
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Linear))?;
+
+        let z = d_sum_iter(
+            [
+                d_mul(w1, p1.z, op).map_err(interp_err(InterpolationError::Linear))?,
+                d_mul(w2, p2.z, op).map_err(interp_err(InterpolationError::Linear))?,
+                d_mul(w3, p3.z, op).map_err(interp_err(InterpolationError::Linear))?,
+            ],
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Linear))?;
 
         Ok(Point3D::new(xy.x, xy.y, z))
     }
@@ -781,16 +1012,17 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         }
 
         // Find the four closest points
+        let op = "Surface::bilinear_interpolate";
         let mut sorted_points: Vec<&Point3D> = self.points.iter().collect();
-        sorted_points.sort_by(|a, b| {
-            let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
-            let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a
-                .partial_cmp(&dist_b)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        sort_by_distance(&mut sorted_points, xy.x, xy.y, op)
+            .map_err(interp_err(InterpolationError::Bilinear))?;
 
-        let closest_points = &sorted_points[0..4];
+        let closest_points = sorted_points.get(0..4).ok_or_else(|| {
+            InterpolationError::Bilinear(format!(
+                "need four neighbours, found {}",
+                sorted_points.len()
+            ))
+        })?;
 
         // Sort points to create a quadrilateral
         let mut quad_points: Vec<&Point3D> = closest_points.to_vec();
@@ -803,20 +1035,45 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
         });
 
         // Get the four points for interpolation
-        let q11 = quad_points[0]; // Bottom-left point
-        let q12 = quad_points[1]; // Bottom-right point
-        let q21 = quad_points[2]; // Top-left point
-        let q22 = quad_points[3]; // Top-right point
+        let q11 = nth(&quad_points, 0, InterpolationError::Bilinear)?; // Bottom-left point
+        let q12 = nth(&quad_points, 1, InterpolationError::Bilinear)?; // Bottom-right point
+        let q21 = nth(&quad_points, 2, InterpolationError::Bilinear)?; // Top-left point
+        let q22 = nth(&quad_points, 3, InterpolationError::Bilinear)?; // Top-right point
 
         // Calculate normalized coordinates
-        let x_ratio = (xy.x - q11.x) / (q12.x - q11.x);
-        let y_ratio = (xy.y - q11.y) / (q21.y - q11.y);
+        let x_span = d_sub(q12.x, q11.x, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let y_span = d_sub(q21.y, q11.y, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        if x_span.is_zero() || y_span.is_zero() {
+            // The quadrilateral has collapsed onto a line, so the normalized
+            // coordinates are undefined rather than infinite.
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let x_offset = d_sub(xy.x, q11.x, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let x_ratio =
+            d_div(x_offset, x_span, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let y_offset = d_sub(xy.y, q11.y, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let y_ratio =
+            d_div(y_offset, y_span, op).map_err(interp_err(InterpolationError::Bilinear))?;
 
         // Perform bilinear interpolation
-        let z = (Decimal::ONE - x_ratio) * (Decimal::ONE - y_ratio) * q11.z
-            + x_ratio * (Decimal::ONE - y_ratio) * q12.z
-            + (Decimal::ONE - x_ratio) * y_ratio * q21.z
-            + x_ratio * y_ratio * q22.z;
+        let inv_x =
+            d_sub(Decimal::ONE, x_ratio, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let inv_y =
+            d_sub(Decimal::ONE, y_ratio, op).map_err(interp_err(InterpolationError::Bilinear))?;
+        let corner = |a: Decimal, b: Decimal, z: Decimal| -> Result<Decimal, InterpolationError> {
+            let weight = d_mul(a, b, op).map_err(interp_err(InterpolationError::Bilinear))?;
+            d_mul(weight, z, op).map_err(interp_err(InterpolationError::Bilinear))
+        };
+        let z = d_sum_iter(
+            [
+                corner(inv_x, inv_y, q11.z)?,
+                corner(x_ratio, inv_y, q12.z)?,
+                corner(inv_x, y_ratio, q21.z)?,
+                corner(x_ratio, y_ratio, q22.z)?,
+            ],
+            op,
+        )
+        .map_err(interp_err(InterpolationError::Bilinear))?;
 
         Ok(Point3D::new(xy.x, xy.y, z))
     }
@@ -848,42 +1105,48 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         }
 
         // Find the 9 closest points for cubic interpolation
+        let op = "Surface::cubic_interpolate";
         let mut sorted_points: Vec<&Point3D> = self.points.iter().collect();
-        sorted_points.sort_by(|a, b| {
-            let dist_a = (a.x - xy.x).powi(2) + (a.y - xy.y).powi(2);
-            let dist_b = (b.x - xy.x).powi(2) + (b.y - xy.y).powi(2);
-            dist_a
-                .partial_cmp(&dist_b)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        sort_by_distance(&mut sorted_points, xy.x, xy.y, op)
+            .map_err(interp_err(InterpolationError::Cubic))?;
 
-        let closest_points = &sorted_points[0..9];
+        let closest_points = sorted_points.get(0..9).ok_or_else(|| {
+            InterpolationError::Cubic(format!(
+                "need nine neighbours, found {}",
+                sorted_points.len()
+            ))
+        })?;
 
         // Cubic interpolation requires solving a system of equations
         // We'll use a weighted cubic interpolation approach
 
         // Calculate weights based on distance
-        let weights: Vec<Decimal> = closest_points
-            .iter()
-            .map(|&point| {
-                let sq = (point.x - xy.x).powi(2) + (point.y - xy.y).powi(2);
-                let dist = match sq.sqrt() {
-                    Some(d) => d,
-                    None => {
-                        // sqrt only fails for negative input or a result that
-                        // cannot be represented as Decimal (overflow). Squared
-                        // distance is always >= 0, so this is the overflow
-                        // case — drop the point's contribution by giving it
-                        // zero weight rather than a misleadingly small one.
-                        warn!(
-                            "cubic_interpolate: sqrt failed for operand ({sq}); dropping point from weighting"
-                        );
-                        return Decimal::ZERO;
-                    }
-                };
-                Decimal::ONE / (dist + Decimal::new(1, 6)) // Avoid division by zero
-            })
-            .collect();
+        let mut weights: Vec<Decimal> = Vec::with_capacity(closest_points.len());
+        for &point in closest_points {
+            let sq = squared_distance(point, xy.x, xy.y, op)
+                .map_err(interp_err(InterpolationError::Cubic))?;
+            let dist = match sq.sqrt() {
+                Some(d) => d,
+                None => {
+                    // sqrt only fails for negative input or a result that
+                    // cannot be represented as Decimal (overflow). Squared
+                    // distance is always >= 0, so this is the overflow
+                    // case — drop the point's contribution by giving it
+                    // zero weight rather than a misleadingly small one.
+                    warn!(
+                        "cubic_interpolate: sqrt failed for operand ({sq}); dropping point from weighting"
+                    );
+                    weights.push(Decimal::ZERO);
+                    continue;
+                }
+            };
+            // The 1e-6 floor keeps a coincident neighbour out of a zero divisor.
+            let shifted = d_add(dist, Decimal::new(1, 6), op)
+                .map_err(interp_err(InterpolationError::Cubic))?;
+            weights.push(
+                d_div(Decimal::ONE, shifted, op).map_err(interp_err(InterpolationError::Cubic))?,
+            );
+        }
 
         // Weighted cubic interpolation
         let mut numerator_z = Decimal::ZERO;
@@ -891,18 +1154,26 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
 
         for (&point, &weight) in closest_points.iter().zip(weights.iter()) {
             // Cubic weight function
-            let cubic_weight = weight.powi(3);
-            numerator_z += point.z * cubic_weight;
-            denominator += cubic_weight;
+            let cubic_weight =
+                powu_checked(weight, 3, op).map_err(interp_err(InterpolationError::Cubic))?;
+            let contribution =
+                d_mul(point.z, cubic_weight, op).map_err(interp_err(InterpolationError::Cubic))?;
+            numerator_z = d_add(numerator_z, contribution, op)
+                .map_err(interp_err(InterpolationError::Cubic))?;
+            denominator = d_add(denominator, cubic_weight, op)
+                .map_err(interp_err(InterpolationError::Cubic))?;
         }
 
         // Prevent division by zero
         let interpolated_z = if denominator != Decimal::ZERO {
-            numerator_z / denominator
+            d_div(numerator_z, denominator, op).map_err(interp_err(InterpolationError::Cubic))?
         } else {
             // Fallback to average if weights are problematic
-            closest_points.iter().map(|p| p.z).sum::<Decimal>()
-                / Decimal::from(closest_points.len())
+            let zs: Vec<Decimal> = closest_points.iter().map(|p| p.z).collect();
+            let sum = d_sum_iter(zs.iter().copied(), op)
+                .map_err(interp_err(InterpolationError::Cubic))?;
+            d_div(sum, Decimal::from(closest_points.len()), op)
+                .map_err(interp_err(InterpolationError::Cubic))?
         };
 
         Ok(Point3D::new(xy.x, xy.y, interpolated_z))
@@ -1017,11 +1288,23 @@ impl MetricsExtractor for Surface {
     fn compute_basic_metrics(&self) -> Result<BasicMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
 
-        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
+        // An empty surface has no statistics; report the same zeroed set
+        // `Curve::compute_basic_metrics` already returns for an empty curve.
+        if z_values.is_empty() {
+            return Ok(BasicMetrics {
+                mean: Decimal::ZERO,
+                median: Decimal::ZERO,
+                mode: Decimal::ZERO,
+                std_dev: Decimal::ZERO,
+            });
+        }
+
+        let op = "Surface::compute_basic_metrics";
+        let mean = mean_of(&z_values, op).map_err(|e| MetricsError::BasicError(e.to_string()))?;
 
         let mut sorted = z_values.clone();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        let median = sorted[sorted.len() / 2];
+        let median = sample_at(&sorted, sorted.len() / 2, "median")?;
 
         // Mode calculation using HashMap to count occurrences
         let mode = {
@@ -1036,13 +1319,11 @@ impl MetricsExtractor for Surface {
                 .unwrap_or(Decimal::ZERO)
         };
 
-        let std_dev = (z_values
-            .iter()
-            .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>()
-            / Decimal::from(z_values.len()))
-        .sqrt()
-        .unwrap_or(Decimal::ZERO);
+        let sum_sq = central_moment(&z_values, mean, 2, op)
+            .map_err(|e| MetricsError::BasicError(e.to_string()))?;
+        let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
+            .map_err(|e| MetricsError::BasicError(e.to_string()))?;
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
             mean,
@@ -1054,28 +1335,56 @@ impl MetricsExtractor for Surface {
 
     fn compute_shape_metrics(&self) -> Result<ShapeMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
-        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
-        let std_dev = (z_values
-            .iter()
-            .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>()
-            / Decimal::from(z_values.len()))
-        .sqrt()
-        .unwrap_or(Decimal::ONE);
+
+        // Skewness and kurtosis need a spread to standardise by; mirror the
+        // zeroed answer `Curve::compute_shape_metrics` returns below two
+        // samples.
+        if z_values.len() < 2 {
+            return Ok(ShapeMetrics {
+                skewness: Decimal::ZERO,
+                kurtosis: Decimal::ZERO,
+                peaks: vec![],
+                valleys: vec![],
+                inflection_points: vec![],
+            });
+        }
+
+        let op = "Surface::compute_shape_metrics";
+        let mean = mean_of(&z_values, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let sum_sq = central_moment(&z_values, mean, 2, op)
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
+        if std_dev.is_zero() {
+            return Err(MetricsError::ShapeError(format!(
+                "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the surface is degenerate"
+            )));
+        }
 
         let n = Decimal::from(z_values.len());
 
-        let skewness = z_values
-            .iter()
-            .map(|x| (*x - mean).powu(3))
-            .sum::<Decimal>()
-            / (n * std_dev.powu(3));
+        let skew_num = central_moment(&z_values, mean, 3, op)
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let skew_den = d_mul(
+            n,
+            powu_checked(std_dev, 3, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?,
+            op,
+        )
+        .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let skewness =
+            d_div(skew_num, skew_den, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
-        let kurtosis = z_values
-            .iter()
-            .map(|x| (*x - mean).powu(4))
-            .sum::<Decimal>()
-            / (n * std_dev.powu(4));
+        let kurt_num = central_moment(&z_values, mean, 4, op)
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let kurt_den = d_mul(
+            n,
+            powu_checked(std_dev, 4, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?,
+            op,
+        )
+        .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
+        let kurtosis =
+            d_div(kurt_num, kurt_den, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         Ok(ShapeMetrics {
             skewness,
@@ -1088,19 +1397,33 @@ impl MetricsExtractor for Surface {
 
     fn compute_range_metrics(&self) -> Result<RangeMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
+
+        // An empty surface has no quantiles; mirror the zeroed answer
+        // `Curve::compute_range_metrics` returns for an empty curve.
+        if z_values.is_empty() {
+            return Ok(RangeMetrics {
+                min: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                max: Point2D::new(Decimal::ZERO, Decimal::ZERO),
+                range: Decimal::ZERO,
+                quartiles: (Decimal::ZERO, Decimal::ZERO, Decimal::ZERO),
+                interquartile_range: Decimal::ZERO,
+            });
+        }
+
         let mut sorted = z_values.clone();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let min = sorted.first().copied().unwrap_or(Decimal::ZERO);
         let max = sorted.last().copied().unwrap_or(Decimal::ZERO);
 
+        let op = "Surface::compute_range_metrics";
         let len = sorted.len();
-        let q1 = sorted[len / 4];
-        let q2 = sorted[len / 2];
-        let q3 = sorted[3 * len / 4];
+        let q1 = sample_at(&sorted, len / 4, "first quartile")?;
+        let q2 = sample_at(&sorted, len / 2, "median")?;
+        let q3 = sample_at(&sorted, 3 * len / 4, "third quartile")?;
 
-        let range = max - min;
-        let iqr = q3 - q1;
+        let range = d_sub(max, min, op).map_err(|e| MetricsError::RangeError(e.to_string()))?;
+        let iqr = d_sub(q3, q1, op).map_err(|e| MetricsError::RangeError(e.to_string()))?;
 
         Ok(RangeMetrics {
             min: Point2D::new(Decimal::ZERO, min),
@@ -1129,65 +1452,72 @@ impl MetricsExtractor for Surface {
         let x_vals: Vec<Decimal> = points.iter().map(|p| p.x).collect();
         let z_vals: Vec<Decimal> = points.iter().map(|p| p.y).collect();
 
-        let sum_x: Decimal = x_vals.iter().sum();
-        let sum_z: Decimal = z_vals.iter().sum();
+        let op = "Surface::compute_trend_metrics";
+        let sum_x = d_sum_iter(x_vals.iter().copied(), op).map_err(trend_err)?;
+        let sum_z = d_sum_iter(z_vals.iter().copied(), op).map_err(trend_err)?;
 
         // Check for identical points to avoid division by zero
-        let is_identical_points = z_vals.iter().all(|&z| z == z_vals[0]);
+        let first_z = sample_at(&z_vals, 0, "trend baseline")?;
+        let is_identical_points = z_vals.iter().all(|&z| z == first_z);
 
         let (slope, intercept, r_squared) = if is_identical_points {
             // All points are the same
-            (Decimal::ZERO, z_vals[0], Decimal::ONE)
+            (Decimal::ZERO, first_z, Decimal::ONE)
         } else {
-            let sum_xz: Decimal = x_vals.iter().zip(&z_vals).map(|(x, z)| *x * *z).sum();
-            let sum_xx: Decimal = x_vals.iter().map(|x| *x * *x).sum();
+            let regression = || -> Result<(Decimal, Decimal, Decimal), DecimalError> {
+                let mut sum_xz = Decimal::ZERO;
+                let mut sum_xx = Decimal::ZERO;
+                for (x, z) in x_vals.iter().zip(&z_vals) {
+                    sum_xz = d_add(sum_xz, d_mul(*x, *z, op)?, op)?;
+                    sum_xx = d_add(sum_xx, d_mul(*x, *x, op)?, op)?;
+                }
 
-            let slope = (n * sum_xz - sum_x * sum_z) / (n * sum_xx - sum_x * sum_x);
-            let intercept = (sum_z - slope * sum_x) / n;
+                let numerator = d_sub(d_mul(n, sum_xz, op)?, d_mul(sum_x, sum_z, op)?, op)?;
+                let denominator = d_sub(d_mul(n, sum_xx, op)?, d_mul(sum_x, sum_x, op)?, op)?;
+                let slope = d_div(numerator, denominator, op)?;
+                let intercept = d_div(d_sub(sum_z, d_mul(slope, sum_x, op)?, op)?, n, op)?;
 
-            // R-squared Calculation
-            let mean_z = sum_z / n;
-            let sst: Decimal = z_vals.iter().map(|z| (*z - mean_z).powu(2)).sum();
+                // R-squared Calculation
+                let mean_z = d_div(sum_z, n, op)?;
+                let sst = central_moment(&z_vals, mean_z, 2, op)?;
 
-            let ssr: Decimal = z_vals
-                .iter()
-                .zip(&x_vals)
-                .map(|(z, x)| {
-                    let z_predicted = slope * *x + intercept;
-                    (*z - z_predicted).powu(2)
-                })
-                .sum();
+                let mut ssr = Decimal::ZERO;
+                for (z, x) in z_vals.iter().zip(&x_vals) {
+                    let z_predicted = d_add(d_mul(slope, *x, op)?, intercept, op)?;
+                    let residual = d_sub(*z, z_predicted, op)?;
+                    ssr = d_add(ssr, powu_checked(residual, 2, op)?, op)?;
+                }
 
-            let r_squared = if sst == Decimal::ZERO {
-                Decimal::ONE
-            } else {
-                Decimal::ONE - (ssr / sst)
+                let r_squared = if sst == Decimal::ZERO {
+                    Decimal::ONE
+                } else {
+                    d_sub(Decimal::ONE, d_div(ssr, sst, op)?, op)?
+                };
+
+                Ok((slope, intercept, r_squared))
             };
 
-            (slope, intercept, r_squared)
+            // A surface whose abscissas all collapse to one value (a single
+            // column) leaves the ordinary-least-squares denominator at zero,
+            // where the slope is undefined rather than infinite.
+            regression().map_err(trend_err)?
         };
 
         // Moving Average Calculation
         let window_sizes = [3, 5, 7];
-        let moving_average: Vec<Point2D> = window_sizes
-            .iter()
-            .flat_map(|&window| {
-                if window > points.len() {
-                    vec![]
-                } else {
-                    points
-                        .windows(window)
-                        .map(|window_points| {
-                            let avg_x = window_points.iter().map(|p| p.x).sum::<Decimal>()
-                                / Decimal::from(window_points.len());
-                            let avg_y = window_points.iter().map(|p| p.y).sum::<Decimal>()
-                                / Decimal::from(window_points.len());
-                            Point2D::new(avg_x, avg_y)
-                        })
-                        .collect::<Vec<Point2D>>()
-                }
-            })
-            .collect();
+        let mut moving_average: Vec<Point2D> = Vec::new();
+        for window in window_sizes {
+            if window > points.len() {
+                continue;
+            }
+            for window_points in points.windows(window) {
+                let xs: Vec<Decimal> = window_points.iter().map(|p| p.x).collect();
+                let ys: Vec<Decimal> = window_points.iter().map(|p| p.y).collect();
+                let avg_x = mean_of(&xs, op).map_err(trend_err)?;
+                let avg_y = mean_of(&ys, op).map_err(trend_err)?;
+                moving_average.push(Point2D::new(avg_x, avg_y));
+            }
+        }
 
         Ok(TrendMetrics {
             slope,
@@ -1200,28 +1530,55 @@ impl MetricsExtractor for Surface {
     fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError> {
         let z_values: Vec<Decimal> = self.points.iter().map(|p| p.z).collect();
 
-        let mean = z_values.iter().sum::<Decimal>() / Decimal::from(z_values.len());
-        let volatility = (z_values
-            .iter()
-            .map(|x| (*x - mean).powu(2))
-            .sum::<Decimal>()
-            / Decimal::from(z_values.len()))
-        .sqrt()
-        .unwrap_or(Decimal::ZERO);
+        // An empty surface carries no risk; mirror the zeroed answer
+        // `Curve::compute_risk_metrics` returns for an empty curve.
+        if z_values.is_empty() {
+            return Ok(RiskMetrics {
+                volatility: Decimal::ZERO,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
+
+        let op = "Surface::compute_risk_metrics";
+        let mean = mean_of(&z_values, op).map_err(risk_err)?;
+        let sum_sq = central_moment(&z_values, mean, 2, op).map_err(risk_err)?;
+        let variance = d_div(sum_sq, Decimal::from(z_values.len()), op).map_err(risk_err)?;
+        let volatility = variance.sqrt().unwrap_or(Decimal::ZERO);
+
+        // A flat surface has no dispersion, so the Sharpe ratio is undefined;
+        // mirror the zeroed answer `Curve::compute_risk_metrics` returns.
+        if volatility == Decimal::ZERO {
+            return Ok(RiskMetrics {
+                volatility,
+                value_at_risk: Decimal::ZERO,
+                expected_shortfall: Decimal::ZERO,
+                beta: Decimal::ZERO,
+                sharpe_ratio: Decimal::ZERO,
+            });
+        }
 
         // Value at Risk (95% confidence) using parametric method
         let z_score = dec!(1.645); // 95% confidence interval
-        let var = mean - z_score * volatility;
+        let scaled_vol = d_mul(z_score, volatility, op).map_err(risk_err)?;
+        let var = d_sub(mean, scaled_vol, op).map_err(risk_err)?;
 
-        // Expected Shortfall (Conditional VaR) calculation
-        let expected_shortfall = z_values.iter().filter(|&x| *x < var).sum::<Decimal>()
-            / Decimal::from(z_values.iter().filter(|&x| *x < var).count() as u64);
+        // Expected Shortfall (Conditional VaR) calculation. An empty tail has
+        // no conditional mean; report zero as `Curve` does.
+        let tail: Vec<Decimal> = z_values.iter().copied().filter(|&x| x < var).collect();
+        let expected_shortfall = if tail.is_empty() {
+            Decimal::ZERO
+        } else {
+            mean_of(&tail, op).map_err(risk_err)?
+        };
 
         // Beta calculation with optional market volatility
         let beta = Decimal::ZERO; // TODO: Implement beta calculation
 
         // Sharpe Ratio (assuming risk-free rate of 0)
-        let sharpe_ratio = mean / volatility;
+        let sharpe_ratio = d_div(mean, volatility, op).map_err(risk_err)?;
 
         Ok(RiskMetrics {
             volatility,
@@ -1244,8 +1601,8 @@ impl Arithmetic<Surface> for Surface {
             ));
         }
 
-        if surfaces.len() == 1 {
-            return Ok(surfaces[0].clone());
+        if let [only] = surfaces {
+            return Ok((*only).clone());
         }
 
         // Find intersection of x,y ranges
@@ -1280,15 +1637,20 @@ impl Arithmetic<Surface> for Surface {
 
         // Create interpolation grid
         let steps = 50;
-        let x_step = (max_x - min_x) / Decimal::from(steps);
-        let y_step = (max_y - min_y) / Decimal::from(steps);
+        let op = "Surface::merge";
+        let x_span = d_sub(max_x, min_x, op).map_err(construction_err)?;
+        let x_step = d_div(x_span, Decimal::from(steps), op).map_err(construction_err)?;
+        let y_span = d_sub(max_y, min_y, op).map_err(construction_err)?;
+        let y_step = d_div(y_span, Decimal::from(steps), op).map_err(construction_err)?;
 
         let result_points: Result<Vec<Point3D>, SurfaceError> = (0..=steps)
             .into_par_iter()
             .flat_map(|i| {
-                let x = min_x + x_step * Decimal::from(i);
                 (0..=steps).into_par_iter().map(move |j| {
-                    let y = min_y + y_step * Decimal::from(j);
+                    let x_offset = d_mul(x_step, Decimal::from(i), op).map_err(construction_err)?;
+                    let x = d_add(min_x, x_offset, op).map_err(construction_err)?;
+                    let y_offset = d_mul(y_step, Decimal::from(j), op).map_err(construction_err)?;
+                    let y = d_add(min_y, y_offset, op).map_err(construction_err)?;
                     let point = Point2D::new(x, y);
 
                     // Interpolate z values
@@ -1306,23 +1668,36 @@ impl Arithmetic<Surface> for Surface {
 
                     // Apply operation
                     let result_z = match operation {
-                        MergeOperation::Add => z_values.par_iter().sum(),
+                        MergeOperation::Add => {
+                            d_sum_iter(z_values.iter().copied(), op).map_err(construction_err)?
+                        }
                         MergeOperation::Subtract => {
                             let first = z_values.first().cloned().unwrap_or(Decimal::ZERO);
-                            let remaining_sum: Decimal = z_values.iter().skip(1).sum();
-                            first - remaining_sum
+                            let remaining_sum = d_sum_iter(z_values.iter().skip(1).copied(), op)
+                                .map_err(construction_err)?;
+                            d_sub(first, remaining_sum, op).map_err(construction_err)?
                         }
-                        MergeOperation::Multiply => z_values.par_iter().product(),
+                        MergeOperation::Multiply => z_values.par_iter().copied().map(Ok).reduce(
+                            || Ok(Decimal::ONE),
+                            |a, b| d_mul(a?, b?, op).map_err(construction_err),
+                        )?,
                         MergeOperation::Divide => {
                             let first = z_values.first().cloned().unwrap_or(Decimal::ONE);
                             z_values
                                 .par_iter()
                                 .skip(1)
                                 .fold(
-                                    || first,
-                                    |acc, &val| if val == Decimal::ZERO { acc } else { acc / val },
+                                    || Ok(first),
+                                    |acc: Result<Decimal, SurfaceError>, &val| {
+                                        let acc = acc?;
+                                        if val == Decimal::ZERO {
+                                            Ok(acc)
+                                        } else {
+                                            d_div(acc, val, op).map_err(construction_err)
+                                        }
+                                    },
                                 )
-                                .reduce(|| first, |a, _b| a)
+                                .reduce(|| Ok(first), |a, _b| a)?
                         }
                         MergeOperation::Max => z_values
                             .par_iter()
@@ -1376,14 +1751,23 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
         // Compare squared distances directly: ordering is monotonic on
         // non-negative inputs, so the sqrt is unnecessary and would
-        // introduce a fallback that could otherwise distort ordering.
-        self.points
-            .iter()
-            .min_by(|a, b| {
-                let sq_a = (a.x - x.x).powi(2) + (a.y - x.y).powi(2);
-                let sq_b = (b.x - x.x).powi(2) + (b.y - x.y).powi(2);
-                sq_a.partial_cmp(&sq_b).unwrap_or(std::cmp::Ordering::Equal)
-            })
+        // introduce a fallback that could otherwise distort ordering. The
+        // distance is folded explicitly because a coordinate at the edge of
+        // the `Decimal` range overflows, and `min_by` has no channel for that.
+        let mut closest: Option<(&Point3D, Decimal)> = None;
+        for point in &self.points {
+            let squared = squared_distance(point, x.x, x.y, "Surface::get_closest_point")
+                .map_err(analysis_err)?;
+            // `min_by` keeps the first of several equal minima; `<=` here
+            // preserves that.
+            match closest {
+                Some((_, best)) if best <= squared => {}
+                _ => closest = Some((point, squared)),
+            }
+        }
+
+        closest
+            .map(|(point, _)| point)
             .ok_or(SurfaceError::Point3DError {
                 reason: "No points found",
             })
@@ -1463,17 +1847,24 @@ impl GeometricTransformations<Point3D> for Surface {
             ));
         }
 
+        let (Some(dx), Some(dy), Some(dz)) = (deltas.first(), deltas.get(1), deltas.get(2)) else {
+            return Err(SurfaceError::invalid_parameters(
+                "translate",
+                "Expected 3 deltas for 3D translation",
+            ));
+        };
+
         let translated_points = self
             .points
             .iter()
             .map(|point| {
-                Point3D::new(
-                    point.x + *deltas[0],
-                    point.y + *deltas[1],
-                    point.z + *deltas[2],
-                )
+                let x = d_add(point.x, **dx, "Surface::translate::x")?;
+                let y = d_add(point.y, **dy, "Surface::translate::y")?;
+                let z = d_add(point.z, **dz, "Surface::translate::z")?;
+                Ok(Point3D::new(x, y, z))
             })
-            .collect();
+            .collect::<Result<BTreeSet<Point3D>, DecimalError>>()
+            .map_err(construction_err)?;
 
         Ok(Surface::new(translated_points))
     }
@@ -1486,17 +1877,25 @@ impl GeometricTransformations<Point3D> for Surface {
             ));
         }
 
+        let (Some(fx), Some(fy), Some(fz)) = (factors.first(), factors.get(1), factors.get(2))
+        else {
+            return Err(SurfaceError::invalid_parameters(
+                "scale",
+                "Expected 3 factors for 3D scaling",
+            ));
+        };
+
         let scaled_points = self
             .points
             .iter()
             .map(|point| {
-                Point3D::new(
-                    point.x * *factors[0],
-                    point.y * *factors[1],
-                    point.z * *factors[2],
-                )
+                let x = d_mul(point.x, **fx, "Surface::scale::x")?;
+                let y = d_mul(point.y, **fy, "Surface::scale::y")?;
+                let z = d_mul(point.z, **fz, "Surface::scale::z")?;
+                Ok(Point3D::new(x, y, z))
             })
-            .collect();
+            .collect::<Result<BTreeSet<Point3D>, DecimalError>>()
+            .map_err(construction_err)?;
 
         Ok(Surface::new(scaled_points))
     }
@@ -1504,13 +1903,20 @@ impl GeometricTransformations<Point3D> for Surface {
     fn intersect_with(&self, other: &Self) -> Result<Vec<Point3D>, Self::Error> {
         let mut intersections = Vec::new();
         let epsilon = Decimal::new(1, 6); // 0.000001 tolerance
+        let op = "Surface::intersect_with";
 
         for p1 in self.points.iter() {
             for p2 in other.points.iter() {
-                if (p1.x - p2.x).abs() < epsilon
-                    && (p1.y - p2.y).abs() < epsilon
-                    && (p1.z - p2.z).abs() < epsilon
-                {
+                let dx = d_sub(p1.x, p2.x, op).map_err(analysis_err)?.abs();
+                if dx >= epsilon {
+                    continue;
+                }
+                let dy = d_sub(p1.y, p2.y, op).map_err(analysis_err)?.abs();
+                if dy >= epsilon {
+                    continue;
+                }
+                let dz = d_sub(p1.z, p2.z, op).map_err(analysis_err)?.abs();
+                if dz < epsilon {
                     intersections.push(*p1);
                 }
             }
@@ -1528,29 +1934,36 @@ impl GeometricTransformations<Point3D> for Surface {
             ));
         }
 
+        let op = "Surface::derivative_at";
+
         // For surfaces with exactly 2 or 3 points, use a simple approach
         if self.points.len() <= 3 {
-            // let points: Vec<_> = self.points.iter().collect();
+            let p0 = self.point_at(0)?;
+            let p1 = self.point_at(1)?;
 
             // Ensure points are not identical
-            if self[0] == self[1] {
+            if p0 == p1 {
                 return Err(SurfaceError::invalid_parameters(
                     "derivative_at",
                     "Points are identical, cannot calculate derivatives",
                 ));
             }
 
-            // Calculate derivatives using the first two points
-            let dx = if (self[1].x - self[0].x) == Decimal::ZERO {
+            // Calculate derivatives using the first two points. `Decimal::MAX`
+            // is the pre-existing sentinel for a collapsed axis.
+            let rise = d_sub(p1.z, p0.z, op).map_err(analysis_err)?;
+            let run_x = d_sub(p1.x, p0.x, op).map_err(analysis_err)?;
+            let dx = if run_x == Decimal::ZERO {
                 Decimal::MAX
             } else {
-                (self[1].z - self[0].z) / (self[1].x - self[0].x)
+                d_div(rise, run_x, op).map_err(analysis_err)?
             };
 
-            let dy = if (self[1].y - self[0].y) == Decimal::ZERO {
+            let run_y = d_sub(p1.y, p0.y, op).map_err(analysis_err)?;
+            let dy = if run_y == Decimal::ZERO {
                 Decimal::MAX
             } else {
-                (self[1].z - self[0].z) / (self[1].y - self[0].y)
+                d_div(rise, run_y, op).map_err(analysis_err)?
             };
 
             return Ok(vec![dx, dy]);
@@ -1568,19 +1981,16 @@ impl GeometricTransformations<Point3D> for Surface {
         // For more complex surfaces, find nearby points
         let tolerance = dec!(0.5);
 
-        let x_points: BTreeSet<Point3D> = self
-            .get_points()
-            .into_iter()
-            .filter(|p| (p.x - point.x).abs() < tolerance)
-            .cloned()
-            .collect();
-
-        let y_points: BTreeSet<Point3D> = self
-            .get_points()
-            .into_iter()
-            .filter(|p| (p.y - point.y).abs() < tolerance)
-            .cloned()
-            .collect();
+        let mut x_points: BTreeSet<Point3D> = BTreeSet::new();
+        let mut y_points: BTreeSet<Point3D> = BTreeSet::new();
+        for candidate in self.get_points() {
+            if d_sub(candidate.x, point.x, op).map_err(analysis_err)?.abs() < tolerance {
+                x_points.insert(*candidate);
+            }
+            if d_sub(candidate.y, point.y, op).map_err(analysis_err)?.abs() < tolerance {
+                y_points.insert(*candidate);
+            }
+        }
 
         // If not enough nearby points, use the entire surface
         let x_candidates = if x_points.len() < 2 {
@@ -1609,17 +2019,33 @@ impl GeometricTransformations<Point3D> for Surface {
         let mut y_sorted: Vec<_> = y_candidates.iter().collect();
         y_sorted.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Prevent division by zero
-        let dx = if x_sorted[0].x == x_sorted[1].x {
-            Decimal::ZERO
-        } else {
-            (x_sorted[1].z - x_sorted[0].z) / (x_sorted[1].x - x_sorted[0].x)
+        let missing = || {
+            SurfaceError::AnalysisError(
+                "derivative_at: fewer than two candidates after filtering".to_string(),
+            )
+        };
+        let (Some(x0), Some(x1)) = (x_sorted.first(), x_sorted.get(1)) else {
+            return Err(missing());
+        };
+        let (Some(y0), Some(y1)) = (y_sorted.first(), y_sorted.get(1)) else {
+            return Err(missing());
         };
 
-        let dy = if y_sorted[0].y == y_sorted[1].y {
+        // Prevent division by zero
+        let dx = if x0.x == x1.x {
             Decimal::ZERO
         } else {
-            (y_sorted[1].z - y_sorted[0].z) / (y_sorted[1].y - y_sorted[0].y)
+            let rise = d_sub(x1.z, x0.z, op).map_err(analysis_err)?;
+            let run = d_sub(x1.x, x0.x, op).map_err(analysis_err)?;
+            d_div(rise, run, op).map_err(analysis_err)?
+        };
+
+        let dy = if y0.y == y1.y {
+            Decimal::ZERO
+        } else {
+            let rise = d_sub(y1.z, y0.z, op).map_err(analysis_err)?;
+            let run = d_sub(y1.y, y0.y, op).map_err(analysis_err)?;
+            d_div(rise, run, op).map_err(analysis_err)?
         };
 
         Ok(vec![dx, dy])
@@ -1663,21 +2089,47 @@ impl GeometricTransformations<Point3D> for Surface {
         let mut volume = Decimal::ZERO;
         let points: Vec<_> = self.points.iter().collect();
 
+        let op = "Surface::measure_under";
+
         // For each possible triangle in the surface
         for window in points.windows(3) {
             // Calculate area of triangle
-            let p1 = window[0];
-            let p2 = window[1];
-            let p3 = window[2];
+            let (Some(p1), Some(p2), Some(p3)) = (window.first(), window.get(1), window.get(2))
+            else {
+                return Err(SurfaceError::AnalysisError(
+                    "measure_under: triangle window is shorter than three points".to_string(),
+                ));
+            };
 
-            let area =
-                ((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)).abs() / dec!(2);
+            let cross_a = d_mul(
+                d_sub(p2.x, p1.x, op).map_err(analysis_err)?,
+                d_sub(p3.y, p1.y, op).map_err(analysis_err)?,
+                op,
+            )
+            .map_err(analysis_err)?;
+            let cross_b = d_mul(
+                d_sub(p3.x, p1.x, op).map_err(analysis_err)?,
+                d_sub(p2.y, p1.y, op).map_err(analysis_err)?,
+                op,
+            )
+            .map_err(analysis_err)?;
+            let cross = d_sub(cross_a, cross_b, op).map_err(analysis_err)?;
+            let area = d_div(cross.abs(), dec!(2), op).map_err(analysis_err)?;
 
             // Average height from base_value
-            let avg_height =
-                ((p1.z - *base_value) + (p2.z - *base_value) + (p3.z - *base_value)) / dec!(3);
+            let heights = d_sum_iter(
+                [
+                    d_sub(p1.z, *base_value, op).map_err(analysis_err)?,
+                    d_sub(p2.z, *base_value, op).map_err(analysis_err)?,
+                    d_sub(p3.z, *base_value, op).map_err(analysis_err)?,
+                ],
+                op,
+            )
+            .map_err(analysis_err)?;
+            let avg_height = d_div(heights, dec!(3), op).map_err(analysis_err)?;
 
-            volume += area * avg_height;
+            let prism = d_mul(area, avg_height, op).map_err(analysis_err)?;
+            volume = d_add(volume, prism, op).map_err(analysis_err)?;
         }
 
         Ok(volume.abs())

@@ -28,4 +28,5 @@ pub use operations::{
     Arithmetic, AxisOperations, GeometricTransformations, MergeAxisInterpolate, MergeOperation,
 };
 pub use utils::GeometricObject;
+pub(crate) use utils::powu_checked;
 pub use visualization::{PlotBuilder, Plottable};

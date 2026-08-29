@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::InterpolationError;
 use crate::geometrics::{
     BiLinearInterpolation, CubicInterpolation, GeometricObject, InterpolationType,
@@ -127,14 +121,20 @@ where
         if points.len() < 2 {
             return Err(InterpolationError::EmptyData);
         }
-        if x.get_x() < points[0].get_x() || x.get_x() > points[points.len() - 1].get_x() {
+        let (Some(first), Some(last)) = (points.first(), points.last()) else {
+            return Err(InterpolationError::EmptyData);
+        };
+        if x.get_x() < first.get_x() || x.get_x() > last.get_x() {
             return Err(InterpolationError::OutOfRange {
                 target: x.get_x().to_string(),
             });
         }
         // Find points that bracket x
-        for i in 0..points.len() - 1 {
-            if points[i].get_x() <= x.get_x() && x.get_x() <= points[i + 1].get_x() {
+        for (i, pair) in points.windows(2).enumerate() {
+            let (Some(left), Some(right)) = (pair.first(), pair.get(1)) else {
+                return Err(InterpolationError::DegenerateInterval);
+            };
+            if left.get_x() <= x.get_x() && x.get_x() <= right.get_x() {
                 return Ok((i, i + 1));
             }
         }

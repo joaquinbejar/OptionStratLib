@@ -10,10 +10,17 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::curves::{Curve, Point2D};
+use crate::error::CurveError;
 use crate::geometrics::GeometricObject;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use tracing::warn;
+
+/// Wraps a checked-arithmetic failure raised while sampling a utility curve.
+fn sampling_err(err: crate::error::decimal::DecimalError) -> CurveError {
+    CurveError::ConstructionError(err.to_string())
+}
 
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///
@@ -67,10 +74,11 @@ use tracing::warn;
 /// - For higher resolution or adaptive step generation, consider modifying the function
 ///   or implementing a similar utility.
 ///
-/// # Panics
-/// This function will panic if the calculated `step_size` results in a division by zero,
-/// which could occur if `end` is equal to `start`. The caller should ensure that `end`
-/// is greater than `start` to avoid this scenario.
+/// # Errors
+///
+/// Returns [`CurveError::ConstructionError`] when the span `end - start`, a
+/// sampled abscissa or the ordinate `slope * x` leaves the representable
+/// `Decimal` range.
 ///
 /// # See Also
 /// - [`Point2D::new`]: Utility used to construct individual points for the curve.
@@ -88,27 +96,33 @@ use tracing::warn;
 ///     Decimal::new(0, 1),   // start = 0.0
 ///     Decimal::new(100, 1), // end = 10.0
 ///     Decimal::new(1, 0)    // slope = 1.0
-/// );
+/// )
+/// .expect("the range and slope are well within the Decimal range");
 /// ```
 ///
 /// would result in a curve defined by the points:
 /// `(0.0, 0.0)`, `(1.0, 1.0)`, ..., `(10.0, 10.0)`.
 ///
 /// From the above, it demonstrates how linearly spaced and
-#[must_use]
-pub fn create_linear_curve(start: Decimal, end: Decimal, slope: Decimal) -> Curve {
+pub fn create_linear_curve(
+    start: Decimal,
+    end: Decimal,
+    slope: Decimal,
+) -> Result<Curve, CurveError> {
     let steps = 10;
-    let step_size = (end - start) / Decimal::from(steps);
+    let op = "create_linear_curve";
+    let span = d_sub(end, start, op).map_err(sampling_err)?;
+    let step_size = d_div(span, Decimal::from(steps), op).map_err(sampling_err)?;
 
-    let points: Vec<Point2D> = (0..=steps)
-        .map(|i| {
-            let x = start + step_size * Decimal::from(i);
-            let y = slope * x;
-            Point2D::new(x, y)
-        })
-        .collect();
+    let mut points: Vec<Point2D> = Vec::new();
+    for i in 0..=steps {
+        let offset = d_mul(step_size, Decimal::from(i), op).map_err(sampling_err)?;
+        let x = d_add(start, offset, op).map_err(sampling_err)?;
+        let y = d_mul(slope, x, op).map_err(sampling_err)?;
+        points.push(Point2D::new(x, y));
+    }
 
-    Curve::from_vector(points.iter().collect())
+    Ok(Curve::from_vector(points.iter().collect()))
 }
 
 /// Creates a constant curve with equidistant points along the x-axis and the same constant value for the y-axis.
@@ -142,28 +156,34 @@ pub fn create_linear_curve(start: Decimal, end: Decimal, slope: Decimal) -> Curv
 /// While this is designed to remain usage-agnostic, in practice, it results in a horizontal line in Cartesian
 /// space that is constant in the y-dimension and spans the x-range.
 ///
-/// # Panics
-/// - The function will panic if `steps` is set to zero or if the provided `start` and `end` values result in
-///   invalid arithmetic operations, such as division by zero or overflow of Decimal values.
+/// # Errors
+///
+/// Returns [`CurveError::ConstructionError`] when the span `end - start` or a
+/// sampled abscissa leaves the representable `Decimal` range.
 ///
 /// # See Also
 /// - [`Point2D::new`]: Used to create individual points in the resulting curve.
 /// - [`Curve::from_vector`]: Used internally to convert the set of constant points into a `Curve` object.
-#[must_use]
-pub fn create_constant_curve(start: Decimal, end: Decimal, value: Decimal) -> Curve {
+pub fn create_constant_curve(
+    start: Decimal,
+    end: Decimal,
+    value: Decimal,
+) -> Result<Curve, CurveError> {
     let steps = 10;
-    let step_size = (end - start) / Decimal::from(steps);
+    let op = "create_constant_curve";
+    let span = d_sub(end, start, op).map_err(sampling_err)?;
+    let step_size = d_div(span, Decimal::from(steps), op).map_err(sampling_err)?;
 
-    let point_values: Vec<Point2D> = (0..=steps)
-        .map(|i| {
-            let x = start + step_size * Decimal::from(i);
-            Point2D::new(x, value)
-        })
-        .collect();
+    let mut point_values: Vec<Point2D> = Vec::new();
+    for i in 0..=steps {
+        let offset = d_mul(step_size, Decimal::from(i), op).map_err(sampling_err)?;
+        let x = d_add(start, offset, op).map_err(sampling_err)?;
+        point_values.push(Point2D::new(x, value));
+    }
 
     let points: Vec<&Point2D> = point_values.iter().collect();
 
-    Curve::from_vector(points)
+    Ok(Curve::from_vector(points))
 }
 
 /// Detects peaks and valleys in a set of points with configurable sensitivity
