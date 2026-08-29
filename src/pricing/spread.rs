@@ -226,9 +226,14 @@ fn kirk_approximation(
     // arguments to `±∞`, where the CDFs saturate: those are the limits of the
     // formula, not substitutes for it.
     let (n_d1, n_d2, n_neg_d1, n_neg_d2) = if denominator.is_zero() {
-        // σ√T → 0: the option is worth its discounted intrinsic, i.e. the
-        // step function at the forward.
-        if ratio >= dec!(1.0) {
+        // σ√T → 0: the option is worth its discounted intrinsic, i.e. the step
+        // function at the forward. The test has to compare the two present
+        // values, not the spot moneyness `S1 / (S2 + K)`: the carry `(r - q1)T`
+        // lives in the discounting, and dropping it flips the step whenever
+        // spot and forward straddle the adjusted strike. `sigma` is exactly
+        // zero at `rho = 1, sigma1 = w * sigma2`, so this branch is reachable
+        // from well-formed inputs.
+        if s1_pv >= adjusted_strike_pv {
             (dec!(1.0), dec!(1.0), dec!(0.0), dec!(0.0))
         } else {
             (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
@@ -637,6 +642,118 @@ mod tests {
         assert!(
             price > dec!(0.0),
             "Spread option with negative correlation should have positive value"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_kirk_zero_volatility {
+    use super::*;
+    use crate::ExpirationDate;
+    use crate::model::option::ExoticParams;
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    /// Kirk's adjusted volatility is
+    /// `sigma^2 = (sigma1 - w*sigma2)^2 + 2*w*sigma1*sigma2*(1 - rho)` with
+    /// `w = S2 / (S2 + K)`, which is exactly zero at `rho = 1` and
+    /// `sigma1 = w * sigma2`. These are well-formed inputs, so the zero-vol
+    /// branch is reachable and its step test has to be right.
+    ///
+    /// `S2 = 100, K = 25` gives `w = 0.8` exactly, so `sigma1 = 0.2` against
+    /// `sigma2 = 0.25` collapses the adjusted volatility to exactly zero — the
+    /// weight has to divide exactly or the branch is never reached.
+    ///
+    /// Spot moneyness `S1 / (S2 + K) = 0.8` says out-of-the-money, but with
+    /// `r = 25%` and `q1 = 0` the present values say the opposite:
+    /// `S1*e^{-q1*T} = 100` against `(S2 + K)*e^{-r*T} = 125*e^{-0.25} = 97.35`.
+    fn zero_vol_spread(option_style: OptionStyle, risk_free_rate: Decimal) -> Options {
+        Options::new(
+            OptionType::Spread {
+                second_asset: Positive::HUNDRED,
+            },
+            Side::Long,
+            "TEST".to_string(),
+            pos_or_panic!(25.0),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            risk_free_rate,
+            option_style,
+            Positive::ZERO,
+            Some(ExoticParams {
+                spot_prices: None,
+                spot_min: None,
+                spot_max: None,
+                cliquet_local_cap: None,
+                cliquet_local_floor: None,
+                cliquet_global_cap: None,
+                cliquet_global_floor: None,
+                rainbow_second_asset_price: None,
+                rainbow_second_asset_volatility: None,
+                rainbow_second_asset_dividend: None,
+                rainbow_correlation: None,
+                spread_second_asset_volatility: Some(pos_or_panic!(0.25)),
+                spread_second_asset_dividend: Some(Positive::ZERO),
+                spread_correlation: Some(Decimal::ONE),
+                quanto_fx_volatility: None,
+                quanto_fx_correlation: None,
+                quanto_foreign_rate: None,
+                exchange_second_asset_volatility: None,
+                exchange_second_asset_dividend: None,
+                exchange_correlation: None,
+            }),
+        )
+    }
+
+    #[test]
+    fn test_zero_volatility_call_uses_present_values_not_spot_moneyness() {
+        let option = zero_vol_spread(OptionStyle::Call, dec!(0.25));
+        let price = match spread_black_scholes(&option) {
+            Ok(price) => price,
+            Err(e) => panic!("the spread should price: {e}"),
+        };
+
+        // The discounted intrinsic is `S1*e^{-q1*T} - (S2 + K)*e^{-r*T}`,
+        // about 2.65. Testing the spot moneyness instead returns zero here.
+        assert!(
+            price > dec!(2.5) && price < dec!(2.8),
+            "zero-vol call priced at {price}, expected the discounted intrinsic near 2.65"
+        );
+    }
+
+    #[test]
+    fn test_zero_volatility_put_is_worthless_when_the_call_is_in_the_money() {
+        let option = zero_vol_spread(OptionStyle::Put, dec!(0.25));
+        let price = match spread_black_scholes(&option) {
+            Ok(price) => price,
+            Err(e) => panic!("the spread should price: {e}"),
+        };
+        assert_eq!(price, Decimal::ZERO, "put priced at {price}");
+    }
+
+    #[test]
+    fn test_zero_volatility_step_flips_with_the_carry() {
+        // A negative rate pushes the adjusted strike's present value above the
+        // first asset's, so the same contract flips: the call is worthless and
+        // the put carries the intrinsic.
+        let call = zero_vol_spread(OptionStyle::Call, dec!(-0.10));
+        let put = zero_vol_spread(OptionStyle::Put, dec!(-0.10));
+
+        let call_price = match spread_black_scholes(&call) {
+            Ok(price) => price,
+            Err(e) => panic!("the call should price: {e}"),
+        };
+        let put_price = match spread_black_scholes(&put) {
+            Ok(price) => price,
+            Err(e) => panic!("the put should price: {e}"),
+        };
+
+        assert_eq!(call_price, Decimal::ZERO, "call priced at {call_price}");
+        assert!(
+            put_price > dec!(38.0),
+            "put priced at {put_price}, expected the discounted intrinsic near 38.1"
         );
     }
 }
