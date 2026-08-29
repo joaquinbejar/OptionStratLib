@@ -367,6 +367,23 @@ fn cmp_to_scaled_premium(current: Decimal, initial: Decimal, pct: Decimal, add: 
     }
 }
 
+/// Answers `|current - target| < 0.01` without ever forming a difference that
+/// leaves the `Decimal` range.
+///
+/// The distance itself overflows for a `Decimal::MIN` premium against any
+/// positive target, which used to abort inside a `#[must_use]` accessor that
+/// promises an `Option`. No representable stand-in is needed to decide the
+/// question: a distance too large to represent is larger than every
+/// representable one, and therefore larger than a one cent tolerance, so an
+/// overflow answers the comparison on its own. `Decimal` is sign-magnitude
+/// and its range is symmetric, so `abs` on the difference cannot overflow in
+/// turn.
+fn within_fixed_price_tolerance(current: Decimal, target: Decimal) -> bool {
+    current
+        .checked_sub(target)
+        .is_some_and(|distance| distance.abs() < dec!(0.01))
+}
+
 /// Checks if an exit policy is triggered for an option position.
 ///
 /// # Parameters
@@ -447,7 +464,7 @@ pub fn check_exit_policy(
             }
         }
         ExitPolicy::FixedPrice(price) => {
-            if (current_premium - price.to_dec()).abs() < dec!(0.01) {
+            if within_fixed_price_tolerance(current_premium, price.to_dec()) {
                 Some(ExitPolicy::FixedPrice(*price))
             } else {
                 None

@@ -23,7 +23,8 @@ use optionstratlib::chains::utils::adjust_volatility;
 use optionstratlib::error::{ChainError, SimulationError};
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{
-    WalkParams, WalkType, WalkTypeAble, expanding_window_vols, generator_positive, walk_steps,
+    ExitPolicy, WalkParams, WalkType, WalkTypeAble, check_exit_policy, expanding_window_vols,
+    generator_positive, walk_steps,
 };
 use optionstratlib::utils::TimeFrame;
 use positive::Positive;
@@ -118,6 +119,36 @@ fn extreme_quote() -> impl Strategy<Value = OptionData> {
             }
             data
         })
+}
+
+/// Every exit policy variant, nested two levels deep through the two
+/// composites, parameterised from the same numeric extremes.
+///
+/// `FixedPrice` is the arm that carries the distance overflow: its target is
+/// compared against a premium that reaches `Decimal::MIN`, so
+/// `current - target` leaves the range while both operands are perfectly
+/// representable. The percentage arms carry the scaled-threshold overflow.
+fn extreme_exit_policy() -> impl Strategy<Value = ExitPolicy> {
+    let leaf = prop_oneof![
+        extreme_decimal().prop_map(ExitPolicy::ProfitPercent),
+        extreme_decimal().prop_map(ExitPolicy::LossPercent),
+        extreme_positive().prop_map(ExitPolicy::FixedPrice),
+        extreme_positive().prop_map(ExitPolicy::MinPrice),
+        extreme_positive().prop_map(ExitPolicy::MaxPrice),
+        prop_oneof![Just(0usize), Just(1), Just(usize::MAX)].prop_map(ExitPolicy::TimeSteps),
+        extreme_positive().prop_map(ExitPolicy::DaysToExpiration),
+        extreme_decimal().prop_map(ExitPolicy::DeltaThreshold),
+        extreme_positive().prop_map(ExitPolicy::UnderlyingPrice),
+        extreme_positive().prop_map(ExitPolicy::UnderlyingBelow),
+        extreme_positive().prop_map(ExitPolicy::UnderlyingAbove),
+        Just(ExitPolicy::Expiration),
+    ];
+    leaf.prop_recursive(2, 8, 2, |inner| {
+        prop_oneof![
+            prop::collection::vec(inner.clone(), 0..3).prop_map(ExitPolicy::And),
+            prop::collection::vec(inner, 0..3).prop_map(ExitPolicy::Or),
+        ]
+    })
 }
 
 /// A walker with no overrides, so every kernel under test is the built-in one.
@@ -416,5 +447,34 @@ proptest! {
         ],
     ) {
         let _ = expanding_window_vols(&prices, timeframe);
+    }
+
+    /// Evaluating an exit policy returns for premiums, underlying prices and
+    /// thresholds at both ends of the range, on both sides of the position.
+    ///
+    /// `check_exit_policy` is `#[must_use]` and returns an `Option`, so the
+    /// only honest answer for an input it cannot measure is `None`. The
+    /// distance a `FixedPrice` target needs is the case that does not fit:
+    /// against a `Decimal::MIN` premium it leaves the range even though the
+    /// premium and the target are both representable.
+    #[test]
+    fn test_check_exit_policy_never_panics(
+        policy in extreme_exit_policy(),
+        initial_premium in extreme_decimal(),
+        current_premium in extreme_decimal(),
+        step_num in prop_oneof![Just(0usize), Just(1), Just(usize::MAX)],
+        days_left in extreme_positive(),
+        underlying_price in extreme_positive(),
+        is_long in any::<bool>(),
+    ) {
+        let _ = check_exit_policy(
+            &policy,
+            initial_premium,
+            current_premium,
+            step_num,
+            days_left,
+            underlying_price,
+            is_long,
+        );
     }
 }

@@ -130,7 +130,7 @@ use crate::error::ChainError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -235,7 +235,7 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::DecimalError`] when a moment leaves the
+    /// Returns [`ChainError::OptionDataError`] when a moment leaves the
     /// representable `Decimal` range — a strike-weighted sum past
     /// `Decimal::MAX`, or a total density of zero where the moment divides by
     /// it — and [`ChainError::PositiveError`] when the variance has no
@@ -268,7 +268,7 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::DecimalError`] when the strike-weighted sum or
+    /// Returns [`ChainError::OptionDataError`] when the strike-weighted sum or
     /// the total density leaves the representable `Decimal` range.
     fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Result<Decimal, ChainError> {
         let mut mean = Decimal::ZERO;
@@ -300,7 +300,7 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::DecimalError`] when a squared deviation, its
+    /// Returns [`ChainError::OptionDataError`] when a squared deviation, its
     /// density weighting or the running sum leaves the representable
     /// `Decimal` range.
     fn calculate_variance(
@@ -344,7 +344,7 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::DecimalError`] when a standardized deviation or
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation or
     /// its cube leaves the representable `Decimal` range, and
     /// [`ChainError::PositiveError`] when the variance has no representable
     /// square root.
@@ -402,8 +402,10 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::DecimalError`] when a fourth power, its density
-    /// weighting or the running sum leaves the representable `Decimal` range.
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation, its
+    /// fourth power, the density weighting or the running sum leaves the
+    /// representable `Decimal` range, and [`ChainError::PositiveError`] when
+    /// the variance has no representable square root.
     fn calculate_kurtosis(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
@@ -413,53 +415,40 @@ impl RNDStatistics {
             return Ok(Decimal::ZERO);
         }
 
-        // Convert variance to decimal and calculate std_dev
-        let variance_dec = variance.to_dec();
-        // SAFETY: variance is `Positive` and the early-return above has
-        // already excluded zero, so `Decimal::sqrt` cannot return None for
-        // a strictly positive value. Default to zero defensively to avoid
-        // a panic if a future invariant change ever produces NaN-like input.
-        let std_dev = variance_dec.sqrt().unwrap_or(Decimal::ZERO);
-        // `sigma^4` underflows to exactly zero once sigma drops below about
-        // 1e-7 — two strikes a hair apart is enough — and dividing by it
-        // aborted with `Division by zero`. A distribution that narrow is the
-        // point mass the `variance == ZERO` guard above already answers with
-        // zero excess kurtosis; this is the same degenerate case reached at a
-        // representable-scale limit rather than exactly.
-        let Some(std_dev_4) = std_dev.checked_powi(4).filter(|value| !value.is_zero()) else {
-            return Ok(Decimal::ZERO);
-        };
-
+        // Each deviation is standardized before it is raised, exactly as the
+        // skewness path does. Accumulating the raw fourth moment and dividing
+        // by `sigma^4` at the end cannot work here: `sigma^4` underflows to
+        // exactly zero once sigma drops below about 1e-7, which two strikes a
+        // hair apart already reach, and the distribution is not degenerate
+        // there. Two equal masses at 100 and 100.0000000000001 standardize to
+        // ±1 and carry the -2 excess kurtosis of a two-point distribution,
+        // which is what this now returns instead of zero.
+        let std_dev = variance.checked_sqrt()?;
         let mut fourth_moment = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
-        // Calculate fourth moment
         for (strike, density) in densities {
-            let diff = d_sub(strike.to_dec(), mean, "chains::rnd::kurtosis")?;
-            // Using powi instead of manual multiplication
-            let term = diff.checked_powi(4).ok_or_else(|| {
-                ChainError::invalid_parameters(
-                    "densities",
-                    "fourth power of a strike deviation is not representable",
-                )
-            })?;
+            let normalized_diff = d_div(
+                d_sub(strike.to_dec(), mean, "chains::rnd::kurtosis")?,
+                std_dev.to_dec(),
+                "chains::rnd::kurtosis",
+            )?;
+            let squared = d_mul(normalized_diff, normalized_diff, "chains::rnd::kurtosis")?;
+            let fourth = d_mul(squared, squared, "chains::rnd::kurtosis")?;
             fourth_moment = d_add(
                 fourth_moment,
-                d_mul(term, *density, "chains::rnd::kurtosis")?,
+                d_mul(fourth, *density, "chains::rnd::kurtosis")?,
                 "chains::rnd::kurtosis",
             )?;
             total_density = d_add(total_density, *density, "chains::rnd::kurtosis")?;
         }
 
-        // Normalize by total density first
         if total_density.is_zero() {
             return Ok(Decimal::ZERO);
         }
-        let normalized_fourth_moment =
-            d_div(fourth_moment, total_density, "chains::rnd::kurtosis")?;
-        // Then divide by std_dev^4 and subtract 3
+
         d_sub(
-            d_div(normalized_fourth_moment, std_dev_4, "chains::rnd::kurtosis")?,
+            d_div(fourth_moment, total_density, "chains::rnd::kurtosis")?,
             dec!(3.0),
             "chains::rnd::kurtosis",
         )
@@ -661,6 +650,33 @@ mod tests {
             let stats = RNDStatistics::new(&densities).unwrap();
             // Excess kurtosis should be near zero for normal-like distribution
             assert_decimal_eq!(stats.kurtosis.abs(), dec!(0.96043315), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_narrow_distribution_is_not_a_point_mass() {
+            // Two equal masses 1e-7 apart. Sigma is 5e-8, so `sigma^4`
+            // underflows to exactly zero and the old formula reported this as
+            // the flat zero of a point mass. The distribution is a genuine
+            // two-point one, whose excess kurtosis is -2.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_survives_the_narrowest_representable_spread() {
+            // The same two-point shape 1e-13 apart, where sigma is around
+            // 5e-14 and `Decimal::sqrt` itself runs out of precision. The
+            // answer is no longer exact, but it is the -2 of a two-point
+            // distribution rather than the zero of a point mass, which is
+            // what the underflow used to turn it into.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000000000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.1));
         }
 
         #[test]
@@ -1236,6 +1252,9 @@ mod statistical_validation_tests {
     use super::*;
 
     use crate::assert_decimal_eq;
+    // The reference moments these tests recompute by hand still raise a
+    // `Decimal` directly; the implementation standardizes first instead.
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     mod moments_tests {
