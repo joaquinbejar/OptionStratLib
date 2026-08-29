@@ -225,12 +225,40 @@ fn tick_size(decimal_places: u32) -> Option<Positive> {
         .and_then(|tick| Positive::new_decimal(tick).ok())
 }
 
+/// Lifts `ask` one tick above `bid` when the two collide, so the thinnest
+/// market this generator emits is one tick wide.
+///
+/// Both sides are floored at the tick, so a row whose whole quote sits below
+/// the tick lands on it twice and comes out locked. A locked market is a real
+/// thing on an exchange, but a quote *generator* that produces one is wrong:
+/// a consumer marking at the touch would read a zero-width spread on the
+/// cheapest strikes, which is the opposite of what a thin market means. The
+/// bid is the side that carries the information — it is the floor itself —
+/// so the ask is the side that moves.
+///
+/// A quote that is already two-sided is returned untouched: only a collision
+/// moves anything.
+///
+/// Returns `None` when the lifted ask leaves the representable `Decimal`
+/// range; the lift is range-checked like every other step, never assumed to
+/// fit.
+#[inline]
+#[must_use]
+fn unlock(bid: Positive, ask: Positive, tick: Positive) -> Option<(Positive, Positive)> {
+    if bid < ask {
+        return Some((bid, ask));
+    }
+    Some((bid, bid.checked_add(&tick).ok()?))
+}
+
 /// Widens a quote around `anchor` by half a spread on each side, flooring both
-/// sides at `tick` and keeping the bid at or below the ask.
+/// sides at `tick` and holding the ask strictly above the bid.
 ///
 /// The ask is floored too: without it, an anchor small enough that
 /// `anchor + half_spread` rounds down to zero would produce a bid above the
-/// ask.
+/// ask. When both sides land on the tick — half a spread no wider than one
+/// tick against a sub-tick anchor — [`unlock`] lifts the ask a tick rather
+/// than letting the quote come out locked.
 ///
 /// Returns `None` when the widened ask leaves the representable `Decimal`
 /// range, or when `decimal_places` is a scale `Decimal` cannot round to.
@@ -252,11 +280,11 @@ fn widen_around(
         .ok()?
         .max(tick)
         .min(ask);
-    Some((bid, ask))
+    unlock(bid, ask, tick)
 }
 
 /// Widens an existing two-sided book: the ask moves up half a spread, the bid
-/// down half a spread, both floored at `tick` and kept ordered.
+/// down half a spread, both floored at `tick` and kept a tick apart.
 ///
 /// Returns `None` on the same conditions as [`widen_around`].
 #[must_use]
@@ -278,7 +306,7 @@ fn widen_book(
         .ok()?
         .max(tick)
         .min(new_ask);
-    Some((new_bid, new_ask))
+    unlock(new_bid, new_ask, tick)
 }
 
 /// The mid of a two-sided quote, or `None` when it is not representable.
@@ -1018,6 +1046,25 @@ impl OptionData {
     /// which is what a thin market looks like; it is not withdrawn. The mid
     /// is never cleared here: a mid that arrived is a mid, and dropping it
     /// destroys information the caller supplied.
+    ///
+    /// # The quote invariant
+    ///
+    /// Every quote this method produces satisfies `tick <= bid < ask`: the
+    /// bid is at least one tick, and the ask is *strictly* above it. The
+    /// thinnest market generated here is one tick wide.
+    ///
+    /// That last part is a rule, not an accident of the arithmetic. When half
+    /// a spread is no wider than one tick and the anchor is sub-tick, both
+    /// sides round down onto the tick floor and the quote would come out
+    /// locked — `0.01 / 0.01` for a `0.02` spread at two decimals. The ask is
+    /// then lifted one tick above the bid. A locked market is a real thing on
+    /// an exchange, but a quote *generator* that emits one is wrong: a chain
+    /// consumer marking at the touch would see a zero-width spread on the
+    /// cheapest strikes, which is the opposite of what a thin market means.
+    ///
+    /// Only a collision moves anything. A quote whose two sides already
+    /// differ is left exactly where the widening put it, so no well-formed
+    /// row is disturbed by this rule.
     ///
     /// A quote is erased only when there is nothing to quote: no mid, and no
     /// two-sided book. A one-sided book with no mid is erased too — half a
@@ -3777,7 +3824,59 @@ mod tests_apply_spread_widen_and_floor {
         let mut sub_tick = quote_with_mid(pos_or_panic!(0.005), pos_or_panic!(0.005));
         sub_tick.apply_spread(pos_or_panic!(0.004), 2);
         assert_eq!(sub_tick.call_bid, spos!(0.01));
-        assert!(sub_tick.call_ask.unwrap() >= sub_tick.call_bid.unwrap());
+        assert_eq!(sub_tick.call_ask, spos!(0.02));
+    }
+
+    #[test]
+    fn test_locked_quote_is_lifted_one_tick() {
+        // The case from #459: half of a `0.02` spread is exactly one tick at
+        // two decimals, so a sub-tick mid floors both sides onto `0.01`. The
+        // ask is lifted rather than left level with the bid.
+        for mid in [0.0001, 0.001, 0.004] {
+            let mid = Positive::new(mid).expect("test literal is positive");
+            let mut option_data = quote_with_mid(mid, mid);
+            option_data.apply_spread(pos_or_panic!(0.02), 2);
+
+            assert_eq!(option_data.call_bid, spos!(0.01), "bid held at the tick");
+            assert_eq!(option_data.call_ask, spos!(0.02), "ask lifted a tick");
+            assert_eq!(option_data.put_bid, spos!(0.01));
+            assert_eq!(option_data.put_ask, spos!(0.02));
+        }
+
+        // A two-sided book with no mid takes the other arm and follows the
+        // same rule.
+        let mut book = quote_with_mid(Positive::ONE, Positive::ONE);
+        book.call_middle = None;
+        book.put_middle = None;
+        book.call_bid = spos!(0.001);
+        book.call_ask = spos!(0.002);
+        book.put_bid = spos!(0.001);
+        book.put_ask = spos!(0.002);
+        book.apply_spread(pos_or_panic!(0.02), 2);
+
+        assert_eq!(book.call_bid, spos!(0.01));
+        assert_eq!(book.call_ask, spos!(0.02));
+        assert_eq!(book.put_bid, spos!(0.01));
+        assert_eq!(book.put_ask, spos!(0.02));
+    }
+
+    #[test]
+    fn test_two_sided_quote_is_left_where_the_widening_put_it() {
+        // The rule fires on a collision and on nothing else: a quote whose
+        // sides already differ comes out of `apply_spread` untouched by it.
+        for (mid, spread, bid, ask) in [
+            (0.06, 0.10, 0.01, 0.11),
+            (0.05, 0.04, 0.03, 0.07),
+            (9.50, 0.60, 9.20, 9.80),
+        ] {
+            let mid = Positive::new(mid).expect("test literal is positive");
+            let spread = Positive::new(spread).expect("test literal is positive");
+            let mut option_data = quote_with_mid(mid, mid);
+            option_data.apply_spread(spread, 2);
+
+            assert_eq!(option_data.call_bid, Positive::new(bid).ok());
+            assert_eq!(option_data.call_ask, Positive::new(ask).ok());
+        }
     }
 
     #[test]

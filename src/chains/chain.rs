@@ -5468,21 +5468,19 @@ mod tests_chain_base {
         assert_eq!(first.strike_price, pos_or_panic!(5250.0));
         assert_eq!(first.call_ask, spos!(630.09));
         assert_eq!(first.call_bid, spos!(630.07));
-        // Deep out-of-the-money put: quoted at the tick, not withdrawn. Bid
-        // and ask are both one tick because the spread is now applied exactly
-        // once per row (#456): the mid is sub-tick, so `mid - half` floors to
-        // the tick and `mid + half` rounds down to it. The ask used to sit one
-        // tick higher only because the spread was applied three times —
-        // `calculate_prices` once per side plus `build_chain` — and the second
-        // pass widened the mid that the first pass had lifted to the tick.
+        // Deep out-of-the-money put: quoted at the tick, not withdrawn. The
+        // mid is sub-tick, so `mid - half` floors to the tick and `mid + half`
+        // rounds down to it: both sides land on `0.01` and the quote would be
+        // locked. `apply_spread` lifts the ask one tick above the bid instead
+        // (#459), so the thinnest market the builder emits is one tick wide.
         assert_eq!(first.put_bid, spos!(0.01));
-        assert_eq!(first.put_ask, spos!(0.01));
+        assert_eq!(first.put_ask, spos!(0.02));
         assert_eq!(first.put_middle, spos!(0.01));
 
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.strike_price, pos_or_panic!(6500.0));
         assert_eq!(last.call_bid, spos!(0.01));
-        assert_eq!(last.call_ask, spos!(0.01));
+        assert_eq!(last.call_ask, spos!(0.02));
         assert_eq!(last.call_middle, spos!(0.01));
         assert_eq!(last.put_ask, spos!(619.07));
         assert_eq!(last.put_bid, spos!(619.05));
