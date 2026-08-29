@@ -66,9 +66,26 @@ impl Display for Point2D {
     }
 }
 
+/// Two points are equal when both coordinates are equal.
+///
+/// `PartialEq`, `Ord` and `Hash` all read the full `(x, y)` pair, so
+/// `a == b` holds exactly when `a.cmp(&b)` is [`Ordering::Equal`], and equal
+/// points hash alike. `Ord` requires that agreement.
+///
+/// Comparing on `x` alone would also break `Point2D` in its second role: it
+/// is the *index* type of a surface (`AxisOperations<Point3D, Point2D>`),
+/// where it names a coordinate in the xy-plane and `z` is the dependent
+/// value. An x-only `Eq`/`Hash` collapses every column of a surface grid
+/// onto one cell whenever those indices pass through a `HashSet`.
+///
+/// The "one ordinate per abscissa" rule is a property of a *curve*, not of a
+/// point, and it is a container-level invariant that nothing currently
+/// enforces: [`crate::curves::Curve::new`] stores a repeated abscissa
+/// unchanged, and whether such a curve should be rejected, normalized or
+/// supported is deferred to issue #466.
 impl PartialEq for Point2D {
     fn eq(&self, other: &Self) -> bool {
-        self.x == other.x
+        self.x == other.x && self.y == other.y
     }
 }
 
@@ -76,8 +93,11 @@ impl Eq for Point2D {}
 
 impl Hash for Point2D {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.x.mantissa().hash(state);
-        self.x.scale().hash(state);
+        // Delegate to `Decimal`'s own `Hash`, which normalizes first. Hashing
+        // the raw mantissa and scale would give `dec!(1.0)` and `dec!(1.00)`
+        // different hashes even though they compare equal.
+        self.x.hash(state);
+        self.y.hash(state);
     }
 }
 
@@ -87,6 +107,8 @@ impl PartialOrd for Point2D {
     }
 }
 
+/// Orders on `(x, y)`, lexicographically: the same pair [`PartialEq`] reads,
+/// so `cmp` returns [`Ordering::Equal`] exactly when the points are equal.
 impl Ord for Point2D {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.x.cmp(&other.x) {
@@ -313,6 +335,15 @@ mod tests {
         }
     }
 
+    /// Equality reads both coordinates.
+    ///
+    /// This test used to assert `p1 == p3` and `p1 == p4` — that points
+    /// sharing an abscissa were equal whatever their ordinate. That is the
+    /// contract this type no longer has: `test_comparison_operators` below
+    /// asserts `p1 < p3` on the very same two values, and `Ord` requires
+    /// `a == b` exactly when `a.cmp(&b)` is `Equal`. Only one of the two
+    /// could survive, and the ordering is the one the rest of the crate
+    /// relies on (`BTreeSet<Point2D>`, and `Point2D` as a surface index).
     #[test]
     fn test_equal() {
         let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
@@ -320,10 +351,47 @@ mod tests {
         let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
         let p4 = Point2D::from_f64_tuple(1.0, 4.0).unwrap();
         let p5 = Point2D::from_f64_tuple(2.0, 2.0).unwrap();
+
+        // Both coordinates equal.
         assert_eq!(p1, p2);
-        assert_eq!(p1, p3);
-        assert_eq!(p1, p4);
+        // Same abscissa, different ordinate: distinct points.
+        assert_ne!(p1, p3);
+        assert_ne!(p1, p4);
+        // Different abscissa.
         assert_ne!(p1, p5);
+    }
+
+    /// `Eq` and `Ord` agree, which is what `Ord` requires of an implementor.
+    #[test]
+    fn test_eq_agrees_with_ord() {
+        let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p2 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
+
+        assert_eq!(p1.cmp(&p2), Ordering::Equal);
+        assert_eq!(p1 == p2, p1.cmp(&p2) == Ordering::Equal);
+        assert_eq!(p1 == p3, p1.cmp(&p3) == Ordering::Equal);
+    }
+
+    /// `Hash` agrees with `Eq`, including across `Decimal` scales: `1.0` and
+    /// `1.00` compare equal, so they must hash alike. The previous
+    /// implementation hashed the raw mantissa and scale and failed this.
+    #[test]
+    fn test_hash_agrees_with_eq() {
+        use std::collections::HashSet;
+
+        let p1 = Point2D::new(dec!(1.0), dec!(2.0));
+        let scaled = Point2D::new(dec!(1.00), dec!(2.000));
+        let other_y = Point2D::new(dec!(1.0), dec!(3.0));
+
+        assert_eq!(p1, scaled);
+        assert_ne!(p1, other_y);
+
+        let set: HashSet<Point2D> = [p1, scaled, other_y].into_iter().collect();
+        // `p1` and `scaled` are one entry; `other_y` is a second.
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&p1));
+        assert!(set.contains(&other_y));
     }
 }
 
@@ -599,6 +667,12 @@ mod tests_edge_cases {
         assert!(debug_str.contains("-2.25"));
     }
 
+    /// Ordering is lexicographic on `(x, y)`.
+    ///
+    /// The `p1 < p3` block below is unchanged, but it used to contradict
+    /// `test_equal`, which asserted `p1 == p3` on the same two values: a
+    /// point could be both equal to and less than another. `PartialEq` now
+    /// reads `y` as well, so the two tests agree.
     #[test]
     fn test_comparison_operators() {
         let p1 = Point2D::new(dec!(1.0), dec!(2.0));
@@ -611,13 +685,19 @@ mod tests_edge_cases {
         assert!(p2 > p1);
         assert!(p2 >= p1);
 
-        // Same x, different y
+        // Same x, different y: ordered by y, and not equal.
         assert!(p1 < p3);
         assert!(p1 <= p3);
         assert!(p3 > p1);
         assert!(p3 >= p1);
+        assert_ne!(p1, p3);
     }
 
+    /// Sorting keeps both coordinates: by `x` first, then by `y`.
+    ///
+    /// This test is unchanged and is the reason an x-only `Ord` was not an
+    /// option: the two points at `x = 1` must sort by their ordinate, not
+    /// land in whatever order the input happened to have.
     #[test]
     fn test_ordering_consistency() {
         let points = vec![

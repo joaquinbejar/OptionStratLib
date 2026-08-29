@@ -129,6 +129,15 @@ impl Surface {
     ///
     /// let object = Surface::new(points);
     /// ```
+    ///
+    /// # Duplicate coordinates
+    ///
+    /// [`Point3D`] orders on the full `(x, y, z)` triple, so `points` may
+    /// hold several heights above one xy-coordinate and `new` stores them
+    /// all, even though [`Surface::get_point`] and
+    /// [`Surface::contains_point`] return only the first match. Whether such
+    /// a surface should be rejected or normalized is unresolved; see the
+    /// issue #466.
     #[must_use]
     pub fn new(points: BTreeSet<Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
@@ -160,6 +169,21 @@ impl Surface {
     /// - For `Axis::X`, the returned curve contains points with (y, z) coordinates
     /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates
     /// - For `Axis::Z`, the returned curve contains points with (x, y) coordinates
+    ///
+    /// # Multi-valued projections
+    ///
+    /// Dropping a coordinate from a grid is multi-valued: every row of the
+    /// grid contributes a different height above the same projected abscissa.
+    /// A projection of an `n`-by-`m` grid therefore yields up to `n * m`
+    /// points, several of which share an abscissa.
+    ///
+    /// Every point is kept. The returned [`Curve`] is consequently **not**
+    /// single-valued in `x`, unlike a curve built from a series, so
+    /// interpolating it returns
+    /// [`InterpolationError::DegenerateInterval`](crate::error::InterpolationError::DegenerateInterval)
+    /// wherever two projected points share an abscissa. Callers that need a
+    /// function of the projected abscissa must aggregate the points
+    /// themselves — this method does not choose an aggregation for them.
     #[must_use]
     pub fn get_curve(&self, axis: Axis) -> Curve {
         let points = self
@@ -2165,6 +2189,13 @@ mod tests_surface_basic {
         assert_eq!(surface.y_range.1, dec!(1.0));
     }
 
+    /// Projecting out `x` maps `(x, y, z)` to `(y, z)`, which is multi-valued
+    /// on a grid: the test surface has two points at `y = 0` and two at
+    /// `y = 1`, and all five survive the projection.
+    ///
+    /// The membership probes below are unchanged, but they are stricter than
+    /// they were: `Point2D` used to compare on `x` alone, so `p == (0, 0)`
+    /// also matched `(0, 1)`. It now means what it says.
     #[test]
     fn test_get_curve_x_axis() {
         let points = create_test_points();
@@ -2204,6 +2235,9 @@ mod tests_surface_basic {
         ));
     }
 
+    /// Projecting out `y` maps `(x, y, z)` to `(x, z)`, multi-valued on a
+    /// grid for the same reason as the X-axis case above. The probes are
+    /// unchanged and now mean exact membership.
     #[test]
     fn test_get_curve_y_axis() {
         let points = create_test_points();
@@ -2226,6 +2260,9 @@ mod tests_surface_basic {
         );
     }
 
+    /// Projecting out `z` maps `(x, y, z)` to `(x, y)`: the xy-footprint of
+    /// the surface, which on a grid has several ordinates per abscissa by
+    /// construction. The probes are unchanged and now mean exact membership.
     #[test]
     fn test_get_curve_z_axis() {
         let points = create_test_points();
@@ -2662,6 +2699,21 @@ mod tests_surface_bilinear_interpolation {
         assert!(result.z > dec!(0.0) && result.z < dec!(1.0));
     }
 
+    /// Four points stacked on one xy-coordinate are an invalid quadrilateral,
+    /// and `bilinear_interpolate` says so.
+    ///
+    /// This test used to assert the *"Need at least four points"* message
+    /// instead, and it reached it because `BTreeSet::from_iter` sorts and then
+    /// deduplicates adjacent elements with `PartialEq`, not with `Ord`. With
+    /// `Point3D` comparing equal on `(x, y)`, these four points collapsed to
+    /// **one** on the way into the set, so the length guard fired and the
+    /// invalid-quadrilateral check below it was unreachable. The same four
+    /// values inserted one by one produced a set of four, because `insert`
+    /// dispatches on `Ord` — the same container, two different contents,
+    /// decided by which constructor was used.
+    ///
+    /// `PartialEq` now agrees with `Ord`, so the set holds all four and the
+    /// check the test is named after is the one that runs.
     #[test]
     fn test_invalid_quadrilateral() {
         let points = BTreeSet::from_iter(vec![
@@ -2670,12 +2722,14 @@ mod tests_surface_bilinear_interpolation {
             Point3D::new(dec!(0.0), dec!(0.0), dec!(2.0)),
             Point3D::new(dec!(0.0), dec!(0.0), dec!(3.0)),
         ]);
+        assert_eq!(points.len(), 4, "all four heights are distinct points");
+
         let surface = Surface::new(points);
         let result = surface.bilinear_interpolate(Point2D::new(dec!(0.0), dec!(0.0)));
         assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(InterpolationError::Bilinear(msg)) if msg.contains("Need at least four points for bilinear interpolation")
+            Err(InterpolationError::Bilinear(msg)) if msg.contains("Invalid quadrilateral")
         ));
     }
 
@@ -3670,13 +3724,30 @@ mod tests_axis_operations {
         );
     }
 
+    /// Merging a 2x2 grid with itself yields all four xy-coordinates.
+    ///
+    /// This test used to assert `merged.len() == 2`, and it passed. That was
+    /// not the specification, it was data loss: `merge_indexes` funnels the
+    /// index values through a `HashSet<Input>`, `Input` is `Point2D` for a
+    /// surface, and `Point2D` hashed and compared on `x` alone — so both
+    /// cells of every column collapsed into one and half the grid vanished
+    /// before `merge_axis_interpolate` ever saw it. `Point2D` now carries
+    /// both coordinates in `Eq` and `Hash`, so the axis survives the merge.
     #[test]
     fn test_merge_indexes() {
         let surface1 = create_test_surface();
         let surface2 = create_test_surface();
         let merged = surface1.merge_indexes(surface2.get_index_values());
 
-        assert_eq!(merged.len(), 2);
+        assert_eq!(merged.len(), 4);
+        for expected in [
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(0.0), dec!(1.0)),
+            Point2D::new(dec!(1.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ] {
+            assert!(merged.contains(&expected), "missing index {expected}");
+        }
     }
 }
 
