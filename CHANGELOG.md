@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Two `ProtectivePut` methods are now fallible, which is a breaking change**
+  (#460). `total_fees` returns `Result<Positive, PositiveError>` instead of
+  `Positive`, and `protection_level` returns
+  `Result<Decimal, StrategyError>` instead of `Decimal`. Both aborted the
+  process on inputs a caller can supply: the fee sum used the raw `Positive +
+  Positive`, which panics for a fee at `Positive::MAX`, and `protection_level`
+  divided by the spot cost basis with the raw operator, which a zero
+  underlying price turns into a panic. Adding `try_` twins instead would have
+  left the panicking methods in place, which is the opposite of what this
+  sweep is for.
+
+  To migrate, add `?` where the value feeds a fallible function, or
+  `.expect("…")` at a boundary that cannot propagate. `ProtectivePut::new` now
+  rejects a zero underlying price as well, so a position built through the
+  constructor never reaches the error arm of `protection_level`; a
+  deserialized one can.
+
 - **A zero-volatility American or Bermuda option is no longer priced as a
   European, so its price goes up** (#449). `price_binomial` short-circuited
   every contract with `volatility == 0` to the discounted forward payoff,
