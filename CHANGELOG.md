@@ -29,6 +29,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every arithmetic Asian option with `r = q` was mispriced** (#454). The
+  Turnbull-Wakeman second moment short-circuited its removable `b = 0`
+  singularity to `M2 = S² e^{σ² T}`, which is `E[S_T²]`: the second moment of
+  the *terminal* price, not of its average. The `b → 0` limit of the double
+  integral the function actually implements is
+  `M2 = (2 S² / (σ² T²)) [ (e^{σ² T} − 1) / σ² − T ]`. The stand-in handed the
+  moment matching `σ_adj = σ` where the average carries `σ_adj ≈ σ / √3`, so
+  the price came out far too high and the branch was discontinuous: a one-year
+  ATM call on `S = K = 100`, `σ = 20%`, `r = q = 4%` returned
+  **7.6532330880**, against `4.4308752837` and `4.4308753262` for a carry a
+  billionth either side. It now returns **4.4308753052**, which agrees with
+  quadrature on the defining integral to `3e-10` and with both neighbours to
+  `2.2e-8`. A forward-priced or fully-carried underlying is an ordinary
+  contract, so every pinned `r = q` Asian value moves.
+- **A zero-volatility Asian option priced off the terminal forward instead of
+  the average** (#454). Both kernels short-circuited `σ = 0` to
+  `(S e^{bT} − K)⁺ e^{−rT}`, but a deterministic path still has to be
+  averaged: the geometric mean of `S e^{b t}` over the window is `S e^{bT/2}`
+  and the arithmetic mean is `S (e^{bT} − 1) / (bT)`, which are also the
+  `σ → 0` limits of the Kemna-Vorst and Turnbull-Wakeman formulas the branches
+  stand in for. A one-year ATM call on `S = K = 100`, `r = 5%`, `q = 0`
+  returned **4.8770575499** from both kernels and now returns
+  **2.4080487528** (geometric) and **2.4182085485** (arithmetic). The old
+  value was only correct at `b = 0`, where every average collapses to `S`.
 - **Reachable panic in the lower break-even of eight strategies.**
   `strike - credit` was computed with the raw `Positive - Decimal` operator,
   which panics when the credit (or, on a long structure, the debit) exceeds the
