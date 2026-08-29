@@ -127,6 +127,82 @@ scan-banned:
 	fi; \
 	echo "OK: no .unwrap()/.expect() in production code"
 
+# Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
+# and they only work as a pair: `cargo public-api` does not read the source,
+# it reads rustdoc JSON, whose schema is unstable and versioned
+# (`format_version`). A floating nightly can therefore start emitting a schema
+# the installed CLI cannot parse, and a floating CLI can render the same
+# rustdoc JSON differently. Pinning both is what keeps an unchanged commit
+# from producing a different snapshot in a different environment.
+#
+# Bumping either pin is a deliberate act: change the value here, run
+# `make public-api-update`, and commit the resulting snapshot diff.
+# `.github/workflows/public_api.yml` reads both values from this file (see
+# `print-public-api-pins`) so CI cannot drift from a local run.
+CARGO_PUBLIC_API_VERSION := 0.52.0
+PUBLIC_API_NIGHTLY := nightly-2026-08-28
+
+# Installs the tooling `public-api-check`/`public-api-update` need: the
+# `cargo public-api` subcommand at the pinned version, plus the pinned nightly
+# toolchain to build rustdoc JSON from (it does not need to be the
+# active/default toolchain, so it coexists with the `stable` channel pinned in
+# rust-toolchain.toml, and it is never used to build the crate itself).
+#
+# The version comparison is not just a first-run install guard: CI restores
+# `~/.cargo/bin` from a cache whose `restore-keys` can hand back an older
+# binary, so an already-installed CLI at the wrong version is reinstalled
+# rather than silently accepted.
+.PHONY: check-cargo-public-api
+check-cargo-public-api:
+	@installed=$$(cargo-public-api --version 2>/dev/null | awk '{print $$2}'); \
+	if [ "$$installed" != "$(CARGO_PUBLIC_API_VERSION)" ]; then \
+		echo "Installing cargo-public-api $(CARGO_PUBLIC_API_VERSION) (found: $${installed:-none})..."; \
+		cargo install cargo-public-api --locked --version $(CARGO_PUBLIC_API_VERSION); \
+	fi
+	@rustup toolchain list | grep -q '^$(PUBLIC_API_NIGHTLY)' || (echo "Installing $(PUBLIC_API_NIGHTLY) for rustdoc JSON..."; rustup toolchain install $(PUBLIC_API_NIGHTLY) --profile minimal)
+
+# Prints the pinned tooling versions as `key=value` lines, one per line, for
+# .github/workflows/public_api.yml to append to $$GITHUB_OUTPUT. Keeps the
+# pins defined in exactly one place.
+.PHONY: print-public-api-pins
+print-public-api-pins:
+	@echo "cargo_public_api_version=$(CARGO_PUBLIC_API_VERSION)"
+	@echo "public_api_nightly=$(PUBLIC_API_NIGHTLY)"
+
+# Regenerates public-api/optionstratlib.txt, the checked-in snapshot of the
+# crate's full public API (built with --all-features, matching semver.yml's
+# feature-group). Run this and commit the result in the same PR whenever a
+# change to a `pub` item is intentional. `-sss` omits Blanket/Auto
+# Trait/Auto Derived impls so the snapshot and its diffs stay reviewable;
+# losing one of those (e.g. a dropped `Send`/`Debug`) is already caught by
+# the `semver` CI job's auto_trait_impl_removed / derive_trait_impl_removed
+# lints, so nothing is lost by omitting them here.
+.PHONY: public-api-update
+public-api-update: check-cargo-public-api
+	@mkdir -p public-api
+	cargo +$(PUBLIC_API_NIGHTLY) public-api -sss --all-features > public-api/optionstratlib.txt
+
+# Fails when the crate's public API has drifted from public-api/optionstratlib.txt
+# without the snapshot being updated to match, i.e. an *unacknowledged* API
+# change slipped in. This catches classes of breakage cargo-semver-checks
+# does not lint for on its own, e.g. a function's return type changing from
+# `T` to `Result<T, E>` (see
+# https://github.com/obi1kenobi/cargo-semver-checks/issues/1613, confirmed a
+# known gap by the maintainer). Run `make public-api-update` and commit the
+# resulting diff to acknowledge a deliberate change.
+.PHONY: public-api-check
+public-api-check: check-cargo-public-api
+	@mkdir -p target/public-api
+	@cargo +$(PUBLIC_API_NIGHTLY) public-api -sss --all-features > target/public-api/optionstratlib.txt
+	@if ! diff -u public-api/optionstratlib.txt target/public-api/optionstratlib.txt; then \
+		echo; \
+		echo "Public API drifted from public-api/optionstratlib.txt (see diff above)."; \
+		echo "If this change is intentional, run 'make public-api-update', review the"; \
+		echo "resulting diff, and commit it together with this change."; \
+		exit 1; \
+	fi
+	@echo "OK: public API matches public-api/optionstratlib.txt"
+
 # Run the project
 .PHONY: run
 run:
