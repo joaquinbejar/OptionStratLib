@@ -85,6 +85,20 @@ use crate::error::InterpolationError;
 ///
 /// This trait is part of a broader framework supporting multiple interpolation techniques,
 /// allowing developers to extend and choose specific methods as per the dataset requirements.
+///
+/// # One point per abscissa
+///
+/// Every interpolator here reads its sample as a function of the abscissa:
+/// at most one ordinate per `x`. See
+/// [`Curve::new`](crate::curves::Curve::new) for the rule and for why no
+/// constructor enforces it. A sample carrying several ordinates at one
+/// abscissa is outside the contract, and the answer is
+/// [`InterpolationError::DegenerateInterval`], never one of the stacked
+/// ordinates chosen silently: the bracket around a repeated abscissa has
+/// zero width and the slope across it is undefined. A projection of a
+/// surface is multi-valued by construction, which is why
+/// [`Surface::project_onto`](crate::surfaces::Surface::project_onto) returns a
+/// `Vec<Point2D>` and not a curve; aggregate it before interpolating.
 pub trait SplineInterpolation<Point, Input> {
     /// Interpolates a y-value for the provided x-coordinate using spline interpolation.
     ///

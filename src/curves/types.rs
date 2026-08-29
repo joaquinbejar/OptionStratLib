@@ -79,10 +79,13 @@ impl Display for Point2D {
 /// onto one cell whenever those indices pass through a `HashSet`.
 ///
 /// The "one ordinate per abscissa" rule is a property of a *curve*, not of a
-/// point, and it is a container-level invariant that nothing currently
-/// enforces: [`crate::curves::Curve::new`] stores a repeated abscissa
-/// unchanged, and whether such a curve should be rejected, normalized or
-/// supported is deferred to issue #466.
+/// point, and it is a container-level invariant that nothing enforces:
+/// [`crate::curves::Curve::new`] stores a repeated abscissa unchanged, and
+/// `points` is a `pub` field, so no constructor could. The rule and what
+/// each consumer does when it is broken are documented on
+/// [`crate::curves::Curve::new`]. A genuinely multi-valued projection is not
+/// a curve at all: [`crate::surfaces::Surface::project_onto`] returns a
+/// `Vec<Point2D>`.
 impl PartialEq for Point2D {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y

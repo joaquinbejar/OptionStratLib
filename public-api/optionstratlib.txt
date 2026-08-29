@@ -10941,9 +10941,9 @@ pub optionstratlib::prelude::Surface::points: alloc::collections::btree::set::BT
 pub optionstratlib::prelude::Surface::x_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 pub optionstratlib::prelude::Surface::y_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 impl optionstratlib::surfaces::Surface
-pub fn optionstratlib::surfaces::Surface::get_curve(&self, optionstratlib::surfaces::types::Axis) -> optionstratlib::curves::Curve
 pub fn optionstratlib::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)>
 pub fn optionstratlib::surfaces::Surface::new(alloc::collections::btree::set::BTreeSet<optionstratlib::surfaces::Point3D>) -> Self
+pub fn optionstratlib::surfaces::Surface::project_onto(&self, optionstratlib::surfaces::types::Axis) -> alloc::vec::Vec<optionstratlib::curves::Point2D>
 impl core::convert::From<optionstratlib::surfaces::Surface> for optionstratlib::visualization::GraphData
 pub fn optionstratlib::visualization::GraphData::from(optionstratlib::surfaces::Surface) -> Self
 impl core::default::Default for optionstratlib::surfaces::Surface
@@ -26232,9 +26232,9 @@ pub optionstratlib::surfaces::Surface::points: alloc::collections::btree::set::B
 pub optionstratlib::surfaces::Surface::x_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 pub optionstratlib::surfaces::Surface::y_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 impl optionstratlib::surfaces::Surface
-pub fn optionstratlib::surfaces::Surface::get_curve(&self, optionstratlib::surfaces::types::Axis) -> optionstratlib::curves::Curve
 pub fn optionstratlib::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)>
 pub fn optionstratlib::surfaces::Surface::new(alloc::collections::btree::set::BTreeSet<optionstratlib::surfaces::Point3D>) -> Self
+pub fn optionstratlib::surfaces::Surface::project_onto(&self, optionstratlib::surfaces::types::Axis) -> alloc::vec::Vec<optionstratlib::curves::Point2D>
 impl core::convert::From<optionstratlib::surfaces::Surface> for optionstratlib::visualization::GraphData
 pub fn optionstratlib::visualization::GraphData::from(optionstratlib::surfaces::Surface) -> Self
 impl core::default::Default for optionstratlib::surfaces::Surface

@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`Surface::get_curve` is renamed to `Surface::project_onto` and returns
+  `Vec<Point2D>` instead of `Curve`, which is a breaking change** (#466).
+  One change with one reason: the method is a projection, and both its name
+  and its type said it was a curve. Projecting a surface onto one axis is
+  multi-valued by construction: every row of a grid contributes a different
+  height above the same projected abscissa, and two rows that agree on the
+  two surviving coordinates project onto the very same point. A `Curve` is a
+  function of its abscissa and stores its points in a `BTreeSet`, so it
+  silently dropped the collisions. The vector keeps every point:
+  `surface.project_onto(axis).len() == surface.points.len()`, always.
+  Contents are sorted ascending by the projected `(x, y)` pair, which is the
+  order the `BTreeSet` gave; only its deduplication is gone.
+
+  The method has no production callers and its `Axis` parameter type is not
+  re-exported, so it is uncallable from outside the crate. To migrate inside
+  it, aggregate the ordinates sharing an abscissa to one value, then build the
+  `Curve`; `Curve::from_vector(surface.project_onto(axis))` reproduces the old
+  behaviour, losses included. The note on `Surface::get_curve` under the #450
+  entry below describes the method by its former name.
+
+- **Interpolating a curve at a repeated abscissa now fails instead of
+  returning the lowest ordinate stacked there** (#466). `Curve` is documented
+  as a function of its abscissa, but nothing enforces it (`points` is a `pub`
+  field, so no constructor could). `linear_interpolate`, `cubic_interpolate`
+  and `spline_interpolate` return `InterpolationError::DegenerateInterval`
+  when several points share the requested `x`, rather than picking one of
+  them: the value there is not defined and no choice among them is less
+  arbitrary than another. A curve with one point per abscissa is unaffected,
+  and `AxisOperations::get_values` still reads every ordinate at an abscissa.
+  The exact-match branch of `Curve::bilinear_interpolate` still returns the
+  lowest ordinate; it is being reworked under #451.
+
+  The one-point-per-abscissa rule, and what each consumer does when it is
+  broken, are now stated on `Curve::new`, `Curve::from_vector`,
+  `Curve::merge`, `get_point`, `contains_point`, `get_values`,
+  `merge_axis_interpolate`, the four interpolation traits and
+  `find_bracket_points`, with the matching one-height-per-xy-coordinate rule
+  on `Surface::new`.
+
 - **Two `ProtectivePut` methods are now fallible, which is a breaking change**
   (#460). `total_fees` returns `Result<Positive, PositiveError>` instead of
   `Positive`, and `protection_level` returns
