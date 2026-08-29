@@ -45,7 +45,7 @@
 
 use crate::error::PricingError;
 use crate::greeks::big_n;
-use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use crate::model::types::OptionStyle;
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -123,12 +123,13 @@ const TOLERANCE: f64 = 1e-6;
 ///
 /// # Errors
 ///
-/// Returns `PricingError::MethodError` (with method
-/// `barone_adesi_whaley`) when the intermediate Newton–Raphson
-/// iteration cannot converge on the early-exercise boundary
-/// `Sx`, and [`PricingError::SqrtFailure`] when the quadratic
-/// formula receives a negative discriminant from the approximation
-/// parameters.
+/// - [`PricingError::MethodError`] when the quadratic formula receives a
+///   negative discriminant, or when the internal `d1` rejects its inputs (a
+///   non-positive time, volatility, underlying or strike).
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range, or when a moneyness ratio underflows to
+///   zero: the BAW parameters `M`, `N`, `q1` / `q2`, the Newton-Raphson
+///   boundary iteration, or the early-exercise premium.
 pub fn barone_adesi_whaley(
     spot: Positive,
     strike: Positive,
@@ -162,8 +163,8 @@ pub fn barone_adesi_whaley(
         // Zero volatility: deterministic pricing
         let neg_rt = d_mul(-r, t, "pricing::american::zero_vol::rt")?;
         let neg_qt = d_mul(-q, t, "pricing::american::zero_vol::qt")?;
-        let discount_r = neg_rt.exp();
-        let discount_q = neg_qt.exp();
+        let discount_r = d_exp(neg_rt, "pricing::american::zero_vol::discount_r")?;
+        let discount_q = d_exp(neg_qt, "pricing::american::zero_vol::discount_q")?;
         let s_disc = d_mul(s, discount_q, "pricing::american::zero_vol::s_disc")?;
         let k_disc = d_mul(k, discount_r, "pricing::american::zero_vol::k_disc")?;
         return Ok(match option_style {
@@ -185,21 +186,68 @@ pub fn barone_adesi_whaley(
     }
 
     // Calculate BAW parameters
-    let sigma_sq = sigma * sigma;
-    let m = dec!(2) * r / sigma_sq;
-    let n = dec!(2) * (r - q) / sigma_sq;
-    let k_factor = dec!(1) - (-r * t).exp();
+    let sigma_sq = d_mul(sigma, sigma, "pricing::american::sigma_sq")?;
+    let m = d_div(
+        d_mul(dec!(2), r, "pricing::american::two_r")?,
+        sigma_sq,
+        "pricing::american::m",
+    )?;
+    let n = d_div(
+        d_mul(
+            dec!(2),
+            d_sub(r, q, "pricing::american::carry")?,
+            "pricing::american::two_carry",
+        )?,
+        sigma_sq,
+        "pricing::american::n",
+    )?;
+    let k_factor = d_sub(
+        dec!(1),
+        d_exp(
+            d_mul(-r, t, "pricing::american::neg_rt")?,
+            "pricing::american::discount",
+        )?,
+        "pricing::american::k_factor",
+    )?;
+
+    // `4M / K` with `K = 1 - e^(-rT)`. `K` is exactly zero at `r = 0` (and
+    // whenever `rT` rounds `e^(-rT)` back to one), where `M` is zero too. The
+    // limit of `4M / K = (8r/σ²) / (1 - e^(-rT))` as `rT → 0` is `8 / (σ² T)`,
+    // which is what the ratio is replaced by there.
+    let four_m_over_k = if k_factor.is_zero() {
+        d_div(
+            dec!(8),
+            d_mul(sigma_sq, t, "pricing::american::variance_time")?,
+            "pricing::american::four_m_over_k_limit",
+        )?
+    } else {
+        d_div(
+            d_mul(dec!(4), m, "pricing::american::four_m")?,
+            k_factor,
+            "pricing::american::four_m_over_k",
+        )?
+    };
+
+    let n_minus_one = d_sub(n, dec!(1), "pricing::american::n_minus_one")?;
+    let discriminant = d_add(
+        d_powd(n_minus_one, Decimal::TWO, "pricing::american::n_squared")?,
+        four_m_over_k,
+        "pricing::american::discriminant",
+    )?;
+    let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
+        PricingError::method_error(
+            "baw",
+            "cannot calculate square root of negative discriminant",
+        )
+    })?;
 
     match option_style {
         OptionStyle::Call => {
-            let discriminant = (n - dec!(1)).powi(2) + dec!(4) * m / k_factor;
-            let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
-                PricingError::method_error(
-                    "baw",
-                    "cannot calculate square root of negative discriminant",
-                )
-            })?;
-            let q2 = (-(n - dec!(1)) + sqrt_disc) / dec!(2);
+            let q2 = d_div(
+                d_add(-n_minus_one, sqrt_disc, "pricing::american::q2_numerator")?,
+                dec!(2),
+                "pricing::american::q2",
+            )?;
 
             // Find critical price S*
             let s_star = find_critical_price_call(s, k, t, r, q, sigma, q2)?;
@@ -212,8 +260,31 @@ pub fn barone_adesi_whaley(
                 // Early exercise premium
                 let d1_val = d1(s_star, k, t, r, q, sigma)?;
                 let n_d1 = big_n(d1_val)?;
-                let a2 = (s_star / q2) * (dec!(1) - (-q * t).exp() * n_d1);
-                let early_exercise_premium = a2 * (s / s_star).powd(q2);
+                let a2 = d_mul(
+                    d_div(s_star, q2, "pricing::american::call::a2_scale")?,
+                    d_sub(
+                        dec!(1),
+                        d_mul(
+                            d_exp(
+                                d_mul(-q, t, "pricing::american::call::neg_qt")?,
+                                "pricing::american::call::dividend_discount",
+                            )?,
+                            n_d1,
+                            "pricing::american::call::a2_weight",
+                        )?,
+                        "pricing::american::call::a2_bracket",
+                    )?,
+                    "pricing::american::call::a2",
+                )?;
+                let early_exercise_premium = d_mul(
+                    a2,
+                    d_powd(
+                        d_div(s, s_star, "pricing::american::call::moneyness")?,
+                        q2,
+                        "pricing::american::call::power",
+                    )?,
+                    "pricing::american::call::premium",
+                )?;
                 d_add(
                     european_price,
                     early_exercise_premium,
@@ -223,14 +294,11 @@ pub fn barone_adesi_whaley(
             }
         }
         OptionStyle::Put => {
-            let discriminant = (n - dec!(1)).powi(2) + dec!(4) * m / k_factor;
-            let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
-                PricingError::method_error(
-                    "baw",
-                    "cannot calculate square root of negative discriminant",
-                )
-            })?;
-            let q1 = (-(n - dec!(1)) - sqrt_disc) / dec!(2);
+            let q1 = d_div(
+                d_sub(-n_minus_one, sqrt_disc, "pricing::american::q1_numerator")?,
+                dec!(2),
+                "pricing::american::q1",
+            )?;
 
             // Find critical price S**
             let s_star_star = find_critical_price_put(s, k, t, r, q, sigma, q1)?;
@@ -243,8 +311,31 @@ pub fn barone_adesi_whaley(
                 // Early exercise premium
                 let d1_val = d1(s_star_star, k, t, r, q, sigma)?;
                 let n_minus_d1 = big_n(-d1_val)?;
-                let a1 = -(s_star_star / q1) * (dec!(1) - (-q * t).exp() * n_minus_d1);
-                let early_exercise_premium = a1 * (s / s_star_star).powd(q1);
+                let a1 = d_mul(
+                    -d_div(s_star_star, q1, "pricing::american::put::a1_scale")?,
+                    d_sub(
+                        dec!(1),
+                        d_mul(
+                            d_exp(
+                                d_mul(-q, t, "pricing::american::put::neg_qt")?,
+                                "pricing::american::put::dividend_discount",
+                            )?,
+                            n_minus_d1,
+                            "pricing::american::put::a1_weight",
+                        )?,
+                        "pricing::american::put::a1_bracket",
+                    )?,
+                    "pricing::american::put::a1",
+                )?;
+                let early_exercise_premium = d_mul(
+                    a1,
+                    d_powd(
+                        d_div(s, s_star_star, "pricing::american::put::moneyness")?,
+                        q1,
+                        "pricing::american::put::power",
+                    )?,
+                    "pricing::american::put::premium",
+                )?;
                 d_add(
                     european_price,
                     early_exercise_premium,
@@ -269,22 +360,41 @@ fn black_scholes_european(
     option_style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
     let d1_val = d1(s, k, t, r, q, sigma)?;
-    let sqrt_t = t.sqrt().ok_or_else(|| {
-        PricingError::method_error("black_scholes", "cannot calculate square root of time")
-    })?;
-    let d2_val = d1_val - sigma * sqrt_t;
+    let sqrt_t = d_sqrt(t, "pricing::american::european::sqrt_t")?;
+    let d2_val = d_sub(
+        d1_val,
+        d_mul(sigma, sqrt_t, "pricing::american::european::sigma_sqrt_t")?,
+        "pricing::american::european::d2",
+    )?;
 
-    let discount = (-r * t).exp();
-    let forward_factor = (-q * t).exp();
+    let discount = d_exp(
+        d_mul(-r, t, "pricing::american::european::neg_rt")?,
+        "pricing::american::european::discount",
+    )?;
+    let forward_factor = d_exp(
+        d_mul(-q, t, "pricing::american::european::neg_qt")?,
+        "pricing::american::european::forward_factor",
+    )?;
 
     let n_d1 = big_n(d1_val)?;
     let n_d2 = big_n(d2_val)?;
     let n_minus_d1 = big_n(-d1_val)?;
     let n_minus_d2 = big_n(-d2_val)?;
 
+    let s_pv = d_mul(s, forward_factor, "pricing::american::european::s_pv")?;
+    let k_pv = d_mul(k, discount, "pricing::american::european::k_pv")?;
+
     match option_style {
-        OptionStyle::Call => Ok(s * forward_factor * n_d1 - k * discount * n_d2),
-        OptionStyle::Put => Ok(k * discount * n_minus_d2 - s * forward_factor * n_minus_d1),
+        OptionStyle::Call => Ok(d_sub(
+            d_mul(s_pv, n_d1, "pricing::american::european::call::spot")?,
+            d_mul(k_pv, n_d2, "pricing::american::european::call::strike")?,
+            "pricing::american::european::call",
+        )?),
+        OptionStyle::Put => Ok(d_sub(
+            d_mul(k_pv, n_minus_d2, "pricing::american::european::put::strike")?,
+            d_mul(s_pv, n_minus_d1, "pricing::american::european::put::spot")?,
+            "pricing::american::european::put",
+        )?),
     }
 }
 
@@ -303,11 +413,40 @@ fn d1(
             "time and volatility must be positive",
         ));
     }
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::method_error("d1", "cannot calculate square root of time"))?;
-    let ln_s_k = (s / k).ln();
-    Ok((ln_s_k + (r - q + sigma * sigma / dec!(2)) * t) / (sigma * sqrt_t))
+    // `ln(S / K)` is undefined for a zero underlying or a zero strike, so both
+    // are rejected before the ratio is formed.
+    if s <= Decimal::ZERO || k <= Decimal::ZERO {
+        return Err(PricingError::method_error(
+            "d1",
+            "underlying price and strike must be positive",
+        ));
+    }
+    let sqrt_t = d_sqrt(t, "pricing::american::d1::sqrt_t")?;
+    let ln_s_k = d_ln(
+        d_div(s, k, "pricing::american::d1::moneyness")?,
+        "pricing::american::d1::log_moneyness",
+    )?;
+    Ok(d_div(
+        d_add(
+            ln_s_k,
+            d_mul(
+                d_add(
+                    d_sub(r, q, "pricing::american::d1::carry")?,
+                    d_div(
+                        d_mul(sigma, sigma, "pricing::american::d1::variance")?,
+                        dec!(2),
+                        "pricing::american::d1::half_variance",
+                    )?,
+                    "pricing::american::d1::drift_rate",
+                )?,
+                t,
+                "pricing::american::d1::drift",
+            )?,
+            "pricing::american::d1::numerator",
+        )?,
+        d_mul(sigma, sqrt_t, "pricing::american::d1::denominator")?,
+        "pricing::american::d1",
+    )?)
 }
 
 /// Finds the critical price S* for American calls using Newton-Raphson.
@@ -323,41 +462,78 @@ fn find_critical_price_call(
     q2: Decimal,
 ) -> Result<Decimal, PricingError> {
     // Initial guess: use strike as starting point
-    let mut s_star = strike * dec!(1.1);
+    let mut s_star = d_mul(strike, dec!(1.1), "pricing::american::call::s_star_seed")?;
+    let exp_qt = d_exp(
+        d_mul(-q, t, "pricing::american::call::neg_qt_seed")?,
+        "pricing::american::call::dividend_discount_seed",
+    )?;
+    let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));
+
+    // `C_euro(S) + (S / q2)(1 - e^(-qT) N(d1(S)))`: the right-hand side of the
+    // BAW boundary condition, evaluated at `S` and at the bumped `S + ΔS`.
+    let boundary_rhs = |spot: Decimal| -> Result<Decimal, PricingError> {
+        let d1_val = d1(spot, strike, t, r, q, sigma)?;
+        let n_d1 = big_n(d1_val)?;
+        let c_euro = black_scholes_european(spot, strike, t, r, q, sigma, &OptionStyle::Call)?;
+        Ok(d_add(
+            c_euro,
+            d_mul(
+                d_div(spot, q2, "pricing::american::call::boundary_scale")?,
+                d_sub(
+                    dec!(1),
+                    d_mul(exp_qt, n_d1, "pricing::american::call::boundary_weight")?,
+                    "pricing::american::call::boundary_bracket",
+                )?,
+                "pricing::american::call::boundary_premium",
+            )?,
+            "pricing::american::call::boundary_rhs",
+        )?)
+    };
 
     for _ in 0..MAX_ITERATIONS {
-        let d1_val = d1(s_star, strike, t, r, q, sigma)?;
-        let n_d1 = big_n(d1_val)?;
-        let exp_qt = (-q * t).exp();
-
         // Function: f(S*) = S* - K - C_european(S*) - (S*/q2)(1 - e^(-qT) * N(d1))
-        let c_euro = black_scholes_european(s_star, strike, t, r, q, sigma, &OptionStyle::Call)?;
-        let lhs = s_star - strike;
-        let rhs = c_euro + (s_star / q2) * (dec!(1) - exp_qt * n_d1);
-        let f = lhs - rhs;
+        let f = d_sub(
+            d_sub(s_star, strike, "pricing::american::call::lhs")?,
+            boundary_rhs(s_star)?,
+            "pricing::american::call::f",
+        )?;
 
         // Derivative approximation
-        let delta_s = s_star * dec!(0.0001);
-        let d1_plus = d1(s_star + delta_s, strike, t, r, q, sigma)?;
-        let n_d1_plus = big_n(d1_plus)?;
-        let c_euro_plus =
-            black_scholes_european(s_star + delta_s, strike, t, r, q, sigma, &OptionStyle::Call)?;
-        let rhs_plus = c_euro_plus + ((s_star + delta_s) / q2) * (dec!(1) - exp_qt * n_d1_plus);
-        let f_plus = (s_star + delta_s) - strike - rhs_plus;
+        let delta_s = d_mul(s_star, dec!(0.0001), "pricing::american::call::delta_s")?;
+        if delta_s.is_zero() {
+            // The bump underflowed below the representable scale, so no
+            // derivative is available: fall back to the current estimate.
+            break;
+        }
+        let bumped = d_add(s_star, delta_s, "pricing::american::call::bumped")?;
+        let f_plus = d_sub(
+            d_sub(bumped, strike, "pricing::american::call::lhs_plus")?,
+            boundary_rhs(bumped)?,
+            "pricing::american::call::f_plus",
+        )?;
 
-        let f_prime: Decimal = (f_plus - f) / delta_s;
+        let f_prime: Decimal = d_div(
+            d_sub(f_plus, f, "pricing::american::call::df")?,
+            delta_s,
+            "pricing::american::call::f_prime",
+        )?;
 
         if f_prime.abs() < dec!(1e-10) {
             break;
         }
 
-        let s_star_new = s_star - f / f_prime;
+        let s_star_new = d_sub(
+            s_star,
+            d_div(f, f_prime, "pricing::american::call::newton_step")?,
+            "pricing::american::call::s_star_new",
+        )?;
 
-        if (s_star_new - s_star).abs() < Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6)) {
+        if d_sub(s_star_new, s_star, "pricing::american::call::convergence")?.abs() < tolerance {
             return Ok(s_star_new.max(strike)); // S* must be >= K for calls
         }
 
-        s_star = s_star_new.max(strike * dec!(0.5)); // Keep S* reasonable
+        // Keep S* reasonable
+        s_star = s_star_new.max(d_mul(strike, dec!(0.5), "pricing::american::call::floor")?);
     }
 
     // Return best estimate
@@ -377,43 +553,82 @@ fn find_critical_price_put(
     q1: Decimal,
 ) -> Result<Decimal, PricingError> {
     // Initial guess: use strike as starting point
-    let mut s_star = strike * dec!(0.9);
+    let mut s_star = d_mul(strike, dec!(0.9), "pricing::american::put::s_star_seed")?;
+    let exp_qt = d_exp(
+        d_mul(-q, t, "pricing::american::put::neg_qt_seed")?,
+        "pricing::american::put::dividend_discount_seed",
+    )?;
+    let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));
+
+    // `P_euro(S) - (S / q1)(1 - e^(-qT) N(-d1(S)))`: the right-hand side of the
+    // BAW boundary condition, evaluated at `S` and at the bumped `S + ΔS`.
+    let boundary_rhs = |spot: Decimal| -> Result<Decimal, PricingError> {
+        let d1_val = d1(spot, strike, t, r, q, sigma)?;
+        let n_minus_d1 = big_n(-d1_val)?;
+        let p_euro = black_scholes_european(spot, strike, t, r, q, sigma, &OptionStyle::Put)?;
+        Ok(d_sub(
+            p_euro,
+            d_mul(
+                d_div(spot, q1, "pricing::american::put::boundary_scale")?,
+                d_sub(
+                    dec!(1),
+                    d_mul(
+                        exp_qt,
+                        n_minus_d1,
+                        "pricing::american::put::boundary_weight",
+                    )?,
+                    "pricing::american::put::boundary_bracket",
+                )?,
+                "pricing::american::put::boundary_premium",
+            )?,
+            "pricing::american::put::boundary_rhs",
+        )?)
+    };
 
     for _ in 0..MAX_ITERATIONS {
-        let d1_val = d1(s_star, strike, t, r, q, sigma)?;
-        let n_minus_d1 = big_n(-d1_val)?;
-        let exp_qt = (-q * t).exp();
-
         // Function: f(S**) = K - S** - P_european(S**) + (S**/q1)(1 - e^(-qT) * N(-d1))
-        let p_euro = black_scholes_european(s_star, strike, t, r, q, sigma, &OptionStyle::Put)?;
-        let lhs = strike - s_star;
-        let rhs = p_euro - (s_star / q1) * (dec!(1) - exp_qt * n_minus_d1);
-        let f = lhs - rhs;
+        let f = d_sub(
+            d_sub(strike, s_star, "pricing::american::put::lhs")?,
+            boundary_rhs(s_star)?,
+            "pricing::american::put::f",
+        )?;
 
         // Derivative approximation
-        let delta_s = s_star * dec!(0.0001);
-        let delta_s = delta_s.max(dec!(0.01)); // Ensure minimum step
-        let d1_plus = d1(s_star + delta_s, strike, t, r, q, sigma)?;
-        let n_minus_d1_plus = big_n(-d1_plus)?;
-        let p_euro_plus =
-            black_scholes_european(s_star + delta_s, strike, t, r, q, sigma, &OptionStyle::Put)?;
-        let rhs_plus =
-            p_euro_plus - ((s_star + delta_s) / q1) * (dec!(1) - exp_qt * n_minus_d1_plus);
-        let f_plus = strike - (s_star + delta_s) - rhs_plus;
+        let delta_s =
+            d_mul(s_star, dec!(0.0001), "pricing::american::put::delta_s")?.max(dec!(0.01)); // Ensure minimum step
+        let bumped = d_add(s_star, delta_s, "pricing::american::put::bumped")?;
+        let f_plus = d_sub(
+            d_sub(strike, bumped, "pricing::american::put::lhs_plus")?,
+            boundary_rhs(bumped)?,
+            "pricing::american::put::f_plus",
+        )?;
 
-        let f_prime: Decimal = (f_plus - f) / delta_s;
+        let f_prime: Decimal = d_div(
+            d_sub(f_plus, f, "pricing::american::put::df")?,
+            delta_s,
+            "pricing::american::put::f_prime",
+        )?;
 
         if f_prime.abs() < dec!(1e-10) {
             break;
         }
 
-        let s_star_new = s_star - f / f_prime;
+        let s_star_new = d_sub(
+            s_star,
+            d_div(f, f_prime, "pricing::american::put::newton_step")?,
+            "pricing::american::put::s_star_new",
+        )?;
 
-        if (s_star_new - s_star).abs() < Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6)) {
+        if d_sub(s_star_new, s_star, "pricing::american::put::convergence")?.abs() < tolerance {
             return Ok(s_star_new.max(dec!(0.01)).min(strike)); // 0 < S** <= K for puts
         }
 
-        s_star = s_star_new.max(dec!(0.01)).min(strike * dec!(1.5)); // Keep S** reasonable
+        // Keep S** reasonable
+        s_star = s_star_new.max(dec!(0.01)).min(d_mul(
+            strike,
+            dec!(1.5),
+            "pricing::american::put::ceiling",
+        )?);
     }
 
     // Return best estimate

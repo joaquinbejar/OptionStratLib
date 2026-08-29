@@ -36,6 +36,7 @@
 
 use crate::Options;
 use crate::error::PricingError;
+use crate::model::decimal::{d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, RainbowType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -57,10 +58,14 @@ use tracing::trace;
 ///
 /// # Errors
 ///
-/// Returns `PricingError` if:
-/// - The option type is not Rainbow
-/// - Required exotic parameters are missing
-/// - The correlation is outside [-1, 1]
+/// - [`PricingError::MethodError`] when the option type is not Rainbow, when
+///   `num_assets` is not 2, when the rainbow sub-type is an unsupported
+///   `#[non_exhaustive]` variant, when the required exotic parameters are
+///   missing, when the correlation is outside `[-1, 1]`, when the expiration
+///   cannot be converted, or when a `Decimal` ↔ `f64` boundary conversion in
+///   the Monte-Carlo kernel fails.
+/// - [`PricingError::Decimal`] when the intrinsic value at expiry or the
+///   discounted Monte-Carlo mean leaves the representable `Decimal` range.
 pub fn rainbow_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Rainbow {
@@ -161,7 +166,7 @@ fn price_call_on_max(
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
         let max_s = s1.max(s2);
-        return Ok((max_s - k).max(dec!(0.0)));
+        return Ok(d_sub(max_s, k, "pricing::rainbow::call_on_max::intrinsic")?.max(dec!(0.0)));
     }
 
     let num_simulations = 10000;
@@ -181,8 +186,7 @@ fn price_call_on_max(
         true,
     )?;
 
-    let discount = (-r * t).exp();
-    Ok(discount * payoff_sum / Decimal::from(num_simulations))
+    discounted_mean(payoff_sum, r, t, num_simulations)
 }
 
 /// Prices a call option on the minimum of two assets using Monte Carlo simulation.
@@ -201,7 +205,7 @@ fn price_call_on_min(
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
         let min_s = s1.min(s2);
-        return Ok((min_s - k).max(dec!(0.0)));
+        return Ok(d_sub(min_s, k, "pricing::rainbow::call_on_min::intrinsic")?.max(dec!(0.0)));
     }
 
     let num_simulations = 10000;
@@ -221,8 +225,28 @@ fn price_call_on_min(
         true,
     )?;
 
-    let discount = (-r * t).exp();
-    Ok(discount * payoff_sum / Decimal::from(num_simulations))
+    discounted_mean(payoff_sum, r, t, num_simulations)
+}
+
+/// Discounts the accumulated Monte-Carlo payoff to a present value.
+///
+/// Shared by the four rainbow kernels: `e^(-rT) · Σpayoff / N`.
+fn discounted_mean(
+    payoff_sum: Decimal,
+    r: Decimal,
+    t: Decimal,
+    num_simulations: usize,
+) -> Result<Decimal, PricingError> {
+    let discount = d_exp(
+        d_mul(-r, t, "pricing::rainbow::neg_rt")?,
+        "pricing::rainbow::discount",
+    )?;
+    let discounted = d_mul(discount, payoff_sum, "pricing::rainbow::discounted_sum")?;
+    Ok(d_div(
+        discounted,
+        Decimal::from(num_simulations),
+        "pricing::rainbow::mean",
+    )?)
 }
 
 /// Monte Carlo simulation for rainbow options.
@@ -354,7 +378,7 @@ fn price_put_on_max(
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
         let max_s = s1.max(s2);
-        return Ok((k - max_s).max(dec!(0.0)));
+        return Ok(d_sub(k, max_s, "pricing::rainbow::put_on_max::intrinsic")?.max(dec!(0.0)));
     }
 
     let num_simulations = 10000;
@@ -374,8 +398,7 @@ fn price_put_on_max(
         false,
     )?;
 
-    let discount = (-r * t).exp();
-    Ok(discount * payoff_sum / Decimal::from(num_simulations))
+    discounted_mean(payoff_sum, r, t, num_simulations)
 }
 
 /// Prices a put option on the minimum of two assets using Monte Carlo simulation.
@@ -394,7 +417,7 @@ fn price_put_on_min(
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
         let min_s = s1.min(s2);
-        return Ok((k - min_s).max(dec!(0.0)));
+        return Ok(d_sub(k, min_s, "pricing::rainbow::put_on_min::intrinsic")?.max(dec!(0.0)));
     }
 
     let num_simulations = 10000;
@@ -414,8 +437,7 @@ fn price_put_on_min(
         false,
     )?;
 
-    let discount = (-r * t).exp();
-    Ok(discount * payoff_sum / Decimal::from(num_simulations))
+    discounted_mean(payoff_sum, r, t, num_simulations)
 }
 
 fn apply_side(price: Decimal, option: &Options) -> Decimal {

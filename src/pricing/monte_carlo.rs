@@ -1,10 +1,10 @@
 use crate::Options;
 use crate::error::PricingError;
-use crate::model::decimal::{d_div, d_mul, d_sub, finite_decimal};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter, finite_decimal};
 use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
 
@@ -60,12 +60,31 @@ pub fn monte_carlo_option_pricing(
     let dt = option.expiration_date.get_years()? / steps_raw as f64;
     let mut payoff_sum = 0.0;
 
+    let dt_dec = dt.to_dec();
+    let drift = d_mul(
+        option.risk_free_rate,
+        dt_dec,
+        "pricing::monte_carlo::gbm::drift",
+    )?;
     for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps_raw {
-            let w = wiener_increment(dt.to_dec())?;
-            st *=
-                Decimal::ONE + option.risk_free_rate * dt + option.implied_volatility.to_dec() * w;
+            let w = wiener_increment(dt_dec)?;
+            let diffusion = d_mul(
+                option.implied_volatility.to_dec(),
+                w,
+                "pricing::monte_carlo::gbm::diffusion",
+            )?;
+            let growth = d_add(
+                d_add(
+                    Decimal::ONE,
+                    drift,
+                    "pricing::monte_carlo::gbm::growth_drift",
+                )?,
+                diffusion,
+                "pricing::monte_carlo::gbm::growth",
+            )?;
+            st = d_mul(st, growth, "pricing::monte_carlo::gbm::step")?;
         }
         // Calculate the payoff for a call option
         let payoff_dec = d_sub(
@@ -175,18 +194,29 @@ pub fn price_option_monte_carlo(
     }
 
     // Calculate total discount factor (risk-free rate adjusted for dividends)
-    let effective_rate = option.risk_free_rate - option.dividend_yield;
-    let discount_factor = (-effective_rate * option.expiration_date.get_years()?).exp();
+    let effective_rate = d_sub(
+        option.risk_free_rate,
+        option.dividend_yield.to_dec(),
+        "pricing::monte_carlo::effective_rate",
+    )?;
+    let discount_factor = d_exp(
+        d_mul(
+            -effective_rate,
+            option.expiration_date.get_years()?.to_dec(),
+            "pricing::monte_carlo::discount_exponent",
+        )?,
+        "pricing::monte_carlo::discount_factor",
+    )?;
 
     // Calculate payoff for each final price and sum them
-    let total_payoff: Decimal = final_prices
-        .iter()
-        .map(|&final_price| {
+    let total_payoff: Decimal = d_sum_iter(
+        final_prices.iter().map(|&final_price| {
             option
                 .payoff_at_price(&final_price)
                 .unwrap_or(Decimal::ZERO)
-        })
-        .sum();
+        }),
+        "pricing::monte_carlo::total_payoff",
+    )?;
 
     // Average payoff discounted to present value. Both the mean and the
     // discounting are fused monetary flows, so they go through the checked

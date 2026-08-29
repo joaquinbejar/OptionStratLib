@@ -27,9 +27,9 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 
 /// Prices a Quanto option using the quanto-adjusted Black-Scholes formula.
@@ -44,10 +44,13 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - The option type is not `Quanto`
-/// - Required exotic parameters are missing
-/// - Correlation is outside the valid range [-1, 1]
+/// - [`PricingError::MethodError`] when the option type is not `Quanto`, when
+///   the required exotic parameters are missing, or when the correlation is
+///   outside `[-1, 1]`.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range: the quanto drift adjustment, the forward,
+///   the discount factor, `d1` / `d2`, or the converted price legs.
+/// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let exchange_rate = match &option.option_type {
         OptionType::Quanto { exchange_rate } => exchange_rate.to_dec(),
@@ -84,10 +87,17 @@ pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
 
     if t <= dec!(0.0) {
         let intrinsic = match option.option_style {
-            OptionStyle::Call => (s - k).max(dec!(0.0)),
-            OptionStyle::Put => (k - s).max(dec!(0.0)),
+            OptionStyle::Call => d_sub(s, k, "pricing::quanto::intrinsic::call")?.max(dec!(0.0)),
+            OptionStyle::Put => d_sub(k, s, "pricing::quanto::intrinsic::put")?.max(dec!(0.0)),
         };
-        return Ok(apply_side(intrinsic * exchange_rate, option));
+        return Ok(apply_side(
+            d_mul(
+                intrinsic,
+                exchange_rate,
+                "pricing::quanto::intrinsic::converted",
+            )?,
+            option,
+        ));
     }
 
     let price = quanto_price(
@@ -133,23 +143,95 @@ fn quanto_price(
     x: Decimal,
     style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
-    let quanto_adjustment = rho * sigma_s * sigma_fx;
-    let adjusted_drift = r_d - q - quanto_adjustment;
+    let quanto_adjustment = d_mul(
+        d_mul(rho, sigma_s, "pricing::quanto::rho_sigma_s")?,
+        sigma_fx,
+        "pricing::quanto::adjustment",
+    )?;
+    let adjusted_drift = d_sub(
+        d_sub(r_d, q, "pricing::quanto::carry")?,
+        quanto_adjustment,
+        "pricing::quanto::adjusted_drift",
+    )?;
 
-    let forward = s * (adjusted_drift * t).exp();
+    let forward = d_mul(
+        s,
+        d_exp(
+            d_mul(adjusted_drift, t, "pricing::quanto::drift_t")?,
+            "pricing::quanto::growth",
+        )?,
+        "pricing::quanto::forward",
+    )?;
 
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute sqrt(t)"))?;
+    let sqrt_t = d_sqrt(t, "pricing::quanto::sqrt_t")?;
+    let denominator = d_mul(sigma_s, sqrt_t, "pricing::quanto::denominator")?;
+    let discount = d_exp(
+        d_mul(-r_d, t, "pricing::quanto::neg_rt")?,
+        "pricing::quanto::discount",
+    )?;
 
-    let d1 = ((forward / k).ln() + (sigma_s * sigma_s / dec!(2.0)) * t) / (sigma_s * sqrt_t);
-    let d2 = d1 - sigma_s * sqrt_t;
+    // `K = 0`: the call is certain to be exercised, the put is worthless; a
+    // collapsed `σ√T` freezes the underlying at its forward. Both are the
+    // limits of the formula below, where the normal arguments diverge and the
+    // CDFs saturate.
+    let moneyness = if k.is_zero() {
+        None
+    } else {
+        Some(d_div(forward, k, "pricing::quanto::moneyness")?)
+    };
+    let (n_d1, n_d2, n_neg_d1, n_neg_d2) = match moneyness {
+        None => (dec!(1.0), dec!(1.0), dec!(0.0), dec!(0.0)),
+        Some(ratio) if ratio.is_zero() => (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0)),
+        Some(ratio) if denominator.is_zero() => {
+            if ratio >= dec!(1.0) {
+                (dec!(1.0), dec!(1.0), dec!(0.0), dec!(0.0))
+            } else {
+                (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
+            }
+        }
+        Some(ratio) => {
+            let d1 = d_div(
+                d_add(
+                    d_ln(ratio, "pricing::quanto::log_moneyness")?,
+                    d_mul(
+                        d_div(
+                            d_mul(sigma_s, sigma_s, "pricing::quanto::variance")?,
+                            dec!(2.0),
+                            "pricing::quanto::half_variance",
+                        )?,
+                        t,
+                        "pricing::quanto::variance_t",
+                    )?,
+                    "pricing::quanto::d1_numerator",
+                )?,
+                denominator,
+                "pricing::quanto::d1",
+            )?;
+            let d2 = d_sub(d1, denominator, "pricing::quanto::d2")?;
+            (big_n(d1)?, big_n(d2)?, big_n(-d1)?, big_n(-d2)?)
+        }
+    };
 
-    let discount = (-r_d * t).exp();
-
+    let converted_discount = d_mul(x, discount, "pricing::quanto::converted_discount")?;
     let price = match style {
-        OptionStyle::Call => x * discount * (forward * big_n(d1)? - k * big_n(d2)?),
-        OptionStyle::Put => x * discount * (k * big_n(-d2)? - forward * big_n(-d1)?),
+        OptionStyle::Call => d_mul(
+            converted_discount,
+            d_sub(
+                d_mul(forward, n_d1, "pricing::quanto::call::forward")?,
+                d_mul(k, n_d2, "pricing::quanto::call::strike")?,
+                "pricing::quanto::call::intrinsic",
+            )?,
+            "pricing::quanto::call",
+        )?,
+        OptionStyle::Put => d_mul(
+            converted_discount,
+            d_sub(
+                d_mul(k, n_neg_d2, "pricing::quanto::put::strike")?,
+                d_mul(forward, n_neg_d1, "pricing::quanto::put::forward")?,
+                "pricing::quanto::put::intrinsic",
+            )?,
+            "pricing::quanto::put",
+        )?,
     };
 
     Ok(price.max(dec!(0.0)))

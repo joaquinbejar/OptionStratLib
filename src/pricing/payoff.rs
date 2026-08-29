@@ -162,32 +162,34 @@ impl PayoffInfo {
 /// - For a put option: Max(strike price - spot price, 0)
 #[inline]
 pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
-    trace!("standard_payoff - spot: {}", info.spot);
-    trace!("standard_payoff - info.strike: {}", info.strike);
-    trace!(
-        "standard_payoff - (info.spot - info.strike): {}",
-        info.spot - info.strike
-    );
-
     let spot: Decimal = info.spot.into();
     let strike: Decimal = info.strike.into();
+
+    // `Positive - Positive` aborts whenever the result would be negative, i.e.
+    // on every out-of-the-money call, so the moneyness is traced on the
+    // `Decimal` values. Both operands live in `[0, Decimal::MAX]`, which makes
+    // the difference always representable; the checked form keeps the raw
+    // operator out of the kernel.
+    let moneyness = spot.checked_sub(strike).unwrap_or(Decimal::ZERO);
+    trace!("standard_payoff - spot: {}", spot);
+    trace!("standard_payoff - info.strike: {}", strike);
+    trace!("standard_payoff - (info.spot - info.strike): {}", moneyness);
 
     // The result of `(spot - strike).max(ZERO)` is a non-negative finite Decimal whenever
     // the inputs are themselves finite (which Positive guarantees), so to_f64 is expected
     // to succeed. We log and fall back to 0.0 instead of panicking if conversion ever fails.
     let payoff = match info.style {
-        OptionStyle::Call => (spot - strike)
-            .max(Decimal::ZERO)
-            .to_f64()
-            .unwrap_or_else(|| {
-                warn!(
-                    spot = %spot,
-                    strike = %strike,
-                    "standard_payoff(Call): to_f64 returned None; defaulting to 0.0"
-                );
-                0.0
-            }),
-        OptionStyle::Put => (strike - spot)
+        OptionStyle::Call => moneyness.max(Decimal::ZERO).to_f64().unwrap_or_else(|| {
+            warn!(
+                spot = %spot,
+                strike = %strike,
+                "standard_payoff(Call): to_f64 returned None; defaulting to 0.0"
+            );
+            0.0
+        }),
+        OptionStyle::Put => strike
+            .checked_sub(spot)
+            .unwrap_or(Decimal::ZERO)
             .max(Decimal::ZERO)
             .to_f64()
             .unwrap_or_else(|| {

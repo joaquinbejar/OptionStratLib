@@ -85,9 +85,12 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
-use crate::model::decimal::{d_mul, finite_decimal};
+use crate::model::decimal::{
+    d_add, d_div, d_exp, d_mul, d_powd, d_sub, d_sum_iter, finite_decimal,
+};
 use crate::prelude::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::Positive;
 use rand::random;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -160,15 +163,24 @@ impl TelegraphProcess {
         } else {
             self.lambda_up
         };
-        let lambda_dt = -lambda * dt;
-        // lambda_dt is non-positive (lambda, dt >= 0). For very-negative
-        // values exp(lambda_dt) underflows to 0; treat as a guaranteed
-        // flip (probability = 1). Otherwise use the standard Poisson
-        // transition: P(flip in dt) = 1 - exp(-lambda * dt).
-        let probability = if lambda_dt < dec!(-11.7) {
-            Decimal::ONE
-        } else {
-            Decimal::ONE - lambda_dt.exp()
+        // lambda_dt is non-positive for the physical case (lambda, dt >= 0).
+        // For very-negative values exp(lambda_dt) underflows to 0; treat as a
+        // guaranteed flip (probability = 1). Otherwise use the standard
+        // Poisson transition: P(flip in dt) = 1 - exp(-lambda * dt).
+        //
+        // The signature is infallible, so every unrepresentable intermediate
+        // degrades to the limit its sign implies rather than aborting: an
+        // exponent that overflows downward is a certain flip, one that
+        // overflows upward drives `1 - exp(..)` far below zero, i.e. no flip.
+        let probability = match (-lambda).checked_mul(dt) {
+            None if lambda.is_sign_negative() == dt.is_sign_negative() => Decimal::ONE,
+            None => Decimal::ZERO,
+            Some(lambda_dt) if lambda_dt < dec!(-11.7) => Decimal::ONE,
+            Some(lambda_dt) => match lambda_dt.checked_exp() {
+                Some(decay) => Decimal::ONE.checked_sub(decay).unwrap_or(Decimal::ZERO),
+                None if lambda_dt.is_sign_negative() => Decimal::ONE,
+                None => Decimal::ZERO,
+            },
         };
 
         // probability is mathematically in [0, 1] (Decimal::ONE or 1 - exp(neg)); to_f64 is
@@ -218,7 +230,10 @@ pub(crate) fn estimate_telegraph_parameters(
 ) -> Result<(Decimal, Decimal), DecimalError> {
     // Allow threshold to be zero - it's a valid threshold for classification
     // Returns are classified as +1 if > threshold, -1 if <= threshold
-    let mut current_state = if returns[0] > threshold {
+    let first = returns.first().ok_or_else(|| {
+        DecimalError::invalid_value(0.0, "returns must contain at least one observation")
+    })?;
+    let mut current_state = if *first > threshold {
         Decimal::ONE
     } else {
         Decimal::NEGATIVE_ONE
@@ -234,7 +249,11 @@ pub(crate) fn estimate_telegraph_parameters(
             Decimal::NEGATIVE_ONE
         };
         if new_state == current_state {
-            current_duration += Decimal::ONE;
+            current_duration = d_add(
+                current_duration,
+                Decimal::ONE,
+                "pricing::telegraph::estimate::duration",
+            )?;
         } else {
             if current_state == Decimal::ONE {
                 up_durations.push(current_duration);
@@ -269,8 +288,14 @@ pub(crate) fn estimate_telegraph_parameters(
         });
     }
 
-    let sum_down = down_durations.iter().sum::<Decimal>();
-    let sum_up = up_durations.iter().sum::<Decimal>();
+    let sum_down = d_sum_iter(
+        down_durations.iter().copied(),
+        "pricing::telegraph::estimate::sum_down",
+    )?;
+    let sum_up = d_sum_iter(
+        up_durations.iter().copied(),
+        "pricing::telegraph::estimate::sum_up",
+    )?;
 
     if sum_down == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
@@ -298,8 +323,24 @@ pub(crate) fn estimate_telegraph_parameters(
             "up_durations length not representable as Decimal",
         )
     })?;
-    let lambda_up = Decimal::ONE / sum_down * down_len;
-    let lambda_down = Decimal::ONE / sum_up * up_len;
+    let lambda_up = d_mul(
+        d_div(
+            Decimal::ONE,
+            sum_down,
+            "pricing::telegraph::estimate::inv_sum_down",
+        )?,
+        down_len,
+        "pricing::telegraph::estimate::lambda_up",
+    )?;
+    let lambda_down = d_mul(
+        d_div(
+            Decimal::ONE,
+            sum_up,
+            "pricing::telegraph::estimate::inv_sum_up",
+        )?,
+        up_len,
+        "pricing::telegraph::estimate::lambda_down",
+    )?;
     Ok((lambda_up, lambda_down))
 }
 
@@ -341,11 +382,15 @@ pub fn telegraph(
     lambda_down: Option<Decimal>,
 ) -> Result<Decimal, PricingError> {
     let no_steps_raw = no_steps.get();
-    let mut price = option.underlying_price;
+    let price = option.underlying_price;
     let no_steps_dec = Decimal::from_usize(no_steps_raw).ok_or_else(|| {
         PricingError::method_error("telegraph", &format!("invalid no_steps: {no_steps_raw}"))
     })?;
-    let dt = option.time_to_expiration()?.to_dec() / no_steps_dec;
+    let dt = d_div(
+        option.time_to_expiration()?.to_dec(),
+        no_steps_dec,
+        "pricing::telegraph::dt",
+    )?;
 
     let one_over_252 = finite_decimal(1.0 / 252.0)
         .ok_or_else(|| PricingError::non_finite("pricing::telegraph::one_over_252", 1.0 / 252.0))?;
@@ -374,29 +419,52 @@ pub fn telegraph(
 
     let tp = telegraph_process;
     let mut telegraph_process = tp.clone();
+    // Loop-invariant risk-neutral drift `r - σ²/2`.
+    let drift: Decimal = d_sub(
+        option.risk_free_rate,
+        d_mul(
+            dec!(0.5),
+            d_powd(
+                option.implied_volatility.to_dec(),
+                Decimal::TWO,
+                "pricing::telegraph::variance",
+            )?,
+            "pricing::telegraph::half_variance",
+        )?,
+        "pricing::telegraph::drift",
+    )?;
+    let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
+    let sqrt_dt = dt
+        .sqrt()
+        .ok_or_else(|| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
+    let sqrt_dt_f64 = sqrt_dt.to_f64().ok_or_else(|| {
+        PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
+    })?;
+    let mut price = price.to_dec();
     for _ in 0..no_steps_raw {
         let state = telegraph_process.next_state(dt);
-        let drift: Decimal = option.risk_free_rate - dec!(0.5) * option.implied_volatility.powi(2);
         let state_f64 = state as f64;
         let state_dec = finite_decimal(state_f64)
             .ok_or_else(|| PricingError::non_finite("pricing::telegraph::state_dec", state_f64))?;
-        let volatility: Decimal = option.implied_volatility.to_dec() * state_dec;
+        let volatility: Decimal = d_mul(
+            option.implied_volatility.to_dec(),
+            state_dec,
+            "pricing::telegraph::volatility",
+        )?;
 
-        let sqrt_dt = dt
-            .sqrt()
-            .ok_or_else(|| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
-        let sqrt_dt_f64 = sqrt_dt.to_f64().ok_or_else(|| {
-            PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
-        })?;
         let rh_f64 = sqrt_dt_f64 * random::<f64>();
         let rh = finite_decimal(rh_f64)
             .ok_or_else(|| PricingError::non_finite("pricing::telegraph::rh", rh_f64))?;
-        let lhs = drift * dt + volatility;
+        let lhs = d_add(drift_dt, volatility, "pricing::telegraph::exponent_scale")?;
 
-        let update = (lhs * rh).exp();
-        price *= update;
+        let update = d_exp(
+            d_mul(lhs, rh, "pricing::telegraph::exponent")?,
+            "pricing::telegraph::update",
+        )?;
+        price = d_mul(price, update, "pricing::telegraph::path")?;
     }
 
+    let price = Positive::new_decimal(price)?;
     let payoff = option.payoff_at_price(&price)?;
     // Build the discount exponent through a checked multiplication so
     // an overflow on `-risk_free_rate * time_to_expiration` is tagged
@@ -406,7 +474,7 @@ pub fn telegraph(
         option.time_to_expiration()?.to_dec(),
         "pricing::telegraph::discount_exponent",
     )?;
-    let discount = discount_exponent.exp();
+    let discount = d_exp(discount_exponent, "pricing::telegraph::discount")?;
     let result = d_mul(payoff, discount, "pricing::telegraph::price")?;
     Ok(result)
 }

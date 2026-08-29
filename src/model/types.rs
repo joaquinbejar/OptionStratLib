@@ -11,6 +11,7 @@ pub use option_type::{
 };
 
 use crate::constants::ZERO;
+use crate::model::decimal::finite_decimal;
 use crate::pricing::payoff::{Payoff, PayoffInfo, standard_payoff};
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -60,15 +61,29 @@ impl Payoff for OptionType {
                 _ => standard_payoff(info),
             },
             OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => (info.spot - info.strike)
-                .max(Positive::ZERO)
-                .max(
-                    Positive::new_decimal(
-                        (info.strike.to_dec() - info.spot.to_dec()).max(Decimal::ZERO),
-                    )
-                    .unwrap_or(Positive::ZERO),
-                )
-                .to_f64(),
+            OptionType::Chooser { .. } => {
+                // The chooser is worth the better of the two intrinsics at
+                // expiry. `Positive - Positive` aborts whenever the result
+                // would be negative, i.e. for every out-of-the-money chooser,
+                // so both legs are formed on `Decimal` — where the difference
+                // of two values in `[0, Decimal::MAX]` is always
+                // representable — and floored at zero before the comparison.
+                let call_intrinsic = info
+                    .spot
+                    .to_dec()
+                    .checked_sub(info.strike.to_dec())
+                    .unwrap_or(Decimal::ZERO)
+                    .max(Decimal::ZERO);
+                let put_intrinsic = info
+                    .strike
+                    .to_dec()
+                    .checked_sub(info.spot.to_dec())
+                    .unwrap_or(Decimal::ZERO)
+                    .max(Decimal::ZERO);
+                Positive::new_decimal(call_intrinsic.max(put_intrinsic))
+                    .unwrap_or(Positive::ZERO)
+                    .to_f64()
+            }
             OptionType::Cliquet { .. } => standard_payoff(info),
             OptionType::Rainbow { .. }
             | OptionType::Spread { .. }
@@ -78,9 +93,28 @@ impl Payoff for OptionType {
                 OptionStyle::Call => {
                     (info.spot.to_f64().powf(exponent.to_f64()) - info.strike).max(ZERO)
                 }
-                OptionStyle::Put => (info.strike - info.spot.to_f64().powf(exponent.to_f64()))
-                    .max(Positive::ZERO)
-                    .to_f64(),
+                OptionStyle::Put => {
+                    // `Positive - f64` aborts whenever the result would be
+                    // negative, i.e. for every out-of-the-money power put, and
+                    // also when `S^n` has no `Decimal` representation. The
+                    // difference keeps the `Decimal` arithmetic the `Positive`
+                    // operator performed and is floored at zero; an `S^n` that
+                    // leaves the representable range is `+∞` in the limit,
+                    // where the put is worthless.
+                    let powered = info.spot.to_f64().powf(exponent.to_f64());
+                    match finite_decimal(powered) {
+                        Some(powered_dec) => Positive::new_decimal(
+                            info.strike
+                                .to_dec()
+                                .checked_sub(powered_dec)
+                                .unwrap_or(Decimal::ZERO)
+                                .max(Decimal::ZERO),
+                        )
+                        .unwrap_or(Positive::ZERO)
+                        .to_f64(),
+                        None => ZERO,
+                    }
+                }
             },
             // `OptionType` is `#[non_exhaustive]`: a variant added upstream falls
             // back to the plain intrinsic value until it gets its own arm.
@@ -447,6 +481,122 @@ mod tests_payoff {
             ..Default::default()
         };
         assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    /// An out-of-the-money chooser used to abort with
+    /// `Positive invariant broken in sub: result would be non-positive`,
+    /// because `info.spot - info.strike` is a `Positive` subtraction. The
+    /// chooser keeps the better of the two intrinsics, so `S < K` is worth
+    /// `K - S`, never a panic.
+    #[test]
+    fn test_chooser_out_of_the_money_call_returns_put_intrinsic() {
+        let option = OptionType::Chooser {
+            choice_date: Positive::ONE,
+        };
+        let info = PayoffInfo {
+            spot: Positive::HUNDRED,
+            strike: pos_or_panic!(110.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_chooser_in_the_money_call_keeps_its_value() {
+        let option = OptionType::Chooser {
+            choice_date: Positive::ONE,
+        };
+        let info = PayoffInfo {
+            spot: pos_or_panic!(110.0),
+            strike: Positive::HUNDRED,
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_chooser_at_the_money_is_zero() {
+        let option = OptionType::Chooser {
+            choice_date: Positive::ONE,
+        };
+        let info = PayoffInfo {
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), ZERO);
+    }
+
+    /// A power put with `S^n > K` used to abort with
+    /// `Positive invariant broken in sub_f64: result would be non-positive`.
+    /// `100² = 10000` is far above the strike, so the put is worthless.
+    #[test]
+    fn test_power_put_out_of_the_money_is_zero() {
+        let option = OptionType::Power {
+            exponent: pos_or_panic!(2.0),
+        };
+        let info = PayoffInfo {
+            spot: Positive::HUNDRED,
+            strike: pos_or_panic!(110.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), ZERO);
+    }
+
+    #[test]
+    fn test_power_put_in_the_money_keeps_its_value() {
+        let option = OptionType::Power {
+            exponent: pos_or_panic!(2.0),
+        };
+        let info = PayoffInfo {
+            spot: pos_or_panic!(10.0),
+            strike: pos_or_panic!(110.0),
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        // 110 - 10² = 10
+        assert_eq!(option.payoff(&info), 10.0);
+    }
+
+    #[test]
+    fn test_power_put_at_the_money_is_zero() {
+        let option = OptionType::Power {
+            exponent: pos_or_panic!(2.0),
+        };
+        let info = PayoffInfo {
+            spot: pos_or_panic!(10.0),
+            strike: Positive::HUNDRED,
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), ZERO);
+    }
+
+    /// `S^n` beyond the `Decimal` range is `+∞` in the limit, where the put is
+    /// worthless. It used to abort inside the `Positive` conversion.
+    #[test]
+    fn test_power_put_unrepresentable_power_is_zero() {
+        let option = OptionType::Power {
+            exponent: Positive::MAX,
+        };
+        let info = PayoffInfo {
+            spot: Positive::HUNDRED,
+            strike: Positive::HUNDRED,
+            style: OptionStyle::Put,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(option.payoff(&info), ZERO);
     }
 }
 

@@ -5,5 +5,6 @@
 
 mod greeks_bounds_test;
 mod panic_freedom_test;
+mod pricing_panic_freedom_test;
 mod put_call_parity_test;
 mod quote_invariants_test;

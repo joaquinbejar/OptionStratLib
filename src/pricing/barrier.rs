@@ -7,7 +7,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::big_n;
-use crate::model::decimal::{d_add, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use crate::model::types::{BarrierType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -18,11 +18,16 @@ use rust_decimal_macros::dec;
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::UnsupportedOptionType`] when `option`
-/// is not a [`OptionType::Barrier`] variant, and propagates any
-/// `PricingError` raised by the underlying Black\u2013Scholes closed
-/// form on the decomposed vanilla components (typically
-/// `PricingError::ExpirationDate` or [`PricingError::Positive`]).
+/// - [`PricingError::UnsupportedOptionType`] when `option` is not a
+///   [`OptionType::Barrier`] variant.
+/// - [`PricingError::MethodError`] when the volatility is zero, when the
+///   underlying, the strike or the barrier level is zero (the closed form
+///   divides by all three), or when the `λ` discriminant is negative.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range, or when a log-moneyness ratio underflows
+///   to zero: `μ`, the `x` / `y` / `z` arguments, the reflection powers,
+///   the discount factors, or the final price composition.
+/// - `PricingError::ExpirationDate` when the expiration cannot be converted.
 pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (barrier_type, barrier_level, rebate) = match &option.option_type {
         OptionType::Barrier {
@@ -63,25 +68,122 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         ));
     }
 
-    let b = r - q; // Cost of carry
-    let sigma2 = sigma * sigma;
-    let mu = (b - sigma2 / dec!(2.0)) / sigma2;
-    let lambda = (mu * mu + dec!(2.0) * r / sigma2).sqrt().ok_or_else(|| {
+    // The closed form divides by `S`, by `K` and by the barrier, and takes
+    // logarithms of their ratios: a zero on any of the three has no financial
+    // meaning here and is rejected before any arithmetic runs.
+    if s == Decimal::ZERO {
+        return Err(PricingError::other(
+            "Underlying price cannot be zero for barrier options pricing",
+        ));
+    }
+    if k == Decimal::ZERO {
+        return Err(PricingError::other(
+            "Strike price cannot be zero for barrier options pricing",
+        ));
+    }
+    if barrier_level == Decimal::ZERO {
+        return Err(PricingError::other(
+            "Barrier level cannot be zero for barrier options pricing",
+        ));
+    }
+
+    let b = d_sub(r, q, "pricing::barrier::carry")?; // Cost of carry
+    let sigma2 = d_mul(sigma, sigma, "pricing::barrier::sigma2")?;
+    let mu = d_div(
+        d_sub(
+            b,
+            d_div(sigma2, dec!(2.0), "pricing::barrier::half_variance")?,
+            "pricing::barrier::mu_numerator",
+        )?,
+        sigma2,
+        "pricing::barrier::mu",
+    )?;
+    let lambda_discriminant = d_add(
+        d_mul(mu, mu, "pricing::barrier::mu_squared")?,
+        d_div(
+            d_mul(dec!(2.0), r, "pricing::barrier::two_r")?,
+            sigma2,
+            "pricing::barrier::rate_over_variance",
+        )?,
+        "pricing::barrier::lambda_discriminant",
+    )?;
+    let lambda = lambda_discriminant.sqrt().ok_or_else(|| {
         PricingError::method_error("barrier_black_scholes", "non-finite lambda discriminant")
     })?;
 
-    let sqrt_t = t
-        .sqrt()
-        .ok_or_else(|| PricingError::method_error("barrier_black_scholes", "non-finite sqrt(t)"))?;
-    let sigma_sqrt_t = sigma * sqrt_t;
+    let sqrt_t = d_sqrt(t, "pricing::barrier::sqrt_t")?;
+    let sigma_sqrt_t = d_mul(sigma, sqrt_t, "pricing::barrier::sigma_sqrt_t")?;
+    let mu_plus_one_term = d_mul(
+        d_add(mu, dec!(1.0), "pricing::barrier::mu_plus_one")?,
+        sigma_sqrt_t,
+        "pricing::barrier::drift_term",
+    )?;
+    // `H / S` drives `y2`, `z` and every reflection power below, so it is
+    // computed once.
+    let h_over_s = d_div(barrier_level, s, "pricing::barrier::h_over_s")?;
+    let log_h_over_s = d_ln(h_over_s, "pricing::barrier::log_h_over_s")?;
 
     // Components used across different barrier types
-    let x1 = (s / k).ln() / sigma_sqrt_t + (mu + dec!(1.0)) * sigma_sqrt_t;
-    let x2 = (s / barrier_level).ln() / sigma_sqrt_t + (mu + dec!(1.0)) * sigma_sqrt_t;
-    let y1 = (barrier_level * barrier_level / (s * k)).ln() / sigma_sqrt_t
-        + (mu + dec!(1.0)) * sigma_sqrt_t;
-    let y2 = (barrier_level / s).ln() / sigma_sqrt_t + (mu + dec!(1.0)) * sigma_sqrt_t;
-    let z = (barrier_level / s).ln() / sigma_sqrt_t + lambda * sigma_sqrt_t;
+    let x1 = d_add(
+        d_div(
+            d_ln(
+                d_div(s, k, "pricing::barrier::moneyness")?,
+                "pricing::barrier::log_moneyness",
+            )?,
+            sigma_sqrt_t,
+            "pricing::barrier::x1_ratio",
+        )?,
+        mu_plus_one_term,
+        "pricing::barrier::x1",
+    )?;
+    let x2 = d_add(
+        d_div(
+            d_ln(
+                d_div(s, barrier_level, "pricing::barrier::s_over_h")?,
+                "pricing::barrier::log_s_over_h",
+            )?,
+            sigma_sqrt_t,
+            "pricing::barrier::x2_ratio",
+        )?,
+        mu_plus_one_term,
+        "pricing::barrier::x2",
+    )?;
+    let y1 = d_add(
+        d_div(
+            d_ln(
+                d_div(
+                    d_mul(barrier_level, barrier_level, "pricing::barrier::h_squared")?,
+                    d_mul(s, k, "pricing::barrier::s_times_k")?,
+                    "pricing::barrier::h2_over_sk",
+                )?,
+                "pricing::barrier::log_h2_over_sk",
+            )?,
+            sigma_sqrt_t,
+            "pricing::barrier::y1_ratio",
+        )?,
+        mu_plus_one_term,
+        "pricing::barrier::y1",
+    )?;
+    let y2 = d_add(
+        d_div(log_h_over_s, sigma_sqrt_t, "pricing::barrier::y2_ratio")?,
+        mu_plus_one_term,
+        "pricing::barrier::y2",
+    )?;
+    let z = d_add(
+        d_div(log_h_over_s, sigma_sqrt_t, "pricing::barrier::z_ratio")?,
+        d_mul(lambda, sigma_sqrt_t, "pricing::barrier::z_drift")?,
+        "pricing::barrier::z",
+    )?;
+
+    // Shared discount factors: every closure below uses both.
+    let discount_q = d_exp(
+        d_mul(-q, t, "pricing::barrier::neg_qt")?,
+        "pricing::barrier::discount_q",
+    )?;
+    let discount_r = d_exp(
+        d_mul(-r, t, "pricing::barrier::neg_rt")?,
+        "pricing::barrier::discount_r",
+    )?;
 
     let _phi = match option.option_style {
         OptionStyle::Call => dec!(1.0),
@@ -96,65 +198,193 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         _ => dec!(1.0),
     };
 
-    let f_a = |phi_val: Decimal, x_val: Decimal| -> Result<Decimal, PricingError> {
-        let n1 = big_n(phi_val * x_val)?;
-        let n2 = big_n(phi_val * (x_val - sigma_sqrt_t))?;
-        Ok(phi_val * s * (-q * t).exp() * n1 - phi_val * k * (-r * t).exp() * n2)
+    // `(H / S)^e`: the reflection factor shared by the `C`, `D`, `E` and `F`
+    // terms of Reiner-Rubinstein.
+    let reflect_pow = |exponent: Decimal, tag: &'static str| -> Result<Decimal, PricingError> {
+        Ok(d_powd(h_over_s, exponent, tag)?)
     };
 
-    let f_b = |phi_val: Decimal, x_val: Decimal| -> Result<Decimal, PricingError> {
-        let n1 = big_n(phi_val * x_val)?;
-        let n2 = big_n(phi_val * (x_val - sigma_sqrt_t))?;
-        Ok(phi_val * s * (-q * t).exp() * n1 - phi_val * k * (-r * t).exp() * n2)
+    // `φ S e^(-qT) N(·) − φ K e^(-rT) N(·)`, the vanilla leg of the decomposition.
+    let vanilla_leg = |phi_val: Decimal, x_val: Decimal| -> Result<Decimal, PricingError> {
+        let n1 = big_n(d_mul(phi_val, x_val, "pricing::barrier::vanilla::arg1")?)?;
+        let n2 = big_n(d_mul(
+            phi_val,
+            d_sub(x_val, sigma_sqrt_t, "pricing::barrier::vanilla::shift")?,
+            "pricing::barrier::vanilla::arg2",
+        )?)?;
+        let spot = d_mul(
+            d_mul(
+                d_mul(phi_val, s, "pricing::barrier::vanilla::phi_s")?,
+                discount_q,
+                "pricing::barrier::vanilla::spot_pv",
+            )?,
+            n1,
+            "pricing::barrier::vanilla::spot_leg",
+        )?;
+        let strike = d_mul(
+            d_mul(
+                d_mul(phi_val, k, "pricing::barrier::vanilla::phi_k")?,
+                discount_r,
+                "pricing::barrier::vanilla::strike_pv",
+            )?,
+            n2,
+            "pricing::barrier::vanilla::strike_leg",
+        )?;
+        Ok(d_sub(spot, strike, "pricing::barrier::vanilla")?)
     };
 
-    let f_c =
+    let f_a = &vanilla_leg;
+    let f_b = &vanilla_leg;
+
+    // `φ S e^(-qT) (H/S)^(2(μ+1)) N(·) − φ K e^(-rT) (H/S)^(2μ) N(·)`.
+    let reflected_leg =
         |phi_val: Decimal, eta_val: Decimal, y_val: Decimal| -> Result<Decimal, PricingError> {
-            let n1 = big_n(eta_val * y_val)?;
-            let n2 = big_n(eta_val * (y_val - sigma_sqrt_t))?;
-            let h_s_ratio = (barrier_level / s).powd(dec!(2.0) * (mu + dec!(1.0)));
-            let h_s_ratio_mu = (barrier_level / s).powd(dec!(2.0) * mu);
-            Ok(phi_val * s * (-q * t).exp() * h_s_ratio * n1
-                - phi_val * k * (-r * t).exp() * h_s_ratio_mu * n2)
+            let n1 = big_n(d_mul(eta_val, y_val, "pricing::barrier::reflected::arg1")?)?;
+            let n2 = big_n(d_mul(
+                eta_val,
+                d_sub(y_val, sigma_sqrt_t, "pricing::barrier::reflected::shift")?,
+                "pricing::barrier::reflected::arg2",
+            )?)?;
+            let h_s_ratio = reflect_pow(
+                d_mul(
+                    dec!(2.0),
+                    d_add(mu, dec!(1.0), "pricing::barrier::reflected::mu_plus_one")?,
+                    "pricing::barrier::reflected::exponent_spot",
+                )?,
+                "pricing::barrier::reflected::pow_spot",
+            )?;
+            let h_s_ratio_mu = reflect_pow(
+                d_mul(
+                    dec!(2.0),
+                    mu,
+                    "pricing::barrier::reflected::exponent_strike",
+                )?,
+                "pricing::barrier::reflected::pow_strike",
+            )?;
+            let spot = d_mul(
+                d_mul(
+                    d_mul(
+                        d_mul(phi_val, s, "pricing::barrier::reflected::phi_s")?,
+                        discount_q,
+                        "pricing::barrier::reflected::spot_pv",
+                    )?,
+                    h_s_ratio,
+                    "pricing::barrier::reflected::spot_reflected",
+                )?,
+                n1,
+                "pricing::barrier::reflected::spot_leg",
+            )?;
+            let strike = d_mul(
+                d_mul(
+                    d_mul(
+                        d_mul(phi_val, k, "pricing::barrier::reflected::phi_k")?,
+                        discount_r,
+                        "pricing::barrier::reflected::strike_pv",
+                    )?,
+                    h_s_ratio_mu,
+                    "pricing::barrier::reflected::strike_reflected",
+                )?,
+                n2,
+                "pricing::barrier::reflected::strike_leg",
+            )?;
+            Ok(d_sub(spot, strike, "pricing::barrier::reflected")?)
         };
 
-    let f_d =
-        |phi_val: Decimal, eta_val: Decimal, y_val: Decimal| -> Result<Decimal, PricingError> {
-            let n1 = big_n(eta_val * y_val)?;
-            let n2 = big_n(eta_val * (y_val - sigma_sqrt_t))?;
-            let h_s_ratio = (barrier_level / s).powd(dec!(2.0) * (mu + dec!(1.0)));
-            let h_s_ratio_mu = (barrier_level / s).powd(dec!(2.0) * mu);
-            Ok(phi_val * s * (-q * t).exp() * h_s_ratio * n1
-                - phi_val * k * (-r * t).exp() * h_s_ratio_mu * n2)
-        };
+    let f_c = &reflected_leg;
+    let f_d = &reflected_leg;
 
+    // Rebate paid at expiry when the barrier is never hit.
     let f_e = |eta_val: Decimal| -> Result<Decimal, PricingError> {
         if rebate == Decimal::ZERO {
             return Ok(Decimal::ZERO);
         }
-        let n1 = big_n(eta_val * (x2 - sigma_sqrt_t))?;
-        let h_s_ratio_mu = (barrier_level / s).powd(dec!(2.0) * mu);
-        let n2 = big_n(eta_val * (y2 - sigma_sqrt_t))?;
-        Ok(rebate * (-r * t).exp() * (n1 - h_s_ratio_mu * n2))
+        let n1 = big_n(d_mul(
+            eta_val,
+            d_sub(x2, sigma_sqrt_t, "pricing::barrier::rebate_expiry::shift1")?,
+            "pricing::barrier::rebate_expiry::arg1",
+        )?)?;
+        let h_s_ratio_mu = reflect_pow(
+            d_mul(dec!(2.0), mu, "pricing::barrier::rebate_expiry::exponent")?,
+            "pricing::barrier::rebate_expiry::pow",
+        )?;
+        let n2 = big_n(d_mul(
+            eta_val,
+            d_sub(y2, sigma_sqrt_t, "pricing::barrier::rebate_expiry::shift2")?,
+            "pricing::barrier::rebate_expiry::arg2",
+        )?)?;
+        Ok(d_mul(
+            d_mul(
+                rebate,
+                discount_r,
+                "pricing::barrier::rebate_expiry::rebate_pv",
+            )?,
+            d_sub(
+                n1,
+                d_mul(
+                    h_s_ratio_mu,
+                    n2,
+                    "pricing::barrier::rebate_expiry::reflected",
+                )?,
+                "pricing::barrier::rebate_expiry::bracket",
+            )?,
+            "pricing::barrier::rebate_expiry",
+        )?)
     };
 
+    // Rebate paid on the hit itself.
     let f_f = |eta_val: Decimal| -> Result<Decimal, PricingError> {
         if rebate == Decimal::ZERO {
             return Ok(Decimal::ZERO);
         }
-        let h_s_ratio_mu_lambda = (barrier_level / s).powd(mu + lambda);
-        let h_s_ratio_mu_lambda_neg = (barrier_level / s).powd(mu - lambda);
-        let n1 = big_n(eta_val * z)?;
-        let n2 = big_n(eta_val * (z - dec!(2.0) * lambda * sigma_sqrt_t))?;
-        Ok(rebate * (h_s_ratio_mu_lambda * n1 + h_s_ratio_mu_lambda_neg * n2))
+        let h_s_ratio_mu_lambda = reflect_pow(
+            d_add(mu, lambda, "pricing::barrier::rebate_hit::exponent_up")?,
+            "pricing::barrier::rebate_hit::pow_up",
+        )?;
+        let h_s_ratio_mu_lambda_neg = reflect_pow(
+            d_sub(mu, lambda, "pricing::barrier::rebate_hit::exponent_down")?,
+            "pricing::barrier::rebate_hit::pow_down",
+        )?;
+        let n1 = big_n(d_mul(eta_val, z, "pricing::barrier::rebate_hit::arg1")?)?;
+        let n2 = big_n(d_mul(
+            eta_val,
+            d_sub(
+                z,
+                d_mul(
+                    d_mul(
+                        dec!(2.0),
+                        lambda,
+                        "pricing::barrier::rebate_hit::two_lambda",
+                    )?,
+                    sigma_sqrt_t,
+                    "pricing::barrier::rebate_hit::shift",
+                )?,
+                "pricing::barrier::rebate_hit::z_shifted",
+            )?,
+            "pricing::barrier::rebate_hit::arg2",
+        )?)?;
+        Ok(d_mul(
+            rebate,
+            d_add(
+                d_mul(
+                    h_s_ratio_mu_lambda,
+                    n1,
+                    "pricing::barrier::rebate_hit::up_leg",
+                )?,
+                d_mul(
+                    h_s_ratio_mu_lambda_neg,
+                    n2,
+                    "pricing::barrier::rebate_hit::down_leg",
+                )?,
+                "pricing::barrier::rebate_hit::bracket",
+            )?,
+            "pricing::barrier::rebate_hit",
+        )?)
     };
 
-    // Each closure return is an addend of the final barrier price. The
-    // intermediate products inside each closure stay on the raw `*` / `-`
-    // operators because they are numerical-kernel internals; the final
-    // price composition that fuses them into the returned value is routed
-    // through `d_add` / `d_sub` so an overflow of the user-visible price
-    // surfaces a `DecimalError::Overflow` instead of wrapping silently.
+    // Each closure return is an addend of the final barrier price; the
+    // composition that fuses them into the returned value goes through
+    // `d_add` / `d_sub` so an overflow of the user-visible price surfaces a
+    // `DecimalError::Overflow` instead of aborting.
     const OP: &str = "pricing::barrier::price";
     match (option.option_style, barrier_type) {
         // Down-and-out call

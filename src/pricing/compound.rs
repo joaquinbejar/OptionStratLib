@@ -34,7 +34,7 @@
 use crate::Options;
 use crate::error::PricingError;
 use crate::greeks::{big_n, d1, d2};
-use crate::model::decimal::{d_add, d_mul, d_sub, finite_decimal};
+use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, finite_decimal};
 use crate::model::types::{OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -56,7 +56,11 @@ fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal,
         // Independent case: P(X <= a, Y <= b) = N(a) * N(b)
         let n_a = big_n(a).unwrap_or(Decimal::ZERO);
         let n_b = big_n(b).unwrap_or(Decimal::ZERO);
-        return Ok(n_a * n_b);
+        return Ok(d_mul(
+            n_a,
+            n_b,
+            "pricing::compound::bivariate::independent",
+        )?);
     }
 
     if rho_f >= 1.0 - 1e-10 {
@@ -66,8 +70,9 @@ fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal,
     }
 
     if rho_f <= -1.0 + 1e-10 {
-        // Perfect negative correlation
-        if a + b >= Decimal::ZERO {
+        // Perfect negative correlation. `a` and `b` are raw `d` values, so
+        // their sum is checked before the comparison.
+        if d_add(a, b, "pricing::compound::bivariate::perfect_negative")? >= Decimal::ZERO {
             return Ok(big_n(a).unwrap_or(Decimal::ZERO));
         } else {
             return Ok(Decimal::ZERO);
@@ -221,10 +226,19 @@ fn standard_normal_cdf(x: f64) -> f64 {
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::UnsupportedOptionType`] when `option` is
-/// not an [`OptionType::Compound`] variant, and propagates any
-/// `PricingError` raised by the Black–Scholes evaluation of the
-/// outer option on the inner-option implied value.
+/// - [`PricingError::MethodError`] when `option` is not an
+///   [`OptionType::Compound`] variant, when the expiration cannot be converted
+///   to a year fraction, or when the `d1` / `d2` kernels reject the inputs.
+/// - [`PricingError::NonFinite`] when the Drezner-Wesolowsky bivariate
+///   quadrature produces a non-finite value.
+/// - [`PricingError::Positive`] when the derived `T2 = 2·T1` maturity is not
+///   representable as a `Positive`.
+/// - [`PricingError::Decimal`] when an intermediate step leaves the
+///   representable `Decimal` range, or when `σ√T1` or the critical-price
+///   moneyness collapses to zero: the discount factors, the critical price,
+///   `d1_t1` / `d2_t1`, or the final leg composition.
+/// - Whatever the inner Black-Scholes valuation of the underlying option
+///   propagates.
 pub fn compound_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Compound { underlying_option } => price_compound(option, underlying_option),
@@ -273,9 +287,22 @@ fn price_compound(
 
     if sigma == Positive::ZERO {
         // Degenerate case
-        let discount = (-r * t1).exp();
-        let forward_value =
-            value_underlying_option(compound, underlying_type)? * ((r - q) * t1).exp();
+        let discount = d_exp(
+            d_mul(-r, t1.to_dec(), "pricing::compound::zero_vol::neg_rt")?,
+            "pricing::compound::zero_vol::discount",
+        )?;
+        let forward_value = d_mul(
+            value_underlying_option(compound, underlying_type)?,
+            d_exp(
+                d_mul(
+                    d_sub(r, q, "pricing::compound::zero_vol::carry")?,
+                    t1.to_dec(),
+                    "pricing::compound::zero_vol::carry_t",
+                )?,
+                "pricing::compound::zero_vol::growth",
+            )?,
+            "pricing::compound::zero_vol::forward",
+        )?;
         let intrinsic = match compound.option_style {
             OptionStyle::Call => d_mul(
                 d_sub(
@@ -305,27 +332,51 @@ fn price_compound(
     // - T1: time to compound expiry (we have this)
     // - T2: time to underlying expiry (assume we're given an underlying with its own expiry)
     // For simplicity, assume underlying expires at 2*T1 if not specified differently
-    let two = Positive::new(2.0)
-        .map_err(|e| PricingError::method_error("price_compound", &e.to_string()))?;
-    let t2 = t1 * two; // Underlying expires at 2*T1
-
-    let b = r - q;
     let t1_dec = t1.to_dec();
-    let t2_dec = t2.to_dec();
-    let sqrt_t1 = t1_dec.sqrt().unwrap_or(Decimal::ZERO);
-    let _sqrt_t2 = t2_dec.sqrt().unwrap_or(Decimal::ZERO);
+    let t2_dec = d_mul(t1_dec, dec!(2), "pricing::compound::t2")?; // Underlying expires at 2*T1
+    let t2 = Positive::new_decimal(t2_dec)?;
+
+    let b = d_sub(r, q, "pricing::compound::carry")?;
+    let sqrt_t1 = d_sqrt(t1_dec, "pricing::compound::sqrt_t1")?;
 
     // Correlation between values at T1 and T2
-    let rho = (t1_dec / t2_dec).sqrt().unwrap_or(dec!(0.5));
+    let rho = d_div(t1_dec, t2_dec, "pricing::compound::rho_ratio")?
+        .sqrt()
+        .unwrap_or(dec!(0.5));
 
     // Calculate critical price S* where underlying option value = K1
     // For simplicity, use an approximation
     let s_star = find_critical_price(s, k1, underlying_type, t1, sigma, r, q)?;
 
     // d values for the bivariate formula
-    let d1_t1 = ((s.to_dec() / s_star).ln() + (b + sigma * sigma / dec!(2)) * t1_dec)
-        / (sigma.to_dec() * sqrt_t1);
-    let d2_t1 = d1_t1 - sigma.to_dec() * sqrt_t1;
+    let sigma_dec = sigma.to_dec();
+    let sigma_sqrt_t1 = d_mul(sigma_dec, sqrt_t1, "pricing::compound::sigma_sqrt_t1")?;
+    let critical_moneyness = d_div(s.to_dec(), s_star, "pricing::compound::critical_moneyness")?;
+    let d1_t1 = d_div(
+        d_add(
+            d_ln(
+                critical_moneyness,
+                "pricing::compound::log_critical_moneyness",
+            )?,
+            d_mul(
+                d_add(
+                    b,
+                    d_div(
+                        d_mul(sigma_dec, sigma_dec, "pricing::compound::variance")?,
+                        dec!(2),
+                        "pricing::compound::half_variance",
+                    )?,
+                    "pricing::compound::drift_rate",
+                )?,
+                t1_dec,
+                "pricing::compound::drift",
+            )?,
+            "pricing::compound::d1_t1_numerator",
+        )?,
+        sigma_sqrt_t1,
+        "pricing::compound::d1_t1",
+    )?;
+    let d2_t1 = d_sub(d1_t1, sigma_sqrt_t1, "pricing::compound::d2_t1")?;
 
     // Get underlying strike (K2)
     let k2 = get_underlying_strike(underlying_type, compound.strike_price);
@@ -335,9 +386,18 @@ fn price_compound(
     let d2_t2 = d2(s, k2, b, t2, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
 
-    let discount_t1 = (-r * t1).exp();
-    let discount_t2 = (-r * t2).exp();
-    let dividend_discount_t2 = (-q * t2).exp();
+    let discount_t1 = d_exp(
+        d_mul(-r, t1_dec, "pricing::compound::neg_rt1")?,
+        "pricing::compound::discount_t1",
+    )?;
+    let discount_t2 = d_exp(
+        d_mul(-r, t2_dec, "pricing::compound::neg_rt2")?,
+        "pricing::compound::discount_t2",
+    )?;
+    let dividend_discount_t2 = d_exp(
+        d_mul(-q, t2_dec, "pricing::compound::neg_qt2")?,
+        "pricing::compound::dividend_discount_t2",
+    )?;
 
     // Determine compound type for pricing
     let is_compound_call = matches!(compound.option_style, OptionStyle::Call);
@@ -501,20 +561,52 @@ fn find_critical_price(
 
     // Simple approximation for critical price
     let _is_call = is_underlying_option_call(underlying_type);
-    let b = r - q;
+    let b = d_sub(r, q, "pricing::compound::critical::carry")?;
     let t_dec = t.to_dec();
-    let sqrt_t = t_dec.sqrt().unwrap_or(Decimal::ZERO);
+    let sqrt_t = d_sqrt(t_dec, "pricing::compound::critical::sqrt_t")?;
 
     // For ATM-ish options, critical price is approximately related to the strike
     // Use forward price adjusted formula
-    let forward = s.to_dec() * (b * t_dec).exp();
+    let forward = d_mul(
+        s.to_dec(),
+        d_exp(
+            d_mul(b, t_dec, "pricing::compound::critical::carry_t")?,
+            "pricing::compound::critical::growth",
+        )?,
+        "pricing::compound::critical::forward",
+    )?;
 
     // Approximate critical price using Black-Scholes structure
-    let vol_adjustment = sigma.to_dec() * sqrt_t * dec!(0.4);
-    let critical = if k1.to_dec() < forward * dec!(0.5) {
-        forward * (dec!(1) - vol_adjustment)
+    let vol_adjustment = d_mul(
+        d_mul(
+            sigma.to_dec(),
+            sqrt_t,
+            "pricing::compound::critical::sigma_sqrt_t",
+        )?,
+        dec!(0.4),
+        "pricing::compound::critical::vol_adjustment",
+    )?;
+    let half_forward = d_mul(forward, dec!(0.5), "pricing::compound::critical::half")?;
+    let critical = if k1.to_dec() < half_forward {
+        d_mul(
+            forward,
+            d_sub(
+                dec!(1),
+                vol_adjustment,
+                "pricing::compound::critical::down_factor",
+            )?,
+            "pricing::compound::critical::down",
+        )?
     } else {
-        forward * (dec!(1) + vol_adjustment)
+        d_mul(
+            forward,
+            d_add(
+                dec!(1),
+                vol_adjustment,
+                "pricing::compound::critical::up_factor",
+            )?,
+            "pricing::compound::critical::up",
+        )?
     };
 
     Ok(critical.max(dec!(0.01)))
