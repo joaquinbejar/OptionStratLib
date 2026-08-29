@@ -53,6 +53,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   returned **4.8770575499** from both kernels and now returns
   **2.4080487528** (geometric) and **2.4182085485** (arithmetic). The old
   value was only correct at `b = 0`, where every average collapses to `S`.
+- **The simple chooser was priced with the wrong formula (#448).**
+  `chooser_black_scholes` discounted its two `y` legs at the choice date `t`
+  instead of at expiry `T`, and built `y1` from `b*t` where Rubinstein (1991)
+  has `b*T + σ²*t/2`, so every simple chooser came out too expensive. On
+  Haug's worked example (S = K = 50, t = 0.25, T = 0.5, r = b = 0.08,
+  σ = 0.25; reference **6.1071**) the function returned **6.524120** and now
+  returns **6.107077**: 6.8% high before, within 1e-14 of the closed form now.
+  The module doc already stated the corrected formula; the code did not
+  implement it.
+- With no diffusion left to run to the choice date (`σ√t` collapsing to zero)
+  the surviving branch is now picked on the sign of `ln(S/K) + b*T`, the
+  forward moneyness at expiry, rather than on `ln(S/K)`. A chooser whose spot
+  sits below the strike but whose forward sits above it prices as the call,
+  not as the put. A zero numerator, which that limit used to report as an
+  undefined `0 / 0`, is exactly forward parity — where call and put are worth
+  the same — and now returns that common value instead of an error (#448).
 - **Reachable panic in the lower break-even of eight strategies.**
   `strike - credit` was computed with the raw `Positive - Decimal` operator,
   which panics when the credit (or, on a long structure, the debit) exceeds the
