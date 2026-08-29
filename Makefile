@@ -127,6 +127,49 @@ scan-banned:
 	fi; \
 	echo "OK: no .unwrap()/.expect() in production code"
 
+# Installs the tooling `public-api-check`/`public-api-update` need: the
+# `cargo public-api` subcommand, plus a nightly toolchain to build rustdoc
+# JSON from (it does not need to be the active/default toolchain, so it
+# coexists with the `stable` channel pinned in rust-toolchain.toml).
+.PHONY: check-cargo-public-api
+check-cargo-public-api:
+	@command -v cargo-public-api > /dev/null || (echo "Installing cargo-public-api..."; cargo install cargo-public-api --locked)
+	@rustup toolchain list | grep -q '^nightly' || (echo "Installing a nightly toolchain for rustdoc JSON..."; rustup toolchain install nightly --profile minimal)
+
+# Regenerates public-api/optionstratlib.txt, the checked-in snapshot of the
+# crate's full public API (built with --all-features, matching semver.yml's
+# feature-group). Run this and commit the result in the same PR whenever a
+# change to a `pub` item is intentional. `-sss` omits Blanket/Auto
+# Trait/Auto Derived impls so the snapshot and its diffs stay reviewable;
+# losing one of those (e.g. a dropped `Send`/`Debug`) is already caught by
+# the `semver` CI job's auto_trait_impl_removed / derive_trait_impl_removed
+# lints, so nothing is lost by omitting them here.
+.PHONY: public-api-update
+public-api-update: check-cargo-public-api
+	@mkdir -p public-api
+	cargo public-api -sss --all-features > public-api/optionstratlib.txt
+
+# Fails when the crate's public API has drifted from public-api/optionstratlib.txt
+# without the snapshot being updated to match, i.e. an *unacknowledged* API
+# change slipped in. This catches classes of breakage cargo-semver-checks
+# does not lint for on its own, e.g. a function's return type changing from
+# `T` to `Result<T, E>` (see
+# https://github.com/obi1kenobi/cargo-semver-checks/issues/1613, confirmed a
+# known gap by the maintainer). Run `make public-api-update` and commit the
+# resulting diff to acknowledge a deliberate change.
+.PHONY: public-api-check
+public-api-check: check-cargo-public-api
+	@mkdir -p target/public-api
+	@cargo public-api -sss --all-features > target/public-api/optionstratlib.txt
+	@if ! diff -u public-api/optionstratlib.txt target/public-api/optionstratlib.txt; then \
+		echo; \
+		echo "Public API drifted from public-api/optionstratlib.txt (see diff above)."; \
+		echo "If this change is intentional, run 'make public-api-update', review the"; \
+		echo "resulting diff, and commit it together with this change."; \
+		exit 1; \
+	fi
+	@echo "OK: public API matches public-api/optionstratlib.txt"
+
 # Run the project
 .PHONY: run
 run:

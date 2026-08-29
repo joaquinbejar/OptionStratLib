@@ -1,0 +1,59 @@
+name: Public API
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+# Cancel any in-flight jobs for the same PR/branch so there's only one active
+# at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  public-api:
+    name: public-api
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      # cargo-public-api builds rustdoc JSON, which requires nightly. It does
+      # not need to be the active toolchain (rust-toolchain.toml keeps
+      # `stable` selected for everything else), it just needs to be
+      # installed so `cargo public-api` can find and use it.
+      - name: Install a nightly toolchain for rustdoc JSON
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-public-api-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-public-api-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+
+      - name: Check public API against the checked-in snapshot
+        run: make public-api-check
