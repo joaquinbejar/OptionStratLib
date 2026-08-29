@@ -308,32 +308,48 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         // matching turns that gap into `σ_adj = σ` instead of the correct
         // `σ_adj ≈ σ / √3`. `r = q` is a forward-priced or fully-carried
         // underlying, so this branch has to be the limit and not a stand-in.
-        if sigma_sq.is_zero() {
-            // σ² underflowed `Decimal`'s 28-digit scale (σ < 1e-14). The
-            // bracket above is `σ² T² / 2 + O(σ⁴)`, so the nested `σ² → 0`
-            // limit of the whole expression is exactly `S²`, and there is no
-            // need to divide by the variance that vanished.
-            s_sq
+        //
+        // Collecting the whole expression on `x = σ² T` gives the form
+        // evaluated below,
+        //
+        //     M2 = 2 S² (e^x - 1 - x) / x² = S² (1 + x/3 + x²/12 + …),
+        //
+        // one division shorter and, since `e^x - 1 - x` is an exact `Decimal`
+        // subtraction, carrying every digit `e^x` had.
+        let x = d_mul(
+            sigma_sq,
+            t_dec,
+            "pricing::asian::arithmetic::m2::b_limit::var_t",
+        )?;
+        if x < dec!(1e-6) {
+            // `e^x` is stored to 28 decimal places, so the `x² / 2` that
+            // leads `e^x - 1 - x` sinks below that floor as `x` shrinks and
+            // the closed form loses it: at `x = 1e-14` it valued a worthless
+            // contract at 31, and below `x ≈ 1e-13` the `2 S² / x²` scale
+            // leaves `Decimal` altogether. The two-term series truncates at
+            // `x² / 12`, a relative `x / 4 ≤ 2.5e-7` on the matched variance,
+            // against the closed form's `6e-28 / x³`; they cross at
+            // `x ≈ 2e-7`, so below `1e-6` the series is the better of the
+            // two. It also absorbs `σ² = 0` (σ under `1e-14` underflows the
+            // scale), where `M2 = S²` exactly and there is nothing to divide
+            // by.
+            d_mul(
+                s_sq,
+                d_add(
+                    Decimal::ONE,
+                    d_div(x, dec!(3), "pricing::asian::arithmetic::m2::b_limit::third")?,
+                    "pricing::asian::arithmetic::m2::b_limit::series",
+                )?,
+                "pricing::asian::arithmetic::m2::b_limit::small_variance",
+            )?
         } else {
-            let exp_var_t = d_exp(
-                d_mul(
-                    sigma_sq,
-                    t_dec,
-                    "pricing::asian::arithmetic::m2::b_limit::var_t",
-                )?,
-                "pricing::asian::arithmetic::m2::b_limit::exp_var_t",
-            )?;
             let bracket = d_sub(
-                d_div(
-                    d_sub(
-                        exp_var_t,
-                        dec!(1),
-                        "pricing::asian::arithmetic::m2::b_limit::exp_var_t_less_one",
-                    )?,
-                    sigma_sq,
-                    "pricing::asian::arithmetic::m2::b_limit::first",
+                d_sub(
+                    d_exp(x, "pricing::asian::arithmetic::m2::b_limit::exp_x")?,
+                    Decimal::ONE,
+                    "pricing::asian::arithmetic::m2::b_limit::exp_x_less_one",
                 )?,
-                t_dec,
+                x,
                 "pricing::asian::arithmetic::m2::b_limit::bracket",
             )?;
             d_mul(
@@ -343,11 +359,7 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
                         s_sq,
                         "pricing::asian::arithmetic::m2::b_limit::two_s_sq",
                     )?,
-                    d_mul(
-                        sigma_sq,
-                        t_sq,
-                        "pricing::asian::arithmetic::m2::b_limit::denominator",
-                    )?,
+                    d_mul(x, x, "pricing::asian::arithmetic::m2::b_limit::x_sq")?,
                     "pricing::asian::arithmetic::m2::b_limit::scale",
                 )?,
                 bracket,
@@ -931,6 +943,50 @@ mod tests {
 
         // (110 - 100) e^{-0.04}.
         assert_decimal_eq!(price, dec!(9.6078943915), dec!(1e-9));
+    }
+
+    /// Below `x = σ² T = 1e-6` the vanishing-carry branch sums the series
+    /// instead of evaluating `e^x - 1 - x`, whose leading `x² / 2` would sink
+    /// under `Decimal`'s 28-decimal floor. The two have to meet at the
+    /// threshold: `σ = 0.001` puts `x` exactly on `1e-6`, so the neighbours
+    /// below and above are priced by different formulas. The tolerance is
+    /// `1e-7`; the genuine `dP/dσ ≈ 22.13` accounts for `2.2e-8` of each
+    /// measured gap and the formulas themselves differ by `2.8e-9`.
+    #[test]
+    fn test_arithmetic_asian_zero_carry_small_variance_series_matches_closed_form() {
+        let mut option = create_zero_carry_option(dec!(0.04));
+
+        option.implied_volatility = Positive::new_decimal(dec!(0.000999999)).unwrap();
+        let series = asian_black_scholes(&option).unwrap();
+        option.implied_volatility = Positive::new_decimal(dec!(0.001)).unwrap();
+        let at = asian_black_scholes(&option).unwrap();
+        option.implied_volatility = Positive::new_decimal(dec!(0.001000001)).unwrap();
+        let closed_form = asian_black_scholes(&option).unwrap();
+
+        assert_decimal_eq!(series, at, dec!(1e-7));
+        assert_decimal_eq!(closed_form, at, dec!(1e-7));
+        assert!(
+            series < at && at < closed_form,
+            "the price must stay monotone in σ across the threshold: {} {} {}",
+            series,
+            at,
+            closed_form
+        );
+    }
+
+    /// A near-zero volatility must leave a near-zero price. The closed form
+    /// cannot deliver that on its own: at `σ = 1e-7` (`x = 1e-14`) it loses
+    /// the whole `x² / 2` to rounding and prices this worthless contract at
+    /// `31`. The series keeps the matched volatility at `σ / √3`, so the
+    /// price stays the Black value `e^{-0.04} · 100 · (2 N(σ_adj / 2) - 1)`.
+    #[test]
+    fn test_arithmetic_asian_zero_carry_tiny_volatility_stays_proportional() {
+        let mut option = create_zero_carry_option(dec!(0.04));
+        option.implied_volatility = Positive::new_decimal(dec!(1e-7)).unwrap();
+
+        let price = asian_black_scholes(&option).unwrap();
+
+        assert_decimal_eq!(price, dec!(0.0000022129811), dec!(1e-11));
     }
 
     /// A deterministic path is still averaged: the geometric mean of
