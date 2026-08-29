@@ -293,7 +293,13 @@ where
         let Some(y_value) = next_y(y_step, volatility, &previous_x_step)? else {
             break;
         };
-        y_index += 1;
+        // The initial index is caller-supplied, so a walk seeded at
+        // `i32::MAX` overflows on its first step.
+        y_index = y_index.checked_add(1).ok_or_else(|| {
+            E::from(SimulationError::step_error(
+                "step index overflowed advancing the walk",
+            ))
+        })?;
         steps.push(Step {
             x: previous_x_step,
             y: Ystep::new(y_index, y_value),
@@ -426,7 +432,13 @@ where
             Ok(None) => break,
             Err(e) => return Err(e),
         };
-        y_index += 1;
+        // The initial index is caller-supplied, so a walk seeded at
+        // `i32::MAX` overflows on its first step.
+        y_index = y_index.checked_add(1).ok_or_else(|| {
+            E::from(SimulationError::step_error(
+                "step index overflowed advancing the walk",
+            ))
+        })?;
         steps.push(Step {
             x: x_step,
             y: Ystep::new(y_index, y_value),

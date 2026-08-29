@@ -154,15 +154,16 @@ where
     ///
     /// # Returns
     ///
-    /// A reference to the `RandomWalk<X, Y>` located at the given `index`.
+    /// * `Some(&RandomWalk<X, Y>)` - The walk at `index`.
+    /// * `None` - If `index` is out of bounds.
     ///
-    /// # Panics
-    ///
-    /// Panics if the `index` is out of bounds for the `random_walks` collection.
-    ///
+    /// Named `get_*`, so it follows [`slice::get`] rather than
+    /// [`std::ops::Index`]: an out-of-bounds index is reported, not aborted
+    /// on. Use the `simulator[index]` operator when the index is an invariant
+    /// of the caller and a panic is the wanted contract.
     #[must_use]
-    pub fn get_random_walk(&self, index: usize) -> &RandomWalk<X, Y> {
-        &self.random_walks[index]
+    pub fn get_random_walk(&self, index: usize) -> Option<&RandomWalk<X, Y>> {
+        self.random_walks.get(index)
     }
 
     /// Retrieves a mutable reference to a `RandomWalk` at the specified index.
@@ -173,14 +174,13 @@ where
     ///
     /// # Returns
     ///
-    /// A mutable reference to the `RandomWalk` object at the given index.
+    /// * `Some(&mut RandomWalk<X, Y>)` - The walk at `index`.
+    /// * `None` - If `index` is out of bounds.
     ///
-    /// # Panics
-    ///
-    /// This function panics if the provided `index` is out of bounds, i.e., if `index >= self.random_walks.len()`.
-    ///
-    pub fn get_random_walk_mut(&mut self, index: usize) -> &mut RandomWalk<X, Y> {
-        &mut self.random_walks[index]
+    /// Mutable counterpart of [`Simulator::get_random_walk`], with the same
+    /// out-of-bounds contract.
+    pub fn get_random_walk_mut(&mut self, index: usize) -> Option<&mut RandomWalk<X, Y>> {
+        self.random_walks.get_mut(index)
     }
 
     /// Returns a reference to the first `RandomWalk` element in the `random_walks` collection, if it exists.
@@ -640,8 +640,12 @@ mod tests {
         assert_eq!(steps.len(), 3);
 
         // Test get_step
-        let step = simulator.get_random_walk(1);
+        let step = simulator.get_random_walk(1).unwrap();
         assert_eq!(step.get_title(), "Test Simulator_1");
+        // Out of bounds is reported, not aborted on; the panicking contract
+        // lives on the `Index` operator, covered by
+        // `test_simulator_index_out_of_bounds`.
+        assert!(simulator.get_random_walk(99).is_none());
 
         // Test first and last
         assert!(simulator.first().is_some());

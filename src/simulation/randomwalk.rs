@@ -126,14 +126,16 @@ where
     ///
     /// # Returns
     ///
-    /// A reference to the step at the specified index.
+    /// * `Some(&Step<X, Y>)` - The step at `index`.
+    /// * `None` - If `index` is out of bounds.
     ///
-    /// # Panics
-    ///
-    /// Panics if the index is out of bounds.
+    /// Named `get_*`, so it follows [`slice::get`] rather than
+    /// [`std::ops::Index`]: an out-of-bounds index is reported, not aborted
+    /// on. Use the `walk[index]` operator when the index is an invariant of
+    /// the caller and a panic is the wanted contract.
     #[must_use]
-    pub fn get_step(&self, index: usize) -> &Step<X, Y> {
-        &self.steps[index]
+    pub fn get_step(&self, index: usize) -> Option<&Step<X, Y>> {
+        self.steps.get(index)
     }
 
     /// Returns a mutable reference to the step at the specified index.
@@ -144,13 +146,13 @@ where
     ///
     /// # Returns
     ///
-    /// A mutable reference to the step at the specified index.
+    /// * `Some(&mut Step<X, Y>)` - The step at `index`.
+    /// * `None` - If `index` is out of bounds.
     ///
-    /// # Panics
-    ///
-    /// Panics if the index is out of bounds.
-    pub fn get_step_mut(&mut self, index: usize) -> &mut Step<X, Y> {
-        &mut self.steps[index]
+    /// Mutable counterpart of [`RandomWalk::get_step`], with the same
+    /// out-of-bounds contract.
+    pub fn get_step_mut(&mut self, index: usize) -> Option<&mut Step<X, Y>> {
+        self.steps.get_mut(index)
     }
 
     /// Returns a reference to the first step in the random walk, if any.
@@ -608,15 +610,17 @@ mod tests_random_walk {
             unreachable!()
         };
 
-        let step_0 = walk.get_step(0);
-        let step_3 = walk.get_step(3);
+        let step_0 = walk.get_step(0).unwrap();
+        let step_3 = walk.get_step(3).unwrap();
 
         assert_eq!(*step_0.x.index(), 0);
         assert_eq!(*step_3.x.index(), 3);
     }
 
+    /// An out-of-bounds index is reported, not aborted on. `get_step` follows
+    /// `slice::get`; the panicking contract lives on the `Index` operator,
+    /// which `test_random_walk_index_operator` covers.
     #[test]
-    #[should_panic(expected = "index out of bounds")]
     fn test_random_walk_get_step_out_of_bounds() {
         let params = create_test_params(
             5,
@@ -629,13 +633,13 @@ mod tests_random_walk {
             },
         );
 
-        let Ok(walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
+        let Ok(mut walk) = RandomWalk::new("Test Walk".to_string(), &params, generate_test_steps)
         else {
             unreachable!()
         };
 
-        // This should panic
-        let _step = walk.get_step(10);
+        assert!(walk.get_step(10).is_none());
+        assert!(walk.get_step_mut(10).is_none());
     }
 
     #[test]
@@ -657,7 +661,7 @@ mod tests_random_walk {
         };
 
         // Get a mutable reference and verify initial state
-        let step_2 = walk.get_step_mut(2);
+        let step_2 = walk.get_step_mut(2).unwrap();
         assert_eq!(*step_2.x.index(), 2);
 
         // Get a new step by calling next on the current step
@@ -666,7 +670,7 @@ mod tests_random_walk {
         *step_2 = new_step.next(new_y_value * 2.0).unwrap();
 
         // Verify the step was updated
-        assert_eq!(*walk.get_step(2).x.index(), 3);
+        assert_eq!(*walk.get_step(2).unwrap().x.index(), 3);
     }
 
     #[test]
@@ -692,7 +696,7 @@ mod tests_random_walk {
         assert_eq!(*step_1.x.index(), 1);
 
         // Test comparison between get_step and index operator
-        assert_eq!(*walk.get_step(3).x.index(), *walk[3].x.index());
+        assert_eq!(*walk.get_step(3).unwrap().x.index(), *walk[3].x.index());
     }
 
     #[test]

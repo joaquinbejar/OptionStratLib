@@ -16,6 +16,7 @@ use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fmt;
 use utoipa::ToSchema;
 
@@ -264,13 +265,25 @@ impl ExitPolicy {
     }
 }
 
+/// A fraction rendered as a percentage to one decimal, or the empty string
+/// when scaling it by 100 leaves the representable `Decimal` range.
+///
+/// [`fmt::Display`] has nowhere to report, and it is reached from every log
+/// line, so a threshold with no printable percentage prints as blank rather
+/// than aborting the caller inside a `format!`.
+fn percent_or_blank(fraction: Decimal) -> String {
+    fraction
+        .checked_mul(Decimal::ONE_HUNDRED)
+        .map_or_else(String::new, |value| format!("{value:.1}"))
+}
+
 impl fmt::Display for ExitPolicy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ProfitPercent(pct) => {
-                write!(f, "Profit Target: {:.1}%", pct * Decimal::from(100))
+                write!(f, "Profit Target: {}%", percent_or_blank(*pct))
             }
-            Self::LossPercent(pct) => write!(f, "Stop Loss: {:.1}%", pct * Decimal::from(100)),
+            Self::LossPercent(pct) => write!(f, "Stop Loss: {}%", percent_or_blank(*pct)),
             Self::FixedPrice(price) => write!(f, "Fixed Price: ${price}"),
             Self::MinPrice(price) => write!(f, "Min Price: ${price}"),
             Self::MaxPrice(price) => write!(f, "Max Price: ${price}"),
@@ -302,6 +315,55 @@ impl fmt::Display for ExitPolicy {
                 write!(f, ")")
             }
         }
+    }
+}
+
+/// Orders `current` against the threshold `initial * (1 +/- pct)` without
+/// ever forming an intermediate outside the `Decimal` range.
+///
+/// Both the factor and the product overflow for an extreme `pct`, and neither
+/// has an honest representable stand-in: clamping the threshold would fire the
+/// exit at a price the caller never set. What IS knowable is the SIGN of the
+/// unrepresentable value — the sign of a product is the product of the signs —
+/// and that decides the comparison on its own, because `current` is a
+/// `Decimal` and therefore sits below any threshold past `Decimal::MAX` and
+/// above any threshold past `Decimal::MIN`.
+///
+/// `add` selects `1 + pct` (a threshold above the premium) over `1 - pct`.
+fn cmp_to_scaled_premium(current: Decimal, initial: Decimal, pct: Decimal, add: bool) -> Ordering {
+    // A zero base scales to zero whatever the factor does.
+    if initial.is_zero() {
+        return current.cmp(&Decimal::ZERO);
+    }
+    // The sign of the product, given the sign of a factor we may not be able
+    // to represent.
+    let decide = |factor_positive: bool| {
+        if initial.is_sign_positive() == factor_positive {
+            // Threshold above `Decimal::MAX`: unreachable from above.
+            Ordering::Less
+        } else {
+            // Threshold below `Decimal::MIN`: unreachable from below.
+            Ordering::Greater
+        }
+    };
+    let factor = if add {
+        Decimal::ONE.checked_add(pct)
+    } else {
+        Decimal::ONE.checked_sub(pct)
+    };
+    let Some(factor) = factor else {
+        // `1 + pct` can only leave the range above `Decimal::MAX` (pct > 0);
+        // `1 - pct` above it for a negative `pct` and below `Decimal::MIN`
+        // for a positive one.
+        return decide(if add {
+            pct.is_sign_positive()
+        } else {
+            pct.is_sign_negative()
+        });
+    };
+    match initial.checked_mul(factor) {
+        Some(threshold) => current.cmp(&threshold),
+        None => decide(factor.is_sign_positive()),
     }
 }
 
@@ -345,16 +407,18 @@ pub fn check_exit_policy(
         ExitPolicy::ProfitPercent(pct) => {
             if is_long {
                 // For long: profit when premium increases
-                let target = initial_premium * (Decimal::ONE + pct);
-                if current_premium >= target {
+                if cmp_to_scaled_premium(current_premium, initial_premium, *pct, true)
+                    != Ordering::Less
+                {
                     Some(ExitPolicy::ProfitPercent(*pct))
                 } else {
                     None
                 }
             } else {
                 // For short: profit when premium decreases
-                let target = initial_premium * (Decimal::ONE - pct);
-                if current_premium <= target {
+                if cmp_to_scaled_premium(current_premium, initial_premium, *pct, false)
+                    != Ordering::Greater
+                {
                     Some(ExitPolicy::ProfitPercent(*pct))
                 } else {
                     None
@@ -364,16 +428,18 @@ pub fn check_exit_policy(
         ExitPolicy::LossPercent(pct) => {
             if is_long {
                 // For long: loss when premium decreases
-                let limit = initial_premium * (Decimal::ONE - pct);
-                if current_premium <= limit {
+                if cmp_to_scaled_premium(current_premium, initial_premium, *pct, false)
+                    != Ordering::Greater
+                {
                     Some(ExitPolicy::LossPercent(*pct))
                 } else {
                     None
                 }
             } else {
                 // For short: loss when premium increases
-                let limit = initial_premium * (Decimal::ONE + pct);
-                if current_premium >= limit {
+                if cmp_to_scaled_premium(current_premium, initial_premium, *pct, true)
+                    != Ordering::Less
+                {
                     Some(ExitPolicy::LossPercent(*pct))
                 } else {
                     None

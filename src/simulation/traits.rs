@@ -6,7 +6,9 @@
 
 use crate::backtesting::results::SimulationStatsResult;
 use crate::error::SimulationError;
-use crate::model::decimal::{decimal_normal_sample, finite_decimal};
+use crate::model::decimal::{
+    d_add, d_div, d_exp, d_mul, d_sub, decimal_normal_sample, finite_decimal,
+};
 use crate::simulation::model::WalkPath;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, WalkParams, WalkType};
@@ -42,7 +44,11 @@ where
             alpha,
             beta,
         } => {
-            if alpha + beta >= Decimal::ONE {
+            // `alpha + beta` is the stationarity test itself, so it has to be
+            // formed before it can be compared; at `alpha = beta = MAX` the
+            // raw operator aborts instead of reporting the violation.
+            let persistence = alpha.checked_add(&beta)?;
+            if persistence >= Decimal::ONE {
                 return Err(SimulationError::GarchStationarity { alpha, beta });
             }
 
@@ -53,9 +59,19 @@ where
             vols.push(volatility);
 
             // --- initial conditional variance (annualised) ---
-            let mut var = volatility * volatility; // σ₀²
+            let mut var = volatility.checked_mul(&volatility)?; // σ₀²
             let mut prev_eps2 = Decimal::ZERO;
-            let omega = volatility.powu(2) * (Decimal::ONE - alpha - beta); // 0.002
+            // `1 - alpha - beta` is strictly positive by the stationarity
+            // check above; the subtraction order is preserved so the
+            // long-run variance is bit-identical to the previous form.
+            let stationary_weight = d_sub(
+                d_sub(Decimal::ONE, alpha.to_dec(), "simulation::garch::omega")?,
+                beta.to_dec(),
+                "simulation::garch::omega",
+            )?;
+            let omega = volatility
+                .checked_powu(2)?
+                .checked_mul_dec(stationary_weight)?; // 0.002
 
             // pre-compute √dt
             let sqrt_dt = dt.to_f64().sqrt();
@@ -65,24 +81,40 @@ where
 
             for _ in 1..params.size {
                 // 1) update variance
-                var = omega + alpha * prev_eps2 + beta * var;
+                var = omega
+                    .checked_add(&alpha.checked_mul_dec(prev_eps2)?)?
+                    .checked_add(&beta.checked_mul(&var)?)?;
 
                 // 2) shock with the right scale σ√dt·Z
                 let z = decimal_normal_sample();
-                let eps = z * var.sqrt() * sqrt_dt_dec; // εₜ
+                // `var` is kept in annualized-squared units, so sqrt is
+                // the annualized conditional volatility at this step; it
+                // feeds both the shock and the reported vol path.
+                let var_sqrt = var.checked_sqrt()?;
+                let eps = d_mul(
+                    d_mul(z, var_sqrt.to_dec(), "simulation::garch::eps")?,
+                    sqrt_dt_dec,
+                    "simulation::garch::eps",
+                )?; // εₜ
 
                 // 3) drift  (use μ dt, or μ dt − ½σ² dt if μ is arithmetic)
-                let ret = drift * dt + eps;
+                let ret = d_add(
+                    d_mul(drift, dt.to_dec(), "simulation::garch::ret")?,
+                    eps,
+                    "simulation::garch::ret",
+                )?;
 
                 // 4) price update
-                price *= (ret).exp();
+                price = d_mul(
+                    price,
+                    d_exp(ret, "simulation::garch::price")?,
+                    "simulation::garch::price",
+                )?;
                 path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
-                // `var` is kept in annualized-squared units, so sqrt is
-                // the annualized conditional volatility at this step.
-                vols.push(var.sqrt());
+                vols.push(var_sqrt);
 
-                // 5) store ε²
-                prev_eps2 = eps.powu(2); // εₜ²
+                // 5) store ε² (`powu(2)` is exactly `eps * eps`)
+                prev_eps2 = d_mul(eps, eps, "simulation::garch::eps_squared")?; // εₜ²
             }
             Ok(WalkPath {
                 prices: path,
@@ -129,7 +161,11 @@ where
             let mut price: Positive = params.ystep_as_positive()?;
 
             // Initial variance is the square of initial volatility
-            let mut variance = volatility.to_dec() * volatility.to_dec();
+            let mut variance = d_mul(
+                volatility.to_dec(),
+                volatility.to_dec(),
+                "simulation::heston::variance0",
+            )?;
 
             values.push(price); // Add initial value
             vols.push(volatility);
@@ -145,7 +181,13 @@ where
                     "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
                 )
             })?;
-            for _ in 0..params.size - 1 {
+            // A zero-step walk has nothing to simulate past the seeded
+            // initial value; `size - 1` underflows there and, in release,
+            // turns the loop bound into `usize::MAX`. `size` is a step count,
+            // not a financial value, so saturating at zero is the loop bound
+            // rather than a hidden clamp on a price.
+            let steps = params.size.saturating_sub(1);
+            for _ in 0..steps {
                 // Generate correlated random numbers
                 let z1 = decimal_normal_sample();
                 let z2 = rho * z1 + one_minus_rho_sq_sqrt * decimal_normal_sample();
@@ -154,19 +196,55 @@ where
                 let variance_sqrt = variance.sqrt().ok_or_else(|| {
                     SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
                 })?;
-                let variance_new = (variance
-                    + kappa.to_dec() * (theta.to_dec() - variance) * dt.to_dec()
-                    + xi.to_dec() * variance_sqrt * z2 * dt_sqrt)
-                    .max(Decimal::ZERO);
+                let variance_drift = d_mul(
+                    d_mul(
+                        kappa.to_dec(),
+                        d_sub(theta.to_dec(), variance, "simulation::heston::variance_gap")?,
+                        "simulation::heston::variance_drift",
+                    )?,
+                    dt.to_dec(),
+                    "simulation::heston::variance_drift",
+                )?;
+                let variance_diffusion = d_mul(
+                    d_mul(
+                        d_mul(
+                            xi.to_dec(),
+                            variance_sqrt,
+                            "simulation::heston::variance_diffusion",
+                        )?,
+                        z2,
+                        "simulation::heston::variance_diffusion",
+                    )?,
+                    dt_sqrt,
+                    "simulation::heston::variance_diffusion",
+                )?;
+                let variance_new = d_add(
+                    d_add(variance, variance_drift, "simulation::heston::variance_new")?,
+                    variance_diffusion,
+                    "simulation::heston::variance_new",
+                )?
+                .max(Decimal::ZERO);
 
                 // Update price using the average variance over the step
-                let avg_variance = (variance + variance_new) / Decimal::TWO;
+                let avg_variance = d_div(
+                    d_add(variance, variance_new, "simulation::heston::avg_variance")?,
+                    Decimal::TWO,
+                    "simulation::heston::avg_variance",
+                )?;
                 let avg_variance_sqrt = avg_variance.sqrt().ok_or_else(|| {
                     SimulationError::walk_error("Heston: sqrt(avg_variance) failed (overflow)")
                 })?;
-                let price_change = drift * dt.to_dec() + avg_variance_sqrt * z1 * dt_sqrt;
+                let price_change = d_add(
+                    d_mul(drift, dt.to_dec(), "simulation::heston::price_change")?,
+                    d_mul(
+                        d_mul(avg_variance_sqrt, z1, "simulation::heston::price_change")?,
+                        dt_sqrt,
+                        "simulation::heston::price_change",
+                    )?,
+                    "simulation::heston::price_change",
+                )?;
 
-                price *= (price_change).exp();
+                price = price.checked_mul_dec(d_exp(price_change, "simulation::heston::price")?)?;
                 variance = variance_new;
 
                 values.push(price);
@@ -212,21 +290,37 @@ where
             vol_speed,
             vol_mean,
         } => {
-            let vols = generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size);
+            let vols = generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size)?;
 
-            let sqrt_dt = dt.sqrt();
+            let sqrt_dt = dt.checked_sqrt()?;
             let mut price = params.ystep_as_positive()?.to_dec();
             let mut path = Vec::with_capacity(params.size + 1);
             let mut vols_out = Vec::with_capacity(params.size + 1);
             path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
             vols_out.push(volatility);
 
-            for &vol in vols.iter().take(params.size - 1) {
+            // A zero-step walk has nothing to simulate past the seeded
+            // initial value; `size - 1` underflows there. `size` is a step
+            // count, not a financial value.
+            let steps = params.size.saturating_sub(1);
+            for &vol in vols.iter().take(steps) {
                 let z = decimal_normal_sample();
-                let sigma_abs = vol.to_dec() * price;
-                let random_step = z * sigma_abs * sqrt_dt.to_dec();
+                let sigma_abs = d_mul(vol.to_dec(), price, "simulation::custom::sigma_abs")?;
+                let random_step = d_mul(
+                    d_mul(z, sigma_abs, "simulation::custom::random_step")?,
+                    sqrt_dt.to_dec(),
+                    "simulation::custom::random_step",
+                )?;
 
-                price += drift * dt + random_step;
+                price = d_add(
+                    price,
+                    d_add(
+                        d_mul(drift, dt.to_dec(), "simulation::custom::price")?,
+                        random_step,
+                        "simulation::custom::price",
+                    )?,
+                    "simulation::custom::price",
+                )?;
                 path.push(
                     Positive::new_decimal(price.max(Decimal::ZERO)).unwrap_or(Positive::ZERO),
                 );
@@ -282,7 +376,7 @@ where
                 -1
             };
 
-            let sqrt_dt = dt.sqrt();
+            let sqrt_dt = dt.checked_sqrt()?;
             let vol_mult_up = vol_multiplier_up.unwrap_or(Positive::ONE);
             let vol_mult_down = vol_multiplier_down.unwrap_or(Positive::ONE);
 
@@ -294,7 +388,17 @@ where
                     lambda_up.to_dec()
                 };
 
-                let transition_prob = Decimal::ONE - (-lambda * dt.to_dec()).exp();
+                // `lambda` is non-negative, so the exponent is non-positive;
+                // an arbitrarily fast transition rate flushes `e^x` to zero,
+                // which is the limit `transition_prob -> 1`.
+                let transition_prob = d_sub(
+                    Decimal::ONE,
+                    d_exp(
+                        d_mul(-lambda, dt.to_dec(), "simulation::telegraph::transition")?,
+                        "simulation::telegraph::transition",
+                    )?,
+                    "simulation::telegraph::transition",
+                )?;
 
                 // Check for state transition using uniform random sample
                 let uniform_sample = (decimal_normal_sample().abs() + Decimal::ONE) / Decimal::TWO; // Convert normal to uniform [0,1]
@@ -304,19 +408,31 @@ where
 
                 // Apply volatility multiplier based on current state
                 let current_vol = if state == 1 {
-                    volatility * vol_mult_up
+                    volatility.checked_mul(&vol_mult_up)?
                 } else {
-                    volatility * vol_mult_down
+                    volatility.checked_mul(&vol_mult_down)?
                 };
 
                 // Generate price change
                 let z = decimal_normal_sample();
-                let diffusion = current_vol.to_dec() * sqrt_dt.to_dec() * z;
-                let drift_term = drift * dt.to_dec();
+                let diffusion = d_mul(
+                    d_mul(
+                        current_vol.to_dec(),
+                        sqrt_dt.to_dec(),
+                        "simulation::telegraph::diffusion",
+                    )?,
+                    z,
+                    "simulation::telegraph::diffusion",
+                )?;
+                let drift_term = d_mul(drift, dt.to_dec(), "simulation::telegraph::drift")?;
 
                 // Update price using geometric Brownian motion with regime-dependent volatility
-                let price_change = drift_term + diffusion;
-                price *= price_change.exp();
+                let price_change = d_add(drift_term, diffusion, "simulation::telegraph::price")?;
+                price = d_mul(
+                    price,
+                    d_exp(price_change, "simulation::telegraph::price")?,
+                    "simulation::telegraph::price",
+                )?;
 
                 values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
                 // Regime volatility that generated this step.
@@ -534,7 +650,7 @@ where
                 let start: Positive = params.ystep_as_positive()?;
                 values.push(start);
                 let mut x: Decimal = start.to_dec();
-                let sigma_abs = (volatility * start).to_dec();
+                let sigma_abs = volatility.checked_mul(&start)?.to_dec();
                 let sqrt_dt = dt.to_f64().sqrt();
                 let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                     SimulationError::non_finite("simulation::brownian::sqrt_dt", sqrt_dt)
@@ -542,9 +658,17 @@ where
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let diffusion = sigma_abs * sqrt_dt_dec * z;
-                    let drift_term = drift * dt;
-                    x += drift_term + diffusion;
+                    let diffusion = d_mul(
+                        d_mul(sigma_abs, sqrt_dt_dec, "simulation::brownian::diffusion")?,
+                        z,
+                        "simulation::brownian::diffusion",
+                    )?;
+                    let drift_term = d_mul(drift, dt.to_dec(), "simulation::brownian::drift")?;
+                    x = d_add(
+                        x,
+                        d_add(drift_term, diffusion, "simulation::brownian::step")?,
+                        "simulation::brownian::step",
+                    )?;
                     values.push(
                         Positive::new_decimal(x.max(Decimal::ZERO)).unwrap_or(Positive::ZERO),
                     );
@@ -592,14 +716,27 @@ where
                 let mut values = Vec::with_capacity(params.size);
                 let mut current_value: Positive = params.ystep_as_positive()?;
                 values.push(current_value);
-                let sqrt_dt = dt.sqrt();
+                let sqrt_dt = dt.checked_sqrt()?;
 
                 for _ in 1..params.size {
                     // σ * √dt * Z
-                    let diffusion = decimal_normal_sample() * volatility * sqrt_dt;
+                    let diffusion = d_mul(
+                        d_mul(
+                            decimal_normal_sample(),
+                            volatility.to_dec(),
+                            "simulation::gbm::diffusion",
+                        )?,
+                        sqrt_dt.to_dec(),
+                        "simulation::gbm::diffusion",
+                    )?;
                     // μ * dt
-                    let drift_term = (drift * dt) + diffusion;
-                    current_value *= Decimal::exp(&drift_term);
+                    let drift_term = d_add(
+                        d_mul(drift, dt.to_dec(), "simulation::gbm::drift")?,
+                        diffusion,
+                        "simulation::gbm::drift",
+                    )?;
+                    current_value = current_value
+                        .checked_mul_dec(d_exp(drift_term, "simulation::gbm::price")?)?;
                     values.push(current_value);
                 }
                 Ok(values)
@@ -654,18 +791,35 @@ where
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let diffusion = z * volatility * sqrt_dt_dec;
-                    let mut log_ret = (expected_return * dt) + diffusion;
+                    let diffusion = d_mul(
+                        d_mul(z, volatility.to_dec(), "simulation::log_returns::diffusion")?,
+                        sqrt_dt_dec,
+                        "simulation::log_returns::diffusion",
+                    )?;
+                    let mut log_ret = d_add(
+                        d_mul(
+                            expected_return,
+                            dt.to_dec(),
+                            "simulation::log_returns::log_ret",
+                        )?,
+                        diffusion,
+                        "simulation::log_returns::log_ret",
+                    )?;
 
                     if let Some(ac) = autocorrelation {
                         if !(-Decimal::ONE..=Decimal::ONE).contains(&ac) {
                             return Err(SimulationError::InvalidAutocorrelation { value: ac });
                         }
-                        log_ret += ac * prev_log_ret;
+                        log_ret = d_add(
+                            log_ret,
+                            d_mul(ac, prev_log_ret, "simulation::log_returns::autocorrelation")?,
+                            "simulation::log_returns::autocorrelation",
+                        )?;
                     }
 
                     // actualizar precio
-                    price *= log_ret.exp();
+                    price =
+                        price.checked_mul_dec(d_exp(log_ret, "simulation::log_returns::price")?)?;
                     values.push(price);
 
                     prev_log_ret = log_ret;
@@ -708,15 +862,15 @@ where
                 speed,
                 mean, // mean level or initial value
             } => {
-                let sigma_abs = volatility * mean;
-                Ok(generate_ou_process(
+                let sigma_abs = volatility.checked_mul(&mean)?;
+                generate_ou_process(
                     params.ystep_as_positive()?,
                     mean,
                     speed,
                     sigma_abs,
                     dt,
                     params.size,
-                ))
+                )
             }
 
             _ => Err(SimulationError::InvalidWalkType {
@@ -761,23 +915,43 @@ where
                 let mut x: Decimal = params.ystep_as_positive()?.to_dec();
                 values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
-                let sqrt_dt = dt.sqrt();
-                let lambda_dt = intensity * dt;
+                let sqrt_dt = dt.checked_sqrt()?;
+                let lambda_dt = intensity.checked_mul(&dt)?;
 
                 for _ in 1..params.size {
                     let z = decimal_normal_sample();
-                    let sigma_abs = volatility.to_dec() * x;
-                    let diffusion = sigma_abs * sqrt_dt.to_dec() * z;
+                    let sigma_abs = d_mul(volatility.to_dec(), x, "simulation::jump::sigma_abs")?;
+                    let diffusion = d_mul(
+                        d_mul(sigma_abs, sqrt_dt.to_dec(), "simulation::jump::diffusion")?,
+                        z,
+                        "simulation::jump::diffusion",
+                    )?;
 
-                    let drift_term = drift * dt;
+                    let drift_term = d_mul(drift, dt.to_dec(), "simulation::jump::drift")?;
                     let jump = if decimal_normal_sample() < lambda_dt.to_dec() {
                         // Bernoulli(λdt)
-                        jump_mean + decimal_normal_sample() * jump_volatility
+                        d_add(
+                            jump_mean,
+                            d_mul(
+                                decimal_normal_sample(),
+                                jump_volatility.to_dec(),
+                                "simulation::jump::size",
+                            )?,
+                            "simulation::jump::size",
+                        )?
                     } else {
                         Decimal::ZERO
                     };
 
-                    x += drift_term + diffusion + jump;
+                    x = d_add(
+                        x,
+                        d_add(
+                            d_add(drift_term, diffusion, "simulation::jump::step")?,
+                            jump,
+                            "simulation::jump::step",
+                        )?,
+                        "simulation::jump::step",
+                    )?;
                     x = x.max(Decimal::ZERO);
                     values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
                 }
@@ -1027,16 +1201,13 @@ where
                 timeframe: _timeframe,
                 prices,
                 symbol: _symbol,
-            } => {
-                if prices.len() >= params.size {
-                    Ok(prices[0..params.size].to_vec())
-                } else {
-                    Err(SimulationError::InsufficientHistoricalData {
-                        required: params.size,
-                        found: prices.len(),
-                    })
-                }
-            }
+            } => match prices.get(0..params.size) {
+                Some(window) => Ok(window.to_vec()),
+                None => Err(SimulationError::InsufficientHistoricalData {
+                    required: params.size,
+                    found: prices.len(),
+                }),
+            },
             _ => Err(SimulationError::InvalidWalkType {
                 expected: "Historical",
             }),

@@ -10,7 +10,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
-use crate::error::VolatilityError;
+use crate::error::{SimulationError, VolatilityError};
 use crate::model::decimal::{
     d_add, d_div, d_mul, d_sub, d_sum, decimal_normal_sample, finite_decimal,
 };
@@ -730,6 +730,17 @@ pub fn volatility_for_dt(
 /// # Returns
 /// A vector containing the simulated values of the Ornstein-Uhlenbeck process at each time step
 ///
+/// # Errors
+///
+/// Returns [`SimulationError::PositiveError`] when `sqrt(dt)` or the mean
+/// reversion term `theta * (mu - x) * dt` leaves the representable `Positive`
+/// range, and [`SimulationError::Decimal`] when the diffusion term or the
+/// accumulated level leaves the representable `Decimal` range.
+///
+/// There is no limit to return in their place: the process level is the state
+/// being simulated, so a step that cannot be represented ends the path rather
+/// than continuing from a stand-in value.
+///
 /// # Examples
 ///
 /// ```rust
@@ -737,6 +748,7 @@ pub fn volatility_for_dt(
 /// use positive::{pos_or_panic, Positive};
 /// use optionstratlib::volatility::generate_ou_process;
 ///
+/// # fn main() -> Result<(), optionstratlib::error::SimulationError> {
 /// // Simulate an OU process with initial value 1.0, mean 1.5,
 /// // reversion speed 0.1, volatility 0.2, time step 0.01, for 1000 steps
 /// let process = generate_ou_process(
@@ -746,9 +758,10 @@ pub fn volatility_for_dt(
 ///     pos_or_panic!(0.2),       // volatility
 ///     pos_or_panic!(0.01),      // time step
 ///     1000             // number of steps
-/// );
+/// )?;
+/// # Ok(())
+/// # }
 /// ```
-#[must_use]
 pub fn generate_ou_process(
     x0: Positive,
     mu: Positive,
@@ -756,22 +769,37 @@ pub fn generate_ou_process(
     volatility: Positive,
     dt: Positive,
     steps: usize,
-) -> Vec<Positive> {
-    let sqrt_dt = dt.sqrt();
+) -> Result<Vec<Positive>, SimulationError> {
+    let sqrt_dt = dt.checked_sqrt()?;
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
     result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
     for _ in 1..steps {
-        let dw = decimal_normal_sample() * sqrt_dt; // Z√dt
-        let drift = (theta * sub_floor_zero(mu, &x) * dt).to_dec(); // θ(μ−x)dt
-        let diffusion = dw * volatility; // σ·Z√dt (Decimal)
-        x += drift + diffusion; // OU process step
+        // Z√dt
+        let dw = d_mul(
+            decimal_normal_sample(),
+            sqrt_dt.to_dec(),
+            "volatility::ou::dw",
+        )?;
+        // θ(μ−x)dt
+        let drift = theta
+            .checked_mul(&sub_floor_zero(mu, &x))?
+            .checked_mul(&dt)?
+            .to_dec();
+        // σ·Z√dt (Decimal)
+        let diffusion = d_mul(dw, volatility.to_dec(), "volatility::ou::diffusion")?;
+        // OU process step
+        x = d_add(
+            x,
+            d_add(drift, diffusion, "volatility::ou::step")?,
+            "volatility::ou::step",
+        )?;
         x = x.max(Decimal::ZERO); // no negative values
         result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
     }
 
-    result
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -2087,7 +2115,8 @@ mod tests_generate_ou_process {
             pos_or_panic!(0.2),
             pos_or_panic!(0.01),
             steps,
-        );
+        )
+        .unwrap();
         assert_eq!(process.len(), steps);
     }
 
@@ -2100,7 +2129,8 @@ mod tests_generate_ou_process {
             pos_or_panic!(0.3),
             pos_or_panic!(0.01),
             1000,
-        );
+        )
+        .unwrap();
 
         for value in process {
             assert!(
@@ -2119,7 +2149,8 @@ mod tests_generate_ou_process {
             pos_or_panic!(0.01), // low volatility
             pos_or_panic!(0.01),
             1000,
-        );
+        )
+        .unwrap();
 
         let last = process.last().unwrap().to_dec();
         let diff = (last - dec!(1.0)).abs();

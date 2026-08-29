@@ -4,6 +4,8 @@
    Date: 8/11/25
 ******************************************************************************/
 use crate::backtesting::results::SimulationResult;
+use crate::error::SimulationError;
+use crate::model::decimal::d_add;
 use crate::simulation::ExitPolicy;
 use prettytable::{Cell, Row, Table, format};
 use rust_decimal::Decimal;
@@ -69,9 +71,21 @@ impl SimulationStats {
     /// # Parameters
     ///
     /// * `result` - The simulation result containing all metrics
-    pub fn update(&mut self, result: SimulationResult) {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::Decimal`] when the running P&L total leaves
+    /// the representable `Decimal` range. Skipping the addition instead would
+    /// leave every later reader looking at a total that is quietly wrong,
+    /// which is worse than the abort this replaces; the run is reported and
+    /// the caller decides.
+    pub fn update(&mut self, result: SimulationResult) -> Result<(), SimulationError> {
         self.total_simulations += 1;
-        self.total_pnl += result.pnl.realized.unwrap_or(dec!(0.0));
+        self.total_pnl = d_add(
+            self.total_pnl,
+            result.pnl.realized.unwrap_or(dec!(0.0)),
+            "simulation::stats::total_pnl",
+        )?;
 
         if result.hit_take_profit {
             self.profitable_closes += 1;
@@ -96,12 +110,14 @@ impl SimulationStats {
             }
         }
 
-        // Update average holding period
+        // Update average holding period. `total_simulations` was incremented
+        // above, so it is at least one and the subtraction cannot underflow.
         let total_holding = self.avg_holding_period * (self.total_simulations - 1) as f64;
         self.avg_holding_period =
             (total_holding + result.holding_period as f64) / self.total_simulations as f64;
 
         self.results.push(result);
+        Ok(())
     }
 
     /// Prints a formatted summary of the simulation statistics.
@@ -335,7 +351,7 @@ mod tests {
             ExitPolicy::ProfitPercent(dec!(0.5)),
         );
 
-        stats.update(result);
+        stats.update(result).unwrap();
 
         assert_eq!(stats.total_simulations, 1);
         assert_eq!(stats.profitable_closes, 1);
@@ -359,7 +375,7 @@ mod tests {
             ExitPolicy::LossPercent(dec!(1.0)),
         );
 
-        stats.update(result);
+        stats.update(result).unwrap();
 
         assert_eq!(stats.total_simulations, 1);
         assert_eq!(stats.profitable_closes, 0);
@@ -375,7 +391,7 @@ mod tests {
         let mut stats = SimulationStats::new();
         let result = create_test_result(dec!(25.0), 20, false, false, true, ExitPolicy::Expiration);
 
-        stats.update(result);
+        stats.update(result).unwrap();
 
         assert_eq!(stats.total_simulations, 1);
         assert_eq!(stats.profitable_closes, 0);
@@ -390,34 +406,40 @@ mod tests {
         let mut stats = SimulationStats::new();
 
         // Add profitable trade
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
 
         // Add loss trade
-        stats.update(create_test_result(
-            dec!(-100.0),
-            20,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-100.0),
+                20,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
 
         // Add expired trade
-        stats.update(create_test_result(
-            dec!(25.0),
-            15,
-            false,
-            false,
-            true,
-            ExitPolicy::Expiration,
-        ));
+        stats
+            .update(create_test_result(
+                dec!(25.0),
+                15,
+                false,
+                false,
+                true,
+                ExitPolicy::Expiration,
+            ))
+            .unwrap();
 
         assert_eq!(stats.total_simulations, 3);
         assert_eq!(stats.profitable_closes, 1);
@@ -434,32 +456,38 @@ mod tests {
     fn test_update_tracks_exit_reasons() {
         let mut stats = SimulationStats::new();
 
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
 
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
 
-        stats.update(create_test_result(
-            dec!(-100.0),
-            20,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-100.0),
+                20,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
 
         assert_eq!(stats.exit_reasons.len(), 2);
         assert_eq!(
@@ -493,7 +521,7 @@ mod tests {
         // Set realized to None
         result.pnl.realized = None;
 
-        stats.update(result);
+        stats.update(result).unwrap();
 
         assert_eq!(stats.total_simulations, 1);
         assert_eq!(stats.total_pnl, dec!(0.0)); // Should use 0.0 when None
@@ -506,36 +534,42 @@ mod tests {
         let mut stats = SimulationStats::new();
 
         // First trade: 10 steps
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.avg_holding_period, 10.0);
 
         // Second trade: 20 steps
-        stats.update(create_test_result(
-            dec!(50.0),
-            20,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                20,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.avg_holding_period, 15.0); // (10 + 20) / 2
 
         // Third trade: 30 steps
-        stats.update(create_test_result(
-            dec!(50.0),
-            30,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                30,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.avg_holding_period, 20.0); // (10 + 20 + 30) / 3
     }
 
@@ -543,35 +577,41 @@ mod tests {
     fn test_max_profit_updates_correctly() {
         let mut stats = SimulationStats::new();
 
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_profit, dec!(50.0));
 
-        stats.update(create_test_result(
-            dec!(100.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(100.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_profit, dec!(100.0));
 
         // Lower profit should not update max
-        stats.update(create_test_result(
-            dec!(75.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(75.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_profit, dec!(100.0));
     }
 
@@ -579,35 +619,41 @@ mod tests {
     fn test_max_loss_updates_correctly() {
         let mut stats = SimulationStats::new();
 
-        stats.update(create_test_result(
-            dec!(-50.0),
-            10,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-50.0),
+                10,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_loss, dec!(-50.0));
 
-        stats.update(create_test_result(
-            dec!(-100.0),
-            10,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-100.0),
+                10,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_loss, dec!(-100.0));
 
         // Smaller loss should not update max_loss
-        stats.update(create_test_result(
-            dec!(-75.0),
-            10,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-75.0),
+                10,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
         assert_eq!(stats.max_loss, dec!(-100.0));
     }
 
@@ -619,14 +665,16 @@ mod tests {
         stats.print_summary();
 
         // Test with some data
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         stats.print_summary();
     }
 
@@ -638,28 +686,32 @@ mod tests {
         stats.print_individual_results();
 
         // Test with some results
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         stats.print_individual_results();
     }
 
     #[test]
     fn test_clone_trait() {
         let mut stats = SimulationStats::new();
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
 
         let cloned = stats.clone();
 
@@ -678,14 +730,16 @@ mod tests {
             ExitPolicy::Expiration,
         ]);
 
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            complex_exit.clone(),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                complex_exit.clone(),
+            ))
+            .unwrap();
 
         assert_eq!(stats.exit_reasons.len(), 1);
         assert_eq!(*stats.exit_reasons.get(&complex_exit).unwrap(), 1);
@@ -695,34 +749,40 @@ mod tests {
     fn test_total_pnl_accumulation() {
         let mut stats = SimulationStats::new();
 
-        stats.update(create_test_result(
-            dec!(50.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(50.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.total_pnl, dec!(50.0));
 
-        stats.update(create_test_result(
-            dec!(30.0),
-            10,
-            true,
-            false,
-            false,
-            ExitPolicy::ProfitPercent(dec!(0.5)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(30.0),
+                10,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
         assert_eq!(stats.total_pnl, dec!(80.0));
 
-        stats.update(create_test_result(
-            dec!(-20.0),
-            10,
-            false,
-            true,
-            false,
-            ExitPolicy::LossPercent(dec!(1.0)),
-        ));
+        stats
+            .update(create_test_result(
+                dec!(-20.0),
+                10,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
         assert_eq!(stats.total_pnl, dec!(60.0));
     }
 
@@ -731,14 +791,16 @@ mod tests {
         let mut stats = SimulationStats::new();
 
         for i in 0..10 {
-            stats.update(create_test_result(
-                dec!(50.0),
-                i,
-                true,
-                false,
-                false,
-                ExitPolicy::ProfitPercent(dec!(0.5)),
-            ));
+            stats
+                .update(create_test_result(
+                    dec!(50.0),
+                    i,
+                    true,
+                    false,
+                    false,
+                    ExitPolicy::ProfitPercent(dec!(0.5)),
+                ))
+                .unwrap();
         }
 
         assert_eq!(stats.results.len(), 10);

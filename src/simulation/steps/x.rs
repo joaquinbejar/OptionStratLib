@@ -201,8 +201,10 @@ where
     ///
     /// Returns [`SimulationError::ExpirationReached`] when the
     /// current step is already at expiration (no forward step is
-    /// possible), or [`SimulationError::ExpirationDate`] when the
-    /// underlying [`ExpirationDate::get_days`] call fails.
+    /// possible), [`SimulationError::ExpirationDate`] when the
+    /// underlying [`ExpirationDate::get_days`] call fails, and
+    /// [`SimulationError::StepError`] when the step index overflows
+    /// `i32::MAX`.
     pub fn next(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         if days == Positive::ZERO {
@@ -225,7 +227,9 @@ where
             days_to_rest, days, datetime
         );
         Ok(Self {
-            index: self.index + 1,
+            index: self.index.checked_add(1).ok_or_else(|| {
+                SimulationError::step_error("step index overflowed advancing the walk")
+            })?,
             step_size_in_time: self.step_size_in_time,
             time_unit: self.time_unit,
             datetime,
@@ -243,18 +247,12 @@ where
     ///
     /// # Errors
     ///
-    /// Returns `SimulationError::ExpirationDate` when the underlying
-    /// `ExpirationDate::get_days` call fails, or
-    /// `SimulationError::step_error` when the step-size conversion
-    /// to `Positive` fails.
-    ///
-    /// # Panics
-    ///
-    /// The decrement `self.index - 1` is unchecked and will panic in
-    /// debug builds (or silently wrap in release) if `self.index` is
-    /// already `i32::MIN`. In practice simulations start at `0` and
-    /// only call `previous` a bounded number of times, so this is
-    /// treated as a caller invariant rather than a runtime check.
+    /// Returns [`SimulationError::ExpirationDate`] when the underlying
+    /// [`ExpirationDate::get_days`] call fails,
+    /// [`SimulationError::StepError`] when the step-size conversion to
+    /// `Positive` fails or when the step index underflows `i32::MIN`, and
+    /// [`SimulationError::PositiveError`] when rewinding the expiration
+    /// leaves the representable `Positive` range.
     pub fn previous(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         let days_to_rest = convert_time_frame(
@@ -264,9 +262,13 @@ where
             &self.time_unit,
             &TimeFrame::Day,
         );
-        let datetime = ExpirationDate::Days(days + days_to_rest);
+        // Rewinding adds days back, so a step taken from an expiration
+        // already near `Positive::MAX` leaves the representable range.
+        let datetime = ExpirationDate::Days(days.checked_add(&days_to_rest)?);
         Ok(Self {
-            index: self.index - 1,
+            index: self.index.checked_sub(1).ok_or_else(|| {
+                SimulationError::step_error("step index underflowed rewinding the walk")
+            })?,
             step_size_in_time: self.step_size_in_time,
             time_unit: self.time_unit,
             datetime,
