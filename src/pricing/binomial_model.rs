@@ -97,7 +97,10 @@ pub struct BinomialPricingParams<'a> {
 /// # Special cases
 ///
 /// - If `expiry` is 0, the function returns the intrinsic value of the option.
-/// - If `volatility` is 0, the function calculates the option price deterministically.
+/// - If `volatility` is 0, the underlying is deterministic and the price is
+///   computed in closed form, which still honours early exercise: an American
+///   is worth the better of exercising now and holding to expiry, a Bermuda
+///   the best of its schedule, a European its discounted payoff.
 ///
 /// # Notes
 ///
@@ -135,7 +138,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         return Ok(intrinsic_value);
     }
     if params.volatility == Decimal::ZERO {
-        return calculate_discounted_payoff(params);
+        return price_deterministic(&params);
     }
 
     let no_steps_raw = params.no_steps.get();
@@ -146,7 +149,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         // `σ√dt` underflowed below the representable scale, so the lattice has
         // collapsed onto a single deterministic path: same answer as the
         // zero-volatility branch above.
-        return calculate_discounted_payoff(params);
+        return price_deterministic(&params);
     }
     let p = calculate_probability(params.int_rate, dt, d, u)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
@@ -222,6 +225,64 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         .first()
         .copied()
         .ok_or(PricingError::BinomialNodeMissing { node: "root" })
+}
+
+/// Price of a contract whose underlying is deterministic.
+///
+/// With no volatility the underlying follows its forward, `S(t) = S · e^{r·t}`,
+/// so exercising at `t` is worth `e^{-r·t} · payoff(S · e^{r·t})` today. Each
+/// candidate exercise time is valued by [`calculate_discounted_payoff`] on a
+/// copy of the parameters whose expiry is that time, which keeps the European
+/// answer bit-identical to the one the direct call used to produce.
+///
+/// The exercise opportunities depend on the contract:
+///
+/// - **European** — expiry only.
+/// - **American** — any `t ∈ [0, T]`. For a standard call or put the value
+///   above is monotone in `t` (a call is worth `(S − K·e^{-r·t})⁺`, a put
+///   `(K·e^{-r·t} − S)⁺`, and only the discount factor moves), so the maximum
+///   always sits at one of the two endpoints and `max(immediate, expiry)` is
+///   the exact optimum rather than an approximation of it.
+/// - **Bermuda** — expiry plus every scheduled date that falls on or before
+///   it. An empty schedule leaves expiry alone, which is a European.
+///
+/// Any other contract keeps the previous behaviour and is valued at expiry:
+/// the lattice rejects those types, but this branch never did and widening
+/// the error surface is a separate decision.
+///
+/// # Errors
+///
+/// Propagates whatever [`calculate_discounted_payoff`] reports for a single
+/// exercise time: [`PricingError::NonFinite`] for a non-finite payoff and
+/// [`PricingError::Decimal`] when the growth or discount factor leaves the
+/// representable range.
+fn price_deterministic(params: &BinomialPricingParams) -> Result<Decimal, PricingError> {
+    let exercise_value = |time: Positive| -> Result<Decimal, PricingError> {
+        calculate_discounted_payoff(BinomialPricingParams {
+            expiry: time,
+            ..params.clone()
+        })
+    };
+
+    let expiry_value = exercise_value(params.expiry)?;
+    match params.option_type {
+        OptionType::American => {
+            let immediate = exercise_value(Positive::ZERO)?;
+            Ok(expiry_value.max(immediate))
+        }
+        OptionType::Bermuda { exercise_dates } => {
+            let mut best = expiry_value;
+            for date in exercise_dates {
+                if *date > params.expiry {
+                    // Not an exercise opportunity: the contract is already gone.
+                    continue;
+                }
+                best = best.max(exercise_value(*date)?);
+            }
+            Ok(best)
+        }
+        _ => Ok(expiry_value),
+    }
 }
 
 /// Spot price at lattice node `(step, i)`: `S · u^i · d^(step - i)`.
@@ -1030,6 +1091,444 @@ mod tests_bermuda_option {
         assert!(
             price > dec!(5.0),
             "ITM Bermuda call should have value > intrinsic"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_zero_volatility_early_exercise {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::types::OptionType;
+    use rust_decimal_macros::dec;
+
+    /// With no volatility the underlying is its own forward, so every price
+    /// below has a closed form. The only error between the two is
+    /// `Decimal::checked_exp`'s series truncation; the largest gap observed
+    /// across these cases is `7.1e-14`, so `1e-12` pins roughly thirteen
+    /// significant digits with room to spare.
+    const ANALYTIC_EPSILON: Decimal = dec!(1e-12);
+
+    /// One year, one hundred steps, no volatility. The step count is
+    /// irrelevant on this path — it never builds a lattice — and is only
+    /// here so the parameters stay comparable with the small-volatility
+    /// runs further down.
+    fn zero_vol_params<'a>(
+        asset: Positive,
+        strike: Positive,
+        int_rate: Decimal,
+        option_type: &'a OptionType,
+        option_style: &'a OptionStyle,
+    ) -> BinomialPricingParams<'a> {
+        BinomialPricingParams {
+            asset,
+            volatility: Positive::ZERO,
+            int_rate,
+            strike,
+            expiry: Positive::ONE,
+            no_steps: crate::nz!(100),
+            option_type,
+            option_style,
+            side: &Side::Long,
+        }
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_put_itm_exercises_immediately() {
+        // S = 90, K = 100, r = 5%, T = 1, σ = 0. The forward is 94.61, so
+        // holding to expiry is worth e^{-0.05}(100 − 90·e^{0.05}) = 5.1229.
+        // Exercising now is worth K − S = 10, and that is the price.
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::American,
+            &OptionStyle::Put,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let american = price_binomial(params).unwrap();
+
+        // Immediate exercise is exact: no discount factor is involved.
+        assert_eq!(american, dec!(10));
+        assert_decimal_eq!(european, dec!(5.122942450071406), ANALYTIC_EPSILON);
+        assert!(
+            american > european,
+            "American {american} must carry an early-exercise premium over European {european}"
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_call_itm_holds_to_expiry() {
+        // S = 110, K = 100, r = 5%. A call on a non-dividend-paying forward
+        // is never exercised early while r > 0: holding is worth
+        // S − K·e^{-rT} = 14.877, above the intrinsic 10.
+        let params = zero_vol_params(
+            Positive::HUNDRED + pos_or_panic!(10.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::American,
+            &OptionStyle::Call,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let american = price_binomial(params).unwrap();
+
+        assert_eq!(american, european);
+        assert_decimal_eq!(american, dec!(14.877057549928594), ANALYTIC_EPSILON);
+        assert!(american > dec!(10), "holding must beat the intrinsic 10");
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_call_negative_rate_exercises_immediately() {
+        // Flip the sign of the rate and the call is the one with an
+        // early-exercise premium: holding is worth
+        // e^{0.05}(110·e^{-0.05} − 100) = 4.873, exercising now is worth 10.
+        let params = zero_vol_params(
+            Positive::HUNDRED + pos_or_panic!(10.0),
+            Positive::HUNDRED,
+            dec!(-0.05),
+            &OptionType::American,
+            &OptionStyle::Call,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let american = price_binomial(params).unwrap();
+
+        assert_eq!(american, dec!(10));
+        assert_decimal_eq!(european, dec!(4.872890362397602), ANALYTIC_EPSILON);
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_put_negative_rate_holds_to_expiry() {
+        // The mirror image: with r < 0 the put is never exercised early,
+        // and holding is worth 100·e^{0.02} − 90 = 12.020 against an
+        // intrinsic of 10.
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(-0.02),
+            &OptionType::American,
+            &OptionStyle::Put,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let american = price_binomial(params).unwrap();
+
+        assert_eq!(american, european);
+        assert_decimal_eq!(american, dec!(12.020134002675576), ANALYTIC_EPSILON);
+        assert!(american > dec!(10), "holding must beat the intrinsic 10");
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_european_put_keeps_the_discounted_forward_payoff() {
+        // The regression bar: early exercise must not leak into a European.
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::European,
+            &OptionStyle::Put,
+        );
+
+        let price = price_binomial(params).unwrap();
+        assert_decimal_eq!(price, dec!(5.122942450071406), ANALYTIC_EPSILON);
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_takes_the_best_scheduled_date() {
+        // Exercising at t is worth K·e^{-rt} − S, which decays in t, so the
+        // earliest scheduled date wins: 100·e^{-0.0125} − 90 = 8.7578. The
+        // price sits strictly between the European (no early exercise) and
+        // the American (exercise at t = 0), which is what proves the
+        // schedule is being read rather than ignored in either direction.
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![pos_or_panic!(0.25), pos_or_panic!(0.5), pos_or_panic!(0.75)],
+        };
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &bermuda_type,
+            &OptionStyle::Put,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let american = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::American,
+            ..params.clone()
+        })
+        .unwrap();
+        let bermuda = price_binomial(params).unwrap();
+
+        assert_decimal_eq!(bermuda, dec!(8.757780049388145), ANALYTIC_EPSILON);
+        assert!(
+            european < bermuda,
+            "European {european} < Bermuda {bermuda}"
+        );
+        assert!(
+            bermuda < american,
+            "Bermuda {bermuda} < American {american}"
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_later_only_schedule_is_worth_less() {
+        // Same contract, the 0.25 date removed: the best remaining date is
+        // 0.5 and the price drops to 100·e^{-0.025} − 90 = 7.5310. A branch
+        // that exercised continuously would return the same number for both
+        // schedules.
+        let early_type = OptionType::Bermuda {
+            exercise_dates: vec![pos_or_panic!(0.25), pos_or_panic!(0.5)],
+        };
+        let late_type = OptionType::Bermuda {
+            exercise_dates: vec![pos_or_panic!(0.5)],
+        };
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &late_type,
+            &OptionStyle::Put,
+        );
+        let early = price_binomial(BinomialPricingParams {
+            option_type: &early_type,
+            ..params.clone()
+        })
+        .unwrap();
+        let late = price_binomial(params).unwrap();
+
+        assert_decimal_eq!(late, dec!(7.530991202833263), ANALYTIC_EPSILON);
+        assert_decimal_eq!(early, dec!(8.757780049388145), ANALYTIC_EPSILON);
+        assert!(late < early, "later-only schedule {late} < {early}");
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_empty_schedule_equals_european() {
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![],
+        };
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &bermuda_type,
+            &OptionStyle::Put,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let bermuda = price_binomial(params).unwrap();
+
+        assert_eq!(bermuda, european);
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_schedule_after_expiry_equals_european() {
+        // A date the contract never reaches is not an exercise opportunity.
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![Positive::TWO],
+        };
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &bermuda_type,
+            &OptionStyle::Put,
+        );
+        let european = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params.clone()
+        })
+        .unwrap();
+        let bermuda = price_binomial(params).unwrap();
+
+        assert_eq!(bermuda, european);
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_exercisable_now_equals_american() {
+        // A schedule containing t = 0 gives the holder the only date the
+        // American would have used here, so the two must agree.
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![Positive::ZERO],
+        };
+        let params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &bermuda_type,
+            &OptionStyle::Put,
+        );
+        let american = price_binomial(BinomialPricingParams {
+            option_type: &OptionType::American,
+            ..params.clone()
+        })
+        .unwrap();
+        let bermuda = price_binomial(params).unwrap();
+
+        assert_eq!(bermuda, american);
+        assert_eq!(bermuda, dec!(10));
+    }
+
+    #[test]
+    fn test_price_binomial_collapsed_lattice_american_put_exercises_immediately() {
+        // `1e-28` is the smallest non-zero `Decimal`, so `σ√dt` underflows
+        // and `u == d`: the lattice collapses and the deterministic branch
+        // takes over. It must honour early exercise like the σ = 0 branch
+        // it stands in for. (`1e-29` and below round to zero and go through
+        // the σ = 0 branch instead.)
+        let params = BinomialPricingParams {
+            asset: pos_or_panic!(90.0),
+            volatility: Positive::new_decimal(dec!(1e-28)).unwrap(),
+            int_rate: dec!(0.05),
+            strike: Positive::HUNDRED,
+            expiry: Positive::ONE,
+            no_steps: crate::nz!(10),
+            option_type: &OptionType::American,
+            option_style: &OptionStyle::Put,
+            side: &Side::Long,
+        };
+
+        let price = price_binomial(params).unwrap();
+        assert_eq!(price, dec!(10));
+    }
+}
+
+#[cfg(test)]
+mod tests_zero_volatility_continuity {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::types::OptionType;
+    use rust_decimal_macros::dec;
+
+    /// Largest gap measured across the five cases below is `4.9e-15`, which
+    /// is `Decimal` round-off accumulated through two hundred induction
+    /// steps rather than model error. `1e-12` leaves two orders of
+    /// magnitude of headroom without hiding a real discrepancy: the defect
+    /// this guards against moved the American put by `4.88`.
+    const CONTINUITY_EPSILON: Decimal = dec!(1e-12);
+
+    /// The volatility used to approach the limit, and the step count that
+    /// goes with it.
+    ///
+    /// The two cannot be chosen independently. A CRR lattice is only
+    /// arbitrage-free while `d < e^{r·dt} < u`, i.e. while `σ > |r|·√dt`;
+    /// below that the risk-neutral probability leaves `[0, 1]`, is clamped,
+    /// and the lattice stops approximating anything. With `|r| = 0.05` and
+    /// `dt = 1/200`, the bound is `0.0035`, so `σ = 0.005` clears it by a
+    /// factor of 1.4. Pushing σ lower without raising the step count moves
+    /// *away* from the limit — measured at `σ = 0.002, n = 400` the
+    /// American call is off by `−1.09`.
+    const LIMIT_VOLATILITY: Decimal = dec!(0.005);
+
+    /// Prices the same contract twice, at σ = 0 and at `LIMIT_VOLATILITY`,
+    /// and asserts the two agree.
+    fn assert_zero_volatility_is_the_limit(
+        asset: Positive,
+        strike: Positive,
+        int_rate: Decimal,
+        option_type: &OptionType,
+        option_style: &OptionStyle,
+    ) {
+        let base = BinomialPricingParams {
+            asset,
+            volatility: Positive::ZERO,
+            int_rate,
+            strike,
+            expiry: Positive::ONE,
+            no_steps: crate::nz!(200),
+            option_type,
+            option_style,
+            side: &Side::Long,
+        };
+
+        let at_zero = price_binomial(base.clone()).unwrap();
+        let near_zero = price_binomial(BinomialPricingParams {
+            volatility: Positive::new_decimal(LIMIT_VOLATILITY).unwrap(),
+            ..base
+        })
+        .unwrap();
+
+        assert_decimal_eq!(at_zero, near_zero, CONTINUITY_EPSILON);
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_put_matches_the_lattice_limit() {
+        assert_zero_volatility_is_the_limit(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::American,
+            &OptionStyle::Put,
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_call_matches_the_lattice_limit() {
+        // r > 0: the limit is the European value, so this catches a branch
+        // that exercised early when it should not.
+        assert_zero_volatility_is_the_limit(
+            Positive::HUNDRED + pos_or_panic!(10.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::American,
+            &OptionStyle::Call,
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_american_call_negative_rate_matches_the_lattice_limit() {
+        // r < 0: the limit is the intrinsic, so this catches the opposite
+        // mistake on the same contract.
+        assert_zero_volatility_is_the_limit(
+            Positive::HUNDRED + pos_or_panic!(10.0),
+            Positive::HUNDRED,
+            dec!(-0.05),
+            &OptionType::American,
+            &OptionStyle::Call,
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_bermuda_matches_the_lattice_limit() {
+        let bermuda_type = OptionType::Bermuda {
+            exercise_dates: vec![pos_or_panic!(0.25), pos_or_panic!(0.5), pos_or_panic!(0.75)],
+        };
+        assert_zero_volatility_is_the_limit(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &bermuda_type,
+            &OptionStyle::Put,
+        );
+    }
+
+    #[test]
+    fn test_price_binomial_zero_volatility_european_matches_the_lattice_limit() {
+        assert_zero_volatility_is_the_limit(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::European,
+            &OptionStyle::Put,
         );
     }
 }

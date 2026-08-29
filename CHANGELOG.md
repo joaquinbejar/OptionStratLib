@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A zero-volatility American or Bermuda option is no longer priced as a
+  European, so its price goes up** (#449). `price_binomial` short-circuited
+  every contract with `volatility == 0` to the discounted forward payoff,
+  `e^{-rT}·payoff(S·e^{rT})`, which is the European value and silently drops
+  the early-exercise premium. The same branch is taken when the lattice
+  collapses (`u == d`, `σ√dt` below the representable scale), so both paths
+  change. An American is now worth the better of exercising immediately and
+  holding to expiry; a Bermuda the best of its schedule and expiry, with a
+  schedule that is empty, or entirely beyond expiry, still pricing as a
+  European. A European is unchanged.
+
+  A zero-volatility American put at `S = 90`, `K = 100`, `r = 5%`, `T = 1`:
+
+  | | before | after |
+  |---|---|---|
+  | price | `5.122942450071404` | `10` |
+
+  `10` is `K − S`, the value of exercising on the spot. The old number was
+  `e^{-0.05}(100 − 90·e^{0.05})`, roughly half. The matching American call at
+  `S = 110`, `K = 100` is unchanged at `14.877057549928595`, since a call on
+  a non-dividend-paying forward is never exercised early while `r > 0`; flip
+  the rate to `r = −5%` and it moves from `4.872890362397602` to `10`.
 - **`OptionData::apply_spread` widens a thin quote instead of withdrawing it**
   (#439). A contract whose mid sat below one full spread used to lose `bid`,
   `ask` **and** `middle`. Both sides are now quoted around the mid — `mid ±
