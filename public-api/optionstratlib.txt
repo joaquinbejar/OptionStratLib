@@ -669,7 +669,7 @@ pub fn optionstratlib::chains::utils::OptionChainParams::get_params(&self, posit
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::utils::adjust_volatility(&core::option::Option<positive::positive::Positive>, &core::option::Option<rust_decimal::decimal::Decimal>, &core::option::Option<rust_decimal::decimal::Decimal>, &positive::positive::Positive, &positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
-pub fn optionstratlib::chains::utils::strike_step(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize, core::option::Option<positive::positive::Positive>) -> positive::positive::Positive
+pub fn optionstratlib::chains::utils::strike_step(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize, core::option::Option<positive::positive::Positive>) -> core::result::Result<positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub enum optionstratlib::chains::StrategyLegs<'a>
 pub optionstratlib::chains::StrategyLegs::FourLegs
 pub optionstratlib::chains::StrategyLegs::FourLegs::first: &'a optionstratlib::chains::OptionData
@@ -1002,7 +1002,7 @@ pub struct optionstratlib::chains::RNDResult
 pub optionstratlib::chains::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
 pub optionstratlib::chains::RNDResult::statistics: optionstratlib::chains::rnd::RNDStatistics
 impl optionstratlib::chains::RNDResult
-pub fn optionstratlib::chains::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> Self
+pub fn optionstratlib::chains::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
 pub trait optionstratlib::chains::RNDAnalysis
 pub fn optionstratlib::chains::RNDAnalysis::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
@@ -9983,8 +9983,8 @@ pub fn optionstratlib::strategies::protective_put::ProtectivePut::compose(alloc:
 pub struct optionstratlib::prelude::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 impl<X, Y> optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::first(&self) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step(&self, usize) -> &optionstratlib::prelude::Step<X, Y>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step_mut(&mut self, usize) -> &mut optionstratlib::prelude::Step<X, Y>
+pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step(&self, usize) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
+pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step_mut(&mut self, usize) -> core::option::Option<&mut optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_steps(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> &str
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::last(&self) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
@@ -10811,7 +10811,7 @@ impl optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::new() -> Self
 pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
-pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult)
+pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
 impl core::default::Default for optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::default() -> Self
 pub struct optionstratlib::prelude::SimulationStatsResult
@@ -10840,8 +10840,8 @@ pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_positive
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_steps(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_values(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_mc_option_price(&self, &optionstratlib::model::option::Options) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk(&self, usize) -> &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk_mut(&mut self, usize) -> &mut optionstratlib::simulation::randomwalk::RandomWalk<X, Y>
+pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk(&self, usize) -> core::option::Option<&optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
+pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk_mut(&mut self, usize) -> core::option::Option<&mut optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walks(&self) -> alloc::vec::Vec<&optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_steps(&self) -> alloc::vec::Vec<alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> &str
@@ -14596,7 +14596,7 @@ pub fn optionstratlib::prelude::gamma_gk(&optionstratlib::model::option::Options
 pub fn optionstratlib::prelude::garch_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::VolatilityError>
 pub fn optionstratlib::prelude::garman_kohlhagen(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::prelude::generate_binomial_tree(&optionstratlib::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<(alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>), optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::prelude::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> alloc::vec::Vec<positive::positive::Positive>
+pub fn optionstratlib::prelude::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::prelude::generator_optionchain(&optionstratlib::simulation::WalkParams<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::prelude::generator_optionseries(&optionstratlib::simulation::WalkParams<positive::positive::Positive, optionstratlib::series::OptionSeries>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, optionstratlib::series::OptionSeries>>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::prelude::generator_positive(&optionstratlib::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib::error::chains::ChainError>
@@ -14973,8 +14973,8 @@ pub mod optionstratlib::simulation::randomwalk
 pub struct optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 impl<X, Y> optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::first(&self) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step(&self, usize) -> &optionstratlib::prelude::Step<X, Y>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step_mut(&mut self, usize) -> &mut optionstratlib::prelude::Step<X, Y>
+pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step(&self, usize) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
+pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_step_mut(&mut self, usize) -> core::option::Option<&mut optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_steps(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> &str
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::last(&self) -> core::option::Option<&optionstratlib::prelude::Step<X, Y>>
@@ -15031,8 +15031,8 @@ pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_positive
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_steps(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_last_values(&self) -> alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_mc_option_price(&self, &optionstratlib::model::option::Options) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk(&self, usize) -> &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk_mut(&mut self, usize) -> &mut optionstratlib::simulation::randomwalk::RandomWalk<X, Y>
+pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk(&self, usize) -> core::option::Option<&optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
+pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walk_mut(&mut self, usize) -> core::option::Option<&mut optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_random_walks(&self) -> alloc::vec::Vec<&optionstratlib::simulation::randomwalk::RandomWalk<X, Y>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_steps(&self) -> alloc::vec::Vec<alloc::vec::Vec<&optionstratlib::prelude::Step<X, Y>>>
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> &str
@@ -15237,7 +15237,7 @@ impl optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::new() -> Self
 pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
-pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult)
+pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
 impl core::default::Default for optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::default() -> Self
 pub struct optionstratlib::simulation::WalkParams<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display + core::marker::Sized, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::marker::Sized + core::clone::Clone
@@ -26829,7 +26829,7 @@ pub fn optionstratlib::volatility::constant_volatility(&[rust_decimal::decimal::
 pub fn optionstratlib::volatility::de_annualized_volatility(positive::positive::Positive, optionstratlib::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib::error::VolatilityError>
 pub fn optionstratlib::volatility::ewma_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::VolatilityError>
 pub fn optionstratlib::volatility::garch_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::VolatilityError>
-pub fn optionstratlib::volatility::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> alloc::vec::Vec<positive::positive::Positive>
+pub fn optionstratlib::volatility::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::volatility::historical_volatility(&[rust_decimal::decimal::Decimal], usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::VolatilityError>
 pub fn optionstratlib::volatility::implied_volatility(positive::positive::Positive, &mut optionstratlib::model::option::Options, i64) -> core::result::Result<positive::positive::Positive, optionstratlib::error::VolatilityError>
 pub fn optionstratlib::volatility::simulate_heston_volatility(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::VolatilityError>

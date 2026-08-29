@@ -123,9 +123,12 @@ where
                 )));
             }
         };
+        let next_index = self.y.index().checked_add(1).ok_or_else(|| {
+            SimulationError::step_error("step index overflowed advancing the walk")
+        })?;
         Ok(Self {
             x: next_x,
-            y: Ystep::new(self.y.index() + 1, new_y_value),
+            y: Ystep::new(next_index, new_y_value),
         })
     }
 
@@ -157,9 +160,12 @@ where
                 )));
             }
         };
+        let previous_index = self.y.index().checked_sub(1).ok_or_else(|| {
+            SimulationError::step_error("step index underflowed rewinding the walk")
+        })?;
         Ok(Self {
             x: previous_x,
-            y: Ystep::new(self.y.index() - 1, new_y_value),
+            y: Ystep::new(previous_index, new_y_value),
         })
     }
 

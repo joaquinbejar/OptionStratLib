@@ -254,13 +254,30 @@ pub fn calculate_log_returns(close_prices: &[Positive]) -> Result<Vec<Decimal>, 
 
     let mut log_returns = Vec::with_capacity(close_prices.len() - 1);
 
-    for i in 1..close_prices.len() {
-        let current_price = close_prices[i];
-        let previous_price = close_prices[i - 1];
+    for window in close_prices.windows(2) {
+        let [previous_price, current_price] = window else {
+            // `windows(2)` only ever yields pairs; the arm exists so the
+            // destructuring stays irrefutable without an index.
+            continue;
+        };
 
-        // Calculate price ratio
-        let ratio = current_price / previous_price;
-        log_returns.push(ratio.ln());
+        // Calculate price ratio. `Positive / Positive` aborts on a zero
+        // divisor and on a quotient that leaves the representable range, and
+        // `Positive::ln` aborts on a ratio that rounded to zero. A zero price
+        // is an ordinary gap in a feed, not an adversarial input, and this
+        // function's contract already promises an error for it.
+        let ratio = current_price.checked_div(previous_price).map_err(|_| {
+            DecimalError::arithmetic_error(
+                "utils::calculate_log_returns",
+                "price ratio is zero or not representable",
+            )
+        })?;
+        log_returns.push(ratio.checked_ln().map_err(|_| {
+            DecimalError::arithmetic_error(
+                "utils::calculate_log_returns",
+                "logarithm of a non-positive price ratio",
+            )
+        })?);
     }
 
     Ok(log_returns)
@@ -701,11 +718,13 @@ mod tests_log_returns {
         );
     }
 
+    /// A zero price is reported, not aborted on. This function's contract
+    /// has always promised an error for a non-positive price; before #456 the
+    /// `Positive / Positive` divide aborted the caller's process instead.
     #[test]
-    #[should_panic]
     fn test_zero_price() {
         let prices = vec![Positive::HUNDRED, Positive::ZERO, pos_or_panic!(105.0)];
-        let _ = calculate_log_returns(&prices);
+        assert!(calculate_log_returns(&prices).is_err());
     }
 
     #[test]

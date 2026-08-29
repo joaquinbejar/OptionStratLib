@@ -291,6 +291,23 @@ fn mid_of(bid: Positive, ask: Positive, decimal_places: u32) -> Option<Positive>
         .and_then(|mid| mid.checked_round_to(decimal_places).ok())
 }
 
+/// The mid of a two-sided quote rounded to four decimals, or `None` when
+/// either side is absent or the sum is not representable.
+///
+/// Backs [`OptionData::set_mid_prices`], whose infallible signature has
+/// nowhere to report an overflow: a quote whose `bid + ask` leaves the
+/// `Decimal` range has no mid, which is the same answer the method already
+/// gives for a one-sided book.
+#[inline]
+#[must_use]
+fn mid_of_rounded(bid: Option<Positive>, ask: Option<Positive>) -> Option<Positive> {
+    let (bid, ask) = (bid?, ask?);
+    bid.checked_add(&ask)
+        .ok()
+        .and_then(|sum| sum.checked_div(&Positive::TWO).ok())
+        .and_then(|mid| mid.checked_round_to(4).ok())
+}
+
 /// Holds a supplied mid inside the quote it belongs to.
 ///
 /// Widening floors the bid at a tick and rounds both sides, so an anchor far
@@ -420,7 +437,9 @@ impl OptionData {
     ///
     /// # Returns
     /// - Returns `Some(Positive)` if both `call_bid` and `call_ask` values are available and non-negative.
-    /// - Returns `None` if either `call_bid` or `call_ask` is missing.
+    /// - Returns `None` if either `call_bid` or `call_ask` is missing, if their
+    ///   sum leaves the representable `Decimal` range, or if the mid is zero —
+    ///   a two-sided quote at zero has no percentage spread.
     ///
     /// # Notes
     /// - The method assumes both `call_bid` and `call_ask` are non-negative.
@@ -438,8 +457,10 @@ impl OptionData {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
                 let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
-                let mid_price = (call_ask + call_bid) / 2.0;
-                Positive::new_decimal(spread).ok().map(|s| s / mid_price)
+                let mid_price = call_ask.checked_add(&call_bid).ok()? / 2.0;
+                Positive::new_decimal(spread)
+                    .ok()
+                    .and_then(|s| s.checked_div(&mid_price).ok())
             }
             _ => None,
         }
@@ -482,7 +503,9 @@ impl OptionData {
     ///
     /// # Returns
     /// - `Some(Positive)` if both `put_bid` and `put_ask` are present, containing the percentage spread.
-    /// - `None` if either `put_bid` or `put_ask` is unavailable.
+    /// - `None` if either `put_bid` or `put_ask` is unavailable, if their sum
+    ///   leaves the representable `Decimal` range, or if the mid is zero — a
+    ///   two-sided quote at zero has no percentage spread.
     ///
     /// # Assumptions
     /// - `put_bid` and `put_ask` are non-negative.
@@ -496,8 +519,10 @@ impl OptionData {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
                 let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
-                let mid_price = (put_ask + put_bid) / 2.0;
-                Positive::new_decimal(spread).ok().map(|s| s / mid_price)
+                let mid_price = put_ask.checked_add(&put_bid).ok()? / 2.0;
+                Positive::new_decimal(spread)
+                    .ok()
+                    .and_then(|s| s.checked_div(&mid_price).ok())
             }
             _ => None,
         }
@@ -941,24 +966,13 @@ impl OptionData {
     /// * Errors propagated from the Black-Scholes calculation functions
     pub fn calculate_prices(&mut self, spread: Option<Positive>) -> Result<(), ChainError> {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
-        match (
-            call_option.calculate_price_black_scholes(),
-            spread.is_some(),
-        ) {
-            (Ok(price), true) => {
-                if price.is_sign_positive() {
-                    self.call_middle = Positive::new_decimal(price).ok();
-                    if let Some(s) = spread {
-                        self.apply_spread(s, 2);
-                    }
-                }
-            }
-            (Ok(price), false) => {
+        match call_option.calculate_price_black_scholes() {
+            Ok(price) => {
                 self.call_middle = Positive::new_decimal(price).ok();
                 self.call_ask = self.call_middle;
                 self.call_bid = self.call_middle;
             }
-            _ => {
+            Err(_) => {
                 debug!("calculate_prices: Failed to calculate call option price");
                 self.call_middle = None;
                 self.call_ask = None;
@@ -967,27 +981,29 @@ impl OptionData {
         };
 
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
-        match (put_option.calculate_price_black_scholes(), spread.is_some()) {
-            (Ok(price), true) => {
-                if price.is_sign_positive() {
-                    self.put_middle = Positive::new_decimal(price).ok();
-                    if let Some(s) = spread {
-                        self.apply_spread(s, 2);
-                    }
-                }
-            }
-            (Ok(price), false) => {
+        match put_option.calculate_price_black_scholes() {
+            Ok(price) => {
                 self.put_middle = Positive::new_decimal(price).ok();
                 self.put_ask = self.put_middle;
                 self.put_bid = self.put_middle;
             }
-            _ => {
+            Err(_) => {
                 debug!("calculate_prices: Failed to calculate put option price");
                 self.put_middle = None;
                 self.put_ask = None;
                 self.put_bid = None;
             }
         };
+
+        // Widen ONCE, after both sides carry a mid. Applying it inside each
+        // arm widened the call side twice — the put arm re-widened the call
+        // mid it had just stored — and `build_chain` then applied it a third
+        // time. `apply_spread` is not idempotent for a sub-tick row, whose
+        // mid is lifted to the tick on the first pass and widened again on
+        // the second.
+        if let Some(spread) = spread {
+            self.apply_spread(spread, 2);
+        }
 
         Ok(())
     }
@@ -1317,16 +1333,13 @@ impl OptionData {
     ///
     /// # Side Effects
     ///
-    /// Updates the `call_middle` and `put_middle` fields with the calculated mid-prices.
+    /// Updates the `call_middle` and `put_middle` fields with the calculated
+    /// mid-prices. A side whose `bid + ask` leaves the representable `Decimal`
+    /// range has no mid and is set to `None`, the same value the method already
+    /// uses for a side with no two-sided quote.
     pub fn set_mid_prices(&mut self) {
-        self.call_middle = match (self.call_bid, self.call_ask) {
-            (Some(bid), Some(ask)) => Some(((bid + ask) / Positive::TWO).round_to(4)),
-            _ => None,
-        };
-        self.put_middle = match (self.put_bid, self.put_ask) {
-            (Some(bid), Some(ask)) => Some(((bid + ask) / Positive::TWO).round_to(4)),
-            _ => None,
-        };
+        self.call_middle = mid_of_rounded(self.call_bid, self.call_ask);
+        self.put_middle = mid_of_rounded(self.put_bid, self.put_ask);
     }
 
     /// Retrieves the current mid-prices for call and put options.
@@ -1441,9 +1454,18 @@ impl Ord for OptionData {
 
 impl fmt::Display for OptionData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Gamma is shown scaled to percent. A gamma whose percent form leaves
+        // the `Decimal` range has no printable percent, so the cell is blank —
+        // the same rendering this row already uses for data it does not have.
+        // `Display` cannot report, and it is reached from every log line.
+        let gamma_pct = self
+            .gamma
+            .unwrap_or(Decimal::ZERO)
+            .checked_mul(Decimal::ONE_HUNDRED)
+            .map_or_else(String::new, |value| format!("{value:.4}"));
         write!(
             f,
-            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<6}{:<7} {:.3}{:<4} {:.3}{:<5} {:.4}{:<8} {:<10} {:<10}",
+            "{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<6}{:<7} {:.3}{:<4} {:.3}{:<5} {}{:<8} {:<10} {:<10}",
             self.strike_price.to_string(),
             empty_string_round_to_2(self.call_bid),
             empty_string_round_to_2(self.call_ask),
@@ -1457,7 +1479,7 @@ impl fmt::Display for OptionData {
             " ".to_string(),
             self.delta_put.unwrap_or(Decimal::ZERO),
             " ".to_string(),
-            self.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED,
+            gamma_pct,
             " ".to_string(),
             default_empty_string(self.volume),
             default_empty_string(self.open_interest),

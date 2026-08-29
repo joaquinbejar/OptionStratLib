@@ -21,7 +21,7 @@ use crate::metrics::{
     TimeDecayCurve, TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve,
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
-use crate::model::decimal::d_add;
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
 use crate::model::utils::sub_floor_zero;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
@@ -455,7 +455,7 @@ impl OptionChain {
                 days,
                 total_strikes,
                 None,
-            )
+            )?
         };
 
         let date_string = expiration_date.get_date_string().map_err(|e| {
@@ -538,7 +538,10 @@ impl OptionChain {
             );
             option_data.set_extra_params(price_params);
 
-            match option_data.calculate_prices(Some(p.spread)) {
+            // `calculate_prices` is given no spread here: the widening
+            // happens once, below, because only this call site knows the
+            // configured `decimal_places` (and therefore the tick).
+            match option_data.calculate_prices(None) {
                 Ok(()) => {
                     option_data.apply_spread(p.spread, p.decimal_places);
                     if p.greek_snapshots {
@@ -3312,8 +3315,17 @@ impl RNDAnalysis for OptionChain {
         let time_to_expiry =
             Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap_or_default();
 
-        // Step 4: Calculate discount factor
-        let discount = (-params.risk_free_rate * time_to_expiry).exp();
+        // Step 4: Calculate discount factor. `Decimal::exp` aborts on overflow
+        // and on underflow; the checked helper flushes an underflowing
+        // discount to zero, which is its limit, and reports a real overflow.
+        let discount = d_exp(
+            d_mul(
+                -params.risk_free_rate,
+                time_to_expiry,
+                "chains::rnd::discount::exponent",
+            )?,
+            "chains::rnd::discount",
+        )?;
 
         // Debug information
         #[cfg(test)]
@@ -3326,12 +3338,20 @@ impl RNDAnalysis for OptionChain {
         for opt in self.options.iter() {
             let k = opt.strike_price;
 
+            // `k + h` aborts when the bumped strike leaves the `Positive`
+            // range. A strike that cannot be bumped has no upper wing and so
+            // no finite difference; skip it exactly as a missing quote is
+            // skipped by the `if let` below.
+            let Ok(k_up) = k.checked_add_dec(h) else {
+                continue;
+            };
+
             // Debug prices
             #[cfg(test)]
             {
                 debug!("Processing strike {}", k);
                 debug!("Call price at k: {:?}", self.get_call_price(k));
-                debug!("Call price at k+h: {:?}", self.get_call_price(k + h));
+                debug!("Call price at k+h: {:?}", self.get_call_price(k_up));
                 debug!(
                     "Call price at k-h: {:?}",
                     self.get_call_price(sub_floor_zero(k, &h))
@@ -3339,11 +3359,18 @@ impl RNDAnalysis for OptionChain {
             }
             if let (Some(call_price), Some(call_up), Some(call_down)) = (
                 self.get_call_price(k),
-                self.get_call_price(k + h),
+                self.get_call_price(k_up),
                 self.get_call_price(sub_floor_zero(k, &h)),
             ) {
-                // Calculate second derivative
-                let second_derivative = (call_up + call_down - Decimal::TWO * call_price) / (h * h);
+                // Calculate second derivative. `h * h` underflows to exactly
+                // zero below scale 28, which a `derivative_tolerance` under
+                // 1e-14 reaches, so the division is checked rather than raw.
+                let sum = d_add(call_up, call_down, "chains::rnd::wing_sum")?;
+                let twice_mid = d_mul(Decimal::TWO, call_price, "chains::rnd::twice_mid")?;
+                let numerator = d_sub(sum, twice_mid, "chains::rnd::curvature")?;
+                let step_squared = d_mul(h, h, "chains::rnd::step_squared")?;
+                let second_derivative =
+                    d_div(numerator, step_squared, "chains::rnd::second_derivative")?;
 
                 #[cfg(test)]
                 {
@@ -3351,7 +3378,7 @@ impl RNDAnalysis for OptionChain {
                 }
 
                 // Calculate density using Breeden-Litzenberger formula
-                let density = second_derivative * discount;
+                let density = d_mul(second_derivative, discount, "chains::rnd::density")?;
 
                 #[cfg(test)]
                 {
@@ -3370,10 +3397,10 @@ impl RNDAnalysis for OptionChain {
             return Err(ChainError::EmptyDensities);
         }
 
-        let total: Decimal = densities.values().sum();
+        let total = d_sum_iter(densities.values().copied(), "chains::rnd::total_density")?;
         if !total.is_zero() {
             for density in densities.values_mut() {
-                *density /= total;
+                *density = d_div(*density, total, "chains::rnd::normalise")?;
             }
         }
 
@@ -3383,7 +3410,7 @@ impl RNDAnalysis for OptionChain {
             debug!("Sum of densities: {}", total);
         }
 
-        Ok(RNDResult::new(densities))
+        RNDResult::new(densities)
     }
 
     /// Implementation of volatility skew calculation
@@ -3400,8 +3427,20 @@ impl RNDAnalysis for OptionChain {
         let atm_vol = self.get_atm_implied_volatility()?;
 
         for opt in self.options.iter() {
-            let relative_strike = opt.strike_price / atm_strike;
-            let vol_diff = opt.implied_volatility.to_dec() - atm_vol;
+            // `Positive / Positive` aborts on a zero underlying and on a
+            // quotient that leaves the range, and the subtraction aborts on a
+            // volatility at the edge of it.
+            let relative_strike = opt.strike_price.checked_div(&atm_strike).map_err(|_| {
+                ChainError::invalid_parameters(
+                    "underlying_price",
+                    "relative strike is not representable against this underlying",
+                )
+            })?;
+            let vol_diff = d_sub(
+                opt.implied_volatility.to_dec(),
+                atm_vol.to_dec(),
+                "chains::skew::volatility_difference",
+            )?;
             skew.push((relative_strike, vol_diff));
         }
 
@@ -5429,20 +5468,21 @@ mod tests_chain_base {
         assert_eq!(first.strike_price, pos_or_panic!(5250.0));
         assert_eq!(first.call_ask, spos!(630.09));
         assert_eq!(first.call_bid, spos!(630.07));
-        // Deep out-of-the-money put: quoted at the tick, not withdrawn.
-        // Deep out-of-the-money put: quoted at the tick, not withdrawn. The ask
-        // sits one tick above the bid because the spread is applied more than
-        // once per row — `OptionData::calculate_prices` applies it and
-        // `build_chain` applies it again — and a mid held at the tick widens by
-        // one more tick on the second pass before settling.
+        // Deep out-of-the-money put: quoted at the tick, not withdrawn. Bid
+        // and ask are both one tick because the spread is now applied exactly
+        // once per row (#456): the mid is sub-tick, so `mid - half` floors to
+        // the tick and `mid + half` rounds down to it. The ask used to sit one
+        // tick higher only because the spread was applied three times —
+        // `calculate_prices` once per side plus `build_chain` — and the second
+        // pass widened the mid that the first pass had lifted to the tick.
         assert_eq!(first.put_bid, spos!(0.01));
-        assert_eq!(first.put_ask, spos!(0.02));
+        assert_eq!(first.put_ask, spos!(0.01));
         assert_eq!(first.put_middle, spos!(0.01));
 
         let last = chain.options.iter().next_back().unwrap();
         assert_eq!(last.strike_price, pos_or_panic!(6500.0));
         assert_eq!(last.call_bid, spos!(0.01));
-        assert_eq!(last.call_ask, spos!(0.02));
+        assert_eq!(last.call_ask, spos!(0.01));
         assert_eq!(last.call_middle, spos!(0.01));
         assert_eq!(last.put_ask, spos!(619.07));
         assert_eq!(last.put_bid, spos!(619.05));

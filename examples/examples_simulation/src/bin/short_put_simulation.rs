@@ -445,7 +445,7 @@ fn main() -> Result<(), Error> {
         );
 
         // Update statistics
-        stats.update(result);
+        stats.update(result)?;
 
         // Update progress bar
         progress_bar.inc(1);

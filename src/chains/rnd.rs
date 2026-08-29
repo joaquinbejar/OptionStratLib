@@ -127,9 +127,10 @@
 //! particularly for extreme market conditions.
 
 use crate::error::ChainError;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -231,19 +232,30 @@ impl RNDStatistics {
     ///
     /// # Returns
     /// New RNDStatistics instance with calculated moments
-    pub fn new(densities: &BTreeMap<Positive, Decimal>) -> Self {
-        let mean = Self::calculate_mean(densities);
-        let variance = Self::calculate_variance(densities, mean);
-        let skewness = Self::calculate_skewness(densities, mean, variance);
-        let kurtosis = Self::calculate_kurtosis(densities, mean, variance);
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a moment leaves the
+    /// representable `Decimal` range — a strike-weighted sum past
+    /// `Decimal::MAX`, or a total density of zero where the moment divides by
+    /// it — and [`ChainError::PositiveError`] when the variance has no
+    /// representable square root.
+    ///
+    /// A density map whose moments are not representable describes no
+    /// distribution, so there is no limit to return in their place.
+    pub fn new(densities: &BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+        let mean = Self::calculate_mean(densities)?;
+        let variance = Self::calculate_variance(densities, mean)?;
+        let skewness = Self::calculate_skewness(densities, mean, variance)?;
+        let kurtosis = Self::calculate_kurtosis(densities, mean, variance)?;
 
-        Self {
+        Ok(Self {
             mean,
             variance,
             skewness,
             kurtosis,
-            volatility: variance.sqrt(),
-        }
+            volatility: variance.checked_sqrt()?,
+        })
     }
 
     /// Calculates the mean (first moment) of the distribution
@@ -253,20 +265,28 @@ impl RNDStatistics {
     ///
     /// # Returns
     /// Mean value as Decimal
-    fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when the strike-weighted sum or
+    /// the total density leaves the representable `Decimal` range.
+    fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Result<Decimal, ChainError> {
         let mut mean = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
         for (strike, density) in densities {
-            mean += strike.to_dec() * density;
-            total_density += density;
+            mean = d_add(
+                mean,
+                d_mul(strike.to_dec(), *density, "chains::rnd::mean")?,
+                "chains::rnd::mean",
+            )?;
+            total_density = d_add(total_density, *density, "chains::rnd::mean")?;
         }
 
-        if !total_density.is_zero() {
-            mean / total_density
-        } else {
-            Decimal::ZERO
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
         }
+        d_div(mean, total_density, "chains::rnd::mean").map_err(Into::into)
     }
 
     /// Calculates the variance (second central moment) of the distribution
@@ -277,22 +297,39 @@ impl RNDStatistics {
     ///
     /// # Returns
     /// Variance as a Positive value
-    fn calculate_variance(densities: &BTreeMap<Positive, Decimal>, mean: Decimal) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a squared deviation, its
+    /// density weighting or the running sum leaves the representable
+    /// `Decimal` range.
+    fn calculate_variance(
+        densities: &BTreeMap<Positive, Decimal>,
+        mean: Decimal,
+    ) -> Result<Positive, ChainError> {
         let mut variance = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
         for (strike, density) in densities {
             let strike_dec = strike.to_dec();
-            let diff = strike_dec - mean;
-            variance += diff * diff * density;
-            total_density += density;
+            let diff = d_sub(strike_dec, mean, "chains::rnd::variance")?;
+            let weighted = d_mul(
+                d_mul(diff, diff, "chains::rnd::variance")?,
+                *density,
+                "chains::rnd::variance",
+            )?;
+            variance = d_add(variance, weighted, "chains::rnd::variance")?;
+            total_density = d_add(total_density, *density, "chains::rnd::variance")?;
         }
 
-        if !total_density.is_zero() {
-            Positive::new_decimal(variance / total_density).unwrap_or_default()
-        } else {
-            Positive::ZERO
+        if total_density.is_zero() {
+            return Ok(Positive::ZERO);
         }
+        let normalized = d_div(variance, total_density, "chains::rnd::variance")?;
+        // A negative normalized variance breaks the `Positive` invariant; the
+        // default of zero is the value this function has always returned for
+        // it.
+        Ok(Positive::new_decimal(normalized).unwrap_or_default())
     }
 
     /// Calculates the skewness (third standardized moment) of the distribution
@@ -304,31 +341,50 @@ impl RNDStatistics {
     ///
     /// # Returns
     /// Skewness as Decimal
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation or
+    /// its cube leaves the representable `Decimal` range, and
+    /// [`ChainError::PositiveError`] when the variance has no representable
+    /// square root.
     fn calculate_skewness(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
         variance: Positive,
-    ) -> Decimal {
+    ) -> Result<Decimal, ChainError> {
         if variance == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        let std_dev = variance.sqrt();
+        let std_dev = variance.checked_sqrt()?;
         let mut skewness = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
         for (strike, density) in densities {
             let strike_dec = strike.to_dec();
-            let normalized_diff = (strike_dec - mean) / std_dev;
-            skewness += normalized_diff * normalized_diff * normalized_diff * density;
-            total_density += density;
+            let normalized_diff = d_div(
+                d_sub(strike_dec, mean, "chains::rnd::skewness")?,
+                std_dev.to_dec(),
+                "chains::rnd::skewness",
+            )?;
+            let cubed = d_mul(
+                d_mul(
+                    d_mul(normalized_diff, normalized_diff, "chains::rnd::skewness")?,
+                    normalized_diff,
+                    "chains::rnd::skewness",
+                )?,
+                *density,
+                "chains::rnd::skewness",
+            )?;
+            skewness = d_add(skewness, cubed, "chains::rnd::skewness")?;
+            total_density = d_add(total_density, *density, "chains::rnd::skewness")?;
         }
 
-        if !total_density.is_zero() {
-            skewness / total_density
-        } else {
-            Decimal::ZERO
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
         }
+        d_div(skewness, total_density, "chains::rnd::skewness").map_err(Into::into)
     }
 
     /// Calculates the kurtosis (fourth standardized moment) of the distribution
@@ -343,55 +399,77 @@ impl RNDStatistics {
     ///
     /// # Returns
     /// Excess kurtosis as Decimal
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation, its
+    /// fourth power, the density weighting or the running sum leaves the
+    /// representable `Decimal` range, and [`ChainError::PositiveError`] when
+    /// the variance has no representable square root.
     fn calculate_kurtosis(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
         variance: Positive,
-    ) -> Decimal {
+    ) -> Result<Decimal, ChainError> {
         if variance == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        // Convert variance to decimal and calculate std_dev
-        let variance_dec = variance.to_dec();
-        // SAFETY: variance is `Positive` and the early-return above has
-        // already excluded zero, so `Decimal::sqrt` cannot return None for
-        // a strictly positive value. Default to zero defensively to avoid
-        // a panic if a future invariant change ever produces NaN-like input.
-        let std_dev = variance_dec.sqrt().unwrap_or(Decimal::ZERO);
-        let std_dev_4 = std_dev.powi(4);
-
+        // Each deviation is standardized before it is raised, exactly as the
+        // skewness path does. Accumulating the raw fourth moment and dividing
+        // by `sigma^4` at the end cannot work here: `sigma^4` underflows to
+        // exactly zero once sigma drops below about 1e-7, which two strikes a
+        // hair apart already reach, and the distribution is not degenerate
+        // there. Two equal masses at 100 and 100.0000000000001 standardize to
+        // ±1 and carry the -2 excess kurtosis of a two-point distribution,
+        // which is what this now returns instead of zero.
+        let std_dev = variance.checked_sqrt()?;
         let mut fourth_moment = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
-        // Calculate fourth moment
         for (strike, density) in densities {
-            let diff = strike.to_dec() - mean;
-            let term = diff.powi(4); // Using powi instead of manual multiplication
-            fourth_moment += term * density;
-            total_density += density;
+            let normalized_diff = d_div(
+                d_sub(strike.to_dec(), mean, "chains::rnd::kurtosis")?,
+                std_dev.to_dec(),
+                "chains::rnd::kurtosis",
+            )?;
+            let squared = d_mul(normalized_diff, normalized_diff, "chains::rnd::kurtosis")?;
+            let fourth = d_mul(squared, squared, "chains::rnd::kurtosis")?;
+            fourth_moment = d_add(
+                fourth_moment,
+                d_mul(fourth, *density, "chains::rnd::kurtosis")?,
+                "chains::rnd::kurtosis",
+            )?;
+            total_density = d_add(total_density, *density, "chains::rnd::kurtosis")?;
         }
 
-        // Normalize by total density first
-        if !total_density.is_zero() {
-            let normalized_fourth_moment = fourth_moment / total_density;
-            // Then divide by std_dev^4 and subtract 3
-            (normalized_fourth_moment / std_dev_4) - dec!(3.0)
-        } else {
-            Decimal::ZERO
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
         }
+
+        d_sub(
+            d_div(fourth_moment, total_density, "chains::rnd::kurtosis")?,
+            dec!(3.0),
+            "chains::rnd::kurtosis",
+        )
+        .map_err(Into::into)
     }
 }
 
 impl RNDResult {
     /// Create a new RNDResult with calculated statistics
-    #[must_use]
-    pub fn new(densities: BTreeMap<Positive, Decimal>) -> Self {
-        let statistics = RNDStatistics::new(&densities);
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Propagates the errors of [`RNDStatistics::new`]: a density map whose
+    /// moments leave the representable `Decimal` range describes no
+    /// distribution, and there is no limit to return in their place.
+    pub fn new(densities: BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+        let statistics = RNDStatistics::new(&densities)?;
+        Ok(Self {
             densities,
             statistics,
-        }
+        })
     }
 }
 
@@ -526,35 +604,35 @@ mod tests {
         #[test]
         fn test_calculate_mean_normal_case() {
             let densities = create_test_densities();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.mean, dec!(101));
         }
 
         #[test]
         fn test_calculate_mean_empty_densities() {
             let densities = BTreeMap::new();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.mean, Decimal::ZERO);
         }
 
         #[test]
         fn test_calculate_variance_normal_case() {
             let densities = create_test_densities();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert!(stats.variance > Positive::ZERO);
         }
 
         #[test]
         fn test_calculate_variance_empty_densities() {
             let densities = BTreeMap::new();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.variance, Positive::ZERO);
         }
 
         #[test]
         fn test_calculate_skewness_normal_case() {
             let densities = create_test_densities();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             // Skewness should be near zero for symmetric distribution
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.139941), dec!(0.00001));
         }
@@ -562,29 +640,56 @@ mod tests {
         #[test]
         fn test_calculate_skewness_empty_densities() {
             let densities = BTreeMap::new();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.skewness, Decimal::ZERO);
         }
 
         #[test]
         fn test_calculate_kurtosis_normal_case() {
             let densities = create_test_densities();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             // Excess kurtosis should be near zero for normal-like distribution
             assert_decimal_eq!(stats.kurtosis.abs(), dec!(0.96043315), dec!(0.00001));
         }
 
         #[test]
+        fn test_calculate_kurtosis_narrow_distribution_is_not_a_point_mass() {
+            // Two equal masses 1e-7 apart. Sigma is 5e-8, so `sigma^4`
+            // underflows to exactly zero and the old formula reported this as
+            // the flat zero of a point mass. The distribution is a genuine
+            // two-point one, whose excess kurtosis is -2.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_survives_the_narrowest_representable_spread() {
+            // The same two-point shape 1e-13 apart, where sigma is around
+            // 5e-14 and `Decimal::sqrt` itself runs out of precision. The
+            // answer is no longer exact, but it is the -2 of a two-point
+            // distribution rather than the zero of a point mass, which is
+            // what the underflow used to turn it into.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000000000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.1));
+        }
+
+        #[test]
         fn test_calculate_kurtosis_empty_densities() {
             let densities = BTreeMap::new();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.kurtosis, Decimal::ZERO);
         }
 
         #[test]
         fn test_calculate_volatility_normal_case() {
             let densities = create_test_densities();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             // Excess kurtosis should be near zero for normal-like distribution
             assert_decimal_eq!(stats.volatility.to_dec(), dec!(7.0), dec!(0.00001));
         }
@@ -592,7 +697,7 @@ mod tests {
         #[test]
         fn test_calculate_volatility_empty_densities() {
             let densities = BTreeMap::new();
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_eq!(stats.volatility.to_dec(), Decimal::ZERO);
         }
     }
@@ -862,7 +967,7 @@ mod additional_tests {
             densities.insert(Positive::HUNDRED, dec!(0.7));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.076839), dec!(0.00001));
         }
 
@@ -873,7 +978,7 @@ mod additional_tests {
             densities.insert(Positive::HUNDRED, dec!(0.97));
             densities.insert(pos_or_panic!(150.0), dec!(0.02));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert!(stats.variance > Positive::ZERO);
             assert!(stats.kurtosis.abs() > dec!(5.0));
         }
@@ -888,7 +993,7 @@ mod additional_tests {
             densities.insert(pos_or_panic!(105.0), dec!(0.2));
             densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.0), dec!(0.00001));
             assert_decimal_eq!(stats.kurtosis, dec!(-1.2999999), dec!(0.00001));
         }
@@ -903,7 +1008,7 @@ mod additional_tests {
             densities.insert(pos_or_panic!(110.0), dec!(0.1));
             densities.insert(pos_or_panic!(120.0), dec!(0.4));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_decimal_eq!(stats.kurtosis, dec!(-1.69028), dec!(0.00001));
         }
     }
@@ -1147,6 +1252,9 @@ mod statistical_validation_tests {
     use super::*;
 
     use crate::assert_decimal_eq;
+    // The reference moments these tests recompute by hand still raise a
+    // `Decimal` directly; the implementation standardizes first instead.
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     mod moments_tests {
@@ -1162,7 +1270,7 @@ mod statistical_validation_tests {
             densities.insert(Positive::HUNDRED, dec!(0.5));
             densities.insert(pos_or_panic!(200.0), dec!(0.5));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_decimal_eq!(stats.mean, dec!(150.0), dec!(0.00001));
         }
 
@@ -1206,7 +1314,7 @@ mod statistical_validation_tests {
             info!("Step-by-step kurtosis: {}", kurtosis);
 
             // Verify with structure
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             info!("Structure values:");
             info!("Mean: {}", stats.mean);
             info!("Variance: {}", stats.variance);
@@ -1262,7 +1370,7 @@ mod statistical_validation_tests {
 
             // Structure calculation
             info!("\nStructure Calculation:");
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             info!("Mean: {}", stats.mean);
             info!("Variance: {}", stats.variance);
             info!("Kurtosis: {}", stats.kurtosis);
@@ -1322,7 +1430,7 @@ mod statistical_validation_tests {
             info!("Step 4 - Final Kurtosis: {}", kurtosis);
 
             // Verify with structure
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             info!("\nStructure values:");
             info!("Mean: {}", stats.mean);
             info!("Variance: {}", stats.variance);
@@ -1339,7 +1447,7 @@ mod statistical_validation_tests {
             densities.insert(pos_or_panic!(90.0), dec!(0.5));
             densities.insert(pos_or_panic!(110.0), dec!(0.5));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert_decimal_eq!(stats.mean, dec!(100.0), dec!(0.00001));
 
@@ -1354,7 +1462,7 @@ mod statistical_validation_tests {
                 densities.insert(pos_or_panic!(i as f64), dec!(0.2));
             }
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert_decimal_eq!(stats.mean, dec!(3.0), dec!(0.00001));
             assert_decimal_eq!(stats.variance.to_dec(), dec!(2.0), dec!(0.00001));
@@ -1366,7 +1474,7 @@ mod statistical_validation_tests {
             let mut densities = BTreeMap::new();
             densities.insert(Positive::HUNDRED, dec!(2.0));
             densities.insert(pos_or_panic!(200.0), dec!(3.0));
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             assert_decimal_eq!(stats.mean, dec!(160.0), dec!(0.00001));
         }
 
@@ -1377,7 +1485,7 @@ mod statistical_validation_tests {
             densities.insert(Positive::TWO, dec!(0.002));
             densities.insert(pos_or_panic!(3.0), dec!(0.001));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert_decimal_eq!(stats.mean, dec!(2.0), dec!(0.00001));
             assert!(stats.variance > Positive::ZERO);
@@ -1390,7 +1498,7 @@ mod statistical_validation_tests {
             densities.insert(pos_or_panic!(2000000.0), dec!(0.4));
             densities.insert(pos_or_panic!(3000000.0), dec!(0.3));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert_decimal_eq!(stats.mean, dec!(2000000.0), dec!(0.00001));
             assert!(stats.variance > Positive::ZERO);
@@ -1402,7 +1510,7 @@ mod statistical_validation_tests {
             densities.insert(pos_or_panic!(10.0), dec!(0.45));
             densities.insert(pos_or_panic!(90.0), dec!(0.55));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert_decimal_eq!(stats.mean, dec!(54.0), dec!(0.00001));
 
@@ -1456,7 +1564,7 @@ mod statistical_validation_tests {
             info!("Step 4 - Final Kurtosis: {}", kurtosis);
 
             // Compare with structure calculation
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
             info!("\nStructure values:");
             info!("Mean: {}", stats.mean);
             info!("Variance: {}", stats.variance);
@@ -1475,7 +1583,7 @@ mod statistical_validation_tests {
             densities.insert(Positive::HUNDRED, dec!(0.4));
             densities.insert(pos_or_panic!(105.0), dec!(0.3));
 
-            let stats = RNDStatistics::new(&densities);
+            let stats = RNDStatistics::new(&densities).unwrap();
 
             assert!(stats.variance > Positive::ZERO);
             assert_decimal_eq!(stats.skewness.abs(), dec!(0.0), dec!(0.00001));
@@ -1716,7 +1824,7 @@ mod rnd_coverage_tests {
         densities.insert(pos_or_panic!(110.0), dec!(0.2));
 
         // Create a new RNDResult
-        let result = RNDResult::new(densities);
+        let result = RNDResult::new(densities).unwrap();
 
         // Check that statistics were calculated
         assert_eq!(result.statistics.mean, dec!(100.0));

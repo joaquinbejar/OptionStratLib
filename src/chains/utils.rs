@@ -712,6 +712,15 @@ pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
     input.map_or_else(|| "".to_string(), |v| v.to_string())
 }
 
+/// Rounds `reference_price` to the nearest multiple of `strike_interval`,
+/// half-up.
+///
+/// Every step runs on the checked path: `price % interval` and the round-up
+/// `base + interval` both leave the representable `Decimal` range for a
+/// reference price near `Positive::MAX`, and the raw operators abort there.
+/// A step that is not representable falls back to `reference_price`, which is
+/// the answer this function already gave for any rounded value that failed the
+/// `Positive` invariant.
 pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> Positive {
     if strike_interval == Positive::ZERO {
         return reference_price;
@@ -719,11 +728,23 @@ pub(crate) fn rounder(reference_price: Positive, strike_interval: Positive) -> P
     let price = reference_price.value();
     let interval = strike_interval.value();
 
-    let remainder = price % interval;
-    let base = price - remainder;
+    let Some(remainder) = price.checked_rem(interval) else {
+        return reference_price;
+    };
+    let Some(base) = price.checked_sub(remainder) else {
+        return reference_price;
+    };
+    let Some(half_interval) = interval.checked_div(Decimal::TWO) else {
+        return reference_price;
+    };
 
-    let rounded = if remainder >= interval / Decimal::TWO {
-        base + interval
+    let rounded = if remainder >= half_interval {
+        // The next grid point above `base` may not be representable; there is
+        // no strike there, so the caller keeps the price it came in with.
+        match base.checked_add(interval) {
+            Some(value) => value,
+            None => return reference_price,
+        }
     } else {
         base
     };
@@ -799,13 +820,26 @@ fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
 /// `size` is the desired TOTAL number of strikes covering the ±kσ range
 /// (not the per-side half-width used by `OptionChainBuildParams::chain_size`;
 /// callers holding a per-side count must pass `2 * chain_size + 1`).
+///
+/// # Errors
+///
+/// Returns [`ChainError::PositiveError`] when the ±kσ half-width leaves the
+/// representable `Positive` range — `underlying_price * implied_vol *
+/// sqrt(t)` or `2 * k * sigma` overflowing, or `sqrt(t)` overflowing for a
+/// `days_to_exp` at the top of the range.
+///
+/// There is deliberately no infallible fallback. The overflow direction is
+/// not determined by the operand that overflows: with `k = Positive::MAX` and
+/// `sigma = 0` the true step is zero (the smallest grid) and with `k = 4` and
+/// `sigma = Positive::MAX` it is enormous (the largest), so no grid value is
+/// the limit and any value returned here would be invented.
 pub fn strike_step(
     underlying_price: Positive,
     implied_vol: Positive, // e.g. 0.25 for 25 %
     days_to_exp: Positive,
     size: usize,         // desired TOTAL number of strikes across the range
     k: Option<Positive>, // σ-multiplier you want to cover (2.0-3.0 typical)
-) -> Positive {
+) -> Result<Positive, ChainError> {
     // Helper for compile-time-safe literal positives. Each `dec!(X.X)` is a
     // positive literal so the checked constructor is total; the
     // `unwrap_or(Positive::ZERO)` branch is unreachable and only exists to
@@ -823,9 +857,15 @@ pub fn strike_step(
         tracing::warn!(size, "strike_step: size must be > 1; clamping to 2");
         2
     };
+    // Both divisions are total: `365.0` and `size as f64 - 1.0` are constants
+    // greater than or equal to one, so neither can divide by zero nor grow the
+    // operand past the representable range. Every multiplication can, and
+    // `sqrt` overflows at the top of the range.
     let t = days_to_exp / 365.0;
-    let sigma = underlying_price * implied_vol * t.sqrt();
-    let raw_step = Positive::TWO * k * sigma / (size as f64 - 1.0);
+    let sigma = underlying_price
+        .checked_mul(&implied_vol)?
+        .checked_mul(&t.checked_sqrt()?)?;
+    let raw_step = Positive::TWO.checked_mul(&k)?.checked_mul(&sigma)? / (size as f64 - 1.0);
 
     // Standard “nice” grids used by most exchanges
     let bins: &[Positive] = &[
@@ -847,7 +887,8 @@ pub fn strike_step(
     ];
 
     // Pick the closest one
-    bins.iter()
+    Ok(bins
+        .iter()
         .copied()
         .min_by(|a, b| {
             // SAFETY: total order on Decimal; partial_cmp only returns None
@@ -856,7 +897,7 @@ pub fn strike_step(
                 .partial_cmp(&(b.to_dec() - raw_step.to_dec()).abs())
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
-        .unwrap_or(raw_step)
+        .unwrap_or(raw_step))
 }
 
 #[cfg(test)]
@@ -875,7 +916,8 @@ mod tests_strike_step {
             pos_or_panic!(30.0),
             11,
             None,
-        );
+        )
+        .unwrap();
         assert_eq!(step, 5.0);
     }
 
@@ -887,9 +929,25 @@ mod tests_strike_step {
             pos_or_panic!(120.0),
             30,
             spos!(3.0),
-        );
+        )
+        .unwrap();
 
         assert_eq!(step, 10.0);
+    }
+
+    /// A half-width that leaves the representable range reports instead of
+    /// aborting. `2 * k * sigma` overflows for a `Positive::MAX` sigma
+    /// multiplier, and no grid value is its limit.
+    #[test]
+    fn overflowing_half_width_reports() {
+        let result = strike_step(
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            pos_or_panic!(30.0),
+            11,
+            Some(Positive::MAX),
+        );
+        assert!(result.is_err());
     }
 
     #[test]
@@ -914,7 +972,8 @@ mod tests_strike_step {
             days,
             chain_size,
             spos!(3.0),
-        );
+        )
+        .unwrap();
 
         assert_eq!(strike_interval, 25.0);
 
