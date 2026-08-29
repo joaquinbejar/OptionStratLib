@@ -232,8 +232,8 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// With no volatility the underlying follows its forward, `S(t) = S · e^{r·t}`,
 /// so exercising at `t` is worth `e^{-r·t} · payoff(S · e^{r·t})` today. Each
 /// candidate exercise time is valued by [`calculate_discounted_payoff`] on a
-/// copy of the parameters whose expiry is that time, which keeps the European
-/// answer bit-identical to the one the direct call used to produce.
+/// copy of the parameters whose expiry is that time, held to the long side,
+/// and the requested side is applied once to the winner.
 ///
 /// The exercise opportunities depend on the contract:
 ///
@@ -257,18 +257,30 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
 /// [`PricingError::Decimal`] when the growth or discount factor leaves the
 /// representable range.
 fn price_deterministic(params: &BinomialPricingParams) -> Result<Decimal, PricingError> {
+    // Every candidate is valued long and the side is applied once, to the
+    // winner. Two reasons, and both arms need them. The exercise decision
+    // belongs to the holder whichever side you are on, so the maximum has to
+    // be taken over long values; taken over signed short ones it would pick
+    // the smallest liability instead of mirroring the holder's choice. And
+    // `calculate_discounted_payoff` already signs the payoff through
+    // `PayoffInfo` before negating a short result a second time, so a short
+    // arm evaluated directly came back positive: a zero-volatility short
+    // American put on `S = 90`, `K = 100`, `r = 5%` returned `+10` for a
+    // liability of `-10`. Signing here keeps this path on the `long == -short`
+    // convention the lattice holds to.
     let exercise_value = |time: Positive| -> Result<Decimal, PricingError> {
         calculate_discounted_payoff(BinomialPricingParams {
             expiry: time,
+            side: &Side::Long,
             ..params.clone()
         })
     };
 
     let expiry_value = exercise_value(params.expiry)?;
-    match params.option_type {
+    let best = match params.option_type {
         OptionType::American => {
             let immediate = exercise_value(Positive::ZERO)?;
-            Ok(expiry_value.max(immediate))
+            expiry_value.max(immediate)
         }
         OptionType::Bermuda { exercise_dates } => {
             let mut best = expiry_value;
@@ -279,10 +291,15 @@ fn price_deterministic(params: &BinomialPricingParams) -> Result<Decimal, Pricin
                 }
                 best = best.max(exercise_value(*date)?);
             }
-            Ok(best)
+            best
         }
-        _ => Ok(expiry_value),
-    }
+        _ => expiry_value,
+    };
+
+    Ok(match params.side {
+        Side::Long => best,
+        Side::Short => -best,
+    })
 }
 
 /// Spot price at lattice node `(step, i)`: `S · u^i · d^(step - i)`.
@@ -1159,6 +1176,67 @@ mod tests_zero_volatility_early_exercise {
             american > european,
             "American {american} must carry an early-exercise premium over European {european}"
         );
+    }
+
+    /// A short position is the negative of the long one, on the deterministic
+    /// path as much as on the lattice. The exercise decision belongs to the
+    /// holder either way, so the maximum is taken over long values and the
+    /// side is applied once to the winner; evaluating a short candidate
+    /// directly signed the payoff twice and reported this liability as `+10`.
+    #[test]
+    fn test_price_binomial_zero_volatility_short_is_the_negative_of_long() {
+        let long_params = zero_vol_params(
+            pos_or_panic!(90.0),
+            Positive::HUNDRED,
+            dec!(0.05),
+            &OptionType::American,
+            &OptionStyle::Put,
+        );
+        let short = price_binomial(BinomialPricingParams {
+            side: &Side::Short,
+            ..long_params.clone()
+        })
+        .unwrap();
+        let long = price_binomial(long_params).unwrap();
+
+        assert_eq!(long, dec!(10));
+        assert_eq!(short, dec!(-10));
+    }
+
+    /// The same symmetry over every arm of the deterministic branch, so an
+    /// American, a Bermuda and a European are all held to `long == -short`.
+    #[test]
+    fn test_price_binomial_zero_volatility_short_symmetry_across_exercise_styles() {
+        let dates = vec![pos_or_panic!(0.5)];
+        let bermuda = OptionType::Bermuda {
+            exercise_dates: dates,
+        };
+        for option_type in [&OptionType::American, &bermuda, &OptionType::European] {
+            for option_style in [&OptionStyle::Put, &OptionStyle::Call] {
+                let long_params = zero_vol_params(
+                    pos_or_panic!(90.0),
+                    Positive::HUNDRED,
+                    dec!(0.05),
+                    option_type,
+                    option_style,
+                );
+                let short = price_binomial(BinomialPricingParams {
+                    side: &Side::Short,
+                    ..long_params.clone()
+                })
+                .unwrap();
+                let long = price_binomial(long_params).unwrap();
+
+                assert_eq!(
+                    long, -short,
+                    "{option_type:?} {option_style:?} broke long == -short: {long} against {short}"
+                );
+                assert!(
+                    long >= Decimal::ZERO,
+                    "{option_type:?} {option_style:?} priced a long holding at {long}"
+                );
+            }
+        }
     }
 
     #[test]
