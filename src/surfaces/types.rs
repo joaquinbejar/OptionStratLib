@@ -69,7 +69,10 @@ impl Display for Point3D {
 /// points hash alike, as `Ord` requires.
 ///
 /// The "one `z` per `(x, y)`" rule is a property of a *surface*, not of a
-/// point; [`crate::surfaces::Surface`] enforces it at construction.
+/// point, and it is a container-level invariant that nothing currently
+/// enforces: [`crate::surfaces::Surface::new`] retains a repeated `(x, y)`
+/// coordinate, and whether such a surface should be rejected, normalized or
+/// supported is deferred to issue #466.
 impl PartialEq for Point3D {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y && self.z == other.z

@@ -79,7 +79,10 @@ impl Display for Point2D {
 /// onto one cell whenever those indices pass through a `HashSet`.
 ///
 /// The "one ordinate per abscissa" rule is a property of a *curve*, not of a
-/// point; [`crate::curves::Curve`] enforces it at construction.
+/// point, and it is a container-level invariant that nothing currently
+/// enforces: [`crate::curves::Curve::new`] stores a repeated abscissa
+/// unchanged, and whether such a curve should be rejected, normalized or
+/// supported is deferred to issue #466.
 impl PartialEq for Point2D {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
