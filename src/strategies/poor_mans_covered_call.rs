@@ -34,6 +34,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::chains::OptionData;
+use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain},
@@ -41,13 +42,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -360,10 +361,18 @@ impl BreakEvenable for PoorMansCoveredCall {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let net_debit = self.get_net_cost()? / self.long_call.option.quantity;
+        // The debit per contract: a position with no contracts has none.
+        // `lower_break_even` measures a distance below the strike and floors
+        // it at zero, hence the negated debit, which sits above the strike.
+        let net_debit = d_div(
+            self.get_net_cost()?,
+            self.long_call.option.quantity.to_dec(),
+            "PoorMansCoveredCall::update_break_even_points",
+        )?;
 
-        self.break_even_points
-            .push((self.long_call.option.strike_price + net_debit).round_to(2));
+        self.break_even_points.push(
+            lower_break_even(self.long_call.option.strike_price, -net_debit).checked_round_to(2)?,
+        );
 
         Ok(())
     }
@@ -650,18 +659,21 @@ impl Strategies for PoorMansCoveredCall {
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let base = (self.short_call.option.strike_price
-            - (self.short_call.option.strike_price
-                - self.get_max_profit().unwrap_or(Positive::ZERO)))
-        .to_f64();
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
+        // The base is the maximum profit measured back from the short strike,
+        // so it is the profit itself while the profit fits under the strike.
+        // A profit above the strike leaves no room below it, and the base
+        // stops at the strike rather than inverting the subtraction.
+        let strike = self.short_call.option.strike_price;
+        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let base = price_gap(strike, price_gap(strike, max_profit)).to_f64();
+        let high = max_profit.to_f64();
         let result = base * high / 200.0;
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let result = match (self.get_max_profit(), self.get_max_loss()) {
-            (Ok(profit), Ok(loss)) => (profit / loss).to_f64() * 100.0,
+            (Ok(profit), Ok(loss)) => profit.checked_div(&loss)?.to_f64() * 100.0,
             _ => ZERO,
         };
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
@@ -830,7 +842,11 @@ impl Profit for PoorMansCoveredCall {
 
 impl ProbabilityAnalysis for PoorMansCoveredCall {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "PoorMansCoveredCall has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -857,7 +873,11 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "PoorMansCoveredCall has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -899,24 +919,36 @@ impl PnLCalculator for PoorMansCoveredCall {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .long_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .short_call
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total =
+            self.long_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        total = total.try_add(&self.short_call.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total = self
             .long_call
-            .calculate_pnl_at_expiration(underlying_price)?
-            + self
+            .calculate_pnl_at_expiration(underlying_price)?;
+        total = total.try_add(
+            &self
                 .short_call
-                .calculate_pnl_at_expiration(underlying_price)?)
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        Ok(total)
     }
 }
 

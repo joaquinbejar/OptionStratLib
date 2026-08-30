@@ -35,7 +35,10 @@ use optionstratlib::strategies::probabilities::{
     calculate_single_point_probability,
 };
 use optionstratlib::strategies::{
-    BullCallSpread, Collar, CoveredCall, LongCall, ProtectivePut, ShortPut,
+    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, Collar,
+    CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongStraddle,
+    LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortPut,
+    ShortStraddle, ShortStrangle, StrategyConstructor,
 };
 use optionstratlib::visualization::Graph;
 use positive::Positive;
@@ -567,6 +570,229 @@ proptest! {
             exercise(&strategy, underlying);
             let _ = strategy.get_best_range_to_show(Positive::HUNDRED);
             let _ = strategy.update_break_even_points();
+        }
+    }
+}
+
+/// Drives a multi-leg strategy twice: as its constructor left it, and again
+/// with its break-even vector emptied.
+///
+/// The second pass is the point. `break_even_points` is a `pub` field on every
+/// strategy in this crate and every strategy derives `Deserialize`, so a JSON
+/// document carrying `"break_even_points": []`, or a struct literal written
+/// downstream, reaches the profit area, the profit ratio and the two
+/// probability ranges with nothing to read. Until #463 each of those indexed
+/// the vector directly and aborted the process.
+macro_rules! exercise_with_and_without_break_evens {
+    ($strategy:expr, $probe:expr) => {{
+        let mut strategy = $strategy;
+        exercise(&strategy, $probe);
+        let _ = strategy.update_break_even_points();
+        exercise(&strategy, $probe);
+        strategy.break_even_points = Vec::new();
+        exercise(&strategy, $probe);
+    }};
+}
+
+proptest! {
+    // Fourteen strategies over eight generators is a wide product, so these
+    // properties run fewer cases each than the single-leg ones above; the
+    // magnitudes they draw from are the same.
+    #![proptest_config(ProptestConfig::with_cases(96))]
+
+    /// The four vertical spreads and the poor man's covered call. Each carries
+    /// a single break-even point computed as a strike offset by a
+    /// per-contract premium, so a zero quantity, a premium above the strike
+    /// and a strike at the top of the `Decimal` range all land in
+    /// `update_break_even_points`; the readers of that point land in
+    /// `get_profit_area` and in the probability ranges.
+    #[test]
+    fn test_vertical_spread_strategies_never_panic(
+        underlying in extreme_positive(),
+        low_strike in extreme_positive(),
+        high_strike in extreme_positive(),
+        volatility in extreme_volatility(),
+        quantity in extreme_quantity(),
+        premium in extreme_money(),
+        fee in extreme_money(),
+        rate in extreme_decimal(),
+        expiration in extreme_expiration(),
+        probe in extreme_positive(),
+    ) {
+        if let Ok(strategy) = BearCallSpread::new(
+            "PROP".to_string(), underlying, low_strike, high_strike, expiration,
+            volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = BullPutSpread::new(
+            "PROP".to_string(), underlying, low_strike, high_strike, expiration,
+            volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = BearPutSpread::new(
+            "PROP".to_string(), underlying, high_strike, low_strike, expiration,
+            volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = PoorMansCoveredCall::new(
+            "PROP".to_string(), underlying, low_strike, high_strike, expiration,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+    }
+
+    /// The straddles and the strangles. They carry two break-even points and
+    /// measure widths between them, so a pair that coincides (a premium of
+    /// zero) and a pair whose order the strikes invert both reach the
+    /// subtraction and the division in `get_profit_area` and
+    /// `get_profit_ratio`.
+    #[test]
+    fn test_straddle_and_strangle_strategies_never_panic(
+        underlying in extreme_positive(),
+        put_strike in extreme_positive(),
+        call_strike in extreme_positive(),
+        volatility in extreme_volatility(),
+        quantity in extreme_quantity(),
+        premium in extreme_money(),
+        fee in extreme_money(),
+        rate in extreme_decimal(),
+        expiration in extreme_expiration(),
+        probe in extreme_positive(),
+    ) {
+        if let Ok(strategy) = LongStraddle::new(
+            "PROP".to_string(), underlying, call_strike, expiration, volatility,
+            rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = ShortStraddle::new(
+            "PROP".to_string(), underlying, call_strike, expiration, volatility,
+            rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = LongStrangle::new(
+            "PROP".to_string(), underlying, call_strike, put_strike, expiration,
+            volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = ShortStrangle::new(
+            "PROP".to_string(), underlying, call_strike, put_strike, expiration,
+            volatility, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+    }
+
+    /// The four-leg structures and the butterflies. The butterflies push a
+    /// break-even point only where a wing actually crosses zero profit, so
+    /// one point, or none at all, is an ordinary outcome here rather than a
+    /// broken constructor, and the readers of the second point have to say
+    /// so instead of indexing past it.
+    #[test]
+    fn test_condor_and_butterfly_strategies_never_panic(
+        underlying in extreme_positive(),
+        low_strike in extreme_positive(),
+        high_strike in extreme_positive(),
+        volatility in extreme_volatility(),
+        quantity in extreme_quantity(),
+        premium in extreme_money(),
+        fee in extreme_money(),
+        rate in extreme_decimal(),
+        expiration in extreme_expiration(),
+        probe in extreme_positive(),
+    ) {
+        let middle_strike = low_strike.checked_add(&high_strike).unwrap_or(high_strike);
+        if let Ok(strategy) = IronCondor::new(
+            "PROP".to_string(), underlying, high_strike, low_strike, high_strike, low_strike,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            premium, premium, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = IronButterfly::new(
+            "PROP".to_string(), underlying, middle_strike, high_strike, low_strike,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            premium, premium, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = LongButterflySpread::new(
+            "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            premium, fee, fee, fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = ShortButterflySpread::new(
+            "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            premium, fee, fee, fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = CallButterfly::new(
+            "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
+            expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
+            premium, fee, fee, fee, fee, fee, fee,
+        ) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+    }
+
+    /// The leg-set construction path of the two butterfly spreads. Until #463
+    /// neither populated the break-even points, so a butterfly assembled from
+    /// positions (the route a chain or a persisted strategy takes) reported
+    /// an empty vector on a well-formed structure.
+    #[test]
+    fn test_butterfly_leg_set_construction_never_panics(
+        underlying in extreme_positive(),
+        strike in extreme_positive(),
+        volatility in extreme_volatility(),
+        quantity in extreme_quantity(),
+        premium in extreme_money(),
+        rate in extreme_decimal(),
+        expiration in extreme_expiration(),
+        probe in extreme_positive(),
+    ) {
+        // The strikes have to be symmetric for `get_strategy` to accept them.
+        let middle = strike.checked_add(&Positive::TEN).unwrap_or(strike);
+        let high = middle.checked_add(&Positive::TEN).unwrap_or(middle);
+        let body = quantity.checked_add(&quantity).unwrap_or(quantity);
+        let leg = |side: Side, strike: Positive, quantity: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, quantity, underlying, rate, OptionStyle::Call,
+                    Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), premium, premium, None, None,
+            )
+        };
+        if let Ok(strategy) = LongButterflySpread::get_strategy(&[
+            leg(Side::Long, strike, quantity),
+            leg(Side::Short, middle, body),
+            leg(Side::Long, high, quantity),
+        ]) {
+            exercise_with_and_without_break_evens!(strategy, probe);
+        }
+        if let Ok(strategy) = ShortButterflySpread::get_strategy(&[
+            leg(Side::Short, strike, quantity),
+            leg(Side::Long, middle, body),
+            leg(Side::Short, high, quantity),
+        ]) {
+            exercise_with_and_without_break_evens!(strategy, probe);
         }
     }
 }

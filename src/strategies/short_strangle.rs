@@ -29,13 +29,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange, Trade, TradeStatusAble,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{Action, OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -182,11 +182,14 @@ impl ShortStrangle {
         open_fee_short_put: Positive,
         close_fee_short_put: Positive,
     ) -> Result<Self, StrategyError> {
+        // The default strikes sit ten percent either side of the spot. A
+        // spot at the top of the `Positive` range has no room above it, and
+        // that is reported rather than aborted.
         if call_strike == Positive::ZERO {
-            call_strike = underlying_price * 1.1;
+            call_strike = underlying_price.checked_mul_f64(1.1)?;
         }
         if put_strike == Positive::ZERO {
-            put_strike = underlying_price * 0.9;
+            put_strike = underlying_price.checked_mul_f64(0.9)?;
         }
         let mut strategy = ShortStrangle {
             name: "Short Strangle".to_string(),
@@ -368,18 +371,33 @@ impl BreakEvenable for ShortStrangle {
 
         let total_premium = self.get_net_premium_received()?;
 
-        self.break_even_points.push(
-            lower_break_even(
-                self.short_put.option.strike_price,
-                total_premium / self.short_put.option.quantity,
-            )
-            .round_to(2),
-        );
+        // The credit per contract on each leg: a strangle with no contracts
+        // has none. The lower break-even goes through `lower_break_even`,
+        // which floors at zero where a credit above the strike leaves no
+        // attainable losing price; the upper one is a sum of two non-negative
+        // figures, so only its overflow is reportable.
+        let put_credit = d_div(
+            total_premium.to_dec(),
+            self.short_put.option.quantity.to_dec(),
+            "ShortStrangle::update_break_even_points",
+        )?;
+        let call_credit = d_div(
+            total_premium.to_dec(),
+            self.one_option().quantity.to_dec(),
+            "ShortStrangle::update_break_even_points",
+        )?;
 
         self.break_even_points.push(
-            (self.one_option().strike_price + (total_premium / self.one_option().quantity))
-                .round_to(2),
+            lower_break_even(self.short_put.option.strike_price, put_credit).checked_round_to(2)?,
         );
+
+        let upper = d_add(
+            self.one_option().strike_price.to_dec(),
+            call_credit,
+            "ShortStrangle::update_break_even_points",
+        )?;
+        self.break_even_points
+            .push(Positive::new_decimal(upper)?.checked_round_to(2)?);
 
         self.break_even_points.sort();
         Ok(())
@@ -720,17 +738,42 @@ impl Strategies for ShortStrangle {
         if max_profit == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
-        let strike_diff = self.one_option().strike_price - self.short_put.option.strike_price;
-        let inner_square = strike_diff * max_profit;
-        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
-        let outer_square = break_even_diff * max_profit;
-        let triangles = (outer_square - inner_square) / 2.0;
-        let result = ((inner_square + triangles) / self.one_option().underlying_price).to_f64();
+        let lower = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("ShortStrangle::get_profit_area: no break-even points")
+        })?;
+        let upper = *self.break_even_points.get(1).ok_or_else(|| {
+            StrategyError::empty_collection(
+                "ShortStrangle::get_profit_area: fewer than two break-even points",
+            )
+        })?;
+        // A call strike below the put strike describes no width between them,
+        // and break-evens that do not straddle the strikes describe no
+        // triangles: both are regions with no area, not negative ones.
+        let strike_diff = price_gap(
+            self.one_option().strike_price,
+            self.short_put.option.strike_price,
+        );
+        let inner_square = strike_diff.checked_mul(&max_profit)?;
+        let break_even_diff = price_gap(upper, lower);
+        let outer_square = break_even_diff.checked_mul(&max_profit)?;
+        let triangles = price_gap(outer_square, inner_square) / 2.0;
+        let result = inner_square
+            .checked_add(&triangles)?
+            .checked_div(&self.one_option().underlying_price)?
+            .to_f64();
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        let lower = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("ShortStrangle::get_profit_ratio: no break-even points")
+        })?;
+        let upper = *self.break_even_points.get(1).ok_or_else(|| {
+            StrategyError::empty_collection(
+                "ShortStrangle::get_profit_ratio: fewer than two break-even points",
+            )
+        })?;
+        let break_even_diff = price_gap(upper, lower);
         let result = match self.get_max_profit() {
             Ok(max_profit) => max_profit.to_f64() / break_even_diff * 100.0,
             Err(_) => ZERO,
@@ -740,11 +783,20 @@ impl Strategies for ShortStrangle {
 
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
         let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let (first_option, last_option) = (self.break_even_points[0], self.break_even_points[1]);
+        let first_option = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection(
+                "ShortStrangle::get_best_range_to_show: no break-even points",
+            )
+        })?;
+        let last_option = *self.break_even_points.get(1).ok_or_else(|| {
+            StrategyError::empty_collection(
+                "ShortStrangle::get_best_range_to_show: fewer than two break-even points",
+            )
+        })?;
         // No lower break-even puts `first_option` at zero, and the plot range
         // cannot start below it.
         let start_price = price_gap(first_option, max_profit);
-        let end_price = last_option + max_profit;
+        let end_price = last_option.checked_add(&max_profit)?;
         calculate_price_range(start_price, end_price, step)
     }
 
@@ -1170,7 +1222,17 @@ impl Profit for ShortStrangle {
 
 impl ProbabilityAnalysis for ShortStrangle {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_points = &self.get_break_even_points()?;
+        let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortStrangle has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortStrangle has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.one_option();
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1181,8 +1243,8 @@ impl ProbabilityAnalysis for ShortStrangle {
         ])?;
 
         let mut profit_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 
@@ -1203,6 +1265,16 @@ impl ProbabilityAnalysis for ShortStrangle {
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let option = &self.one_option();
         let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortStrangle has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortStrangle has no upper break-even point".to_string(),
+            })
+        })?;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
 
@@ -1212,7 +1284,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         ])?;
 
         let mut lower_loss_range =
-            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+            ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -1226,7 +1298,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         )?;
 
         let mut upper_loss_range =
-            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+            ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_loss_range.calculate_probability(
             self.get_underlying_price(),
@@ -1280,24 +1352,36 @@ impl PnLCalculator for ShortStrangle {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .short_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .short_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total =
+            self.short_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        total = total.try_add(&self.short_put.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total = self
             .short_call
-            .calculate_pnl_at_expiration(underlying_price)?
-            + self
+            .calculate_pnl_at_expiration(underlying_price)?;
+        total = total.try_add(
+            &self
                 .short_put
-                .calculate_pnl_at_expiration(underlying_price)?)
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        Ok(total)
     }
 
     fn adjustments_pnl(&self, adjustment: &DeltaAdjustment) -> Result<PnL, PricingError> {

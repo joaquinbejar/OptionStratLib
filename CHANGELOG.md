@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every multi-leg strategy aborted the process when its break-even vector
+  was shorter than the point it read** (#463). `get_profit_area`,
+  `get_profit_ratio`, `get_profit_ranges`, `get_loss_ranges` and
+  `get_best_range_to_show` indexed `break_even_points` directly across the
+  fourteen multi-leg strategies, 75 unguarded accesses, and an empty vector
+  turned each into `index out of bounds: the len is 0 but the index is 0`.
+  The vector is a `pub` field and every strategy derives `Deserialize`, so a
+  JSON document carrying `"break_even_points": []` reached all five. Two ways
+  in needed no extreme input at all: `LongButterflySpread::get_strategy` and
+  `ShortButterflySpread::get_strategy` never called
+  `update_break_even_points`, so a butterfly assembled from a leg set always
+  carried an empty vector; and a butterfly whose wing never crosses zero
+  profit legitimately has one break-even point or none, which made
+  `the len is 1 but the index is 1` reachable from an ordinary constructor.
+
+  The two constructors now populate the vector like every other constructor
+  in the crate. The readers report the shortfall, `StrategyError` on the
+  `Strategies` methods and `ProbabilityError::RangeError` on the probability
+  ranges, and name which of the two points is missing. Every value a
+  populated vector produced is unchanged: the widths taken between two
+  break-even points go through `price_gap`, which is the same subtraction for
+  an ordered pair, and a zero-width region instead of a panic for a crossed
+  one.
+
+  The arithmetic around those reads moved to the checked helpers in the same
+  files, since a `Result` that reports a missing point and then aborts on the
+  next line is not panic-free. `update_break_even_points` divides the premium
+  by a quantity that can be zero; `get_max_loss` on the bear call spread
+  subtracted strikes in an order nothing enforces; the strangles' default
+  strikes multiply the spot by 1.1 and 0.9, which overflows at
+  `Positive::MAX`; and the fourteen `PnLCalculator` impls summed their legs
+  with `impl Add for PnL`, which returns `Self` and so has nowhere to report
+  an overflowing four-leg total. They now use the checked `PnL::try_add` that
+  #460 added for exactly this. A probe over the public API of these files
+  went from 43,857 panics in 254,070 calls to none, and the property suite
+  gained four cases covering the fourteen strategies, both butterfly leg-set
+  constructors and the emptied vector.
 - **Six chain tests wrote their artifacts into the working tree and asserted
   their own cleanup succeeded.** `cargo` runs test binaries concurrently
   against one working directory, so `assert!(fs::remove_file(..).is_ok())`

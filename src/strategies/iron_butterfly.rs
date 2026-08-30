@@ -21,20 +21,20 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
-use crate::strategies::base::lower_break_even;
+use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -451,13 +451,29 @@ impl BreakEvenable for IronButterfly {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let net_credit = self.get_net_premium_received()? / self.short_call.option.quantity;
+        // The credit per contract: a position with no contracts has none.
+        // The upper break-even is a sum of two non-negative figures, so only
+        // its overflow is reportable; the lower one goes through
+        // `lower_break_even`, which floors at zero where a credit above the
+        // strike leaves no attainable losing price.
+        let net_credit = d_div(
+            self.get_net_premium_received()?.to_dec(),
+            self.short_call.option.quantity.to_dec(),
+            "IronButterfly::update_break_even_points",
+        )?;
 
+        let upper = d_add(
+            self.short_call.option.strike_price.to_dec(),
+            net_credit,
+            "IronButterfly::update_break_even_points",
+        )?;
         self.break_even_points
-            .push((self.short_call.option.strike_price + net_credit).round_to(2));
+            .push(Positive::new_decimal(upper)?.checked_round_to(2)?);
 
-        self.break_even_points
-            .push(lower_break_even(self.short_call.option.strike_price, net_credit).round_to(2));
+        self.break_even_points.push(
+            lower_break_even(self.short_call.option.strike_price, net_credit)
+                .checked_round_to(2)?,
+        );
 
         self.break_even_points.sort();
         Ok(())
@@ -816,10 +832,18 @@ impl Strategies for IronButterfly {
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let inner_width =
-            (self.short_call.option.strike_price - self.short_put.option.strike_price).to_f64();
-        let outer_width =
-            (self.long_call.option.strike_price - self.long_put.option.strike_price).to_f64();
+        // Short strikes crossed, or long strikes narrower than the short
+        // ones, describe a body with no width rather than a negative one.
+        let inner_width = price_gap(
+            self.short_call.option.strike_price,
+            self.short_put.option.strike_price,
+        )
+        .to_f64();
+        let outer_width = price_gap(
+            self.long_call.option.strike_price,
+            self.long_put.option.strike_price,
+        )
+        .to_f64();
         let height = self.get_max_profit().unwrap_or(Positive::ZERO);
 
         let inner_area = inner_width * height;
@@ -1055,6 +1079,16 @@ impl Profit for IronButterfly {
 impl ProbabilityAnalysis for IronButterfly {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "IronButterfly has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "IronButterfly has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1067,8 +1101,8 @@ impl ProbabilityAnalysis for IronButterfly {
         ])?;
 
         let mut profit_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 
@@ -1088,6 +1122,16 @@ impl ProbabilityAnalysis for IronButterfly {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "IronButterfly has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "IronButterfly has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1100,10 +1144,10 @@ impl ProbabilityAnalysis for IronButterfly {
         ])?;
 
         let mut loss_range_lower =
-            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+            ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         let mut loss_range_upper =
-            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+            ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
@@ -1173,36 +1217,56 @@ impl PnLCalculator for IronButterfly {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .long_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .long_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .short_call
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .short_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total =
+            self.long_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        total = total.try_add(&self.long_put.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        total = total.try_add(&self.short_call.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        total = total.try_add(&self.short_put.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total = self
             .long_call
-            .calculate_pnl_at_expiration(underlying_price)?
-            + self
+            .calculate_pnl_at_expiration(underlying_price)?;
+        total = total.try_add(
+            &self
                 .long_put
-                .calculate_pnl_at_expiration(underlying_price)?
-            + self
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        total = total.try_add(
+            &self
                 .short_call
-                .calculate_pnl_at_expiration(underlying_price)?
-            + self
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        total = total.try_add(
+            &self
                 .short_put
-                .calculate_pnl_at_expiration(underlying_price)?)
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        Ok(total)
     }
 }
 

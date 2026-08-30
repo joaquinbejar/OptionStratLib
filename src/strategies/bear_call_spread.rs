@@ -32,13 +32,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_mul, d_sub, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -340,11 +340,21 @@ impl BreakEvenable for BearCallSpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        self.break_even_points.push(
-            (self.short_call.option.strike_price
-                + self.get_net_premium_received()? / self.short_call.option.quantity)
-                .round_to(2),
-        );
+        // The credit per contract: a spread with no contracts has none, and
+        // the strike it is added to can sit at the top of the `Decimal`
+        // range. Both are reported rather than aborted.
+        let per_contract = d_div(
+            self.get_net_premium_received()?.to_dec(),
+            self.short_call.option.quantity.to_dec(),
+            "BearCallSpread::update_break_even_points",
+        )?;
+        let break_even = d_add(
+            self.short_call.option.strike_price.to_dec(),
+            per_contract,
+            "BearCallSpread::update_break_even_points",
+        )?;
+        self.break_even_points
+            .push(Positive::new_decimal(break_even)?.checked_round_to(2)?);
 
         Ok(())
     }
@@ -607,9 +617,32 @@ impl Strategies for BearCallSpread {
         }
     }
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
-        let width = self.long_call.option.strike_price - self.short_call.option.strike_price;
-        let max_loss =
-            (width * self.short_call.option.quantity).to_dec() - self.get_net_premium_received()?;
+        // A long strike below the short one is not a bear call spread; the
+        // width would invert, and a width of zero would report a loss the
+        // position cannot take. `new` does not reject the ordering, so this
+        // is the first place that can.
+        let width = d_sub(
+            self.long_call.option.strike_price.to_dec(),
+            self.short_call.option.strike_price.to_dec(),
+            "BearCallSpread::get_max_loss",
+        )?;
+        if width < Decimal::ZERO {
+            return Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxLossError {
+                    reason: "Long call strike must be above short call strike".to_string(),
+                },
+            ));
+        }
+        let exposure = d_mul(
+            width,
+            self.short_call.option.quantity.to_dec(),
+            "BearCallSpread::get_max_loss",
+        )?;
+        let max_loss = d_sub(
+            exposure,
+            self.get_net_premium_received()?.to_dec(),
+            "BearCallSpread::get_max_loss",
+        )?;
         if max_loss < Decimal::ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -622,11 +655,10 @@ impl Strategies for BearCallSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
-        let base = price_gap(
-            self.break_even_points[0],
-            self.short_call.option.strike_price,
-        )
-        .to_f64();
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("BearCallSpread::get_profit_area: no break-even points")
+        })?;
+        let base = price_gap(*break_even, self.short_call.option.strike_price).to_f64();
         Ok(Decimal::from_f64(high * base / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -833,7 +865,11 @@ impl Profit for BearCallSpread {
 
 impl ProbabilityAnalysis for BearCallSpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BearCallSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -859,7 +895,11 @@ impl ProbabilityAnalysis for BearCallSpread {
         Ok(vec![profit_range])
     }
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BearCallSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -919,24 +959,36 @@ impl PnLCalculator for BearCallSpread {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .long_call
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .short_call
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total =
+            self.long_call
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        total = total.try_add(&self.short_call.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total = self
             .long_call
-            .calculate_pnl_at_expiration(underlying_price)?
-            + self
+            .calculate_pnl_at_expiration(underlying_price)?;
+        total = total.try_add(
+            &self
                 .short_call
-                .calculate_pnl_at_expiration(underlying_price)?)
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        Ok(total)
     }
 }
 
