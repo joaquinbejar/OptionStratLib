@@ -223,10 +223,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Decimal::MAX + Decimal::MAX`.
 
   The quieter half is the one worth knowing about. A single sentinel leg beside
-  an ordinary one did *not* abort: `Decimal::MAX + x` for `|x| < 1` rescales and
-  rounds straight back to `Decimal::MAX`, so the addition succeeds, the running
-  total stands still, and the ordinary leg's alpha is dropped without a trace.
-  `checked_add` cannot detect that, because nothing overflowed. Both halves are
+  an ordinary one did *not* abort: `Decimal::MAX + x` for `|x| < 0.5` rescales
+  the addend down to zero and rounds straight back to `Decimal::MAX`, so the
+  addition succeeds, the running total stands still, and the ordinary leg's
+  alpha is dropped without a trace. `checked_add` cannot detect that, because
+  nothing overflowed. Both halves are
   now a `GreeksError` naming the leg that carried the sentinel, raised by an
   explicit guard ahead of the arithmetic rather than by the arithmetic itself.
   The remaining twenty-two accumulations moved to checked addition, so an

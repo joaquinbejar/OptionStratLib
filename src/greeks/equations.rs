@@ -399,7 +399,7 @@ pub trait Greeks {
     /// [`alpha`] answers `Decimal::MAX` for a leg whose theta has vanished, and
     /// that value cannot be added to a real one. Two such legs leave the
     /// representable range. One beside an ordinary leg does not, which is
-    /// worse: `Decimal::MAX` plus a value below one rescales and rounds
+    /// worse: `Decimal::MAX` plus a value below `0.5` rescales and rounds
     /// straight back to `Decimal::MAX`, so the arithmetic succeeds while the
     /// ordinary leg's contribution is silently dropped.
     ///
@@ -1788,7 +1788,10 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// sentinel with another leg's contribution at all, and report which leg
 /// carried it; see [`add_alpha`]. That covers the abort and the quieter
 /// failure beside it, where `Decimal::MAX` plus a small value rescales back to
-/// `Decimal::MAX` and drops the other leg without any arithmetic error.
+/// `Decimal::MAX` and drops the other leg without any arithmetic error. That
+/// second mechanism is a property of `Decimal`, not of this sentinel, and is
+/// pinned by `model::decimal`'s
+/// `checked_add_near_max_reports_ok_without_moving_the_value`.
 ///
 /// Nothing prevents a caller from reaching the sentinel, so it is described
 /// here rather than declared impossible: no constructor bounds the quantity
@@ -1819,11 +1822,13 @@ fn alpha_from(gamma: Decimal, theta: Decimal) -> Result<Decimal, GreeksError> {
 ///
 /// [`alpha_from`] answers `Decimal::MAX` for a leg whose theta has vanished.
 /// That value cannot be added to a real one: `Decimal::MAX` plus anything of
-/// magnitude below one rescales and rounds straight back to `Decimal::MAX`, so
-/// `checked_add` answers `Some` with the accumulator standing still and the
+/// magnitude below `0.5` rescales and rounds straight back to `Decimal::MAX`,
+/// so `checked_add` answers `Some` with the accumulator standing still and the
 /// other leg's alpha silently dropped. `checked_add` cannot detect that — the
 /// arithmetic genuinely succeeded — so the guard is explicit rather than
-/// arithmetic, and it runs before [`d_add`] is reached.
+/// arithmetic, and it runs before [`d_add`] is reached. The mechanism is pinned
+/// by `model::decimal`'s
+/// `checked_add_near_max_reports_ok_without_moving_the_value`.
 ///
 /// Refused, therefore:
 ///
