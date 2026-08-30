@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The four `plotters` tests that came in `_bis` pairs wrote to the same two
   paths as their originals, so they raced each other by construction. Each
   pair now writes its own file.
+- **The arithmetic Asian is accurate at short maturities, where it used to
+  return confident wrong prices** (#462). The general branch of the
+  Turnbull-Wakeman second moment recovered `σ²_asian·T` from the difference of
+  two terms that grow as `2S²/(a·c·T²)` while the answer shrinks with `T`; at
+  fourteen minutes to expiry the terms are around `2.8e15` and the signal is
+  `3.7e-8`. It overpriced by a factor of **612** at eighty-six seconds and
+  collapsed to approximately zero below `1e-5` days. The moment is now twice
+  the first divided difference of `φ(w) = (e^w − 1)/w`, which makes all three
+  removable singularities ordinary points and never subtracts two terms larger
+  than the result. Relative error across the nine maturities of the issue's
+  table is now at most `6.9e-12`, against `1e-9` asserted.
+
+  Prices are **bit-for-bit unchanged at 7, 30, 90, 182.5 and 365 days**, call
+  and put. One ordinary maturity moves: **at 1 day the price changes by a
+  relative `2.5e-10`, and it moves toward the reference** — measured against
+  50-digit `mpmath` quadrature, the old value sat `2.5e-10` away from it and
+  the new one sits `8.5e-14` away. A one-day option moving by `2.5e-10`
+  relative is orders of magnitude below a tick, so no quoted price changes;
+  the direction and size are stated here so the claim can be checked rather
+  than taken.
 
 ### Changed
 
