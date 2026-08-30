@@ -38,3 +38,4 @@ src/.DS_Store
 
 # Agent tooling configuration, local to each developer's machine
 .codex/
+AGENTS.md
