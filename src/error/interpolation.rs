@@ -26,8 +26,17 @@ pub enum InterpolationError {
 
     /// Errors that occur during bilinear interpolation.
     ///
-    /// These may include insufficient grid points, irregularly spaced grid,
-    /// or extrapolation beyond the defined grid boundaries.
+    /// These may include a sample too small to build a cell from (fewer than
+    /// four points on a [`Curve`](crate::curves::Curve)), or a
+    /// checked-arithmetic step leaving the representable range.
+    ///
+    /// A query in the last segments of a
+    /// [`Curve`](crate::curves::Curve) is not one of them. The cell there is
+    /// built by clamping its far edge to the curve's last segment, which is
+    /// described on
+    /// [`BiLinearInterpolation for Curve`](crate::geometrics::BiLinearInterpolation);
+    /// it used to report this error because the cell ran off the end of the
+    /// sample.
     #[error("Bilinear interpolation error: {0}")]
     Bilinear(String),
 

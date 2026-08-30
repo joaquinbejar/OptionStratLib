@@ -70,15 +70,26 @@ use crate::error::InterpolationError;
 /// abscissa has zero width and the slope across it is undefined, so the
 /// answer is [`InterpolationError::DegenerateInterval`].
 ///
-/// One branch is an exception. The [`Curve`](crate::curves::Curve)
-/// implementation short-circuits an `x` that matches a sample exactly, and
-/// on a stack of ordinates at that `x` it returns the lowest of them rather
-/// than reporting the degeneracy. That branch is left alone here because
-/// the whole method is being reworked under issue #451.
+/// That holds on every branch, including the exact match: the
+/// [`Curve`](crate::curves::Curve) implementation short-circuits an `x` that
+/// lands on a sample, and on a stack of ordinates at that `x` it reports the
+/// degeneracy rather than returning the lowest of them.
 ///
 /// A projection of a surface is multi-valued by construction, which is why
 /// [`Surface::project_onto`](crate::surfaces::Surface::project_onto) returns a
 /// `Vec<Point2D>` and not a curve; aggregate it before interpolating.
+///
+/// # Cells at the edge of the sample
+///
+/// A cell wants samples on both sides of the query along every axis, which
+/// the samples at the upper edge of the domain cannot supply. The
+/// [`Curve`](crate::curves::Curve) implementation builds its cell out of two
+/// consecutive segments and clamps the far one to the curve's last segment
+/// where it would run off the end, so the segment holding the query is
+/// always one edge of the cell and the answer stays a convex combination of
+/// the four ordinates read; that implementation documents the rule and its
+/// consequences in full. The [`Surface`](crate::surfaces::Surface) one picks
+/// the four samples nearest the query, so its cell has no end to run off.
 pub trait BiLinearInterpolation<Point, Input> {
     /// Performs bilinear interpolation to compute a value for the given input.
     ///
@@ -112,8 +123,12 @@ pub trait BiLinearInterpolation<Point, Input> {
     ///
     /// Returns [`InterpolationError::EmptyData`] when the grid has
     /// no samples, [`InterpolationError::OutOfRange`] when `x` falls
-    /// outside the covered domain, and
+    /// outside the covered domain,
     /// [`InterpolationError::DegenerateInterval`] when the
-    /// neighbouring grid cell has zero width on either axis.
+    /// neighbouring grid cell has zero width on either axis, and
+    /// [`InterpolationError::Bilinear`] when the sample is too small to build
+    /// a cell from (fewer than four points on a
+    /// [`Curve`](crate::curves::Curve)), or when a checked-arithmetic step
+    /// leaves the representable range.
     fn bilinear_interpolate(&self, x: Input) -> Result<Point, InterpolationError>;
 }

@@ -45,6 +45,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`Curve::bilinear_interpolate` now answers across the whole interior
+  domain, and its exact-match branch fails on a repeated abscissa** (#451).
+  The method read a four-sample window starting at the bracket index, which
+  `find_bracket_points` only guarantees to `i + 1`, so every `x` in the last
+  two segments left the window past the end and returned
+  `InterpolationError::Bilinear`. The cell is now built from the segment
+  bracketing `x` and the segment two positions on, the far one clamped to the
+  curve's last segment where it would run off the end. On the final segment
+  the two edges coincide and the answer is the linear interpolant there; on
+  the second-to-last the far edge is the immediately following segment.
+
+  The clamp reaches only those last two segments, so every abscissa the
+  method already answered keeps its answer digit for digit, and no existing
+  test changed. Values were validated against a reference implementation of
+  the rule in exact rational arithmetic, cross-checked against `mpmath` at 60
+  digits, over three curves including a non-uniform one.
+
+  The near edge is deliberately not clamped, unlike `cubic_interpolate` at its
+  own boundary: the window start is the denominator of the fraction along the
+  cell, so moving it back off the segment holding `x` pushes that fraction
+  past `1`, turns two of the four weights negative and stops the answer being
+  a convex combination of the cell's corners. On `(0,0), (1,1), (2,4), (3,9)`
+  that variant returns `9.5` at `x = 2.5`, above every ordinate on the curve.
+
+  The exact-match branch now goes through `Curve::exact_point_at` like the
+  three other interpolators, so several ordinates at the queried abscissa
+  return `InterpolationError::DegenerateInterval` instead of the lowest of
+  them. This is a behaviour change on a curve that breaks the
+  one-point-per-abscissa rule, and it closes the exception the #466 entry
+  below left open. No signature changed and the public API is unchanged.
+
 - **The crate moves to 0.21.0, which is the breaking bump for a `0.x`
   version.** `cargo-semver-checks` compares against the published 0.20.0 and
   rejected the rename below under `inherent_method_missing`, since a version
@@ -82,8 +113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them: the value there is not defined and no choice among them is less
   arbitrary than another. A curve with one point per abscissa is unaffected,
   and `AxisOperations::get_values` still reads every ordinate at an abscissa.
-  The exact-match branch of `Curve::bilinear_interpolate` still returns the
-  lowest ordinate; it is being reworked under #451.
+  The exact-match branch of `Curve::bilinear_interpolate` was left out of that
+  pass and is covered by the #451 entry above, which brings it into line.
 
   The one-point-per-abscissa rule, and what each consumer does when it is
   broken, are now stated on `Curve::new`, `Curve::from_vector`,

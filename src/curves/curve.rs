@@ -146,14 +146,10 @@ impl Curve {
     /// `new` stores them all; a curve built that way is outside the contract
     /// and the consumers behave as follows:
     ///
-    /// - the interpolators return
+    /// - all four interpolators return
     ///   [`InterpolationError::DegenerateInterval`] when asked about a
     ///   repeated abscissa, and pick no survivor: the bracket around it has
-    ///   zero width and the slope across it is undefined. The one exception
-    ///   is the exact-match branch of
-    ///   [`BiLinearInterpolation::bilinear_interpolate`],
-    ///   which still returns the lowest ordinate and is being reworked under
-    ///   issue #451;
+    ///   zero width and the slope across it is undefined;
     /// - `get_point` and `merge_axis_interpolate` read the first match in
     ///   `(x, y)` order, which is the lowest ordinate of the stack, and the
     ///   rest are invisible to the caller. Use
@@ -691,66 +687,119 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
 
 /// Implementation of the `BiLinearInterpolation` trait for the `Curve` struct.
 ///
-/// This function performs bilinear interpolation, which is used to estimate the value
-/// of a function at a given point `x` within a grid defined by at least 4 points.
-/// Bilinear interpolation combines two linear interpolations: one along the x-axis
-/// and another along the y-axis, within the bounds defined by the four surrounding points.
+/// # What it computes
+///
+/// Bilinear interpolation is defined on a cell of a two-dimensional grid: the
+/// answer is the mean of four corner samples, weighted by the query's
+/// fractional position along each axis. A curve has one axis, so the cell is
+/// built out of two of its segments and the second fraction is fixed at one
+/// half:
+///
+/// - the *near edge* is the segment that brackets `x`, from sample `i` to
+///   sample `i + 1`;
+/// - the *far edge* is the segment two positions further along, from sample
+///   `f` to sample `f + 1`;
+/// - the answer is the mean of the two edges read at the same fraction.
+///
+/// ```text
+/// t    = (x - x[i]) / (x[i+1] - x[i])
+/// near = y[i] + t * (y[i+1] - y[i])
+/// far  = y[f] + t * (y[f+1] - y[f])
+/// y    = (near + far) / 2
+/// ```
+///
+/// # Behaviour near the upper boundary
+///
+/// The far edge is `f = i + 2` while such a segment exists. Over the last two
+/// segments of the curve it does not, and `f` is clamped to `len - 2`, the
+/// curve's last segment. Two consequences a caller can act on:
+///
+/// - on the final segment the two edges coincide, `near` equals `far`, and
+///   the answer is the linear interpolant there. Not always to the last
+///   digit: this method normalises `x` before scaling by the rise and
+///   [`LinearInterpolation::linear_interpolate`] scales first, so where the
+///   fraction along the segment has no finite decimal expansion the two
+///   round at scale 28 on different quantities and can part company in the
+///   28th place;
+/// - on the second-to-last segment the far edge is the segment immediately
+///   after the near one instead of the one after that.
+///
+/// # Why not clamp the window start
+///
+/// The obvious repair, and the one
+/// [`CubicInterpolation::cubic_interpolate`] applies at its own boundary, is
+/// to slide the whole window back to the last four samples. Do not reach for
+/// it here. The window start is also the denominator of `t`, so moving it
+/// back off the segment holding `x` pushes `t` past `1`. Written out, the
+/// answer weights the four ordinates it reads by
+///
+/// ```text
+/// y = (1 - t)/2 * y[i] + t/2 * y[i+1] + (1 - t)/2 * y[f] + t/2 * y[f+1]
+/// ```
+///
+/// which sums to one for any `t`, but has every weight non-negative only
+/// while `t` is in `[0, 1]`. Past `1` the two `(1 - t)/2` weights go
+/// negative, the answer stops being a convex combination of the cell's
+/// corners, and what is left is an extrapolation of a cell that does not
+/// contain `x`: on `(0,0), (1,1), (2,4), (3,9)` the window-start clamp
+/// returns `9.5` at `x = 2.5`, above every ordinate the curve has. Being a
+/// convex combination of its cell's corners is what makes bilinear
+/// interpolation bilinear interpolation, so it is the near edge that has to
+/// stay put and the far edge that gives way. That is why the two boundary
+/// rules differ.
+///
+/// Before this rule existed the last two segments returned
+/// [`InterpolationError::Bilinear`] because the window ran off the end.
+///
+/// # What this is not
+///
+/// The far edge sits elsewhere on the curve, so the result does not follow
+/// the samples between knots and this is not an interpolant through them: on
+/// `(0,0), (1,1), (2,4), (3,9)` the value at `x = 0.5` is `3.5`, not the
+/// `0.5` a straight reading of the bracketing segment gives.
+///
+/// An `x` landing exactly on a sample returns that sample, which neither
+/// one-sided limit approaching it matches, so the result jumps at every
+/// sample. That jump is as old as the method and owes nothing to the
+/// boundary rule above: on `(0,0), (1,1), (2,4), (3,9), (4,16)` both limits
+/// at `x = 1` are `5` against a sample of `1`, and both segments meeting
+/// there are far from the clamp. What the clamp does add is that at the last
+/// two samples before the end of the curve the two limits no longer agree
+/// with each other either, because the segments on either side get different
+/// far edges.
+///
+/// Reach for [`LinearInterpolation`] or [`SplineInterpolation`] when a curve
+/// through the samples is what is wanted.
 ///
 /// # Parameters
 ///
-/// - **`x`**: The x-coordinate value for which the interpolation will be performed.
-///   Must fall within the range of the x-coordinates of the curve's points.
+/// - **`x`**: The x-coordinate to interpolate at. Must lie within the range
+///   of the curve's x-coordinates.
 ///
 /// # Returns
 ///
-/// - **`Ok(Point2D)`**: A `Point2D` instance representing the interpolated point
-///   at the given x-coordinate, with both x and y provided as `Decimal` values.
-/// - **`Err(CurvesError)`**: An error if the interpolation cannot be performed due
-///   to one of the following reasons:
-///   - There are fewer than 4 points in the curve.
-///   - The x-coordinate does not fall within a valid range of points.
-///   - The bracketing points for the given x-coordinate cannot be determined.
-///
-/// # Function Details
-///
-/// 1. **Input Validation**:
-///    - Ensures the curve has at least 4 points, as required for bilinear interpolation.
-///    - Returns an error if the condition is not met.
-///
-/// 2. **Exact Match Check**:
-///    - If the x-coordinate matches exactly with one of the points in the curve,
-///      the corresponding `Point2D` is returned directly.
-///
-/// 3. **Bracket Point Search**:
-///    - Determines the bracketing points (`i` and `j`) for the given x-coordinate
-///      using the `find_bracket_points` method.
-///
-/// 4. **Grid Point Selection**:
-///    - Extracts four points from the curve:
-///      - `p11`: Bottom-left point.
-///      - `p12`: Bottom-right point.
-///      - `p21`: Top-left point.
-///      - `p22`: Top-right point.
-///
-/// 5. **x-Normalization**:
-///    - Computes a normalized x value (`dx` in the range `[0,1]`), used to perform
-///      interpolation along the x-axis within the defined grid.
-///
-/// 6. **Linear Interpolation**:
-///    - First performs interpolation along the x-axis for the bottom and top edges of
-///      the grid, resulting in partial y-values `bottom` and `top`.
-///    - Then, interpolates along the y-axis between the bottom and top edge values,
-///      resulting in the final interpolated y-coordinate.
-///
-/// 7. **Output**:
-///    - Returns the interpolated `Point2D` with the input x-coordinate and the computed y-coordinate.
+/// - **`Ok(Point2D)`**: The interpolated point at `x`, both coordinates as
+///   `Decimal`.
+/// - **`Err(InterpolationError)`**: See the error list below.
 ///
 /// # Errors
 ///
-/// - **Insufficient Points**: If the curve contains fewer than 4 points, a `CurvesError`
-///   with a relevant message is returned.
-/// - **Out-of-Range x**: If the x-coordinate cannot be bracketed by points in the curve,
-///   a `CurvesError` is returned with an appropriate message.
+/// - [`InterpolationError::Bilinear`]: the curve holds fewer than four
+///   samples, or a checked-arithmetic step left the representable `Decimal`
+///   range.
+/// - [`InterpolationError::OutOfRange`]: `x` falls outside the curve's
+///   x-range.
+/// - [`InterpolationError::DegenerateInterval`]: several samples share the
+///   abscissa `x`, so the curve has no value there.
+///
+/// # One point per abscissa
+///
+/// A curve is a function of its abscissa; see [`Curve::new`]. Asking for a
+/// repeated abscissa returns [`InterpolationError::DegenerateInterval`], as
+/// it does for the three sibling algorithms; no ordinate of the stack is
+/// chosen. A stack elsewhere on the curve does not stop this method
+/// answering: only the near edge's width is divided by, and a stack sitting
+/// on the far edge is read for its two ordinates alone.
 ///
 /// # Related Traits
 ///
@@ -764,68 +813,55 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
 /// - [`find_bracket_points`](crate::geometrics::Interpolate::find_bracket_points):
 ///   A helper method used to locate the two points that bracket the given x-coordinate.
 impl BiLinearInterpolation<Point2D, Decimal> for Curve {
-    /// Performs bilinear interpolation to find the value of the curve at a given `x` coordinate.
+    /// Reads the curve at `x` as the mean of the bracketing segment and the
+    /// segment two positions further along, both at the same fraction.
     ///
-    /// # Parameters
-    /// - `x`: The x-coordinate at which the interpolation is to be performed. This should be a `Decimal` value
-    ///   within the range of the curve's known points.
-    ///
-    /// # Returns
-    /// - On success, returns a `Point2D` instance representing the interpolated point at the given `x` value.
-    /// - On failure, returns a `CurvesError`:
-    ///   - `CurvesError::InterpolationError`: If there are fewer than four points available for interpolation or
-    ///     if the required conditions for interpolation are not met.
-    ///
-    /// # Function Description
-    /// - The function retrieves the set of points defining the curve using `self.get_points()`.
-    /// - If fewer than four points exist, the function immediately fails with an `InterpolationError`.
-    /// - If the exact `x` value is found in the point set, its corresponding `Point2D` is returned directly.
-    /// - Otherwise, it determines the bracketing points (two pairs of points forming a square grid) necessary
-    ///   for bilinear interpolation using `self.find_bracket_points()`.
-    /// - From the bracketing points, it computes:
-    ///   - `dx`: A normalized value representing the relative position of `x` between its bracketing x-coordinates
-    ///     in the `[`0,1`]` interval.
-    ///   - `bottom`: The interpolated y-value along the bottom edge of the grid.
-    ///   - `top`: The interpolated y-value along the top edge of the grid.
-    ///   - `y`: The final interpolated value along the y-dimension from `bottom` to `top`.
-    /// - Returns the final interpolated point as `Point2D(x, y)`.
+    /// The far segment is clamped to the curve's last one where it would run
+    /// off the end, which makes the final segment a plain linear
+    /// interpolation. The impl-level documentation states the rule and its
+    /// consequences in full.
     ///
     /// # Errors
-    /// - Returns an error if the curve has fewer than four points, as bilinear interpolation requires at least four.
-    /// - Returns an error from `self.find_bracket_points()` if `x` cannot be bracketed.
     ///
-    /// # Notes
-    /// - The input `x` should be within the bounds of the curve for interpolation to succeed,
-    ///   as specified by the bracketing function.
-    /// - This function assumes that the points provided by `get_points` are sorted by ascending x-coordinate.
-    ///
-    /// # Example Use Case
-    /// This method is useful for calculating intermediate values on a 2D grid when exact measurements are unavailable.
-    /// Bilinear interpolation is particularly applicable for approximating smoother values in a tabular dataset
-    /// or a regularly sampled grid.
+    /// - [`InterpolationError::Bilinear`] when the curve holds fewer than
+    ///   four samples, or when a checked-arithmetic step leaves the
+    ///   representable `Decimal` range.
+    /// - [`InterpolationError::OutOfRange`] when `x` is outside the curve's
+    ///   x-range.
+    /// - [`InterpolationError::DegenerateInterval`] when several samples
+    ///   share the abscissa `x`.
     fn bilinear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
-        let points = self.get_points();
+        let len = self.len();
 
-        if points.len() < 4 {
+        // The cell is four samples wide: two segments, one edge each.
+        if len < 4 {
             return Err(InterpolationError::Bilinear(
                 "Need at least four points for bilinear interpolation".to_string(),
             ));
         }
 
-        // For exact points, return the actual point value
-        if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(**point);
+        // For exact points, return the actual point value. A stack of
+        // ordinates at `x` has no single value, so it errors out instead of
+        // yielding the lowest of them, which is what the three sibling
+        // algorithms do.
+        if let Some(point) = self.exact_point_at(x)? {
+            return Ok(point);
         }
 
         let (i, _j) = self.find_bracket_points(x)?;
 
-        // The grid is the four consecutive points starting at the lower
-        // bracket index. `find_bracket_points` only guarantees `i + 1`, so any
-        // `x` in the last three intervals leaves the window past the end.
-        let p11 = self.point_at(i, InterpolationError::Bilinear)?; // Bottom left
-        let p12 = self.point_at(i + 1, InterpolationError::Bilinear)?; // Bottom right
-        let p21 = self.point_at(i + 2, InterpolationError::Bilinear)?; // Top left
-        let p22 = self.point_at(i + 3, InterpolationError::Bilinear)?; // Top right
+        // The near edge is the segment bracketing `x`, so `dx` below stays in
+        // `[0, 1]`. The far edge is the segment two positions on;
+        // `find_bracket_points` only guarantees `i + 1` exists, so over the
+        // last two segments that one runs past the end and is clamped to the
+        // curve's last segment, `len - 2`. The four-sample check above keeps
+        // that subtraction in range.
+        let far = (i + 2).min(len - 2);
+
+        let p11 = self.point_at(i, InterpolationError::Bilinear)?; // Near edge, left
+        let p12 = self.point_at(i + 1, InterpolationError::Bilinear)?; // Near edge, right
+        let p21 = self.point_at(far, InterpolationError::Bilinear)?; // Far edge, left
+        let p22 = self.point_at(far + 1, InterpolationError::Bilinear)?; // Far edge, right
 
         let span = d_sub(p12.x, p11.x, "Curve::bilinear_interpolate::span")
             .map_err(interp_err(InterpolationError::Bilinear))?;
@@ -839,7 +875,7 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
         let dx = d_div(offset, span, "Curve::bilinear_interpolate::dx")
             .map_err(interp_err(InterpolationError::Bilinear))?;
 
-        // Interpolate along bottom edge
+        // Interpolate along the near edge
         let bottom_rise = d_sub(p12.y, p11.y, "Curve::bilinear_interpolate::bottom_rise")
             .map_err(interp_err(InterpolationError::Bilinear))?;
         let bottom_step = d_mul(dx, bottom_rise, "Curve::bilinear_interpolate::bottom_step")
@@ -847,7 +883,7 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
         let bottom = d_add(p11.y, bottom_step, "Curve::bilinear_interpolate::bottom")
             .map_err(interp_err(InterpolationError::Bilinear))?;
 
-        // Interpolate along top edge
+        // Interpolate along the far edge, at the same fraction
         let top_rise = d_sub(p22.y, p21.y, "Curve::bilinear_interpolate::top_rise")
             .map_err(interp_err(InterpolationError::Bilinear))?;
         let top_step = d_mul(dx, top_rise, "Curve::bilinear_interpolate::top_step")
@@ -855,7 +891,7 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
         let top = d_add(p21.y, top_step, "Curve::bilinear_interpolate::top")
             .map_err(interp_err(InterpolationError::Bilinear))?;
 
-        // Final interpolation in y direction
+        // Mean of the two edges
         let edge_gap = d_sub(top, bottom, "Curve::bilinear_interpolate::edge_gap")
             .map_err(interp_err(InterpolationError::Bilinear))?;
         let half_gap = d_div(edge_gap, dec!(2), "Curve::bilinear_interpolate::half_gap")
@@ -2703,6 +2739,249 @@ mod tests_bilinear_interpolate {
                 .interpolate(Decimal::TWO, InterpolationType::Bilinear)
                 .is_err()
         );
+    }
+
+    /// The three curves the reference table was built on. `quadratic_*` are
+    /// the samples of `y = x^2`; `irregular` has neither uniform spacing nor
+    /// a monotone ordinate, so the far edge of a cell is a different width
+    /// from the near one.
+    fn quadratic_four() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(0)),
+            Point2D::new(dec!(1), dec!(1)),
+            Point2D::new(dec!(2), dec!(4)),
+            Point2D::new(dec!(3), dec!(9)),
+        ]))
+    }
+
+    fn quadratic_five() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(0)),
+            Point2D::new(dec!(1), dec!(1)),
+            Point2D::new(dec!(2), dec!(4)),
+            Point2D::new(dec!(3), dec!(9)),
+            Point2D::new(dec!(4), dec!(16)),
+        ]))
+    }
+
+    fn irregular() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(1)),
+            Point2D::new(dec!(0.5), dec!(2.25)),
+            Point2D::new(dec!(2), dec!(-1.5)),
+            Point2D::new(dec!(3.25), dec!(4)),
+            Point2D::new(dec!(5), dec!(0.75)),
+        ]))
+    }
+
+    /// The two abscissas that used to abort and then, after #446, returned
+    /// `InterpolationError::Bilinear`. Reference values computed in exact
+    /// rational arithmetic from the rule stated on the impl: mean of the
+    /// bracketing segment and the segment two on, the second clamped to the
+    /// curve's last.
+    ///
+    /// `x = 1.5`: near edge `(1,1)-(2,4)` gives `2.5`, far edge clamped to
+    /// `(2,4)-(3,9)` gives `6.5`, mean `4.5`.
+    /// `x = 2.5`: both edges are `(2,4)-(3,9)`, mean of `6.5` with itself.
+    #[test]
+    fn test_bilinear_interpolate_four_point_upper_segments_match_reference() {
+        let curve = quadratic_four();
+
+        let mid = curve.bilinear_interpolate(dec!(1.5)).unwrap();
+        assert_eq!(mid.x, dec!(1.5));
+        assert_eq!(mid.y, dec!(4.5));
+
+        let last = curve.bilinear_interpolate(dec!(2.5)).unwrap();
+        assert_eq!(last.x, dec!(2.5));
+        assert_eq!(last.y, dec!(6.5));
+    }
+
+    /// On a five-point curve the clamp bites on the last two segments only.
+    /// `x = 2.5`: near `(2,4)-(3,9)` gives `6.5`, far clamped to
+    /// `(3,9)-(4,16)` gives `12.5`, mean `9.5`.
+    /// `x = 3.5`: both edges are `(3,9)-(4,16)`, mean of `12.5` with itself.
+    #[test]
+    fn test_bilinear_interpolate_five_point_upper_segments_match_reference() {
+        let curve = quadratic_five();
+
+        let second_to_last = curve.bilinear_interpolate(dec!(2.5)).unwrap();
+        assert_eq!(second_to_last.y, dec!(9.5));
+
+        let last = curve.bilinear_interpolate(dec!(3.5)).unwrap();
+        assert_eq!(last.y, dec!(12.5));
+    }
+
+    /// The clamp only reaches the last two segments, so every abscissa the
+    /// method already answered keeps its answer. These are the values the
+    /// pre-#451 code produced.
+    #[test]
+    fn test_bilinear_interpolate_interior_is_unchanged_by_the_clamp() {
+        let four = quadratic_four();
+        assert_eq!(four.bilinear_interpolate(dec!(0.5)).unwrap().y, dec!(3.5));
+
+        let five = quadratic_five();
+        assert_eq!(five.bilinear_interpolate(dec!(0.5)).unwrap().y, dec!(3.5));
+        assert_eq!(five.bilinear_interpolate(dec!(1.5)).unwrap().y, dec!(7.5));
+    }
+
+    /// On the final segment the two edges of the cell are the same segment,
+    /// so the mean of the two collapses to the linear interpolant.
+    #[test]
+    fn test_bilinear_interpolate_final_segment_equals_linear() {
+        for (curve, x) in [(quadratic_four(), dec!(2.5)), (quadratic_five(), dec!(3.5))] {
+            let bilinear = curve.bilinear_interpolate(x).unwrap();
+            let linear = curve.linear_interpolate(x).unwrap();
+            assert_eq!(bilinear.y, linear.y);
+        }
+    }
+
+    /// The same identity where the fraction along the segment has no finite
+    /// decimal expansion. The two methods divide at different points of the
+    /// chain, `bilinear` normalising `x` before scaling by the rise and
+    /// `linear` scaling first, so each rounds at scale 28 on a different
+    /// quantity and the two answers can part company in the last place.
+    #[test]
+    fn test_bilinear_interpolate_final_segment_equals_linear_to_the_last_place() {
+        let curve = irregular();
+        let bilinear = curve.bilinear_interpolate(dec!(4)).unwrap().y;
+        let linear = curve.linear_interpolate(dec!(4)).unwrap().y;
+
+        assert_ne!(bilinear, linear);
+        assert!((bilinear - linear).abs() < dec!(0.0000000000000000000000001));
+    }
+
+    /// Reference values for the irregular curve, exact rational arithmetic:
+    ///
+    /// ```text
+    /// x = 0.25  near seg 0, far seg 2  ->  1.4375
+    /// x = 1     near seg 1, far seg 3  ->  47/24     = 1.95833...
+    /// x = 2.5   near seg 2, far seg 3  ->  1.7
+    /// x = 4     near seg 3, far seg 3  ->  73/28     = 2.60714...
+    /// ```
+    ///
+    /// `x = 1` and `x = 4` land on a fraction with no finite decimal
+    /// expansion, so `d_div` rounds it at scale 28 and the result carries the
+    /// rounding forward; the bound below is far above the observed error of
+    /// roughly `1.7e-28` and far below anything a caller could care about.
+    #[test]
+    fn test_bilinear_interpolate_irregular_curve_matches_reference() {
+        const TOLERANCE: Decimal = dec!(0.0000000000000000000000001);
+        let curve = irregular();
+
+        assert_eq!(
+            curve.bilinear_interpolate(dec!(0.25)).unwrap().y,
+            dec!(1.4375)
+        );
+        assert_eq!(curve.bilinear_interpolate(dec!(2.5)).unwrap().y, dec!(1.7));
+
+        let recurring = curve.bilinear_interpolate(dec!(1)).unwrap().y;
+        assert!((recurring - dec!(1.9583333333333333333333333333)).abs() < TOLERANCE);
+
+        let last = curve.bilinear_interpolate(dec!(4)).unwrap().y;
+        assert!((last - dec!(2.6071428571428571428571428571)).abs() < TOLERANCE);
+    }
+
+    /// An abscissa carrying a sample returns that sample, on both ends of the
+    /// curve and in the middle.
+    #[test]
+    fn test_bilinear_interpolate_sample_abscissa_returns_the_sample() {
+        let curve = quadratic_four();
+        for (x, y) in [
+            (dec!(0), dec!(0)),
+            (dec!(1), dec!(1)),
+            (dec!(2), dec!(4)),
+            (dec!(3), dec!(9)),
+        ] {
+            let point = curve.bilinear_interpolate(x).unwrap();
+            assert_eq!(point.x, x);
+            assert_eq!(point.y, y);
+        }
+    }
+
+    /// Several ordinates at the queried abscissa leave the curve with no
+    /// value there, and the exact-match branch now reports that instead of
+    /// returning the lowest of them, which is what the three sibling
+    /// algorithms do.
+    #[test]
+    fn test_bilinear_interpolate_stacked_abscissa_is_degenerate() {
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0), dec!(0)),
+            Point2D::new(dec!(1), dec!(1)),
+            Point2D::new(dec!(1), dec!(7)),
+            Point2D::new(dec!(2), dec!(4)),
+            Point2D::new(dec!(3), dec!(9)),
+        ]));
+
+        let err = curve.bilinear_interpolate(dec!(1)).unwrap_err();
+        assert!(matches!(err, InterpolationError::DegenerateInterval));
+    }
+
+    /// The jump at a sample predates the boundary rule. At `x = 1` both
+    /// segments meeting there take their far edge unclamped, so all three
+    /// values below are the ones the pre-#451 code produced: the two
+    /// one-sided limits agree with each other on `(4 + 16) / 2` and neither
+    /// agrees with the sample.
+    #[test]
+    fn test_bilinear_interpolate_jump_at_a_sample_predates_the_clamp() {
+        const EPSILON: Decimal = dec!(0.0000000001);
+        const SLACK: Decimal = dec!(0.00000001);
+        let curve = quadratic_five();
+
+        let from_left = curve.bilinear_interpolate(dec!(1) - EPSILON).unwrap().y;
+        assert!((from_left - dec!(5)).abs() < SLACK);
+
+        let from_right = curve.bilinear_interpolate(dec!(1) + EPSILON).unwrap().y;
+        assert!((from_right - dec!(5)).abs() < SLACK);
+
+        assert_eq!(curve.bilinear_interpolate(dec!(1)).unwrap().y, dec!(1));
+    }
+
+    /// The clamp gives the segments on either side of `x = 2` different far
+    /// edges, so the one-sided limits there disagree, and neither matches the
+    /// sample. Approaching from the left the far edge is the segment
+    /// `(3,9)-(4,16)` and the limit is the mean of `4` and `16`; from the
+    /// right it is clamped back to that same segment read at fraction zero,
+    /// and the limit is the mean of `4` and `9`. The sample itself is `4`.
+    /// The doc comment on the impl calls this jump out; the test pins it.
+    #[test]
+    fn test_bilinear_interpolate_jumps_where_the_clamp_starts() {
+        const EPSILON: Decimal = dec!(0.0000000001);
+        const SLACK: Decimal = dec!(0.00000001);
+        let curve = quadratic_five();
+
+        let from_left = curve.bilinear_interpolate(dec!(2) - EPSILON).unwrap().y;
+        assert!((from_left - dec!(10)).abs() < SLACK);
+
+        let from_right = curve.bilinear_interpolate(dec!(2) + EPSILON).unwrap().y;
+        assert!((from_right - dec!(6.5)).abs() < SLACK);
+
+        assert_eq!(curve.bilinear_interpolate(dec!(2)).unwrap().y, dec!(4));
+    }
+
+    /// The near edge is never clamped, so the fraction along it stays in
+    /// `[0, 1]` and the answer is a convex combination of four sample
+    /// ordinates: it cannot leave the range the curve's ordinates span. This
+    /// is what a clamp of the whole window to the last four samples would
+    /// give up.
+    #[test]
+    fn test_bilinear_interpolate_stays_within_the_ordinate_range() {
+        for curve in [quadratic_four(), quadratic_five(), irregular()] {
+            let ordinates: Vec<Decimal> = curve.points.iter().map(|p| p.y).collect();
+            let low = ordinates.iter().copied().fold(Decimal::MAX, Decimal::min);
+            let high = ordinates.iter().copied().fold(Decimal::MIN, Decimal::max);
+
+            let first = curve.points.iter().next().unwrap().x;
+            let last = curve.points.iter().next_back().unwrap().x;
+            let step = (last - first) / dec!(64);
+
+            let mut x = first;
+            while x <= last {
+                let y = curve.bilinear_interpolate(x).unwrap().y;
+                assert!(y >= low, "{y} below the sample range at x = {x}");
+                assert!(y <= high, "{y} above the sample range at x = {x}");
+                x += step;
+            }
+        }
     }
 }
 
