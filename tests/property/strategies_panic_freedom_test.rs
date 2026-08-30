@@ -271,11 +271,7 @@ where
     let _ = strategy.get_positions();
     let _ = strategy.delta();
     let _ = strategy.gamma();
-    // `Greeks::greeks` is deliberately absent. Its aggregation loop in
-    // `greeks::equations` adds the per-option `alpha`, and `alpha_from`
-    // returns `Decimal::MAX` as a sentinel when theta vanishes, so two legs at
-    // a sub-contract quantity abort on `Decimal::MAX + Decimal::MAX`. That is
-    // in `src/greeks`, outside this sweep, and is reported separately.
+    let _ = strategy.greeks();
     let _ = strategy.delta_neutrality();
     let _ = strategy.is_delta_neutral();
     let _ = strategy.get_atm_strike();

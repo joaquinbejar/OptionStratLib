@@ -211,7 +211,12 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if any individual Greek calculation fails.
+    /// Returns a `GreeksError` if any individual Greek calculation fails, or
+    /// [`crate::error::DecimalError::Overflow`] (wrapped by `GreeksError`) when
+    /// one of the twelve running sums leaves the representable `Decimal` range.
+    /// The `alpha` sum is the one that reaches that limit on ordinary input:
+    /// [`alpha`] returns `Decimal::MAX` whenever a leg's theta vanishes, so two
+    /// such legs overflow.
     fn greeks(&self) -> Result<Greek, GreeksError> {
         // Aggregate option by option rather than greek by greek, so the shared
         // Black-Scholes kernels are computed once per option instead of once
@@ -232,18 +237,18 @@ pub trait Greeks {
         let mut color = Decimal::ZERO;
         for option in options {
             let single = greeks_for(option)?;
-            delta += single.delta;
-            gamma += single.gamma;
-            theta += single.theta;
-            vega += single.vega;
-            rho += single.rho;
-            rho_d += single.rho_d;
-            alpha += single.alpha;
-            vanna += single.vanna;
-            vomma += single.vomma;
-            veta += single.veta;
-            charm += single.charm;
-            color += single.color;
+            delta = d_add(delta, single.delta, "greeks::aggregate::delta")?;
+            gamma = d_add(gamma, single.gamma, "greeks::aggregate::gamma")?;
+            theta = d_add(theta, single.theta, "greeks::aggregate::theta")?;
+            vega = d_add(vega, single.vega, "greeks::aggregate::vega")?;
+            rho = d_add(rho, single.rho, "greeks::aggregate::rho")?;
+            rho_d = d_add(rho_d, single.rho_d, "greeks::aggregate::rho_d")?;
+            alpha = d_add(alpha, single.alpha, "greeks::aggregate::alpha")?;
+            vanna = d_add(vanna, single.vanna, "greeks::aggregate::vanna")?;
+            vomma = d_add(vomma, single.vomma, "greeks::aggregate::vomma")?;
+            veta = d_add(veta, single.veta, "greeks::aggregate::veta")?;
+            charm = d_add(charm, single.charm, "greeks::aggregate::charm")?;
+            color = d_add(color, single.color, "greeks::aggregate::color")?;
         }
         Ok(Greek {
             delta,
@@ -268,12 +273,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or delta calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or delta calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn delta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut delta_value = Decimal::ZERO;
         for option in options {
-            delta_value += delta(option)?;
+            delta_value = d_add(delta_value, delta(option)?, "greeks::delta::aggregate")?;
         }
         Ok(delta_value)
     }
@@ -285,12 +292,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or gamma calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or gamma calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn gamma(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut gamma_value = Decimal::ZERO;
         for option in options {
-            gamma_value += gamma(option)?;
+            gamma_value = d_add(gamma_value, gamma(option)?, "greeks::gamma::aggregate")?;
         }
         Ok(gamma_value)
     }
@@ -302,12 +311,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or theta calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or theta calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn theta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut theta_value = Decimal::ZERO;
         for option in options {
-            theta_value += theta(option)?;
+            theta_value = d_add(theta_value, theta(option)?, "greeks::theta::aggregate")?;
         }
         Ok(theta_value)
     }
@@ -319,12 +330,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or vega calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or vega calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn vega(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut vega_value = Decimal::ZERO;
         for option in options {
-            vega_value += vega(option)?;
+            vega_value = d_add(vega_value, vega(option)?, "greeks::vega::aggregate")?;
         }
         Ok(vega_value)
     }
@@ -336,12 +349,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or rho calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or rho calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn rho(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_value = Decimal::ZERO;
         for option in options {
-            rho_value += rho(option)?;
+            rho_value = d_add(rho_value, rho(option)?, "greeks::rho::aggregate")?;
         }
         Ok(rho_value)
     }
@@ -353,12 +368,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or rho_d calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or rho_d calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn rho_d(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut rho_d_value = Decimal::ZERO;
         for option in options {
-            rho_d_value += rho_d(option)?;
+            rho_d_value = d_add(rho_d_value, rho_d(option)?, "greeks::rho_d::aggregate")?;
         }
         Ok(rho_d_value)
     }
@@ -368,14 +385,28 @@ pub trait Greeks {
     /// Alpha represents the ratio between gamma and theta, providing insight into
     /// the option's risk/reward efficiency with respect to time decay.
     ///
+    /// # The sentinel in a sum
+    ///
+    /// [`alpha`] answers `Decimal::MAX` for a leg whose theta has vanished, and
+    /// summing that is degenerate in both directions. Two such legs leave the
+    /// representable range and are reported as an error. A single one beside an
+    /// ordinary leg is *not*: `Decimal::MAX` plus a value below one rescales and
+    /// rounds straight back to `Decimal::MAX`, so the sum stands still and the
+    /// ordinary leg's contribution is lost. Callers that need to tell the two
+    /// apart should check the per-leg [`alpha`] for the sentinel before summing.
+    ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or alpha calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or alpha calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum leaves
+    /// the representable `Decimal` range. Unlike the other eleven, that limit is
+    /// reachable on ordinary input: [`alpha`] returns `Decimal::MAX` whenever a leg's
+    /// theta vanishes, so two such legs overflow.
     fn alpha(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut alpha_value = Decimal::ZERO;
         for option in options {
-            alpha_value += alpha(option)?;
+            alpha_value = d_add(alpha_value, alpha(option)?, "greeks::alpha::aggregate")?;
         }
         Ok(alpha_value)
     }
@@ -387,12 +418,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or vanna calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or vanna calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn vanna(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut vanna_value = Decimal::ZERO;
         for option in options {
-            vanna_value += vanna(option)?;
+            vanna_value = d_add(vanna_value, vanna(option)?, "greeks::vanna::aggregate")?;
         }
         Ok(vanna_value)
     }
@@ -404,12 +437,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or vomma calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or vomma calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn vomma(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut vomma_value = Decimal::ZERO;
         for option in options {
-            vomma_value += vomma(option)?;
+            vomma_value = d_add(vomma_value, vomma(option)?, "greeks::vomma::aggregate")?;
         }
         Ok(vomma_value)
     }
@@ -421,12 +456,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or veta calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or veta calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn veta(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut veta_value = Decimal::ZERO;
         for option in options {
-            veta_value += veta(option)?;
+            veta_value = d_add(veta_value, veta(option)?, "greeks::veta::aggregate")?;
         }
         Ok(veta_value)
     }
@@ -438,12 +475,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or charm calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or charm calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn charm(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut charm_value = Decimal::ZERO;
         for option in options {
-            charm_value += charm(option)?;
+            charm_value = d_add(charm_value, charm(option)?, "greeks::charm::aggregate")?;
         }
         Ok(charm_value)
     }
@@ -455,12 +494,14 @@ pub trait Greeks {
     ///
     /// # Errors
     ///
-    /// Returns a `GreeksError` if the options can't be retrieved or color calculation fails.
+    /// Returns a `GreeksError` if the options can't be retrieved or color calculation
+    /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum
+    /// leaves the representable `Decimal` range.
     fn color(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut color_value = Decimal::ZERO;
         for option in options {
-            color_value += color(option)?;
+            color_value = d_add(color_value, color(option)?, "greeks::color::aggregate")?;
         }
         Ok(color_value)
     }
@@ -1718,6 +1759,27 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// Returns `Decimal::MAX` as a sentinel when theta vanishes but gamma does not.
 /// Callers that publish the value are responsible for mapping it to something
 /// meaningful; see `OptionData::calculate_greeks`.
+///
+/// # Why the sentinel is still `Decimal::MAX`
+///
+/// The sentinel used to be a live hazard: [`Greeks::alpha`] and
+/// [`Greeks::greeks`] summed it across a strategy's legs with the raw `+`
+/// operator, so two legs whose theta vanished aborted the process on
+/// `Decimal::MAX + Decimal::MAX`. Both aggregators now add with
+/// [`crate::model::decimal::d_add`], which reports that sum as a
+/// [`GreeksError`] overflow instead, and that was the whole of the danger.
+///
+/// Nothing prevents a caller from reaching the sentinel, so it is described
+/// here rather than declared impossible: no constructor bounds the quantity
+/// away from it. An ordinary at-the-money contract held at a quantity around
+/// `1e-27` has a daily theta that rounds to zero at `Decimal`'s
+/// twenty-eight-digit scale while its gamma still rounds to `1e-28`, which is
+/// the state this branch answers.
+///
+/// Replacing the sentinel would change the documented return of the public
+/// [`alpha`] and ripple into `OptionData::calculate_greeks`, which already maps
+/// it to `None`, without buying any safety the checked aggregation does not
+/// already provide.
 ///
 /// # Errors
 ///
@@ -5544,5 +5606,297 @@ mod tests_side_sign_convention {
             ok(theta(&long_call), "theta").is_sign_negative(),
             "a long call pays decay, so theta must be negative"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_checked_aggregation {
+    use super::*;
+    use crate::error::decimal::DecimalError;
+    use crate::error::greeks::CalculationErrorKind;
+    use crate::model::types::OptionType;
+    use crate::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    /// A quantity small enough that the daily theta of an ordinary at-the-money
+    /// contract rounds to zero at `Decimal`'s twenty-eight-digit scale while its
+    /// gamma still rounds to a non-zero value. That is exactly the state
+    /// [`alpha_from`] answers with the `Decimal::MAX` sentinel.
+    const SENTINEL_QUANTITY: Decimal = Decimal::from_parts(1, 0, 0, false, 27);
+
+    /// The smallest thing that implements [`Greeks`]: a bare list of legs.
+    struct Legs(Vec<Options>);
+
+    impl Greeks for Legs {
+        fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
+            Ok(self.0.iter().collect())
+        }
+    }
+
+    fn positive(value: Decimal) -> Positive {
+        match Positive::new_decimal(value) {
+            Ok(v) => v,
+            Err(e) => panic!("fixture quantity should be positive: {e}"),
+        }
+    }
+
+    fn leg(
+        option_type: OptionType,
+        strike: Positive,
+        days: Positive,
+        implied_volatility: Positive,
+        style: OptionStyle,
+        side: Side,
+        quantity: Positive,
+    ) -> Options {
+        Options::new(
+            option_type,
+            side,
+            "TEST".to_string(),
+            strike,
+            ExpirationDate::Days(days),
+            implied_volatility,
+            quantity,
+            Positive::HUNDRED,
+            dec!(0.05),
+            style,
+            Positive::ZERO,
+            None,
+        )
+    }
+
+    /// An at-the-money call at [`SENTINEL_QUANTITY`], whose alpha is the
+    /// `Decimal::MAX` sentinel.
+    fn sentinel_leg() -> Options {
+        leg(
+            OptionType::European,
+            Positive::HUNDRED,
+            pos_or_panic!(30.0),
+            pos_or_panic!(0.2),
+            OptionStyle::Call,
+            Side::Long,
+            positive(SENTINEL_QUANTITY),
+        )
+    }
+
+    fn ok(result: Result<Decimal, GreeksError>, what: &str) -> Decimal {
+        match result {
+            Ok(value) => value,
+            Err(e) => panic!("{what} should compute: {e}"),
+        }
+    }
+
+    fn expect_overflow(result: Result<Decimal, GreeksError>, what: &str) {
+        match result {
+            Ok(value) => panic!("{what} should overflow, got {value}"),
+            Err(GreeksError::CalculationError(CalculationErrorKind::DecimalError(
+                DecimalError::Overflow { operation, .. },
+            ))) => {
+                assert!(
+                    operation.starts_with("greeks::"),
+                    "the overflow should name the greeks call-site, got {operation}"
+                );
+            }
+            Err(e) => panic!("{what} should report a decimal overflow, got {e}"),
+        }
+    }
+
+    /// The fixture has to actually reach the sentinel, otherwise the two-leg
+    /// tests below prove nothing.
+    #[test]
+    fn test_alpha_sub_contract_quantity_returns_the_sentinel() {
+        let option = sentinel_leg();
+        assert_eq!(
+            ok(theta(&option), "theta"),
+            Decimal::ZERO,
+            "the fixture's daily theta must round to zero"
+        );
+        assert_ne!(
+            ok(gamma(&option), "gamma"),
+            Decimal::ZERO,
+            "the fixture's gamma must stay non-zero, or alpha takes the zero branch"
+        );
+        assert_eq!(
+            ok(alpha(&option), "alpha"),
+            Decimal::MAX,
+            "a vanished theta against a live gamma is the sentinel"
+        );
+    }
+
+    /// The defect this module exists for: two legs at the sentinel used to sum
+    /// `Decimal::MAX + Decimal::MAX` with the raw operator and abort the
+    /// process. The checked aggregation reports it instead.
+    #[test]
+    fn test_alpha_two_sentinel_legs_reports_overflow() {
+        let legs = Legs(vec![sentinel_leg(), sentinel_leg()]);
+        expect_overflow(legs.alpha(), "the aggregate alpha of two sentinel legs");
+    }
+
+    /// Same for the twelve-field aggregate, which is the call the strategies
+    /// panic-freedom proptest used to skip.
+    #[test]
+    fn test_greeks_two_sentinel_legs_reports_overflow() {
+        let legs = Legs(vec![sentinel_leg(), sentinel_leg()]);
+        match legs.greeks() {
+            Ok(g) => panic!("greeks() should overflow on two sentinel legs, got {g:?}"),
+            Err(GreeksError::CalculationError(CalculationErrorKind::DecimalError(
+                DecimalError::Overflow { operation, .. },
+            ))) => assert_eq!(operation, "greeks::aggregate::alpha"),
+            Err(e) => panic!("greeks() should report a decimal overflow, got {e}"),
+        }
+    }
+
+    /// A single sentinel leg on its own is not an overflow, so a one-leg
+    /// position keeps returning the documented sentinel rather than an error.
+    #[test]
+    fn test_alpha_one_sentinel_leg_still_returns_the_sentinel() {
+        let legs = Legs(vec![sentinel_leg()]);
+        assert_eq!(ok(legs.alpha(), "alpha"), Decimal::MAX);
+    }
+
+    /// A sentinel leg beside an ordinary one is **not** reported, and the
+    /// ordinary leg's contribution is lost: `Decimal::MAX + x` for a small `x`
+    /// rescales and rounds straight back to `Decimal::MAX`, so `checked_add`
+    /// answers `Some` with the accumulator standing still.
+    ///
+    /// That is a property of the sentinel, not of the checked addition, and it
+    /// predates this change. It is pinned here so the limit is visible: only a
+    /// second leg large enough to carry the sum past the range — the other
+    /// sentinel above, or any alpha of magnitude one or more — surfaces.
+    #[test]
+    fn test_alpha_sentinel_absorbs_a_small_leg_without_moving() {
+        // An at-the-money call at 80% volatility, whose alpha is about -0.11.
+        let ordinary = leg(
+            OptionType::European,
+            Positive::HUNDRED,
+            pos_or_panic!(30.0),
+            pos_or_panic!(0.8),
+            OptionStyle::Call,
+            Side::Long,
+            Positive::ONE,
+        );
+        let ordinary_alpha = ok(alpha(&ordinary), "alpha");
+        assert!(
+            ordinary_alpha != Decimal::ZERO && ordinary_alpha.abs() < Decimal::ONE,
+            "the fixture must contribute a small non-zero alpha, got {ordinary_alpha}"
+        );
+
+        let legs = Legs(vec![sentinel_leg(), ordinary]);
+        assert_eq!(
+            ok(legs.alpha(), "alpha"),
+            Decimal::MAX,
+            "the sum stands still: the sentinel absorbs the ordinary leg"
+        );
+    }
+
+    /// Every leg combination whose sums stay inside the `Decimal` range must
+    /// aggregate to exactly what the raw `+` operator produced.
+    ///
+    /// `Decimal::checked_add` and `Add::add` both dispatch to the same
+    /// `add_impl`; they differ only in whether a non-`Ok` result panics or
+    /// yields `None`. This walks a matrix of legs and asserts the equality
+    /// term by term, for the twelve-field aggregate and for each of the twelve
+    /// per-greek aggregators.
+    #[test]
+    fn test_checked_aggregation_matches_the_unchecked_sum() {
+        let mut options = Vec::new();
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            for side in [Side::Long, Side::Short] {
+                for strike in [pos_or_panic!(80.0), Positive::HUNDRED, pos_or_panic!(120.0)] {
+                    options.push(leg(
+                        OptionType::European,
+                        strike,
+                        pos_or_panic!(30.0),
+                        pos_or_panic!(0.2),
+                        style,
+                        side,
+                        pos_or_panic!(3.0),
+                    ));
+                    options.push(leg(
+                        OptionType::European,
+                        strike,
+                        pos_or_panic!(3650.0),
+                        pos_or_panic!(0.8),
+                        style,
+                        side,
+                        pos_or_panic!(0.25),
+                    ));
+                }
+            }
+        }
+        let legs = Legs(options);
+
+        // The reference: the pre-change accumulation, greek by greek, with the
+        // raw operator. None of these legs approaches the range limit.
+        let mut reference = Greek {
+            delta: Decimal::ZERO,
+            gamma: Decimal::ZERO,
+            theta: Decimal::ZERO,
+            vega: Decimal::ZERO,
+            rho: Decimal::ZERO,
+            rho_d: Decimal::ZERO,
+            alpha: Decimal::ZERO,
+            vanna: Decimal::ZERO,
+            vomma: Decimal::ZERO,
+            veta: Decimal::ZERO,
+            charm: Decimal::ZERO,
+            color: Decimal::ZERO,
+        };
+        for option in &legs.0 {
+            reference.delta += ok(delta(option), "delta");
+            reference.gamma += ok(gamma(option), "gamma");
+            reference.theta += ok(theta(option), "theta");
+            reference.vega += ok(vega(option), "vega");
+            reference.rho += ok(rho(option), "rho");
+            reference.rho_d += ok(rho_d(option), "rho_d");
+            reference.alpha += ok(alpha(option), "alpha");
+            reference.vanna += ok(vanna(option), "vanna");
+            reference.vomma += ok(vomma(option), "vomma");
+            reference.veta += ok(veta(option), "veta");
+            reference.charm += ok(charm(option), "charm");
+            reference.color += ok(color(option), "color");
+        }
+
+        let Ok(aggregate) = legs.greeks() else {
+            panic!("the aggregate should compute for ordinary legs");
+        };
+        assert_eq!(
+            aggregate, reference,
+            "greeks() must match the unchecked sum"
+        );
+
+        for (name, aggregated, expected) in [
+            ("delta", legs.delta(), reference.delta),
+            ("gamma", legs.gamma(), reference.gamma),
+            ("theta", legs.theta(), reference.theta),
+            ("vega", legs.vega(), reference.vega),
+            ("rho", legs.rho(), reference.rho),
+            ("rho_d", legs.rho_d(), reference.rho_d),
+            ("alpha", legs.alpha(), reference.alpha),
+            ("vanna", legs.vanna(), reference.vanna),
+            ("vomma", legs.vomma(), reference.vomma),
+            ("veta", legs.veta(), reference.veta),
+            ("charm", legs.charm(), reference.charm),
+            ("color", legs.color(), reference.color),
+        ] {
+            assert_eq!(
+                ok(aggregated, name),
+                expected,
+                "{name} must match the unchecked sum"
+            );
+        }
+    }
+
+    /// An empty leg set aggregates to zero rather than erroring, on both paths.
+    #[test]
+    fn test_checked_aggregation_of_no_legs_is_zero() {
+        let legs = Legs(Vec::new());
+        assert_eq!(ok(legs.alpha(), "alpha"), Decimal::ZERO);
+        let Ok(aggregate) = legs.greeks() else {
+            panic!("an empty leg set should aggregate to zero");
+        };
+        assert_eq!(aggregate.delta, Decimal::ZERO);
+        assert_eq!(aggregate.alpha, Decimal::ZERO);
     }
 }
