@@ -838,7 +838,7 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call.option.implied_volatility,
             self.long_call.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
 
@@ -865,7 +865,7 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_call.option.implied_volatility,
             self.short_call.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 

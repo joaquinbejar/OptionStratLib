@@ -1064,7 +1064,7 @@ impl ProbabilityAnalysis for IronButterfly {
             self.short_put.option.implied_volatility,
             self.long_call.option.implied_volatility,
             self.long_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
@@ -1097,7 +1097,7 @@ impl ProbabilityAnalysis for IronButterfly {
             self.short_put.option.implied_volatility,
             self.long_call.option.implied_volatility,
             self.long_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range_lower =
             ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;

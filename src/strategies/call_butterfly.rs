@@ -999,7 +999,7 @@ impl ProbabilityAnalysis for CallButterfly {
             self.long_call.option.implied_volatility,
             self.short_call_low.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
@@ -1031,7 +1031,7 @@ impl ProbabilityAnalysis for CallButterfly {
             self.long_call.option.implied_volatility,
             self.short_call_low.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range_lower =
             ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;

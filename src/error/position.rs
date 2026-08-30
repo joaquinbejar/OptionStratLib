@@ -13,11 +13,13 @@
 //! ## Error Types
 //!
 //! ### Position Error (`PositionError`)
-//! The main error type with four variants:
+//! The main error type with six variants:
 //! * `StrategyError` - For strategy operation failures
 //! * `ValidationError` - For position validation failures
 //! * `LimitError` - For position limit violations
 //! * `UpdateError` - For position update failures
+//! * `DecimalError` - For `Decimal` arithmetic failures
+//! * `PositiveError` - For `Positive` arithmetic failures
 //!
 //! ### Strategy Errors (`StrategyErrorKind`)
 //! Handles specific strategy-related errors:
@@ -130,6 +132,19 @@ pub enum PositionError {
     /// `#[from]` cascade so callers keep matching `PositionError`.
     #[error(transparent)]
     DecimalError(#[from] crate::error::DecimalError),
+
+    /// `Positive` arithmetic failures propagated from cost and fee
+    /// computations (overflow, division by zero, broken positivity
+    /// invariant).
+    ///
+    /// Produced when a checked `Positive` helper surfaces a
+    /// [`positive::PositiveError`] from inside a `Position` method (for
+    /// example `total_cost` or `fees`, where the premium and the fees are
+    /// accumulated and then scaled by the contract quantity). Propagated
+    /// transparently via the `#[from]` cascade so callers keep matching
+    /// `PositionError`.
+    #[error(transparent)]
+    PositiveError(#[from] positive::PositiveError),
 }
 
 /// Specific errors that can occur in strategy operations

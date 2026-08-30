@@ -843,7 +843,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_put.option.implied_volatility,
             self.short_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(
             Some(self.short_put.option.strike_price), // Price below short strike is max profit
@@ -873,7 +873,7 @@ impl ProbabilityAnalysis for BearPutSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.long_put.option.implied_volatility,
             self.short_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_point), // Lower bound is break even point

@@ -6,6 +6,7 @@ use crate::error::{
 };
 use crate::greeks::Greeks;
 use crate::model::decimal::d_sub;
+use crate::model::expiration::resolve_expiration_date;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
 use crate::pnl::utils::{PnL, PnLCalculator};
@@ -916,7 +917,7 @@ impl PnLCalculator for Options {
             unrealized,
             Positive::new_decimal(initial_costs)?,
             Positive::new_decimal(initial_income)?,
-            current_option.expiration_date.get_date()?,
+            resolve_expiration_date(&current_option.expiration_date)?,
         ))
     }
 
@@ -937,7 +938,7 @@ impl PnLCalculator for Options {
             None,
             Positive::new_decimal(initial_costs)?,
             Positive::new_decimal(initial_income)?,
-            self.expiration_date.get_date()?,
+            resolve_expiration_date(&self.expiration_date)?,
         ))
     }
 }
@@ -1153,6 +1154,32 @@ mod tests_options {
     use chrono::{Duration, Utc};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+
+    /// A day count no calendar instant can hold is a value a caller can build
+    /// and hand to any public method. Both P&L entry points resolved it
+    /// through `ExpirationDate::get_date`, which aborts on the overflow
+    /// rather than reporting it, so the `Result` these return could never be
+    /// reached for that input.
+    #[test]
+    fn test_pnl_reports_an_unrepresentable_expiration_instead_of_aborting() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(1_000_000_000.0));
+
+        assert!(
+            option
+                .calculate_pnl_at_expiration(&Positive::HUNDRED)
+                .is_err()
+        );
+        assert!(
+            option
+                .calculate_pnl(
+                    &Positive::HUNDRED,
+                    ExpirationDate::Days(pos_or_panic!(1_000_000_000.0)),
+                    &pos_or_panic!(0.2),
+                )
+                .is_err()
+        );
+    }
 
     #[test]
     fn test_new_option() {

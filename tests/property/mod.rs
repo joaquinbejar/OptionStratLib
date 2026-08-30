@@ -6,6 +6,7 @@
 mod chains_panic_freedom_test;
 mod curves_panic_freedom_test;
 mod greeks_bounds_test;
+mod model_panic_freedom_test;
 mod panic_freedom_test;
 mod point_contract_test;
 mod pricing_panic_freedom_test;

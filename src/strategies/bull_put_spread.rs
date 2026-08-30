@@ -954,7 +954,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_put.option.implied_volatility,
             self.long_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
 
@@ -981,7 +981,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_put.option.implied_volatility,
             self.long_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range = ProfitLossRange::new(
             Some(self.long_put.option.strike_price),

@@ -1501,6 +1501,7 @@ pub mod optionstratlib::error::position
 pub enum optionstratlib::error::position::PositionError
 pub optionstratlib::error::position::PositionError::DecimalError(optionstratlib::error::decimal::DecimalError)
 pub optionstratlib::error::position::PositionError::LimitError(optionstratlib::error::position::PositionLimitErrorKind)
+pub optionstratlib::error::position::PositionError::PositiveError(positive::error::PositiveError)
 pub optionstratlib::error::position::PositionError::StrategyError(optionstratlib::error::position::StrategyErrorKind)
 pub optionstratlib::error::position::PositionError::UpdateError(optionstratlib::error::position::PositionUpdateErrorKind)
 pub optionstratlib::error::position::PositionError::ValidationError(optionstratlib::error::position::PositionValidationErrorKind)
@@ -2098,6 +2099,7 @@ pub fn optionstratlib::error::OptionsError::from(optionstratlib::error::pricing:
 pub enum optionstratlib::error::PositionError
 pub optionstratlib::error::PositionError::DecimalError(optionstratlib::error::decimal::DecimalError)
 pub optionstratlib::error::PositionError::LimitError(optionstratlib::error::position::PositionLimitErrorKind)
+pub optionstratlib::error::PositionError::PositiveError(positive::error::PositiveError)
 pub optionstratlib::error::PositionError::StrategyError(optionstratlib::error::position::StrategyErrorKind)
 pub optionstratlib::error::PositionError::UpdateError(optionstratlib::error::position::PositionUpdateErrorKind)
 pub optionstratlib::error::PositionError::ValidationError(optionstratlib::error::position::PositionValidationErrorKind)
@@ -4262,7 +4264,7 @@ pub fn optionstratlib::model::utils::create_sample_option_with_date(financial_ty
 pub fn optionstratlib::model::utils::create_sample_option_with_days(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib::model::option::Options
 pub fn optionstratlib::model::utils::create_sample_position(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib::model::position::Position
 pub fn optionstratlib::model::utils::generate_price_points(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn optionstratlib::model::utils::mean_and_std(alloc::vec::Vec<positive::positive::Positive>) -> (positive::positive::Positive, positive::positive::Positive)
+pub fn optionstratlib::model::utils::mean_and_std(alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), positive::error::PositiveError>
 pub fn optionstratlib::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> alloc::vec::Vec<f64>
 #[repr(u8)] pub enum optionstratlib::model::BasicAxisTypes
 pub optionstratlib::model::BasicAxisTypes::Charm
@@ -4635,6 +4637,8 @@ pub fn optionstratlib::model::position::Position::exercised(&self) -> core::resu
 pub fn optionstratlib::model::position::Position::expired(&self) -> core::result::Result<optionstratlib::model::Trade, optionstratlib::error::trade::TradeError>
 pub fn optionstratlib::model::position::Position::open(&self) -> core::result::Result<optionstratlib::model::Trade, optionstratlib::error::trade::TradeError>
 pub fn optionstratlib::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib::model::Trade, optionstratlib::error::trade::TradeError>
+pub fn optionstratlib::model::reject_unrepresentable_expiration(&expiration_date::ExpirationDate) -> core::result::Result<(), expiration_date::error::ExpirationDateError>
+pub fn optionstratlib::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib::model::save_trades(&[optionstratlib::model::Trade], &str) -> core::io::error::Result<()>
 pub mod optionstratlib::pnl
 pub mod optionstratlib::pnl::model
@@ -6044,6 +6048,7 @@ pub fn optionstratlib::error::OptionsError::from(optionstratlib::error::pricing:
 pub enum optionstratlib::prelude::PositionError
 pub optionstratlib::prelude::PositionError::DecimalError(optionstratlib::error::decimal::DecimalError)
 pub optionstratlib::prelude::PositionError::LimitError(optionstratlib::error::position::PositionLimitErrorKind)
+pub optionstratlib::prelude::PositionError::PositiveError(positive::error::PositiveError)
 pub optionstratlib::prelude::PositionError::StrategyError(optionstratlib::error::position::StrategyErrorKind)
 pub optionstratlib::prelude::PositionError::UpdateError(optionstratlib::error::position::PositionUpdateErrorKind)
 pub optionstratlib::prelude::PositionError::ValidationError(optionstratlib::error::position::PositionValidationErrorKind)

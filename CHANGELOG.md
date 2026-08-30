@@ -91,6 +91,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `merge_axis_interpolate`, the four interpolation traits and
   `find_bracket_points`, with the matching one-height-per-xy-coordinate rule
   on `Surface::new`.
+- **`model::utils::mean_and_std` is now fallible, which is a breaking change**
+  (#470). It returns `Result<(Positive, Positive), PositiveError>` instead of
+  `(Positive, Positive)`. It summed with the raw `Positive` operator, which
+  panics on overflow, and divided by `vec.len() as f64`, which divides by zero
+  on an empty sample; every `get_profit_ranges` implementation averages its leg
+  volatilities through it. The returned figures are unchanged for every sample
+  the panicking form accepted — the squared deviations are still taken in
+  `f64` — but a deviation that overflows is now reported instead of collapsing
+  to zero through `unwrap_or(Positive::ZERO)`. To migrate, add `?` where the
+  value feeds a fallible function.
+
+  `PositionError` gains a `PositiveError` variant in the same change, so
+  `Position::total_cost` and `Position::fees` can carry the cause of a
+  `Positive` overflow instead of flattening it into a message. Both already
+  returned `Result`, so their signatures are unchanged. Matching exhaustively
+  on `PositionError` needs a new arm.
+
+  `model::resolve_expiration_date` and `model::reject_unrepresentable_expiration`
+  are new. `ExpirationDate::get_date()` aborts with
+  `` `DateTime + TimeDelta` overflowed `` for a day count no calendar can
+  represent, and every strategy reaches it through
+  `calculate_pnl_at_expiration`; these resolve or reject it instead. The guard
+  #441 added inside `OptionChain::build_chain` is replaced by a call to the
+  shared one. The instant returned is identical for every input the panicking
+  form accepted.
 
 - **Two `ProtectivePut` methods are now fallible, which is a breaking change**
   (#460). `total_fees` returns `Result<Positive, PositiveError>` instead of
