@@ -5337,7 +5337,7 @@ mod tests_chain_base {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    /// A directory of this test's own, outside the working tree.
+    /// A directory of this test run's own, outside the working tree.
     ///
     /// Writing chain artifacts into `.` or `tests/` puts every file-writing
     /// test in one shared directory, and `cargo` runs test binaries
@@ -5346,11 +5346,16 @@ mod tests_chain_base {
     /// two of these failed together on a full-suite run, each passing on its
     /// own. `tests/` is a source directory besides, so the round trip was
     /// leaving artifacts in the tree.
-    fn scratch_dir(name: &str) -> String {
-        let dir = std::env::temp_dir().join(format!("optionstratlib_chain_{name}"));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("the temp directory is writable");
-        dir.to_string_lossy().into_owned()
+    ///
+    /// The directory has to be unique per *process*, not per test: a path
+    /// derived from the test's own name is shared by every process running
+    /// that test, so two checkouts, or a `cargo test` beside a coverage run,
+    /// would still remove each other's directory — the same flake in a new
+    /// place. `tempfile` picks a fresh one and removes it when the returned
+    /// handle drops, so the caller keeps the handle alive for as long as it
+    /// needs the files.
+    fn scratch_dir() -> tempfile::TempDir {
+        tempfile::tempdir().expect("a temporary directory is available")
     }
 
     use crate::model::ExpirationDate;
@@ -5598,7 +5603,8 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let dir = scratch_dir("save_to_csv");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
         let result = chain.save_to_csv(&dir);
         assert!(result.is_ok());
         assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.csv")).exists());
@@ -5627,7 +5633,8 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let dir = scratch_dir("save_to_json");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
         let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
         assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.json")).exists());
@@ -5656,7 +5663,8 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let dir = scratch_dir("load_from_csv");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
         let result = chain.save_to_csv(&dir);
         assert!(result.is_ok());
 
@@ -5691,7 +5699,8 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let dir = scratch_dir("load_from_json");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
         let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
 
@@ -11767,7 +11776,7 @@ mod chain_coverage_tests_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    /// A directory of this test's own, outside the working tree.
+    /// A directory of this test run's own, outside the working tree.
     ///
     /// Writing chain artifacts into `.` or `tests/` puts every file-writing
     /// test in one shared directory, and `cargo` runs test binaries
@@ -11776,11 +11785,16 @@ mod chain_coverage_tests_bis {
     /// two of these failed together on a full-suite run, each passing on its
     /// own. `tests/` is a source directory besides, so the round trip was
     /// leaving artifacts in the tree.
-    fn scratch_dir(name: &str) -> String {
-        let dir = std::env::temp_dir().join(format!("optionstratlib_chain_{name}"));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).expect("the temp directory is writable");
-        dir.to_string_lossy().into_owned()
+    ///
+    /// The directory has to be unique per *process*, not per test: a path
+    /// derived from the test's own name is shared by every process running
+    /// that test, so two checkouts, or a `cargo test` beside a coverage run,
+    /// would still remove each other's directory — the same flake in a new
+    /// place. `tempfile` picks a fresh one and removes it when the returned
+    /// handle drops, so the caller keeps the handle alive for as long as it
+    /// needs the files.
+    fn scratch_dir() -> tempfile::TempDir {
+        tempfile::tempdir().expect("a temporary directory is available")
     }
     use positive::spos;
 
@@ -11815,7 +11829,8 @@ mod chain_coverage_tests_bis {
         let chain = create_test_chain();
 
         // Save to JSON to trigger serialization
-        let dir = scratch_dir("deserializer_field_handling");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
         let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
         let file = format!("{dir}/{}.json", chain.get_title());

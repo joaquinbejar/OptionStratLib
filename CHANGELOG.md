@@ -16,7 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   test: `test_load_from_json` and `test_deserializer_field_handling` failed
   together on a full-suite run and passed individually. Each writes into a
   directory of its own under the system temp directory now, and the round trip
-  is asserted rather than the deletion. `test_load_from_json` was also writing
+  is asserted rather than the deletion. The directory is unique per process
+  rather than per test, since a path derived from a test's own name is shared
+  by every process running that test. `test_load_from_json` was also writing
   into `tests/`, a source directory.
 
 - **`prepare_file_path` reported failure for a file that was already gone.**
