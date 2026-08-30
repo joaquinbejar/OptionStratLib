@@ -30,7 +30,7 @@ const SURFACE_SIDES: [usize; 2] = [8, 16];
 /// Builds a `Decimal` with a long mantissa from two small integers.
 ///
 /// The quotient by 970 is a repeating decimal, so every fixture ordinate
-/// fills the 28-digit scale. That is what makes a product of three or more of
+/// fills the 28-place scale. That is what makes a product of three or more of
 /// them round, which is the whole subject of the measurement: on short
 /// mantissas the fold would be exact and the ordering of the reduction would
 /// not matter.

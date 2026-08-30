@@ -1661,7 +1661,7 @@ impl Arithmetic<Surface> for Surface {
     /// The same operands in the same order give the same result, digit for
     /// digit. Within a cell the heights are accumulated in the order they
     /// were passed in, never in an order chosen by the thread pool: `Decimal`
-    /// multiplication rounds once a product needs more than 28 significant
+    /// multiplication rounds once a product needs more than 28 decimal
     /// digits and is therefore not associative, so a parallel reducer would
     /// take its bracketing from rayon's chunking and could return different
     /// last digits on consecutive runs of one binary over one input.
@@ -3444,7 +3444,7 @@ mod tests_surface_arithmetic {
     /// run, and gives the digits of a left-to-right fold.
     ///
     /// The three heights are the ones used by the curve test of the same
-    /// name: their triple product overruns the 28 significant digits a
+    /// name: their triple product overruns the 28 decimal places a
     /// `Decimal` holds and has to round twice, ending `...768908` grouped
     /// from the left and `...768907` grouped from the right. The parallel
     /// reducer this replaces returned the second.

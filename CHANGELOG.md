@@ -102,8 +102,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entry exists. Every merge test in the crate compares within `1e-3` or
   `1e-4`, so none of them moved.
 
-  **The parallelism it removes was worth nothing.** Pooling 500 samples a side
-  over five alternating Criterion runs, the sequential fold is 2% to 12%
+  **The parallelism it removes was worth nothing.** Over five alternating
+  Criterion runs — 500 samples a side on the curve group, 50 on the surface
+  group, whose `sample_size(10)` keeps a 51 x 51 grid affordable — the
+  sequential fold is 2% to 12%
   faster at the least-contended end of the distribution and indistinguishable
   from the reducer at the median, against a noise floor on the measuring
   machine of roughly 30%. What it removes is a rayon dispatch per grid point

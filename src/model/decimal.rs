@@ -407,8 +407,8 @@ pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 ///
 /// The fold runs strictly left to right, and that order is part of the
 /// contract rather than an implementation detail. `Decimal` multiplication
-/// rounds as soon as a product needs more than the 28 significant digits the
-/// backing 96-bit mantissa holds, which makes it non-associative: `(a * b) *
+/// rounds as soon as a product needs more decimal places than `Decimal`'s
+/// scale limit of 28, which makes it non-associative: `(a * b) *
 /// c` and `a * (b * c)` can differ in their last digit. A parallel reducer
 /// picks its bracketing from the chunking rayon happens to choose on the day,
 /// so the same binary on the same input can return different last digits from

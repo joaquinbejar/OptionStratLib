@@ -1928,7 +1928,7 @@ impl Arithmetic<Curve> for Curve {
     /// passed in, never in an order chosen by the thread pool.
     ///
     /// This matters for `Multiply` and `Divide` in particular. `Decimal`
-    /// multiplication rounds once a product needs more than 28 significant
+    /// multiplication rounds once a product needs more than 28 decimal
     /// digits, so it is not associative, and a parallel reducer would take
     /// its bracketing from whatever chunking rayon picked on the day: three
     /// or more curves could then merge to different last digits on
@@ -3426,7 +3426,7 @@ mod tests_curve_arithmetic {
 
     /// Builds `CROSS_POOL_OPERANDS` constant curves just under one.
     ///
-    /// Each ordinate is `1 - 1/n` for a distinct `n`, which fills the 28-digit
+    /// Each ordinate is `1 - 1/n` for a distinct `n`, which fills the 28-place
     /// scale so the running product rounds at every step, and stays near one
     /// so forty of them neither overflow nor collapse toward zero.
     fn cross_pool_operands() -> Vec<Curve> {
@@ -3558,7 +3558,7 @@ mod tests_curve_arithmetic {
     /// value, so it rounds as often as `Multiply` does and needs the same
     /// fixed order.
     ///
-    /// The divisors are chosen so their reciprocals fill the 28-digit scale;
+    /// The divisors are chosen so their reciprocals fill the 28-place scale;
     /// the quotient is not pinned to a literal here because the operand
     /// ordering is already pinned by
     /// [`test_merge_curves_multiply_is_reproducible`], and reproducing the
