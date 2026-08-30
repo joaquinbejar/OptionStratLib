@@ -1057,24 +1057,36 @@ impl PnLCalculator for BullPutSpread {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
-            .short_put
-            .calculate_pnl(market_price, expiration_date, implied_volatility)?
-            + self
-                .long_put
-                .calculate_pnl(market_price, expiration_date, implied_volatility)?)
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total =
+            self.short_put
+                .calculate_pnl(market_price, expiration_date, implied_volatility)?;
+        total = total.try_add(&self.long_put.calculate_pnl(
+            market_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        Ok(self
+        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
+        // `Positive` range has nowhere to be reported and aborts instead.
+        // `PnL::try_add` adds the same fields and reports it.
+        let mut total = self
             .short_put
-            .calculate_pnl_at_expiration(underlying_price)?
-            + self
+            .calculate_pnl_at_expiration(underlying_price)?;
+        total = total.try_add(
+            &self
                 .long_put
-                .calculate_pnl_at_expiration(underlying_price)?)
+                .calculate_pnl_at_expiration(underlying_price)?,
+        )?;
+        Ok(total)
     }
 }
 
