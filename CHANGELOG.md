@@ -1078,7 +1078,14 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.16.5...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.0
+[0.20.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.20.0
+[0.19.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.19.1
+[0.19.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.19.0
+[0.18.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.18.1
+[0.18.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.18.0
+[0.17.2]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.17.2
 [0.16.5]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.16.5
 
 ## [0.16.4] - 2026-04-20
