@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The crate moves to 0.21.0, which is the breaking bump for a `0.x`
+  version.** `cargo-semver-checks` compares against the published 0.20.0 and
+  rejected the rename below under `inherent_method_missing`, since a version
+  unchanged from its baseline is read as a minor bump and a minor bump may not
+  remove a public method. Every earlier change in this cycle was a return type
+  moving to `Result`, which no lint covers, so this is the first one the check
+  could see.
+
 - **`Surface::get_curve` is renamed to `Surface::project_onto` and returns
   `Vec<Point2D>` instead of `Curve`, which is a breaking change** (#466).
   One change with one reason: the method is a projection, and both its name
