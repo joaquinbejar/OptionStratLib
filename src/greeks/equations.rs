@@ -4,7 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::constants::{TRADING_DAYS, ZERO};
-use crate::error::greeks::GreeksError;
+use crate::error::greeks::{CalculationErrorKind, GreeksError};
 use crate::greeks::utils::{big_n, d1, n};
 use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType};
@@ -214,9 +214,12 @@ pub trait Greeks {
     /// Returns a `GreeksError` if any individual Greek calculation fails, or
     /// [`crate::error::DecimalError::Overflow`] (wrapped by `GreeksError`) when
     /// one of the twelve running sums leaves the representable `Decimal` range.
-    /// The `alpha` sum is the one that reaches that limit on ordinary input:
-    /// [`alpha`] returns `Decimal::MAX` whenever a leg's theta vanishes, so two
-    /// such legs overflow.
+    ///
+    /// The `alpha` sum has one further failure of its own, and it is reachable
+    /// on ordinary input. [`alpha`] returns `Decimal::MAX` for a leg whose theta
+    /// has vanished, and that value cannot be added to a real one; a leg
+    /// carrying it beside any other contribution is refused by [`add_alpha`],
+    /// which names the leg. See [`Greeks::alpha`].
     fn greeks(&self) -> Result<Greek, GreeksError> {
         // Aggregate option by option rather than greek by greek, so the shared
         // Black-Scholes kernels are computed once per option instead of once
@@ -235,7 +238,7 @@ pub trait Greeks {
         let mut veta = Decimal::ZERO;
         let mut charm = Decimal::ZERO;
         let mut color = Decimal::ZERO;
-        for option in options {
+        for (index, option) in options.into_iter().enumerate() {
             let single = greeks_for(option)?;
             delta = d_add(delta, single.delta, "greeks::aggregate::delta")?;
             gamma = d_add(gamma, single.gamma, "greeks::aggregate::gamma")?;
@@ -243,7 +246,13 @@ pub trait Greeks {
             vega = d_add(vega, single.vega, "greeks::aggregate::vega")?;
             rho = d_add(rho, single.rho, "greeks::aggregate::rho")?;
             rho_d = d_add(rho_d, single.rho_d, "greeks::aggregate::rho_d")?;
-            alpha = d_add(alpha, single.alpha, "greeks::aggregate::alpha")?;
+            alpha = add_alpha(
+                alpha,
+                single.alpha,
+                option,
+                index,
+                "greeks::aggregate::alpha",
+            )?;
             vanna = d_add(vanna, single.vanna, "greeks::aggregate::vanna")?;
             vomma = d_add(vomma, single.vomma, "greeks::aggregate::vomma")?;
             veta = d_add(veta, single.veta, "greeks::aggregate::veta")?;
@@ -388,25 +397,35 @@ pub trait Greeks {
     /// # The sentinel in a sum
     ///
     /// [`alpha`] answers `Decimal::MAX` for a leg whose theta has vanished, and
-    /// summing that is degenerate in both directions. Two such legs leave the
-    /// representable range and are reported as an error. A single one beside an
-    /// ordinary leg is *not*: `Decimal::MAX` plus a value below one rescales and
-    /// rounds straight back to `Decimal::MAX`, so the sum stands still and the
-    /// ordinary leg's contribution is lost. Callers that need to tell the two
-    /// apart should check the per-leg [`alpha`] for the sentinel before summing.
+    /// that value cannot be added to a real one. Two such legs leave the
+    /// representable range. One beside an ordinary leg does not, which is
+    /// worse: `Decimal::MAX` plus a value below one rescales and rounds
+    /// straight back to `Decimal::MAX`, so the arithmetic succeeds while the
+    /// ordinary leg's contribution is silently dropped.
+    ///
+    /// Both are refused, by an explicit guard rather than by the arithmetic;
+    /// see [`add_alpha`]. A sentinel leg that is the only leg, or that sits
+    /// beside legs whose own alpha is zero, still reports the sentinel, because
+    /// nothing is lost in those sums.
     ///
     /// # Errors
     ///
     /// Returns a `GreeksError` if the options can't be retrieved or alpha calculation
     /// fails, and [`crate::error::DecimalError::Overflow`] when the running sum leaves
-    /// the representable `Decimal` range. Unlike the other eleven, that limit is
-    /// reachable on ordinary input: [`alpha`] returns `Decimal::MAX` whenever a leg's
-    /// theta vanishes, so two such legs overflow.
+    /// the representable `Decimal` range. Returns
+    /// [`GreeksError::CalculationError`] naming the leg when that leg's alpha is
+    /// the sentinel and another leg contributes to the same sum.
     fn alpha(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
         let mut alpha_value = Decimal::ZERO;
-        for option in options {
-            alpha_value = d_add(alpha_value, alpha(option)?, "greeks::alpha::aggregate")?;
+        for (index, option) in options.into_iter().enumerate() {
+            alpha_value = add_alpha(
+                alpha_value,
+                alpha(option)?,
+                option,
+                index,
+                "greeks::alpha::aggregate",
+            )?;
         }
         Ok(alpha_value)
     }
@@ -1765,9 +1784,11 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// The sentinel used to be a live hazard: [`Greeks::alpha`] and
 /// [`Greeks::greeks`] summed it across a strategy's legs with the raw `+`
 /// operator, so two legs whose theta vanished aborted the process on
-/// `Decimal::MAX + Decimal::MAX`. Both aggregators now add with
-/// [`crate::model::decimal::d_add`], which reports that sum as a
-/// [`GreeksError`] overflow instead, and that was the whole of the danger.
+/// `Decimal::MAX + Decimal::MAX`. Both aggregators now refuse to combine the
+/// sentinel with another leg's contribution at all, and report which leg
+/// carried it; see [`add_alpha`]. That covers the abort and the quieter
+/// failure beside it, where `Decimal::MAX` plus a small value rescales back to
+/// `Decimal::MAX` and drops the other leg without any arithmetic error.
 ///
 /// Nothing prevents a caller from reaching the sentinel, so it is described
 /// here rather than declared impossible: no constructor bounds the quantity
@@ -1778,7 +1799,7 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 ///
 /// Replacing the sentinel would change the documented return of the public
 /// [`alpha`] and ripple into `OptionData::calculate_greeks`, which already maps
-/// it to `None`, without buying any safety the checked aggregation does not
+/// it to `None`, without buying any safety the guarded aggregation does not
 /// already provide.
 ///
 /// # Errors
@@ -1791,6 +1812,79 @@ fn alpha_from(gamma: Decimal, theta: Decimal) -> Result<Decimal, GreeksError> {
         (_, val) if val == Decimal::ZERO => Ok(Decimal::MAX),
         _ => Ok(d_div(gamma, theta, "greeks::alpha")?),
     }
+}
+
+/// Combines one leg's alpha into a running total, refusing the `Decimal::MAX`
+/// sentinel wherever summing it would lose a contribution.
+///
+/// [`alpha_from`] answers `Decimal::MAX` for a leg whose theta has vanished.
+/// That value cannot be added to a real one: `Decimal::MAX` plus anything of
+/// magnitude below one rescales and rounds straight back to `Decimal::MAX`, so
+/// `checked_add` answers `Some` with the accumulator standing still and the
+/// other leg's alpha silently dropped. `checked_add` cannot detect that — the
+/// arithmetic genuinely succeeded — so the guard is explicit rather than
+/// arithmetic, and it runs before [`d_add`] is reached.
+///
+/// Refused, therefore:
+///
+/// - a sentinel leg meeting a total that already carries a contribution, and
+/// - a contribution meeting a total that is already the sentinel,
+///
+/// which between them cover a sentinel beside an ordinary leg in either order,
+/// and two sentinels (which would also have left the representable range).
+///
+/// Allowed, because nothing is lost: a sentinel that is the only leg, and a
+/// sentinel beside legs whose own alpha is zero — the value `alpha` returns
+/// for a vanished gamma. A one-leg aggregate therefore still reports the
+/// documented sentinel, which is what `OptionData::greeks_snapshot` reads to
+/// map the published `alpha` to `None`.
+///
+/// Only the two alpha accumulation paths use this. None of the other eleven
+/// greeks has a sentinel, so a `Decimal::MAX` among those is a real value that
+/// must sum, or overflow, normally.
+///
+/// # Errors
+///
+/// Returns [`GreeksError::CalculationError`] naming the offending leg when the
+/// sentinel would meet a contribution, and
+/// [`crate::error::DecimalError::Overflow`] when an ordinary sum leaves the
+/// representable range.
+#[inline]
+fn add_alpha(
+    total: Decimal,
+    value: Decimal,
+    option: &Options,
+    index: usize,
+    op: &'static str,
+) -> Result<Decimal, GreeksError> {
+    let sentinel_meets_a_contribution = (value == Decimal::MAX && total != Decimal::ZERO)
+        || (total == Decimal::MAX && value != Decimal::ZERO);
+    if sentinel_meets_a_contribution {
+        return Err(alpha_sentinel_error(option, index));
+    }
+    Ok(d_add(total, value, op)?)
+}
+
+/// Builds the error [`add_alpha`] returns, naming the leg that carries the
+/// sentinel.
+///
+/// Filed under [`CalculationErrorKind::ThetaError`] because a vanished theta is
+/// the cause; there is no alpha-specific variant, and this matches how
+/// `greeks::numerical` reports the same family of failures.
+#[cold]
+#[inline(never)]
+fn alpha_sentinel_error(option: &Options, index: usize) -> GreeksError {
+    GreeksError::CalculationError(CalculationErrorKind::ThetaError {
+        reason: format!(
+            "leg {index} ({symbol} {strike} {style:?} {side:?}) has a vanished theta, \
+             so its alpha is the Decimal::MAX sentinel and cannot be summed into an \
+             aggregate; read the leg's own alpha instead",
+            symbol = option.underlying_symbol,
+            strike = option.strike_price,
+            style = option.option_style,
+            side = option.side,
+        ),
+    })
 }
 
 /// Computes the vanna of an option.
@@ -5612,8 +5706,6 @@ mod tests_side_sign_convention {
 #[cfg(test)]
 mod tests_checked_aggregation {
     use super::*;
-    use crate::error::decimal::DecimalError;
-    use crate::error::greeks::CalculationErrorKind;
     use crate::model::types::OptionType;
     use crate::{ExpirationDate, Options};
     use positive::{Positive, pos_or_panic};
@@ -5687,18 +5779,18 @@ mod tests_checked_aggregation {
         }
     }
 
-    fn expect_overflow(result: Result<Decimal, GreeksError>, what: &str) {
+    /// Asserts that `result` is the sentinel refusal, and that its message
+    /// names the offending leg.
+    fn expect_sentinel_refusal(result: Result<Decimal, GreeksError>, what: &str) {
         match result {
-            Ok(value) => panic!("{what} should overflow, got {value}"),
-            Err(GreeksError::CalculationError(CalculationErrorKind::DecimalError(
-                DecimalError::Overflow { operation, .. },
-            ))) => {
+            Ok(value) => panic!("{what} should be refused, got {value}"),
+            Err(GreeksError::CalculationError(CalculationErrorKind::ThetaError { reason })) => {
                 assert!(
-                    operation.starts_with("greeks::"),
-                    "the overflow should name the greeks call-site, got {operation}"
+                    reason.contains("leg ") && reason.contains("sentinel"),
+                    "the refusal should name the leg and the sentinel, got {reason}"
                 );
             }
-            Err(e) => panic!("{what} should report a decimal overflow, got {e}"),
+            Err(e) => panic!("{what} should report the sentinel refusal, got {e}"),
         }
     }
 
@@ -5726,46 +5818,40 @@ mod tests_checked_aggregation {
 
     /// The defect this module exists for: two legs at the sentinel used to sum
     /// `Decimal::MAX + Decimal::MAX` with the raw operator and abort the
-    /// process. The checked aggregation reports it instead.
+    /// process. The aggregate refuses them instead.
     #[test]
-    fn test_alpha_two_sentinel_legs_reports_overflow() {
+    fn test_alpha_two_sentinel_legs_are_refused() {
         let legs = Legs(vec![sentinel_leg(), sentinel_leg()]);
-        expect_overflow(legs.alpha(), "the aggregate alpha of two sentinel legs");
+        expect_sentinel_refusal(legs.alpha(), "the aggregate alpha of two sentinel legs");
     }
 
     /// Same for the twelve-field aggregate, which is the call the strategies
     /// panic-freedom proptest used to skip.
     #[test]
-    fn test_greeks_two_sentinel_legs_reports_overflow() {
+    fn test_greeks_two_sentinel_legs_are_refused() {
         let legs = Legs(vec![sentinel_leg(), sentinel_leg()]);
         match legs.greeks() {
-            Ok(g) => panic!("greeks() should overflow on two sentinel legs, got {g:?}"),
-            Err(GreeksError::CalculationError(CalculationErrorKind::DecimalError(
-                DecimalError::Overflow { operation, .. },
-            ))) => assert_eq!(operation, "greeks::aggregate::alpha"),
-            Err(e) => panic!("greeks() should report a decimal overflow, got {e}"),
+            Ok(g) => panic!("greeks() should refuse two sentinel legs, got {g:?}"),
+            Err(GreeksError::CalculationError(CalculationErrorKind::ThetaError { reason })) => {
+                assert!(
+                    reason.contains("sentinel"),
+                    "the refusal should mention the sentinel, got {reason}"
+                );
+            }
+            Err(e) => panic!("greeks() should report the sentinel refusal, got {e}"),
         }
     }
 
-    /// A single sentinel leg on its own is not an overflow, so a one-leg
-    /// position keeps returning the documented sentinel rather than an error.
-    #[test]
-    fn test_alpha_one_sentinel_leg_still_returns_the_sentinel() {
-        let legs = Legs(vec![sentinel_leg()]);
-        assert_eq!(ok(legs.alpha(), "alpha"), Decimal::MAX);
-    }
-
-    /// A sentinel leg beside an ordinary one is **not** reported, and the
-    /// ordinary leg's contribution is lost: `Decimal::MAX + x` for a small `x`
-    /// rescales and rounds straight back to `Decimal::MAX`, so `checked_add`
-    /// answers `Some` with the accumulator standing still.
+    /// A sentinel leg beside an ordinary one is refused, in either order.
     ///
-    /// That is a property of the sentinel, not of the checked addition, and it
-    /// predates this change. It is pinned here so the limit is visible: only a
-    /// second leg large enough to carry the sum past the range — the other
-    /// sentinel above, or any alpha of magnitude one or more — surfaces.
+    /// This is the case `checked_add` cannot detect and so the one an explicit
+    /// guard has to catch: `Decimal::MAX` plus a value below one rescales and
+    /// rounds straight back to `Decimal::MAX`, so the addition genuinely
+    /// succeeds and returns `Some`, with the accumulator standing still and the
+    /// ordinary leg's alpha dropped. Reporting an aggregate that is wrong in a
+    /// way the caller cannot see is worse than reporting nothing.
     #[test]
-    fn test_alpha_sentinel_absorbs_a_small_leg_without_moving() {
+    fn test_alpha_sentinel_beside_an_ordinary_leg_is_refused() {
         // An at-the-money call at 80% volatility, whose alpha is about -0.11.
         let ordinary = leg(
             OptionType::European,
@@ -5781,12 +5867,69 @@ mod tests_checked_aggregation {
             ordinary_alpha != Decimal::ZERO && ordinary_alpha.abs() < Decimal::ONE,
             "the fixture must contribute a small non-zero alpha, got {ordinary_alpha}"
         );
-
-        let legs = Legs(vec![sentinel_leg(), ordinary]);
+        // The unguarded arithmetic really does succeed and stand still, which
+        // is what makes the guard necessary.
         assert_eq!(
-            ok(legs.alpha(), "alpha"),
-            Decimal::MAX,
-            "the sum stands still: the sentinel absorbs the ordinary leg"
+            Decimal::MAX.checked_add(ordinary_alpha),
+            Some(Decimal::MAX),
+            "checked_add cannot detect this, so the guard must"
+        );
+
+        expect_sentinel_refusal(
+            Legs(vec![sentinel_leg(), ordinary.clone()]).alpha(),
+            "the aggregate alpha with the sentinel leg first",
+        );
+        expect_sentinel_refusal(
+            Legs(vec![ordinary, sentinel_leg()]).alpha(),
+            "the aggregate alpha with the sentinel leg last",
+        );
+    }
+
+    /// A single sentinel leg is not a sum: nothing is dropped, so it keeps
+    /// reporting the documented sentinel rather than an error.
+    ///
+    /// `OptionData::greeks_snapshot` depends on this. It calls `greeks()` on one
+    /// option through `impl Greeks for Options` and maps an `alpha` of
+    /// `Decimal::MAX` to `None` on the wire; refusing a lone sentinel would
+    /// drop the other eleven greeks from that snapshot too.
+    #[test]
+    fn test_alpha_one_sentinel_leg_still_returns_the_sentinel() {
+        let legs = Legs(vec![sentinel_leg()]);
+        assert_eq!(ok(legs.alpha(), "alpha"), Decimal::MAX);
+        let Ok(aggregate) = legs.greeks() else {
+            panic!("a lone sentinel leg should still aggregate");
+        };
+        assert_eq!(aggregate.alpha, Decimal::MAX);
+    }
+
+    /// A sentinel beside a leg whose own alpha is zero is not refused either:
+    /// `alpha` returns zero for a vanished gamma, and adding zero drops
+    /// nothing. Refusing it would be a false positive.
+    #[test]
+    fn test_alpha_sentinel_beside_a_zero_alpha_leg_is_allowed() {
+        // At expiry gamma vanishes, which is the branch `alpha_from` answers
+        // with zero.
+        let expired = leg(
+            OptionType::European,
+            Positive::HUNDRED,
+            Positive::ZERO,
+            pos_or_panic!(0.2),
+            OptionStyle::Call,
+            Side::Long,
+            Positive::ONE,
+        );
+        assert_eq!(
+            ok(alpha(&expired), "alpha"),
+            Decimal::ZERO,
+            "the fixture must contribute exactly zero"
+        );
+        assert_eq!(
+            ok(Legs(vec![sentinel_leg(), expired.clone()]).alpha(), "alpha"),
+            Decimal::MAX
+        );
+        assert_eq!(
+            ok(Legs(vec![expired, sentinel_leg()]).alpha(), "alpha"),
+            Decimal::MAX
         );
     }
 
