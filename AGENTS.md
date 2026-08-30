@@ -110,14 +110,21 @@ it. They are gaps, not advice.
    `lower_break_even` (`src/strategies/base.rs`).
 
 2. **`make public-api-check` is not a documentation gate.** It builds
-   rustdoc with `--all-features`, but `cargo public-api` forwards
-   `--cap-lints warn` to that build, so the lints `src/lib.rs` denies
-   (`missing_docs`, `rustdoc::broken_intra_doc_links`) are capped to
-   warnings. With the same broken link in place:
+   rustdoc with `--all-features`, but that build runs under
+   `--cap-lints warn`, so the lints `src/lib.rs` denies (`missing_docs`,
+   `rustdoc::broken_intra_doc_links`) are capped to warnings. The cap is not
+   `cargo public-api`'s choice: it comes from the `rustdoc-json` builder it
+   calls, which defaults to it and passes it through
+   (`rustdoc-json-0.9.10/src/builder.rs:316` sets
+   `cap_lints: Some(String::from("warn"))`, `:159` forwards it). An upgrade
+   changing that default changes this behaviour without anything here
+   changing. With the same broken link in place:
 
    ```
    cargo +nightly-2026-08-28 public-api -sss --all-features > /dev/null
-   # exit 0, "warning: unresolved link", full snapshot produced
+   # exit 0, full snapshot produced, and the link reported as
+   # "warning: unresolved link to ..." — not as an error, so it reads
+   # like ordinary noise rather than something hiding under a green check
    ```
 
 3. **`cargo test --all-features` never exercises the default feature set.**
