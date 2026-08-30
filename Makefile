@@ -61,16 +61,38 @@ clean:
 .PHONY: check
 check: test fmt-check lint scan-banned
 
-# Fails when a panicking construct reappears in production code. A bare
-# `#[cfg(test)]` never truncates the scan; only the braced body of the item
-# it actually gates is skipped, brace counted (files may carry several):
+# Fails when a panicking construct reappears in production code.
+#
+# The banned set, and why each entry is there:
+#   * `.unwrap()` / `.expect(` — abort instead of reporting.
+#   * `panic!` / `unreachable!` / `todo!` / `unimplemented!` — the same,
+#     spelled out. The pattern requires a non-word, non-`_` character before
+#     the macro name so `pos_or_panic!` is not swept up with `panic!`.
+#   * `.exp()` / `.ln()` / `.powd(` — `rust_decimal`'s `MathematicalOps`
+#     aborts on all three (`Exp overflowed`, `Unable to calculate ln for
+#     zero`, `Pow overflowed`); `d_exp` / `d_ln` / `d_powd` in
+#     `src/model/decimal.rs` are the checked forms. `f64` has the same three
+#     method names and does *not* abort, so those call sites carry a marker
+#     saying so — grep cannot tell the receiver types apart.
+#   * `.sqrt().unwrap()` — `Decimal::sqrt` is the safe one, returning
+#     `Option`; unwrapping it puts the panic back.
+#
+# A bare `#[cfg(test)]` never truncates the scan; only the braced body of the
+# item it actually gates is skipped, brace counted (files may carry several):
 # `mod`/`fn`/`impl`/`trait`/`struct`/`enum`/`union` (any `pub(..)` visibility,
 # `async`/`unsafe`, generics or return type before the `{`, spanning multiple
 # signature lines if needed), and a bare `#[cfg(test)] { ... }` block. A
 # body-less item behind `#[cfg(test)]` (`use`, `const`, `static`, `type`
 # alias, or a `;`-terminated declaration such as a tuple struct or a trait
 # method signature) skips nothing; scanning resumes right after it as usual.
-# Doc comments are skipped too. A reviewed exception carries a trailing
+#
+# Line comments (`///`, `//!`, `//`) are skipped, and so is the closing line
+# of a `/*** … ***/` banner (`*`-run followed by `/`). The filter used to skip
+# every line starting with `*`, which also skipped the continuation lines of a
+# multi-line product — `        * asr.exp()` in `src/pricing/compound.rs` is
+# five such lines — so a banned construct could hide there.
+#
+# A reviewed exception carries a trailing
 # `// scan-banned: allow -- <reason>` marker on the same line.
 .PHONY: scan-banned
 scan-banned:
@@ -117,15 +139,22 @@ scan-banned:
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(' \
-		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*)' \
-		| grep -v 'scan-banned: allow' || true); \
+		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)\.unwrap\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
+		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
+		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
+	malformed=$$(grep -rn 'scan-banned: allow' src \
+		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
+	if [ -n "$$malformed" ]; then \
+		echo "Exemption markers without a reason (use 'scan-banned: allow -- <reason>'):"; \
+		echo "$$malformed"; \
+		exit 1; \
+	fi; \
 	if [ -n "$$found" ]; then \
 		echo "Banned patterns found in production code:"; \
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no .unwrap()/.expect() in production code"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented, no unchecked exp/ln/powd/sqrt in production code"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,
@@ -215,9 +244,19 @@ fix:
 .PHONY: pre-push
 pre-push: fix fmt lint-fix test readme doc
 
+# Builds the crate's documentation with every feature on. It used to run
+# `cargo clippy -- -W missing-docs`, which builds no documentation at all and
+# so never resolved an intra-doc link. `--all-features` is what makes the
+# difference: `create-doc` below omits it, so a link inside `plotly` /
+# `static_export` / `async` code was checked by nothing.
+#
+# The target starts green: two `private_intra_doc_links` warnings stand
+# (`RNDStatistics::new` in src/chains/rnd.rs and `lower_break_even` in
+# src/strategies/base.rs), and warnings do not fail it. `src/lib.rs` denies
+# `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo clippy -- -W missing-docs
+	cargo doc --all-features --no-deps
 
 .PHONY: doc-open
 doc-open:

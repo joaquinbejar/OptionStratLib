@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Seven entry points in `src/volatility/` aborted on inputs the type system
+  accepts** (#442). A `catch_unwind` probe over the module's public API across
+  3305 extreme-input cases reported 287 aborts before the sweep and none
+  after. `historical_volatility` handed a zero `window_size` to
+  `slice::windows`, which panics with `window size must be non-zero`;
+  `garch_volatility` seeded its recursion with `returns[0]` and aborted on an
+  empty slice with `index out of bounds: the len is 0 but the index is 0`;
+  `simulate_heston_volatility` ran its Euler step on raw `Decimal` operators
+  and aborted with `Multiplication overflowed`; `annualized_volatility`,
+  `de_annualized_volatility`, `volatility_for_dt` and `adjust_volatility` used
+  the panicking `Positive` operators for the square-root-of-time rescaling and
+  aborted with `Positive arithmetic overflow in mul` / `in div`, and with
+  `Positive invariant broken in div: result would be non-positive` for a
+  `TimeFrame::Custom(Positive::ZERO)` divisor; and `implied_volatility`
+  computed its grid size as `100 * max_iterations`, which aborts a debug build
+  with `attempt to multiply with overflow` at `i64::MAX` and wraps silently in
+  release.
+
+  Every one of these already returned `Result`, so no signature changed. The
+  degenerate timeframe is now `VolatilityError::InvalidTime` with the same
+  message shape `adjust_volatility` already used for its target frame, so the
+  two entry points agree on where the domain ends. Well-formed inputs keep
+  their values: the checked `Positive` helpers are the same code path the
+  operators call before panicking. `tests/property/volatility_panic_freedom_test.rs`
+  drives the sweep over the sample shapes, the timeframes and the option
+  geometries.
+
+- **`Options::payoff`, `payoff_at_price` and `intrinsic_value` reported a
+  payoff of zero when it was too large to represent** (#442). All three
+  evaluated the payoff in `f64`, scaled it by the quantity, and converted with
+  `Decimal::from_f64(..).unwrap_or_default()`. Both factors reach
+  `Positive::MAX` (`≈ 7.92e28`), so the product routinely leaves the `Decimal`
+  range — and a long call struck at zero on an underlying at `Positive::MAX`
+  leaves it at quantity one, because the nearest `f64` to `Decimal::MAX` rounds
+  above it. The three now return `OptionsError::PayoffError` naming the value
+  and the entry point. An out-of-the-money leg still returns `Ok(0)`, which is
+  the answer rather than a fallback, and no existing test changed.
+
+- **`DecimalStats::mean` and `DecimalStats::std_dev` aborted on a sample they
+  could not sum** (#442). `mean` folded with `iter().sum()`, which aborts with
+  `Addition overflowed`; `std_dev` squared each centred deviation with
+  `.powd(Decimal::TWO)`, which aborts with `Pow overflowed`. `vec![Decimal::MAX;
+  2]` reached both. The two trait methods now return
+  `Result<Decimal, DecimalError>` and fold through the checked helpers in
+  `src/model/decimal.rs`; the sample standard deviation is unchanged digit for
+  digit for a representable sample.
+
+  This is a breaking change to a public trait. To migrate, add `?` where the
+  value feeds a fallible function or `.expect("…")` at a boundary that cannot
+  propagate; an external implementor changes the two signatures and returns
+  `Ok(..)`. No further version bump: 0.21.0 is already the breaking version
+  for this unreleased cycle.
+
+- **`decimal_normal_sample` constructed a distribution that could be
+  rejected** (#442). It built `Normal::new(0.0, 1.0)` on every call and had an
+  `unreachable!` in the `Err` arm. It samples `rand_distr::StandardNormal`
+  instead, a unit struct with no constructor and nothing to reject.
+  `Normal::sample` is `mean + std_dev * z` over the same `StandardNormal`, so
+  at `(0.0, 1.0)` the two are the same value as well as the same distribution.
+
 - **Every multi-leg strategy aborted the process when its break-even vector
   was shorter than the point it read** (#463). `get_profit_area`,
   `get_profit_ratio`, `get_profit_ranges`, `get_loss_ranges` and
@@ -157,6 +217,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`make doc` builds documentation.** It ran `cargo clippy -- -W
+  missing-docs`, which builds none, so no intra-doc link was ever resolved by
+  it. It is now `cargo doc --all-features --no-deps`. The target starts green:
+  two `private_intra_doc_links` warnings stand (`RNDStatistics::new` in
+  `src/chains/rnd.rs`, `lower_break_even` in `src/strategies/base.rs`) and
+  warnings do not fail it. `AGENTS.md` records this and four other gaps
+  between what the gates check and what they appear to check.
+
+- **`make scan-banned` guards the panicking maths and the panicking macros,
+  not just `unwrap`/`expect`.** It now also rejects `panic!`,
+  `unreachable!`, `todo!`, `unimplemented!`, `.exp()`, `.ln()`, `.powd(` and
+  `.sqrt().unwrap()`. The `f64` methods share three of those names and do not
+  abort, so those call sites carry a `// scan-banned: allow` marker saying so;
+  grep cannot tell the receiver types apart. Its comment filter no longer
+  skips every line starting with `*`, which had been swallowing the
+  continuation lines of multi-line products — five `.exp()` calls in
+  `src/pricing/compound.rs` were invisible to it.
 - **Twenty public methods whose return type had no error channel are now
   fallible, which is a breaking change** (#471). Each aborted the process on
   arithmetic over `pub` fields. #460 closed everything reachable through the

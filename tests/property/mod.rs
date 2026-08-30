@@ -13,3 +13,4 @@ mod pricing_panic_freedom_test;
 mod put_call_parity_test;
 mod quote_invariants_test;
 mod strategies_panic_freedom_test;
+mod volatility_panic_freedom_test;

@@ -312,8 +312,8 @@ fn monte_carlo_rainbow(
     for i in 0..num_simulations {
         let (z1, z2) = generate_correlated_normals(i as u64, rho_f);
 
-        let s1_t = s1_f * (drift1 + vol1 * z1).exp();
-        let s2_t = s2_f * (drift2 + vol2 * z2).exp();
+        let s1_t = s1_f * (drift1 + vol1 * z1).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+        let s2_t = s2_f * (drift2 + vol2 * z2).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
         let underlying = if is_best_of {
             s1_t.max(s2_t)
@@ -351,7 +351,8 @@ fn box_muller_transform(seed: u64) -> f64 {
     let u1_clamped = u1.clamp(1e-10, 1.0 - 1e-10);
     let u2_clamped = u2.clamp(1e-10, 1.0 - 1e-10);
 
-    (-2.0 * u1_clamped.ln()).sqrt() * (2.0 * PI * u2_clamped).cos()
+    // `u1_clamped` is clamped away from 0 and 1 above, so the log is finite.
+    (-2.0 * u1_clamped.ln()).sqrt() * (2.0 * PI * u2_clamped).cos() // scan-banned: allow -- f64 `ln`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 }
 
 /// Simple linear congruential generator for uniform random numbers.

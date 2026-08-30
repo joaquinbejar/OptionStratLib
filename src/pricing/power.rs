@@ -147,15 +147,15 @@ fn power_price(
 
     let drift_adjustment =
         n_f64 * (r_f64 - q_f64) + n_f64 * (n_f64 - 1.0) * sigma_f64 * sigma_f64 / 2.0;
-    let forward = s_power * (drift_adjustment * t_f64).exp();
+    let forward = s_power * (drift_adjustment * t_f64).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
     let sigma_adj = n_f64 * sigma_f64;
 
     let sqrt_t = t_f64.sqrt();
-    let d1 = ((forward / k_f64).ln() + sigma_adj * sigma_adj * t_f64 / 2.0) / (sigma_adj * sqrt_t);
+    let d1 = ((forward / k_f64).ln() + sigma_adj * sigma_adj * t_f64 / 2.0) / (sigma_adj * sqrt_t); // scan-banned: allow -- f64 `ln`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
     let d2 = d1 - sigma_adj * sqrt_t;
 
-    let discount = (-r_f64 * t_f64).exp();
+    let discount = (-r_f64 * t_f64).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
     let d1_dec =
         Decimal::from_f64(d1).ok_or_else(|| PricingError::other("Failed to convert d1"))?;

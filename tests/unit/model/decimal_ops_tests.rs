@@ -37,6 +37,6 @@ fn decimal_partial_eq_with_positive() {
 #[test]
 fn decimalstats_empty_vec_returns_zeroes() {
     let v: Vec<Decimal> = vec![];
-    assert_eq!(v.mean(), Decimal::ZERO);
-    assert_eq!(v.std_dev(), Decimal::ZERO);
+    assert_eq!(v.mean().unwrap(), Decimal::ZERO);
+    assert_eq!(v.std_dev().unwrap(), Decimal::ZERO);
 }
