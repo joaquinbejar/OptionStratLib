@@ -8,7 +8,7 @@ use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use positive::Positive;
+use positive::{Positive, PositiveError};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::ops::Mul;
@@ -395,14 +395,24 @@ pub fn create_sample_option_simplest_strike(
 ///
 /// # Arguments
 ///
-/// * `vec` - A `Vec<Positive>` containing the data for which the mean and standard deviation
-///   are to be calculated.
+/// * `vec` - A non-empty `Vec<Positive>` containing the data for which the mean and standard
+///   deviation are to be calculated.
 ///
 /// # Returns
 ///
 /// A tuple containing:
 /// - `Positive` - The mean of the provided vector.
 /// - `Positive` - The standard deviation of the provided vector.
+///
+/// # Errors
+///
+/// Returns [`PositiveError::ArithmeticError`] when the sample is empty — no
+/// mean is defined for it — and when accumulating the values or the squared
+/// deviations overflows the `Positive` range. Returns
+/// [`PositiveError::InvalidValue`] when a squared deviation is not
+/// representable as a finite `f64`. The raw `Positive` operators abort the
+/// process in all of those cases, so every step is taken through its checked
+/// counterpart.
 ///
 /// # Example
 ///
@@ -415,7 +425,7 @@ pub fn create_sample_option_simplest_strike(
 ///     Positive::new(2.0)?, Positive::new(4.0)?, Positive::new(4.0)?, Positive::new(4.0)?,
 ///     Positive::new(5.0)?, Positive::new(5.0)?, Positive::new(7.0)?, Positive::new(9.0)?,
 /// ];
-/// let (mean, std) = mean_and_std(data);
+/// let (mean, std) = mean_and_std(data)?;
 ///
 /// assert_eq!(mean.to_f64(), 5.0);
 /// assert_eq!(std.to_f64(), 4.0_f64.sqrt());
@@ -428,23 +438,38 @@ pub fn create_sample_option_simplest_strike(
 /// - The mean is computed by summing the `Positive` values and dividing by the count of elements.
 /// - The standard deviation is derived from the variance, which is the average of the squared differences
 ///   from the mean. The variance is then converted into standard deviation by taking its square root.
-/// - This function assumes the vector is non-empty and filled with valid `Positive` values.
 ///
 /// Note: The `Positive` type and associated operations are defined in the `crate::model::types` module.
-#[must_use]
-pub fn mean_and_std(vec: Vec<Positive>) -> (Positive, Positive) {
-    let mean = vec.iter().sum::<Positive>() / vec.len() as f64;
-    // `(x - mean).powi(2)` is mathematically non-negative, and so is
-    // `sqrt(variance)`. The `Positive::ZERO` fallback on the checked
-    // constructors is therefore unreachable and only exists to keep these
-    // call sites free of `.unwrap()`/`.expect()`.
-    let variance = vec
-        .iter()
-        .map(|x| Positive::new((x.to_f64() - mean.to_f64()).powi(2)).unwrap_or(Positive::ZERO))
-        .sum::<Positive>()
-        / vec.len() as f64;
-    let std = variance.to_f64().sqrt();
-    (mean, Positive::new(std).unwrap_or(Positive::ZERO))
+pub fn mean_and_std(vec: Vec<Positive>) -> Result<(Positive, Positive), PositiveError> {
+    if vec.is_empty() {
+        return Err(PositiveError::ArithmeticError {
+            operation: "mean_and_std".to_string(),
+            reason: "an empty sample has no mean".to_string(),
+        });
+    }
+    // `Decimal::from(usize)` is exact for every length a `Vec` can hold, so
+    // the divisor introduces no rounding of its own.
+    let count = Decimal::from(vec.len());
+
+    let mut total = Positive::ZERO;
+    for value in &vec {
+        total = total.checked_add(value)?;
+    }
+    let mean = total.checked_div_dec(count)?;
+
+    // The squared deviations are taken in `f64`, as they always have been, so
+    // the returned figures are unchanged for every sample the panicking form
+    // accepted. What changes is the reporting: a deviation that overflows
+    // `f64` now surfaces instead of collapsing to zero.
+    let mut squared_deviations = Positive::ZERO;
+    for value in &vec {
+        let deviation = Positive::new((value.to_f64() - mean.to_f64()).powi(2))?;
+        squared_deviations = squared_deviations.checked_add(&deviation)?;
+    }
+    let variance = squared_deviations.checked_div_dec(count)?;
+    let std = Positive::new(variance.to_f64().sqrt())?;
+
+    Ok((mean, std))
 }
 
 /// Trait for rounding operations on numeric types, specifically for financial calculations.
@@ -609,7 +634,7 @@ mod tests_mean_and_std {
             pos_or_panic!(7.0),
             pos_or_panic!(9.0),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), 2.0, epsilon = 0.0001);
@@ -623,7 +648,7 @@ mod tests_mean_and_std {
             pos_or_panic!(5.0),
             pos_or_panic!(5.0),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 5.0, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), 0.0, epsilon = 0.0001);
@@ -632,7 +657,7 @@ mod tests_mean_and_std {
     #[test]
     fn test_single_value() {
         let values = vec![pos_or_panic!(3.0)];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), 0.0, epsilon = 0.0001);
@@ -641,7 +666,7 @@ mod tests_mean_and_std {
     #[test]
     fn test_small_numbers() {
         let values = vec![pos_or_panic!(0.1), pos_or_panic!(0.2), pos_or_panic!(0.3)];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 0.2, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), 0.08164966, epsilon = 0.0001);
@@ -654,7 +679,7 @@ mod tests_mean_and_std {
             pos_or_panic!(2000.0),
             pos_or_panic!(3000.0),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 2000.0, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), 816.4966, epsilon = 0.1);
@@ -668,17 +693,24 @@ mod tests_mean_and_std {
             pos_or_panic!(50.0),
             pos_or_panic!(500.0),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 138.875, epsilon = 0.001);
         assert_relative_eq!(std.to_f64(), 209.392, epsilon = 0.001);
     }
 
     #[test]
-    #[should_panic]
     fn test_empty_vector() {
         let values: Vec<Positive> = vec![];
-        let _ = mean_and_std(values);
+        let error = mean_and_std(values).expect_err("an empty sample has no mean");
+        assert!(matches!(error, PositiveError::ArithmeticError { .. }));
+    }
+
+    #[test]
+    fn test_sum_overflow_returns_error() {
+        let values = vec![Positive::MAX, Positive::MAX];
+        let error = mean_and_std(values).expect_err("two maxima overflow the sum");
+        assert!(matches!(error, PositiveError::ArithmeticError { .. }));
     }
 
     #[test]
@@ -690,7 +722,7 @@ mod tests_mean_and_std {
             pos_or_panic!(4.0),
             pos_or_panic!(5.0),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 3.0, epsilon = 0.0001);
         assert_relative_eq!(std.to_f64(), std::f64::consts::SQRT_2, epsilon = 0.0001);
@@ -699,7 +731,7 @@ mod tests_mean_and_std {
     #[test]
     fn test_result_is_positive() {
         let values = vec![Positive::ONE, Positive::TWO, pos_or_panic!(3.0)];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert!(mean > Positive::ZERO);
         assert!(std > Positive::ZERO);
@@ -712,7 +744,7 @@ mod tests_mean_and_std {
             pos_or_panic!(2.34567890),
             pos_or_panic!(3.45678901),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 2.34567860, epsilon = 0.00000001);
         assert_relative_eq!(std.to_f64(), 0.90721797, epsilon = 0.00000001);
@@ -725,7 +757,7 @@ mod tests_mean_and_std {
             pos_or_panic!(0.134567890),
             pos_or_panic!(0.145678901),
         ];
-        let (mean, std) = mean_and_std(values);
+        let (mean, std) = mean_and_std(values).expect("the sample is non-empty and finite");
 
         assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);
         assert_relative_eq!(std.to_f64(), 0.00907213, epsilon = 0.00000001);

@@ -25,13 +25,14 @@ use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
 use crate::model::utils::sub_floor_zero;
 use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
+    reject_unrepresentable_expiration,
 };
 use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::VolatilitySmile;
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 #[cfg(test)]
@@ -253,35 +254,6 @@ impl<'de> Deserialize<'de> for OptionChain {
     }
 }
 
-/// Rejects a relative expiration that no calendar date can represent.
-///
-/// [`ExpirationDate::get_date_string`] resolves `Days(n)` as `now + n days`
-/// with `DateTime + TimeDelta`, which panics on overflow instead of
-/// reporting it. A chain built from a caller-supplied day count reaches that
-/// addition directly, so the span is validated here first.
-///
-/// # Errors
-///
-/// Returns [`ChainError::invalid_parameters`] when the day count is outside
-/// the range a `DateTime<Utc>` can hold.
-fn reject_unrepresentable_expiration(expiration_date: &ExpirationDate) -> Result<(), ChainError> {
-    let ExpirationDate::Days(days) = expiration_date else {
-        return Ok(());
-    };
-    let out_of_range = || {
-        ChainError::invalid_parameters(
-            "expiration_date",
-            &format!("expiration of {days} days is outside the representable calendar range"),
-        )
-    };
-    let whole_days = days.to_dec().trunc().to_i64().ok_or_else(out_of_range)?;
-    let span = Duration::try_days(whole_days).ok_or_else(out_of_range)?;
-    Utc::now()
-        .checked_add_signed(span)
-        .ok_or_else(out_of_range)?;
-    Ok(())
-}
-
 impl OptionChain {
     /// Creates a new `OptionChain` for a specific underlying instrument and expiration date.
     ///
@@ -398,6 +370,7 @@ impl OptionChain {
     /// Returns `ChainError` if:
     /// - `underlying_price` is missing from price params
     /// - `expiration_date` is missing from price params
+    /// - `expiration_date` is a day count no calendar instant can represent
     /// - Failed to get days from expiration date
     /// - Failed to get date string from expiration date
     #[inline(never)]

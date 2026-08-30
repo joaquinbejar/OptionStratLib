@@ -11,6 +11,7 @@ use crate::error::{
 };
 use crate::greeks::Greeks;
 use crate::model::decimal::{d_add, d_mul, d_sub};
+use crate::model::expiration::resolve_expiration_date;
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
 use crate::model::{Trade, TradeAble, TradeStatus};
@@ -242,20 +243,22 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// A `f64` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
+    /// A `Positive` representing the total cost of the position. THE VALUE IS ALWAYS POSITIVE
     ///
     /// # Errors
     ///
-    /// Currently infallible — long positions accumulate only
-    /// non-negative `Positive` terms and short positions delegate
-    /// to `fees()`, which is itself infallible under the current
-    /// implementation. The `Result` signature is retained so future
-    /// implementations that validate fee configuration or surface
-    /// overflow on `Positive` arithmetic can return
-    /// `PositionError` without a breaking change.
+    /// Returns [`PositionError::PositiveError`] when accumulating the premium
+    /// and the two fees, or scaling the accumulated per-contract cost by the
+    /// contract quantity, overflows the `Positive` range. The raw `Positive`
+    /// operators abort on overflow, so every step is taken through its
+    /// checked counterpart.
     pub fn total_cost(&self) -> Result<Positive, PositionError> {
         let total_cost = match self.option.side {
-            Side::Long => (self.premium + self.open_fee + self.close_fee) * self.option.quantity,
+            Side::Long => self
+                .premium
+                .checked_add(&self.open_fee)?
+                .checked_add(&self.close_fee)?
+                .checked_mul(&self.option.quantity)?,
             Side::Short => self.fees()?,
         };
 
@@ -307,17 +310,13 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Currently infallible — long positions return
-    /// `Ok(Positive::ZERO)` (no premium received) and short
-    /// positions return `Ok(self.premium * self.option.quantity)`.
-    /// The `Result` signature is retained so future implementations
-    /// that treat long-side calls as a programmer error, or that
-    /// surface overflow on the `premium × quantity` product, can
-    /// return `PositionError` without a breaking change.
+    /// Returns [`PositionError::PositiveError`] when the short-side
+    /// `premium × quantity` product overflows the `Positive` range. Long
+    /// positions receive no premium and are infallible.
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
-            Side::Short => Ok(self.premium * self.option.quantity),
+            Side::Short => Ok(self.premium.checked_mul(&self.option.quantity)?),
         }
     }
 
@@ -341,9 +340,9 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Propagates any `PositionError` raised by `total_cost()` (no
-    /// variant is surfaced under the current implementation, but
-    /// the call site keeps the `?` for forward compatibility).
+    /// Propagates any `PositionError` raised by `total_cost()`, and returns
+    /// [`PositionError::PositiveError`] when scaling the premium by the
+    /// contract quantity overflows the `Positive` range.
     ///
     /// When the short-side net amount `premium − total_cost` is
     /// negative the function returns `Ok(Positive::ZERO)` (clamped)
@@ -354,10 +353,10 @@ impl Position {
             Side::Long => Ok(Positive::ZERO),
             Side::Short => {
                 // max profit is premium received - fees (cost)
-                let premium = self.premium * self.option.quantity;
+                let premium = self.premium.checked_mul(&self.option.quantity)?;
                 let total_cost = self.total_cost()?;
                 if premium >= total_cost {
-                    Ok(premium - total_cost)
+                    Ok(premium.checked_sub(&total_cost)?)
                 } else {
                     Ok(Positive::ZERO)
                 }
@@ -655,10 +654,9 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Currently only propagates arithmetic-failure variants surfaced by the
-    /// premium × quantity and fee additions; in practice infallible for all
-    /// valid positions, but the `Result` signature is retained to let
-    /// callers handle future overflow paths uniformly.
+    /// Propagates the [`PositionError::PositiveError`] raised by `total_cost`,
+    /// `fees` and `premium_received` when the fee or premium accumulation, or
+    /// its product with the contract quantity, overflows the `Positive` range.
     pub fn net_cost(&self) -> Result<Decimal, PositionError> {
         match self.option.side {
             Side::Long => Ok(self.total_cost()?.to_dec()),
@@ -689,32 +687,46 @@ impl Position {
     /// # Returns
     ///
     /// - `Some(Positive)` containing the break-even price if the position has non-zero quantity
-    /// - `None` if the position has zero quantity (no contracts) or if the position total
-    ///   cost cannot be calculated
+    /// - `None` if the position has zero quantity (no contracts), if the position total
+    ///   cost cannot be calculated, or if the break-even price is not representable as a
+    ///   `Positive` — a cost per contract above the strike puts it below zero, and a cost
+    ///   per contract near `Positive::MAX` overflows the sum
     ///
     #[must_use]
     pub fn break_even(&self) -> Option<Positive> {
         if self.option.quantity == Positive::ZERO {
             return None;
         }
-        if let Ok(position_total_cost) = self.total_cost() {
-            let total_cost_per_contract = position_total_cost / self.option.quantity;
-            match (&self.option.side, &self.option.option_style) {
-                (Side::Long, OptionStyle::Call) => {
-                    Some(self.option.strike_price + total_cost_per_contract)
-                }
-                (Side::Short, OptionStyle::Call) => {
-                    Some(self.option.strike_price + self.premium - total_cost_per_contract)
-                }
-                (Side::Long, OptionStyle::Put) => {
-                    Some(self.option.strike_price - total_cost_per_contract)
-                }
-                (Side::Short, OptionStyle::Put) => {
-                    Some(self.option.strike_price - self.premium + total_cost_per_contract)
-                }
-            }
-        } else {
-            None
+        let position_total_cost = self.total_cost().ok()?;
+        // The raw `Positive` operators abort on overflow and on a difference
+        // that would go below zero; a long put whose cost per contract exceeds
+        // its strike reaches the latter with entirely ordinary numbers.
+        let total_cost_per_contract = position_total_cost
+            .checked_div(&self.option.quantity)
+            .ok()?;
+        match (&self.option.side, &self.option.option_style) {
+            (Side::Long, OptionStyle::Call) => self
+                .option
+                .strike_price
+                .checked_add(&total_cost_per_contract)
+                .ok(),
+            (Side::Short, OptionStyle::Call) => self
+                .option
+                .strike_price
+                .checked_add(&self.premium)
+                .and_then(|total| total.checked_sub(&total_cost_per_contract))
+                .ok(),
+            (Side::Long, OptionStyle::Put) => self
+                .option
+                .strike_price
+                .checked_sub(&total_cost_per_contract)
+                .ok(),
+            (Side::Short, OptionStyle::Put) => self
+                .option
+                .strike_price
+                .checked_sub(&self.premium)
+                .and_then(|net| net.checked_add(&total_cost_per_contract))
+                .ok(),
         }
     }
 
@@ -771,12 +783,15 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Currently infallible in practice; the `Result` signature is retained
-    /// so that future fee models that can overflow `Positive` (e.g. tiered
-    /// fee schedules multiplied by very large quantities) can surface their
-    /// failures without a breaking API change.
+    /// Returns [`PositionError::PositiveError`] when adding the two fees, or
+    /// scaling their sum by the contract quantity, overflows the `Positive`
+    /// range. The raw `Positive` operators abort on overflow, so both steps
+    /// are taken through their checked counterparts.
     pub fn fees(&self) -> Result<Positive, PositionError> {
-        Ok((self.open_fee + self.close_fee) * self.option.quantity)
+        Ok(self
+            .open_fee
+            .checked_add(&self.close_fee)?
+            .checked_mul(&self.option.quantity)?)
     }
 
     /// Validates the position to ensure it meets all necessary conditions for trading.
@@ -962,8 +977,16 @@ mod tests_transaction_able_default {
 
 impl TradeAble for Position {
     fn trade(&self) -> Result<Trade, TradeError> {
+        let fee = self
+            .open_fee
+            .checked_add(&self.close_fee)
+            .map_err(|error| {
+                TradeError::invalid_trade(&format!(
+                    "open and close fees overflow the Positive range: {error}"
+                ))
+            })?;
         if let (Ok(expiry), Some(timestamp)) = (
-            self.option.expiration_date.get_date(),
+            resolve_expiration_date(&self.option.expiration_date),
             Utc::now().timestamp_nanos_opt(),
         ) {
             Ok(Trade {
@@ -971,7 +994,7 @@ impl TradeAble for Position {
                 action: Action::Buy,
                 side: self.option.side,
                 option_style: self.option.option_style,
-                fee: self.open_fee + self.close_fee,
+                fee,
                 symbol: None,
                 strike: self.option.strike_price,
                 expiry,
@@ -1131,10 +1154,25 @@ impl PnLCalculator for Position {
     ) -> Result<PnL, PricingError> {
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
-        let date_time = self.option.expiration_date.get_date()?;
+        // `ExpirationDate::get_date` resolves a relative expiration with the
+        // `+` operator on `DateTime<Utc>`, which aborts past the calendar
+        // range instead of reporting it.
+        let date_time = resolve_expiration_date(&self.option.expiration_date)?;
 
-        let realized = self.option.intrinsic_value(*underlying_price)? - initial_cost.to_dec()
-            + initial_income.to_dec();
+        // A cost or an income at the top of the `Positive` range overflows the
+        // raw `Decimal` operators, so the running total is taken through
+        // `d_sub`/`d_add` exactly as `pnl_at_expiration` does.
+        let intrinsic = self.option.intrinsic_value(*underlying_price)?;
+        let net_after_cost = d_sub(
+            intrinsic,
+            initial_cost.to_dec(),
+            "position::calculate_pnl_at_expiration::net",
+        )?;
+        let realized = d_add(
+            net_after_cost,
+            initial_income.to_dec(),
+            "position::calculate_pnl_at_expiration::total",
+        )?;
         Ok(PnL::new(
             Some(realized),
             Some(Decimal::ZERO),

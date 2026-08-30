@@ -1006,7 +1006,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
             self.short_call_low.option.implied_volatility,
             self.long_call.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
-        ]);
+        ])?;
 
         let volatility_adjustment = Some(VolatilityAdjustment {
             base_volatility: mean_volatility,
@@ -1052,7 +1052,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
             self.short_call_low.option.implied_volatility,
             self.long_call.option.implied_volatility,
             self.short_call_high.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range = ProfitLossRange::new(
             Some(break_even_points[0]),

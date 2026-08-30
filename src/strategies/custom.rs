@@ -905,7 +905,7 @@ impl ProbabilityAnalysis for CustomStrategy {
             .iter()
             .map(|position| position.option.implied_volatility)
             .collect();
-        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
+        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities)?;
 
         let (mut profit_ranges, _) = self.get_profit_loss_zones(break_even_points)?;
 
@@ -942,7 +942,7 @@ impl ProbabilityAnalysis for CustomStrategy {
             .iter()
             .map(|position| position.option.implied_volatility)
             .collect();
-        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities);
+        let (mean_volatility, std_dev) = mean_and_std(implied_volatilities)?;
 
         let (_, mut loss_ranges) = self.get_profit_loss_zones(break_even_points)?;
 

@@ -67,15 +67,32 @@ fn extreme_positive() -> impl Strategy<Value = Positive> {
     ]
 }
 
-/// Premia and fees, bounded below the magnitude at which a *single* leg's own
-/// `Position::total_cost` overflows.
-///
-/// `(premium + open_fee + close_fee) * quantity` is computed with the raw
-/// `Positive` operators in `src/model/position.rs`, which this sweep does not
-/// touch; that overflow is reported separately. Everything above this bound
-/// aborts before the composition layer is reached, so driving it here would
-/// only re-find the model-layer defect.
+/// Premia and fees over the whole `Positive` range, up to and including the
+/// magnitude at which a single leg's own `Position::total_cost` overflows.
 fn extreme_money() -> impl Strategy<Value = Positive> {
+    prop_oneof![
+        Just(Positive::ZERO),
+        Just(pos(TINY)),
+        Just(pos(dec!(0.01))),
+        Just(Positive::ONE),
+        Just(Positive::HUNDRED),
+        Just(pos(dec!(100000000000000))),
+        Just(Positive::MAX),
+    ]
+}
+
+/// Premia, fees and spot prices for the spot-leg strategies, bounded below the
+/// magnitude at which the *infallible* signatures they run through overflow.
+///
+/// `LegAble::pnl_at_price`, `LegAble::total_cost` and `LegAble::fees` return a
+/// bare `Decimal` or `Positive` (`src/model/leg/spot.rs:251`, `:262` and
+/// `:269`) and `Collar::net_premium` returns a bare `Decimal`
+/// (`src/strategies/collar.rs:361`). All four multiply and add with the raw
+/// operators and have nowhere to report an overflow, so they abort. Lifting
+/// this bound needs those signatures to gain an error channel, which is a
+/// change to the `LegAble` trait and to the spot-leg strategies, both outside
+/// the model-layer sweep that unbounded the generators above.
+fn spot_leg_money() -> impl Strategy<Value = Positive> {
     prop_oneof![
         Just(Positive::ZERO),
         Just(pos(TINY)),
@@ -86,9 +103,8 @@ fn extreme_money() -> impl Strategy<Value = Positive> {
     ]
 }
 
-/// Contract and share counts, bounded for the same reason as
-/// [`extreme_money`]. Zero is kept: it is the divisor of every per-contract
-/// and per-share figure in this layer.
+/// Contract and share counts. Zero is kept: it is the divisor of every
+/// per-contract and per-share figure in this layer.
 fn extreme_quantity() -> impl Strategy<Value = Positive> {
     prop_oneof![
         Just(Positive::ZERO),
@@ -99,14 +115,9 @@ fn extreme_quantity() -> impl Strategy<Value = Positive> {
     ]
 }
 
-/// Volatilities, bounded below the magnitude at which
-/// `model::utils::mean_and_std` overflows.
-///
-/// Every `get_profit_ranges` implementation averages the leg volatilities
-/// through that helper, which sums them with the raw `Positive` operator and
-/// has no error channel (it returns `(Positive, Positive)`). That overflow
-/// lives in `src/model`, which this sweep does not touch, and is reported
-/// separately.
+/// Volatilities over the whole `Positive` range, up to and including the
+/// magnitude at which averaging them through `model::utils::mean_and_std`
+/// overflows.
 fn extreme_volatility() -> impl Strategy<Value = Positive> {
     prop_oneof![
         Just(Positive::ZERO),
@@ -115,6 +126,7 @@ fn extreme_volatility() -> impl Strategy<Value = Positive> {
         Just(Positive::ONE),
         Just(pos(dec!(1000000))),
         Just(pos(dec!(1000000000000000))),
+        Just(Positive::MAX),
     ]
 }
 
@@ -160,8 +172,10 @@ fn extreme_decimal() -> impl Strategy<Value = Decimal> {
     ]
 }
 
-/// Expirations from one already reached, through a sub-second sliver, to a
-/// horizon whose `DateTime` arithmetic is itself at the edge.
+/// Expirations from one already reached, through a sub-second sliver, to
+/// horizons past the calendar itself: a billion days overflows the
+/// `DateTime + TimeDelta` addition, `1e15` days overflows `TimeDelta`, and
+/// `Positive::MAX` days does not even fit the `i64` day count.
 fn extreme_expiration() -> impl Strategy<Value = ExpirationDate> {
     prop_oneof![
         Just(ExpirationDate::Days(Positive::ZERO)),
@@ -169,6 +183,9 @@ fn extreme_expiration() -> impl Strategy<Value = ExpirationDate> {
         Just(ExpirationDate::Days(Positive::ONE)),
         Just(ExpirationDate::Days(pos(dec!(30)))),
         Just(ExpirationDate::Days(pos(dec!(3650)))),
+        Just(ExpirationDate::Days(pos(dec!(1000000000)))),
+        Just(ExpirationDate::Days(pos(dec!(1000000000000000)))),
+        Just(ExpirationDate::Days(Positive::MAX)),
     ]
 }
 
@@ -359,20 +376,19 @@ proptest! {
     /// basis net of a credit that the fees can turn into a debit.
     #[test]
     fn test_spot_leg_strategies_never_panic(
-        // The spot price and the probe price are bounded here for the same
-        // reason as `extreme_money`: `SpotPosition::pnl_at_price` multiplies
-        // their difference by the share count with the raw operator, in
-        // `src/model/leg/spot.rs`.
-        underlying in extreme_money(),
+        // Every monetary argument of this test goes through an infallible
+        // signature in the spot leg; see [`spot_leg_money`] for the four sites
+        // and why they are not this sweep's to fix.
+        underlying in spot_leg_money(),
         put_strike in extreme_positive(),
         call_strike in extreme_positive(),
         volatility in extreme_volatility(),
         quantity in extreme_quantity(),
-        premium in extreme_money(),
-        fee in extreme_money(),
+        premium in spot_leg_money(),
+        fee in spot_leg_money(),
         rate in extreme_decimal(),
         expiration in extreme_expiration(),
-        probe in extreme_money(),
+        probe in spot_leg_money(),
     ) {
         if let Ok(mut strategy) = Collar::new(
             "PROP".to_string(), underlying, put_strike, call_strike, expiration,

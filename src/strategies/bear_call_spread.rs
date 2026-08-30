@@ -841,7 +841,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call.option.implied_volatility,
             self.long_call.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
@@ -867,7 +867,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             self.short_call.option.implied_volatility,
             self.long_call.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 

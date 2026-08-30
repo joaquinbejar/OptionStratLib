@@ -132,6 +132,7 @@ pub use axis::BasicAxisTypes;
 pub use balance::*;
 pub use expiration::ExpirationDate;
 pub use expiration::ExpirationDateError;
+pub use expiration::{reject_unrepresentable_expiration, resolve_expiration_date};
 pub use option::Options;
 pub use position::Position;
 pub use profit_range::ProfitLossRange;

@@ -1178,7 +1178,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
             self.short_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut profit_range = ProfitLossRange::new(
             Some(break_even_points[0]),
@@ -1209,7 +1209,7 @@ impl ProbabilityAnalysis for ShortStrangle {
         let (mean_volatility, std_dev) = mean_and_std(vec![
             option.implied_volatility,
             self.short_put.option.implied_volatility,
-        ]);
+        ])?;
 
         let mut lower_loss_range =
             ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
