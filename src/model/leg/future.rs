@@ -40,8 +40,9 @@
 //! );
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
 use crate::model::ExpirationDate;
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable};
 use crate::model::types::Side;
@@ -235,15 +236,40 @@ impl FuturePosition {
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn unrealized_pnl(&self, current_price: Positive) -> Decimal {
-        let price_change = current_price.to_dec() - self.entry_price.to_dec();
-        let pnl = price_change * self.quantity.to_dec() * self.contract_size.to_dec();
+    ///
+    /// # Decision (issue #471): fallible because `pnl_at_price` is
+    ///
+    /// This is the whole body of [`LegAble::pnl_at_price`] for a future, so
+    /// leaving it infallible would have moved that method's abort one frame
+    /// down rather than removing it. `entry_price`, `quantity` and
+    /// `contract_size` are `pub`, so no constructor guard bounds the product.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the price difference, the
+    /// quantity scaling or the contract-size scaling leaves the representable
+    /// `Decimal` range.
+    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+        let price_change = d_sub(
+            current_price.to_dec(),
+            self.entry_price.to_dec(),
+            "FuturePosition::unrealized_pnl/price_change",
+        )?;
+        let pnl = d_mul(
+            d_mul(
+                price_change,
+                self.quantity.to_dec(),
+                "FuturePosition::unrealized_pnl/quantity",
+            )?,
+            self.contract_size.to_dec(),
+            "FuturePosition::unrealized_pnl/contract_size",
+        )?;
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => pnl,
+            // Negating a representable `Decimal` is always representable.
             Side::Short => -pnl,
-        }
+        })
     }
 
     /// Calculates the tick value (value of one minimum price movement).
@@ -299,16 +325,30 @@ impl LegAble for FuturePosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Decimal {
-        self.unrealized_pnl(price) - self.fees.to_dec()
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+        Ok(d_sub(
+            self.unrealized_pnl(price)?,
+            self.fees.to_dec(),
+            "FuturePosition::pnl_at_price/net",
+        )?)
     }
 
-    fn total_cost(&self) -> Positive {
-        self.total_margin_required() + self.fees
+    fn total_cost(&self) -> Result<Positive, PositionError> {
+        // The product is formed here rather than read from
+        // `total_margin_required`, which multiplies raw and would abort on
+        // `initial_margin_req = Positive::MAX` before this `Result` could
+        // carry the failure. The infallible helper keeps its signature; what
+        // this fixes is the error channel promising something it could not
+        // deliver.
+        let margin = self
+            .initial_margin_req
+            .checked_mul(&self.quantity)
+            .map_err(PositionError::from)?;
+        Ok(margin.checked_add(&self.fees)?)
     }
 
-    fn fees(&self) -> Positive {
-        self.fees
+    fn fees(&self) -> Result<Positive, PositionError> {
+        Ok(self.fees)
     }
 
     fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -437,6 +477,28 @@ mod tests {
     use super::*;
     use positive::pos_or_panic;
 
+    /// A margin requirement at the top of the range with more than one
+    /// contract overflows the product `total_cost` needs. The signature
+    /// promises a `Result`, so it has to arrive as one rather than as an
+    /// abort inside the raw multiplication `total_margin_required` performs.
+    #[test]
+    fn test_future_total_cost_reports_a_margin_product_that_overflows() {
+        let future = FuturePosition::new(
+            "ES".to_string(),
+            Positive::TWO,
+            pos_or_panic!(4500.0),
+            Side::Long,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            Positive::MAX,
+            pos_or_panic!(12000.0),
+            Utc::now(),
+            pos_or_panic!(5.0),
+        );
+
+        assert!(future.total_cost().is_err());
+    }
+
     #[test]
     fn test_future_position_new() {
         let future = FuturePosition::new(
@@ -514,10 +576,10 @@ mod tests {
         );
 
         let pnl = future.unrealized_pnl(pos_or_panic!(4510.0));
-        assert_eq!(pnl, Decimal::from(500));
+        assert_eq!(pnl.ok(), Some(Decimal::from(500)));
 
         let pnl_loss = future.unrealized_pnl(pos_or_panic!(4490.0));
-        assert_eq!(pnl_loss, Decimal::from(-500));
+        assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
     #[test]
@@ -532,10 +594,10 @@ mod tests {
         );
 
         let pnl = future.unrealized_pnl(pos_or_panic!(4490.0));
-        assert_eq!(pnl, Decimal::from(500));
+        assert_eq!(pnl.ok(), Some(Decimal::from(500)));
 
         let pnl_loss = future.unrealized_pnl(pos_or_panic!(4510.0));
-        assert_eq!(pnl_loss, Decimal::from(-500));
+        assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
     #[test]

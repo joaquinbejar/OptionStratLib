@@ -3573,7 +3573,7 @@ pub fn optionstratlib::model::leg::PerpetualPosition::funding_payment(&self, pos
 pub fn optionstratlib::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
 pub trait optionstratlib::model::leg::traits::LegAble
 pub fn optionstratlib::model::leg::traits::LegAble::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::traits::LegAble::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::traits::LegAble::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::traits::LegAble::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::traits::LegAble::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::traits::LegAble::get_side(&self) -> financial_types::Side
@@ -3581,14 +3581,14 @@ pub fn optionstratlib::model::leg::traits::LegAble::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::traits::LegAble::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::traits::LegAble::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::traits::LegAble::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::traits::LegAble::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::traits::LegAble::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::traits::LegAble::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::traits::LegAble::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::traits::LegAble::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::traits::LegAble::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::traits::LegAble::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::FuturePosition
 pub fn optionstratlib::model::leg::FuturePosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
@@ -3596,14 +3596,14 @@ pub fn optionstratlib::model::leg::FuturePosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::FuturePosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::FuturePosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::Leg::get_side(&self) -> financial_types::Side
@@ -3611,14 +3611,14 @@ pub fn optionstratlib::model::leg::Leg::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::Leg::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::Leg::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::PerpetualPosition
 pub fn optionstratlib::model::leg::PerpetualPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
@@ -3626,14 +3626,14 @@ pub fn optionstratlib::model::leg::PerpetualPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::PerpetualPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::SpotPosition
 pub fn optionstratlib::model::leg::SpotPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
@@ -3641,10 +3641,10 @@ pub fn optionstratlib::model::leg::SpotPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::SpotPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::SpotPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub trait optionstratlib::model::leg::traits::Marginable: optionstratlib::model::leg::traits::LegAble
 pub fn optionstratlib::model::leg::traits::Marginable::initial_margin(&self) -> positive::positive::Positive
@@ -3703,7 +3703,7 @@ impl core::fmt::Display for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::Leg::get_side(&self) -> financial_types::Side
@@ -3711,10 +3711,10 @@ pub fn optionstratlib::model::leg::Leg::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::Leg::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::Leg::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl utoipa::ToSchema for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::name() -> alloc::borrow::Cow<'static, str>
@@ -3752,7 +3752,7 @@ pub fn optionstratlib::model::leg::FuturePosition::notional_value_at_price(&self
 pub fn optionstratlib::model::leg::FuturePosition::short(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive) -> Self
 pub fn optionstratlib::model::leg::FuturePosition::tick_value(&self, positive::positive::Positive) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::FuturePosition::total_margin_required(&self) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::FuturePosition::unrealized_pnl(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::FuturePosition::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 impl core::convert::From<optionstratlib::model::leg::FuturePosition> for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::from(optionstratlib::model::leg::FuturePosition) -> Self
 impl core::default::Default for optionstratlib::model::leg::FuturePosition
@@ -3766,7 +3766,7 @@ pub fn optionstratlib::model::leg::FuturePosition::is_expired(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::FuturePosition
 pub fn optionstratlib::model::leg::FuturePosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
@@ -3774,10 +3774,10 @@ pub fn optionstratlib::model::leg::FuturePosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::FuturePosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::FuturePosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::Marginable for optionstratlib::model::leg::FuturePosition
 pub fn optionstratlib::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
@@ -3804,15 +3804,15 @@ pub optionstratlib::model::leg::PerpetualPosition::symbol: alloc::string::String
 impl optionstratlib::model::leg::PerpetualPosition
 pub const optionstratlib::model::leg::PerpetualPosition::DEFAULT_FUNDING_INTERVAL_HOURS: u32
 pub const optionstratlib::model::leg::PerpetualPosition::DEFAULT_MAINTENANCE_MARGIN_RATIO: rust_decimal::decimal::Decimal
-pub fn optionstratlib::model::leg::PerpetualPosition::effective_leverage(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::effective_leverage(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::long(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> Self
-pub fn optionstratlib::model::leg::PerpetualPosition::margin_ratio(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::margin_ratio(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, financial_types::Side, positive::positive::Positive, positive::positive::Positive, optionstratlib::model::leg::MarginType, rust_decimal::decimal::Decimal, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive) -> Self
 pub fn optionstratlib::model::leg::PerpetualPosition::notional_value_at_entry(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::PerpetualPosition::notional_value_at_price(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::PerpetualPosition::roe_percentage(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::roe_percentage(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::short(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> Self
-pub fn optionstratlib::model::leg::PerpetualPosition::unrealized_pnl(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::update_funding_rate(&mut self, rust_decimal::decimal::Decimal)
 impl core::convert::From<optionstratlib::model::leg::PerpetualPosition> for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::from(optionstratlib::model::leg::PerpetualPosition) -> Self
@@ -3827,7 +3827,7 @@ pub fn optionstratlib::model::leg::PerpetualPosition::funding_payment(&self, pos
 pub fn optionstratlib::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::PerpetualPosition
 pub fn optionstratlib::model::leg::PerpetualPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
@@ -3835,10 +3835,10 @@ pub fn optionstratlib::model::leg::PerpetualPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::PerpetualPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::Marginable for optionstratlib::model::leg::PerpetualPosition
 pub fn optionstratlib::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
@@ -3875,7 +3875,7 @@ impl core::fmt::Display for optionstratlib::model::leg::SpotPosition
 pub fn optionstratlib::model::leg::SpotPosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::SpotPosition
 pub fn optionstratlib::model::leg::SpotPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
@@ -3883,10 +3883,10 @@ pub fn optionstratlib::model::leg::SpotPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::SpotPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::SpotPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl utoipa::ToSchema for optionstratlib::model::leg::SpotPosition
 pub fn optionstratlib::model::leg::SpotPosition::name() -> alloc::borrow::Cow<'static, str>
@@ -3915,7 +3915,7 @@ pub fn optionstratlib::model::leg::PerpetualPosition::funding_payment(&self, pos
 pub fn optionstratlib::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
 pub trait optionstratlib::model::leg::LegAble
 pub fn optionstratlib::model::leg::LegAble::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::LegAble::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::LegAble::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::LegAble::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::LegAble::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::LegAble::get_side(&self) -> financial_types::Side
@@ -3923,14 +3923,14 @@ pub fn optionstratlib::model::leg::LegAble::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::LegAble::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::LegAble::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::LegAble::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::LegAble::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::LegAble::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::LegAble::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::LegAble::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::LegAble::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::LegAble::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::LegAble::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::FuturePosition
 pub fn optionstratlib::model::leg::FuturePosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
@@ -3938,14 +3938,14 @@ pub fn optionstratlib::model::leg::FuturePosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::FuturePosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::FuturePosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::FuturePosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::FuturePosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::Leg
 pub fn optionstratlib::model::leg::Leg::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::Leg::get_side(&self) -> financial_types::Side
@@ -3953,14 +3953,14 @@ pub fn optionstratlib::model::leg::Leg::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::Leg::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::Leg::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::Leg::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::Leg::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::PerpetualPosition
 pub fn optionstratlib::model::leg::PerpetualPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
@@ -3968,14 +3968,14 @@ pub fn optionstratlib::model::leg::PerpetualPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::PerpetualPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::PerpetualPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::PerpetualPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::PerpetualPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 impl optionstratlib::model::leg::traits::LegAble for optionstratlib::model::leg::SpotPosition
 pub fn optionstratlib::model::leg::SpotPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
 pub fn optionstratlib::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
@@ -3983,10 +3983,10 @@ pub fn optionstratlib::model::leg::SpotPosition::get_symbol(&self) -> &str
 pub fn optionstratlib::model::leg::SpotPosition::is_long(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::is_short(&self) -> bool
 pub fn optionstratlib::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
-pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::model::leg::SpotPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::model::leg::SpotPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> positive::positive::Positive
+pub fn optionstratlib::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::position::PositionError>
 pub fn optionstratlib::model::leg::SpotPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub trait optionstratlib::model::leg::Marginable: optionstratlib::model::leg::traits::LegAble
 pub fn optionstratlib::model::leg::Marginable::initial_margin(&self) -> positive::positive::Positive
@@ -4660,6 +4660,7 @@ pub optionstratlib::pnl::utils::PnL::unrealized: core::option::Option<rust_decim
 impl optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib::pnl::utils::PnL::try_add(&self, &optionstratlib::pnl::utils::PnL) -> core::result::Result<optionstratlib::pnl::utils::PnL, optionstratlib::error::pricing::PricingError>
 impl core::convert::From<&optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::from(&optionstratlib::model::Trade) -> Self
 impl core::convert::From<optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
@@ -4817,6 +4818,7 @@ pub optionstratlib::pnl::PnL::unrealized: core::option::Option<rust_decimal::dec
 impl optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib::pnl::utils::PnL::try_add(&self, &optionstratlib::pnl::utils::PnL) -> core::result::Result<optionstratlib::pnl::utils::PnL, optionstratlib::error::pricing::PricingError>
 impl core::convert::From<&optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::from(&optionstratlib::model::Trade) -> Self
 impl core::convert::From<optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
@@ -7299,13 +7301,13 @@ pub fn optionstratlib::strategies::collar::Collar::get_legs(&self) -> alloc::vec
 pub fn optionstratlib::strategies::collar::Collar::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::is_call_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::is_put_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_profit_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::collar::Collar::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::collar::Collar::quantity(&self) -> positive::positive::Positive
@@ -7450,7 +7452,7 @@ pub optionstratlib::prelude::CoveredCall::spot_leg: optionstratlib::model::leg::
 impl optionstratlib::strategies::covered_call::CoveredCall
 pub fn optionstratlib::strategies::covered_call::CoveredCall::assignment_probability(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib::strategies::covered_call::CoveredCall::call_strike(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_option_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
@@ -9399,6 +9401,7 @@ pub optionstratlib::prelude::PnL::unrealized: core::option::Option<rust_decimal:
 impl optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib::pnl::utils::PnL::try_add(&self, &optionstratlib::pnl::utils::PnL) -> core::result::Result<optionstratlib::pnl::utils::PnL, optionstratlib::error::pricing::PricingError>
 impl core::convert::From<&optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
 pub fn optionstratlib::pnl::utils::PnL::from(&optionstratlib::model::Trade) -> Self
 impl core::convert::From<optionstratlib::model::Trade> for optionstratlib::pnl::utils::PnL
@@ -9736,12 +9739,12 @@ pub optionstratlib::prelude::PortfolioGreeks::rho: rust_decimal::decimal::Decima
 pub optionstratlib::prelude::PortfolioGreeks::theta: rust_decimal::decimal::Decimal
 pub optionstratlib::prelude::PortfolioGreeks::vega: rust_decimal::decimal::Decimal
 impl optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks)
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<(), optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions(&[optionstratlib::model::position::Position]) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions_with_underlying(&[optionstratlib::model::position::Position], rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_delta_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_gamma_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_vega_neutral(&self, rust_decimal::decimal::Decimal) -> bool
@@ -9864,7 +9867,7 @@ pub optionstratlib::prelude::ProtectivePut::long_put: optionstratlib::model::pos
 pub optionstratlib::prelude::ProtectivePut::name: alloc::string::String
 pub optionstratlib::prelude::ProtectivePut::spot_leg: optionstratlib::model::leg::SpotPosition
 impl optionstratlib::strategies::protective_put::ProtectivePut
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
@@ -17729,13 +17732,13 @@ pub fn optionstratlib::strategies::collar::Collar::get_legs(&self) -> alloc::vec
 pub fn optionstratlib::strategies::collar::Collar::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::is_call_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::is_put_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_profit_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::collar::Collar::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::collar::Collar::quantity(&self) -> positive::positive::Positive
@@ -17882,7 +17885,7 @@ pub optionstratlib::strategies::covered_call::CoveredCall::spot_leg: optionstrat
 impl optionstratlib::strategies::covered_call::CoveredCall
 pub fn optionstratlib::strategies::covered_call::CoveredCall::assignment_probability(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib::strategies::covered_call::CoveredCall::call_strike(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_option_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
@@ -18292,12 +18295,12 @@ pub optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::rho: 
 pub optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::theta: rust_decimal::decimal::Decimal
 pub optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::vega: rust_decimal::decimal::Decimal
 impl optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks)
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<(), optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions(&[optionstratlib::model::position::Position]) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions_with_underlying(&[optionstratlib::model::position::Position], rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_delta_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_gamma_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_vega_neutral(&self, rust_decimal::decimal::Decimal) -> bool
@@ -18490,12 +18493,12 @@ pub optionstratlib::strategies::delta_neutral::PortfolioGreeks::rho: rust_decima
 pub optionstratlib::strategies::delta_neutral::PortfolioGreeks::theta: rust_decimal::decimal::Decimal
 pub optionstratlib::strategies::delta_neutral::PortfolioGreeks::vega: rust_decimal::decimal::Decimal
 impl optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks)
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<(), optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions(&[optionstratlib::model::position::Position]) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions_with_underlying(&[optionstratlib::model::position::Position], rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_delta_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_gamma_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_vega_neutral(&self, rust_decimal::decimal::Decimal) -> bool
@@ -20248,7 +20251,7 @@ pub optionstratlib::strategies::protective_put::ProtectivePut::long_put: options
 pub optionstratlib::strategies::protective_put::ProtectivePut::name: alloc::string::String
 pub optionstratlib::strategies::protective_put::ProtectivePut::spot_leg: optionstratlib::model::leg::SpotPosition
 impl optionstratlib::strategies::protective_put::ProtectivePut
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
@@ -22165,13 +22168,13 @@ pub fn optionstratlib::strategies::collar::Collar::get_legs(&self) -> alloc::vec
 pub fn optionstratlib::strategies::collar::Collar::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::collar::Collar::is_call_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_credit(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::is_put_itm(&self, positive::positive::Positive) -> bool
-pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> bool
+pub fn optionstratlib::strategies::collar::Collar::is_zero_cost(&self) -> core::result::Result<bool, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_loss_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::max_profit_potential(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::collar::Collar::net_premium(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::strategies::collar::Collar::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::collar::Collar::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::collar::Collar::quantity(&self) -> positive::positive::Positive
@@ -22316,7 +22319,7 @@ pub optionstratlib::strategies::CoveredCall::spot_leg: optionstratlib::model::le
 impl optionstratlib::strategies::covered_call::CoveredCall
 pub fn optionstratlib::strategies::covered_call::CoveredCall::assignment_probability(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib::strategies::covered_call::CoveredCall::call_strike(&self) -> positive::positive::Positive
-pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::covered_call::CoveredCall::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_option_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::covered_call::CoveredCall::get_spot_leg(&self) -> optionstratlib::model::leg::Leg
@@ -23649,12 +23652,12 @@ pub optionstratlib::strategies::PortfolioGreeks::rho: rust_decimal::decimal::Dec
 pub optionstratlib::strategies::PortfolioGreeks::theta: rust_decimal::decimal::Decimal
 pub optionstratlib::strategies::PortfolioGreeks::vega: rust_decimal::decimal::Decimal
 impl optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks)
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::add(&mut self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<(), optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::combined(&self, &optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib::error::greeks::GreeksError>
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::delta_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions(&[optionstratlib::model::position::Position]) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::from_positions_with_underlying(&[optionstratlib::model::position::Position], rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib::error::greeks::GreeksError>
-pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::gamma_gap(&self, rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_delta_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_gamma_neutral(&self, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks::is_vega_neutral(&self, rust_decimal::decimal::Decimal) -> bool
@@ -23674,7 +23677,7 @@ pub optionstratlib::strategies::ProtectivePut::long_put: optionstratlib::model::
 pub optionstratlib::strategies::ProtectivePut::name: alloc::string::String
 pub optionstratlib::strategies::ProtectivePut::spot_leg: optionstratlib::model::leg::SpotPosition
 impl optionstratlib::strategies::protective_put::ProtectivePut
-pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib::strategies::protective_put::ProtectivePut::effective_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_legs(&self) -> alloc::vec::Vec<optionstratlib::model::leg::Leg>
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_put_leg(&self) -> optionstratlib::model::leg::Leg
 pub fn optionstratlib::strategies::protective_put::ProtectivePut::get_spot_leg(&self) -> optionstratlib::model::leg::Leg

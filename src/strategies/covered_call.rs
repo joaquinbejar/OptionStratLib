@@ -72,8 +72,8 @@ use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
-use positive::Positive;
-use rust_decimal::Decimal;
+use positive::{Positive, PositiveError};
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::debug;
@@ -292,14 +292,43 @@ impl CoveredCall {
     /// Calculates the effective cost basis after receiving premium.
     ///
     /// Effective Cost Basis = Original Cost Basis - Premium Received per Share
-    #[must_use]
-    pub fn effective_cost_basis(&self) -> Positive {
-        let premium_per_share =
-            self.short_call.premium * self.short_call.option.quantity / self.spot_leg.quantity;
+    ///
+    /// A credit larger than the cost basis leaves nothing at risk per share,
+    /// and the function keeps its existing answer of `Positive::ZERO` for
+    /// that case rather than turning it into an error.
+    ///
+    /// # Decision (issue #471): return `Result`
+    ///
+    /// The divisor is `spot_leg.quantity`, a `pub` field. [`CoveredCall::new`]
+    /// rejects a zero share count, but a `CoveredCall` deserialized from JSON
+    /// or mutated in place can carry one, and `Positive` has no value that
+    /// means "undefined per-share figure". The product above the division can
+    /// also leave the `Positive` range on its own.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError::ArithmeticError`] when the spot leg holds
+    /// zero shares, so there is no per-share premium to divide out, and when
+    /// `premium × quantity` overflows.
+    pub fn effective_cost_basis(&self) -> Result<Positive, PositiveError> {
+        let premium_per_share = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?
+            // A per-share figure rarely divides exactly — one contract of
+            // premium over three shares repeats — so the rounding is chosen
+            // here rather than taken from the dependency's default.
+            // `MidpointNearestEven` is what `d_div` already applies to every
+            // `Decimal` division in this crate, so a per-share value rounds
+            // the same way whichever path computes it.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
         if self.spot_leg.cost_basis > premium_per_share {
-            self.spot_leg.cost_basis - premium_per_share
+            self.spot_leg.cost_basis.checked_sub(&premium_per_share)
         } else {
-            Positive::ZERO
+            Ok(Positive::ZERO)
         }
     }
 
@@ -443,12 +472,20 @@ impl BreakEvenable for CoveredCall {
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // Same rounding choice as the per-share premium above.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
         let fees_per_share = self
             .spot_leg
             .open_fee
             .checked_add(&self.spot_leg.close_fee)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // Same rounding choice as the per-share premium above.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
 
         // Net credit per share, which is negative when the fees swallow the
         // premium. `lower_break_even` floors the result at zero, the sentinel
@@ -616,7 +653,7 @@ impl Strategies for CoveredCall {
 impl Profit for CoveredCall {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         // Spot P&L
-        let spot_pnl = self.spot_leg.pnl_at_price(*price);
+        let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
 
         // Option P&L at expiration
         let option_pnl = self
@@ -657,7 +694,7 @@ impl PnLCalculator for CoveredCall {
         underlying_price: &Positive,
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
-        let spot_cost = self.spot_leg.total_cost();
+        let spot_cost = self.spot_leg.total_cost()?;
         let premium_received = self
             .short_call
             .premium
@@ -787,6 +824,26 @@ mod tests {
         .unwrap()
     }
 
+    /// A per-share premium that does not divide exactly: one contract of
+    /// 3.50 spread over three shares is 1.1666… repeating. The rounding is
+    /// this crate's choice rather than the dependency's default, so the
+    /// quotient is pinned here — if the strategy ever changes, the last digit
+    /// moves and this test says so.
+    #[test]
+    fn test_covered_call_per_share_premium_rounds_to_nearest_even() {
+        let mut cc = create_test_covered_call();
+        cc.spot_leg.quantity = pos_or_panic!(3.0);
+        cc.spot_leg.cost_basis = Positive::HUNDRED;
+
+        // 100 - 3.50/3. The quotient repeats, so it is rounded, and the
+        // literal is written as a `Decimal` rather than through the `f64`
+        // path of `pos_or_panic!`, which cannot carry these digits.
+        assert_eq!(
+            cc.effective_cost_basis().unwrap().to_dec(),
+            dec!(98.83333333333333333333333333)
+        );
+    }
+
     #[test]
     fn test_covered_call_creation() {
         let cc = create_test_covered_call();
@@ -823,7 +880,19 @@ mod tests {
         let effective = cc.effective_cost_basis();
 
         // Effective cost basis should be lower than original
-        assert!(effective < cc.spot_leg.cost_basis);
+        assert!(effective.is_ok_and(|e| e < cc.spot_leg.cost_basis));
+    }
+
+    /// `effective_cost_basis` divides by `spot_leg.quantity`, a `pub` field.
+    /// `CoveredCall::new` rejects a zero share count, but a covered call
+    /// mutated in place or deserialized from JSON can carry one, and there is
+    /// no per-share cost basis to report for it.
+    #[test]
+    fn test_covered_call_effective_cost_basis_zero_shares_is_reported() {
+        let mut cc = create_test_covered_call();
+        cc.spot_leg.quantity = Positive::ZERO;
+
+        assert!(cc.effective_cost_basis().is_err());
     }
 
     #[test]

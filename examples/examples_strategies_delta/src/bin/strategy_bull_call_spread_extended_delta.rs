@@ -76,7 +76,10 @@ fn main() -> Result<(), Error> {
             info!("Portfolio Rho: {:.4}", greeks.rho);
             info!("Is Delta Neutral: {}", greeks.is_delta_neutral(dec!(0.1)));
             info!("Is Gamma Neutral: {}", greeks.is_gamma_neutral(dec!(0.01)));
-            info!("Delta Gap from 0: {:.4}", greeks.delta_gap(Decimal::ZERO));
+            match greeks.delta_gap(Decimal::ZERO) {
+                Ok(gap) => info!("Delta Gap from 0: {:.4}", gap),
+                Err(e) => warn!("Could not calculate the portfolio delta gap: {}", e),
+            }
         }
         Err(e) => warn!("Could not calculate portfolio Greeks: {}", e),
     }

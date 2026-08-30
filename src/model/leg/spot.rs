@@ -35,7 +35,8 @@
 //! );
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
@@ -248,26 +249,45 @@ impl LegAble for SpotPosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Decimal {
-        let price_change = price.to_dec() - self.cost_basis.to_dec();
-        let gross_pnl = price_change * self.quantity.to_dec();
-        let total_fees = self.open_fee.to_dec() + self.close_fee.to_dec();
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+        let price_change = d_sub(
+            price.to_dec(),
+            self.cost_basis.to_dec(),
+            "SpotPosition::pnl_at_price/price_change",
+        )?;
+        let gross_pnl = d_mul(
+            price_change,
+            self.quantity.to_dec(),
+            "SpotPosition::pnl_at_price/gross",
+        )?;
+        let total_fees = self.open_fee.checked_add(&self.close_fee)?;
 
-        match self.side {
-            Side::Long => gross_pnl - total_fees,
-            Side::Short => -gross_pnl - total_fees,
-        }
+        let signed_gross = match self.side {
+            Side::Long => gross_pnl,
+            // `Decimal` is symmetric, so negating a representable value is
+            // itself representable and needs no check.
+            Side::Short => -gross_pnl,
+        };
+        Ok(d_sub(
+            signed_gross,
+            total_fees.to_dec(),
+            "SpotPosition::pnl_at_price/net",
+        )?)
     }
 
-    fn total_cost(&self) -> Positive {
-        match self.side {
-            Side::Long => self.quantity * self.cost_basis + self.open_fee + self.close_fee,
-            Side::Short => self.open_fee + self.close_fee,
-        }
+    fn total_cost(&self) -> Result<Positive, PositionError> {
+        Ok(match self.side {
+            Side::Long => self
+                .quantity
+                .checked_mul(&self.cost_basis)?
+                .checked_add(&self.open_fee)?
+                .checked_add(&self.close_fee)?,
+            Side::Short => self.open_fee.checked_add(&self.close_fee)?,
+        })
     }
 
-    fn fees(&self) -> Positive {
-        self.open_fee + self.close_fee
+    fn fees(&self) -> Result<Positive, PositionError> {
+        Ok(self.open_fee.checked_add(&self.close_fee)?)
     }
 
     fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -376,28 +396,28 @@ mod tests {
     fn test_long_pnl_profit() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
-        assert_eq!(pnl, Decimal::from(1000)); // (160-150) * 100
+        assert_eq!(pnl.ok(), Some(Decimal::from(1000))); // (160-150) * 100
     }
 
     #[test]
     fn test_long_pnl_loss() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
-        assert_eq!(pnl, Decimal::from(-1000)); // (140-150) * 100
+        assert_eq!(pnl.ok(), Some(Decimal::from(-1000))); // (140-150) * 100
     }
 
     #[test]
     fn test_short_pnl_profit() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(140.0));
-        assert_eq!(pnl, Decimal::from(1000)); // Short profits when price drops
+        assert_eq!(pnl.ok(), Some(Decimal::from(1000))); // Short profits when price drops
     }
 
     #[test]
     fn test_short_pnl_loss() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
-        assert_eq!(pnl, Decimal::from(-1000)); // Short loses when price rises
+        assert_eq!(pnl.ok(), Some(Decimal::from(-1000))); // Short loses when price rises
     }
 
     #[test]
@@ -412,7 +432,42 @@ mod tests {
             pos_or_panic!(10.0),
         );
         let pnl = spot.pnl_at_price(pos_or_panic!(160.0));
-        assert_eq!(pnl, Decimal::from(980)); // 1000 profit - 20 fees
+        assert_eq!(pnl.ok(), Some(Decimal::from(980))); // 1000 profit - 20 fees
+    }
+
+    /// `cost_basis` and `quantity` are `pub`, so a spot leg can hold a
+    /// price difference the `Decimal` range cannot express. Before #471 the
+    /// trait signature had nowhere to say so and the process aborted with
+    /// `Subtraction overflowed`.
+    #[test]
+    fn test_spot_position_pnl_at_price_overflowing_notional_is_reported() {
+        let mut spot =
+            SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
+        spot.quantity = Positive::MAX;
+
+        assert!(spot.pnl_at_price(Positive::MAX).is_err());
+    }
+
+    /// A long spot leg's `total_cost` multiplies size by cost basis before
+    /// adding the two fees, so both steps can leave the `Positive` range.
+    #[test]
+    fn test_spot_position_total_cost_overflowing_notional_is_reported() {
+        let mut spot = SpotPosition::long("AAPL".to_string(), Positive::MAX, Positive::MAX);
+        spot.open_fee = Positive::ONE;
+
+        assert!(spot.total_cost().is_err());
+    }
+
+    /// A short leg pays only the fees, and those still have to sum.
+    #[test]
+    fn test_spot_position_total_cost_overflowing_fees_is_reported() {
+        let mut spot =
+            SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
+        spot.open_fee = Positive::MAX;
+        spot.close_fee = Positive::MAX;
+
+        assert!(spot.total_cost().is_err());
+        assert!(spot.fees().is_err());
     }
 
     #[test]
@@ -438,7 +493,7 @@ mod tests {
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
-        assert_eq!(spot.total_cost(), pos_or_panic!(15020.0)); // 15000 + 20 fees
+        assert_eq!(spot.total_cost().ok(), Some(pos_or_panic!(15020.0))); // 15000 + 20 fees
     }
 
     #[test]
@@ -452,7 +507,7 @@ mod tests {
             pos_or_panic!(10.0),
             pos_or_panic!(10.0),
         );
-        assert_eq!(spot.total_cost(), pos_or_panic!(20.0)); // Only fees for short
+        assert_eq!(spot.total_cost().ok(), Some(pos_or_panic!(20.0))); // Only fees for short
     }
 
     #[test]

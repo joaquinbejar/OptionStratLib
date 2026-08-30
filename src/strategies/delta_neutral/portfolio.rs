@@ -29,7 +29,7 @@
 
 use crate::error::GreeksError;
 use crate::greeks::Greeks;
-use crate::model::decimal::d_add;
+use crate::model::decimal::{d_add, d_sub};
 use crate::model::position::Position;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -207,10 +207,23 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// The difference between current delta and target
+    ///
+    /// # Decision (issue #471): return `Result`
+    ///
+    /// All five Greek fields on this struct are `pub` and are written
+    /// directly by callers that aggregate Greeks from their own sources, so
+    /// [`PortfolioGreeks::from_positions`] guarantees nothing about the value
+    /// this subtracts from. A `Decimal` gap has no sentinel for "did not
+    /// fit", so the error channel is the only place the overflow can be
+    /// reported.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when the difference leaves the
+    /// representable `Decimal` range.
     #[inline]
-    #[must_use]
-    pub fn delta_gap(&self, target: Decimal) -> Decimal {
-        target - self.delta
+    pub fn delta_gap(&self, target: Decimal) -> Result<Decimal, GreeksError> {
+        Ok(d_sub(target, self.delta, "PortfolioGreeks::delta_gap")?)
     }
 
     /// Returns the gamma gap from a target value.
@@ -222,35 +235,52 @@ impl PortfolioGreeks {
     /// # Returns
     ///
     /// The difference between current gamma and target
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when the difference leaves the
+    /// representable `Decimal` range. See [`PortfolioGreeks::delta_gap`] for
+    /// why the `pub` fields make that reachable.
     #[inline]
-    #[must_use]
-    pub fn gamma_gap(&self, target: Decimal) -> Decimal {
-        target - self.gamma
+    pub fn gamma_gap(&self, target: Decimal) -> Result<Decimal, GreeksError> {
+        Ok(d_sub(target, self.gamma, "PortfolioGreeks::gamma_gap")?)
     }
 
     /// Adds another PortfolioGreeks to this one.
     ///
     /// Useful for combining Greeks from multiple sources.
+    ///
+    /// On failure `self` is left unchanged: the five sums are computed into
+    /// a temporary before any field is written, so a portfolio is never left
+    /// holding a partially applied aggregation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when any of the five sums leaves the
+    /// representable `Decimal` range. See [`PortfolioGreeks::delta_gap`] for
+    /// why the `pub` fields make that reachable.
     #[inline]
-    pub fn add(&mut self, other: &PortfolioGreeks) {
-        self.delta += other.delta;
-        self.gamma += other.gamma;
-        self.theta += other.theta;
-        self.vega += other.vega;
-        self.rho += other.rho;
+    pub fn add(&mut self, other: &PortfolioGreeks) -> Result<(), GreeksError> {
+        *self = self.combined(other)?;
+        Ok(())
     }
 
     /// Returns a new PortfolioGreeks that is the sum of this and another.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when any of the five sums leaves the
+    /// representable `Decimal` range. See [`PortfolioGreeks::delta_gap`] for
+    /// why the `pub` fields make that reachable.
     #[inline]
-    #[must_use]
-    pub fn combined(&self, other: &PortfolioGreeks) -> PortfolioGreeks {
-        PortfolioGreeks {
-            delta: self.delta + other.delta,
-            gamma: self.gamma + other.gamma,
-            theta: self.theta + other.theta,
-            vega: self.vega + other.vega,
-            rho: self.rho + other.rho,
-        }
+    pub fn combined(&self, other: &PortfolioGreeks) -> Result<PortfolioGreeks, GreeksError> {
+        Ok(PortfolioGreeks {
+            delta: d_add(self.delta, other.delta, "PortfolioGreeks::combined/delta")?,
+            gamma: d_add(self.gamma, other.gamma, "PortfolioGreeks::combined/gamma")?,
+            theta: d_add(self.theta, other.theta, "PortfolioGreeks::combined/theta")?,
+            vega: d_add(self.vega, other.vega, "PortfolioGreeks::combined/vega")?,
+            rho: d_add(self.rho, other.rho, "PortfolioGreeks::combined/rho")?,
+        })
     }
 }
 
@@ -623,8 +653,8 @@ mod tests_portfolio_greeks {
     fn test_delta_gap() {
         let greeks =
             PortfolioGreeks::new(dec!(0.3), dec!(0.02), dec!(-0.05), dec!(0.15), dec!(0.01));
-        assert_eq!(greeks.delta_gap(Decimal::ZERO), dec!(-0.3));
-        assert_eq!(greeks.delta_gap(dec!(0.5)), dec!(0.2));
+        assert_eq!(greeks.delta_gap(Decimal::ZERO).ok(), Some(dec!(-0.3)));
+        assert_eq!(greeks.delta_gap(dec!(0.5)).ok(), Some(dec!(0.2)));
     }
 
     #[test]
@@ -633,7 +663,9 @@ mod tests_portfolio_greeks {
             PortfolioGreeks::new(dec!(0.3), dec!(0.02), dec!(-0.05), dec!(0.15), dec!(0.01));
         let greeks2 =
             PortfolioGreeks::new(dec!(0.2), dec!(0.01), dec!(-0.03), dec!(0.10), dec!(0.005));
-        let combined = greeks1.combined(&greeks2);
+        let Ok(combined) = greeks1.combined(&greeks2) else {
+            unreachable!("hand-written Greeks well inside the Decimal range")
+        };
 
         assert_eq!(combined.delta, dec!(0.5));
         assert_eq!(combined.gamma, dec!(0.03));
@@ -648,10 +680,52 @@ mod tests_portfolio_greeks {
             PortfolioGreeks::new(dec!(0.3), dec!(0.02), dec!(-0.05), dec!(0.15), dec!(0.01));
         let greeks2 =
             PortfolioGreeks::new(dec!(0.2), dec!(0.01), dec!(-0.03), dec!(0.10), dec!(0.005));
-        greeks1.add(&greeks2);
+        assert!(greeks1.add(&greeks2).is_ok());
 
         assert_eq!(greeks1.delta, dec!(0.5));
         assert_eq!(greeks1.gamma, dec!(0.03));
+    }
+
+    /// `add` writes through `combined`, so an overflow on any one of the five
+    /// Greeks has to leave all five as they were rather than commit the ones
+    /// that happened to be summed first.
+    #[test]
+    fn test_portfolio_greeks_add_overflow_leaves_the_receiver_untouched() {
+        let mut greeks = PortfolioGreeks::new(
+            Decimal::MAX,
+            dec!(0.02),
+            dec!(-0.05),
+            dec!(0.15),
+            dec!(0.01),
+        );
+        let other = PortfolioGreeks::new(
+            Decimal::MAX,
+            dec!(0.01),
+            dec!(-0.03),
+            dec!(0.10),
+            dec!(0.005),
+        );
+
+        assert!(greeks.add(&other).is_err());
+        assert_eq!(greeks.delta, Decimal::MAX);
+        assert_eq!(greeks.gamma, dec!(0.02));
+        assert_eq!(greeks.theta, dec!(-0.05));
+        assert_eq!(greeks.vega, dec!(0.15));
+        assert_eq!(greeks.rho, dec!(0.01));
+    }
+
+    /// A gap against a target at the far end of the range is not a number
+    /// this type can report, and the `Result` says so instead of aborting.
+    #[test]
+    fn test_portfolio_greeks_delta_gap_overflow_is_reported() {
+        let greeks = PortfolioGreeks::new(
+            -Decimal::MAX,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+        );
+        assert!(greeks.delta_gap(Decimal::MAX).is_err());
     }
 }
 

@@ -157,6 +157,95 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Twenty public methods whose return type had no error channel are now
+  fallible, which is a breaking change** (#471). Each aborted the process on
+  arithmetic over `pub` fields. #460 closed everything reachable through the
+  public constructors, and what remained was reachable only by writing a
+  field directly, by deserializing a document that carries one, or through a
+  trait whose signature forbade failure — so none of them could be fixed
+  without changing the signature, which is why they were reported rather than
+  fixed at the time. The values returned are unchanged for every input the
+  panicking forms accepted. To migrate, add `?` where the value feeds a
+  fallible function, or handle the `Result` at a boundary that cannot
+  propagate.
+
+  **`LegAble` gains an error channel on three methods.** `pnl_at_price`
+  returns `Result<Decimal, PricingError>` instead of `Decimal`, and
+  `total_cost` and `fees` return `Result<Positive, PositionError>` instead of
+  `Positive`. `pnl_at_price` computes `(price - cost_basis) * quantity` and
+  aborted with `Subtraction overflowed`; `total_cost` multiplies size by cost
+  basis before adding two fees, and aborted with `Positive arithmetic overflow
+  in add`. The four implementors — `SpotPosition`, `FuturePosition`,
+  `PerpetualPosition` and the `Leg` enum — are updated, and every one of the
+  three now uses the checked helpers. `Leg::pnl_at_price` and
+  `Leg::total_cost` propagate the option leg's failure instead of swallowing
+  it as `unwrap_or(Decimal::ZERO)` / `unwrap_or(Positive::ZERO)`; both
+  fallbacks were values a legitimate leg can also return, so neither could be
+  told apart from an answer. `Position::total_cost` and `Position::fees` have
+  returned `Result` since #470, so the leg trait was the last infallible
+  wrapper over the same sums.
+
+  **Five `PerpetualPosition` and `FuturePosition` methods follow.**
+  `FuturePosition::unrealized_pnl` and `PerpetualPosition::unrealized_pnl`
+  return `Result<Decimal, PricingError>`, and with them
+  `PerpetualPosition::roe_percentage`, `margin_ratio` and
+  `effective_leverage`. `unrealized_pnl` is the entire body of
+  `pnl_at_price` on those two types, so leaving it infallible would have
+  moved the abort one frame down rather than removed it. The three ratios
+  keep their existing degenerate answers — `Decimal::ZERO` for a zero margin
+  or a zero notional, `Decimal::MAX` for wiped-out equity — rather than
+  turning those into errors; only the overflow is new.
+
+  **`PnL::try_add` is now public, and the operator impls are documented as
+  superseded.** `impl Add for PnL` and `impl Sum for PnL` add `initial_costs:
+  Positive + Positive` with the raw operator. `Add::add` and `Sum::sum` are
+  fixed by `std` to return `Self`, so no fallible form of either exists and no
+  signature change makes them safe. #460 routed every accumulation inside the
+  library through a `pub(crate) try_add`; it is `pub` now so callers have the
+  same route. The four operator impls are kept, because removing them would
+  break every `a + b` and `.sum()` at a call site with nothing to overflow.
+  They carry a `# Deprecated in favour of PnL::try_add` doc section rather
+  than a `#[deprecated]` attribute: Rust rejects that attribute on a trait
+  `impl` block and on a trait method inside one (`error: #[deprecated]
+  attribute cannot be used on trait impl blocks`), so the compiler cannot
+  emit this warning at all.
+
+  **Three `Collar` methods.** `net_premium` returns `Result<Decimal,
+  PricingError>` instead of `Decimal`, and `is_zero_cost` and `is_credit`
+  return `Result<bool, PricingError>` instead of `bool`. `net_premium`
+  multiplies each leg's `premium` by its `quantity`, both `pub` fields, and
+  aborted on overflow; the two predicates read it. They report the same
+  failure rather than collapsing it into `false`, which would have read as a
+  definite classification.
+
+  **`CoveredCall::effective_cost_basis` and
+  `ProtectivePut::effective_cost_basis`** return `Result<Positive,
+  PositiveError>` instead of `Positive`. Both divide the premium by
+  `spot_leg.quantity`. Both constructors reject a zero share count, but a
+  strategy deserialized from JSON or mutated in place can carry one, and
+  `Positive` has no value meaning "undefined per-share figure".
+
+  **Four `PortfolioGreeks` methods.** `delta_gap` and `gamma_gap` return
+  `Result<Decimal, GreeksError>`, `combined` returns
+  `Result<PortfolioGreeks, GreeksError>`, and `add` returns `Result<(),
+  GreeksError>` instead of nothing. All five Greek fields are `pub` and are
+  written directly by callers aggregating from their own sources, so
+  `from_positions` guarantees nothing about them. `add` now writes through
+  `combined`, so a failure on the fourth of five sums leaves the receiver
+  exactly as it was rather than committing the first three.
+
+  No error enum and no error variant was added, so nothing that matches
+  exhaustively on a public error type needs a new arm. The property suite's
+  `test_spot_leg_strategies_never_panic` drops the bounded `spot_leg_money`
+  generator that existed only for these signatures and runs against the
+  unbounded `extreme_money`, so `Positive::MAX` is back in range for the
+  three spot-leg strategies.
+
+  Two siblings with the same defect are deliberately out of scope and remain
+  infallible: `AdjustmentTarget::delta_gap` / `gamma_gap` / `vega_gap` /
+  `is_satisfied`, which subtract the same `pub` Greeks a `PortfolioGreeks`
+  carries.
+
 - **`Curve::bilinear_interpolate` now answers across the whole interior
   domain, and its exact-match branch fails on a repeated abscissa** (#451).
   The method read a four-sample window starting at the bracket index, which

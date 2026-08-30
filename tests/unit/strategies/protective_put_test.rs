@@ -171,7 +171,7 @@ fn test_protective_put_effective_cost_basis() {
     let pp = create_test_protective_put();
     let effective = pp.effective_cost_basis();
     // 150 + 3.5 = 153.5
-    assert_eq!(effective, Positive::new(153.5).unwrap());
+    assert_eq!(effective.ok(), Positive::new(153.5).ok());
 }
 
 #[test]
