@@ -461,7 +461,7 @@ impl RNDResult {
     ///
     /// # Errors
     ///
-    /// Propagates the errors of [`RNDStatistics::new`]: a density map whose
+    /// Propagates the errors of RNDStatistics::new: a density map whose
     /// moments leave the representable `Decimal` range describes no
     /// distribution, and there is no limit to return in their place.
     pub fn new(densities: BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {

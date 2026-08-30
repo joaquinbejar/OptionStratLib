@@ -1289,7 +1289,7 @@ pub(crate) fn price_gap(high: Positive, low: Positive) -> Positive {
 /// A lower break-even of `Positive::ZERO` means the strategy has none: the
 /// credit taken in (or, on a long structure, the debit paid) exceeds the
 /// strike, so no attainable price of the underlying puts the position in a
-/// loss on that side. See [`lower_break_even`].
+/// loss on that side. See lower_break_even.
 pub trait BreakEvenable {
     /// Retrieves the break-even points for the strategy.
     ///
