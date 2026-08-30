@@ -232,7 +232,7 @@ pub trait Greeks {
         let mut vega = Decimal::ZERO;
         let mut rho = Decimal::ZERO;
         let mut rho_d = Decimal::ZERO;
-        let mut alpha = Decimal::ZERO;
+        let mut alpha = AlphaSum::default();
         let mut vanna = Decimal::ZERO;
         let mut vomma = Decimal::ZERO;
         let mut veta = Decimal::ZERO;
@@ -246,13 +246,7 @@ pub trait Greeks {
             vega = d_add(vega, single.vega, "greeks::aggregate::vega")?;
             rho = d_add(rho, single.rho, "greeks::aggregate::rho")?;
             rho_d = d_add(rho_d, single.rho_d, "greeks::aggregate::rho_d")?;
-            alpha = add_alpha(
-                alpha,
-                single.alpha,
-                option,
-                index,
-                "greeks::aggregate::alpha",
-            )?;
+            alpha = alpha.push(single.alpha, option, index, "greeks::aggregate::alpha")?;
             vanna = d_add(vanna, single.vanna, "greeks::aggregate::vanna")?;
             vomma = d_add(vomma, single.vomma, "greeks::aggregate::vomma")?;
             veta = d_add(veta, single.veta, "greeks::aggregate::veta")?;
@@ -266,7 +260,7 @@ pub trait Greeks {
             vega,
             rho,
             rho_d,
-            alpha,
+            alpha: alpha.total,
             vanna,
             vomma,
             veta,
@@ -417,17 +411,12 @@ pub trait Greeks {
     /// the sentinel and another leg contributes to the same sum.
     fn alpha(&self) -> Result<Decimal, GreeksError> {
         let options = self.get_options()?;
-        let mut alpha_value = Decimal::ZERO;
+        let mut alpha_value = AlphaSum::default();
         for (index, option) in options.into_iter().enumerate() {
-            alpha_value = add_alpha(
-                alpha_value,
-                alpha(option)?,
-                option,
-                index,
-                "greeks::alpha::aggregate",
-            )?;
+            alpha_value =
+                alpha_value.push(alpha(option)?, option, index, "greeks::alpha::aggregate")?;
         }
-        Ok(alpha_value)
+        Ok(alpha_value.total)
     }
 
     /// Calculates the aggregate vanna value for all options.
@@ -1854,20 +1843,62 @@ fn alpha_from(gamma: Decimal, theta: Decimal) -> Result<Decimal, GreeksError> {
 /// sentinel would meet a contribution, and
 /// [`crate::error::DecimalError::Overflow`] when an ordinary sum leaves the
 /// representable range.
-#[inline]
-fn add_alpha(
+/// Running alpha aggregate.
+///
+/// The two facts the rule needs — whether a real contribution has been made,
+/// and whether the sentinel has been seen — cannot be read back off a
+/// `Decimal` total, and inferring them from it makes the answer depend on the
+/// order the legs arrive in. Reading "no contribution yet" as `total ==
+/// ZERO` mistakes a pair of legs that cancel for no legs at all: `[+5, -5,
+/// sentinel]` returned the sentinel while `[sentinel, +5, -5]` was refused,
+/// for the same three legs. A sum has no business depending on leg order, so
+/// the facts are carried rather than inferred.
+#[derive(Clone, Copy, Debug, Default)]
+struct AlphaSum {
     total: Decimal,
-    value: Decimal,
-    option: &Options,
-    index: usize,
-    op: &'static str,
-) -> Result<Decimal, GreeksError> {
-    let sentinel_meets_a_contribution = (value == Decimal::MAX && total != Decimal::ZERO)
-        || (total == Decimal::MAX && value != Decimal::ZERO);
-    if sentinel_meets_a_contribution {
-        return Err(alpha_sentinel_error(option, index));
+    contributed: bool,
+    sentinel: bool,
+}
+
+impl AlphaSum {
+    /// Folds one leg's alpha in, refusing exactly the sums that would lose a
+    /// contribution.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] naming the leg when the
+    /// sentinel would meet a contribution in either order, or a second
+    /// sentinel, and [`crate::error::DecimalError::Overflow`] when an
+    /// ordinary sum leaves the representable range.
+    fn push(
+        mut self,
+        value: Decimal,
+        option: &Options,
+        index: usize,
+        op: &'static str,
+    ) -> Result<Self, GreeksError> {
+        if value == Decimal::MAX {
+            // A second sentinel would leave the range; a sentinel after a
+            // contribution would swallow it.
+            if self.contributed || self.sentinel {
+                return Err(alpha_sentinel_error(option, index));
+            }
+            self.sentinel = true;
+            self.total = Decimal::MAX;
+            return Ok(self);
+        }
+        // A leg whose own alpha is zero adds nothing and loses nothing, so it
+        // neither counts as a contribution nor conflicts with the sentinel.
+        if value.is_zero() {
+            return Ok(self);
+        }
+        if self.sentinel {
+            return Err(alpha_sentinel_error(option, index));
+        }
+        self.contributed = true;
+        self.total = d_add(self.total, value, op)?;
+        Ok(self)
     }
-    Ok(d_add(total, value, op)?)
 }
 
 /// Builds the error [`add_alpha`] returns, naming the leg that carries the
@@ -5715,6 +5746,44 @@ mod tests_checked_aggregation {
     use crate::{ExpirationDate, Options};
     use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
+
+    /// A sum must not depend on the order its terms arrive in. Inferring "no
+    /// contribution yet" from `total == ZERO` broke that: two legs whose
+    /// alphas cancel look identical to no legs at all, so `[+5, -5, sentinel]`
+    /// returned the sentinel while `[sentinel, +5, -5]` was refused, for the
+    /// same three legs. Both are refused now, because in both a real
+    /// contribution meets the sentinel.
+    #[test]
+    fn test_alpha_sum_refuses_the_sentinel_whatever_the_leg_order() {
+        let option = leg(
+            OptionType::European,
+            Positive::HUNDRED,
+            pos_or_panic!(30.0),
+            pos_or_panic!(0.2),
+            OptionStyle::Call,
+            Side::Long,
+            Positive::ONE,
+        );
+        let fold = |values: &[Decimal]| -> Result<Decimal, GreeksError> {
+            let mut sum = AlphaSum::default();
+            for (index, value) in values.iter().enumerate() {
+                sum = sum.push(*value, &option, index, "test::alpha_sum")?;
+            }
+            Ok(sum.total)
+        };
+
+        assert!(fold(&[dec!(5), dec!(-5), Decimal::MAX]).is_err());
+        assert!(fold(&[Decimal::MAX, dec!(5), dec!(-5)]).is_err());
+
+        // The two allowed shapes stay allowed, in either order.
+        assert_eq!(fold(&[Decimal::MAX]).unwrap(), Decimal::MAX);
+        assert_eq!(
+            fold(&[Decimal::ZERO, Decimal::MAX, Decimal::ZERO]).unwrap(),
+            Decimal::MAX
+        );
+        // And an ordinary sum is still an ordinary sum.
+        assert_eq!(fold(&[dec!(5), dec!(-5)]).unwrap(), Decimal::ZERO);
+    }
 
     /// A quantity small enough that the daily theta of an ordinary at-the-money
     /// contract rounds to zero at `Decimal`'s twenty-eight-digit scale while its
