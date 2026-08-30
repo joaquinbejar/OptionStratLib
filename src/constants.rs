@@ -180,3 +180,39 @@ pub const MAX_NEWTON_ITER: NonZeroUsize = match NonZeroUsize::new(100) {
     Some(n) => n,
     None => unreachable!(), // scan-banned: allow -- `const` context: an unreachable arm here fails compilation, it cannot abort at run time
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Forces every `LazyLock` in this file.
+    ///
+    /// The `unreachable!` arms above are justified by the literals beside
+    /// them being strictly positive and finite, which is true of the literals
+    /// as written and of nothing else: `LazyLock` initialises at first
+    /// access, at run time, so an edit that makes one of these literals zero
+    /// or negative compiles cleanly and aborts on whichever request touches
+    /// it first. Unlike the `const` items below, the compiler does not check
+    /// the premise.
+    ///
+    /// Dereferencing each one here moves that failure into the test suite,
+    /// where a bad literal is a red run rather than a dead worker. It is what
+    /// makes the markers honest rather than merely reviewed.
+    #[test]
+    fn test_every_lazy_constant_initialises() {
+        for (name, value) in [
+            ("MIN_VOLATILITY", *MIN_VOLATILITY),
+            ("TRADING_DAYS", *TRADING_DAYS),
+            ("TRADING_HOURS", *TRADING_HOURS),
+            ("SECONDS_PER_HOUR", *SECONDS_PER_HOUR),
+            ("MICROSECONDS_PER_SECOND", *MICROSECONDS_PER_SECOND),
+            ("WEEKS_PER_YEAR", *WEEKS_PER_YEAR),
+            ("MONTHS_PER_YEAR", *MONTHS_PER_YEAR),
+        ] {
+            assert!(
+                value > Positive::ZERO,
+                "{name} must be strictly positive, or its unreachable arm is reachable"
+            );
+        }
+    }
+}
