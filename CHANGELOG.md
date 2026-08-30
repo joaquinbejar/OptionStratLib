@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`prepare_file_path` reported failure for a file that was already gone.**
+  It tested `Path::exists` and then removed, so anything deleting the file in
+  between made `remove_file` fail with `NotFound` — for a postcondition that
+  already held. Every `write_html` / `write_png` caller inherited it. Two
+  tests sharing a working directory were enough to lose the race, and it
+  aborted a whole `cargo tarpaulin` run on `main` with `Failed to remove
+  existing file: multiple_curves_test.html`, taking a coverage report down
+  over a file nobody was reading. The removal is now attempted
+  unconditionally and `NotFound` is accepted, which also makes the function
+  idempotent for concurrent writers downstream.
+- The four `plotters` tests that came in `_bis` pairs wrote to the same two
+  paths as their originals, so they raced each other by construction. Each
+  pair now writes its own file.
+
 ### Changed
 
 - **Two `ProtectivePut` methods are now fallible, which is a breaking change**
