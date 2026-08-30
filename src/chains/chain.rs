@@ -5333,15 +5333,36 @@ impl From<&Vec<OptionData>> for OptionChain {
 
 #[cfg(test)]
 mod tests_chain_base {
+
     #![allow(clippy::indexing_slicing)]
     use super::*;
+
+    /// A directory of this test run's own, outside the working tree.
+    ///
+    /// Writing chain artifacts into `.` or `tests/` puts every file-writing
+    /// test in one shared directory, and `cargo` runs test binaries
+    /// concurrently. Asserting that the cleanup succeeded then asserts that
+    /// nothing else touched the file, which is not a property of the test:
+    /// two of these failed together on a full-suite run, each passing on its
+    /// own. `tests/` is a source directory besides, so the round trip was
+    /// leaving artifacts in the tree.
+    ///
+    /// The directory has to be unique per *process*, not per test: a path
+    /// derived from the test's own name is shared by every process running
+    /// that test, so two checkouts, or a `cargo test` beside a coverage run,
+    /// would still remove each other's directory — the same flake in a new
+    /// place. `tempfile` picks a fresh one and removes it when the returned
+    /// handle drops, so the caller keeps the handle alive for as long as it
+    /// needs the files.
+    fn scratch_dir() -> tempfile::TempDir {
+        tempfile::tempdir().expect("a temporary directory is available")
+    }
 
     use crate::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
     use positive::spos;
-    use std::fs;
     use tracing::info;
 
     #[test]
@@ -5582,11 +5603,11 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_csv(".");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        let result = chain.save_to_csv(&dir);
         assert!(result.is_ok());
-        let file_name = "./SP500-18-oct-2024-5781.88.csv".to_string();
-        let remove_result = fs::remove_file(file_name);
-        assert!(remove_result.is_ok());
+        assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.csv")).exists());
     }
 
     #[test]
@@ -5612,12 +5633,11 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_json(".");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
-
-        let file_name = "./SP500-18-oct-2024-5781.88.json".to_string();
-        let remove_result = fs::remove_file(file_name);
-        assert!(remove_result.is_ok());
+        assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.json")).exists());
     }
 
     #[test]
@@ -5643,19 +5663,17 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_csv(".");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        let result = chain.save_to_csv(&dir);
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_csv("./SP500-18-oct-2024-5781.89.csv");
+        let result = OptionChain::load_from_csv(&format!("{dir}/SP500-18-oct-2024-5781.89.csv"));
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.89);
-
-        let file_name = "./SP500-18-oct-2024-5781.89.csv".to_string();
-        let remove_result = fs::remove_file(file_name);
-        assert!(remove_result.is_ok());
     }
 
     #[test]
@@ -5681,19 +5699,17 @@ mod tests_chain_base {
             Some(100),
             None,
         );
-        let result = chain.save_to_json("tests/");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
 
-        let result = OptionChain::load_from_json("tests/SP500-18-oct-2024-5781.9.json");
+        let result = OptionChain::load_from_json(&format!("{dir}/SP500-18-oct-2024-5781.9.json"));
         assert!(result.is_ok());
         let chain = result.unwrap();
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
-
-        let file_name = "tests/SP500-18-oct-2024-5781.9.json".to_string();
-        let remove_result = fs::remove_file(file_name);
-        assert!(remove_result.is_ok());
     }
 }
 
@@ -11756,8 +11772,30 @@ mod chain_coverage_tests {
 
 #[cfg(test)]
 mod chain_coverage_tests_bis {
+
     #![allow(clippy::indexing_slicing)]
     use super::*;
+
+    /// A directory of this test run's own, outside the working tree.
+    ///
+    /// Writing chain artifacts into `.` or `tests/` puts every file-writing
+    /// test in one shared directory, and `cargo` runs test binaries
+    /// concurrently. Asserting that the cleanup succeeded then asserts that
+    /// nothing else touched the file, which is not a property of the test:
+    /// two of these failed together on a full-suite run, each passing on its
+    /// own. `tests/` is a source directory besides, so the round trip was
+    /// leaving artifacts in the tree.
+    ///
+    /// The directory has to be unique per *process*, not per test: a path
+    /// derived from the test's own name is shared by every process running
+    /// that test, so two checkouts, or a `cargo test` beside a coverage run,
+    /// would still remove each other's directory — the same flake in a new
+    /// place. `tempfile` picks a fresh one and removes it when the returned
+    /// handle drops, so the caller keeps the handle alive for as long as it
+    /// needs the files.
+    fn scratch_dir() -> tempfile::TempDir {
+        tempfile::tempdir().expect("a temporary directory is available")
+    }
     use positive::spos;
 
     use rust_decimal_macros::dec;
@@ -11791,9 +11829,11 @@ mod chain_coverage_tests_bis {
         let chain = create_test_chain();
 
         // Save to JSON to trigger serialization
-        let result = chain.save_to_json(".");
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        let result = chain.save_to_json(&dir);
         assert!(result.is_ok());
-        let file = format!("./{}.json", chain.get_title());
+        let file = format!("{dir}/{}.json", chain.get_title());
         // Load from JSON to trigger deserialization
         let loaded_chain = OptionChain::load_from_json(&file);
         assert!(loaded_chain.is_ok());
@@ -11801,9 +11841,6 @@ mod chain_coverage_tests_bis {
         let loaded_chain = loaded_chain.unwrap();
         assert_eq!(loaded_chain.symbol, "TEST");
         assert_eq!(loaded_chain.underlying_price, Positive::HUNDRED);
-
-        // Clean up the test file
-        std::fs::remove_file(file).unwrap();
     }
 
     // Test for many display-related lines

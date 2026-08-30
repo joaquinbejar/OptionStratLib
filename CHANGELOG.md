@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Six chain tests wrote their artifacts into the working tree and asserted
+  their own cleanup succeeded.** `cargo` runs test binaries concurrently
+  against one working directory, so `assert!(fs::remove_file(..).is_ok())`
+  asserts that nothing else touched the file, which is not a property of the
+  test: `test_load_from_json` and `test_deserializer_field_handling` failed
+  together on a full-suite run and passed individually. Each writes into a
+  directory of its own under the system temp directory now, and the round trip
+  is asserted rather than the deletion. The directory is unique per process
+  rather than per test, since a path derived from a test's own name is shared
+  by every process running that test. `test_load_from_json` was also writing
+  into `tests/`, a source directory.
+
 - **`prepare_file_path` reported failure for a file that was already gone.**
   It tested `Path::exists` and then removed, so anything deleting the file in
   between made `remove_file` fail with `NotFound` — for a postcondition that
