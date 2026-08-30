@@ -73,7 +73,7 @@ use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use positive::{Positive, PositiveError};
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::debug;
@@ -315,7 +315,16 @@ impl CoveredCall {
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // A per-share figure rarely divides exactly — one contract of
+            // premium over three shares repeats — so the rounding is chosen
+            // here rather than taken from the dependency's default.
+            // `MidpointNearestEven` is what `d_div` already applies to every
+            // `Decimal` division in this crate, so a per-share value rounds
+            // the same way whichever path computes it.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
         if self.spot_leg.cost_basis > premium_per_share {
             self.spot_leg.cost_basis.checked_sub(&premium_per_share)
         } else {
@@ -463,12 +472,20 @@ impl BreakEvenable for CoveredCall {
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // Same rounding choice as the per-share premium above.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
         let fees_per_share = self
             .spot_leg
             .open_fee
             .checked_add(&self.spot_leg.close_fee)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // Same rounding choice as the per-share premium above.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
 
         // Net credit per share, which is negative when the fees swallow the
         // premium. `lower_break_even` floors the result at zero, the sentinel
@@ -805,6 +822,26 @@ mod tests {
             pos_or_panic!(0.65),
         )
         .unwrap()
+    }
+
+    /// A per-share premium that does not divide exactly: one contract of
+    /// 3.50 spread over three shares is 1.1666… repeating. The rounding is
+    /// this crate's choice rather than the dependency's default, so the
+    /// quotient is pinned here — if the strategy ever changes, the last digit
+    /// moves and this test says so.
+    #[test]
+    fn test_covered_call_per_share_premium_rounds_to_nearest_even() {
+        let mut cc = create_test_covered_call();
+        cc.spot_leg.quantity = pos_or_panic!(3.0);
+        cc.spot_leg.cost_basis = Positive::HUNDRED;
+
+        // 100 - 3.50/3. The quotient repeats, so it is rounded, and the
+        // literal is written as a `Decimal` rather than through the `f64`
+        // path of `pos_or_panic!`, which cannot carry these digits.
+        assert_eq!(
+            cc.effective_cost_basis().unwrap().to_dec(),
+            dec!(98.83333333333333333333333333)
+        );
     }
 
     #[test]

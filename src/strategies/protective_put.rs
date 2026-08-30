@@ -40,7 +40,7 @@ use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use positive::Positive;
 use positive::PositiveError;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use tracing::debug;
@@ -328,7 +328,16 @@ impl ProtectivePut {
             .long_put
             .premium
             .checked_mul(&self.long_put.option.quantity)?
-            .checked_div(&self.spot_leg.quantity)?;
+            // A per-share figure rarely divides exactly — one contract of
+            // premium over three shares repeats — so the rounding is chosen
+            // here rather than taken from the dependency's default.
+            // `MidpointNearestEven` is what `d_div` already applies to every
+            // `Decimal` division in this crate, so a per-share value rounds
+            // the same way whichever path computes it.
+            .checked_div_with_strategy(
+                &self.spot_leg.quantity,
+                RoundingStrategy::MidpointNearestEven,
+            )?;
         self.spot_leg.cost_basis.checked_add(&premium_per_share)
     }
 

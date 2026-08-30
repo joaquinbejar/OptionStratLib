@@ -334,7 +334,17 @@ impl LegAble for FuturePosition {
     }
 
     fn total_cost(&self) -> Result<Positive, PositionError> {
-        Ok(self.total_margin_required().checked_add(&self.fees)?)
+        // The product is formed here rather than read from
+        // `total_margin_required`, which multiplies raw and would abort on
+        // `initial_margin_req = Positive::MAX` before this `Result` could
+        // carry the failure. The infallible helper keeps its signature; what
+        // this fixes is the error channel promising something it could not
+        // deliver.
+        let margin = self
+            .initial_margin_req
+            .checked_mul(&self.quantity)
+            .map_err(PositionError::from)?;
+        Ok(margin.checked_add(&self.fees)?)
     }
 
     fn fees(&self) -> Result<Positive, PositionError> {
@@ -466,6 +476,28 @@ impl Default for FuturePosition {
 mod tests {
     use super::*;
     use positive::pos_or_panic;
+
+    /// A margin requirement at the top of the range with more than one
+    /// contract overflows the product `total_cost` needs. The signature
+    /// promises a `Result`, so it has to arrive as one rather than as an
+    /// abort inside the raw multiplication `total_margin_required` performs.
+    #[test]
+    fn test_future_total_cost_reports_a_margin_product_that_overflows() {
+        let future = FuturePosition::new(
+            "ES".to_string(),
+            Positive::TWO,
+            pos_or_panic!(4500.0),
+            Side::Long,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            Positive::MAX,
+            pos_or_panic!(12000.0),
+            Utc::now(),
+            pos_or_panic!(5.0),
+        );
+
+        assert!(future.total_cost().is_err());
+    }
 
     #[test]
     fn test_future_position_new() {

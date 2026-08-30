@@ -341,7 +341,10 @@ impl PerpetualPosition {
     /// [`PricingError::Decimal`] when the equity sum or the ratio leaves the
     /// representable `Decimal` range.
     pub fn margin_ratio(&self, current_price: Positive) -> Result<Decimal, PricingError> {
-        let notional = self.notional_value_at_price(current_price);
+        // Formed here rather than read from `notional_value_at_price`, whose
+        // raw product aborts for a quantity and price whose product leaves
+        // the `Positive` range — before this `Result` could report it.
+        let notional = self.quantity.checked_mul(&current_price)?;
         if notional == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
@@ -394,7 +397,7 @@ impl PerpetualPosition {
             return Ok(Decimal::MAX);
         }
 
-        let notional = self.notional_value_at_price(current_price);
+        let notional = self.quantity.checked_mul(&current_price)?;
         Ok(d_div(
             notional.to_dec(),
             equity,
@@ -546,6 +549,29 @@ mod tests {
     use positive::pos_or_panic;
 
     use rust_decimal_macros::dec;
+
+    /// Both ratios divide by a notional whose product leaves the `Positive`
+    /// range for a large quantity at a large price. Both signatures promise a
+    /// `Result`, so both have to report it rather than abort inside the raw
+    /// multiplication `notional_value_at_price` performs.
+    #[test]
+    fn test_perpetual_ratios_report_a_notional_that_overflows() {
+        let perp = PerpetualPosition::new(
+            "BTC-USDT-PERP".to_string(),
+            Positive::MAX,
+            pos_or_panic!(50000.0),
+            Side::Long,
+            pos_or_panic!(10.0),
+            pos_or_panic!(5000.0),
+            MarginType::Isolated,
+            dec!(0.0001),
+            Utc::now(),
+            pos_or_panic!(5.0),
+        );
+
+        assert!(perp.margin_ratio(pos_or_panic!(50000.0)).is_err());
+        assert!(perp.effective_leverage(pos_or_panic!(50000.0)).is_err());
+    }
 
     #[test]
     fn test_perpetual_position_new() {
