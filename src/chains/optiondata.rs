@@ -239,16 +239,20 @@ fn tick_size(decimal_places: u32) -> Option<Positive> {
 /// A quote that is already two-sided is returned untouched: only a collision
 /// moves anything.
 ///
-/// Returns `None` when the lifted ask leaves the representable `Decimal`
-/// range; the lift is range-checked like every other step, never assumed to
-/// fit.
+/// Returns `None` when the lift cannot be made: either the sum leaves the
+/// representable `Decimal` range, or it lands back on the bid because the tick
+/// is finer than the last representable digit at that magnitude —
+/// `Decimal::MAX + 0.01` rounds to `Decimal::MAX`. Both cases would hand back
+/// the locked quote this function exists to remove, so neither is assumed to
+/// fit; the caller leaves the quote untouched instead.
 #[inline]
 #[must_use]
 fn unlock(bid: Positive, ask: Positive, tick: Positive) -> Option<(Positive, Positive)> {
     if bid < ask {
         return Some((bid, ask));
     }
-    Some((bid, bid.checked_add(&tick).ok()?))
+    let lifted = bid.checked_add(&tick).ok()?;
+    (lifted > bid).then_some((bid, lifted))
 }
 
 /// Widens a quote around `anchor` by half a spread on each side, flooring both
@@ -1620,6 +1624,46 @@ mod optiondata_coverage_tests {
 
         assert_eq!(option_data.call_bid, spos!(0.01));
         assert!(option_data.call_ask.unwrap() >= option_data.call_bid.unwrap());
+    }
+
+    /// The lift is range-checked rather than assumed to fit. An ask already at
+    /// the top of the `Decimal` range has no tick above it, and that is the
+    /// branch keeping `apply_spread` from emitting a quote it cannot form.
+    #[test]
+    fn test_unlock_reports_a_lift_that_cannot_fit() {
+        let tick = tick_size(2).expect("two decimal places is a representable scale");
+
+        // Locked at the top of the range: there is no tick above the ask.
+        assert_eq!(unlock(Positive::MAX, Positive::MAX, tick), None);
+
+        // An ordinary locked quote is lifted by exactly one tick, and the bid
+        // — the side carrying the information — does not move.
+        assert_eq!(
+            unlock(pos_or_panic!(0.01), pos_or_panic!(0.01), tick),
+            Some((pos_or_panic!(0.01), pos_or_panic!(0.02)))
+        );
+
+        // A quote that is already two-sided is returned untouched.
+        assert_eq!(
+            unlock(pos_or_panic!(0.01), pos_or_panic!(0.50), tick),
+            Some((pos_or_panic!(0.01), pos_or_panic!(0.50)))
+        );
+    }
+
+    /// And the same case reached through the public entry point: a quote whose
+    /// widened ask cannot be represented is left exactly as it was, not
+    /// half-written.
+    #[test]
+    fn test_apply_spread_leaves_an_unrepresentable_quote_untouched() {
+        let mut option_data = create_test_option_data();
+        option_data.call_bid = Some(Positive::MAX);
+        option_data.call_ask = Some(Positive::MAX);
+        let before = option_data.clone();
+
+        option_data.apply_spread(pos_or_panic!(0.6), 2);
+
+        assert_eq!(option_data.call_bid, before.call_bid);
+        assert_eq!(option_data.call_ask, before.call_ask);
     }
 
     #[test]

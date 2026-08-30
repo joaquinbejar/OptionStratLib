@@ -88,8 +88,9 @@ proptest! {
         let call_ask = option_data.call_ask.expect("call ask is quoted");
         prop_assert!(call_bid >= floor, "bid {call_bid} below the tick {floor}");
         prop_assert!(call_bid < call_ask, "locked or crossed quote {call_bid}/{call_ask}");
+        let width = call_ask.to_dec().checked_sub(call_bid.to_dec());
         prop_assert!(
-            call_ask.to_dec() - call_bid.to_dec() >= floor.to_dec(),
+            width.is_some_and(|width| width >= floor.to_dec()),
             "quote {call_bid}/{call_ask} thinner than the tick {floor}"
         );
 
@@ -134,8 +135,9 @@ proptest! {
         let call_ask = option_data.call_ask.expect("call ask is quoted");
         prop_assert!(call_bid >= floor, "bid {call_bid} below the tick {floor}");
         prop_assert!(call_bid < call_ask, "locked or crossed quote {call_bid}/{call_ask}");
+        let width = call_ask.to_dec().checked_sub(call_bid.to_dec());
         prop_assert!(
-            call_ask.to_dec() - call_bid.to_dec() >= floor.to_dec(),
+            width.is_some_and(|width| width >= floor.to_dec()),
             "quote {call_bid}/{call_ask} thinner than the tick {floor}"
         );
 
@@ -156,12 +158,20 @@ proptest! {
         // A mid strictly below one tick and a spread of at most two ticks:
         // `mid + half` rounds down onto the tick and `mid - half` floors onto
         // it, so both sides collide there.
-        let mid = Positive::new_decimal(floor.to_dec() * Decimal::try_from(mid_ticks)
-            .expect("range is representable"))
-            .expect("a non-negative product is positive");
-        let spread = Positive::new_decimal(floor.to_dec() * Decimal::try_from(spread_ticks)
-            .expect("range is representable"))
-            .expect("a non-negative product is positive");
+        // The two scalings are checked like any other financial arithmetic,
+        // and their success is part of the setup: a sub-tick fraction of a
+        // tick is representable, so a `None` here is a broken generator
+        // rather than a property failure.
+        let ticks_of = |fraction: f64| -> Positive {
+            let fraction = Decimal::try_from(fraction).expect("range is representable");
+            floor
+                .to_dec()
+                .checked_mul(fraction)
+                .and_then(|value| Positive::new_decimal(value).ok())
+                .expect("a fraction of one tick is representable and non-negative")
+        };
+        let mid = ticks_of(mid_ticks);
+        let spread = ticks_of(spread_ticks);
 
         let mut option_data = quote_with_mid(mid);
         option_data.apply_spread(spread, decimal_places);
