@@ -643,7 +643,7 @@ impl OptionChain {
             if iv <= 0.0 {
                 continue;
             }
-            let m = (option.strike_price.to_f64() / spot).ln();
+            let m = (option.strike_price.to_f64() / spot).ln(); // scan-banned: allow -- f64 `ln`: returns -inf/NaN, it does not abort; the `is_finite` guard on the next line drops the point
             if !m.is_finite() {
                 continue;
             }

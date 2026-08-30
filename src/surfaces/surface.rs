@@ -821,14 +821,14 @@ impl Index<usize> for Surface {
         // so panic on out-of-bounds is the documented contract.
         match self.points.iter().nth(index) {
             Some(p) => p,
-            // scan-banned: allow -- `std::ops::Index` returns `&Self::Output`
-            // and has no fallible channel; the contract mirrors `Vec::index`.
-            // No library code reaches this arm: every internal lookup goes
-            // through `Surface::point_at`.
-            None => panic!(
-                "Surface::index: out of bounds (index = {index}, len = {})",
-                self.points.len()
-            ),
+            None => {
+                // INVARIANT: `std::ops::Index` returns `&Self::Output` and has
+                // no fallible channel; the contract mirrors `Vec::index`. No
+                // library code reaches this arm: every internal lookup goes
+                // through `Surface::point_at`.
+                let len = self.points.len();
+                panic!("Surface::index: out of bounds (index = {index}, len = {len})") // scan-banned: allow -- `Index` has no fallible channel and no library call site reaches it
+            }
         }
     }
 }

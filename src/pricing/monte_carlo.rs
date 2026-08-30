@@ -125,7 +125,7 @@ pub fn monte_carlo_option_pricing(
             years,
         ));
     }
-    let discount = (-rate_f64 * years).exp();
+    let discount = (-rate_f64 * years).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
     if !discount.is_finite() {
         return Err(PricingError::non_finite(
             "pricing::monte_carlo::discount",

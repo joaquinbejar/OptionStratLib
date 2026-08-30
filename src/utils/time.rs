@@ -172,12 +172,19 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         // 365 / 7 — kept as exact Decimal arithmetic to preserve the
         // round-trip identity Week→Day→Week (an f64 literal would
         // accumulate ~1 ulp of error and break the strict assertion in
-        // tests like `test_step_next_with_weeks`). The structural
-        // invariant (positive non-zero numerator and denominator)
-        // makes the Err arm unreachable.
+        // tests like `test_step_next_with_weeks`).
+        //
+        // Both operands are `dec!()` literals fixed at compile time, so the
+        // division has no runtime input: the divisor is 7, never zero, and
+        // the quotient 52.142857… is positive and far inside the `Decimal`
+        // range. `Positive::new_decimal` rejects only a value below the
+        // lower bound, so nothing reaches the `Err` arm, and there is no
+        // value to return there — `units_per_year` is infallible by
+        // signature and a stand-in would make every weekly annualisation
+        // silently wrong.
         TimeFrame::Week => match Positive::new_decimal(dec!(365.0) / dec!(7.0)) {
             Ok(v) => v,
-            Err(_) => unreachable!("365/7 is structurally positive non-zero"),
+            Err(_) => unreachable!("365/7 is structurally positive non-zero"), // scan-banned: allow -- both operands are compile-time literals; see the comment above
         },
         TimeFrame::Month => pos_lit(dec!(12.0)),  // 12
         TimeFrame::Quarter => pos_lit(dec!(4.0)), // 4
@@ -353,10 +360,14 @@ pub fn get_today_formatted() -> String {
 /// ```
 #[must_use]
 pub fn get_today_or_tomorrow_formatted() -> String {
-    // 18:30 is a valid wall-clock time, so the Err arm is unreachable.
+    // `NaiveTime::from_hms_opt` returns `None` only for `hour > 23`,
+    // `min > 59` or `sec > 59` (leap seconds aside). All three arguments are
+    // literals inside those ranges, so the `None` arm has no input that can
+    // select it, and `get_today_or_tomorrow_formatted` is infallible by
+    // signature so there is no cutoff to fall back to.
     let cutoff_time = match NaiveTime::from_hms_opt(18, 30, 0) {
         Some(t) => t,
-        None => unreachable!("18:30:00 is always a valid NaiveTime"),
+        None => unreachable!("18:30:00 is always a valid NaiveTime"), // scan-banned: allow -- literal arguments inside chrono's documented ranges
     };
     let now = Utc::now();
     // Get the date we should use based on current UTC time

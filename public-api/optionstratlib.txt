@@ -3541,11 +3541,11 @@ pub use optionstratlib::model::Side
 pub mod optionstratlib::model::decimal
 pub const optionstratlib::model::decimal::ONE_DAY: rust_decimal::decimal::Decimal
 pub trait optionstratlib::model::decimal::DecimalStats
-pub fn optionstratlib::model::decimal::DecimalStats::mean(&self) -> rust_decimal::decimal::Decimal
-pub fn optionstratlib::model::decimal::DecimalStats::std_dev(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::model::decimal::DecimalStats::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
+pub fn optionstratlib::model::decimal::DecimalStats::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 impl optionstratlib::model::decimal::DecimalStats for alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::mean(&self) -> rust_decimal::decimal::Decimal
-pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::std_dev(&self) -> rust_decimal::decimal::Decimal
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::model::decimal::decimal_normal_sample() -> rust_decimal::decimal::Decimal
 pub fn optionstratlib::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>

@@ -7,7 +7,7 @@ use crate::error::decimal::DecimalError;
 use crate::geometrics::HasX;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distr::Distribution;
-use rand_distr::Normal;
+use rand_distr::StandardNormal;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use rust_decimal_macros::dec;
 
@@ -65,24 +65,24 @@ macro_rules! assert_decimal_eq {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
+/// use optionstratlib::error::DecimalError;
 /// use optionstratlib::model::decimal::DecimalStats;
 ///
 /// struct DecimalSeries(Vec<Decimal>);
 ///
 /// impl DecimalStats for DecimalSeries {
-///     fn mean(&self) -> Decimal {
-///         let sum: Decimal = self.0.iter().sum();
+///     fn mean(&self) -> Result<Decimal, DecimalError> {
 ///         if self.0.is_empty() {
-///             dec!(0)
-///         } else {
-///             sum / Decimal::from(self.0.len())
+///             return Ok(dec!(0));
 ///         }
+///         let sum: Decimal = self.0.iter().sum();
+///         Ok(sum / Decimal::from(self.0.len()))
 ///     }
-///     
-///     fn std_dev(&self) -> Decimal {
+///
+///     fn std_dev(&self) -> Result<Decimal, DecimalError> {
 ///         // Implementation of standard deviation calculation
 ///         // ...
-///         dec!(0) // Placeholder return
+///         Ok(dec!(0)) // Placeholder return
 ///     }
 /// }
 /// ```
@@ -91,7 +91,12 @@ pub trait DecimalStats {
     ///
     /// The mean is the sum of all values divided by the count of values.
     /// This method should handle empty collections appropriately.
-    fn mean(&self) -> Decimal;
+    ///
+    /// # Errors
+    ///
+    /// Implementations return [`DecimalError`] when the running sum or the
+    /// division by the count leaves the representable `Decimal` range.
+    fn mean(&self) -> Result<Decimal, DecimalError>;
 
     /// Calculates the standard deviation of the collection.
     ///
@@ -99,28 +104,58 @@ pub trait DecimalStats {
     /// from the mean. A low standard deviation indicates that values tend to be
     /// close to the mean, while a high standard deviation indicates values are
     /// spread out over a wider range.
-    fn std_dev(&self) -> Decimal;
+    ///
+    /// # Errors
+    ///
+    /// Implementations return [`DecimalError`] when a centred deviation, its
+    /// square, the sum of squares, or the final division leaves the
+    /// representable `Decimal` range.
+    fn std_dev(&self) -> Result<Decimal, DecimalError>;
 }
 
 impl DecimalStats for Vec<Decimal> {
-    fn mean(&self) -> Decimal {
+    /// # Errors
+    ///
+    /// Returns [`DecimalError::Overflow`] when the sum of the values leaves
+    /// the representable range — `vec![Decimal::MAX; 2]` is enough. The
+    /// previous signature had nowhere to put that, and `iter().sum()` aborts
+    /// with `Addition overflowed`.
+    fn mean(&self) -> Result<Decimal, DecimalError> {
         if self.is_empty() {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
-        let sum: Decimal = self.iter().sum();
-        sum / Decimal::from(self.len())
+        let sum = d_sum(self, "decimal::stats::mean::sum")?;
+        // `Decimal::from(usize)` is total, and the slice is non-empty here,
+        // so the divisor is neither an overflow nor a zero.
+        d_div(sum, Decimal::from(self.len()), "decimal::stats::mean")
     }
 
-    fn std_dev(&self) -> Decimal {
+    /// # Errors
+    ///
+    /// Returns [`DecimalError::Overflow`] when the mean, a centred deviation,
+    /// its square or the sum of squares leaves the representable range, and
+    /// [`DecimalError::ArithmeticError`] if the sample variance were negative.
+    /// The squaring was `.powd(Decimal::TWO)`, which aborts with
+    /// `Pow overflowed`.
+    fn std_dev(&self) -> Result<Decimal, DecimalError> {
         // Population variance of a single value is zero
         if self.len() < 2usize {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
-        let mean = self.mean();
-        let variance: Decimal = self.iter().map(|x| (x - mean).powd(Decimal::TWO)).sum();
-        (variance / Decimal::from(self.len() - 1))
-            .sqrt()
-            .unwrap_or(Decimal::ZERO)
+        let mean = self.mean()?;
+        let mut sq_total = Decimal::ZERO;
+        for value in self {
+            let centred = d_sub(*value, mean, "decimal::stats::std_dev::centred")?;
+            let centred_sq = d_mul(centred, centred, "decimal::stats::std_dev::centred_sq")?;
+            sq_total = d_add(sq_total, centred_sq, "decimal::stats::std_dev::sq_total")?;
+        }
+        // `len() >= 2` above, so `len() - 1` neither underflows nor is zero.
+        let variance = d_div(
+            sq_total,
+            Decimal::from(self.len() - 1),
+            "decimal::stats::std_dev::variance",
+        )?;
+        d_sqrt(variance, "decimal::stats::std_dev")
     }
 }
 
@@ -260,25 +295,17 @@ pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
 /// let normal = decimal_normal_sample();
 /// ```
 ///
-/// # Panics
-///
-/// The `unreachable!` branch fires only if
-/// `statrs::distribution::Normal::new(0.0, 1.0)` rejects the provided
-/// parameters. `statrs` accepts any finite mean together with a
-/// strictly positive standard deviation, so `(0.0, 1.0)` is always
-/// valid under the `statrs` contract and the arm is unreachable in
-/// practice. Kept as a panic rather than `Result` to preserve the
-/// infallible sampling API.
+/// The sample is drawn from [`rand_distr::StandardNormal`], which is a unit
+/// struct with no constructor and therefore nothing to reject. It replaced
+/// `Normal::new(0.0, 1.0)`, whose `Err` arm had no value to return and so
+/// aborted. The two are the same distribution and the same value: `Normal`
+/// samples `StandardNormal` and applies `mean + std_dev * z`, which is the
+/// identity at `(0.0, 1.0)`.
 #[must_use]
 pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
-    // Normal::new(0.0, 1.0) is provably valid (mean=0, std=1 are accepted
-    // by `statrs::distribution::Normal`), so the Err arm is unreachable.
-    let normal = match Normal::new(0.0, 1.0) {
-        Ok(n) => n,
-        Err(_) => unreachable!("standard normal parameters are always valid"),
-    };
-    Decimal::from_f64(normal.sample(&mut t_rng)).unwrap_or(Decimal::ZERO)
+    let sample: f64 = StandardNormal.sample(&mut t_rng);
+    Decimal::from_f64(sample).unwrap_or(Decimal::ZERO)
 }
 
 impl HasX for Decimal {
@@ -610,8 +637,13 @@ macro_rules! d2f {
 #[macro_export]
 macro_rules! nz {
     ($val:expr) => {{
+        // The panic expands at the caller, never inside the library: no
+        // production code uses `nz!`, only tests, examples and doc examples,
+        // all of which pass a non-zero literal. A runtime count must go
+        // through `NonZeroUsize::new(x).ok_or_else(..)` at the boundary, as
+        // the doc comment above says.
         ::std::num::NonZeroUsize::new($val)
-            .unwrap_or_else(|| panic!("nz!({}) must be non-zero", stringify!($val)))
+            .unwrap_or_else(|| panic!("nz!({}) must be non-zero", stringify!($val))) // scan-banned: allow -- expands at the caller only; no library code uses `nz!`
     }};
 }
 
@@ -691,6 +723,58 @@ pub mod tests {
 }
 
 #[cfg(test)]
+mod tests_decimal_stats {
+    use super::*;
+
+    #[test]
+    fn test_decimal_stats_empty_and_singleton_return_zero() {
+        let empty: Vec<Decimal> = vec![];
+        assert_eq!(empty.mean().unwrap(), Decimal::ZERO);
+        assert_eq!(empty.std_dev().unwrap(), Decimal::ZERO);
+        let one = vec![dec!(3)];
+        assert_eq!(one.mean().unwrap(), dec!(3));
+        assert_eq!(one.std_dev().unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_decimal_stats_ordinary_sample_is_unchanged() {
+        // The textbook series: mean 5, sample variance 32 / 7.
+        let values = vec![
+            dec!(2),
+            dec!(4),
+            dec!(4),
+            dec!(4),
+            dec!(5),
+            dec!(5),
+            dec!(7),
+            dec!(9),
+        ];
+        assert_eq!(values.mean().unwrap(), dec!(5));
+        let expected = d_div(dec!(32), dec!(7), "test")
+            .and_then(|v| d_sqrt(v, "test"))
+            .unwrap();
+        assert_eq!(values.std_dev().unwrap(), expected);
+    }
+
+    #[test]
+    fn test_decimal_stats_saturated_sample_reports_overflow_instead_of_aborting() {
+        // `iter().sum()` aborted here with `Addition overflowed`, and the
+        // squaring in `std_dev` with `Pow overflowed`. Both are a
+        // `DecimalError` the caller can read now.
+        let values = vec![Decimal::MAX, Decimal::MAX];
+        assert!(values.mean().is_err());
+        assert!(values.std_dev().is_err());
+    }
+
+    #[test]
+    fn test_decimal_stats_std_dev_reports_a_deviation_that_overflows() {
+        // The mean is finite but a centred deviation is not.
+        let values = vec![Decimal::MAX, Decimal::MIN, Decimal::MAX, Decimal::MIN];
+        assert!(values.std_dev().is_err());
+    }
+}
+
+#[cfg(test)]
 mod tests_random_generation {
     use super::*;
     use approx::assert_relative_eq;
@@ -733,7 +817,8 @@ mod tests_random_generation {
     #[test]
     fn test_normal_distribution_transformation() {
         let mut t_rng = rand::rng();
-        let normal = Normal::new(-1.0, 0.5).unwrap(); // Deliberately using a distribution with negative mean
+        // Deliberately a distribution with a negative mean.
+        let normal = rand_distr::Normal::new(-1.0, 0.5).unwrap();
 
         // Count occurrences of values after transformation
         let mut value_counts: HashMap<i32, usize> = HashMap::new();

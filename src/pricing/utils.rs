@@ -605,8 +605,8 @@ mod tests_simulate_returns {
         assert_eq!(returns.len(), length);
 
         // Check that the mean and standard deviation are reasonably close to expected values
-        let simulated_mean = returns.clone().mean();
-        let simulated_std_dev = returns.std_dev();
+        let simulated_mean = returns.clone().mean().unwrap();
+        let simulated_std_dev = returns.std_dev().unwrap();
 
         assert_decimal_eq!(simulated_mean, mean * time_step, dec!(0.01));
         assert_decimal_eq!(
@@ -649,7 +649,7 @@ mod tests_simulate_returns_bis {
             Decimal::from_f64(1.0 / 252.0).unwrap(),
         )
         .unwrap();
-        let mean = returns.mean();
+        let mean = returns.mean().unwrap();
         assert!(mean.abs() < dec!(0.01));
     }
 

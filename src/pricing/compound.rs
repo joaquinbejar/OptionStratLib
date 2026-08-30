@@ -116,9 +116,9 @@ fn drezner_bivariate_normal(a: f64, b: f64, rho: f64) -> f64 {
 
         for i in 0..5 {
             let sn = (asr * (1.0 - x[i]) / 2.0).sin();
-            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp();
+            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             let sn = (asr * (1.0 + x[i]) / 2.0).sin();
-            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp();
+            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         }
         bvn *= asr / (4.0 * PI);
         bvn += standard_normal_cdf(-h) * standard_normal_cdf(-k);
@@ -149,7 +149,7 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
 
         if asr > -100.0 {
             bvn = a
-                * asr.exp()
+                * asr.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                 * (1.0 - c * (bs - ass) * (1.0 - d * bs / 5.0) / 3.0 + c * d * ass * ass / 5.0);
         } else {
             bvn = 0.0;
@@ -157,7 +157,7 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
 
         if -hk < 100.0 {
             let b = ass.sqrt();
-            bvn -= (-hk / 2.0).exp()
+            bvn -= (-hk / 2.0).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                 * (2.0 * PI).sqrt()
                 * standard_normal_cdf(-h / b)
                 * b
@@ -172,8 +172,8 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
             if asr_tmp > -100.0 {
                 bvn += a
                     * w[i]
-                    * asr_tmp.exp()
-                    * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp()
+                    * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+                    * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         / (1.0 + (1.0 - rs).sqrt())
                         - (1.0 + c * rs * (1.0 + d * rs)));
             }
@@ -183,8 +183,8 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
             if asr_tmp > -100.0 {
                 bvn += a
                     * w[i]
-                    * asr_tmp.exp()
-                    * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp()
+                    * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+                    * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         / (1.0 + (1.0 - rs).sqrt())
                         - (1.0 + c * rs * (1.0 + d * rs)));
             }
