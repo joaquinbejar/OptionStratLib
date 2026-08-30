@@ -5,7 +5,7 @@ use crate::error::{
     GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
 };
 use crate::greeks::Greeks;
-use crate::model::decimal::d_sub;
+use crate::model::decimal::{d_sub, finite_decimal};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
@@ -30,6 +30,30 @@ use std::collections::{HashMap, HashSet};
 use std::num::NonZeroUsize;
 use tracing::{error, trace};
 use utoipa::ToSchema;
+
+/// Projects a quantity-scaled `f64` payoff back onto `Decimal`, reporting the
+/// rejection instead of substituting zero.
+///
+/// The three payoff entry points below (`payoff`, `payoff_at_price`,
+/// `intrinsic_value`) evaluate `OptionType::payoff` in `f64` and scale it by
+/// the position quantity. Both factors can be as large as `Positive::MAX`
+/// (`≈ 7.92e28`), so the product routinely leaves the `Decimal` range — and a
+/// deep in-the-money call on an underlying at `Positive::MAX` leaves it even
+/// at quantity one, because the `f64` nearest to `Decimal::MAX` rounds above
+/// it. Those cases used to come back as `Ok(Decimal::ZERO)`: a worthless
+/// payoff for an option that is worth more than the type can express.
+///
+/// The returned error is [`OptionsError::PayoffError`], carrying the entry
+/// point and the offending value.
+#[cold]
+#[inline(never)]
+fn payoff_out_of_range(context: &'static str, value: f64) -> OptionsError {
+    OptionsError::PayoffError {
+        reason: format!(
+            "{context}: payoff {value} is not representable as a Decimal (non-finite or out of range)"
+        ),
+    }
+}
 
 /// Result type for binomial tree pricing models, containing:
 /// - The option price
@@ -491,10 +515,10 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
-    /// back to `Decimal::default()`), but the `Result` signature is retained
-    /// for forward-compatibility with exotic payoff kernels that may surface
-    /// `OptionsError` variants.
+    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled payoff is
+    /// not representable as a `Decimal` (non-finite, or beyond the `Decimal`
+    /// range). It previously returned `Ok(Decimal::ZERO)` for those inputs,
+    /// which reported a deep in-the-money position as worthless.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
@@ -506,7 +530,7 @@ impl Options {
             spot_max: None,
         };
         let payoff = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(payoff).unwrap_or_default())
+        finite_decimal(payoff).ok_or_else(|| payoff_out_of_range("Options::payoff", payoff))
     }
 
     /// Calculates the financial payoff value of the option at a specific underlying price.
@@ -526,10 +550,10 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
-    /// back to `Decimal::default()`), but the `Result` signature is retained
-    /// for forward-compatibility with exotic payoff kernels that may surface
-    /// `OptionsError` variants.
+    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled payoff at
+    /// `price` is not representable as a `Decimal` (non-finite, or beyond the
+    /// `Decimal` range). It previously returned `Ok(Decimal::ZERO)` for those
+    /// inputs, which reported a deep in-the-money position as worthless.
     pub fn payoff_at_price(&self, price: &Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: *price,
@@ -541,7 +565,7 @@ impl Options {
             spot_max: None,
         };
         let price = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(price).unwrap_or_default())
+        finite_decimal(price).ok_or_else(|| payoff_out_of_range("Options::payoff_at_price", price))
     }
 
     /// Calculates the intrinsic value of the option.
@@ -560,10 +584,10 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Currently infallible in practice (the `f64` → `Decimal` conversion falls
-    /// back to `Decimal::default()`), but the `Result` signature is retained
-    /// for forward-compatibility with exotic payoff kernels that may surface
-    /// `OptionsError` variants.
+    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled intrinsic
+    /// value is not representable as a `Decimal` (non-finite, or beyond the
+    /// `Decimal` range). It previously returned `Ok(Decimal::ZERO)` for those
+    /// inputs, which reported a deep in-the-money position as worthless.
     pub fn intrinsic_value(&self, underlying_price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
@@ -575,7 +599,7 @@ impl Options {
             spot_max: None,
         };
         let iv = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        Ok(Decimal::from_f64(iv).unwrap_or_default())
+        finite_decimal(iv).ok_or_else(|| payoff_out_of_range("Options::intrinsic_value", iv))
     }
 
     /// Determines whether an option is "in-the-money" based on its current price relative to strike price.
@@ -1558,6 +1582,57 @@ mod tests_options_payoffs {
         );
         let put_payoff_otm = put_option_otm.payoff().unwrap();
         assert_eq!(put_payoff_otm, Decimal::ZERO); // -max(95 - 100, 0) = 0
+    }
+
+    /// The three payoff entry points reported `Ok(0)` for a payoff too large
+    /// to represent, which is a deep in-the-money position priced at nothing.
+    #[test]
+    fn test_payoff_out_of_range_reports_an_error_instead_of_zero() {
+        let mut option = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(95.0),
+        );
+        option.strike_price = Positive::ZERO;
+        option.underlying_price = Positive::MAX;
+        option.quantity = Positive::ONE;
+
+        // `Positive::MAX` is representable, but the nearest `f64` to it
+        // rounds above `Decimal::MAX`, so the round trip fails at quantity
+        // one — no extreme quantity is needed.
+        assert!(matches!(
+            option.payoff(),
+            Err(OptionsError::PayoffError { .. })
+        ));
+        assert!(matches!(
+            option.payoff_at_price(&Positive::MAX),
+            Err(OptionsError::PayoffError { .. })
+        ));
+        assert!(matches!(
+            option.intrinsic_value(Positive::MAX),
+            Err(OptionsError::PayoffError { .. })
+        ));
+    }
+
+    /// A payoff that is genuinely zero still comes back as `Ok(0)`: the fix
+    /// distinguishes "worth nothing" from "cannot be represented".
+    #[test]
+    fn test_payoff_out_of_the_money_still_returns_zero() {
+        let mut option =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(95.0));
+        option.strike_price = Positive::ZERO;
+        option.underlying_price = Positive::MAX;
+        option.quantity = Positive::ONE;
+
+        assert_eq!(option.payoff().unwrap(), Decimal::ZERO);
+        assert_eq!(
+            option.payoff_at_price(&Positive::MAX).unwrap(),
+            Decimal::ZERO
+        );
+        assert_eq!(
+            option.intrinsic_value(Positive::MAX).unwrap(),
+            Decimal::ZERO
+        );
     }
 }
 
