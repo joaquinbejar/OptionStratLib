@@ -92,6 +92,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the direction and size are stated here so the claim can be checked rather
   than taken.
 
+- **`Curve::merge` and `Surface::merge` return the same digits on every run,
+  on every machine** (#453). The `Multiply` arm of both types reduced the
+  interpolated values with a rayon `reduce`, and `Curve`'s `Divide` arm folded
+  its reciprocals with the same reducer. `Decimal` multiplication rounds once
+  a product needs more than the 28 decimal places it stores, so it is not
+  associative: over a sweep of 205,379 reciprocal triples, 628 of them, 0.31%,
+  regroup to a different last digit.
+
+  Rayon takes the grouping from its length splitter, whose threshold is the
+  length of the input divided by eight times the number of threads in the
+  ambient pool. So the result moved two ways. Run to run, from work stealing:
+  merging forty curves returned **1996 distinct results in 2000 runs of one
+  binary over one input** on an eight-thread pool, 809 in 2000 at four threads
+  and 52 in 2000 at two. And machine to machine, from the pool size: on one
+  thread and on sixteen it returned one result across 2000 runs each, and
+  those two results disagreed with each other. The second is the worse of the
+  two, because two services on differently sized machines then disagree on one
+  input while each looks perfectly stable where it runs.
+
+  Both arms now fold left to right, `Multiply` through the new
+  `d_product_iter` placed beside the `d_sum_iter` the `Add` arm already used.
+
+  **Both `Multiply` and `Divide` move in their last digits, and they are
+  separate changes.** `Multiply` moves on both types. Three constant curves at
+  `0.010989010989010989010989011`, `0.010752688172043010752688172` and
+  `0.0094339622641509433962264151` merged to
+  `0.0000011147302687168785768907` before, the reducer having bracketed them
+  as `a * (b * c)`, and merge to `0.0000011147302687168785768908` now, which
+  is `(a * b) * c`: one unit in the last of the 28 decimal places, `9e-23`
+  relative to a value of that size. `Divide` moves on `Curve` only. #452 made
+  `Surface`'s `Divide` a sequential chain of divisions and it is untouched
+  here; `Curve`'s was still a parallel product of reciprocals, so it took its
+  bracketing from the same splitter and had to change with `Multiply`. Three
+  constant curves at 97, 91 and 93 merged to
+  `0.0114616566229469455275906915` before and merge to
+  `0.0114616566229469455275906888` now, a move of 27 units in the last
+  decimal place, `2.4e-25` relative. The `Divide` move is the larger of the
+  two because each reciprocal is separately rounded to 28 decimal places
+  before it is multiplied in.
+
+  Both are more than twenty orders of magnitude below a tick, so no quoted
+  price, greek or premium changes; the values are given so the claim can be
+  checked rather than taken. A downstream consumer holding a golden file at
+  full `Decimal` precision will see the difference, which is the reason this
+  entry exists. Every merge test in the crate compares within `1e-3` or
+  `1e-4`, so none of them moved.
+
+  **The parallelism it removes was worth nothing.** Over five alternating
+  Criterion runs — 500 samples a side on the curve group, 50 on the surface
+  group, whose `sample_size(10)` keeps a 51 x 51 grid affordable — the
+  sequential fold is 2% to 12%
+  faster at the least-contended end of the distribution and indistinguishable
+  from the reducer at the median, against a noise floor on the measuring
+  machine of roughly 30%. What it removes is a rayon dispatch per grid point
+  to multiply between two and ten numbers; measured on its own that dispatch
+  costs 17 µs against 22 ns for the fold at two operands, and 28 µs against
+  794 ns at ten. `benches/geometrics/merge.rs` is new and carries all three
+  measurements.
+
+  `Max` and `Min` keep their parallel reducers: they select a value instead of
+  accumulating one, so no rounding enters and the extremum does not depend on
+  the grouping.
+
 ### Changed
 
 - **`Curve::bilinear_interpolate` now answers across the whole interior

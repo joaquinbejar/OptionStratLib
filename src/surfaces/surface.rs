@@ -30,7 +30,7 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
+use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sub, d_sum_iter};
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
@@ -1649,6 +1649,34 @@ impl MetricsExtractor for Surface {
 impl Arithmetic<Surface> for Surface {
     type Error = SurfaceError;
 
+    /// Merges a collection of surfaces into one, resampled onto a 51 x 51
+    /// grid over the intersection of their ranges.
+    ///
+    /// Each cell of the grid interpolates every operand and combines the
+    /// heights with `operation`. An empty slice is an error; a single surface
+    /// is returned as a clone.
+    ///
+    /// # Determinism
+    ///
+    /// The same operands in the same order give the same result, digit for
+    /// digit. Within a cell the heights are accumulated in the order they
+    /// were passed in, never in an order chosen by the thread pool: `Decimal`
+    /// multiplication rounds once a product needs more than 28 decimal
+    /// digits and is therefore not associative, so a parallel reducer would
+    /// take its bracketing from rayon's chunking and could return different
+    /// last digits on consecutive runs of one binary over one input.
+    ///
+    /// `Max` and `Min` still reduce in parallel; they select a height rather
+    /// than accumulating one, so no rounding enters, and the same caveat
+    /// about ties between equal `Decimal` values at different scales applies
+    /// as it does to `Curve::merge`.
+    ///
+    /// # Errors
+    ///
+    /// - [`SurfaceError::OperationError`] when no surfaces are supplied or
+    ///   their ranges do not intersect.
+    /// - The interpolation error of the operand that failed, and any
+    ///   checked-arithmetic failure raised while combining the heights.
     fn merge(surfaces: &[&Surface], operation: MergeOperation) -> Result<Surface, Self::Error> {
         if surfaces.is_empty() {
             return Err(SurfaceError::invalid_parameters(
@@ -1733,10 +1761,8 @@ impl Arithmetic<Surface> for Surface {
                                 .map_err(construction_err)?;
                             d_sub(first, remaining_sum, op).map_err(construction_err)?
                         }
-                        MergeOperation::Multiply => z_values.par_iter().copied().map(Ok).reduce(
-                            || Ok(Decimal::ONE),
-                            |a, b| d_mul(a?, b?, op).map_err(construction_err),
-                        )?,
+                        MergeOperation::Multiply => d_product_iter(z_values.iter().copied(), op)
+                            .map_err(construction_err)?,
                         MergeOperation::Divide => {
                             // Division is neither associative nor commutative,
                             // so the divisors are folded in sequence from the
@@ -3389,6 +3415,67 @@ mod tests_surface_arithmetic {
             "expected 8 / 2 / 2 = 2, got {}",
             mid_point.z
         );
+    }
+
+    /// Number of times a determinism test repeats the same merge.
+    ///
+    /// `Surface::merge` resamples a 51 x 51 grid and runs the fold once per
+    /// cell, so one call already exercises the fold 2601 times against
+    /// `Curve::merge`'s 101. That buys the same confidence from far fewer
+    /// repeats, which matters because each call is three orders of magnitude
+    /// dearer than a curve merge; see `DETERMINISM_REPEATS` in
+    /// `curves::curve` for how the rate this is sized against was measured.
+    const DETERMINISM_REPEATS: usize = 24;
+
+    /// The heights of a surface as `(mantissa, scale)` pairs.
+    ///
+    /// `Decimal` compares equal across scales, so `dec!(2.0) == dec!(2.00)`
+    /// and a plain equality check would not notice a fold that moved the
+    /// scale. The mantissa and the scale together are the stored value.
+    fn height_fingerprint(surface: &Surface) -> Vec<(i128, u32)> {
+        surface
+            .points
+            .iter()
+            .map(|point| (point.z.mantissa(), point.z.scale()))
+            .collect()
+    }
+
+    /// Merging three surfaces under `Multiply` gives the same digits on every
+    /// run, and gives the digits of a left-to-right fold.
+    ///
+    /// The three heights are the ones used by the curve test of the same
+    /// name: their triple product overruns the 28 decimal places a
+    /// `Decimal` holds and has to round twice, ending `...768908` grouped
+    /// from the left and `...768907` grouped from the right. The parallel
+    /// reducer this replaces returned the second.
+    #[test]
+    fn test_merge_surfaces_multiply_is_reproducible() {
+        let a = constant_surface(dec!(0.010989010989010989010989011));
+        let b = constant_surface(dec!(0.010752688172043010752688172));
+        let c = constant_surface(dec!(0.0094339622641509433962264151));
+
+        let expected = dec!(0.0000011147302687168785768908);
+        let first = Surface::merge(&[&a, &b, &c], MergeOperation::Multiply).unwrap();
+        for point in first.points.iter() {
+            assert_eq!(
+                (point.z.mantissa(), point.z.scale()),
+                (expected.mantissa(), expected.scale()),
+                "expected the left-to-right product {expected} at ({}, {}), got {}",
+                point.x,
+                point.y,
+                point.z
+            );
+        }
+
+        let reference = height_fingerprint(&first);
+        for run in 1..DETERMINISM_REPEATS {
+            let again = Surface::merge(&[&a, &b, &c], MergeOperation::Multiply).unwrap();
+            assert_eq!(
+                height_fingerprint(&again),
+                reference,
+                "run {run} of {DETERMINISM_REPEATS} produced different digits from the first"
+            );
+        }
     }
 
     /// A divisor that fails the checked division has to surface as an error

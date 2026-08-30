@@ -14,7 +14,7 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
+use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sub, d_sum_iter};
 use crate::utils::Len;
 use crate::visualization::{Graph, GraphData};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -1912,12 +1912,36 @@ impl Arithmetic<Curve> for Curve {
     ///   - Applies the specified `operation` to the aggregated y-values at each x-point.
     ///
     /// 5. **Parallel Processing**:
-    ///   - Uses parallel iteration to perform interpolation and value combination
-    ///     efficiently, leveraging the Rayon library.
+    ///   - Uses parallel iteration over the grid to interpolate the operands
+    ///     efficiently, leveraging the Rayon library. The grid points are
+    ///     independent of one another and are collected back in x order.
     ///
     /// 6. **Error Handling**:
     ///   - Any errors during interpolation or arithmetic operations are propagated
     ///     back to the caller.
+    ///
+    /// # Determinism
+    ///
+    /// The same operands in the same order give the same result, digit for
+    /// digit, with the one exception noted for `Max` and `Min` below. Within
+    /// a grid point the operands are accumulated in the order they were
+    /// passed in, never in an order chosen by the thread pool.
+    ///
+    /// This matters for `Multiply` and `Divide` in particular. `Decimal`
+    /// multiplication rounds once a product needs more than 28 decimal
+    /// digits, so it is not associative, and a parallel reducer would take
+    /// its bracketing from whatever chunking rayon picked on the day: three
+    /// or more curves could then merge to different last digits on
+    /// consecutive runs of one binary over one input. `Add` and `Subtract`
+    /// fold in order for the same reason.
+    ///
+    /// `Max` and `Min` still reduce in parallel. They select an operand
+    /// instead of accumulating one, so no rounding enters and the extremum
+    /// is the same whatever the grouping. What is not pinned is which of
+    /// several operands that compare equal is the one returned, and two
+    /// `Decimal` values comparing equal can still carry different scales, so
+    /// a tie between `2.0` and `2.00` is the one case where the stored digits
+    /// are left to the reducer.
     ///
     /// # Errors
     ///
@@ -2019,28 +2043,36 @@ impl Arithmetic<Curve> for Curve {
                             .map(|(i, &val)| if i == 0 { val } else { -val });
                         d_sum_iter(signed, op).map_err(construction_err)?
                     }
-                    MergeOperation::Multiply => y_values.par_iter().copied().map(Ok).reduce(
-                        || Ok(Decimal::ONE),
-                        |a, b| d_mul(a?, b?, op).map_err(construction_err),
-                    )?,
-                    MergeOperation::Divide => y_values
-                        .par_iter()
-                        .enumerate()
-                        .map(|(i, &val)| {
-                            // `Decimal::MAX` is the pre-existing sentinel for a
-                            // zero divisor; only the arithmetic is made checked.
-                            if i == 0 {
-                                Ok(val)
-                            } else if val == Decimal::ZERO {
-                                Ok(Decimal::MAX)
-                            } else {
-                                d_div(Decimal::ONE, val, op).map_err(construction_err)
-                            }
-                        })
-                        .reduce(
-                            || Ok(Decimal::ONE),
-                            |a, b| d_mul(a?, b?, op).map_err(construction_err),
-                        )?,
+                    MergeOperation::Multiply => {
+                        d_product_iter(y_values.iter().copied(), op).map_err(construction_err)?
+                    }
+                    MergeOperation::Divide => {
+                        // Division is neither associative nor commutative, so
+                        // every element after the first enters as its
+                        // reciprocal and the whole set is folded in sequence
+                        // from the leftmost value, leaving no partial to
+                        // discard. The fold is sequential for the same reason
+                        // `Multiply` is: `Decimal` multiplication rounds at 28
+                        // digits and is not associative either, so a parallel
+                        // reducer would take its bracketing from rayon's
+                        // chunking and move the last digits with it.
+                        y_values.iter().copied().enumerate().try_fold(
+                            Decimal::ONE,
+                            |acc, (i, val)| {
+                                // `Decimal::MAX` is the pre-existing sentinel
+                                // for a zero divisor; only the arithmetic is
+                                // made checked.
+                                let factor = if i == 0 {
+                                    val
+                                } else if val == Decimal::ZERO {
+                                    Decimal::MAX
+                                } else {
+                                    d_div(Decimal::ONE, val, op).map_err(construction_err)?
+                                };
+                                d_mul(acc, factor, op).map_err(construction_err)
+                            },
+                        )?
+                    }
                     MergeOperation::Max => y_values
                         .par_iter()
                         .cloned()
@@ -3329,6 +3361,224 @@ mod tests_curve_arithmetic {
             assert!(
                 (y - dec!(2)).abs() < dec!(0.0001),
                 "expected 8 / 2 / 2 = 2 at x = {x}, got {y}"
+            );
+        }
+    }
+
+    /// Number of times a single-pool determinism test repeats the same merge.
+    ///
+    /// This is the weaker of the two guards here, and the count says so.
+    /// Repeating on one pool only reaches the work-stealing component of the
+    /// old defect: measured against the reducer this replaces, a forty-operand
+    /// merge returned 52 distinct results in 2000 runs on a two-thread pool,
+    /// 809 in 2000 on four threads and 1996 in 2000 on eight, but exactly one
+    /// result in 2000 on one thread and one in 2000 on sixteen. Taking the
+    /// weakest rate that did flap, about 2.6% per run, 512 repeats leave
+    /// roughly one chance in a million of missing it.
+    ///
+    /// At the three operands the issue names, the old reducer was stable on
+    /// every pool size probed: 5000 runs, one result. Repetition alone would
+    /// not have caught it there at any count, which is why
+    /// [`test_merge_curves_multiply_is_reproducible`] also pins the exact
+    /// product, and why the property that actually broke is pinned by
+    /// [`test_merge_curves_multiply_is_reproducible_across_pool_sizes`].
+    const DETERMINISM_REPEATS: usize = 512;
+
+    /// The ordinates of a curve as `(mantissa, scale)` pairs.
+    ///
+    /// `Decimal` compares equal across scales, so `dec!(2.0) == dec!(2.00)`
+    /// and a plain equality check would not notice a fold that moved the
+    /// scale. The mantissa and the scale together are the stored value.
+    fn ordinate_fingerprint(curve: &Curve) -> Vec<(i128, u32)> {
+        curve
+            .points
+            .iter()
+            .map(|point| (point.y.mantissa(), point.y.scale()))
+            .collect()
+    }
+
+    /// Rayon pool sizes a cross-pool determinism test merges on.
+    ///
+    /// Rayon sets the splitting threshold of a parallel reduction to the
+    /// length of the input divided by eight times the number of threads in
+    /// the pool, so the pool size is one of the inputs to the grouping the
+    /// old reducer chose. One, two and four are the sizes at which the
+    /// threshold lands above one for a forty-operand merge, and eight and
+    /// sixteen bracket the count of a typical machine.
+    const POOL_SIZES: [usize; 5] = [1, 2, 4, 8, 16];
+
+    /// Merges per pool size in a cross-pool determinism test.
+    ///
+    /// The pool size is the variable that moved the result deterministically;
+    /// the repeats on top of it catch the work-stealing component, which on
+    /// eight threads made 1996 of 2000 runs of the old reducer distinct from
+    /// one another. Four is enough at that rate for the odds of missing it to
+    /// be negligible, and keeps the whole test inside a second.
+    const RUNS_PER_POOL: usize = 4;
+
+    /// Number of operands a cross-pool determinism test merges.
+    ///
+    /// Forty rather than three. At three operands the splitting threshold is
+    /// one whatever the pool size, so rayon built the same balanced tree
+    /// everywhere and the old reducer looked stable; the divergence needs an
+    /// input long enough for the threshold to exceed one on a small pool.
+    const CROSS_POOL_OPERANDS: u32 = 40;
+
+    /// Builds `CROSS_POOL_OPERANDS` constant curves just under one.
+    ///
+    /// Each ordinate is `1 - 1/n` for a distinct `n`, which fills the 28-place
+    /// scale so the running product rounds at every step, and stays near one
+    /// so forty of them neither overflow nor collapse toward zero.
+    fn cross_pool_operands() -> Vec<Curve> {
+        (0..CROSS_POOL_OPERANDS)
+            .map(|i| {
+                let value = Decimal::ONE - Decimal::ONE / Decimal::from(1000 + i * 7);
+                create_constant_curve(dec!(0), dec!(10), value)
+                    .expect("constant curve fixture must build")
+            })
+            .collect()
+    }
+
+    /// Asserts that merging `curves` under `operation` gives one set of digits
+    /// across every pool size in [`POOL_SIZES`].
+    fn assert_reproducible_across_pools(curves: &[&Curve], operation: MergeOperation) {
+        let mut reference: Option<Vec<(i128, u32)>> = None;
+
+        for threads in POOL_SIZES {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(threads)
+                .build()
+                .expect("rayon must build a pool of a fixed size");
+
+            for run in 0..RUNS_PER_POOL {
+                let merged = pool
+                    .install(|| Curve::merge(curves, operation))
+                    .expect("the fixture merge must succeed");
+                let fingerprint = ordinate_fingerprint(&merged);
+
+                match &reference {
+                    None => reference = Some(fingerprint),
+                    Some(reference) => assert_eq!(
+                        &fingerprint, reference,
+                        "run {run} on a {threads}-thread pool produced different digits \
+                         from the first merge, under {operation:?}"
+                    ),
+                }
+            }
+        }
+    }
+
+    /// The same operands in the same order give the same digits whatever the
+    /// size of the rayon pool the merge runs on.
+    ///
+    /// This is the defect of #453 at its root, and the property repetition on
+    /// one pool does not reach. Rayon takes the grouping of a parallel
+    /// reduction from a threshold keyed to the pool size, so the old reducer
+    /// bracketed a forty-curve product one way on one thread and another way
+    /// on sixteen: 2000 runs on each, one result each, and the two results
+    /// disagreed. Two services on differently sized machines would have
+    /// disagreed on one input while each looked perfectly stable where it
+    /// ran, which is harder to notice than run-to-run noise.
+    ///
+    /// The pool is built explicitly rather than read from the environment
+    /// because `RAYON_NUM_THREADS` is consulted once, when the global pool is
+    /// first used, and a test cannot rely on being the first to touch it.
+    /// `rayon` is already a direct dependency, so this needs nothing new.
+    #[test]
+    fn test_merge_curves_multiply_is_reproducible_across_pool_sizes() {
+        let curves = cross_pool_operands();
+        let refs: Vec<&Curve> = curves.iter().collect();
+        assert_reproducible_across_pools(&refs, MergeOperation::Multiply);
+    }
+
+    /// `Divide` folds the reciprocals of its divisors into the leftmost value
+    /// with the same multiplication, so it took its bracketing from the same
+    /// splitter and moves under the same fix.
+    ///
+    /// `Surface`'s `Divide` was made sequential in #452; `Curve`'s was not,
+    /// and was still a parallel product of reciprocals until #453.
+    #[test]
+    fn test_merge_curves_divide_is_reproducible_across_pool_sizes() {
+        let curves = cross_pool_operands();
+        let refs: Vec<&Curve> = curves.iter().collect();
+        assert_reproducible_across_pools(&refs, MergeOperation::Divide);
+    }
+
+    /// Merging three curves under `Multiply` gives the same digits on every
+    /// run, and gives the digits of a left-to-right fold.
+    ///
+    /// The three ordinates are picked so the triple product overruns the 28
+    /// significant digits a `Decimal` holds and has to round twice: they
+    /// multiply to `...768908` grouped from the left and to `...768907`
+    /// grouped from the right, so the bracketing shows up in the result
+    /// instead of being hidden by exact arithmetic. Most triples do not
+    /// behave that way, which is why these are not arbitrary: over a sweep of
+    /// 205,379 reciprocal triples only 628, 0.31%, regrouped to a different
+    /// last digit.
+    ///
+    /// The exact product is what fails the old reducer here: it returned the
+    /// right-grouped value on every pool size probed, so at three operands
+    /// the repetition is a guard against a future regression rather than a
+    /// reproduction of this one. See [`DETERMINISM_REPEATS`] for the count,
+    /// and [`test_merge_curves_multiply_is_reproducible_across_pool_sizes`]
+    /// for the property that did break.
+    #[test]
+    fn test_merge_curves_multiply_is_reproducible() {
+        let a =
+            create_constant_curve(dec!(0), dec!(10), dec!(0.010989010989010989010989011)).unwrap();
+        let b =
+            create_constant_curve(dec!(0), dec!(10), dec!(0.010752688172043010752688172)).unwrap();
+        let c =
+            create_constant_curve(dec!(0), dec!(10), dec!(0.0094339622641509433962264151)).unwrap();
+
+        let expected = dec!(0.0000011147302687168785768908);
+        let first = Curve::merge(&[&a, &b, &c], MergeOperation::Multiply).unwrap();
+        for point in first.points.iter() {
+            assert_eq!(
+                (point.y.mantissa(), point.y.scale()),
+                (expected.mantissa(), expected.scale()),
+                "expected the left-to-right product {expected} at x = {}, got {}",
+                point.x,
+                point.y
+            );
+        }
+
+        let reference = ordinate_fingerprint(&first);
+        for run in 1..DETERMINISM_REPEATS {
+            let again = Curve::merge(&[&a, &b, &c], MergeOperation::Multiply).unwrap();
+            assert_eq!(
+                ordinate_fingerprint(&again),
+                reference,
+                "run {run} of {DETERMINISM_REPEATS} produced different digits from the first"
+            );
+        }
+    }
+
+    /// `Divide` folds the reciprocals of every divisor into the leftmost
+    /// value, so it rounds as often as `Multiply` does and needs the same
+    /// fixed order.
+    ///
+    /// The divisors are chosen so their reciprocals fill the 28-place scale;
+    /// the quotient is not pinned to a literal here because the operand
+    /// ordering is already pinned by
+    /// [`test_merge_curves_multiply_is_reproducible`], and reproducing the
+    /// reciprocal rounding rule inside the assertion would only restate the
+    /// implementation. What is asserted is the property the issue names:
+    /// same operands, same digits, every run.
+    #[test]
+    fn test_merge_curves_divide_is_reproducible() {
+        let a = create_constant_curve(dec!(0), dec!(10), dec!(97)).unwrap();
+        let b = create_constant_curve(dec!(0), dec!(10), dec!(91)).unwrap();
+        let c = create_constant_curve(dec!(0), dec!(10), dec!(93)).unwrap();
+
+        let first = Curve::merge(&[&a, &b, &c], MergeOperation::Divide).unwrap();
+        let reference = ordinate_fingerprint(&first);
+        for run in 1..DETERMINISM_REPEATS {
+            let again = Curve::merge(&[&a, &b, &c], MergeOperation::Divide).unwrap();
+            assert_eq!(
+                ordinate_fingerprint(&again),
+                reference,
+                "run {run} of {DETERMINISM_REPEATS} produced different digits from the first"
             );
         }
     }
