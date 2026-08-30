@@ -33,7 +33,7 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
@@ -630,10 +630,10 @@ impl Strategies for BullCallSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = price_gap(
-            self.short_call.option.strike_price,
-            self.break_even_points[0],
-        );
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("BullCallSpread::get_profit_area: no break-even points")
+        })?;
+        let base = price_gap(self.short_call.option.strike_price, *break_even);
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -847,7 +847,11 @@ impl Profit for BullCallSpread {
 
 impl ProbabilityAnalysis for BullCallSpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BullCallSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -878,7 +882,11 @@ impl ProbabilityAnalysis for BullCallSpread {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BullCallSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;

@@ -24,19 +24,20 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::SpreadStrategy;
+use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_div, d_mul, d_sub, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -352,10 +353,18 @@ impl BreakEvenable for BullPutSpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // The net cost per contract, which on this credit spread is negative
+        // and moves the break-even below the short strike. `lower_break_even`
+        // takes the distance down from the strike and floors it at zero, where
+        // a credit above the strike leaves no attainable losing price.
+        let per_contract = d_div(
+            self.get_net_cost()?,
+            self.short_put.option.quantity.to_dec(),
+            "BullPutSpread::update_break_even_points",
+        )?;
         self.break_even_points.push(
-            (self.short_put.option.strike_price
-                + self.get_net_cost()? / self.short_put.option.quantity)
-                .round_to(2),
+            lower_break_even(self.short_put.option.strike_price, -per_contract)
+                .checked_round_to(2)?,
         );
 
         Ok(())
@@ -623,7 +632,8 @@ impl Strategies for BullPutSpread {
         }
         let qty = self.short_put.option.quantity.to_dec();
         let net_prem = self.get_net_premium_received()?.to_dec();
-        let max_loss_dec = (width * qty) - net_prem;
+        let exposure = d_mul(width, qty, "BullPutSpread::get_max_loss")?;
+        let max_loss_dec = d_sub(exposure, net_prem, "BullPutSpread::get_max_loss")?;
         Positive::new_decimal(max_loss_dec).map_err(|_| {
             StrategyError::ProfitLossError(ProfitLossErrorKind::MaxLossError {
                 reason: "Max loss is negative".to_string(),
@@ -632,11 +642,13 @@ impl Strategies for BullPutSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = if self.short_put.option.strike_price > self.break_even_points[0] {
-            self.short_put.option.strike_price - self.break_even_points[0]
-        } else {
-            self.break_even_points[0] - self.short_put.option.strike_price
-        };
+        let break_even = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("BullPutSpread::get_profit_area: no break-even points")
+        })?;
+        // The distance between the strike and the break-even, in whichever
+        // order the two fall.
+        let strike = self.short_put.option.strike_price;
+        let base = price_gap(strike.max(break_even), strike.min(break_even));
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -946,7 +958,11 @@ impl Profit for BullPutSpread {
 
 impl ProbabilityAnalysis for BullPutSpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BullPutSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_put.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -973,7 +989,11 @@ impl ProbabilityAnalysis for BullPutSpread {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BullPutSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_put.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;

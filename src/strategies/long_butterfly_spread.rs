@@ -8,19 +8,20 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
+use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
-        strategies::{ProfitLossErrorKind, StrategyError},
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
+        strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sub, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -378,23 +379,41 @@ impl BreakEvenable for LongButterflySpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let left_net_value = self.calculate_profit_at(&self.long_call_low.option.strike_price)?
-            / self.long_call_low.option.quantity;
+        // A wing contributes a break-even only where the payoff at that wing
+        // is a loss the profitable region can climb out of; a wing already in
+        // profit is never crossed. A leg with no contracts has no
+        // per-contract value at all, which is reported rather than divided.
+        let left_net_value = d_div(
+            self.calculate_profit_at(&self.long_call_low.option.strike_price)?,
+            self.long_call_low.option.quantity.to_dec(),
+            "LongButterflySpread::update_break_even_points",
+        )?;
 
-        let right_net_value = self.calculate_profit_at(&self.long_call_high.option.strike_price)?
-            / self.long_call_high.option.quantity;
+        let right_net_value = d_div(
+            self.calculate_profit_at(&self.long_call_high.option.strike_price)?,
+            self.long_call_high.option.quantity.to_dec(),
+            "LongButterflySpread::update_break_even_points",
+        )?;
 
         if left_net_value <= Decimal::ZERO {
-            let candidate = self.long_call_low.option.strike_price.to_dec() - left_net_value;
+            let candidate = d_sub(
+                self.long_call_low.option.strike_price.to_dec(),
+                left_net_value,
+                "LongButterflySpread::update_break_even_points",
+            )?;
             if let Ok(be) = Positive::new_decimal(candidate) {
-                self.break_even_points.push(be.round_to(2));
+                self.break_even_points.push(be.checked_round_to(2)?);
             }
         }
 
         if right_net_value <= Decimal::ZERO {
-            let candidate = self.long_call_high.option.strike_price.to_dec() + right_net_value;
+            let candidate = d_add(
+                self.long_call_high.option.strike_price.to_dec(),
+                right_net_value,
+                "LongButterflySpread::update_break_even_points",
+            )?;
             if let Ok(be) = Positive::new_decimal(candidate) {
-                self.break_even_points.push(be.round_to(2));
+                self.break_even_points.push(be.checked_round_to(2)?);
             }
         }
 
@@ -785,23 +804,31 @@ impl Strategies for LongButterflySpread {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
         let break_even_points = self.get_break_even_points()?;
 
-        let base = if break_even_points.len() == 2 {
-            break_even_points[1] - break_even_points[0]
-        } else {
-            let break_even_point = break_even_points[0];
-
-            if break_even_point < self.short_call.option.strike_price {
-                Positive::new_decimal(
-                    self.calculate_profit_at(&self.long_call_high.option.strike_price)?
-                        .abs(),
-                )
-                .unwrap_or(Positive::ZERO)
-            } else {
-                Positive::new_decimal(
-                    self.calculate_profit_at(&self.long_call_low.option.strike_price)?
-                        .abs(),
-                )
-                .unwrap_or(Positive::ZERO)
+        // The width of the profitable region between the two break-even
+        // points; where a wing never crosses zero and only one point exists,
+        // the loss at the far wing. A butterfly bought for more than
+        // its wings are worth has no break-even at all, and no base with it.
+        let base = match break_even_points.as_slice() {
+            [lower, upper] => price_gap(*upper, *lower),
+            [] => {
+                return Err(StrategyError::BreakEvenError(
+                    BreakEvenErrorKind::NoBreakEvenPoints,
+                ));
+            }
+            [break_even_point, ..] => {
+                if *break_even_point < self.short_call.option.strike_price {
+                    Positive::new_decimal(
+                        self.calculate_profit_at(&self.long_call_high.option.strike_price)?
+                            .abs(),
+                    )
+                    .unwrap_or(Positive::ZERO)
+                } else {
+                    Positive::new_decimal(
+                        self.calculate_profit_at(&self.long_call_low.option.strike_price)?
+                            .abs(),
+                    )
+                    .unwrap_or(Positive::ZERO)
+                }
             }
         };
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
@@ -1032,6 +1059,19 @@ impl Profit for LongButterflySpread {
 impl ProbabilityAnalysis for LongButterflySpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        // A long butterfly whose payoff never crosses zero on a wing has
+        // fewer than two break-even points; the ranges below are bounded by
+        // both, so the shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongButterflySpread has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongButterflySpread has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1043,8 +1083,8 @@ impl ProbabilityAnalysis for LongButterflySpread {
         ])?;
 
         let mut profit_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 
@@ -1065,6 +1105,19 @@ impl ProbabilityAnalysis for LongButterflySpread {
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points()?;
+        // A long butterfly whose payoff never crosses zero on a wing has
+        // fewer than two break-even points; the ranges below are bounded by
+        // both, so the shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongButterflySpread has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongButterflySpread has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1084,7 +1137,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         // This represents losses when price is below the lower break-even
         let mut lower_loss_range = ProfitLossRange::new(
             None, // No lower bound (losses extend to zero)
-            Some(break_even_points[0]),
+            Some(lower_break_even_point),
             Positive::ZERO,
         )?;
 
@@ -1101,7 +1154,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         // Upper loss range: from upper break-even point to infinity
         // This represents losses when price is above the upper break-even
         let mut upper_loss_range = ProfitLossRange::new(
-            Some(break_even_points[1]),
+            Some(upper_break_even_point),
             None, // No upper bound (losses extend to infinity)
             Positive::ZERO,
         )?;

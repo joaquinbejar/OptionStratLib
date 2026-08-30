@@ -34,13 +34,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -345,12 +345,17 @@ impl BreakEvenable for BearPutSpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // The debit per contract: a spread with no contracts has none.
+        // `lower_break_even` floors at zero, where a debit above the strike
+        // leaves the position losing at every attainable price.
+        let per_contract = d_div(
+            self.get_net_cost()?,
+            self.long_put.option.quantity.to_dec(),
+            "BearPutSpread::update_break_even_points",
+        )?;
         self.break_even_points.push(
-            lower_break_even(
-                self.long_put.option.strike_price,
-                self.get_net_cost()? / self.long_put.option.quantity,
-            )
-            .round_to(2),
+            lower_break_even(self.long_put.option.strike_price, per_contract)
+                .checked_round_to(2)?,
         );
 
         Ok(())
@@ -619,10 +624,10 @@ impl Strategies for BearPutSpread {
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let high = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let base = price_gap(
-            self.break_even_points[0],
-            self.short_put.option.strike_price,
-        );
+        let break_even = self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("BearPutSpread::get_profit_area: no break-even points")
+        })?;
+        let base = price_gap(*break_even, self.short_put.option.strike_price);
         Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
@@ -835,7 +840,11 @@ impl Profit for BearPutSpread {
 
 impl ProbabilityAnalysis for BearPutSpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BearPutSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_put.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -865,7 +874,11 @@ impl ProbabilityAnalysis for BearPutSpread {
         Ok(vec![profit_range])
     }
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_point = self.get_break_even_points()?[0];
+        let break_even_point = *self.get_break_even_points()?.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "BearPutSpread has no break-even point".to_string(),
+            })
+        })?;
         let option = &self.short_put.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;

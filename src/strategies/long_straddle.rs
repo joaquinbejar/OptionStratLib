@@ -19,7 +19,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::StraddleStrategy;
-use crate::strategies::base::lower_break_even;
+use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
     ExpirationDate, Options,
     chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup},
@@ -27,13 +27,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::StrategyError,
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -365,18 +365,33 @@ impl BreakEvenable for LongStraddle {
 
         let total_cost = self.get_total_cost()?;
 
-        self.break_even_points.push(
-            lower_break_even(
-                self.long_put.option.strike_price,
-                total_cost / self.long_put.option.quantity,
-            )
-            .round_to(2),
-        );
+        // The cost per contract on each leg: a straddle with no contracts has
+        // none. The lower break-even goes through `lower_break_even`, which
+        // floors at zero where a cost above the strike leaves the position
+        // losing at every attainable price; the upper one is a sum of two
+        // non-negative figures, so only its overflow is reportable.
+        let put_cost = d_div(
+            total_cost.to_dec(),
+            self.long_put.option.quantity.to_dec(),
+            "LongStraddle::update_break_even_points",
+        )?;
+        let call_cost = d_div(
+            total_cost.to_dec(),
+            self.long_call.option.quantity.to_dec(),
+            "LongStraddle::update_break_even_points",
+        )?;
 
         self.break_even_points.push(
-            (self.long_call.option.strike_price + (total_cost / self.long_call.option.quantity))
-                .round_to(2),
+            lower_break_even(self.long_put.option.strike_price, put_cost).checked_round_to(2)?,
         );
+
+        let upper = d_add(
+            self.long_call.option.strike_price.to_dec(),
+            call_cost,
+            "LongStraddle::update_break_even_points",
+        )?;
+        self.break_even_points
+            .push(Positive::new_decimal(upper)?.checked_round_to(2)?);
 
         self.break_even_points.sort();
         Ok(())
@@ -623,7 +638,15 @@ impl Strategies for LongStraddle {
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let strike_diff = self.break_even_points[1] - self.break_even_points[0];
+        let lower = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("LongStraddle::get_profit_area: no break-even points")
+        })?;
+        let upper = *self.break_even_points.get(1).ok_or_else(|| {
+            StrategyError::empty_collection(
+                "LongStraddle::get_profit_area: fewer than two break-even points",
+            )
+        })?;
+        let strike_diff = price_gap(upper, lower);
         let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         let result = (1.0 / loss_area) * 10000.0; // Invert the value to get the profit area: the lower, the better
@@ -631,9 +654,22 @@ impl Strategies for LongStraddle {
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let break_even_diff = self.break_even_points[1] - self.break_even_points[0];
+        let lower = *self.break_even_points.first().ok_or_else(|| {
+            StrategyError::empty_collection("LongStraddle::get_profit_ratio: no break-even points")
+        })?;
+        let upper = *self.break_even_points.get(1).ok_or_else(|| {
+            StrategyError::empty_collection(
+                "LongStraddle::get_profit_ratio: fewer than two break-even points",
+            )
+        })?;
+        let break_even_diff = price_gap(upper, lower);
+        // A straddle that cost nothing has no ratio to report: the quotient is
+        // unbounded, and a number stood in for it would read as a real one.
         let result = match self.get_max_loss() {
-            Ok(max_loss) => ((break_even_diff / max_loss) * 100.0).to_f64(),
+            Ok(max_loss) => break_even_diff
+                .checked_div(&max_loss)?
+                .checked_mul_f64(100.0)?
+                .to_f64(),
             Err(_) => ZERO,
         };
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
@@ -827,6 +863,16 @@ impl Profit for LongStraddle {
 impl ProbabilityAnalysis for LongStraddle {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongStraddle has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongStraddle has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -837,7 +883,7 @@ impl ProbabilityAnalysis for LongStraddle {
         ])?;
 
         let mut lower_profit_range =
-            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+            ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -851,7 +897,7 @@ impl ProbabilityAnalysis for LongStraddle {
         )?;
 
         let mut upper_profit_range =
-            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+            ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -868,7 +914,17 @@ impl ProbabilityAnalysis for LongStraddle {
     }
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
-        let break_even_points = &self.get_break_even_points()?;
+        let break_even_points = self.get_break_even_points()?;
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongStraddle has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "LongStraddle has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -879,8 +935,8 @@ impl ProbabilityAnalysis for LongStraddle {
         ])?;
 
         let mut loss_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 

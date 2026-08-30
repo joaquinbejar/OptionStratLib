@@ -15,13 +15,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -371,22 +371,36 @@ impl BreakEvenable for ShortButterflySpread {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
-        let left_net_value = self.calculate_profit_at(&self.short_call_low.option.strike_price)?
-            / self.short_call_low.option.quantity;
+        // A wing contributes a break-even only where the payoff at that wing
+        // is a profit the losing region falls back through; a wing already at
+        // a loss is never crossed. A leg with no contracts has no
+        // per-contract value at all, which is reported rather than divided.
+        let left_net_value = d_div(
+            self.calculate_profit_at(&self.short_call_low.option.strike_price)?,
+            self.short_call_low.option.quantity.to_dec(),
+            "ShortButterflySpread::update_break_even_points",
+        )?;
 
-        let right_net_value = self
-            .calculate_profit_at(&self.short_call_high.option.strike_price)?
-            / self.short_call_high.option.quantity;
+        let right_net_value = d_div(
+            self.calculate_profit_at(&self.short_call_high.option.strike_price)?,
+            self.short_call_high.option.quantity.to_dec(),
+            "ShortButterflySpread::update_break_even_points",
+        )?;
 
         if left_net_value >= Decimal::ZERO {
+            let candidate = d_add(
+                self.short_call_low.option.strike_price.to_dec(),
+                left_net_value,
+                "ShortButterflySpread::update_break_even_points",
+            )?;
             self.break_even_points
-                .push((self.short_call_low.option.strike_price + left_net_value).round_to(2));
+                .push(Positive::new_decimal(candidate)?.checked_round_to(2)?);
         }
 
         if right_net_value >= Decimal::ZERO {
             self.break_even_points.push(
                 lower_break_even(self.short_call_high.option.strike_price, right_net_value)
-                    .round_to(2),
+                    .checked_round_to(2)?,
             );
         }
 
@@ -1004,6 +1018,19 @@ impl ProbabilityAnalysis for ShortButterflySpread {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let mut ranges = Vec::new();
         let break_even_points = self.get_break_even_points()?;
+        // A short butterfly whose payoff never crosses zero on a wing has
+        // fewer than two break-even points; the ranges below are bounded by
+        // both, so the shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortButterflySpread has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortButterflySpread has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1020,7 +1047,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         });
 
         let mut lower_profit_range =
-            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+            ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1033,7 +1060,7 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         ranges.push(lower_profit_range);
 
         let mut upper_profit_range =
-            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+            ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
@@ -1050,6 +1077,19 @@ impl ProbabilityAnalysis for ShortButterflySpread {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        // A short butterfly whose payoff never crosses zero on a wing has
+        // fewer than two break-even points; the ranges below are bounded by
+        // both, so the shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortButterflySpread has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "ShortButterflySpread has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1061,8 +1101,8 @@ impl ProbabilityAnalysis for ShortButterflySpread {
         ])?;
 
         let mut loss_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 

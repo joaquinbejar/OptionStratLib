@@ -16,13 +16,13 @@ use crate::{
     error::{
         GreeksError, OperationErrorKind, PricingError,
         position::{PositionError, PositionValidationErrorKind},
-        probability::ProbabilityError,
+        probability::{ProbabilityError, ProfitLossRangeErrorKind},
         strategies::{ProfitLossErrorKind, StrategyError},
     },
     greeks::Greeks,
     model::{
         ProfitLossRange,
-        decimal::d_sum,
+        decimal::{d_add, d_div, d_sub, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},
         utils::mean_and_std,
@@ -381,20 +381,42 @@ impl BreakEvenable for CallButterfly {
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points = Vec::new();
 
+        // Each wing contributes a break-even only where the payoff actually
+        // crosses zero: a candidate below zero is a price the underlying
+        // cannot reach, so the wing has none. A leg with no contracts has no
+        // per-contract profit at all, which is reported rather than divided.
         let long_strike = self.long_call.option.strike_price.to_dec();
         let long_qty = self.long_call.option.quantity.to_dec();
         let long_profit = self.calculate_profit_at(&self.long_call.option.strike_price)?;
-        let candidate_low = long_strike - long_profit / long_qty;
+        let long_per_contract = d_div(
+            long_profit,
+            long_qty,
+            "CallButterfly::update_break_even_points",
+        )?;
+        let candidate_low = d_sub(
+            long_strike,
+            long_per_contract,
+            "CallButterfly::update_break_even_points",
+        )?;
         if let Ok(be) = Positive::new_decimal(candidate_low) {
-            self.break_even_points.push(be.round_to(2));
+            self.break_even_points.push(be.checked_round_to(2)?);
         }
 
         let short_strike = self.short_call_high.option.strike_price.to_dec();
         let short_qty = self.short_call_high.option.quantity.to_dec();
         let short_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
-        let candidate_high = short_strike + short_profit / short_qty;
+        let short_per_contract = d_div(
+            short_profit,
+            short_qty,
+            "CallButterfly::update_break_even_points",
+        )?;
+        let candidate_high = d_add(
+            short_strike,
+            short_per_contract,
+            "CallButterfly::update_break_even_points",
+        )?;
         if let Ok(be) = Positive::new_decimal(candidate_high) {
-            self.break_even_points.push(be.round_to(2));
+            self.break_even_points.push(be.checked_round_to(2)?);
         }
 
         self.break_even_points.sort();
@@ -747,7 +769,9 @@ impl Strategies for CallButterfly {
         };
 
         match (self.get_max_profit(), max_loss) {
-            (Ok(max_profit), Some(ml)) => Ok(Decimal::from(max_profit / ml * 100.0)),
+            (Ok(max_profit), Some(ml)) => Ok(Decimal::from(
+                max_profit.checked_div(&ml)?.checked_mul_f64(100.0)?,
+            )),
             _ => Ok(Decimal::ZERO),
         }
     }
@@ -991,6 +1015,19 @@ impl Profit for CallButterfly {
 impl ProbabilityAnalysis for CallButterfly {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        // A call butterfly whose wings never cross zero profit has fewer than
+        // two break-even points; the ranges below are bounded by both, so the
+        // shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "CallButterfly has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "CallButterfly has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1002,8 +1039,8 @@ impl ProbabilityAnalysis for CallButterfly {
         ])?;
 
         let mut profit_range = ProfitLossRange::new(
-            Some(break_even_points[0]),
-            Some(break_even_points[1]),
+            Some(lower_break_even_point),
+            Some(upper_break_even_point),
             Positive::ZERO,
         )?;
 
@@ -1023,6 +1060,19 @@ impl ProbabilityAnalysis for CallButterfly {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
+        // A call butterfly whose wings never cross zero profit has fewer than
+        // two break-even points; the ranges below are bounded by both, so the
+        // shortfall is reported rather than indexed past.
+        let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "CallButterfly has no lower break-even point".to_string(),
+            })
+        })?;
+        let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "CallButterfly has no upper break-even point".to_string(),
+            })
+        })?;
         let option = &self.long_call.option;
         let expiration_date = &option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
@@ -1034,10 +1084,10 @@ impl ProbabilityAnalysis for CallButterfly {
         ])?;
 
         let mut loss_range_lower =
-            ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO)?;
+            ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         let mut loss_range_upper =
-            ProfitLossRange::new(Some(break_even_points[1]), None, Positive::ZERO)?;
+            ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
