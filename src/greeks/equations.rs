@@ -218,7 +218,7 @@ pub trait Greeks {
     /// The `alpha` sum has one further failure of its own, and it is reachable
     /// on ordinary input. [`alpha`] returns `Decimal::MAX` for a leg whose theta
     /// has vanished, and that value cannot be added to a real one; a leg
-    /// carrying it beside any other contribution is refused by [`add_alpha`],
+    /// carrying it beside any other contribution is refused by `AlphaSum::push`,
     /// which names the leg. See [`Greeks::alpha`].
     fn greeks(&self) -> Result<Greek, GreeksError> {
         // Aggregate option by option rather than greek by greek, so the shared
@@ -398,7 +398,7 @@ pub trait Greeks {
     /// ordinary leg's contribution is silently dropped.
     ///
     /// Both are refused, by an explicit guard rather than by the arithmetic;
-    /// see [`add_alpha`]. A sentinel leg that is the only leg, or that sits
+    /// see `AlphaSum::push`. A sentinel leg that is the only leg, or that sits
     /// beside legs whose own alpha is zero, still reports the sentinel, because
     /// nothing is lost in those sums.
     ///
@@ -1775,7 +1775,7 @@ pub fn alpha(option: &Options) -> Result<Decimal, GreeksError> {
 /// operator, so two legs whose theta vanished aborted the process on
 /// `Decimal::MAX + Decimal::MAX`. Both aggregators now refuse to combine the
 /// sentinel with another leg's contribution at all, and report which leg
-/// carried it; see [`add_alpha`]. That covers the abort and the quieter
+/// carried it; see `AlphaSum::push`. That covers the abort and the quieter
 /// failure beside it, where `Decimal::MAX` plus a small value rescales back to
 /// `Decimal::MAX` and drops the other leg without any arithmetic error. That
 /// second mechanism is a property of `Decimal`, not of this sentinel, and is
@@ -1853,11 +1853,25 @@ fn alpha_from(gamma: Decimal, theta: Decimal) -> Result<Decimal, GreeksError> {
 /// sentinel]` returned the sentinel while `[sentinel, +5, -5]` was refused,
 /// for the same three legs. A sum has no business depending on leg order, so
 /// the facts are carried rather than inferred.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct AlphaSum {
     total: Decimal,
     contributed: bool,
-    sentinel: bool,
+    /// The leg that carried the sentinel, described when it arrived.
+    ///
+    /// The description is kept rather than the fact alone, because the leg
+    /// that *reveals* the conflict is not the leg that caused it: when the
+    /// sentinel arrives first, the ordinary leg behind it is the one being
+    /// refused, and naming that one would report a vanished theta for a leg
+    /// whose theta is fine.
+    sentinel: Option<SentinelLeg>,
+}
+
+/// A leg whose alpha is the `Decimal::MAX` sentinel, described for the error.
+#[derive(Clone, Debug)]
+struct SentinelLeg {
+    index: usize,
+    description: String,
 }
 
 impl AlphaSum {
@@ -1879,11 +1893,15 @@ impl AlphaSum {
     ) -> Result<Self, GreeksError> {
         if value == Decimal::MAX {
             // A second sentinel would leave the range; a sentinel after a
-            // contribution would swallow it.
-            if self.contributed || self.sentinel {
-                return Err(alpha_sentinel_error(option, index));
+            // contribution would swallow it. Either way the arriving leg is
+            // the sentinel, so it is the one to name.
+            if self.contributed || self.sentinel.is_some() {
+                return Err(alpha_sentinel_error(index, &describe_leg(option)));
             }
-            self.sentinel = true;
+            self.sentinel = Some(SentinelLeg {
+                index,
+                description: describe_leg(option),
+            });
             self.total = Decimal::MAX;
             return Ok(self);
         }
@@ -1892,8 +1910,10 @@ impl AlphaSum {
         if value.is_zero() {
             return Ok(self);
         }
-        if self.sentinel {
-            return Err(alpha_sentinel_error(option, index));
+        if let Some(sentinel) = &self.sentinel {
+            // The arriving leg is the ordinary one. The sentinel came earlier,
+            // and it is the leg whose theta vanished.
+            return Err(alpha_sentinel_error(sentinel.index, &sentinel.description));
         }
         self.contributed = true;
         self.total = d_add(self.total, value, op)?;
@@ -1901,24 +1921,32 @@ impl AlphaSum {
     }
 }
 
-/// Builds the error [`add_alpha`] returns, naming the leg that carries the
-/// sentinel.
+/// Describes a leg for the sentinel error.
+fn describe_leg(option: &Options) -> String {
+    format!(
+        "{symbol} {strike} {style:?} {side:?}",
+        symbol = option.underlying_symbol,
+        strike = option.strike_price,
+        style = option.option_style,
+        side = option.side,
+    )
+}
+
+/// Builds the error `AlphaSum::push` returns, naming the leg that carries the
+/// sentinel — which is not always the leg that was arriving when the conflict
+/// surfaced.
 ///
 /// Filed under [`CalculationErrorKind::ThetaError`] because a vanished theta is
 /// the cause; there is no alpha-specific variant, and this matches how
 /// `greeks::numerical` reports the same family of failures.
 #[cold]
 #[inline(never)]
-fn alpha_sentinel_error(option: &Options, index: usize) -> GreeksError {
+fn alpha_sentinel_error(index: usize, description: &str) -> GreeksError {
     GreeksError::CalculationError(CalculationErrorKind::ThetaError {
         reason: format!(
-            "leg {index} ({symbol} {strike} {style:?} {side:?}) has a vanished theta, \
-             so its alpha is the Decimal::MAX sentinel and cannot be summed into an \
-             aggregate; read the leg's own alpha instead",
-            symbol = option.underlying_symbol,
-            strike = option.strike_price,
-            style = option.option_style,
-            side = option.side,
+            "leg {index} ({description}) has a vanished theta, so its alpha is the \
+             Decimal::MAX sentinel and cannot be summed into an aggregate; read the \
+             leg's own alpha instead"
         ),
     })
 }
@@ -5844,6 +5872,60 @@ mod tests_checked_aggregation {
             Side::Long,
             positive(SENTINEL_QUANTITY),
         )
+    }
+
+    /// The refusal must name the leg whose theta vanished, which is not the
+    /// leg that was arriving when the conflict surfaced. With the sentinel
+    /// first, the ordinary leg is the one being refused, and naming *it*
+    /// would report a vanished theta for a leg whose theta is fine.
+    ///
+    /// The two legs differ by style rather than by strike, so the fixture
+    /// keeps the at-the-money position both of them need — the sentinel to
+    /// have a theta that rounds away while its gamma does not, the ordinary
+    /// leg to carry a real alpha.
+    #[test]
+    fn test_alpha_sentinel_refusal_names_the_sentinel_leg_in_either_order() {
+        let sentinel = sentinel_leg();
+        let ordinary = leg(
+            OptionType::European,
+            Positive::HUNDRED,
+            pos_or_panic!(30.0),
+            pos_or_panic!(0.8),
+            OptionStyle::Put,
+            Side::Long,
+            Positive::ONE,
+        );
+        assert!(
+            ok(alpha(&ordinary), "alpha") != Decimal::ZERO,
+            "the ordinary leg must contribute, or nothing is being refused"
+        );
+
+        for (legs, sentinel_index, what) in [
+            (
+                vec![sentinel.clone(), ordinary.clone()],
+                "leg 0",
+                "sentinel first",
+            ),
+            (
+                vec![ordinary.clone(), sentinel.clone()],
+                "leg 1",
+                "sentinel last",
+            ),
+        ] {
+            match Legs(legs).alpha() {
+                Err(GreeksError::CalculationError(CalculationErrorKind::ThetaError { reason })) => {
+                    assert!(
+                        reason.contains(sentinel_index) && reason.contains("Call"),
+                        "{what}: the refusal must name the sentinel leg, got {reason}"
+                    );
+                    assert!(
+                        !reason.contains("Put"),
+                        "{what}: the refusal must not blame the ordinary leg, got {reason}"
+                    );
+                }
+                other => panic!("{what}: expected the sentinel refusal, got {other:?}"),
+            }
+        }
     }
 
     fn ok(result: Result<Decimal, GreeksError>, what: &str) -> Decimal {
