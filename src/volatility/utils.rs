@@ -21,7 +21,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rand::random;
 use rayon::prelude::*;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use tracing::instrument;
 
 #[cfg(test)]
@@ -642,7 +642,11 @@ pub fn de_annualized_volatility(
         });
     }
     let scale_factor = periods.checked_sqrt()?;
-    Ok(annual_volatility.checked_div(&scale_factor)?)
+    // Explicit rounding rather than the dependency's default, matching the
+    // strategy `d_div` applies crate-wide, so a de-annualised volatility
+    // rounds the same way whichever path computes it.
+    Ok(annual_volatility
+        .checked_div_with_strategy(&scale_factor, RoundingStrategy::MidpointNearestEven)?)
 }
 
 /// Adjusts volatility between different timeframes using the square root of time rule
@@ -701,12 +705,20 @@ pub fn adjust_volatility(
         });
     }
 
-    // Scale factor is square root of (from_periods / to_periods). `Positive`
-    // has a checked square root, so skip the f64 round-trip and keep the
-    // computation in `Decimal` precision end-to-end. Both steps are checked:
-    // the ratio overflows for a `Custom` target of 1e-27, and the operator
-    // form aborted there.
-    let scale_factor = from_periods.checked_div(&to_periods)?.checked_sqrt()?;
+    // Scale factor is the square root of `from_periods / to_periods`, taken
+    // as `sqrt(from) / sqrt(to)` rather than `sqrt(from / to)`. The two are
+    // equal in exact arithmetic and not in this one: the ratio is rounded to
+    // 28 decimal places before the root can rescue it, so a `Year` source
+    // against a `Custom(Positive::MAX)` target rounds `1 / MAX` — about
+    // `1.26e-29` — to zero and the volatility silently collapses, even
+    // though the root of that ratio is around `1.1e-15` and perfectly
+    // representable. Rooting first keeps both operands far from the scale
+    // limit. The division that follows chooses `MidpointNearestEven`, the
+    // strategy `d_div` applies to every `Decimal` division in the crate.
+    let scale_factor = from_periods.checked_sqrt()?.checked_div_with_strategy(
+        &to_periods.checked_sqrt()?,
+        RoundingStrategy::MidpointNearestEven,
+    )?;
 
     Ok(volatility.checked_mul(&scale_factor)?)
 }
@@ -879,6 +891,27 @@ pub fn generate_ou_process(
 #[cfg(test)]
 mod tests_annualize_volatility {
     use super::*;
+
+    /// A representable scale factor must not collapse to zero on its way to
+    /// being computed. `Year` against `Custom(Positive::MAX)` divides one by
+    /// `Decimal::MAX`, which is about `1.26e-29` and rounds to zero at the
+    /// 28-place scale — but the square root of that ratio is around
+    /// `1.1e-15`, which is representable, so the answer exists and the
+    /// intermediate was the only thing that did not.
+    #[test]
+    fn test_adjust_volatility_survives_an_extreme_target_timeframe() {
+        let adjusted = adjust_volatility(
+            pos_or_panic!(0.2),
+            TimeFrame::Year,
+            TimeFrame::Custom(Positive::MAX),
+        )
+        .expect("the conversion is representable");
+
+        assert!(
+            adjusted > Positive::ZERO,
+            "a representable scale factor collapsed to zero: {adjusted}"
+        );
+    }
     use positive::assert_pos_relative_eq;
 
     #[test]

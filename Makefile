@@ -141,7 +141,14 @@ scan-banned:
 	done \
 		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)\.unwrap\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
-		| grep -v 'scan-banned: allow' || true); \
+		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
+	malformed=$$(grep -rn 'scan-banned: allow' src \
+		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
+	if [ -n "$$malformed" ]; then \
+		echo "Exemption markers without a reason (use 'scan-banned: allow -- <reason>'):"; \
+		echo "$$malformed"; \
+		exit 1; \
+	fi; \
 	if [ -n "$$found" ]; then \
 		echo "Banned patterns found in production code:"; \
 		echo "$$found"; \

@@ -56,6 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/model/decimal.rs`; the sample standard deviation is unchanged digit for
   digit for a representable sample.
 
+  This is a breaking change to a public trait. To migrate, add `?` where the
+  value feeds a fallible function or `.expect("…")` at a boundary that cannot
+  propagate; an external implementor changes the two signatures and returns
+  `Ok(..)`. No further version bump: 0.21.0 is already the breaking version
+  for this unreleased cycle.
+
 - **`decimal_normal_sample` constructed a distribution that could be
   rejected** (#442). It built `Normal::new(0.0, 1.0)` on every call and had an
   `unreachable!` in the `Err` arm. It samples `rand_distr::StandardNormal`
