@@ -396,6 +396,45 @@ pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
         .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
 }
 
+/// Checked product over any `IntoIterator` of `Decimal` values.
+///
+/// Multiplicative counterpart to [`d_sum_iter`], with the same
+/// overflow-tagging semantics and the same zero-allocation shape. Returns
+/// [`Decimal::ONE`] on an empty iterator, so an empty product is the
+/// multiplicative identity just as an empty sum is [`Decimal::ZERO`].
+///
+/// # Ordering
+///
+/// The fold runs strictly left to right, and that order is part of the
+/// contract rather than an implementation detail. `Decimal` multiplication
+/// rounds as soon as a product needs more than the 28 significant digits the
+/// backing 96-bit mantissa holds, which makes it non-associative: `(a * b) *
+/// c` and `a * (b * c)` can differ in their last digit. A parallel reducer
+/// picks its bracketing from the chunking rayon happens to choose on the day,
+/// so the same binary on the same input can return different last digits from
+/// one run to the next. Callers that have to reconcile, cache or
+/// regression-test a result at full precision need the fixed order this
+/// gives them.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] on the first accumulation that
+/// exceeds the representable `Decimal` range, tagged with the supplied `op`
+/// string so the call-site can be identified without a stack trace.
+#[inline]
+pub(crate) fn d_product_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
+where
+    I: IntoIterator<Item = Decimal>,
+{
+    let mut acc = Decimal::ONE;
+    for v in iter {
+        acc = acc
+            .checked_mul(v)
+            .ok_or_else(|| DecimalError::overflow(op, acc, v))?;
+    }
+    Ok(acc)
+}
+
 /// Checked `Decimal` division with banker's rounding at scale 28.
 ///
 /// Crate-private helper used by every monetary-flow kernel in place of the

@@ -1,10 +1,15 @@
 use criterion::{criterion_group, criterion_main};
 
 mod chains;
+mod geometrics;
 mod model;
 
 use chains::generators::benchmark_chain_generators;
 use chains::optiondata::benchmark_option_data;
+use geometrics::merge::{
+    benchmark_curve_merge_multiply, benchmark_decimal_product_fold,
+    benchmark_surface_merge_multiply,
+};
 use model::positive::{
     benchmark_arithmetic, benchmark_comparisons, benchmark_conversions, benchmark_creation,
     benchmark_math_operations,
@@ -39,6 +44,9 @@ criterion_group!(
     benchmark_profit_calculations,
     benchmark_time_calculations,
     benchmark_validations,
-    benchmark_strategies
+    benchmark_strategies,
+    benchmark_curve_merge_multiply,
+    benchmark_surface_merge_multiply,
+    benchmark_decimal_product_fold
 );
 criterion_main!(benches);
