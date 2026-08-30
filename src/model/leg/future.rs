@@ -42,6 +42,7 @@
 
 use crate::error::GreeksError;
 use crate::model::ExpirationDate;
+use crate::model::expiration::resolve_expiration_date;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable};
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
@@ -373,9 +374,12 @@ impl Marginable for FuturePosition {
 
 impl Expirable for FuturePosition {
     fn expiration_timestamp(&self) -> i64 {
-        self.expiration_date
-            .get_date()
-            .map(|d| d.timestamp())
+        // The resolver rather than `get_date`, which aborts on a day count no
+        // calendar instant can hold instead of reporting it. The `unwrap_or`
+        // was never reached for that input, because there was nothing to
+        // unwrap: the process was already gone.
+        resolve_expiration_date(&self.expiration_date)
+            .map(|date| date.timestamp())
             .unwrap_or(0)
     }
 
@@ -384,9 +388,8 @@ impl Expirable for FuturePosition {
     }
 
     fn is_expired(&self) -> bool {
-        self.expiration_date
-            .get_date()
-            .map(|d| d < Utc::now())
+        resolve_expiration_date(&self.expiration_date)
+            .map(|date| date < Utc::now())
             .unwrap_or(false)
     }
 }
