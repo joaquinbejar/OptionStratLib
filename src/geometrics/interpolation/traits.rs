@@ -84,7 +84,8 @@ where
     /// [`InterpolationError`] it produces; see the per-algorithm
     /// traits ([`LinearInterpolation`], [`CubicInterpolation`],
     /// [`BiLinearInterpolation`], [`SplineInterpolation`]) for the
-    /// specific variant breakdown.
+    /// specific variant breakdown, including what each of them does with a
+    /// sample that carries several ordinates at one abscissa.
     fn interpolate(
         &self,
         x: Input,
@@ -110,6 +111,17 @@ where
     /// # Returns
     /// - `Ok((usize, usize))`: The indices of the two bracketing points
     /// - `Err(InterpolationError)`: If bracketing points cannot be found
+    ///
+    /// # One point per abscissa
+    ///
+    /// The sample is assumed to be a function of its abscissa; see
+    /// [`Curve::new`](crate::curves::Curve::new). This returns the *first*
+    /// window `(i, i + 1)` containing `x`, so when `x` is an abscissa
+    /// carrying several ordinates the window it returns is the degenerate
+    /// one spanning two of them, of zero width. That is deliberate: the
+    /// callers divide by that width and report
+    /// [`InterpolationError::DegenerateInterval`], instead of bracketing
+    /// against an arbitrary member of the stack.
     ///
     /// # Errors
     /// - If there are fewer than 2 points in the dataset

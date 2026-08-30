@@ -58,6 +58,9 @@ use utoipa::ToSchema;
 /// - Methods working with `Curve` data will assume that the `points` vector is ordered
 ///   by the `x`-coordinate. Non-ordered inputs may lead to undefined behavior in specific
 ///   operations.
+/// - A curve is a function of its abscissa: at most one point per `x`. See
+///   [`Curve::new`] for what breaking that rule does to each consumer, and
+///   for why no constructor can enforce it.
 ///
 /// # See Also
 /// - [`Point2D`]: The fundamental data type for representing points in 2D space.
@@ -66,7 +69,13 @@ use utoipa::ToSchema;
 #[serde(deny_unknown_fields)]
 pub struct Curve {
     /// A ordered set of `Point2D` objects that defines the curve in terms of its x-y plane coordinates.
-    /// Points are stored in a `BTreeSet` which automatically maintains them in sorted order by their x-coordinate.
+    /// Points are stored in a `BTreeSet` which automatically maintains them in sorted order by their
+    /// `(x, y)` pair. The set rejects an exact duplicate of that pair; it does not stop two ordinates
+    /// from sharing an abscissa.
+    ///
+    /// Public, so a struct literal can populate it without passing through
+    /// [`Curve::new`]. No constructor can therefore guarantee one point per
+    /// abscissa.
     pub points: BTreeSet<Point2D>,
 
     /// A tuple `(min_x, max_x)` that specifies the minimum and maximum x-coordinate values
@@ -120,19 +129,46 @@ impl Curve {
     ///
     /// - [`Point2D`]: The type of points used to define the curve.
     /// - [`crate::curves::Curve::calculate_range`]: Computes the x-range of a set of points.
-    /// # Duplicate abscissae
+    /// # One point per abscissa
     ///
-    /// [`Point2D`] orders on the full `(x, y)` pair, so `points` may hold
-    /// several ordinates for one abscissa and `new` stores them all. Most of
-    /// the crate treats a curve as single-valued in `x` —
-    /// [`Curve::get_point`] returns the first match, [`Curve::merge`]
-    /// resamples onto one shared x-grid — and the interpolators reject a
-    /// repeated abscissa with [`InterpolationError::DegenerateInterval`],
-    /// since the slope over a zero-width interval is undefined.
+    /// A `Curve` is a function of its abscissa: at most one point per `x`.
+    /// Every consumer reads it that way.
+    /// [`get_point`](crate::geometrics::AxisOperations::get_point) and
+    /// [`contains_point`](crate::geometrics::AxisOperations::contains_point)
+    /// answer from the first point matching `x`,
+    /// [`merge`](crate::geometrics::Arithmetic::merge) resamples every curve
+    /// onto one shared x-grid with one `y` per `x`, and the interpolators in
+    /// [`crate::geometrics`] bracket `x` between two consecutive points and
+    /// divide by the width of that bracket.
     ///
-    /// Whether such a curve should be rejected, normalized or supported is
-    /// unresolved: [`crate::surfaces::Surface::get_curve`] produces one
-    /// legitimately, by projecting a grid. See issue #466.
+    /// Nothing enforces the rule. [`Point2D`] orders on the full `(x, y)`
+    /// pair, so `points` may hold several ordinates for one abscissa and
+    /// `new` stores them all; a curve built that way is outside the contract
+    /// and the consumers behave as follows:
+    ///
+    /// - the interpolators return
+    ///   [`InterpolationError::DegenerateInterval`] when asked about a
+    ///   repeated abscissa, and pick no survivor: the bracket around it has
+    ///   zero width and the slope across it is undefined. The one exception
+    ///   is the exact-match branch of
+    ///   [`BiLinearInterpolation::bilinear_interpolate`],
+    ///   which still returns the lowest ordinate and is being reworked under
+    ///   issue #451;
+    /// - `get_point` and `merge_axis_interpolate` read the first match in
+    ///   `(x, y)` order, which is the lowest ordinate of the stack, and the
+    ///   rest are invisible to the caller. Use
+    ///   [`get_values`](crate::geometrics::AxisOperations::get_values) to
+    ///   see every ordinate at an abscissa.
+    ///
+    /// Normalizing here would not help: `points` is a `pub` field, so a
+    /// struct literal reaches the same state without going through any
+    /// constructor. Rejecting or collapsing a duplicate can only ever be a
+    /// convenience on this path, never an invariant of the type.
+    ///
+    /// A projection of a surface is genuinely multi-valued and is therefore
+    /// not a curve: [`crate::surfaces::Surface::project_onto`] returns a
+    /// `Vec<Point2D>`, and aggregating it to one ordinate per abscissa is
+    /// the caller's job.
     #[must_use]
     pub fn new(points: BTreeSet<Point2D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
@@ -155,6 +191,26 @@ impl Curve {
                 self.points.len()
             ))
         })
+    }
+
+    /// Returns the sample sitting exactly at the abscissa `x`, if the curve
+    /// has one there.
+    ///
+    /// A curve is a function of its abscissa (see [`Curve::new`]), so at most
+    /// one point can sit at `x`. When several do, the curve has no value at
+    /// `x` and no non-arbitrary way to choose among them exists, so this
+    /// reports [`InterpolationError::DegenerateInterval`] instead of
+    /// returning the first, which would be the lowest ordinate of the stack.
+    /// [`AxisOperations::get_values`] reads all of them.
+    fn exact_point_at(&self, x: Decimal) -> Result<Option<Point2D>, InterpolationError> {
+        let mut at_x = self.points.iter().filter(|p| p.x == x);
+        let Some(point) = at_x.next() else {
+            return Ok(None);
+        };
+        if at_x.next().is_some() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        Ok(Some(*point))
     }
 }
 
@@ -320,6 +376,17 @@ impl GeometricObject<Point2D, Decimal> for Curve {
         self.points.iter().collect()
     }
 
+    /// Builds a curve from a vector of convertible points.
+    ///
+    /// # One point per abscissa
+    ///
+    /// Same rule and same non-enforcement as [`Curve::new`]: a curve is a
+    /// function of its abscissa, and this constructor does not check it.
+    /// `points` is collected into a `BTreeSet`, which drops an exact
+    /// duplicate of an `(x, y)` pair but keeps two ordinates that merely
+    /// share an `x`. Aggregate before calling if the input can carry
+    /// several ordinates per abscissa, as the projection returned by
+    /// [`crate::surfaces::Surface::project_onto`] does.
     fn from_vector<T>(points: Vec<T>) -> Self
     where
         T: Into<Point2D> + Clone,
@@ -539,6 +606,23 @@ impl Interpolate<Point2D, Decimal> for Curve {}
 ///   defined points.
 /// - **No Bracketing Points Found**: When the method fails to find two points
 ///   that bracket the given `x`.
+/// - **Degenerate Bracket**: When several points share the requested
+///   abscissa. The curve has no value there and the bracket around it has
+///   zero width, so the method reports
+///   `InterpolationError::DegenerateInterval` instead of picking one of the
+///   ordinates stacked there.
+///
+/// # One point per abscissa
+///
+/// A curve is a function of its abscissa; see [`Curve::new`]. Asking for a
+/// repeated abscissa returns `InterpolationError::DegenerateInterval`; no
+/// ordinate of the stack is chosen.
+///
+/// Away from the stack the method still answers, reading the stack as a
+/// vertical jump: an `x` strictly inside an interval bounded by a repeated
+/// abscissa brackets against the point on its own side, the highest
+/// ordinate when the stack bounds the interval on the left and the lowest
+/// when it bounds it on the right.
 ///
 /// # Example (How it works internally)
 /// Suppose the curve is defined by the following points:
@@ -566,14 +650,23 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
     /// points on the curve (`p1` and `p2`) that bracket the provided `x`. The `y` value
     /// is then calculated using the linear interpolation formula:
     fn linear_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
+        // A sample sitting exactly at `x` is the answer, and a stack of
+        // ordinates at `x` has no answer. Without this branch the first
+        // bracket containing `x` ends at the lowest of the stack and the
+        // formula reproduces its ordinate, which is a silent pick.
+        if let Some(point) = self.exact_point_at(x)? {
+            return Ok(point);
+        }
+
         let (i, j) = self.find_bracket_points(x)?;
 
         let p1 = self.point_at(i, InterpolationError::Linear)?;
         let p2 = self.point_at(j, InterpolationError::Linear)?;
 
-        // `Point2D` orders on (x, y) but compares equal on x alone, so a
-        // `BTreeSet<Point2D>` legitimately holds two points sharing an
-        // abscissa; the slope is then undefined rather than infinite.
+        // A curve is meant to be a function of its abscissa, but nothing
+        // enforces it: a `BTreeSet<Point2D>` holds two points sharing an
+        // abscissa, and the slope across a zero-width bracket is undefined
+        // rather than infinite. Report it instead of picking an ordinate.
         let run = d_sub(p2.x, p1.x, "Curve::linear_interpolate::run")
             .map_err(interp_err(InterpolationError::Linear))?;
         if run.is_zero() {
@@ -893,6 +986,12 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
     ///   with a corresponding message.
     /// - If the bracketing points cannot be identified (e.g., when `x` is outside the
     ///   range of points), the appropriate interpolation error is propagated.
+    /// - If the curve is not a function of its abscissa at the point it is
+    ///   asked about, it returns `InterpolationError::DegenerateInterval`:
+    ///   several points at `x` leave the exact-match branch with no single
+    ///   value to return, and two consecutive points sharing an abscissa
+    ///   leave the interpolation bracket with zero width. Neither case picks
+    ///   an ordinate. See [`Curve::new`] for the rule.
     ///
     /// # Example
     ///
@@ -902,7 +1001,6 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
     /// - Provides a high degree of precision due to the use of the `Decimal` type for
     ///   `x` and `y` calculations.
     fn cubic_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
-        let points = self.get_points();
         let len = self.len();
 
         // Need at least 4 points for cubic interpolation
@@ -912,9 +1010,11 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
             ));
         }
 
-        // For exact points, return the actual point value
-        if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(**point);
+        // For exact points, return the actual point value. A stack of
+        // ordinates at `x` has no single value, so it errors out instead of
+        // yielding the lowest of them.
+        if let Some(point) = self.exact_point_at(x)? {
+            return Ok(point);
         }
 
         let (i, _) = self.find_bracket_points(x)?;
@@ -1159,8 +1259,12 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     /// - Natural spline interpolation may introduce minor deviations beyond the range of existing
     ///   data points due to its boundary conditions. For strictly constrained results, consider
     ///   alternative interpolation methods, such as linear or cubic Hermite interpolation.
+    /// - The knots must be a function of their abscissa. Several points at
+    ///   the requested `x` leave the exact-match branch with no single value
+    ///   to return, and any repeated abscissa collapses a knot interval, so
+    ///   both return `InterpolationError::DegenerateInterval` rather than
+    ///   picking an ordinate. See [`Curve::new`] for the rule.
     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
-        let points = self.get_points();
         let len = self.len();
 
         // Need at least 3 points for spline interpolation
@@ -1179,9 +1283,11 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
             ));
         }
 
-        // For exact points, return the actual point value
-        if let Some(point) = points.iter().find(|p| p.x == x) {
-            return Ok(**point);
+        // For exact points, return the actual point value. A stack of
+        // ordinates at `x` has no single value, so it errors out instead of
+        // yielding the lowest of them.
+        if let Some(point) = self.exact_point_at(x)? {
+            return Ok(point);
         }
 
         let n = len;
@@ -1789,6 +1895,22 @@ impl Arithmetic<Curve> for Curve {
     /// This function enables combining multiple curves for tasks such as:
     /// - Summing y-values across different curves to compute a composite curve.
     /// - Finding the maximum/minimum y-value at each x-point for a collection of curves.
+    ///
+    /// # One point per abscissa
+    ///
+    /// This assumes the one-point-per-abscissa rule of [`Curve::new`] and
+    /// re-establishes it in the result: the merged curve is sampled on an
+    /// evenly spaced grid over the common x-range, with one `y` per grid
+    /// point, so the original abscissae do not survive the merge.
+    ///
+    /// An input carrying several ordinates at one abscissa never has one of
+    /// them silently chosen. Each sample is produced by cubic interpolation,
+    /// which reports [`InterpolationError::DegenerateInterval`], wrapped in
+    /// a [`CurveError`], whenever the sample lands on the repeated abscissa
+    /// or brackets across it. A sample far enough from the stack is
+    /// unaffected and reads the ordinate on its own side, so a merge of such
+    /// a curve can still succeed on a grid that misses the stack. Aggregate
+    /// the curve to one ordinate per abscissa before merging it.
     fn merge(curves: &[&Curve], operation: MergeOperation) -> Result<Curve, CurveError> {
         if curves.is_empty() {
             return Err(CurveError::invalid_parameters(
@@ -1943,14 +2065,30 @@ impl Arithmetic<Curve> for Curve {
 impl AxisOperations<Point2D, Decimal> for Curve {
     type Error = CurveError;
 
+    /// Reports whether the curve has a point at the abscissa `x`.
+    ///
+    /// Answers on `x` alone, so it says nothing about how many ordinates sit
+    /// there. On a curve honouring the one-point-per-abscissa rule of
+    /// [`Curve::new`] there is at most one.
     fn contains_point(&self, x: &Decimal) -> bool {
         self.points.iter().any(|p| &p.x == x)
     }
 
+    /// Returns the abscissa of every point, in `(x, y)` order.
+    ///
+    /// A curve holding several ordinates at one abscissa yields that
+    /// abscissa once per ordinate; the duplicates are visible here rather
+    /// than dropped.
     fn get_index_values(&self) -> Vec<Decimal> {
         self.points.iter().map(|p| p.x).collect()
     }
 
+    /// Returns every ordinate at the abscissa `x`, in ascending order.
+    ///
+    /// This is the multi-valued reader: unlike [`Self::get_point`], it never
+    /// picks a survivor. A curve honouring the one-point-per-abscissa rule
+    /// of [`Curve::new`] returns at most one value; anything longer says the
+    /// curve is not a function of its abscissa.
     fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
         self.points
             .iter()
@@ -1983,6 +2121,12 @@ impl AxisOperations<Point2D, Decimal> for Curve {
             })
     }
 
+    /// Returns the point at the abscissa `x`, if there is one.
+    ///
+    /// Assumes the one-point-per-abscissa rule of [`Curve::new`]. If the
+    /// curve breaks it, this returns the *first* match in `(x, y)` order,
+    /// which is the lowest ordinate of the stack, and the rest are invisible
+    /// to the caller. Use [`Self::get_values`] to see all of them.
     fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
         if self.contains_point(x) {
             self.points.iter().find(|p| p.x == *x)
@@ -1996,6 +2140,14 @@ impl MergeAxisInterpolate<Point2D, Decimal> for Curve
 where
     Self: Sized,
 {
+    /// Resamples both curves onto the shared x-grid of their merged indices.
+    ///
+    /// Each result holds one point per abscissa of that grid, so it is a
+    /// function of its abscissa whatever the inputs were: where a curve
+    /// already has a point at an abscissa, the one kept is the first match
+    /// in `(x, y)` order, so a stack of ordinates collapses to its lowest,
+    /// and elsewhere the point is interpolated. Aggregate such a curve
+    /// before merging if a different ordinate is wanted.
     fn merge_axis_interpolate(
         &self,
         other: &Self,
@@ -4406,5 +4558,127 @@ mod tests_axis_merge_and_transformations {
         let (min, max) = curve.extrema().unwrap();
         assert_eq!(min.y, dec!(0.0));
         assert_eq!(max.y, dec!(3.0));
+    }
+}
+
+/// A `Curve` is a function of its abscissa, and nothing enforces it. These
+/// tests pin what each consumer does when the rule is broken, so that no
+/// consumer picks a survivor from a stack of ordinates without saying so.
+#[cfg(test)]
+mod tests_duplicate_abscissa {
+    use crate::curves::{Curve, Point2D};
+    use crate::error::InterpolationError;
+    use crate::geometrics::{AxisOperations, Interpolate, InterpolationType};
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    /// Four abscissae, with two ordinates stacked on `x = 1`: enough points
+    /// for every interpolator, and the stack sits in the interior.
+    fn stacked_curve() -> Curve {
+        Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(1.0), dec!(3.0)),
+            Point2D::new(dec!(2.0), dec!(2.0)),
+            Point2D::new(dec!(3.0), dec!(5.0)),
+        ]))
+    }
+
+    #[test]
+    fn test_curve_new_stacked_abscissa_keeps_both_points() {
+        let curve = stacked_curve();
+
+        // `Point2D` orders and compares on the full pair, so both survive.
+        assert_eq!(curve.points.len(), 5);
+        assert_eq!(curve.x_range, (dec!(0.0), dec!(3.0)));
+    }
+
+    #[test]
+    fn test_curve_get_values_stacked_abscissa_returns_every_ordinate() {
+        let curve = stacked_curve();
+
+        let values: Vec<_> = curve.get_values(dec!(1.0)).into_iter().copied().collect();
+        assert_eq!(values, vec![dec!(1.0), dec!(3.0)]);
+    }
+
+    /// `get_point` is documented as reading the first match. This pins that
+    /// it is the lowest ordinate, so the doc is checkable.
+    #[test]
+    fn test_curve_get_point_stacked_abscissa_returns_lowest_ordinate() {
+        let curve = stacked_curve();
+
+        let point = curve.get_point(&dec!(1.0)).expect("x = 1 is present");
+        assert_eq!(*point, Point2D::new(dec!(1.0), dec!(1.0)));
+        assert!(curve.contains_point(&dec!(1.0)));
+    }
+
+    #[test]
+    fn test_curve_linear_interpolate_stacked_abscissa_is_degenerate() {
+        let curve = stacked_curve();
+
+        assert!(matches!(
+            curve.interpolate(dec!(1.0), InterpolationType::Linear),
+            Err(InterpolationError::DegenerateInterval)
+        ));
+    }
+
+    #[test]
+    fn test_curve_cubic_interpolate_stacked_abscissa_is_degenerate() {
+        let curve = stacked_curve();
+
+        assert!(matches!(
+            curve.interpolate(dec!(1.0), InterpolationType::Cubic),
+            Err(InterpolationError::DegenerateInterval)
+        ));
+    }
+
+    #[test]
+    fn test_curve_spline_interpolate_stacked_abscissa_is_degenerate() {
+        let curve = stacked_curve();
+
+        assert!(matches!(
+            curve.interpolate(dec!(1.0), InterpolationType::Spline),
+            Err(InterpolationError::DegenerateInterval)
+        ));
+    }
+
+    /// Away from the stack the curve is still a function, and linear
+    /// interpolation reads the ordinate on the same side of the jump.
+    #[test]
+    fn test_curve_linear_interpolate_away_from_stack_reads_its_own_side() {
+        let curve = stacked_curve();
+
+        let left = curve
+            .interpolate(dec!(0.5), InterpolationType::Linear)
+            .expect("0.5 brackets between (0, 0) and the lowest ordinate at x = 1");
+        assert_eq!(left, Point2D::new(dec!(0.5), dec!(0.5)));
+
+        let right = curve
+            .interpolate(dec!(1.5), InterpolationType::Linear)
+            .expect("1.5 brackets between the highest ordinate at x = 1 and (2, 2)");
+        assert_eq!(right, Point2D::new(dec!(1.5), dec!(2.5)));
+    }
+
+    /// A curve honouring the rule is unaffected by the exact-match guard:
+    /// asking for a stored abscissa returns the stored point.
+    #[test]
+    fn test_curve_interpolate_single_ordinate_returns_the_stored_point() {
+        let curve = Curve::new(BTreeSet::from_iter(vec![
+            Point2D::new(dec!(0.0), dec!(0.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+            Point2D::new(dec!(2.0), dec!(4.0)),
+            Point2D::new(dec!(3.0), dec!(9.0)),
+        ]));
+
+        for interpolation in [
+            InterpolationType::Linear,
+            InterpolationType::Cubic,
+            InterpolationType::Spline,
+        ] {
+            let point = curve
+                .interpolate(dec!(2.0), interpolation)
+                .expect("x = 2 is a stored abscissa");
+            assert_eq!(point, Point2D::new(dec!(2.0), dec!(4.0)));
+        }
     }
 }

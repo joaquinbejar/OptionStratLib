@@ -21,7 +21,7 @@
 //! * **Error Handling:** Uses the `SurfaceError` type for robust error management.
 //!
 
-use crate::curves::{Curve, Point2D};
+use crate::curves::Point2D;
 use crate::error::decimal::DecimalError;
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
 use crate::geometrics::{
@@ -56,7 +56,10 @@ use utoipa::ToSchema;
 ///
 /// # Fields
 /// - **points**: A sorted collection of `Point3D` objects that define the surface
-///   geometry. Using `BTreeSet` ensures points are uniquely stored and ordered.
+///   geometry. `BTreeSet` keeps them ordered and rejects an exact duplicate of
+///   the full `(x, y, z)` triple; it does not stop two heights from sitting
+///   above one xy-coordinate. See [`Surface::new`] for the one-height-per-cell
+///   rule and for why it is a convention rather than an invariant.
 /// - **x_range**: A tuple containing the minimum and maximum x-coordinates of the surface
 ///   as `Decimal` values, representing the surface's width boundaries.
 /// - **y_range**: A tuple containing the minimum and maximum y-coordinates of the surface
@@ -91,7 +94,11 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Surface {
-    /// Collection of 3D points defining the surface
+    /// Collection of 3D points defining the surface.
+    ///
+    /// Public, so a struct literal can populate it without passing through
+    /// [`Surface::new`]. No constructor can therefore guarantee one height
+    /// per xy-coordinate.
     pub points: BTreeSet<Point3D>,
     /// The minimum and maximum x-coordinates of the surface (min_x, max_x)
     pub x_range: (Decimal, Decimal),
@@ -130,14 +137,33 @@ impl Surface {
     /// let object = Surface::new(points);
     /// ```
     ///
-    /// # Duplicate coordinates
+    /// # One height per xy-coordinate
     ///
-    /// [`Point3D`] orders on the full `(x, y, z)` triple, so `points` may
-    /// hold several heights above one xy-coordinate and `new` stores them
-    /// all, even though [`Surface::get_point`] and
-    /// [`Surface::contains_point`] return only the first match. Whether such
-    /// a surface should be rejected or normalized is unresolved; see the
-    /// issue #466.
+    /// A `Surface` is a function of its `(x, y)` coordinate: at most one `z`
+    /// above each cell. Every consumer reads it that way.
+    /// [`get_point`](crate::geometrics::AxisOperations::get_point) and
+    /// [`contains_point`](crate::geometrics::AxisOperations::contains_point)
+    /// answer from the first point matching `(x, y)`, and
+    /// `merge_axis_interpolate` resamples both surfaces onto one shared
+    /// xy-grid with one `z` per cell.
+    ///
+    /// Nothing enforces the rule. [`Point3D`] orders on the full
+    /// `(x, y, z)` triple, so `points` may hold several heights above one
+    /// xy-coordinate and `new` stores them all; a surface built that way is
+    /// outside the contract, and `get_point` then silently returns the
+    /// lowest `z` of the stack, the first in `(x, y, z)` order, while
+    /// `contains_point` reports only that something is there. Use
+    /// [`get_values`](crate::geometrics::AxisOperations::get_values) to see
+    /// every `z` above a cell.
+    ///
+    /// Normalizing here would not help: `points` is a `pub` field, so a
+    /// struct literal reaches the same state without going through any
+    /// constructor. Rejecting or collapsing a duplicate can only ever be a
+    /// convenience on this path, never an invariant of the type.
+    ///
+    /// The one projection that is genuinely multi-valued,
+    /// [`Surface::project_onto`], returns a `Vec<Point2D>` for that reason
+    /// and never a [`Curve`](crate::curves::Curve).
     #[must_use]
     pub fn new(points: BTreeSet<Point3D>) -> Self {
         let x_range = Self::calculate_range(points.iter().map(|p| p.x));
@@ -149,11 +175,11 @@ impl Surface {
         }
     }
 
-    /// Projects a 3D surface onto a 2D plane based on the specified axis.
+    /// Projects the surface onto a 2D plane by dropping one coordinate.
     ///
-    /// This method creates a 2D curve by projecting the points of the surface onto a plane
-    /// perpendicular to the specified axis. The projection is achieved by omitting the coordinate
-    /// that corresponds to the specified axis.
+    /// The projection is perpendicular to `axis`: the coordinate naming the
+    /// axis is omitted and the remaining two become the abscissa and the
+    /// ordinate of a [`Point2D`].
     ///
     /// # Parameters
     /// - `&self`: Reference to the Surface instance
@@ -163,30 +189,37 @@ impl Surface {
     ///   - `Axis::Z`: Projects onto the XY plane (z-coordinate is omitted)
     ///
     /// # Returns
-    /// - `Curve`: A new 2D curve containing the projected points
+    /// - `Vec<Point2D>`: exactly one projected point per surface point,
+    ///   sorted ascending by the projected `(x, y)` pair.
     ///
     /// # Behavior
-    /// - For `Axis::X`, the returned curve contains points with (y, z) coordinates
-    /// - For `Axis::Y`, the returned curve contains points with (x, z) coordinates
-    /// - For `Axis::Z`, the returned curve contains points with (x, y) coordinates
+    /// - For `Axis::X`, the returned points carry (y, z) coordinates
+    /// - For `Axis::Y`, the returned points carry (x, z) coordinates
+    /// - For `Axis::Z`, the returned points carry (x, y) coordinates
     ///
     /// # Multi-valued projections
     ///
     /// Dropping a coordinate from a grid is multi-valued: every row of the
     /// grid contributes a different height above the same projected abscissa.
-    /// A projection of an `n`-by-`m` grid therefore yields up to `n * m`
-    /// points, several of which share an abscissa.
+    /// A projection of an `n`-by-`m` grid therefore yields `n * m` points,
+    /// several of which share an abscissa, and two rows that agree on the
+    /// two surviving coordinates project onto the very same point.
     ///
-    /// Every point is kept. The returned [`Curve`] is consequently **not**
-    /// single-valued in `x`, unlike a curve built from a series, so
-    /// interpolating it returns
-    /// [`InterpolationError::DegenerateInterval`](crate::error::InterpolationError::DegenerateInterval)
-    /// wherever two projected points share an abscissa. Callers that need a
-    /// function of the projected abscissa must aggregate the points
-    /// themselves — this method does not choose an aggregation for them.
+    /// That is why this returns a `Vec` and not a
+    /// [`Curve`](crate::curves::Curve). A curve is a function of its
+    /// abscissa (see [`Curve::new`](crate::curves::Curve::new)) and it
+    /// stores its points in a `BTreeSet`, which drops every projected point
+    /// equal to one already collected. The vector keeps all of them:
+    /// `result.len() == self.points.len()`, always.
+    ///
+    /// Callers that need a function of the projected abscissa must aggregate
+    /// the ordinates sharing one themselves. This method does not choose an
+    /// aggregation for them, and building a `Curve` from the result without
+    /// aggregating first is exactly the loss the return type exists to
+    /// prevent.
     #[must_use]
-    pub fn get_curve(&self, axis: Axis) -> Curve {
-        let points = self
+    pub fn project_onto(&self, axis: Axis) -> Vec<Point2D> {
+        let mut points: Vec<Point2D> = self
             .points
             .iter()
             .map(|p| match axis {
@@ -195,7 +228,10 @@ impl Surface {
                 Axis::Z => Point2D::new(p.x, p.y),
             })
             .collect();
-        Curve::new(points)
+        // Sorting is what the `BTreeSet` behind the old `Curve` return type
+        // provided; only its deduplication is dropped.
+        points.sort();
+        points
     }
 
     /// Performs one-dimensional spline interpolation on a collection of points.
@@ -1752,14 +1788,29 @@ impl Arithmetic<Surface> for Surface {
 impl AxisOperations<Point3D, Point2D> for Surface {
     type Error = SurfaceError;
 
+    /// Reports whether any point sits above the xy-coordinate `x`.
+    ///
+    /// Answers on the `(x, y)` pair alone, so it says nothing about how many
+    /// heights are stacked there. On a surface honouring the
+    /// one-height-per-cell rule of [`Surface::new`] there is at most one.
     fn contains_point(&self, x: &Point2D) -> bool {
         self.points.iter().any(|p| p.x == x.x && p.y == x.y)
     }
 
+    /// Returns the xy-coordinate of every point, in `(x, y, z)` order.
+    ///
+    /// A surface holding several heights above one cell yields that cell
+    /// once per height; the duplicates are visible here rather than dropped.
     fn get_index_values(&self) -> Vec<Point2D> {
         self.points.iter().map(|p| Point2D::new(p.x, p.y)).collect()
     }
 
+    /// Returns every `z` above the xy-coordinate `x`, in ascending order.
+    ///
+    /// This is the multi-valued reader: unlike [`Self::get_point`], it never
+    /// picks a survivor. A surface honouring the one-height-per-cell rule of
+    /// [`Surface::new`] returns at most one value; anything longer says the
+    /// surface is not a function of its xy-coordinate.
     fn get_values(&self, x: Point2D) -> Vec<&Decimal> {
         self.points
             .iter()
@@ -1793,6 +1844,12 @@ impl AxisOperations<Point3D, Point2D> for Surface {
             })
     }
 
+    /// Returns the point above the xy-coordinate `x`, if there is one.
+    ///
+    /// Assumes the one-height-per-cell rule of [`Surface::new`]. If the
+    /// surface breaks it, this returns the *first* match in `(x, y, z)`
+    /// order, which is the lowest `z` of the stack, and the rest are
+    /// invisible to the caller. Use [`Self::get_values`] to see all of them.
     fn get_point(&self, x: &Point2D) -> Option<&Point3D> {
         self.points.iter().find(|p| p.x == x.x && p.y == x.y)
     }
@@ -1802,6 +1859,15 @@ impl MergeAxisInterpolate<Point3D, Point2D> for Surface
 where
     Self: Sized,
 {
+    /// Resamples both surfaces onto the shared xy-grid of their merged
+    /// indices.
+    ///
+    /// Each result holds one `z` per cell of that grid, so it is a function
+    /// of its xy-coordinate whatever the inputs were: where a surface
+    /// already covers a cell, the point kept is the first match in
+    /// `(x, y, z)` order, so a stack of heights above one cell collapses to
+    /// its lowest. Aggregate such a surface before merging if a different
+    /// height is wanted.
     fn merge_axis_interpolate(
         &self,
         other: &Self,
@@ -2191,31 +2257,31 @@ mod tests_surface_basic {
 
     /// Projecting out `x` maps `(x, y, z)` to `(y, z)`, which is multi-valued
     /// on a grid: the test surface has two points at `y = 0` and two at
-    /// `y = 1`, and all five survive the projection.
+    /// `y = 1`, so the projection has two ordinates above abscissa `0` and
+    /// two above abscissa `1`.
     ///
-    /// The membership probes below are unchanged, but they are stricter than
-    /// they were: `Point2D` used to compare on `x` alone, so `p == (0, 0)`
-    /// also matched `(0, 1)`. It now means what it says.
+    /// All five are asserted by exact contents, not by membership probes.
+    /// Under the pre-#450 `Point2D` contract, `collect` into the `BTreeSet`
+    /// of the old `Curve` return type kept only three of them, and the
+    /// probes passed anyway because `x`-only equality made `(0, 1)` match a
+    /// probe for `(0, 0)`.
     #[test]
-    fn test_get_curve_x_axis() {
+    fn test_project_onto_x_axis_keeps_every_projected_point() {
         let points = create_test_points();
         let surface = Surface::new(points);
-        let curve = surface.get_curve(Axis::X);
+        let projection = surface.project_onto(Axis::X);
 
-        // Check curve points
-        let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
-
-        // Verify the points are mapped correctly for X-axis curve
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+        assert_eq!(
+            projection,
+            vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(0.0), dec!(1.0)),
+                Point2D::new(dec!(0.5), dec!(1.5)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+                Point2D::new(dec!(1.0), dec!(2.0)),
+            ]
         );
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
-        );
+        assert_eq!(projection.len(), surface.points.len());
 
         let points = surface.get_f64_points();
         assert_eq!(points.len(), 5);
@@ -2236,53 +2302,81 @@ mod tests_surface_basic {
     }
 
     /// Projecting out `y` maps `(x, y, z)` to `(x, z)`, multi-valued on a
-    /// grid for the same reason as the X-axis case above. The probes are
-    /// unchanged and now mean exact membership.
+    /// grid for the same reason as the X-axis case above: two heights above
+    /// `x = 0` and two above `x = 1`.
     #[test]
-    fn test_get_curve_y_axis() {
+    fn test_project_onto_y_axis_keeps_every_projected_point() {
         let points = create_test_points();
         let surface = Surface::new(points);
-        let curve = surface.get_curve(Axis::Y);
+        let projection = surface.project_onto(Axis::Y);
 
-        // Check curve points
-        let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
-
-        // Verify the points are mapped correctly for Y-axis curve
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+        assert_eq!(
+            projection,
+            vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(0.0), dec!(1.0)),
+                Point2D::new(dec!(0.5), dec!(1.5)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+                Point2D::new(dec!(1.0), dec!(2.0)),
+            ]
         );
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(1.0), dec!(2.0)))
-        );
+        assert_eq!(projection.len(), surface.points.len());
     }
 
     /// Projecting out `z` maps `(x, y, z)` to `(x, y)`: the xy-footprint of
     /// the surface, which on a grid has several ordinates per abscissa by
-    /// construction. The probes are unchanged and now mean exact membership.
+    /// construction.
     #[test]
-    fn test_get_curve_z_axis() {
+    fn test_project_onto_z_axis_keeps_every_projected_point() {
         let points = create_test_points();
         let surface = Surface::new(points);
-        let curve = surface.get_curve(Axis::Z);
+        let projection = surface.project_onto(Axis::Z);
 
-        // Check curve points
-        let curve_points: Vec<Point2D> = curve.points.into_iter().collect();
+        assert_eq!(
+            projection,
+            vec![
+                Point2D::new(dec!(0.0), dec!(0.0)),
+                Point2D::new(dec!(0.0), dec!(1.0)),
+                Point2D::new(dec!(0.5), dec!(0.5)),
+                Point2D::new(dec!(1.0), dec!(0.0)),
+                Point2D::new(dec!(1.0), dec!(1.0)),
+            ]
+        );
+        assert_eq!(projection.len(), surface.points.len());
+    }
 
-        // Verify the points are mapped correctly for Z-axis curve
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(0.0), dec!(0.0)))
+    /// Two surface points that agree on the two surviving coordinates
+    /// project onto the very same 2D point. A set keeps one of them; the
+    /// `Vec` this method returns keeps both, which is the loss the return
+    /// type exists to prevent.
+    #[test]
+    fn test_project_onto_coincident_images_keeps_both_points() {
+        // `z` depends on `y` alone, so projecting out `x` maps both rows of
+        // the grid onto the same two points.
+        let surface = Surface::new(BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(7.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(9.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(7.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(9.0)),
+        ]));
+
+        let projection = surface.project_onto(Axis::X);
+
+        assert_eq!(projection.len(), 4);
+        assert_eq!(
+            projection,
+            vec![
+                Point2D::new(dec!(0.0), dec!(7.0)),
+                Point2D::new(dec!(0.0), dec!(7.0)),
+                Point2D::new(dec!(1.0), dec!(9.0)),
+                Point2D::new(dec!(1.0), dec!(9.0)),
+            ]
         );
-        assert!(
-            curve_points
-                .iter()
-                .any(|p| p == &Point2D::new(dec!(1.0), dec!(1.0)))
-        );
+
+        // The old return type collected into a `BTreeSet`, which is where
+        // the two lost points went.
+        let as_set: BTreeSet<Point2D> = projection.into_iter().collect();
+        assert_eq!(as_set.len(), 2);
     }
 
     #[test]

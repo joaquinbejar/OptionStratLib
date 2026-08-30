@@ -59,6 +59,26 @@ use crate::error::InterpolationError;
 ///   A module defining different types of interpolation methods.
 /// - [`crate::geometrics::interpolation::LinearInterpolation`](crate::geometrics::LinearInterpolation):
 ///   A simpler interpolation method for one-dimensional data.
+///
+/// # One point per abscissa
+///
+/// Every interpolator here reads its sample as a function of the abscissa:
+/// at most one ordinate per `x`. See
+/// [`Curve::new`](crate::curves::Curve::new) for the rule and for why no
+/// constructor enforces it. A sample carrying several ordinates at one
+/// abscissa is outside the contract: the grid cell around a repeated
+/// abscissa has zero width and the slope across it is undefined, so the
+/// answer is [`InterpolationError::DegenerateInterval`].
+///
+/// One branch is an exception. The [`Curve`](crate::curves::Curve)
+/// implementation short-circuits an `x` that matches a sample exactly, and
+/// on a stack of ordinates at that `x` it returns the lowest of them rather
+/// than reporting the degeneracy. That branch is left alone here because
+/// the whole method is being reworked under issue #451.
+///
+/// A projection of a surface is multi-valued by construction, which is why
+/// [`Surface::project_onto`](crate::surfaces::Surface::project_onto) returns a
+/// `Vec<Point2D>` and not a curve; aggregate it before interpolating.
 pub trait BiLinearInterpolation<Point, Input> {
     /// Performs bilinear interpolation to compute a value for the given input.
     ///
