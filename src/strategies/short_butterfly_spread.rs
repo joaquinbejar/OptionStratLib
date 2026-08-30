@@ -319,7 +319,7 @@ impl StrategyConstructor for ShortButterflySpread {
         }
 
         // Create strategy
-        let strategy = ShortButterflySpread {
+        let mut strategy = ShortButterflySpread {
             name: "Short Butterfly Spread".to_string(),
             kind: StrategyType::ShortButterflySpread,
             description: SHORT_BUTTERFLY_DESCRIPTION.to_string(),
@@ -352,6 +352,12 @@ impl StrategyConstructor for ShortButterflySpread {
                 higher_strike_position.extra_fields.clone(),
             ),
         };
+
+        // Every other constructor in this crate populates the break-even
+        // points before handing the strategy back; this one did not, so a
+        // butterfly built from a leg set reported an empty vector and every
+        // reader of it (profit area, profit and loss ranges) aborted.
+        strategy.update_break_even_points()?;
 
         Ok(strategy)
     }
