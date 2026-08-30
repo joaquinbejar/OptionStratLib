@@ -237,9 +237,19 @@ fix:
 .PHONY: pre-push
 pre-push: fix fmt lint-fix test readme doc
 
+# Builds the crate's documentation with every feature on. It used to run
+# `cargo clippy -- -W missing-docs`, which builds no documentation at all and
+# so never resolved an intra-doc link. `--all-features` is what makes the
+# difference: `create-doc` below omits it, so a link inside `plotly` /
+# `static_export` / `async` code was checked by nothing.
+#
+# The target starts green: two `private_intra_doc_links` warnings stand
+# (`RNDStatistics::new` in src/chains/rnd.rs and `lower_break_even` in
+# src/strategies/base.rs), and warnings do not fail it. `src/lib.rs` denies
+# `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo clippy -- -W missing-docs
+	cargo doc --all-features --no-deps
 
 .PHONY: doc-open
 doc-open:

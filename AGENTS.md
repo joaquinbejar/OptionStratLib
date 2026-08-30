@@ -87,3 +87,70 @@ When implementing a non-trivial change, follow this order:
 
 Steps 3 and 5 can be parallelized across agents when the model layer is
 stable.
+
+## What the gates do not check
+
+Five facts about this repository's checks, each with the command that shows
+it. They are gaps, not advice.
+
+1. **`make doc` built no documentation.** It ran
+   `cargo clippy -- -W missing-docs`; it is `cargo doc --all-features
+   --no-deps` as of this commit. `make create-doc` has no `--all-features`,
+   so a doc link inside `plotly` / `static_export` / `async` code was
+   resolved by nothing. Add `/// See [`ThisItemDoesNotExist`].` to
+   `pub trait Graph` in `src/visualization/plotly.rs`, then:
+
+   ```
+   make create-doc                    # exit 0
+   cargo doc --all-features --no-deps # exit 101, unresolved link
+   ```
+
+   Two `private_intra_doc_links` warnings stand on a clean tree and are not
+   worth re-investigating: `RNDStatistics::new` (`src/chains/rnd.rs`) and
+   `lower_break_even` (`src/strategies/base.rs`).
+
+2. **`make public-api-check` is not a documentation gate.** It builds
+   rustdoc with `--all-features`, but `cargo public-api` forwards
+   `--cap-lints warn` to that build, so the lints `src/lib.rs` denies
+   (`missing_docs`, `rustdoc::broken_intra_doc_links`) are capped to
+   warnings. With the same broken link in place:
+
+   ```
+   cargo +nightly-2026-08-28 public-api -sss --all-features > /dev/null
+   # exit 0, "warning: unresolved link", full snapshot produced
+   ```
+
+3. **`cargo test --all-features` never exercises the default feature set.**
+   `src/visualization/default.rs` is `#[cfg(not(feature = "plotly"))]`, so
+   the `Graph` a default-features consumer gets is never compiled. Append
+   `compile_error!("x");` to that file:
+
+   ```
+   cargo check --all-features   # exit 0
+   cargo check                  # exit 101
+   ```
+
+   `make test` is what covers all three: default, `plotly`, and
+   `static_export,plotly`, run separately.
+
+4. **`cargo-semver-checks` compares against the published baseline, not the
+   snapshot.** `.github/workflows/semver.yml` passes no `baseline-rev`, so
+   the baseline is the crates.io release. A rename, or a variant added to an
+   exhaustive public enum, therefore needs a minor bump for a 0.x crate.
+   `make public-api-check` only diffs against
+   `public-api/optionstratlib.txt` and never asks for the bump.
+
+   ```
+   grep -A4 cargo-semver-checks-action .github/workflows/semver.yml
+   curl -sL -H 'User-Agent: optionstratlib' \
+     https://crates.io/api/v1/crates/optionstratlib/versions   # baseline
+   ```
+
+5. **`gh` reports refusals on stderr only.** A `gh pr merge` blocked by a
+   base-branch policy writes nothing to stdout, so a caller capturing only
+   stdout sees a silent no-op:
+
+   ```
+   gh pr view 999999 --repo joaquinbejar/OptionStratLib 2>/dev/null
+   # no output; the message went to stderr
+   ```

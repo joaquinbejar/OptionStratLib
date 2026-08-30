@@ -211,6 +211,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`make doc` builds documentation.** It ran `cargo clippy -- -W
+  missing-docs`, which builds none, so no intra-doc link was ever resolved by
+  it. It is now `cargo doc --all-features --no-deps`. The target starts green:
+  two `private_intra_doc_links` warnings stand (`RNDStatistics::new` in
+  `src/chains/rnd.rs`, `lower_break_even` in `src/strategies/base.rs`) and
+  warnings do not fail it. `AGENTS.md` records this and four other gaps
+  between what the gates check and what they appear to check.
+
 - **`make scan-banned` guards the panicking maths and the panicking macros,
   not just `unwrap`/`expect`.** It now also rejects `panic!`,
   `unreachable!`, `todo!`, `unimplemented!`, `.exp()`, `.ln()`, `.powd(` and
