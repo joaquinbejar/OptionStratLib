@@ -90,7 +90,7 @@ stable.
 
 ## What the gates do not check
 
-Five facts about this repository's checks, each with the command that shows
+Six facts about this repository's checks, each with the command that shows
 it. They are gaps, not advice.
 
 1. **`make doc` built no documentation.** It ran
@@ -153,4 +153,20 @@ it. They are gaps, not advice.
    ```
    gh pr view 999999 --repo joaquinbejar/OptionStratLib 2>/dev/null
    # no output; the message went to stderr
+   ```
+
+6. **`make scan-banned` is a grep, so confirm it sees your construct before
+   trusting a clean run.** It is line-oriented `awk`, and its comment filter
+   skipped every line beginning with `*`, which is what the continuation
+   lines of a multi-line expression are indented to — five `.exp()` calls in
+   `src/pricing/compound.rs` were invisible to it until this commit. It also
+   cannot tell receiver types apart, so `f64::exp` and `Decimal::exp` look
+   alike and the `f64` sites carry `// scan-banned: allow` markers saying so.
+   Before relying on it for a new construct, plant one and check it is
+   caught:
+
+   ```
+   printf '\npub fn probe(x: Decimal) -> Decimal {\n    x\n        * dec!(2)\n        .exp()\n}\n' >> src/pricing/utils.rs
+   make scan-banned    # must fail (exit 2) and print the offending line
+   git checkout -- src/pricing/utils.rs
    ```
