@@ -159,12 +159,44 @@ impl PnL {
     /// overflow and aborts instead. Every accumulation inside the library goes
     /// through this method, which reports it.
     ///
+    /// # Decision (issue #471): public, and the operator stays
+    ///
+    /// `Add::add` and `Sum::sum` are fixed by `std` to return `Self`, so no
+    /// fallible form of either exists — there is no signature change that
+    /// makes the operator safe. This method was already the crate-internal
+    /// accumulation path; making it `pub` gives callers the same route.
+    ///
+    /// The operator impls are kept rather than removed: deleting them would
+    /// break every `a + b` and `.sum()` at a call site that has no overflow
+    /// to worry about. Rust does not accept `#[deprecated]` on a trait `impl`
+    /// block or on a trait method inside one (`error: #[deprecated]
+    /// attribute cannot be used on trait impl blocks`), so the redirection
+    /// is documented on the impls themselves rather than emitted by the
+    /// compiler.
+    ///
     /// # Errors
     ///
     /// Returns [`PricingError::Positive`] when either running cost total
     /// leaves the `Positive` range, and [`PricingError::Decimal`] when a
     /// realized or unrealized total leaves the `Decimal` range.
-    pub(crate) fn try_add(&self, other: &PnL) -> Result<PnL, PricingError> {
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use chrono::Utc;
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib::pnl::utils::PnL;
+    /// use positive::Positive;
+    ///
+    /// let now = Utc::now();
+    /// let a = PnL::new(Some(dec!(500.0)), None, Positive::HUNDRED, Positive::ZERO, now);
+    /// let b = PnL::new(Some(dec!(250.0)), None, Positive::HUNDRED, Positive::ZERO, now);
+    ///
+    /// let total = a.try_add(&b)?;
+    /// assert_eq!(total.realized, Some(dec!(750.0)));
+    /// # Ok::<(), optionstratlib::error::PricingError>(())
+    /// ```
+    pub fn try_add(&self, other: &PnL) -> Result<PnL, PricingError> {
         fn add_leg(
             a: Option<Decimal>,
             b: Option<Decimal>,
@@ -192,6 +224,28 @@ impl PnL {
     }
 }
 
+/// Sums a sequence of `PnL` values.
+///
+/// # Deprecated in favour of [`PnL::try_add`]
+///
+/// `initial_costs` and `initial_income` are `Positive`, and this fold adds
+/// them with the raw `+` operator, which aborts on overflow. `Sum::sum` is
+/// fixed by `std` to return `Self`, so there is no fallible form of it and
+/// the abort cannot be removed from this signature. Fold with
+/// [`PnL::try_add`] instead:
+///
+/// ```rust
+/// use optionstratlib::pnl::utils::PnL;
+/// # let items: Vec<PnL> = Vec::new();
+/// let total = items
+///     .iter()
+///     .try_fold(PnL::default(), |acc, item| acc.try_add(item))?;
+/// # Ok::<(), optionstratlib::error::PricingError>(())
+/// ```
+///
+/// The impl is retained because removing it would break every call site that
+/// sums values it already knows to be in range. Rust rejects `#[deprecated]`
+/// on a trait `impl` block, so this notice is the only marker available.
 impl Sum for PnL {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(PnL::default(), |acc, x| PnL {
@@ -214,6 +268,13 @@ impl Sum for PnL {
     }
 }
 
+/// Sums a sequence of `&PnL` values.
+///
+/// # Deprecated in favour of [`PnL::try_add`]
+///
+/// Same defect and same reasoning as [`Sum::sum`] for owned `PnL`: the
+/// `Positive` accumulation uses the raw `+` operator and `std` gives
+/// `Sum::sum` no error channel. Fold with [`PnL::try_add`] instead.
 impl<'a> Sum<&'a PnL> for PnL {
     fn sum<I: Iterator<Item = &'a PnL>>(iter: I) -> Self {
         iter.fold(PnL::default(), |acc, x| PnL {
@@ -236,6 +297,33 @@ impl<'a> Sum<&'a PnL> for PnL {
     }
 }
 
+/// Adds two `PnL` values.
+///
+/// # Deprecated in favour of [`PnL::try_add`]
+///
+/// `initial_costs: Positive + Positive` uses the raw `+` operator, which
+/// aborts on overflow. `Add::add` is fixed by `std` to return `Self`, so
+/// there is no fallible form of it. Use [`PnL::try_add`], which returns
+/// `Result<PnL, PricingError>`:
+///
+/// ```rust
+/// use chrono::Utc;
+/// use optionstratlib::pnl::utils::PnL;
+/// use positive::Positive;
+/// use rust_decimal_macros::dec;
+///
+/// let now = Utc::now();
+/// let a = PnL::new(Some(dec!(1.0)), None, Positive::ONE, Positive::ZERO, now);
+/// let b = PnL::new(Some(dec!(2.0)), None, Positive::ONE, Positive::ZERO, now);
+///
+/// let total = a.try_add(&b)?;      // instead of `a + b`
+/// assert_eq!(total.realized, Some(dec!(3.0)));
+/// # Ok::<(), optionstratlib::error::PricingError>(())
+/// ```
+///
+/// The impl is retained because removing it would break every call site that
+/// adds values it already knows to be in range. Rust rejects `#[deprecated]`
+/// on a trait `impl` block, so this notice is the only marker available.
 impl Add for PnL {
     type Output = Self;
 
@@ -264,6 +352,14 @@ impl Add for PnL {
     }
 }
 
+/// Adds two `&PnL` values.
+///
+/// # Deprecated in favour of [`PnL::try_add`]
+///
+/// Same defect and same reasoning as [`Add::add`] for owned `PnL`: the
+/// `Positive` accumulation uses the raw `+` operator and `std` gives
+/// `Add::add` no error channel. Use [`PnL::try_add`], which already takes
+/// both operands by reference.
 impl Add for &PnL {
     type Output = PnL;
 
@@ -483,6 +579,55 @@ mod tests_add {
         assert_eq!(sum.unrealized, Some(dec!(15.0)));
         assert_eq!(sum.initial_costs, pos_or_panic!(5.0));
         assert_eq!(sum.initial_income, pos_or_panic!(3.0));
+    }
+
+    /// `try_add` is the public replacement for the operator: on values the
+    /// operator handles it gives the same answer.
+    #[test]
+    fn test_pnl_try_add_matches_the_operator_in_range() {
+        let now = Utc::now();
+        let pnl1 = PnL {
+            realized: Some(dec!(10.0)),
+            unrealized: Some(dec!(5.0)),
+            initial_costs: Positive::TWO,
+            initial_income: Positive::ONE,
+            date_time: now,
+        };
+        let pnl2 = PnL {
+            realized: Some(dec!(20.0)),
+            unrealized: Some(dec!(10.0)),
+            initial_costs: pos_or_panic!(3.0),
+            initial_income: Positive::TWO,
+            date_time: now,
+        };
+
+        let Ok(sum) = pnl1.try_add(&pnl2) else {
+            unreachable!("both operands are well inside the Decimal range")
+        };
+        assert_eq!(sum, pnl1 + pnl2);
+    }
+
+    /// Where the operator aborts, `try_add` reports. This is the whole point
+    /// of making it public in #471.
+    #[test]
+    fn test_pnl_try_add_reports_what_the_operator_aborts_on() {
+        let now = Utc::now();
+        let pnl1 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: Positive::MAX,
+            initial_income: Positive::ZERO,
+            date_time: now,
+        };
+        let pnl2 = PnL {
+            realized: None,
+            unrealized: None,
+            initial_costs: Positive::MAX,
+            initial_income: Positive::ZERO,
+            date_time: now,
+        };
+
+        assert!(pnl1.try_add(&pnl2).is_err());
     }
 }
 

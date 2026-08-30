@@ -40,8 +40,9 @@
 //! );
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
 use crate::model::ExpirationDate;
+use crate::model::decimal::{d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable};
 use crate::model::types::Side;
@@ -235,15 +236,40 @@ impl FuturePosition {
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn unrealized_pnl(&self, current_price: Positive) -> Decimal {
-        let price_change = current_price.to_dec() - self.entry_price.to_dec();
-        let pnl = price_change * self.quantity.to_dec() * self.contract_size.to_dec();
+    ///
+    /// # Decision (issue #471): fallible because `pnl_at_price` is
+    ///
+    /// This is the whole body of [`LegAble::pnl_at_price`] for a future, so
+    /// leaving it infallible would have moved that method's abort one frame
+    /// down rather than removing it. `entry_price`, `quantity` and
+    /// `contract_size` are `pub`, so no constructor guard bounds the product.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the price difference, the
+    /// quantity scaling or the contract-size scaling leaves the representable
+    /// `Decimal` range.
+    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+        let price_change = d_sub(
+            current_price.to_dec(),
+            self.entry_price.to_dec(),
+            "FuturePosition::unrealized_pnl/price_change",
+        )?;
+        let pnl = d_mul(
+            d_mul(
+                price_change,
+                self.quantity.to_dec(),
+                "FuturePosition::unrealized_pnl/quantity",
+            )?,
+            self.contract_size.to_dec(),
+            "FuturePosition::unrealized_pnl/contract_size",
+        )?;
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => pnl,
+            // Negating a representable `Decimal` is always representable.
             Side::Short => -pnl,
-        }
+        })
     }
 
     /// Calculates the tick value (value of one minimum price movement).
@@ -299,16 +325,20 @@ impl LegAble for FuturePosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Decimal {
-        self.unrealized_pnl(price) - self.fees.to_dec()
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+        Ok(d_sub(
+            self.unrealized_pnl(price)?,
+            self.fees.to_dec(),
+            "FuturePosition::pnl_at_price/net",
+        )?)
     }
 
-    fn total_cost(&self) -> Positive {
-        self.total_margin_required() + self.fees
+    fn total_cost(&self) -> Result<Positive, PositionError> {
+        Ok(self.total_margin_required().checked_add(&self.fees)?)
     }
 
-    fn fees(&self) -> Positive {
-        self.fees
+    fn fees(&self) -> Result<Positive, PositionError> {
+        Ok(self.fees)
     }
 
     fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -514,10 +544,10 @@ mod tests {
         );
 
         let pnl = future.unrealized_pnl(pos_or_panic!(4510.0));
-        assert_eq!(pnl, Decimal::from(500));
+        assert_eq!(pnl.ok(), Some(Decimal::from(500)));
 
         let pnl_loss = future.unrealized_pnl(pos_or_panic!(4490.0));
-        assert_eq!(pnl_loss, Decimal::from(-500));
+        assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
     #[test]
@@ -532,10 +562,10 @@ mod tests {
         );
 
         let pnl = future.unrealized_pnl(pos_or_panic!(4490.0));
-        assert_eq!(pnl, Decimal::from(500));
+        assert_eq!(pnl.ok(), Some(Decimal::from(500)));
 
         let pnl_loss = future.unrealized_pnl(pos_or_panic!(4510.0));
-        assert_eq!(pnl_loss, Decimal::from(-500));
+        assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
     }
 
     #[test]

@@ -40,7 +40,8 @@
 //! );
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::{Fundable, LegAble, Marginable};
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
@@ -256,50 +257,105 @@ impl PerpetualPosition {
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn unrealized_pnl(&self, current_price: Positive) -> Decimal {
-        let price_change = current_price.to_dec() - self.entry_price.to_dec();
-        let pnl = price_change * self.quantity.to_dec();
+    ///
+    /// # Decision (issue #471): fallible because `pnl_at_price` is
+    ///
+    /// This is the whole body of [`LegAble::pnl_at_price`] for a perpetual,
+    /// so leaving it infallible would have moved that method's abort one
+    /// frame down rather than removing it. `entry_price` and `quantity` are
+    /// `pub`, so no constructor guard bounds the product.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the price difference or the
+    /// quantity scaling leaves the representable `Decimal` range.
+    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+        let price_change = d_sub(
+            current_price.to_dec(),
+            self.entry_price.to_dec(),
+            "PerpetualPosition::unrealized_pnl/price_change",
+        )?;
+        let pnl = d_mul(
+            price_change,
+            self.quantity.to_dec(),
+            "PerpetualPosition::unrealized_pnl/quantity",
+        )?;
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => pnl,
+            // Negating a representable `Decimal` is always representable.
             Side::Short => -pnl,
-        }
+        })
     }
 
     /// Calculates the ROE (Return on Equity) percentage.
     ///
     /// ROE = (Unrealized P&L / Margin) × 100
     ///
+    /// A zero margin has no return on equity to report, and the function
+    /// keeps its existing answer of `Decimal::ZERO` for that case rather than
+    /// turning it into an error.
+    ///
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn roe_percentage(&self, current_price: Positive) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
+    /// [`PricingError::Decimal`] when the ratio or its percentage scaling
+    /// leaves the representable `Decimal` range.
+    pub fn roe_percentage(&self, current_price: Positive) -> Result<Decimal, PricingError> {
         if self.margin == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        let pnl = self.unrealized_pnl(current_price);
-        (pnl / self.margin.to_dec()) * Decimal::ONE_HUNDRED
+        let pnl = self.unrealized_pnl(current_price)?;
+        let ratio = d_div(
+            pnl,
+            self.margin.to_dec(),
+            "PerpetualPosition::roe_percentage/ratio",
+        )?;
+        Ok(d_mul(
+            ratio,
+            Decimal::ONE_HUNDRED,
+            "PerpetualPosition::roe_percentage/percent",
+        )?)
     }
 
     /// Calculates the margin ratio at a given price.
     ///
     /// Margin Ratio = (Margin + Unrealized P&L) / Notional Value
     ///
+    /// A zero notional has no margin ratio to report, and the function keeps
+    /// its existing answer of `Decimal::ZERO` for that case rather than
+    /// turning it into an error.
+    ///
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn margin_ratio(&self, current_price: Positive) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
+    /// [`PricingError::Decimal`] when the equity sum or the ratio leaves the
+    /// representable `Decimal` range.
+    pub fn margin_ratio(&self, current_price: Positive) -> Result<Decimal, PricingError> {
         let notional = self.notional_value_at_price(current_price);
         if notional == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        let equity = self.margin.to_dec() + self.unrealized_pnl(current_price);
-        equity / notional.to_dec()
+        let equity = d_add(
+            self.margin.to_dec(),
+            self.unrealized_pnl(current_price)?,
+            "PerpetualPosition::margin_ratio/equity",
+        )?;
+        Ok(d_div(
+            equity,
+            notional.to_dec(),
+            "PerpetualPosition::margin_ratio/ratio",
+        )?)
     }
 
     /// Updates the funding rate.
@@ -315,18 +371,35 @@ impl PerpetualPosition {
     ///
     /// Effective Leverage = Notional Value / (Margin + Unrealized P&L)
     ///
+    /// A position whose equity has been wiped out is infinitely levered, and
+    /// the function keeps its existing answer of `Decimal::MAX` for that case
+    /// rather than turning it into an error.
+    ///
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn effective_leverage(&self, current_price: Positive) -> Decimal {
-        let equity = self.margin.to_dec() + self.unrealized_pnl(current_price);
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
+    /// [`PricingError::Decimal`] when the equity sum or the quotient leaves
+    /// the representable `Decimal` range.
+    pub fn effective_leverage(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+        let equity = d_add(
+            self.margin.to_dec(),
+            self.unrealized_pnl(current_price)?,
+            "PerpetualPosition::effective_leverage/equity",
+        )?;
         if equity <= Decimal::ZERO {
-            return Decimal::MAX;
+            return Ok(Decimal::MAX);
         }
 
         let notional = self.notional_value_at_price(current_price);
-        notional.to_dec() / equity
+        Ok(d_div(
+            notional.to_dec(),
+            equity,
+            "PerpetualPosition::effective_leverage/leverage",
+        )?)
     }
 }
 
@@ -343,16 +416,20 @@ impl LegAble for PerpetualPosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Decimal {
-        self.unrealized_pnl(price) - self.fees.to_dec()
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+        Ok(d_sub(
+            self.unrealized_pnl(price)?,
+            self.fees.to_dec(),
+            "PerpetualPosition::pnl_at_price/net",
+        )?)
     }
 
-    fn total_cost(&self) -> Positive {
-        self.margin + self.fees
+    fn total_cost(&self) -> Result<Positive, PositionError> {
+        Ok(self.margin.checked_add(&self.fees)?)
     }
 
-    fn fees(&self) -> Positive {
-        self.fees
+    fn fees(&self) -> Result<Positive, PositionError> {
+        Ok(self.fees)
     }
 
     fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -549,8 +626,14 @@ mod tests {
             pos_or_panic!(5000.0),
         );
 
-        assert_eq!(perp.unrealized_pnl(pos_or_panic!(55000.0)), dec!(5000));
-        assert_eq!(perp.unrealized_pnl(pos_or_panic!(45000.0)), dec!(-5000));
+        assert_eq!(
+            perp.unrealized_pnl(pos_or_panic!(55000.0)).ok(),
+            Some(dec!(5000))
+        );
+        assert_eq!(
+            perp.unrealized_pnl(pos_or_panic!(45000.0)).ok(),
+            Some(dec!(-5000))
+        );
     }
 
     #[test]
@@ -563,8 +646,14 @@ mod tests {
             pos_or_panic!(5000.0),
         );
 
-        assert_eq!(perp.unrealized_pnl(pos_or_panic!(45000.0)), dec!(5000));
-        assert_eq!(perp.unrealized_pnl(pos_or_panic!(55000.0)), dec!(-5000));
+        assert_eq!(
+            perp.unrealized_pnl(pos_or_panic!(45000.0)).ok(),
+            Some(dec!(5000))
+        );
+        assert_eq!(
+            perp.unrealized_pnl(pos_or_panic!(55000.0)).ok(),
+            Some(dec!(-5000))
+        );
     }
 
     #[test]
@@ -578,7 +667,7 @@ mod tests {
         );
 
         let roe = perp.roe_percentage(pos_or_panic!(55000.0));
-        assert_eq!(roe, dec!(100));
+        assert_eq!(roe.ok(), Some(dec!(100)));
     }
 
     #[test]
@@ -685,7 +774,7 @@ mod tests {
         );
 
         let eff_lev = perp.effective_leverage(pos_or_panic!(50000.0));
-        assert_eq!(eff_lev, dec!(10));
+        assert_eq!(eff_lev.ok(), Some(dec!(10)));
     }
 
     #[test]

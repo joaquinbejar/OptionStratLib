@@ -356,23 +356,58 @@ impl Collar {
     /// Calculates the net premium (credit if positive, debit if negative).
     ///
     /// Net Premium = Call Premium Received - Put Premium Paid
-    #[must_use]
-    pub fn net_premium(&self) -> Decimal {
-        let call_premium = self.short_call.premium * self.short_call.option.quantity;
-        let put_premium = self.long_put.premium * self.long_put.option.quantity;
-        call_premium.to_dec() - put_premium.to_dec()
+    ///
+    /// # Decision (issue #471): return `Result`, do not privatise the fields
+    ///
+    /// This used to return a bare `Decimal` over `premium * quantity` on both
+    /// legs. `Position::premium` and `Options::quantity` are `pub`, so
+    /// [`Collar::new`] cannot bound either product, and a signed premium has
+    /// no sentinel that means "did not fit". Hiding the fields would have
+    /// been a larger break than adding the error channel and would still
+    /// leave `Collar` deserializable from arbitrary JSON, so the channel is
+    /// what was added.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when either leg's `premium ×
+    /// quantity` leaves the `Positive` range, and [`PricingError::Decimal`]
+    /// when their difference leaves the representable `Decimal` range.
+    pub fn net_premium(&self) -> Result<Decimal, PricingError> {
+        let call_premium = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?;
+        let put_premium = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?;
+        Ok(d_sub(
+            call_premium.to_dec(),
+            put_premium.to_dec(),
+            "Collar::net_premium",
+        )?)
     }
 
     /// Returns true if this is a zero-cost collar (net premium is approximately zero).
-    #[must_use]
-    pub fn is_zero_cost(&self) -> bool {
-        self.net_premium().abs() < Decimal::new(1, 2) // Less than $0.01
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Collar::net_premium`]: a premium total that does not fit
+    /// is not a collar this predicate can classify, and `false` would read as
+    /// "not zero-cost" rather than "not known".
+    pub fn is_zero_cost(&self) -> Result<bool, PricingError> {
+        Ok(self.net_premium()?.abs() < Decimal::new(1, 2)) // Less than $0.01
     }
 
     /// Returns true if this is a credit collar (net premium received).
-    #[must_use]
-    pub fn is_credit(&self) -> bool {
-        self.net_premium() > Decimal::ZERO
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Collar::net_premium`]: a premium total that does not fit
+    /// is not a collar this predicate can classify, and `false` would read as
+    /// "a debit collar" rather than "not known".
+    pub fn is_credit(&self) -> Result<bool, PricingError> {
+        Ok(self.net_premium()? > Decimal::ZERO)
     }
 
     /// Calculates the net delta of the collar.
@@ -412,7 +447,7 @@ impl Collar {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let net_premium = self.net_premium();
+        let net_premium = self.net_premium()?;
         let total_fees = self.total_fees()?;
 
         if call_strike >= cost_basis {
@@ -453,7 +488,7 @@ impl Collar {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let net_premium = self.net_premium();
+        let net_premium = self.net_premium()?;
         let total_fees = self.total_fees()?;
 
         if cost_basis >= put_strike {
@@ -561,7 +596,7 @@ impl BreakEvenable for Collar {
 
         // Break-even = Cost Basis - Net Premium per Share
         let net_premium_per_share = d_div(
-            self.net_premium(),
+            self.net_premium()?,
             self.spot_leg.quantity.to_dec(),
             "Collar::update_break_even_points",
         )?;
@@ -791,7 +826,7 @@ impl Strategies for Collar {
 impl Profit for Collar {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         // Spot P&L
-        let spot_pnl = self.spot_leg.pnl_at_price(*price);
+        let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
 
         // Put P&L at expiration
         let put_pnl = self
@@ -838,7 +873,7 @@ impl PnLCalculator for Collar {
         underlying_price: &Positive,
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
-        let spot_cost = self.spot_leg.total_cost();
+        let spot_cost = self.spot_leg.total_cost()?;
         let put_cost = self
             .long_put
             .premium
@@ -1017,13 +1052,38 @@ mod tests {
 
         // Call premium (3.00) - Put premium (2.50) = 0.50 credit per share
         // With 1 contract (100 shares / 100 = 1), net = 0.50
-        assert!(net_premium > Decimal::ZERO); // Credit collar
+        assert!(net_premium.is_ok_and(|p| p > Decimal::ZERO)); // Credit collar
+    }
+
+    /// `net_premium` reads two `pub` premium fields. Setting one past the
+    /// range `Collar::new` produced makes the product unrepresentable, and
+    /// the getter reports it instead of aborting.
+    #[test]
+    fn test_collar_net_premium_overflowing_premium_is_reported() {
+        let mut collar = create_test_collar();
+        collar.short_call.premium = Positive::MAX;
+        collar.short_call.option.quantity = Positive::TWO;
+
+        assert!(collar.net_premium().is_err());
+    }
+
+    /// The two predicates over `net_premium` report the same failure rather
+    /// than collapsing it into `false`, which would read as a definite
+    /// classification.
+    #[test]
+    fn test_collar_credit_predicates_propagate_the_premium_overflow() {
+        let mut collar = create_test_collar();
+        collar.long_put.premium = Positive::MAX;
+        collar.long_put.option.quantity = Positive::TWO;
+
+        assert!(collar.is_zero_cost().is_err());
+        assert!(collar.is_credit().is_err());
     }
 
     #[test]
     fn test_is_credit() {
         let collar = create_test_collar();
-        assert!(collar.is_credit());
+        assert_eq!(collar.is_credit().ok(), Some(true));
     }
 
     #[test]

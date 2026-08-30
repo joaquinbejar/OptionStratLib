@@ -308,11 +308,28 @@ impl ProtectivePut {
     }
 
     /// Calculates the effective cost basis (Price paid for spot + Premium paid for put).
-    #[must_use]
-    pub fn effective_cost_basis(&self) -> Positive {
-        let premium_per_share =
-            self.long_put.premium * self.long_put.option.quantity / self.spot_leg.quantity;
-        self.spot_leg.cost_basis + premium_per_share
+    ///
+    /// # Decision (issue #471): return `Result`
+    ///
+    /// The divisor is `spot_leg.quantity`, a `pub` field.
+    /// [`ProtectivePut::new`] rejects a zero share count, but a
+    /// `ProtectivePut` deserialized from JSON or mutated in place can carry
+    /// one, and `Positive` has no value that means "undefined per-share
+    /// figure". The product above the division and the sum below it can also
+    /// leave the `Positive` range on their own.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError::ArithmeticError`] when the spot leg holds
+    /// zero shares, so there is no per-share premium to divide out, and when
+    /// `premium × quantity` or the final sum overflows.
+    pub fn effective_cost_basis(&self) -> Result<Positive, PositiveError> {
+        let premium_per_share = self
+            .long_put
+            .premium
+            .checked_mul(&self.long_put.option.quantity)?
+            .checked_div(&self.spot_leg.quantity)?;
+        self.spot_leg.cost_basis.checked_add(&premium_per_share)
     }
 
     /// Checks if the put is out-of-the-money.
@@ -510,7 +527,7 @@ impl Strategies for ProtectivePut {
 
 impl Profit for ProtectivePut {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
-        let spot_pnl = self.spot_leg.pnl_at_price(*price);
+        let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
         let put_pnl = self
             .long_put
             .pnl_at_expiration(&Some(price))
@@ -548,7 +565,7 @@ impl PnLCalculator for ProtectivePut {
         underlying_price: &Positive,
     ) -> Result<crate::pnl::utils::PnL, PricingError> {
         let profit = self.calculate_profit_at(underlying_price)?;
-        let spot_cost = self.spot_leg.total_cost();
+        let spot_cost = self.spot_leg.total_cost()?;
         let put_cost = self
             .long_put
             .premium
@@ -686,6 +703,29 @@ mod tests {
         assert_eq!(pp.spot_leg.symbol, "AAPL");
         assert_eq!(pp.spot_leg.cost_basis, pos_or_panic!(150.0));
         assert_eq!(pp.long_put.option.strike_price, pos_or_panic!(145.0));
+    }
+
+    /// `effective_cost_basis` divides by `spot_leg.quantity`, a `pub` field.
+    /// `ProtectivePut::new` rejects a zero share count, but a protective put
+    /// mutated in place or deserialized from JSON can carry one, and there is
+    /// no per-share cost basis to report for it.
+    #[test]
+    fn test_protective_put_effective_cost_basis_zero_shares_is_reported() {
+        let mut pp = create_test_protective_put();
+        pp.spot_leg.quantity = Positive::ZERO;
+
+        assert!(pp.effective_cost_basis().is_err());
+    }
+
+    /// The premium leg is `pub` too, so the numerator can leave the
+    /// `Positive` range before the division is reached.
+    #[test]
+    fn test_protective_put_effective_cost_basis_overflowing_premium_is_reported() {
+        let mut pp = create_test_protective_put();
+        pp.long_put.premium = Positive::MAX;
+        pp.long_put.option.quantity = Positive::TWO;
+
+        assert!(pp.effective_cost_basis().is_err());
     }
 
     #[test]

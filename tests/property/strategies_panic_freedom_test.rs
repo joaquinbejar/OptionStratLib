@@ -84,28 +84,6 @@ fn extreme_money() -> impl Strategy<Value = Positive> {
     ]
 }
 
-/// Premia, fees and spot prices for the spot-leg strategies, bounded below the
-/// magnitude at which the *infallible* signatures they run through overflow.
-///
-/// `LegAble::pnl_at_price`, `LegAble::total_cost` and `LegAble::fees` return a
-/// bare `Decimal` or `Positive` (`src/model/leg/spot.rs:251`, `:262` and
-/// `:269`) and `Collar::net_premium` returns a bare `Decimal`
-/// (`src/strategies/collar.rs:361`). All four multiply and add with the raw
-/// operators and have nowhere to report an overflow, so they abort. Lifting
-/// this bound needs those signatures to gain an error channel, which is a
-/// change to the `LegAble` trait and to the spot-leg strategies, both outside
-/// the model-layer sweep that unbounded the generators above.
-fn spot_leg_money() -> impl Strategy<Value = Positive> {
-    prop_oneof![
-        Just(Positive::ZERO),
-        Just(pos(TINY)),
-        Just(pos(dec!(0.01))),
-        Just(Positive::ONE),
-        Just(Positive::HUNDRED),
-        Just(pos(dec!(100000000000000))),
-    ]
-}
-
 /// Contract and share counts. Zero is kept: it is the divisor of every
 /// per-contract and per-share figure in this layer.
 fn extreme_quantity() -> impl Strategy<Value = Positive> {
@@ -375,19 +353,24 @@ proptest! {
     /// basis net of a credit that the fees can turn into a debit.
     #[test]
     fn test_spot_leg_strategies_never_panic(
-        // Every monetary argument of this test goes through an infallible
-        // signature in the spot leg; see [`spot_leg_money`] for the four sites
-        // and why they are not this sweep's to fix.
-        underlying in spot_leg_money(),
+        // Every monetary argument of this test goes through the spot leg.
+        // Until #471 these arguments ran through a bounded `spot_leg_money`
+        // generator, because `LegAble::pnl_at_price`, `LegAble::total_cost`
+        // and `LegAble::fees` returned a bare `Decimal` or `Positive` and
+        // `Collar::net_premium` returned a bare `Decimal`: all four added and
+        // multiplied with the raw operators and had nowhere to report an
+        // overflow. All four now return `Result`, so the generator is the
+        // unbounded `extreme_money` and `Positive::MAX` is back in range.
+        underlying in extreme_money(),
         put_strike in extreme_positive(),
         call_strike in extreme_positive(),
         volatility in extreme_volatility(),
         quantity in extreme_quantity(),
-        premium in spot_leg_money(),
-        fee in spot_leg_money(),
+        premium in extreme_money(),
+        fee in extreme_money(),
         rate in extreme_decimal(),
         expiration in extreme_expiration(),
-        probe in spot_leg_money(),
+        probe in extreme_money(),
     ) {
         if let Ok(mut strategy) = Collar::new(
             "PROP".to_string(), underlying, put_strike, call_strike, expiration,

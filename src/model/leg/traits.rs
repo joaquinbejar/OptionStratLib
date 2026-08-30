@@ -13,7 +13,7 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
 use crate::model::types::Side;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -49,16 +49,55 @@ pub trait LegAble {
     /// # Returns
     ///
     /// The profit (positive) or loss (negative) as a Decimal value.
-    fn pnl_at_price(&self, price: Positive) -> Decimal;
+    ///
+    /// # Decision (issue #471): the error channel is part of the signature
+    ///
+    /// This method used to return a bare `Decimal`. Every implementor computes
+    /// some form of `(price - basis) * quantity - fees`, and each of those
+    /// operators aborts the process on overflow. The inputs are `pub` fields
+    /// on the leg structs, so no constructor guard can bound them, and a
+    /// `Decimal` has no value that means "this does not fit". The trait
+    /// signature was the thing forbidding the report, so the trait signature
+    /// is what changed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the price difference, the
+    /// quantity scaling or the fee deduction leaves the representable
+    /// `Decimal` range, and [`PricingError::Positive`] when a fee total
+    /// leaves the `Positive` range. Option legs additionally propagate
+    /// whatever [`crate::model::position::Position::pnl_at_expiration`]
+    /// reports.
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError>;
 
     /// Returns the total cost to establish this position.
     ///
     /// For long positions, this includes the purchase price plus fees.
     /// For short positions, this typically includes only fees.
-    fn total_cost(&self) -> Positive;
+    ///
+    /// # Decision (issue #471): fallible, alongside `pnl_at_price`
+    ///
+    /// `Position::total_cost` has returned `Result<Positive, PositionError>`
+    /// since the position layer was made panic-free; the leg trait was the
+    /// remaining infallible wrapper over the same sum, and `Leg::Option` had
+    /// to swallow the position's error as `unwrap_or(Positive::ZERO)` to fit
+    /// this signature. A cost of zero is a legitimate answer for a short
+    /// leg, so that fallback was indistinguishable from a real result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the size, premium or fee sum leaves the
+    /// `Positive` range.
+    fn total_cost(&self) -> Result<Positive, PositionError>;
 
     /// Returns the total fees associated with this position.
-    fn fees(&self) -> Positive;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the open and close fees do not sum
+    /// within the `Positive` range. See [`LegAble::total_cost`] for why this
+    /// gained an error channel.
+    fn fees(&self) -> Result<Positive, PositionError>;
 
     /// Returns the delta of this position.
     ///
@@ -288,20 +327,23 @@ mod tests {
             self.side
         }
 
-        fn pnl_at_price(&self, price: Positive) -> Decimal {
+        fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
             let value_change = (price.to_dec() - self.cost_basis.to_dec()) * self.quantity.to_dec();
-            match self.side {
+            Ok(match self.side {
                 Side::Long => value_change,
                 Side::Short => -value_change,
-            }
+            })
         }
 
-        fn total_cost(&self) -> Positive {
-            self.cost_basis * self.quantity + self.fees
+        fn total_cost(&self) -> Result<Positive, PositionError> {
+            Ok(self
+                .cost_basis
+                .checked_mul(&self.quantity)?
+                .checked_add(&self.fees)?)
         }
 
-        fn fees(&self) -> Positive {
-            self.fees
+        fn fees(&self) -> Result<Positive, PositionError> {
+            Ok(self.fees)
         }
 
         fn delta(&self) -> Result<Decimal, GreeksError> {
@@ -325,11 +367,11 @@ mod tests {
 
         // Price goes up - profit
         let pnl = leg.pnl_at_price(positive::pos_or_panic!(55000.0));
-        assert_eq!(pnl, Decimal::from(5000));
+        assert_eq!(pnl.ok(), Some(Decimal::from(5000)));
 
         // Price goes down - loss
         let pnl = leg.pnl_at_price(positive::pos_or_panic!(45000.0));
-        assert_eq!(pnl, Decimal::from(-5000));
+        assert_eq!(pnl.ok(), Some(Decimal::from(-5000)));
     }
 
     #[test]
@@ -344,11 +386,11 @@ mod tests {
 
         // Price goes up - loss for short
         let pnl = leg.pnl_at_price(positive::pos_or_panic!(55000.0));
-        assert_eq!(pnl, Decimal::from(-5000));
+        assert_eq!(pnl.ok(), Some(Decimal::from(-5000)));
 
         // Price goes down - profit for short
         let pnl = leg.pnl_at_price(positive::pos_or_panic!(45000.0));
-        assert_eq!(pnl, Decimal::from(5000));
+        assert_eq!(pnl.ok(), Some(Decimal::from(5000)));
     }
 
     #[test]

@@ -33,7 +33,7 @@
 //! assert!(spot_leg.is_spot());
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PositionError, PricingError};
 use crate::model::leg::future::FuturePosition;
 use crate::model::leg::perpetual::PerpetualPosition;
 use crate::model::leg::spot::SpotPosition;
@@ -260,29 +260,39 @@ impl LegAble for Leg {
         }
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Decimal {
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
         match self {
-            Self::Option(pos) => pos
-                .pnl_at_expiration(&Some(&price))
-                .unwrap_or(Decimal::ZERO),
+            // The option arm used to swallow the failure as
+            // `unwrap_or(Decimal::ZERO)`, which reported a break-even where
+            // the payoff had in fact not been computed. Now that the trait
+            // has an error channel it reports the failure instead.
+            Self::Option(pos) => pos.pnl_at_expiration(&Some(&price)),
             Self::Spot(pos) => pos.pnl_at_price(price),
             Self::Future(pos) => pos.pnl_at_price(price),
             Self::Perpetual(pos) => pos.pnl_at_price(price),
         }
     }
 
-    fn total_cost(&self) -> Positive {
+    fn total_cost(&self) -> Result<Positive, PositionError> {
         match self {
-            Self::Option(pos) => pos.total_cost().unwrap_or(Positive::ZERO),
+            // The option arm used to swallow the failure as
+            // `unwrap_or(Positive::ZERO)`, which is also the honest cost of a
+            // short leg and so could not be told apart from a real answer.
+            Self::Option(pos) => pos.total_cost(),
             Self::Spot(pos) => pos.total_cost(),
             Self::Future(pos) => pos.total_cost(),
             Self::Perpetual(pos) => pos.total_cost(),
         }
     }
 
-    fn fees(&self) -> Positive {
+    fn fees(&self) -> Result<Positive, PositionError> {
         match self {
-            Self::Option(pos) => pos.open_fee + pos.close_fee,
+            // Deliberately not `Position::fees()`, which scales the sum by
+            // the contract quantity. This arm has always returned the two
+            // fees unscaled, and #471 is about giving the method an error
+            // channel, not about changing what it reports. The discrepancy
+            // between the two conventions predates this change.
+            Self::Option(pos) => Ok(pos.open_fee.checked_add(&pos.close_fee)?),
             Self::Spot(pos) => pos.fees(),
             Self::Future(pos) => pos.fees(),
             Self::Perpetual(pos) => pos.fees(),
@@ -607,7 +617,7 @@ mod tests {
         let leg = Leg::spot(spot);
 
         let pnl = leg.pnl_at_price(pos_or_panic!(160.0));
-        assert_eq!(pnl, Decimal::from(1000));
+        assert_eq!(pnl.ok(), Some(Decimal::from(1000)));
     }
 
     #[test]
@@ -646,7 +656,7 @@ mod tests {
             pos_or_panic!(10.0),
         );
         let leg = Leg::spot(spot);
-        assert_eq!(leg.total_cost(), pos_or_panic!(15020.0));
+        assert_eq!(leg.total_cost().ok(), Some(pos_or_panic!(15020.0)));
     }
 
     #[test]
@@ -661,6 +671,6 @@ mod tests {
             pos_or_panic!(15.0),
         );
         let leg = Leg::spot(spot);
-        assert_eq!(leg.fees(), pos_or_panic!(25.0));
+        assert_eq!(leg.fees().ok(), Some(pos_or_panic!(25.0)));
     }
 }
