@@ -469,16 +469,33 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
 ///
 /// The building block of both Turnbull-Wakeman moments: `M1 = S φ(bT)` and
 /// `M2 = 2 S² (φ(cT) - φ(bT)) / (aT)`. The `w = 0` singularity is removable
-/// and the limit is `∫₀^1 ds = 1`, which the guard returns exactly rather
-/// than dividing by the rate that vanished.
+/// and the limit is `∫₀^1 ds = 1`, which the series below returns exactly
+/// rather than dividing by the rate that vanished.
+///
+/// Small `w` is summed rather than evaluated, and at the *same*
+/// [`M2_SERIES_THRESHOLD`] the second moment uses. Sharing the constant is
+/// the point, not a convenience: the two moments have to change regime
+/// together. When they did not, `M1` collapsed to exactly `S` below a cutoff
+/// of its own while `M2` went on evaluating the real carry, and the price
+/// jumped twofold across that cutoff — `S = K = 100`, `σ = 1e-5`, `T = 1`
+/// priced at `4.6066e-4` for `b = 9.99999e-11` and at `2.3033e-4` for
+/// `b = 1e-10`, for a `1e-16` change in the rate.
+///
+/// The closed form loses the leading digits of `e^w` to the `1 /`
+/// amplification exactly as it does inside `φ(z) - φ(x)`: `e^w` rounds at
+/// `Decimal`'s scale, so `(e^w - 1) / w` carries a relative error of about
+/// `u / |w|` — `1e-18` at `w = 1e-10`, but `1e-8` by `w = 1e-20`, past the
+/// `1e-9` bound the issue sets. The series has no such subtraction and
+/// truncates at `w⁶ / 7!`, a relative `2e-4 w⁶`, which is `2e-22` at the
+/// threshold.
 ///
 /// # Errors
 ///
 /// Returns [`PricingError::Decimal`] when `e^w` leaves the representable
 /// `Decimal` range.
 fn growth_average(w: Decimal) -> Result<Decimal, PricingError> {
-    if w.is_zero() {
-        return Ok(Decimal::ONE);
+    if w.abs() < M2_SERIES_THRESHOLD {
+        return growth_average_series(w);
     }
     Ok(d_div(
         d_sub(
@@ -488,6 +505,42 @@ fn growth_average(w: Decimal) -> Result<Decimal, PricingError> {
         )?,
         w,
         "pricing::asian::growth_average",
+    )?)
+}
+
+/// `φ(w)` summed as `Σ_{n ≥ 0} wⁿ / (n+1)! = 1 + w/2 + w²/6 + …`, which
+/// carries the leading `1` explicitly instead of recovering it from
+/// `e^w - 1`.
+///
+/// `w = 0` gives exactly `1` here, every term after the first vanishing, so
+/// the removable singularity needs no guard of its own.
+///
+/// # Errors
+///
+/// Returns [`PricingError::Decimal`] when a power, a factorial or the running
+/// sum leaves the representable `Decimal` range.
+fn growth_average_series(w: Decimal) -> Result<Decimal, PricingError> {
+    // The `n = 0` term is `w⁰ / 1! = 1`, the `1` the correction is added to.
+    let mut w_power = Decimal::ONE;
+    let mut factorial = Decimal::ONE;
+    let mut correction = Decimal::ZERO;
+    for n in 1..M2_SERIES_TERMS {
+        w_power = d_mul(w_power, w, "pricing::asian::phi::series::power")?;
+        factorial = d_mul(
+            factorial,
+            Decimal::from(n + 1),
+            "pricing::asian::phi::series::factorial",
+        )?;
+        correction = d_add(
+            correction,
+            d_div(w_power, factorial, "pricing::asian::phi::series::term")?,
+            "pricing::asian::phi::series::correction",
+        )?;
+    }
+    Ok(d_add(
+        Decimal::ONE,
+        correction,
+        "pricing::asian::phi::series",
     )?)
 }
 
@@ -649,9 +702,11 @@ fn second_moment_series(x: Decimal, z: Decimal) -> Result<Decimal, PricingError>
 /// Returns [`PricingError::Decimal`] when `e^{bT}` or the product with `S`
 /// leaves the representable `Decimal` range.
 fn arithmetic_average_forward(s: Decimal, b: Decimal, t: Decimal) -> Result<Decimal, PricingError> {
-    if b.abs() < dec!(1e-10) {
-        return Ok(s);
-    }
+    // No cutoff of its own. A `|b| < 1e-10` shortcut to exactly `S` used to
+    // live here, which put this moment in a different limit regime from the
+    // second one and made the price discontinuous across the boundary.
+    // `growth_average` handles a vanishing `bT` by summing its series, and
+    // returns exactly `1` at zero.
     let bt = d_mul(b, t, "pricing::asian::average_forward::bt")?;
     Ok(d_mul(
         s,
@@ -888,6 +943,58 @@ mod tests {
             Positive::ZERO,
             None,
         )
+    }
+
+    fn low_vol_option(risk_free_rate: Decimal) -> Options {
+        Options::new(
+            OptionType::Asian {
+                averaging_type: AsianAveragingType::Arithmetic,
+            },
+            Side::Long,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+            Positive::new_decimal(dec!(1e-5)).unwrap(),
+            Positive::ONE,
+            Positive::HUNDRED,
+            risk_free_rate,
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        )
+    }
+
+    /// The two moments have to change limit regime at the same place. `M1`
+    /// used to collapse to exactly `S` below `|b| = 1e-10` while `M2` went on
+    /// evaluating the real carry, so the price jumped by a factor of two
+    /// across a cutoff only one of them had: `4.6066e-4` against `2.3033e-4`
+    /// for a `1e-16` change in the rate, on a contract that is otherwise
+    /// ordinary. Sharing `M2_SERIES_THRESHOLD` is what removes the seam.
+    #[test]
+    fn test_arithmetic_asian_low_volatility_carry_boundary_is_continuous() {
+        let price_at = |rate: Decimal| asian_black_scholes(&low_vol_option(rate)).unwrap();
+
+        let below = price_at(dec!(9.99999e-11));
+        let at = price_at(dec!(1e-10));
+        let above = price_at(dec!(1.00001e-10));
+
+        // Neighbours a relative 1e-5 apart in the rate, on either side of the
+        // cutoff that used to be there. The gaps are 2.5e-15 and 2.5e-14
+        // absolute, a relative 1.1e-11 and 1.1e-10 on a price of 2.3e-4,
+        // against the factor of two the seam used to produce.
+        assert_decimal_eq!(below, at, dec!(1e-13));
+        assert_decimal_eq!(above, at, dec!(1e-13));
+        assert!(
+            below < at && at < above,
+            "the price must stay monotone in the carry across the old cutoff: {below} {at} {above}"
+        );
+
+        // And it is the carry that moves it: three decades up, the price has
+        // to have moved by more than that gap.
+        assert!(
+            price_at(dec!(1e-7)) > at + dec!(1e-13),
+            "a real carry must price above the vanishing one"
+        );
     }
 
     /// `b = 0` zeroes the outer rate of the Turnbull-Wakeman second moment.
