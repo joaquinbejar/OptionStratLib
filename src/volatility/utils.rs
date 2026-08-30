@@ -104,20 +104,25 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
 ///
 /// # Errors
 ///
+/// Returns [`VolatilityError::NumericalFailure`] when `window_size`
+/// is zero: `slice::windows` has no meaning at that width and
+/// panics rather than yielding an empty iterator.
+///
 /// Propagates any `VolatilityError::NumericalFailure` raised by
 /// `constant_volatility` on an individual window.
 ///
-/// # Panics
-///
-/// The underlying `slice::windows(window_size)` call panics when
-/// `window_size == 0`. When `window_size > returns.len()` the
-/// function returns `Ok(vec![])` instead of an error, so callers
-/// that need a non-empty result must validate the inputs
-/// themselves.
+/// When `window_size > returns.len()` the function returns
+/// `Ok(vec![])` instead of an error, so callers that need a
+/// non-empty result must validate the inputs themselves.
 pub fn historical_volatility(
     returns: &[Decimal],
     window_size: usize,
 ) -> Result<Vec<Positive>, VolatilityError> {
+    if window_size == 0 {
+        return Err(VolatilityError::NumericalFailure {
+            reason: "historical_volatility: window_size must be non-zero".to_string(),
+        });
+    }
     returns
         .windows(window_size)
         .map(constant_volatility)
@@ -221,6 +226,11 @@ pub fn ewma_volatility(
 /// `VolatilityError::PositiveError` when the boundary `Positive`
 /// conversion fails. Black–Scholes errors on individual candidates
 /// are discarded by the parallel filter rather than propagated.
+///
+/// Returns `VolatilityError::NumericalFailure` when
+/// `100 * max_iterations` overflows `i64` (`max_iterations` at or near
+/// `i64::MAX` or `i64::MIN`), which used to abort a debug build with
+/// `attempt to multiply with overflow` and wrap silently in release.
 #[instrument(skip(options), fields(
     market_price = %market_price,
     strike = %options.strike_price,
@@ -232,7 +242,14 @@ pub fn implied_volatility(
     max_iterations: i64,
 ) -> Result<Positive, VolatilityError> {
     let base_option = options.clone();
-    let iterations = 100 * max_iterations;
+    let iterations =
+        max_iterations
+            .checked_mul(100)
+            .ok_or_else(|| VolatilityError::NumericalFailure {
+                reason: format!(
+                    "implied_volatility: grid size 100 * {max_iterations} overflows i64"
+                ),
+            })?;
     let result = (1..iterations)
         .into_par_iter()
         .map(|i| {
@@ -345,11 +362,12 @@ pub fn calculate_iv(
 ///   parameters with `omega` or `beta * v_prev` negative). This is
 ///   a real diagnostic now instead of being silently clamped to
 ///   `Positive::ZERO` as in earlier implementations.
-///
-/// # Panics
-///
-/// Panics on `returns[0]` when `returns` is empty. Callers must
-/// validate the input slice length before invoking.
+/// - Returns [`VolatilityError::NumericalFailure`] when `returns` is
+///   empty: the recursion has no seed variance to start from.
+/// - Returns [`VolatilityError::PositiveError`] if a running
+///   `checked_sqrt` ever rejects its operand. A variance is
+///   non-negative by construction here, so this arm is a guard
+///   rather than a reachable outcome.
 pub fn garch_volatility(
     returns: &[Decimal],
     omega: Decimal,
@@ -369,15 +387,21 @@ pub fn garch_volatility(
 
     // Seed the recursion with `r_0^2` via `d_mul` so a saturating
     // squaring cannot feed a silently capped value into the GARCH
-    // update below.
+    // update below. `first()` is what makes the seed total: indexing
+    // `returns[0]` aborted on an empty slice.
+    let first_return = returns
+        .first()
+        .ok_or_else(|| VolatilityError::NumericalFailure {
+            reason: "garch_volatility: returns slice is empty".to_string(),
+        })?;
     let seed = d_mul(
-        returns[0],
-        returns[0],
+        *first_return,
+        *first_return,
         "volatility::garch::initial_variance",
     )?;
     let mut variance = to_positive_variance(seed, "initial_variance")?;
-    let mut volatilities = vec![variance.sqrt()];
-    for &return_value in &returns[1..] {
+    let mut volatilities = vec![variance.checked_sqrt()?];
+    for &return_value in returns.iter().skip(1) {
         // GARCH(1, 1) variance recursion:
         // v' = ω + α · r² + β · v_prev.
         let return_sq = d_mul(return_value, return_value, "volatility::garch::return_sq")?;
@@ -386,7 +410,7 @@ pub fn garch_volatility(
         let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;
         let next_variance = d_add(persistent, beta_v, "volatility::garch::variance")?;
         variance = to_positive_variance(next_variance, "variance")?;
-        volatilities.push(variance.sqrt());
+        volatilities.push(variance.checked_sqrt()?);
     }
     Ok(volatilities)
 }
@@ -413,11 +437,17 @@ pub fn garch_volatility(
 /// representable as `f64`, or when the per-step `dw` sample cannot
 /// be converted back into `Decimal`.
 ///
+/// Returns [`VolatilityError::DecimalError`] when a step of the
+/// Euler discretisation `v' = v + κ(θ − v)dt + ξ√v dW` leaves the
+/// representable `Decimal` range. The raw operators this used to be
+/// written with aborted instead; there is no limit to substitute,
+/// because the variance is the state being simulated and a step that
+/// cannot be represented ends the path.
+///
 /// Variance is clamped to zero on each step
 /// (`v = v.max(Decimal::ZERO)`) and converted via
-/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
-/// negative variance is silently recovered and `PositiveError` is
-/// never surfaced.
+/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so a
+/// negative intermediate is silently recovered.
 pub fn simulate_heston_volatility(
     kappa: Decimal,
     theta: Decimal,
@@ -428,7 +458,7 @@ pub fn simulate_heston_volatility(
 ) -> Result<Vec<Positive>, VolatilityError> {
     let mut v = v0.max(Decimal::ZERO);
     let mut v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
-    let mut volatilities = vec![v_pos.sqrt()];
+    let mut volatilities = vec![v_pos.checked_sqrt()?];
     let dt_sqrt_f64 = dt
         .sqrt()
         .ok_or_else(|| VolatilityError::NumericalFailure {
@@ -442,11 +472,29 @@ pub fn simulate_heston_volatility(
         let dw_f64 = random::<f64>() * dt_sqrt_f64;
         let dw = finite_decimal(dw_f64)
             .ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw_f64))?;
-        let sqrt_v = v_pos.sqrt().to_dec();
-        v += kappa * (theta - v) * dt + xi * sqrt_v * dw;
+        let sqrt_v = v_pos.checked_sqrt()?.to_dec();
+        // Euler step of dv = κ(θ − v)dt + ξ√v dW, every factor checked:
+        // the raw operator form aborted with `Multiplication overflowed`
+        // on an extreme `dt` or an extreme initial variance.
+        let reversion = d_sub(theta, v, "volatility::heston::reversion")?;
+        let drift = d_mul(
+            d_mul(kappa, reversion, "volatility::heston::kappa_reversion")?,
+            dt,
+            "volatility::heston::drift",
+        )?;
+        let diffusion = d_mul(
+            d_mul(xi, sqrt_v, "volatility::heston::xi_sqrt_v")?,
+            dw,
+            "volatility::heston::diffusion",
+        )?;
+        v = d_add(
+            v,
+            d_add(drift, diffusion, "volatility::heston::dv")?,
+            "volatility::heston::variance",
+        )?;
         v = v.max(Decimal::ZERO); // Ensure variance doesn't become negative
         v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
-        volatilities.push(v_pos.sqrt());
+        volatilities.push(v_pos.checked_sqrt()?);
     }
     Ok(volatilities)
 }
@@ -526,13 +574,16 @@ pub fn uncertain_volatility_bounds(
 ///
 /// Returns [`VolatilityError::PositiveError`] when the scaling factor
 /// multiplied by the base volatility cannot be represented as a
-/// `Positive` (e.g. overflow on an extreme timeframe annualisation).
+/// `Positive` — for example `Positive::MAX` annualised from
+/// `TimeFrame::Microsecond`, which used to abort with
+/// `Positive arithmetic overflow in mul`.
 #[inline]
 pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
 ) -> Result<Positive, VolatilityError> {
-    Ok(volatility * timeframe.periods_per_year().sqrt())
+    let scale_factor = timeframe.periods_per_year().checked_sqrt()?;
+    Ok(volatility.checked_mul(&scale_factor)?)
 }
 
 /// De-annualizes a volatility value to a specific timeframe.
@@ -565,15 +616,33 @@ pub fn annualized_volatility(
 ///
 /// # Errors
 ///
+/// Returns [`VolatilityError::InvalidTime`] when the timeframe reports
+/// zero periods per year — `TimeFrame::Custom(Positive::ZERO)` — since
+/// the square-root-of-time rule has no de-annualised value there. The
+/// guard and its message mirror the one [`adjust_volatility`] applies
+/// to its target timeframe, so the two entry points agree on where the
+/// domain ends.
+///
 /// Returns [`VolatilityError::PositiveError`] when the rescaling
-/// produces a value that violates the `Positive` invariant, typically
-/// due to division rounding on an extremely small timeframe.
+/// produces a value that violates the `Positive` invariant or
+/// overflows, typically due to division by an extremely small
+/// number of periods.
 #[inline]
 pub fn de_annualized_volatility(
     annual_volatility: Positive,
     timeframe: TimeFrame,
 ) -> Result<Positive, VolatilityError> {
-    Ok(annual_volatility / timeframe.periods_per_year().sqrt())
+    let periods = timeframe.periods_per_year();
+    if periods.is_zero() {
+        return Err(VolatilityError::InvalidTime {
+            time: periods,
+            reason: format!(
+                "Cannot de-annualize volatility to timeframe with zero periods per year: {timeframe:?}"
+            ),
+        });
+    }
+    let scale_factor = periods.checked_sqrt()?;
+    Ok(annual_volatility.checked_div(&scale_factor)?)
 }
 
 /// Adjusts volatility between different timeframes using the square root of time rule
@@ -600,9 +669,12 @@ pub fn de_annualized_volatility(
 ///
 /// # Errors
 ///
-/// Propagates any [`VolatilityError::PositiveError`] surfaced by the
-/// intermediate [`annualized_volatility`] or [`de_annualized_volatility`]
-/// calls when either rescaling breaches the `Positive` invariant.
+/// Returns [`VolatilityError::InvalidTime`] when `to_frame` reports zero
+/// periods per year, and [`VolatilityError::PositiveError`] when the
+/// period ratio or the rescaled volatility leaves the representable
+/// `Positive` range — for example `TimeFrame::Microsecond` into
+/// `TimeFrame::Custom(1e-27)`, which used to abort with
+/// `Positive arithmetic overflow in div`.
 pub fn adjust_volatility(
     volatility: Positive,
     from_frame: TimeFrame,
@@ -630,11 +702,13 @@ pub fn adjust_volatility(
     }
 
     // Scale factor is square root of (from_periods / to_periods). `Positive`
-    // already implements `sqrt()`, so skip the f64 round-trip and keep the
-    // computation in `Decimal` precision end-to-end.
-    let scale_factor = (from_periods / to_periods).sqrt();
+    // has a checked square root, so skip the f64 round-trip and keep the
+    // computation in `Decimal` precision end-to-end. Both steps are checked:
+    // the ratio overflows for a `Custom` target of 1e-27, and the operator
+    // form aborted there.
+    let scale_factor = from_periods.checked_div(&to_periods)?.checked_sqrt()?;
 
-    Ok(volatility * scale_factor)
+    Ok(volatility.checked_mul(&scale_factor)?)
 }
 
 /// Adjusts annualized volatility for use in random walk simulations with a specific dt.
