@@ -15,6 +15,7 @@ use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
@@ -352,24 +353,46 @@ fn mid_within(anchor: Positive, bid: Positive, ask: Positive) -> Positive {
     anchor.max(bid).min(ask)
 }
 
-/// A theoretical price as a quotable one, with a worthless option read as zero.
+/// How far below zero a price may sit and still be read as worthless.
 ///
 /// Black-Scholes on `Decimal` undershoots by an epsilon for an option that is
-/// worth nothing: a call 300 points out of the money at seven and a half hours
-/// to expiry prices at `-2.992e-25`. That is not a value, it is the numeric
-/// floor of "worth nothing", and rejecting it used to leave the side with no
-/// price at all.
+/// worth nothing: the case that motivated this, a call 300 points out of the
+/// money at seven and a half hours to expiry, prices at `-2.992e-25`. This
+/// bound sits thirteen orders of magnitude above that artefact and ten below
+/// one tick at two decimal places, so it separates rounding noise from a
+/// number that means something without coming close to a real price.
+const PRICING_EPSILON: Decimal = dec!(0.000000000001);
+
+/// A theoretical price as a quotable one, or `None` when it is not a price.
 ///
-/// Zero is the honest reading, and it is the same decision issue #439 made one
-/// layer down, where a thin quote is widened to a tick instead of being
-/// withdrawn: a contract nobody would pay for is still a contract, and it is
-/// quoted at nothing rather than removed from the chain.
+/// Three outcomes, deliberately:
 ///
-/// A genuine pricing FAILURE is still a failure, and is handled by the `Err`
-/// arm of the caller; this only reinterprets a successful, non-positive price.
+/// - A positive price is the price.
+/// - A price at zero, or within [`PRICING_EPSILON`] below it, is an option
+///   worth nothing, which is a price: it comes back as zero, and the tick floor
+///   in [`OptionData::apply_spread`] then quotes it the way a market would.
+///   This is the decision issue #439 made one layer down, where a thin quote is
+///   widened rather than withdrawn.
+/// - A MATERIALLY negative price is not a worthless option, it is a broken
+///   pricing invariant. Publishing it as a zero quote would hide that, so the
+///   side is left unpriced and the failure is logged with the strike that
+///   produced it.
 #[must_use]
-fn worthless_or(price: Decimal) -> Positive {
-    Positive::new_decimal(price).unwrap_or(Positive::ZERO)
+fn quotable_price(price: Decimal, strike: Positive) -> Option<Positive> {
+    if let Ok(price) = Positive::new_decimal(price) {
+        return Some(price);
+    }
+    if price >= -PRICING_EPSILON {
+        return Some(Positive::ZERO);
+    }
+
+    warn!(
+        strike = %strike,
+        price = %price,
+        "calculate_prices: the pricing model returned a materially negative price; \
+         the side is left unpriced"
+    );
+    None
 }
 
 impl OptionData {
@@ -1020,7 +1043,7 @@ impl OptionData {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
         match call_option.calculate_price_black_scholes() {
             Ok(price) => {
-                self.call_middle = Some(worthless_or(price));
+                self.call_middle = quotable_price(price, self.strike_price);
                 self.call_ask = self.call_middle;
                 self.call_bid = self.call_middle;
             }
@@ -1035,7 +1058,7 @@ impl OptionData {
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
         match put_option.calculate_price_black_scholes() {
             Ok(price) => {
-                self.put_middle = Some(worthless_or(price));
+                self.put_middle = quotable_price(price, self.strike_price);
                 self.put_ask = self.put_middle;
                 self.put_bid = self.put_middle;
             }
@@ -2564,16 +2587,20 @@ mod tests_get_option_for_iv {
 }
 
 #[cfg(test)]
-mod tests_worthless_or {
+mod tests_quotable_price {
     use super::*;
     use positive::pos_or_panic;
-    use rust_decimal_macros::dec;
+
+    const STRIKE: Positive = Positive::HUNDRED;
 
     /// A real price passes through untouched.
     #[test]
     fn test_a_positive_price_is_kept() {
-        assert_eq!(worthless_or(dec!(12.34)), pos_or_panic!(12.34));
-        assert_eq!(worthless_or(Decimal::ZERO), Positive::ZERO);
+        assert_eq!(
+            quotable_price(dec!(12.34), STRIKE),
+            Some(pos_or_panic!(12.34))
+        );
+        assert_eq!(quotable_price(Decimal::ZERO, STRIKE), Some(Positive::ZERO));
     }
 
     /// The negative epsilon Black-Scholes returns for a worthless option reads
@@ -2584,10 +2611,29 @@ mod tests_worthless_or {
     #[test]
     fn test_a_worthless_price_reads_as_zero() {
         assert_eq!(
-            worthless_or(dec!(-0.0000000000000000000000002992)),
-            Positive::ZERO
+            quotable_price(dec!(-0.0000000000000000000000002992), STRIKE),
+            Some(Positive::ZERO)
         );
-        assert_eq!(worthless_or(dec!(-1)), Positive::ZERO);
+        assert_eq!(
+            quotable_price(-PRICING_EPSILON, STRIKE),
+            Some(Positive::ZERO),
+            "the bound itself is still rounding noise"
+        );
+    }
+
+    /// A materially negative price is a broken invariant, not a free option.
+    ///
+    /// Reading it as zero would publish a pricing failure as a market price,
+    /// so the side is left unpriced and the model's failure stays visible.
+    #[test]
+    fn test_a_materially_negative_price_is_not_a_quote() {
+        for price in [dec!(-1), dec!(-0.01), dec!(-0.000001)] {
+            assert_eq!(
+                quotable_price(price, STRIKE),
+                None,
+                "{price} is not rounding noise"
+            );
+        }
     }
 }
 
