@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-08-30
+
+### Fixed
+
+- **A worthless option was priced as absent, which truncated the strike
+  ladder** (#487). `OptionData::calculate_prices` mapped a non-positive
+  Black-Scholes price to `None`: Black-Scholes on `Decimal` undershoots by an
+  epsilon for an option worth nothing, measured at `-2.992e-25` for a call 300
+  points out of the money at seven and a half hours to expiry, and
+  `Positive::new_decimal` rejected it. A contract that was merely worthless
+  became one that does not quote, and since `build_chain` reads
+  `some_price_is_none()` as "this wing does not quote", two strikes missing
+  only their out-of-the-money side stopped the ladder: at spot 5100 with
+  `strike_interval` 25 at 0.3125 days, `chain_size` 20 returned 23 strikes
+  instead of 41, with the 4825 put and the 5375 call absent while their other
+  sides carried real prices. A successful but non-positive price now reads as
+  zero, so the tick floor from #439 quotes it as a market would; a genuine
+  pricing failure still produces no price.
+
 ## [0.21.0] - 2026-08-30
 
 ### Fixed
