@@ -750,6 +750,50 @@ mod checked_helpers_tests {
         }
     }
 
+    /// A checked add that reports `Ok` has not necessarily moved the value.
+    ///
+    /// `Decimal::MAX` has scale 0 and a mantissa filling all 96 bits. Adding a
+    /// fractional addend needs a 29th significant digit, which does not exist,
+    /// so `rust_decimal` rescales the addend down to scale 0 instead of failing:
+    /// anything below half a unit rounds to zero, the addition succeeds, and the
+    /// result is `Decimal::MAX` again. The overflow path is never reached. The
+    /// silent window is `|x| < 0.5`, not `|x| < 1` — at `0.5` the addend rounds
+    /// away from zero to `1` and the sum does overflow, which is why the two
+    /// halves of this test sit three hundredths apart.
+    ///
+    /// This has already broken two call sites in this crate:
+    ///
+    /// - `chains::optiondata::unlock` lifted a locked quote by one tick and read
+    ///   `Ok` as "lifted", so it re-emitted the very quote it existed to remove.
+    /// - `greeks::equations::alpha_from` returns `Decimal::MAX` as its
+    ///   "theta vanished" sentinel. Summing one such leg with an ordinary one
+    ///   returned `Ok` with the running total standing still and the ordinary
+    ///   leg's alpha silently dropped, so that aggregation needs an explicit
+    ///   guard on the operand; no arithmetic check can catch it.
+    ///
+    /// The rule this implies: when you nudge a value and need to know it moved,
+    /// compare the result against the input. `checked_*` returning `Ok` is not
+    /// that check — it only says the result was representable.
+    #[test]
+    fn checked_add_near_max_reports_ok_without_moving_the_value() {
+        // Below half a unit: rounds to zero, succeeds, and stands still.
+        assert_eq!(
+            Decimal::MAX.checked_add(dec!(0.01)),
+            Some(Decimal::MAX),
+            "a fractional addend rescales away instead of overflowing"
+        );
+        assert_eq!(
+            d_add(Decimal::MAX, dec!(0.47), "test::add").unwrap(),
+            Decimal::MAX,
+            "the crate helper inherits the same behaviour"
+        );
+
+        // At half a unit and above: rounds away from zero and does overflow, so
+        // the boundary is visible rather than implied.
+        assert_eq!(Decimal::MAX.checked_add(dec!(0.5)), None);
+        assert!(d_add(Decimal::MAX, dec!(0.5), "test::add").is_err());
+    }
+
     #[test]
     fn d_sub_happy_path() {
         let result = d_sub(dec!(10), dec!(3.5), "test::sub");
