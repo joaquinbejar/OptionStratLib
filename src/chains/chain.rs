@@ -5380,6 +5380,105 @@ mod tests_chain_base {
         assert!(chain.options.is_empty());
     }
 
+    /// `chain_size` is the number of strikes per side, at every tenor.
+    ///
+    /// The regression this pins: a worthless wing used to be priced as `None`
+    /// rather than as zero, and the build loop stopped as soon as both ends
+    /// were "priceless", so the SAME request returned fewer strikes the closer
+    /// the expiry got. Measured before the fix at a spot of 5100 with
+    /// `chain_size` 20: 41 strikes at one day, 11 at 0.05 days, 5 at 0.01 days.
+    #[test]
+    fn test_build_chain_returns_the_requested_width_at_every_tenor() {
+        for days in [30.0, 1.0, 0.3125, 0.05, 0.01] {
+            let params = OptionChainBuildParams::new(
+                "SP500".to_string(),
+                None,
+                20,
+                spos!(25.0),
+                dec!(-0.2),
+                dec!(0.4),
+                Positive::ZERO,
+                2,
+                OptionDataPriceParams::new(
+                    Some(Box::new(pos_or_panic!(5100.0))),
+                    Some(ExpirationDate::Days(pos_or_panic!(days))),
+                    Some(dec!(0.04)),
+                    Some(Positive::ZERO),
+                    Some("SP500".to_string()),
+                ),
+                pos_or_panic!(0.2),
+            );
+
+            let chain = match OptionChain::build_chain(&params) {
+                Ok(chain) => chain,
+                Err(error) => panic!("the chain must build at {days} days: {error}"),
+            };
+
+            assert_eq!(
+                chain.options.len(),
+                41,
+                "chain_size 20 must mean 41 strikes at {days} days, got [{:?} .. {:?}]",
+                chain.options.iter().next().map(|c| c.strike_price),
+                chain.options.iter().next_back().map(|c| c.strike_price),
+            );
+        }
+    }
+
+    /// A worthless wing is quoted at the tick, not withdrawn.
+    ///
+    /// Black-Scholes on `Decimal` returns a negative epsilon for an option
+    /// worth nothing, and reading that as "no price" removed the contract from
+    /// the chain. It is a contract that nobody would pay for, which is a price,
+    /// so it is quoted: this is issue #439's decision applied one layer up.
+    #[test]
+    fn test_a_worthless_wing_is_quoted_rather_than_dropped() {
+        let params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            20,
+            spos!(25.0),
+            dec!(-0.2),
+            dec!(0.4),
+            // A real spread, so this cannot be read as an artefact of asking
+            // for none: the wing came back unpriced either way.
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(pos_or_panic!(4793.056))),
+                Some(ExpirationDate::Days(pos_or_panic!(0.3125))),
+                Some(dec!(0.04)),
+                Some(Positive::ZERO),
+                Some("SP500".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+
+        let chain = match OptionChain::build_chain(&params) {
+            Ok(chain) => chain,
+            Err(error) => panic!("the chain must build: {error}"),
+        };
+
+        // 5100 is 300 points out of the money at seven and a half hours: the
+        // call there priced at -2.992e-25 before the fix.
+        let wing = match chain
+            .options
+            .iter()
+            .find(|contract| contract.strike_price == pos_or_panic!(5100.0))
+        {
+            Some(wing) => wing,
+            None => panic!("the worthless wing must be in the chain"),
+        };
+
+        assert!(
+            wing.call_bid.is_some() && wing.call_ask.is_some(),
+            "a worthless call must still be quoted: {wing:?}"
+        );
+        assert!(
+            wing.put_bid.is_some() && wing.put_ask.is_some(),
+            "the deep in-the-money put must be quoted too: {wing:?}"
+        );
+    }
+
     #[test]
     fn test_new_option_chain_build_chain() {
         let params = OptionChainBuildParams::new(

@@ -352,6 +352,26 @@ fn mid_within(anchor: Positive, bid: Positive, ask: Positive) -> Positive {
     anchor.max(bid).min(ask)
 }
 
+/// A theoretical price as a quotable one, with a worthless option read as zero.
+///
+/// Black-Scholes on `Decimal` undershoots by an epsilon for an option that is
+/// worth nothing: a call 300 points out of the money at seven and a half hours
+/// to expiry prices at `-2.992e-25`. That is not a value, it is the numeric
+/// floor of "worth nothing", and rejecting it used to leave the side with no
+/// price at all.
+///
+/// Zero is the honest reading, and it is the same decision issue #439 made one
+/// layer down, where a thin quote is widened to a tick instead of being
+/// withdrawn: a contract nobody would pay for is still a contract, and it is
+/// quoted at nothing rather than removed from the chain.
+///
+/// A genuine pricing FAILURE is still a failure, and is handled by the `Err`
+/// arm of the caller; this only reinterprets a successful, non-positive price.
+#[must_use]
+fn worthless_or(price: Decimal) -> Positive {
+    Positive::new_decimal(price).unwrap_or(Positive::ZERO)
+}
+
 impl OptionData {
     /// Creates a new instance of `OptionData` with the given option market parameters.
     ///
@@ -1000,7 +1020,7 @@ impl OptionData {
         let call_option = self.get_option(Side::Long, OptionStyle::Call)?;
         match call_option.calculate_price_black_scholes() {
             Ok(price) => {
-                self.call_middle = Positive::new_decimal(price).ok();
+                self.call_middle = Some(worthless_or(price));
                 self.call_ask = self.call_middle;
                 self.call_bid = self.call_middle;
             }
@@ -1015,7 +1035,7 @@ impl OptionData {
         let put_option = self.get_option(Side::Long, OptionStyle::Put)?;
         match put_option.calculate_price_black_scholes() {
             Ok(price) => {
-                self.put_middle = Positive::new_decimal(price).ok();
+                self.put_middle = Some(worthless_or(price));
                 self.put_ask = self.put_middle;
                 self.put_bid = self.put_middle;
             }
@@ -2540,6 +2560,34 @@ mod tests_get_option_for_iv {
         assert!(result.is_ok());
         let option = result.unwrap();
         assert_eq!(option.side, Side::Short);
+    }
+}
+
+#[cfg(test)]
+mod tests_worthless_or {
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// A real price passes through untouched.
+    #[test]
+    fn test_a_positive_price_is_kept() {
+        assert_eq!(worthless_or(dec!(12.34)), pos_or_panic!(12.34));
+        assert_eq!(worthless_or(Decimal::ZERO), Positive::ZERO);
+    }
+
+    /// The negative epsilon Black-Scholes returns for a worthless option reads
+    /// as zero, not as an absent price.
+    ///
+    /// `-2.992e-25` is the value measured for a call 300 points out of the
+    /// money at seven and a half hours to expiry.
+    #[test]
+    fn test_a_worthless_price_reads_as_zero() {
+        assert_eq!(
+            worthless_or(dec!(-0.0000000000000000000000002992)),
+            Positive::ZERO
+        );
+        assert_eq!(worthless_or(dec!(-1)), Positive::ZERO);
     }
 }
 
