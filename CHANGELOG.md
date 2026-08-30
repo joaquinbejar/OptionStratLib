@@ -243,6 +243,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Aggregating greeks aborted the process on two legs whose theta had
+  vanished, and returned a silently-wrong total when one such leg met an
+  ordinary one** (#469). `Greeks::greeks` and the twelve per-greek aggregators
+  summed their legs with the raw `Decimal` operator, which panics on overflow.
+  For eleven of the twelve that needs an extreme book; for `alpha` it does not.
+  `alpha` returns `Decimal::MAX` as a documented sentinel when a leg's theta
+  rounds to zero while its gamma does not — an at-the-money contract at a
+  quantity around `1e-27` is enough — so two such legs aborted on
+  `Decimal::MAX + Decimal::MAX`.
+
+  The quieter half is the one worth knowing about. A single sentinel leg beside
+  an ordinary one did *not* abort: `Decimal::MAX + x` for `|x| < 0.5` rescales
+  the addend down to zero and rounds straight back to `Decimal::MAX`, so the
+  addition succeeds, the running total stands still, and the ordinary leg's
+  alpha is dropped without a trace. `checked_add` cannot detect that, because
+  nothing overflowed. Both halves are
+  now a `GreeksError` naming the leg that carried the sentinel, raised by an
+  explicit guard ahead of the arithmetic rather than by the arithmetic itself.
+  The remaining twenty-two accumulations moved to checked addition, so an
+  ordinary sum that leaves the representable range is reported instead of
+  aborting; every sum that stayed inside it is unchanged, `Decimal::checked_add`
+  and `Add::add` being the same operation but for the overflow arm.
+
+  **A lone sentinel leg still returns the sentinel**, as does a sentinel beside
+  legs whose own alpha is zero, because no contribution is lost in those sums.
+  `OptionData::greeks_snapshot` therefore behaves exactly as before: it computes
+  the twelve greeks for one option and maps an `alpha` of `Decimal::MAX` to
+  `None` on the wire. Chain snapshots have not started failing. The sentinel
+  itself is unchanged, and so is the single-option `greeks::alpha`.
 - **Every arithmetic Asian option with `r = q` was mispriced** (#454). The
   Turnbull-Wakeman second moment short-circuited its removable `b = 0`
   singularity to `M2 = S² e^{σ² T}`, which is `E[S_T²]`: the second moment of
