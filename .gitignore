@@ -35,3 +35,6 @@ src/.DS_Store
 # Local draft issue / PR bodies kept at the repo root
 /.issue-*.md
 /.pr-*.md
+
+# Agent tooling configuration, local to each developer's machine
+.codex/
