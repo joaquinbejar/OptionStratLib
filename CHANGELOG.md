@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **The crate no longer builds a `cdylib`** (#496). `Cargo.toml` declared
+  `crate-type = ["cdylib", "rlib"]`, but the library exposes no C ABI: there is
+  not one `extern "C"`, `#[no_mangle]`, `#[unsafe(no_mangle)]` or
+  `#[export_name]` in `src/`, so the dynamic library it produced had no callable
+  entry point. It was build and release surface without a foreign-function
+  interface behind it.
+
+  The compatibility impact is nil for any consumer using the crate as a Rust
+  dependency: the `rlib` is unchanged and the public API snapshot does not move.
+  It is only observable to something loading `liboptionstratlib.dylib` /
+  `.so` / `.dll` by filename, which would have found no symbols to call. Nothing
+  in this repository consumed the artifact — not the `Makefile`, not the
+  workflows, not `Docker/`.
+
+  To reinstate a dynamic library, the crate needs an actual `extern "C"` surface
+  first; restoring the target alone would rebuild the same empty artifact.
+
 ## [0.21.1] - 2026-08-30
 
 ### Fixed
