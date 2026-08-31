@@ -97,7 +97,7 @@ harness = false
 [lib]
 name = "optionstratlib"
 path = "src/lib.rs"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [workspace]
 members = [
