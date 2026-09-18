@@ -11,4 +11,4 @@ rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
 prettytable-rs = "0.10"
 serde_json = { workspace = true }
-indicatif = "0.17"
+indicatif = "0.18"

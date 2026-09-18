@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dependencies updated to latest stable versions (`rust_decimal` 1.42 -> 1.43;
+  `indicatif` 0.17 -> 0.18 in `examples_simulation`).
+
 ### Removed
 
 - **The crate no longer builds a `cdylib`** (#496). `Cargo.toml` declared

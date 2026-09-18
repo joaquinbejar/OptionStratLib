@@ -118,7 +118,7 @@ members = [
 [workspace.dependencies]
 optionstratlib = { path = "." }
 tracing = "0.1"
-rust_decimal = { version = "1.42", features = ["maths", "serde"] }
+rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
 plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
 chrono = { version = "0.4", features = ["serde"] }
