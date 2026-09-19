@@ -104,6 +104,9 @@ use positive::pos_or_panic;
 //! * Income tracking
 //! * Timestamp-based calculations
 
+/// Neutral delta-adjustment actions consumed by [`PnLCalculator::adjustments_pnl`].
+pub mod adjustment;
+
 /// * [`model`] - Core data structures for financial analysis and PnL modeling
 pub mod model;
 
@@ -113,6 +116,7 @@ mod transaction;
 /// * [`utils`] - Utility functions for data manipulation and calculations
 pub mod utils;
 
+pub use adjustment::{DeltaAdjustment, DeltaAdjustmentSameSize};
 pub use metrics::{
     PnLMetrics, PnLMetricsDocument, PnLMetricsStep, create_pnl_metrics_document, load_pnl_metrics,
     save_pnl_metrics, save_pnl_metrics_with_document,
