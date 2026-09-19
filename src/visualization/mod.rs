@@ -307,6 +307,7 @@ mod model_impls;
 /// `Plottable` trait and `PlotBuilder`.
 mod plot_builder;
 mod simulation;
+mod strategies;
 mod styles;
 /// `impl Graph` and `impl Plottable` for `Surface`.
 mod surfaces;

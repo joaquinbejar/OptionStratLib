@@ -216,9 +216,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are derived from the generic ones in one place.
 - `SimulationStats::update_outcome` folds a `PathOutcome` into the
   accumulator; `SimulationStats::update` now delegates to it.
+- **Single-leg strategy simulation orchestration lives in backtesting**
+  (#505, multi-crate roadmap M1-08). `backtesting::strategy_simulation`
+  provides `SingleLegSimulation` (the side of the leg and the fee adjustment
+  applied to every mark, the only things that differed between the four
+  bodies), `SingleLegPathEvaluator` (a `PathEvaluator` producing one
+  `SimulationResult` per walk) and `simulate_single_leg` (the loop, its
+  progress bar and the aggregate through `SimulationStatsResult::from_results`).
 
 ### Changed
 
+- **`strategies` no longer imports `simulation`, `backtesting` or
+  `visualization` in production code** (#505). The `Simulate`
+  implementations for `LongCall`, `LongPut`, `ShortCall` and `ShortPut`
+  moved from the strategy files to `backtesting::strategy_simulation` as
+  one generic body; `strategy.simulate(&simulator, exit)` is unchanged and
+  its outputs are byte-for-byte what they were (verified on 280 serialized
+  runs across the four strategies, five paths and seven exit policies). The
+  `indicatif` progress bar moved with the loop; M6-05 removes it from the
+  library. The `Graph` implementations for every concrete strategy and the
+  `impl_graph_for_payoff_strategy!` macro moved from `strategies::graph` to
+  `visualization::strategies`; the macro keeps its crate-root path and the
+  `strategies::graph` module stays (empty) until the 0.22.0 breaking batch.
+  `strategies::simulation_impls` (the `BasicAble` impls for the simulation
+  containers, marked `// facade-compat: simulation`) is the one remaining
+  reverse edge; it goes with the batch.
 - **`simulation` no longer imports `strategies` or `visualization`** (#504).
   `impl BasicAble for Simulator` / `RandomWalk` moved to
   `strategies::simulation_impls` and `impl Graph for Simulator` / `RandomWalk`
