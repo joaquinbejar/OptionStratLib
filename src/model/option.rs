@@ -7,13 +7,13 @@ use crate::error::{
 use crate::greeks::Greeks;
 use crate::model::decimal::{d_sub, finite_decimal};
 use crate::model::expiration::resolve_expiration_date;
+use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::calculate_optimal_price_range;
 use crate::pnl::utils::{PnL, PnLCalculator};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
-    BinomialPricingParams, Payoff, PayoffInfo, Profit, black_scholes, generate_binomial_tree,
-    price_binomial, telegraph,
+    BinomialPricingParams, black_scholes, generate_binomial_tree, price_binomial, telegraph,
 };
 use crate::strategies::base::BasicAble;
 use crate::visualization::{
@@ -964,12 +964,6 @@ impl PnLCalculator for Options {
             Positive::new_decimal(initial_income)?,
             resolve_expiration_date(&self.expiration_date)?,
         ))
-    }
-}
-
-impl Profit for Options {
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
-        Ok(self.payoff_at_price(price)?)
     }
 }
 

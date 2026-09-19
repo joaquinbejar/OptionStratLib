@@ -17,7 +17,6 @@ use crate::model::types::{Action, OptionBasicType, OptionStyle, Side};
 use crate::model::{Trade, TradeAble, TradeStatus};
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
-use crate::pricing::payoff::Profit;
 use crate::strategies::base::BasicAble;
 use crate::visualization::{Graph, GraphConfig, GraphData};
 use crate::{ExpirationDate, OptionType, Options};
@@ -1302,30 +1301,6 @@ impl PnLCalculator for Position {
             initial_income,
             date_time: self.date,
         })
-    }
-}
-
-/// Implementation of the Profit trait for the Position struct.
-///
-/// This allows calculating the profit of a position at a given price by using the
-/// position's profit and loss (PnL) calculation at expiration.
-///
-impl Profit for Position {
-    /// Calculates the profit of the position at a specific price.
-    ///
-    /// This method computes the profit or loss that would be realized if the position
-    /// were to expire with the underlying asset at the specified price.
-    ///
-    /// # Parameters
-    ///
-    /// * `price` - The price at which to calculate the profit, represented as a Positive value.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal if successful,
-    ///   or an error if the calculation fails.
-    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
-        self.pnl_at_expiration(&Some(price))
     }
 }
 

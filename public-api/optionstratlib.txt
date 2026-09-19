@@ -4133,6 +4133,23 @@ pub fn optionstratlib::model::option::Options::name() -> alloc::borrow::Cow<'sta
 pub fn optionstratlib::model::option::Options::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::model::option::Options
 pub fn optionstratlib::model::option::Options::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub mod optionstratlib::model::payoff
+pub struct optionstratlib::model::payoff::PayoffInfo
+pub optionstratlib::model::payoff::PayoffInfo::side: financial_types::Side
+pub optionstratlib::model::payoff::PayoffInfo::spot: positive::positive::Positive
+pub optionstratlib::model::payoff::PayoffInfo::spot_max: core::option::Option<f64>
+pub optionstratlib::model::payoff::PayoffInfo::spot_min: core::option::Option<f64>
+pub optionstratlib::model::payoff::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<f64>>
+pub optionstratlib::model::payoff::PayoffInfo::strike: positive::positive::Positive
+pub optionstratlib::model::payoff::PayoffInfo::style: financial_types::OptionStyle
+impl optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
+impl core::default::Default for optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::default() -> Self
+pub trait optionstratlib::model::payoff::Payoff
+pub fn optionstratlib::model::payoff::Payoff::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
+impl optionstratlib::model::payoff::Payoff for option_type::option_type::OptionType
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
 pub mod optionstratlib::model::position
 pub struct optionstratlib::model::position::Position
 pub optionstratlib::model::position::Position::close_fee: positive::positive::Positive
@@ -9384,14 +9401,14 @@ pub optionstratlib::prelude::PayoffInfo::strike: positive::positive::Positive
 pub optionstratlib::prelude::PayoffInfo::strike: positive::positive::Positive
 pub optionstratlib::prelude::PayoffInfo::style: financial_types::OptionStyle
 pub optionstratlib::prelude::PayoffInfo::style: financial_types::OptionStyle
-impl optionstratlib::prelude::PayoffInfo
-impl optionstratlib::prelude::PayoffInfo
-pub fn optionstratlib::prelude::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
-pub fn optionstratlib::prelude::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
-impl core::default::Default for optionstratlib::prelude::PayoffInfo
-impl core::default::Default for optionstratlib::prelude::PayoffInfo
-pub fn optionstratlib::prelude::PayoffInfo::default() -> Self
-pub fn optionstratlib::prelude::PayoffInfo::default() -> Self
+impl optionstratlib::model::payoff::PayoffInfo
+impl optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
+pub fn optionstratlib::model::payoff::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
+impl core::default::Default for optionstratlib::model::payoff::PayoffInfo
+impl core::default::Default for optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::default() -> Self
+pub fn optionstratlib::model::payoff::PayoffInfo::default() -> Self
 pub struct optionstratlib::prelude::PnL
 pub optionstratlib::prelude::PnL::date_time: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib::prelude::PnL::initial_costs: positive::positive::Positive
@@ -13168,12 +13185,12 @@ impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
 pub trait optionstratlib::prelude::Payoff
 pub trait optionstratlib::prelude::Payoff
-pub fn optionstratlib::prelude::Payoff::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
-pub fn optionstratlib::prelude::Payoff::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
-impl optionstratlib::prelude::Payoff for option_type::option_type::OptionType
-impl optionstratlib::prelude::Payoff for option_type::option_type::OptionType
-pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
-pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
+pub fn optionstratlib::prelude::Payoff::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
+pub fn optionstratlib::prelude::Payoff::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
+impl optionstratlib::model::payoff::Payoff for option_type::option_type::OptionType
+impl optionstratlib::model::payoff::Payoff for option_type::option_type::OptionType
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
 pub trait optionstratlib::prelude::Plottable
 pub type optionstratlib::prelude::Plottable::Error
 pub fn optionstratlib::prelude::Plottable::plot(&self) -> optionstratlib::geometrics::PlotBuilder<Self> where Self: core::marker::Sized + optionstratlib::visualization::Graph
@@ -14769,10 +14786,10 @@ pub optionstratlib::pricing::PayoffInfo::spot_min: core::option::Option<f64>
 pub optionstratlib::pricing::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<f64>>
 pub optionstratlib::pricing::PayoffInfo::strike: positive::positive::Positive
 pub optionstratlib::pricing::PayoffInfo::style: financial_types::OptionStyle
-impl optionstratlib::prelude::PayoffInfo
-pub fn optionstratlib::prelude::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
-impl core::default::Default for optionstratlib::prelude::PayoffInfo
-pub fn optionstratlib::prelude::PayoffInfo::default() -> Self
+impl optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
+impl core::default::Default for optionstratlib::model::payoff::PayoffInfo
+pub fn optionstratlib::model::payoff::PayoffInfo::default() -> Self
 pub struct optionstratlib::pricing::TelegraphProcess
 impl optionstratlib::pricing::telegraph::TelegraphProcess
 pub fn optionstratlib::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
@@ -14788,9 +14805,9 @@ pub trait optionstratlib::pricing::GarmanKohlhagen
 pub fn optionstratlib::pricing::GarmanKohlhagen::calculate_price_garman_kohlhagen(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::pricing::GarmanKohlhagen::get_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::pricing::PricingError>
 pub trait optionstratlib::pricing::Payoff
-pub fn optionstratlib::pricing::Payoff::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
-impl optionstratlib::prelude::Payoff for option_type::option_type::OptionType
-pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::prelude::PayoffInfo) -> f64
+pub fn optionstratlib::pricing::Payoff::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
+impl optionstratlib::model::payoff::Payoff for option_type::option_type::OptionType
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
 pub trait optionstratlib::pricing::Priceable
 pub fn optionstratlib::pricing::Priceable::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options

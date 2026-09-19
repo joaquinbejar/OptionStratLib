@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Payoff contracts are owned by the core model** (#500, multi-crate
+  roadmap M1-03). `Payoff`, `PayoffInfo`, the implementation for every
+  `OptionType` variant and the exotic payoff helpers now live in
+  `optionstratlib::model::payoff`; `optionstratlib::pricing::payoff` and the
+  prelude re-export them, so `use optionstratlib::pricing::{Payoff,
+  PayoffInfo}` keeps compiling. `impl Profit for Options` and `impl Profit for
+  Position` moved from `model` to `pricing::payoff`, beside the `Profit` trait
+  they implement. No signature or numerical result changed; the only new
+  public path is `optionstratlib::model::payoff`.
+
 ## [0.21.3] - 2026-09-19
 
 ### Fixed

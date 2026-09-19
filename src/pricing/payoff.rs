@@ -1,212 +1,16 @@
+//! Profit contracts and the historical home of the payoff contracts.
+//!
+//! [`Payoff`] and [`PayoffInfo`] are owned by
+//! [`crate::model::payoff`] and re-exported here so that
+//! `optionstratlib::pricing::{Payoff, PayoffInfo}` keeps working.
+
 use crate::error::PricingError;
-use crate::model::types::{OptionStyle, Side};
-use num_traits::ToPrimitive;
+use crate::model::{Options, Position};
 use positive::Positive;
 use rust_decimal::Decimal;
-use tracing::{trace, warn};
+use tracing::trace;
 
-/// Defines a contract for calculating the payoff value of an option.
-///
-/// The `Payoff` trait establishes a standard interface for implementing different
-/// option payoff calculations. Classes that implement this trait can define specific
-/// payoff formulas for various option types (standard calls/puts, exotic options, etc.).
-///
-/// # Examples
-///
-/// Implementing the trait for a standard call option:
-///
-/// ```rust
-/// use num_traits::ToPrimitive;
-/// use optionstratlib::pricing::{Payoff, PayoffInfo};
-/// use optionstratlib::Side;
-/// struct CallOption;
-///
-/// impl Payoff for CallOption {
-///     fn payoff(&self, info: &PayoffInfo) -> f64 {
-///         let spot = info.spot.value().to_f64().unwrap_or(0.0);
-///         let strike = info.strike.value().to_f64().unwrap_or(0.0);
-///         match info.side {
-///             Side::Long => (spot - strike).max(0.0),
-///             Side::Short => -1.0 * (spot - strike).max(0.0),
-///         }
-///     }
-/// }
-/// ```
-///
-/// # Usage
-///
-/// This trait is typically used within the options pricing module to:
-/// - Create standardized payoff calculations for different option types
-/// - Enable polymorphic handling of various option payoff strategies
-/// - Support both standard and exotic option payoffs through a unified interface
-pub trait Payoff {
-    /// Calculates the payoff value of an option based on the provided information.
-    ///
-    /// # Parameters
-    ///
-    /// * `info` - A reference to a `PayoffInfo` struct containing all necessary data
-    ///   for calculating the option's payoff, including spot price, strike price,
-    ///   option style, position side, and additional parameters for exotic options.
-    ///
-    /// # Returns
-    ///
-    /// Returns the calculated payoff value as a `f64`.
-    fn payoff(&self, info: &PayoffInfo) -> f64;
-}
-/// `PayoffInfo` is a struct that holds information about an option's payoff calculation parameters.
-///
-/// This structure encapsulates all the necessary variables to calculate the payoff of different
-/// option types, including standard options (calls and puts) as well as exotic options like
-/// Asian and Lookback options.
-///
-/// # Usage
-///
-/// This structure is typically used within the options pricing module to calculate
-/// the final payoff value of different option types at expiration or exercise.
-///
-#[derive(Debug, Clone)]
-pub struct PayoffInfo {
-    /// * `spot` - The current market price of the underlying asset.
-    ///   This value is used as the reference price for calculating option payoffs.
-    pub spot: Positive,
-    /// * `strike` - The strike price specified in the option contract.
-    ///   This is the price at which the option holder can buy (for calls) or sell (for puts)
-    ///   the underlying asset.
-    pub strike: Positive,
-    /// * `style` - Defines whether the option is a Call or Put.
-    ///   Call options give the right to buy, while put options give the right to sell.
-    pub style: OptionStyle,
-    /// * `side` - Indicates whether the position is Long (bought) or Short (sold).
-    ///   This affects the direction of the payoff calculation.
-    pub side: Side,
-    /// * `spot_prices` - A collection of historical spot prices used specifically for Asian options.
-    ///   Asian options base their payoff on the average price of the underlying asset over a specified period.
-    pub spot_prices: Option<Vec<f64>>, // Asian
-    /// * `spot_min` - The minimum observed price of the underlying asset during the option's life.
-    ///   This field is used specifically for Lookback options where the payoff depends on the
-    ///   minimum price reached.
-    pub spot_min: Option<f64>, // Lookback
-    /// * `spot_max` - The maximum observed price of the underlying asset during the option's life.
-    ///   This field is used specifically for Lookback options where the payoff depends on the
-    ///   maximum price reached.
-    pub spot_max: Option<f64>, // Lookback
-}
-
-impl Default for PayoffInfo {
-    fn default() -> Self {
-        PayoffInfo {
-            spot: Positive::ZERO,
-            strike: Positive::ZERO,
-            style: OptionStyle::Call,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        }
-    }
-}
-
-impl PayoffInfo {
-    /// Returns the length of the spot prices collection if it exists.
-    ///
-    /// This method provides a safe way to check the length of the historical spot prices
-    /// vector without direct access to the optional field. It's particularly useful when
-    /// working with Asian options, which use a collection of historical prices to calculate
-    /// their payoff based on average price.
-    ///
-    /// # Returns
-    ///
-    /// * `Some(usize)` - The number of spot prices in the collection if it exists
-    /// * `None` - If no spot prices are available (the vector is None)
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use optionstratlib::pricing::PayoffInfo;
-    /// use positive::Positive;
-    /// use optionstratlib::model::types::{OptionStyle, Side};
-    /// # fn run() -> Result<(), optionstratlib::error::Error> {
-    /// let payoff_info = PayoffInfo {
-    ///     spot: Positive::new(100.0)?,
-    ///     strike: Positive::new(105.0)?,
-    ///     style: OptionStyle::Call,
-    ///     side: Side::Long,
-    ///     spot_prices: Some(vec![98.0, 99.0, 101.0, 102.0]),
-    ///     spot_min: None,
-    ///     spot_max: None,
-    /// };
-    ///
-    /// assert_eq!(payoff_info.spot_prices_len(), Some(4));
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[inline]
-    #[must_use]
-    pub fn spot_prices_len(&self) -> Option<usize> {
-        self.spot_prices.as_ref().map(|vec| vec.len())
-    }
-}
-
-/// Calculates the standard payoff for an option given its information.
-///
-/// # Arguments
-///
-/// * `info` - A reference to a `PayoffInfo` struct that contains the essential details of the option such as its style, spot price, and strike price.
-///
-/// # Returns
-///
-/// * `f64` - The payoff value based on the type of the option (call or put).
-///
-/// This function evaluates the payoff based on the option style:
-/// - For a call option: Max(spot price - strike price, 0)
-/// - For a put option: Max(strike price - spot price, 0)
-#[inline]
-pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
-    let spot: Decimal = info.spot.into();
-    let strike: Decimal = info.strike.into();
-
-    // `Positive - Positive` aborts whenever the result would be negative, i.e.
-    // on every out-of-the-money call, so the moneyness is traced on the
-    // `Decimal` values. Both operands live in `[0, Decimal::MAX]`, which makes
-    // the difference always representable; the checked form keeps the raw
-    // operator out of the kernel.
-    let moneyness = spot.checked_sub(strike).unwrap_or(Decimal::ZERO);
-    trace!("standard_payoff - spot: {}", spot);
-    trace!("standard_payoff - info.strike: {}", strike);
-    trace!("standard_payoff - (info.spot - info.strike): {}", moneyness);
-
-    // The result of `(spot - strike).max(ZERO)` is a non-negative finite Decimal whenever
-    // the inputs are themselves finite (which Positive guarantees), so to_f64 is expected
-    // to succeed. We log and fall back to 0.0 instead of panicking if conversion ever fails.
-    let payoff = match info.style {
-        OptionStyle::Call => moneyness.max(Decimal::ZERO).to_f64().unwrap_or_else(|| {
-            warn!(
-                spot = %spot,
-                strike = %strike,
-                "standard_payoff(Call): to_f64 returned None; defaulting to 0.0"
-            );
-            0.0
-        }),
-        OptionStyle::Put => strike
-            .checked_sub(spot)
-            .unwrap_or(Decimal::ZERO)
-            .max(Decimal::ZERO)
-            .to_f64()
-            .unwrap_or_else(|| {
-                warn!(
-                    spot = %spot,
-                    strike = %strike,
-                    "standard_payoff(Put): to_f64 returned None; defaulting to 0.0"
-                );
-                0.0
-            }),
-    };
-
-    match info.side {
-        Side::Long => payoff,
-        Side::Short => -payoff,
-    }
-}
+pub use crate::model::payoff::{Payoff, PayoffInfo};
 
 /// Defines the profit calculation behavior for financial instruments.
 ///
@@ -267,99 +71,32 @@ pub trait Profit {
     }
 }
 
-#[cfg(test)]
-mod tests_standard_payoff {
-    use super::*;
-    use crate::model::types::OptionType;
-    use positive::pos_or_panic;
-
-    #[test]
-    fn test_call_option_in_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: pos_or_panic!(110.0),
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Call,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 10.0);
+impl Profit for Options {
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
+        Ok(self.payoff_at_price(price)?)
     }
+}
 
-    #[test]
-    fn test_call_option_at_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: Positive::HUNDRED,
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Call,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 0.0);
-    }
-
-    #[test]
-    fn test_call_option_out_of_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: pos_or_panic!(90.0),
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Call,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 0.0);
-    }
-
-    #[test]
-    fn test_put_option_in_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: pos_or_panic!(90.0),
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Put,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 10.0);
-    }
-
-    #[test]
-    fn test_put_option_at_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: Positive::HUNDRED,
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Put,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 0.0);
-    }
-
-    #[test]
-    fn test_put_option_out_of_the_money() {
-        let option_type = OptionType::European;
-        let info = PayoffInfo {
-            spot: pos_or_panic!(110.0),
-            strike: Positive::HUNDRED,
-            style: OptionStyle::Put,
-            side: Side::Long,
-            spot_prices: None,
-            spot_min: None,
-            spot_max: None,
-        };
-        assert_eq!(option_type.payoff(&info), 0.0);
+/// Implementation of the Profit trait for the Position struct.
+///
+/// This allows calculating the profit of a position at a given price by using the
+/// position's profit and loss (PnL) calculation at expiration.
+///
+impl Profit for Position {
+    /// Calculates the profit of the position at a specific price.
+    ///
+    /// This method computes the profit or loss that would be realized if the position
+    /// were to expire with the underlying asset at the specified price.
+    ///
+    /// # Parameters
+    ///
+    /// * `price` - The price at which to calculate the profit, represented as a Positive value.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal if successful,
+    ///   or an error if the calculation fails.
+    fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
+        self.pnl_at_expiration(&Some(price))
     }
 }
