@@ -24,7 +24,7 @@ use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
 use crate::volatility::{AtmIvProvider, VolatilitySmile};
-use chrono::{NaiveDate, Utc};
+use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 #[cfg(test)]
@@ -11851,5 +11851,93 @@ mod tests_option_chain_params_trait {
         assert!(result.is_err());
     }
 }
-use crate::volatility::{AtmIvProvider, VolatilitySmile};
-use chrono::{NaiveDate, Utc};
+
+#[cfg(test)]
+mod tests_atm_iv_provider {
+    use super::*;
+    use crate::volatility::AtmIvProvider;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_atm_iv_provider_for_option_chain_success() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2025-12-31".to_string(),
+            Some(dec!(0.05)),
+            None,
+        );
+
+        // Add options with implied volatility
+        chain.add_option(
+            pos_or_panic!(95.0),
+            Some(pos_or_panic!(6.0)),
+            Some(pos_or_panic!(6.5)),
+            Some(Positive::ONE),
+            Some(pos_or_panic!(1.5)),
+            pos_or_panic!(0.25),
+            Some(dec!(0.7)),
+            Some(dec!(-0.3)),
+            Some(dec!(0.02)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            Positive::HUNDRED,
+            Some(pos_or_panic!(3.0)),
+            Some(pos_or_panic!(3.5)),
+            Some(pos_or_panic!(3.0)),
+            Some(pos_or_panic!(3.5)),
+            pos_or_panic!(0.20),
+            Some(dec!(0.5)),
+            Some(dec!(-0.5)),
+            Some(dec!(0.025)),
+            None,
+            None,
+            None,
+        );
+
+        chain.add_option(
+            pos_or_panic!(105.0),
+            Some(Positive::ONE),
+            Some(pos_or_panic!(1.5)),
+            Some(pos_or_panic!(6.0)),
+            Some(pos_or_panic!(6.5)),
+            pos_or_panic!(0.22),
+            Some(dec!(0.3)),
+            Some(dec!(-0.7)),
+            Some(dec!(0.02)),
+            None,
+            None,
+            None,
+        );
+
+        let result = chain.atm_iv();
+        assert!(result.is_ok());
+        let iv = result.unwrap();
+        assert!(*iv > Positive::ZERO);
+    }
+
+    #[test]
+    fn test_atm_iv_provider_for_option_chain_empty() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2025-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.atm_iv();
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("ATM implied volatility is not available")
+        );
+    }
+}
