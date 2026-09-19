@@ -272,6 +272,14 @@ pub(crate) mod constants;
 /// closed-form solutions don't exist.
 pub mod monte_carlo;
 
+/// Pricing capability of the core `Options` contract.
+///
+/// Defines the [`OptionPricing`] extension trait that carries the
+/// model-based valuations of an `Options` contract (binomial, Black-Scholes,
+/// Monte Carlo, telegraph, time value, implied volatility). The inherent
+/// methods of the same names on `Options` forward here.
+pub mod option_pricing;
+
 /// Payoff functions for different option types and derivatives.
 ///
 /// Defines payoff calculations for various financial instruments, including
@@ -351,6 +359,7 @@ pub use exchange::exchange_black_scholes;
 pub use garman_kohlhagen::{GarmanKohlhagen, garman_kohlhagen};
 pub use lookback::lookback_black_scholes;
 pub use monte_carlo::monte_carlo_option_pricing;
+pub use option_pricing::OptionPricing;
 pub use payoff::{Payoff, PayoffInfo, Profit};
 pub use power::power_black_scholes;
 pub use quanto::quanto_black_scholes;

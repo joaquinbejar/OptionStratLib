@@ -12,6 +12,7 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use crate::chains::model_impls::UpdateFromOptionData;
 use crate::model::decimal::{d_div, d_mul};
 use crate::strategies::base::price_gap;
 use crate::strategies::utils::calculate_price_range_bounded;

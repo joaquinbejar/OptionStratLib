@@ -230,6 +230,8 @@ mod options;
 
 mod optiondata;
 
+pub(crate) mod model_impls;
+
 /// Simulation-backed chain generation. This is the only place where the
 /// market layer depends on `simulation`; it is gated by the `synthetic`
 /// feature (on by default) so that a minimal market consumer never resolves

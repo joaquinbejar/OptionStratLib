@@ -119,6 +119,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   place: removing a variant is a breaking change and is batched behind the
   0.22.0 bump (ADR-0001 D6). No interpolation, projection or rendering
   behaviour changed.
+- **Capability behaviour moved off the core types into extension traits**
+  (#499, M1-02). The model-based valuations of `Options`
+  (`calculate_price_binomial`, `calculate_price_binomial_tree`,
+  `calculate_price_black_scholes`, `calculate_price_montecarlo`,
+  `calculate_price_telegraph`, `time_value`, `calculate_implied_volatility`)
+  now have their real bodies in the pricing-owned extension trait
+  `pricing::OptionPricing` (`src/pricing/option_pricing.rs`), implemented for
+  `Options` and re-exported through the prelude. `use
+  optionstratlib::pricing::OptionPricing;` is the canonical 0.22 form; the
+  inherent methods of the same names stay as one-line forwarding wrappers
+  marked `// facade-compat: pricing` so every 0.21 call site that never
+  imported a trait keeps compiling; they are the compatibility surface and go
+  with the facade at extraction. No `Position` extension trait was needed: all
+  of its P&L helpers (`total_cost`, `premium_received`,
+  `net_premium_received`, `net_cost`, `fees`, `break_even`, `unrealized_pnl`,
+  `pnl_at_expiration`, `max_profit`, `max_loss`) need only core data and stay
+  inherent. Whole trait-impl blocks moved to the layer that owns the trait,
+  bodies unchanged: `impl Greeks for Options/Position` to
+  `src/greeks/model_impls.rs`; `impl PnLCalculator for Options/Position` and
+  `impl TransactionAble for Position` to `src/pnl/model_impls.rs` (valuation
+  now goes through `OptionPricing`); `impl BasicAble for Options/Position` to
+  `src/strategies/model_impls.rs`; `impl Graph for Options/Position` to
+  `src/visualization/model_impls.rs`; `impl TryFrom<&OptionData> for Options`
+  and the crate-internal `update_from_option_data` pair (now the
+  `pub(crate)` trait `chains::model_impls::UpdateFromOptionData`) to
+  `src/chains/model_impls.rs`. Every public path, signature and test assertion
+  is unchanged; the tests of the moved impls moved with them. Compile fixtures
+  in `tests/unit/model/capability_traits_test.rs` cover the inherent call
+  without any trait import, the trait form from `pricing`, the prelude form
+  and the moved trait impls.
 
 ## [0.21.3] - 2026-09-19
 

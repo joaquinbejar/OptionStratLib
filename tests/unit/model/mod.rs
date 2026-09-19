@@ -1,25 +1,7 @@
 /******************************************************************************
    Author: Joaquín Béjar García
    Email: jb@taunais.com
-   Date: 1/8/24
+   Date: 19/9/25
 ******************************************************************************/
 
-mod analytics;
-
-mod strategies;
-
-mod chain;
-
-mod error;
-
-mod visualization;
-
-mod pnl;
-
-mod lib_test;
-
-mod utils;
-
-mod pricing;
-
-mod model;
+mod capability_traits_test;

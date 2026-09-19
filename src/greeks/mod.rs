@@ -186,6 +186,7 @@ use positive::pos_or_panic;
 mod black_76;
 mod equations;
 mod garman_kohlhagen;
+mod model_impls;
 pub mod numerical;
 mod utils;
 
