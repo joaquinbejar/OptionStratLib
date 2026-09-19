@@ -1,13 +1,13 @@
 //! Adapters between the generic simulation contracts and the
 //! strategy-bound result types.
 //!
-//! The simulation layer reports a run as [`PathOutcome`]s and summarises
-//! them as [`PathStatistics`]. Backtesting keeps the richer
-//! [`SimulationResult`] (carrying a [`PnL`] and optional risk metrics) and
+//! The simulation layer reports a run as [`crate::simulation::PathOutcome`]s and summarises
+//! them as [`crate::simulation::PathStatistics`]. Backtesting keeps the richer
+//! [`crate::backtesting::results::SimulationResult`] (carrying a [`crate::pnl::PnL`] and optional risk metrics) and
 //! [`SimulationStatsResult`]; this module owns the conversion between the
 //! two shapes so that neither simulation nor strategies has to know about
 //! it. The aggregate figures of a [`SimulationStatsResult`] are always the
-//! ones [`PathStatistics::from_outcomes`] computes.
+//! ones [`crate::simulation::PathStatistics::from_outcomes`] computes.
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::error::SimulationError;

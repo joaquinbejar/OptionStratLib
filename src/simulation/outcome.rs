@@ -4,7 +4,7 @@
 //! caller (a strategy, a hedging rule, a research fixture). This module
 //! defines the contract between the two halves without naming either side:
 //!
-//! - [`PathEvaluator`] turns one [`RandomWalk`] into an outcome of the
+//! - [`PathEvaluator`] turns one [`crate::simulation::randomwalk::RandomWalk`] into an outcome of the
 //!   caller's choosing.
 //! - [`PathOutcome`] is the per-path record the library understands: a
 //!   P&L, a holding period, an exit reason and the premium marks observed
@@ -12,7 +12,7 @@
 //! - [`PathStatistics`] summarises a set of outcomes (mean, median, sample
 //!   standard deviation, best, worst, win rate, average holding period).
 //! - [`evaluate_paths`] runs an evaluator over every walk of a
-//!   [`Simulator`].
+//!   [`crate::simulation::simulator::Simulator`].
 //!
 //! Strategy-bound result types (the ones carrying `PnL` and risk metrics)
 //! live in the backtesting layer, which adapts them to and from

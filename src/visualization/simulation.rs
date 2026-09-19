@@ -1,7 +1,7 @@
 //! `Graph` implementations for the simulation containers.
 //!
-//! A [`RandomWalk`] plots as one price series against days to expiry
-//! (negated so time runs left to right); a [`Simulator`] plots every walk
+//! A [`crate::simulation::randomwalk::RandomWalk`] plots as one price series against days to expiry
+//! (negated so time runs left to right); a [`crate::simulation::simulator::Simulator`] plots every walk
 //! it holds as one series each. The implementations live here because
 //! `Graph` is a visualization trait and simulation must not depend on
 //! visualization (ADR-0001 D2, simulation row).
