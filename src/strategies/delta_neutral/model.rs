@@ -1111,6 +1111,19 @@ pub struct DeltaNeutralResponse {
 }
 
 #[cfg(test)]
+mod tests_adjustment_reexport {
+    use super::*;
+
+    #[test]
+    fn test_delta_adjustment_is_the_analytics_owned_type() {
+        // `strategies::delta_neutral::DeltaAdjustment` is a re-export of the
+        // analytics-owned enum, not a second definition.
+        let adj: crate::pnl::DeltaAdjustment = DeltaAdjustment::NoAdjustmentNeeded;
+        assert!(matches!(adj, DeltaAdjustment::NoAdjustmentNeeded));
+    }
+}
+
+#[cfg(test)]
 mod tests_display_implementations {
     use super::*;
     use positive::pos_or_panic;

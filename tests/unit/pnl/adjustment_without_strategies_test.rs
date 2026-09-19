@@ -99,15 +99,3 @@ fn test_adjustment_pnl_is_computable_without_strategies() {
         "No adjustment needed"
     );
 }
-
-#[test]
-fn test_strategies_path_is_the_same_type() {
-    // `strategies::delta_neutral::DeltaAdjustment` is a re-export of the
-    // analytics-owned enum, not a second definition.
-    let from_strategies: optionstratlib::strategies::DeltaAdjustment =
-        DeltaAdjustment::NoAdjustmentNeeded;
-    assert!(matches!(
-        from_strategies,
-        DeltaAdjustment::NoAdjustmentNeeded
-    ));
-}
