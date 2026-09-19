@@ -19,13 +19,13 @@
 //! [`PathOutcome`].
 
 use crate::error::SimulationError;
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub, d_sum_iter};
 use crate::simulation::ExitPolicy;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::simulator::Simulator;
 use crate::utils::Len;
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -201,7 +201,8 @@ impl PathStatistics {
         } else {
             dec!(0.0)
         };
-        let std_dev_pnl = variance.sqrt().unwrap_or(dec!(0.0));
+        let std_dev_pnl =
+            d_sqrt(variance, "simulation::outcome::from_outcomes").unwrap_or(dec!(0.0));
 
         let best_pnl = pnl_values.last().copied().unwrap_or(dec!(0.0));
         let worst_pnl = pnl_values.first().copied().unwrap_or(dec!(0.0));
@@ -391,7 +392,7 @@ mod tests {
         assert_eq!(stats.average_holding_period, dec!(12.5));
 
         let variance = d_div(dec!(12968.75), dec!(3), "test/variance").unwrap();
-        assert_eq!(stats.std_dev_pnl, variance.sqrt().unwrap());
+        assert_eq!(stats.std_dev_pnl, d_sqrt(variance, "test").unwrap());
     }
 
     #[test]
