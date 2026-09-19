@@ -9,6 +9,7 @@ mod composite_metrics_test;
 mod greeks_side_sign_test;
 mod greeks_snapshot_test;
 mod liquidity_metrics_test;
+mod metrics_through_analytics_test;
 mod price_metrics_test;
 mod random_walk_chain;
 mod risk_metrics_test;

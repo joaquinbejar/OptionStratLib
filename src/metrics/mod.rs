@@ -151,6 +151,9 @@
 //!     }
 //! }
 //! ```
+/// `impl <MetricTrait> for OptionChain` blocks; private because the impls
+/// need no path and the traits are reached through this module.
+mod chain;
 pub mod composite;
 pub mod liquidity;
 pub mod price;

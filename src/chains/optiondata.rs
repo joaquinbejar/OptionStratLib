@@ -853,7 +853,12 @@ impl OptionData {
     ///
     /// Returns `ChainError::invalid_volatility` if neither the input parameters nor the object
     /// itself contains a valid implied volatility value.
-    pub(super) fn get_option(
+    ///
+    /// `pub(crate)` rather than `pub(super)` because the analytics-owned
+    /// `impl <MetricTrait> for OptionChain` blocks in `metrics::chain` and the
+    /// `BasicCurves` / `BasicSurfaces` projections build per-strike contracts
+    /// through it.
+    pub(crate) fn get_option(
         &self,
         side: Side,
         option_style: OptionStyle,

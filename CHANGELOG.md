@@ -75,6 +75,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changes; `default-features = false` now gives a market surface with no
   simulation-backed generation. `make test` additionally builds that surface
   (`cargo build --no-default-features`).
+- **`OptionChain` metric and RND implementations moved to the analytics
+  layer** (#509). The thirty `impl <MetricTrait> for OptionChain` blocks and
+  `impl RNDAnalysis for OptionChain` lived in `chains::chain`, so the market
+  module imported `metrics` and owned the risk-neutral-density surface: a
+  Market-to-Analytics edge in the direction ADR-0001 forbids. The metric impls
+  now sit in the private `metrics::chain` module next to their traits, and
+  `RNDAnalysis`, `RNDParameters`, `RNDResult` and `RNDStatistics` together
+  with the chain impl live in the new top-level `analytics::rnd` module.
+  `chains` no longer references `metrics`; it reads nothing from `analytics`
+  except the compatibility re-export marked `// facade-compat: analytics`.
+  The public surface is unchanged: `chains::{RNDAnalysis, RNDParameters,
+  RNDResult}` keep resolving, `RNDStatistics` gains a nameable path under
+  `analytics`, and every metric is still reached by importing its trait from
+  `metrics`. No formula changed; the moved tests assert the same values.
+  `ChainError::EmptyDensities` and `ChainError::EmptySkewData` stay in
+  `ChainError` (ADR-0001 D5): analytics constructing a market error is a
+  downward reference. `OptionData::get_option` and the
+  `OptionChain::expiration_date` field are widened from `pub(super)` /
+  private to `pub(crate)` for the moved impls and their tests.
 
 ## [0.21.3] - 2026-09-19
 
