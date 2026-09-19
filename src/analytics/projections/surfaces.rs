@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 9/2/25
 ******************************************************************************/
-//! `BasicSurfaces`: projection of an option set onto a [`Surface`] over a
+//! `BasicSurfaces`: projection of an option set onto a [`crate::surfaces::Surface`] over a
 //! Greek, price or volatility axis against volatility or time. Analytics-owned
 //! because it prices `Options` and reads Greeks; `Surface` itself stays a
 //! math container. `surfaces::BasicSurfaces` is kept as a compatibility

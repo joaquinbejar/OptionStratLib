@@ -1,4 +1,4 @@
-//! [`OptionChain`] projections: `impl BasicCurves for OptionChain`,
+//! [`crate::chains::OptionChain`] projections: `impl BasicCurves for OptionChain`,
 //! `impl BasicSurfaces for OptionChain`, and the inherent convenience
 //! wrappers (`gamma_curve`, `vanna_surface`, `theta_time_surface`, ...)
 //! that call them.
