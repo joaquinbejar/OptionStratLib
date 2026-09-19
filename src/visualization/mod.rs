@@ -303,9 +303,9 @@ mod config;
 mod curves;
 mod interface;
 mod model;
+mod model_impls;
 /// `Plottable` trait and `PlotBuilder`.
 mod plot_builder;
-mod model_impls;
 mod styles;
 /// `impl Graph` and `impl Plottable` for `Surface`.
 mod surfaces;

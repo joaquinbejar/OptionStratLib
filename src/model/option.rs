@@ -1,10 +1,10 @@
 use crate::ExpirationDate;
 use crate::constants::ZERO;
-use crate::error::{OptionsError, OptionsResult, PricingError, VolatilityError};
+use crate::error::{OptionsError, OptionsResult, VolatilityError};
 use crate::model::decimal::finite_decimal;
+use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::pricing::OptionPricing; // facade-compat: pricing
-use crate::model::payoff::{Payoff, PayoffInfo};
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
