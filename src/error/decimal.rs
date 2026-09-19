@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 25/12/24
 ******************************************************************************/
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `DecimalError`.
+
 use rust_decimal::Decimal;
 use thiserror::Error;
 

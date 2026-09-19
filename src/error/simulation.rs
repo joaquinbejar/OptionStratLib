@@ -1,5 +1,7 @@
+//! Target crate (ADR-0001 D6, roadmap M1-14): **simulation**. Owns `SimulationError`; the `Strategy`, `Chain` and `GraphError` variants are upper-layer references removed in the batch behind the 0.22.0 bump.
+
+use crate::error::graph::GraphError;
 use crate::error::{ChainError, DecimalError, OptionsError, PricingError, StrategyError};
-use crate::prelude::GraphError;
 use expiration_date::error::ExpirationDateError;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -181,20 +183,6 @@ impl SimulationError {
     #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         SimulationError::NonFinite { context, value }
-    }
-}
-
-impl From<StrategyError> for SimulationError {
-    #[inline]
-    fn from(err: StrategyError) -> Self {
-        SimulationError::Strategy(Box::new(err))
-    }
-}
-
-impl From<ChainError> for SimulationError {
-    #[inline]
-    fn from(err: ChainError) -> Self {
-        SimulationError::Chain(Box::new(err))
     }
 }
 

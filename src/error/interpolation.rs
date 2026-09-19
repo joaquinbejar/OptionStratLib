@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
+//! Target crate (ADR-0001 D6, roadmap M1-14): **math**. Owns `InterpolationError`.
+
 use crate::error::{CurveError, PositionError, SurfaceError};
 use thiserror::Error;
 

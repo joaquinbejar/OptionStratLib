@@ -4,6 +4,8 @@
    Date: 19/1/25
 ******************************************************************************/
 
+//! Target crate (ADR-0001 D6, roadmap M1-14): **pricing**. Owns `VolatilityError`; the `Chain(ChainError)` variant is a market reference removed in the batch behind the 0.22.0 bump.
+
 use crate::error::{GreeksError, OptionsError};
 use positive::Positive;
 use thiserror::Error;
@@ -167,12 +169,6 @@ impl VolatilityError {
     #[must_use]
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         VolatilityError::NonFinite { context, value }
-    }
-}
-
-impl From<crate::error::ChainError> for VolatilityError {
-    fn from(error: crate::error::ChainError) -> Self {
-        Self::Chain(Box::new(error))
     }
 }
 

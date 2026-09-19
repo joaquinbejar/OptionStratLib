@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
+//! Target crate (ADR-0001 D6, roadmap M1-14): **math**. Owns `SurfaceError`; the `Greeks` and graph variants are removed in the batch behind the 0.22.0 bump.
+
 use crate::error::{
     GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
 };
@@ -185,12 +187,6 @@ impl SurfaceError {
 impl From<InterpolationError> for SurfaceError {
     fn from(err: InterpolationError) -> Self {
         SurfaceError::AnalysisError(err.to_string())
-    }
-}
-
-impl From<GraphError> for SurfaceError {
-    fn from(err: GraphError) -> Self {
-        SurfaceError::Graph(Box::new(err))
     }
 }
 

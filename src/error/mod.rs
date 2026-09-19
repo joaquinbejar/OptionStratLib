@@ -86,6 +86,34 @@
 //! ├── trade.rs        - Trade management errors
 //! └── volatility.rs   - Volatility calculation errors
 //! ```
+//!
+//! ## Ownership in the multi-crate workspace (ADR-0001 D6, roadmap M1-14)
+//!
+//! Every file in this directory has exactly one target crate, stated in its
+//! own module docs. A file may wrap errors of lower layers with `#[from]`;
+//! it never wraps a higher layer's error. Conversions whose source error is
+//! owned by a higher layer live in that layer's file (for example
+//! `impl From<StrategyError> for PositionError` sits in `strategies.rs`,
+//! not in `position.rs`).
+//!
+//! | Target crate | Files |
+//! | --- | --- |
+//! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs` |
+//! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs` |
+//! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs` |
+//! | simulation | `simulation.rs` |
+//! | market | `chains.rs`, `csv.rs` (behind `io`) |
+//! | analytics | `transaction.rs`, `metrics.rs`, `probability.rs` |
+//! | strategies | `strategies.rs` |
+//! | visualization | `graph.rs` |
+//! | facade | `unified.rs`, this file's re-exports |
+//!
+//! Variants that still reference a higher layer (`OptionsError::Greeks`,
+//! `CurveError::{MetricsError, Greeks, Graph}`, `SurfaceError::Greeks` and
+//! its graph variants, `VolatilityError::Chain`,
+//! `SimulationError::{Strategy, Chain, GraphError}`) are removed in the
+//! batch that follows the 0.22.0 version bump; removing a variant is a
+//! breaking change the published-baseline semver gate rejects before then.
 
 /// ### Chain Errors (`ChainError`)
 /// Handles:

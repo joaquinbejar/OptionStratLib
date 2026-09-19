@@ -57,7 +57,11 @@
 //!
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper
 //! error handling and formatting.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`; the `Simulation(SimulationError)` payload follows ADR-0003 section 4 after the bump.
 
+use crate::error::simulation::SimulationError;
+use crate::error::volatility::VolatilityError;
 use crate::error::{DecimalError, GreeksError, OptionsError};
 use positive::Positive;
 use std::io;
@@ -701,6 +705,23 @@ impl From<crate::error::VolatilityError> for ChainError {
     #[inline]
     fn from(err: crate::error::VolatilityError) -> Self {
         ChainError::Volatility(Box::new(err))
+    }
+}
+
+// Conversions whose SOURCE error is owned by this layer and whose target
+// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
+// lower layer's error file never names a higher one.
+
+impl From<ChainError> for SimulationError {
+    #[inline]
+    fn from(err: ChainError) -> Self {
+        SimulationError::Chain(Box::new(err))
+    }
+}
+
+impl From<crate::error::ChainError> for VolatilityError {
+    fn from(error: crate::error::ChainError) -> Self {
+        Self::Chain(Box::new(error))
     }
 }
 

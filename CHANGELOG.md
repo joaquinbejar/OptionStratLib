@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every error file names its target crate and wraps only lower layers**
+  (#511, multi-crate roadmap M1-14). The `From` conversions whose source
+  error belongs to a higher layer moved next to that source
+  (`From<StrategyError> for PositionError/ProbabilityError/SimulationError`,
+  `From<PricingError> for OptionsError`, `From<MetricsError>` and
+  `From<GraphError> for CurveError`, `From<GraphError> for SurfaceError`,
+  `From<ChainError> for SimulationError/VolatilityError`); no conversion was
+  removed or changed. `error::simulation` imports `GraphError` from its
+  owning file instead of through the prelude. The ownership table is in the
+  `error` module docs; the variants that still reference a higher layer are
+  listed there and are removed after the 0.22.0 version bump.
+
+### Changed
+
 - **Payoff contracts are owned by the core model** (#500, multi-crate
   roadmap M1-03). `Payoff`, `PayoffInfo`, the implementation for every
   `OptionType` variant and the exotic payoff helpers now live in

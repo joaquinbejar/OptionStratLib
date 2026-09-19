@@ -4,6 +4,8 @@
    Date: 31/12/25
 ******************************************************************************/
 
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `TradeError`.
+
 use thiserror::Error;
 
 /// Represents errors that can occur during trade-related operations.

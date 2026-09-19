@@ -1,3 +1,5 @@
+//! Target crate (ADR-0001 D6, roadmap M1-14): **pricing**. Owns `PricingError`.
+
 use crate::error::{DecimalError, GreeksError, OptionsError, PositionError};
 use expiration_date::error::ExpirationDateError;
 use positive::PositiveError;
@@ -203,6 +205,20 @@ impl PricingError {
 ///
 /// This is a convenience type for functions that return pricing results.
 pub type PricingResult<T> = Result<T, PricingError>;
+
+// Conversions whose SOURCE error is owned by this layer and whose target
+// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
+// lower layer's error file never names a higher one.
+
+impl From<PricingError> for OptionsError {
+    #[inline]
+    fn from(value: PricingError) -> Self {
+        Self::PricingError {
+            method: "unknown".to_string(),
+            reason: value.to_string(),
+        }
+    }
+}
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
