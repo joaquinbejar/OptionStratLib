@@ -3,13 +3,13 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
+use crate::analytics::probability::{
+    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
+};
 use crate::error::probability::{
     PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
 use crate::model::ExpirationDate;
-use crate::strategies::probabilities::utils::{
-    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
-};
 use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};

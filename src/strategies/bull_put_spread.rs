@@ -47,7 +47,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -1967,7 +1967,7 @@ mod tests_bull_put_spread_graph {
 mod tests_bull_put_spread_probability {
     use super::*;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     fn bull_put_spread_test() -> BullPutSpread {

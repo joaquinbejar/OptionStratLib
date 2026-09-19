@@ -9,6 +9,7 @@ use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter};
 use crate::strategies::base::lower_break_even;
 
+use crate::analytics::probability::VolatilityAdjustment;
 use crate::chains::OptionChain;
 use crate::error::strategies::ProfitLossErrorKind;
 use crate::error::{
@@ -30,7 +31,6 @@ use crate::strategies::base::Optimizable;
 use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{
     BasicAble, DeltaAdjustment, FindOptimalSide, Strategable, Strategies, StrategyConstructor,

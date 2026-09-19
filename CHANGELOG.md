@@ -55,6 +55,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `calculate_delta_neutral_sizes` uses it; `strategies::delta_neutral::DELTA_THRESHOLD`
   and `strategies::DELTA_THRESHOLD` are re-exports of the same constant.
   `greeks` no longer imports anything from `strategies`.
+### Added
+
+- **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
+  the strategy-neutral home of the price-probability kernels.
+  `VolatilityAdjustment`, `PriceTrend`, `calculate_single_point_probability`
+  and `calculate_price_probability` moved from `strategies::probabilities`
+  to `analytics::probability`; `strategies::probabilities::{...}` re-exports
+  them, so no import changes. `ProbabilityAnalysis` and
+  `StrategyProbabilityAnalysis` stay strategy-owned and consume the kernels
+  downward. No formula or tolerance changed.
 
 ## [0.21.3] - 2026-09-19
 

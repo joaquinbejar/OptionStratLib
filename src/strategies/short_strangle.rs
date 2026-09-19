@@ -45,7 +45,7 @@ use crate::{
     strategies::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
@@ -1732,7 +1732,7 @@ mod tests_short_strangle_probability {
 
     use crate::model::ExpirationDate;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     /// Helper function that creates a basic short strangle for testing purposes
@@ -1872,7 +1872,7 @@ mod tests_short_strangle_probability_bis {
 
     use crate::model::ExpirationDate;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     fn create_test() -> ShortStrangle {

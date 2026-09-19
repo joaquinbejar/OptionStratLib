@@ -43,7 +43,7 @@ use crate::{
     strategies::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
@@ -1203,7 +1203,7 @@ mod tests_long_strangle_probability {
     use crate::model::ExpirationDate;
     use positive::pos_or_panic;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     fn create_test_long_strangle() -> LongStrangle {

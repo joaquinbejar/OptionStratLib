@@ -31,7 +31,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,

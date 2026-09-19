@@ -240,11 +240,12 @@
 
 mod analysis;
 pub(crate) mod core;
-pub(crate) mod utils;
 
-pub use analysis::StrategyProbabilityAnalysis;
-pub use core::ProbabilityAnalysis;
-pub use utils::{
+/// The neutral kernels and inputs are owned by [`crate::analytics::probability`];
+/// these re-exports keep the historical `strategies::probabilities` paths.
+pub use crate::analytics::probability::{
     PriceTrend, VolatilityAdjustment, calculate_price_probability,
     calculate_single_point_probability,
 };
+pub use analysis::StrategyProbabilityAnalysis;
+pub use core::ProbabilityAnalysis;

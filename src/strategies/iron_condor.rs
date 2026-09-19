@@ -42,7 +42,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -3006,7 +3006,7 @@ mod tests_iron_condor_probability {
     use super::*;
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     /// Creates a test Iron Condor with standard parameters

@@ -4,6 +4,14 @@
    Date: 30/11/24
 ******************************************************************************/
 
+//! Neutral price-probability kernels.
+//!
+//! [`calculate_single_point_probability`] and [`calculate_price_probability`]
+//! evaluate a lognormal price distribution at expiry from a spot price, a
+//! volatility, a time to expiry and optional [`VolatilityAdjustment`] and
+//! [`PriceTrend`] inputs. Nothing here knows what a strategy is; the
+//! strategy-bound aggregation lives in `strategies::probabilities`.
+
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };

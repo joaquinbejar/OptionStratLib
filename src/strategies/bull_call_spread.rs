@@ -49,7 +49,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -2008,7 +2008,7 @@ mod tests_bull_call_spread_probability {
     use super::*;
     use positive::assert_pos_relative_eq;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     #[test]
