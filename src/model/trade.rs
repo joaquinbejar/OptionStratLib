@@ -1,6 +1,6 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
-use crate::pnl::PnL;
+use crate::pnl::PnL; // facade-compat: analytics
 use crate::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;

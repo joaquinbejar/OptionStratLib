@@ -150,6 +150,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `tests/unit/model/capability_traits_test.rs` cover the inherent call
   without any trait import, the trait form from `pricing`, the prelude form
   and the moved trait impls.
+- **Upper-layer dependencies removed from the core model** (#498, M1-01).
+  Every `model -> {chains, greeks, pnl, pricing, series, strategies,
+  visualization, geometrics}` production reference that could go without a
+  public change is gone: `From<OptionChain>`/`From<&OptionChain> for
+  Positive` moved to `src/chains/model_impls.rs` and
+  `From<OptionSeries>`/`From<&OptionSeries> for Positive` to
+  `src/series/model.rs` (`positive_ext.rs` keeps only `impl ToRound for
+  Positive`); `impl Display`/`impl Debug for Strategy` moved from
+  `src/model/format.rs` to `src/strategies/base.rs` next to the struct;
+  `impl HasX for Decimal` moved from `src/model/decimal.rs` to
+  `src/geometrics/interpolation/traits.rs` next to the trait;
+  `ProfitLossRange::calculate_probability` has its body in the new
+  analytics-owned extension trait
+  `strategies::probabilities::ProfitRangeProbability`
+  (`src/strategies/probabilities/profit_range.rs`) and the inherent method is
+  a forwarding wrapper. Nothing public moved path, changed signature or
+  changed a result; the tests moved with their bodies.
+  What stays, and why (every remaining hit of the boundary scan
+  `rg -n 'crate::(chains|greeks|pnl|pricing|series|strategies|visualization|analytics|geometrics|curves|surfaces|metrics)' src/model`
+  is either inside `#[cfg(test)]` or on a line marked `// facade-compat`):
+  - `src/model/option.rs:6` `use crate::pricing::OptionPricing;`
+    (pricing): the seven inherent pricing wrappers from #499 forward to
+    the trait; removing them is the 0.22 break recorded in
+    `doc/API-BASELINE.md` 3.3.
+  - `src/model/leg/leg_enum.rs:305,317,327,339,349` `use
+    crate::greeks::Greeks;` (pricing): `impl LegAble for Leg` is a core
+    trait on a core type, so its `Option` arm cannot move under the orphan
+    rule; the Greek methods of the core-owned `LegAble` trait (which already
+    return the pricing-owned `GreeksError`) need an ownership decision that
+    is out of scope here.
+  - `src/model/trade.rs:3` `use crate::pnl::PnL;` (analytics):
+    `Trade::pnl() -> PnL` is public inherent API returning an
+    analytics-owned type; `PnL::from(&trade)` is the 0.22 form.
+  - `src/model/profit_range.rs:8-9` `ProfitRangeProbability`, `PriceTrend`,
+    `VolatilityAdjustment` (analytics): the inherent
+    `ProfitLossRange::calculate_probability` wrapper keeps its 0.21
+    signature, which names the two analytics-owned parameter types.
+  - `src/model/option.rs:7`, `src/model/position.rs:14`,
+    `src/model/types.rs:15` and the `types.rs` test modules: `Payoff`,
+    `PayoffInfo`, `standard_payoff`, `Profit`; owned by #500 (PR #572), left
+    untouched here.
+  Error-type references (`PricingError`, `ProbabilityError`, `GreeksError`
+  in `model` signatures) are `error/` ownership and belong to M1-14 (#511);
+  `ProfitLossRange::new` returning `ProbabilityError` is the deferred
+  breaking item ADR-0001 D6 assigns to the 0.22.0 batch.
 
 ## [0.21.3] - 2026-09-19
 

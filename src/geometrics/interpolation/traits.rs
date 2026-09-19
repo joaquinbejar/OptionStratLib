@@ -198,6 +198,14 @@ pub trait HasX {
     fn get_x(&self) -> Decimal;
 }
 
+/// A bare `Decimal` is its own X-coordinate, so scalar samples can feed the
+/// same interpolators as points.
+impl HasX for Decimal {
+    fn get_x(&self) -> Decimal {
+        *self
+    }
+}
+
 #[cfg(test)]
 mod tests_interpolate {
     use super::*;

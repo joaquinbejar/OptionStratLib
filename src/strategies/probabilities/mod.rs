@@ -247,5 +247,8 @@ pub use crate::analytics::probability::{
     PriceTrend, VolatilityAdjustment, calculate_price_probability,
     calculate_single_point_probability,
 };
+/// The range-probability extension trait is owned by
+/// [`crate::analytics::profit_range`]; re-exported for discoverability.
+pub use crate::analytics::profit_range::ProfitRangeProbability;
 pub use analysis::StrategyProbabilityAnalysis;
 pub use core::ProbabilityAnalysis;

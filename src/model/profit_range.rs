@@ -3,12 +3,9 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::analytics::probability::{
-    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
-};
-use crate::error::probability::{
-    PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
-};
+use crate::analytics::probability::{PriceTrend, VolatilityAdjustment}; // facade-compat: analytics
+use crate::analytics::profit_range::ProfitRangeProbability; // facade-compat: analytics
+use crate::error::probability::ProbabilityError;
 use crate::model::ExpirationDate;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -147,65 +144,15 @@ impl ProfitLossRange {
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
     ) -> Result<(), ProbabilityError> {
-        let lower = self.lower_bound.unwrap_or(Positive::ZERO);
-        let upper = self.upper_bound.unwrap_or(Positive::MAX);
-        if lower > upper {
-            return Err(ProbabilityError::PriceError(
-                PriceErrorKind::InvalidPriceRange {
-                    range: format!("lower_bound: {lower} upper_bound: {upper}"),
-                    reason: "Lower bound must be less than upper bound".to_string(),
-                },
-            ));
-        }
-        // Calculate probabilities for the lower bound
-        let (prob_below_lower, _) = calculate_single_point_probability(
+        // facade-compat: analytics
+        ProfitRangeProbability::calculate_probability(
+            self,
             current_price,
-            &self.lower_bound.unwrap_or(Positive::ZERO),
-            volatility_adj.clone(),
-            trend.clone(),
-            expiration_date,
-            risk_free_rate,
-        )?;
-
-        // Calculate probabilities for the upper bound
-        let (prob_below_upper, _) = calculate_single_point_probability(
-            current_price,
-            &self.upper_bound.unwrap_or(Positive::MAX),
             volatility_adj,
             trend,
             expiration_date,
             risk_free_rate,
-        )?;
-
-        // A distribution function is monotone, so `upper >= lower` must give
-        // `prob_below_upper >= prob_below_lower`; equality is a zero-width
-        // range with probability zero, which `sub_or_none` returns. A smaller
-        // probability at the upper bound is a result outside the model's
-        // precision, not a property of the range: with a spot near
-        // `Positive::MAX` and a volatility of `1e-28`, `(MAX - 4) / MAX`
-        // rounds to `0.9999999999999999999999999999` and `Decimal::checked_ln`
-        // returns `+9e-28` for it where the true value is `-1e-28`, so the
-        // lower bound comes out three standard deviations *above* the spot
-        // (`0.9987`) while the upper bound sits at the median (`0.5`). It is
-        // reported rather than floored to zero, which would be a probability
-        // nobody computed; the raw `Positive` operator aborted on it (#569).
-        // Ordinary inputs cannot reach this: the `ln` error is at the 28th
-        // decimal and only surfaces once `vol * sqrt(T)` is below `~1e-11`.
-        self.probability = prob_below_upper
-            .sub_or_none(&prob_below_lower.to_dec())
-            .ok_or_else(|| {
-                ProbabilityError::CalculationError(
-                    ProbabilityCalculationErrorKind::InvalidProbability {
-                        value: prob_below_upper.to_f64() - prob_below_lower.to_f64(),
-                        reason: format!(
-                            "probability below the upper bound {upper} ({prob_below_upper}) is \
-                             smaller than below the lower bound {lower} ({prob_below_lower}); \
-                             the inputs are outside the precision of the price model"
-                        ),
-                    },
-                )
-            })?;
-        Ok(())
+        )
     }
 
     /// Checks if a given price is within this range
@@ -279,228 +226,5 @@ mod tests_profit_range {
         let upper_infinite = ProfitLossRange::new(spos!(100.0), None, pos_or_panic!(0.5)).unwrap();
         assert!(!upper_infinite.contains(pos_or_panic!(99.0)));
         assert!(upper_infinite.contains(pos_or_panic!(150.0)));
-    }
-}
-
-#[cfg(test)]
-mod tests_calculate_probability {
-    use super::*;
-    use positive::{pos_or_panic, spos};
-
-    use positive::constants::DAYS_IN_A_YEAR;
-
-    use rust_decimal_macros::dec;
-
-    fn create_basic_range() -> ProfitLossRange {
-        ProfitLossRange::new(spos!(90.0), spos!(110.0), Positive::ZERO).unwrap()
-    }
-
-    #[test]
-    fn test_basic_probability_calculation() {
-        let mut range = create_basic_range();
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            None,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-        assert!(range.probability <= Positive::ONE);
-    }
-
-    #[test]
-    #[should_panic(expected = "Lower bound must be less than upper bound")]
-    fn test_invalid_bounds() {
-        let _ = ProfitLossRange::new(spos!(110.0), spos!(90.0), Positive::ZERO).unwrap();
-    }
-
-    /// A range whose bounds coincide has probability zero, and that is a
-    /// value. `new` rejects two equal explicit bounds, but an open upper bound
-    /// resolves to `Positive::MAX`, so a lower bound at `MAX` gives a
-    /// zero-width range through the public constructor. `sub_or_none` returns
-    /// the zero; this pins that the #569 change did not turn it into an error.
-    #[test]
-    fn test_calculate_probability_zero_width_range_is_zero() {
-        let mut range = ProfitLossRange::new(Some(Positive::MAX), None, Positive::ZERO)
-            .expect("an open upper bound is a valid range");
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            None,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(
-            result.is_ok(),
-            "a zero-width range is a value, not an error"
-        );
-        assert_eq!(range.probability, Positive::ZERO);
-    }
-
-    #[test]
-    fn test_with_volatility_adjustment() {
-        let mut range = create_basic_range();
-        let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos_or_panic!(0.25),
-            std_dev_adjustment: pos_or_panic!(0.05),
-        });
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            vol_adj,
-            None,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_with_upward_trend() {
-        let mut range = create_basic_range();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.10, // 10% tendencia alcista anual
-            confidence: 0.95,
-        });
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            trend,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_with_downward_trend() {
-        let mut range = create_basic_range();
-        let trend = Some(PriceTrend {
-            drift_rate: -0.10,
-            confidence: 0.95,
-        });
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            trend,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_infinite_lower_bound() {
-        let mut range = ProfitLossRange::new(None, spos!(110.0), Positive::ZERO).unwrap();
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            None,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_infinite_upper_bound() {
-        let mut range = ProfitLossRange::new(spos!(90.0), None, Positive::ZERO).unwrap();
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            None,
-            None,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_combined_adjustments() {
-        let mut range = create_basic_range();
-        let vol_adj = Some(VolatilityAdjustment {
-            base_volatility: pos_or_panic!(0.25),
-            std_dev_adjustment: pos_or_panic!(0.05),
-        });
-        let trend = Some(PriceTrend {
-            drift_rate: 0.10,
-            confidence: 0.95,
-        });
-
-        let result = range.calculate_probability(
-            &Positive::HUNDRED,
-            vol_adj,
-            trend,
-            &ExpirationDate::Days(pos_or_panic!(30.0)),
-            Some(dec!(0.05)),
-        );
-
-        assert!(result.is_ok());
-        assert!(range.probability > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_different_expiration_dates() {
-        let mut range = create_basic_range();
-
-        let expirations = vec![
-            ExpirationDate::Days(Positive::ONE),
-            ExpirationDate::Days(pos_or_panic!(30.0)),
-            ExpirationDate::Days(pos_or_panic!(90.0)),
-            ExpirationDate::Days(DAYS_IN_A_YEAR),
-        ];
-
-        for expiration in expirations {
-            let result = range.calculate_probability(
-                &Positive::HUNDRED,
-                None,
-                None,
-                &expiration,
-                Some(dec!(0.05)),
-            );
-
-            assert!(result.is_ok());
-            assert!(range.probability > Positive::ZERO);
-            assert!(range.probability <= Positive::ONE);
-        }
-    }
-
-    #[test]
-    fn test_extreme_prices() {
-        let mut range = create_basic_range();
-
-        let extreme_prices = vec![Positive::ONE, pos_or_panic!(1000.0), pos_or_panic!(10000.0)];
-
-        for price in extreme_prices {
-            let result = range.calculate_probability(
-                &price,
-                None,
-                None,
-                &ExpirationDate::Days(pos_or_panic!(30.0)),
-                Some(dec!(0.05)),
-            );
-
-            assert!(result.is_ok());
-            assert!(range.probability >= Positive::ZERO);
-            assert!(range.probability <= Positive::ONE);
-        }
     }
 }

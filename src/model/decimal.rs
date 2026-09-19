@@ -4,7 +4,6 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use crate::geometrics::HasX;
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::distr::Distribution;
 use rand_distr::StandardNormal;
@@ -306,12 +305,6 @@ pub fn decimal_normal_sample() -> Decimal {
     let mut t_rng = rand::rng();
     let sample: f64 = StandardNormal.sample(&mut t_rng);
     Decimal::from_f64(sample).unwrap_or(Decimal::ZERO)
-}
-
-impl HasX for Decimal {
-    fn get_x(&self) -> Decimal {
-        *self
-    }
 }
 
 /// Scale applied to banker's-rounding divisions in [`d_div`].
