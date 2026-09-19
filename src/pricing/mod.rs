@@ -310,6 +310,9 @@ pub(crate) mod utils;
 /// This module provides a single, consistent API for pricing options using different models.
 /// It includes the `PricingEngine` enum for selecting pricing methods, the `price_option`
 /// function as the main entry point, and the `Priceable` trait for trait-based pricing.
+/// `GenericPricingEngine<M>` and `price_option_with` are the same dispatcher generic
+/// over its Monte Carlo pricer (`MonteCarloPricer`, `NoMonteCarlo`), so a caller that
+/// only needs the closed forms carries no simulator (`ClosedFormEngine`).
 ///
 /// ## Features
 /// - Black-Scholes closed-form pricing
@@ -366,5 +369,8 @@ pub use quanto::quanto_black_scholes;
 pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
 pub use telegraph::{TelegraphProcess, telegraph};
-pub use unified::{Priceable, PricingEngine, price_option};
+pub use unified::{
+    ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, Priceable,
+    PricingEngine, price_option, price_option_with,
+};
 pub use utils::{probability_keep_under_strike, simulate_returns};

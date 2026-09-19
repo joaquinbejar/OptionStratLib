@@ -223,6 +223,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bodies), `SingleLegPathEvaluator` (a `PathEvaluator` producing one
   `SimulationResult` per walk) and `simulate_single_leg` (the loop, its
   progress bar and the aggregate through `SimulationStatsResult::from_results`).
+- **`MonteCarloPricer` contract and the generic pricing engine** (#508,
+  multi-crate roadmap M1-11, ADR-0001 D3). `pricing::MonteCarloPricer` is
+  the one method pricing needs from a simulator (`price_monte_carlo(&self,
+  &Options) -> PricingResult<Positive>`, `Send + Sync`, also implemented for
+  `&M`); `pricing::NoMonteCarlo` is the zero-sized pricer that reports
+  `PricingError::SimulationError`; `pricing::GenericPricingEngine<M =
+  NoMonteCarlo>` has the same four arms as `PricingEngine` with `MonteCarlo
+  { simulator: M }`; `pricing::price_option_with` dispatches it with static
+  dispatch; `pricing::ClosedFormEngine` is `GenericPricingEngine<NoMonteCarlo>`.
+  `Simulator<Positive, Positive>` implements `MonteCarloPricer` by delegating
+  to `get_mc_option_price`, and `From<PricingEngine>` converts the concrete
+  engine into `GenericPricingEngine<Simulator<Positive, Positive>>`.
 
 ### Changed
 
@@ -246,6 +258,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deferred edges: `strategies::simulation_impls` (the `BasicAble` impls for
   the simulation containers) and the `Strategable: Graph` supertrait bound
   in `strategies::base`; both go with the batch.
+- **`price_option` dispatches through the generic engine** (#508).
+  `PricingEngine` and `price_option` are unchanged in shape; `price_option`
+  now views the engine as `GenericPricingEngine<&Simulator<..>>` and calls
+  `price_option_with`, so the two dispatchers share every arm and cannot
+  drift. Prices are identical (closed-form arms are the same functions; the
+  Monte Carlo arm is the same `get_mc_option_price` call, failures still
+  reported as `PricingError::SimulationError`). Numerical Greeks are
+  untouched. The `simulation` import in `pricing::unified` is the one
+  remaining reverse edge, marked `// deferred edge` (listed by the boundary checker); per
+  ADR-0001 D3 the 0.22.0 batch makes `GenericPricingEngine` the only engine
+  and the facade aliases `PricingEngine` to
+  `GenericPricingEngine<Simulator<Positive, Positive>>`.
 - **`simulation` no longer imports `strategies` or `visualization`** (#504).
   `impl BasicAble for Simulator` / `RandomWalk` moved to
   `strategies::simulation_impls` and `impl Graph for Simulator` / `RandomWalk`
