@@ -3197,3 +3197,62 @@ mod tests_bear_put_spread_pnl {
         assert_decimal_eq!(pnl.realized.unwrap(), dec!(-2.0), dec!(1e-6));
     }
 }
+
+#[cfg(test)]
+mod tests_bear_put_spread_degenerate_ranges {
+    use super::*;
+    use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
+    use crate::model::ExpirationDate;
+    use crate::strategies::probabilities::ProbabilityAnalysis;
+    use rust_decimal_macros::dec;
+
+    /// The pinned proptest input from #569: both strikes at zero, a positive
+    /// fee, a sub-contract quantity and a spot at `Positive::MAX`. The loss
+    /// range runs from a break-even four units below `MAX` to `MAX`, and at
+    /// that precision the price model evaluates the distribution function
+    /// higher at the lower point (`0.9987`) than at the upper one (`0.5`).
+    /// `ProfitLossRange::calculate_probability` used to abort in
+    /// `Positive::sub` on the negative difference; it reports the inversion
+    /// as `InvalidProbability` now. An error is the honest answer: flooring it
+    /// to zero would publish a probability the model never computed.
+    #[test]
+    fn test_get_loss_ranges_zero_strikes_with_fee_does_not_panic() {
+        let tiny = Positive::new_decimal(dec!(0.0000000000000000000000000001))
+            .expect("literal is positive");
+        let spread = BearPutSpread::new(
+            "PROP".to_string(),
+            Positive::MAX,
+            Positive::ZERO,
+            Positive::ZERO,
+            ExpirationDate::Days(Positive::new_decimal(dec!(3650)).expect("literal")),
+            tiny,
+            dec!(0),
+            Positive::ZERO,
+            tiny,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+            Positive::ONE,
+        )
+        .expect("the constructor accepted this input before #569 as well");
+
+        let ranges = spread.get_loss_ranges();
+        match ranges {
+            Err(ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability { value, reason },
+            )) => {
+                assert!(
+                    value < 0.0,
+                    "the reported difference should be negative, got {value}"
+                );
+                assert!(
+                    reason.contains("smaller than"),
+                    "the error should name the inverted ordering, got: {reason}"
+                );
+            }
+            other => panic!("expected the inverted-range error, got {other:?}"),
+        }
+    }
+}

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-09-19
+
+### Fixed
+
+- **A range whose upper-bound probability comes out below its lower-bound
+  probability is reported, not aborted on** (#569).
+  `ProfitLossRange::calculate_probability` subtracted the two with the raw
+  `Positive` operator; on a spot near `Positive::MAX` with a volatility of
+  `1e-28`, `Decimal::checked_ln` returns `+9e-28` for `(MAX - 4) / MAX` where
+  the true value is `-1e-28`, the distribution function evaluates higher below
+  the lower bound (`0.9987`) than below the upper one (`0.5`), and
+  `Positive::sub` aborted the process. It now returns
+  `ProbabilityError::CalculationError(InvalidProbability)` carrying the negative
+  difference and both probabilities. Flooring the difference to zero was
+  rejected: a probability nobody computed is worse than an error. A zero-width
+  range still reports probability zero. Ordinary inputs cannot reach the error;
+  the `ln` error is at the 28th decimal and only surfaces below
+  `vol * sqrt(T) ~ 1e-11`.
+
 ## [0.21.2] - 2026-09-18
 
 ### Changed

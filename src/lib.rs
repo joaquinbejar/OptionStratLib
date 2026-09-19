@@ -10,7 +10,7 @@
 // into, so the lint is silenced in `#[cfg(test)]` only.
 #![cfg_attr(test, allow(clippy::indexing_slicing))]
 
-//! # OptionStratLib v0.21.2: Financial Options Library
+//! # OptionStratLib v0.21.3: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -800,7 +800,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.21.2"
+//! optionstratlib = "0.21.3"
 //! ```
 //!
 //! Or use cargo to add it to your project:
@@ -815,7 +815,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.21.2", features = ["plotly"] }
+//! optionstratlib = { version = "0.21.3", features = ["plotly"] }
 //! ```
 //!
 //! - `plotly`: Enables interactive visualization using plotly.rs
@@ -1210,7 +1210,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.21.2** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.21.3** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
