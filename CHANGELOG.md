@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   simulation-backed generation. `make test` additionally builds that surface
   (`cargo build --no-default-features`).
 - **`OptionChain` metric and RND implementations moved to the analytics
-  layer** (#509). The thirty `impl <MetricTrait> for OptionChain` blocks and
+  layer** (#509). The twenty-eight `impl <MetricTrait> for OptionChain` blocks and
   `impl RNDAnalysis for OptionChain` lived in `chains::chain`, so the market
   module imported `metrics` and owned the risk-neutral-density surface: a
   Market-to-Analytics edge in the direction ADR-0001 forbids. The metric impls
