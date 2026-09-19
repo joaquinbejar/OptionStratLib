@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 optionstratlib = { path = "../../" }
+osl-example-support = { path = "../support" }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 positive = { workspace = true }

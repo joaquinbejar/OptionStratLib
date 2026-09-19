@@ -1,5 +1,5 @@
-use optionstratlib::prelude::setup_logger;
 use optionstratlib::utils::read_ohlcv_from_zip_async;
+use osl_example_support::setup_logger;
 use std::error::Error;
 use tracing::{error, info};
 

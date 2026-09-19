@@ -39,6 +39,7 @@ use optionstratlib::error::Error;
 //! - PNG visualization of the last simulation in `Draws/Simulation/long_call_strategy_simulation.png`
 
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
 /// Walker implementation for the simulation.

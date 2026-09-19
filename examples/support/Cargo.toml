@@ -1,0 +1,10 @@
+[package]
+name = "osl-example-support"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Application-side helpers shared by the OptionStratLib example binaries; never published"
+
+[dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

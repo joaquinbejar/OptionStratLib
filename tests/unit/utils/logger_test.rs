@@ -1,3 +1,7 @@
+#![allow(deprecated)]
+//! The library logger is deprecated (multi-crate roadmap M1-09, #506) and
+//! removed in M6-04; these tests pin its behaviour until then.
+
 use optionstratlib::utils::logger::{setup_logger, setup_logger_with_level};
 use std::env;
 use std::sync::Mutex;

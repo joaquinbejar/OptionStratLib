@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
 #[derive(Clone)]

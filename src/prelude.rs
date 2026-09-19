@@ -107,10 +107,12 @@ pub use crate::error::{
 
 // Utility functions and traits
 pub use crate::model::utils::ToRound;
+#[allow(deprecated)]
+pub use crate::utils::setup_logger;
 pub use crate::utils::{
     Len, OhlcvCandle, TimeFrame,
     others::calculate_log_returns,
-    read_ohlcv_from_zip, setup_logger,
+    read_ohlcv_from_zip,
     time::{convert_time_frame, get_tomorrow_formatted, get_x_days_formatted},
 };
 

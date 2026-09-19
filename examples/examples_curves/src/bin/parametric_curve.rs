@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use rust_decimal::{Decimal, MathematicalOps};
 
 fn main() -> Result<(), Error> {

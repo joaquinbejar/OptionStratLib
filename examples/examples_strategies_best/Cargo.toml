@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 optionstratlib = { workspace = true, features = ["plotly", "static_export"] }
+osl-example-support = { path = "../support" }
 positive = { workspace = true }
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }

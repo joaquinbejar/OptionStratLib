@@ -1,4 +1,5 @@
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use std::error::Error;
 
 #[tokio::main]

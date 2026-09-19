@@ -6,9 +6,9 @@
 
 use optionstratlib::model::option::ExoticParams;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::prelude::setup_logger;
 use optionstratlib::pricing::cliquet::cliquet_black_scholes;
 use optionstratlib::{ExpirationDate, Options};
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 use tracing::{error, info};

@@ -13,6 +13,7 @@
 //! - PNG image: `./Draws/Metrics/strike_concentration_premium_weighted_curve.png`
 //! - HTML interactive: `./Draws/Metrics/strike_concentration_premium_weighted_curve.html`
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();
