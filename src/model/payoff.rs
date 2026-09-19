@@ -28,7 +28,7 @@ use tracing::{trace, warn};
 ///
 /// ```rust
 /// use num_traits::ToPrimitive;
-/// use optionstratlib::pricing::{Payoff, PayoffInfo};
+/// use optionstratlib::model::payoff::{Payoff, PayoffInfo};
 /// use optionstratlib::Side;
 /// struct CallOption;
 ///
@@ -133,7 +133,7 @@ impl PayoffInfo {
     /// # Example
     ///
     /// ```
-    /// use optionstratlib::pricing::PayoffInfo;
+    /// use optionstratlib::model::payoff::PayoffInfo;
     /// use positive::Positive;
     /// use optionstratlib::model::types::{OptionStyle, Side};
     /// # fn run() -> Result<(), optionstratlib::error::Error> {
