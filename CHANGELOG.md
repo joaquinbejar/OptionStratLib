@@ -16,9 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
   against the approved graph. Lines marked `// facade-compat: <layer>` (the
   compatibility re-exports that become facade code at extraction) are
-  exempt; the known reverse edges whose removal is a breaking change are
-  listed in the script per file with the issue that removes them and are
-  reported, not hidden; a self-test proves the scanner catches what it
+  exempt; the eleven known reverse edges whose removal is a breaking change
+  are listed in the script per file with the issue that removes them (the
+  same module pair in any other file fails) and the run prints how many
+  marked lines each layer carries; a self-test proves the scanner catches what it
   must. The `lint` workflow runs it on every push. The last two imports
   through `crate::prelude` inside the library (`pricing::telegraph`,
   `strategies::delta_neutral`) now use canonical paths.

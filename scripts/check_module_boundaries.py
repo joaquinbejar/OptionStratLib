@@ -17,10 +17,15 @@ Three kinds of lines are exempt from the layer rule:
   own module files at extraction time;
 * files listed in `SYNTHETIC_FILES`: the market-to-simulation edge that the
   `synthetic` feature gates (ADR-0003);
-* edges listed in `DEFERRED`: known violations whose removal is a breaking
-  change batched behind the 0.22.0 bump (ADR-0001, "Sequencing under the
-  semver gate"). Each entry names the issue that removes it. A deferred edge
-  that no longer exists is reported so the list can be pruned.
+* edges listed in `DEFERRED`, scoped to the files that carry them: known
+  violations whose removal is a breaking change batched behind the 0.22.0
+  bump (ADR-0001, "Sequencing under the semver gate"). Each entry names the
+  issue that removes it and every such line is annotated `// deferred edge`
+  in the source. The same module pair in any other file is a violation. A
+  deferred edge that no longer exists is reported so the list can be pruned.
+
+The run also prints the number of `// facade-compat` lines per layer, so
+marker creep is visible in the CI log.
 
 Exit status is 1 on any other cross-layer edge, 0 otherwise. Run
 `make check-graph`; an optional first argument names the crate root to scan
@@ -96,9 +101,10 @@ ALLOWED = {
     "simulation": {"core", "math", "pricing", "simulation"},
     "market": {"core", "math", "pricing", "market"},
     "analytics": {"core", "math", "pricing", "market", "analytics"},
-    "strategies": {"core", "math", "pricing", "market", "analytics", "strategies"},
+    # ADR-0001 D9: strategies and backtest have no math edge.
+    "strategies": {"core", "pricing", "market", "analytics", "strategies"},
     "backtest": {
-        "core", "math", "pricing", "simulation", "market", "analytics",
+        "core", "pricing", "simulation", "market", "analytics",
         "strategies", "backtest",
     },
     "visualization": {
@@ -116,6 +122,9 @@ ALLOWED = {
 ALWAYS_ALLOWED_TARGETS = {"error"}
 
 # Files whose simulation edge is the `synthetic`-gated market capability.
+# File-level on purpose: the only simulation references in `chains/mod.rs`
+# are the `#[cfg(feature = "synthetic")]` re-exports, and the generator
+# modules are compiled only under that feature.
 SYNTHETIC_FILES = {
     "chains/generators.rs",
     "series/generators.rs",
@@ -125,25 +134,35 @@ SYNTHETIC_FILES = {
     "error/chains.rs",
 }
 
-# (source module, target module) -> issue that removes the edge.
-# Populated from the state of `main` after the M1 PRs; keep it sorted.
-DEFERRED: dict[tuple[str, str], str] = {
-    # `SimulationError::GraphError(#[from] GraphError)`: variant removal,
-    # ADR-0001 D6, batch behind the 0.22.0 bump.
-    ("error/simulation", "error/graph"): "0.22.0 batch (ADR-0001 D6)",
-    # `StrategyError::Simulation(Box<SimulationError>)` and the
-    # `From<StrategyError> for SimulationError` conversion that lives next to
-    # its source: strategies must not depend on simulation once extracted
-    # (M1-08, #505); variant removal in the 0.22.0 batch.
-    ("error/strategies", "error/simulation"): "0.22.0 batch (ADR-0001 D6, #505)",
-    # `ProfitLossRange::new` returns the analytics-owned `ProbabilityError`;
-    # the core constructor gets a core-owned error in the 0.22.0 batch
-    # (ADR-0001 D6, M1-01).
-    ("model", "error/probability"): "0.22.0 batch (ADR-0001 D6, #498)",
-    # `Strategable: ... + Graph` (`src/strategies/base.rs`): the
-    # visualization supertrait bound leaves the strategy contract in the
-    # 0.22.0 batch (M1-08, #505); dropping a supertrait is a public break.
-    ("strategies", "visualization"): "0.22.0 batch (#505, Strategable: Graph bound)",
+# (source module, target module) -> (files that may carry the edge, the issue
+# that removes it). Scoped to files on purpose: a new file introducing the
+# same module pair is a fresh violation, not tolerated debt. Every listed
+# line is annotated `// deferred edge` in the source.
+DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
+    # Inherent pricing wrappers on `Options` forward to `pricing::OptionPricing`.
+    ("model", "pricing"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499, API-BASELINE 3.3)"),
+    # `impl LegAble for Leg` computes Greeks in its `Option` arms.
+    ("model", "greeks"): (frozenset({"model/leg/leg_enum.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
+    # `Trade::pnl() -> PnL` is public inherent API returning an analytics type.
+    ("model", "pnl"): (frozenset({"model/trade.rs"}), "0.22.0 batch (#498)"),
+    # `ProfitLossRange::calculate_probability` wrapper and its parameter types.
+    ("model", "analytics"): (frozenset({"model/profit_range.rs"}), "0.22.0 batch (#498)"),
+    # `ProfitLossRange::new` returns the analytics-owned `ProbabilityError`.
+    ("model", "error/probability"): (frozenset({"model/profit_range.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
+    # `PricingEngine::MonteCarlo` still stores the concrete `Simulator`.
+    ("pricing", "simulation"): (frozenset({"pricing/unified.rs"}), "0.22.0 batch (#508, ADR-0001 D3)"),
+    # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`
+    # stores `SimulationResult` (both embed analytics types).
+    ("simulation", "backtesting"): (frozenset({"simulation/stats.rs", "simulation/traits.rs"}), "0.22.0 batch (#504)"),
+    # `impl BasicAble for Simulator/RandomWalk` lives in strategies.
+    ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
+    # `Strategable: ... + Graph` supertrait bound.
+    ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
+    # `SimulationError::GraphError(#[from] GraphError)`.
+    ("error/simulation", "error/graph"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6)"),
+    # `StrategyError::Simulation(Box<SimulationError>)` and the conversion
+    # that lives next to its source.
+    ("error/strategies", "error/simulation"): (frozenset({"error/strategies.rs"}), "0.22.0 batch (ADR-0001 D6, #505)"),
 }
 
 MARKER = "// facade-compat:"
@@ -289,11 +308,32 @@ def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
             continue
         if dst_layer == "simulation" and src_layer == "market" and all(f in SYNTHETIC_FILES for f in files):
             continue
-        if (src, dst) in DEFERRED:
+        deferred = DEFERRED.get((src, dst))
+        if deferred is not None and set(files) <= deferred[0]:
             continue
         where = ", ".join(sorted(set(files)))
+        if deferred is not None:
+            extra = ", ".join(sorted(set(files) - deferred[0]))
+            where = f"{extra} (deferred only for {', '.join(sorted(deferred[0]))})"
         violations.append(f"{src} -> {dst} ({src_layer} -> {dst_layer}) in {where}")
     return violations
+
+
+def marked_lines(src: Path = SRC) -> dict[str, int]:
+    """Count `// facade-compat` lines per source layer so marker creep shows in the log."""
+    counts: dict[str, int] = {}
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        parts = rel.split("/")
+        top = parts[0].removesuffix(".rs")
+        if top == "error":
+            layer = ERROR_FILE_LAYER.get(parts[1].removesuffix(".rs") if len(parts) > 1 else "mod", "facade")
+        else:
+            layer = LAYER_OF.get(top, "facade")
+        n = sum(1 for line in path.read_text().splitlines() if MARKER in line)
+        if n:
+            counts[layer] = counts.get(layer, 0) + n
+    return counts
 
 
 def self_test() -> int:
@@ -311,6 +351,8 @@ def self_test() -> int:
         "nested brace import": (("model/x.rs", "use crate::{error::{strategies::StrategyError, DecimalError}, model::Options};\n"), 1),
         "qualified error path": (("model/x.rs", "use crate::error::strategies::StrategyError;\n"), 1),
         "synthetic file": (("chains/generators.rs", "use crate::simulation::WalkParams;\n"), 0),
+        "deferred pair in its file": (("pricing/unified.rs", "use crate::simulation::simulator::Simulator;\n"), 0),
+        "deferred pair in another file": (("pricing/other.rs", "use crate::simulation::simulator::Simulator;\n"), 1),
     }
     failures = 0
     for name, ((rel, content), expected) in cases.items():
@@ -320,11 +362,22 @@ def self_test() -> int:
             target.parent.mkdir(parents=True)
             target.write_text(content)
             edges, _ = scan(root)
-            got = len([v for v in violations_of(edges) if (rel.split("/")[0], ) ])
+            got = len(violations_of(edges))
             status = "ok" if got == expected else "FAIL"
             if got != expected:
                 failures += 1
             print(f"self-test {status}: {name} (expected {expected}, got {got})")
+    # A deferred entry whose edge is gone must be reported as stale.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "src"
+        (root / "model").mkdir(parents=True)
+        (root / "model" / "x.rs").write_text("use crate::error::DecimalError;\n")
+        _, present = scan(root)
+        stale = [key for key in DEFERRED if key not in present]
+        ok = len(stale) == len(DEFERRED)
+        print(f"self-test {'ok' if ok else 'FAIL'}: stale deferred entries are detected ({len(stale)} of {len(DEFERRED)})")
+        if not ok:
+            failures += 1
     return 1 if failures else 0
 
 
@@ -333,7 +386,7 @@ def main() -> int:
         return self_test()
     edges, present = scan()
     violations = violations_of(edges)
-    stale = [f"{s} -> {d} ({issue})" for (s, d), issue in DEFERRED.items() if (s, d) not in present]
+    stale = [f"{s} -> {d} ({meta[1]})" for (s, d), meta in DEFERRED.items() if (s, d) not in present]
     if stale:
         print("deferred edges no longer present, prune them from DEFERRED:")
         for item in stale:
@@ -344,7 +397,8 @@ def main() -> int:
             print(f"  {item}")
         return 1
     deferred_count = sum(1 for key in DEFERRED if key in present)
-    print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated)")
+    marks = ", ".join(f"{layer}={n}" for layer, n in sorted(marked_lines().items())) or "none"
+    print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     return 0
 
 
