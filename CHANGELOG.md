@@ -226,21 +226,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`strategies` no longer imports `simulation`, `backtesting` or
-  `visualization` in production code** (#505). The `Simulate`
-  implementations for `LongCall`, `LongPut`, `ShortCall` and `ShortPut`
-  moved from the strategy files to `backtesting::strategy_simulation` as
-  one generic body; `strategy.simulate(&simulator, exit)` is unchanged and
-  its outputs are byte-for-byte what they were (verified on 280 serialized
-  runs across the four strategies, five paths and seven exit policies). The
-  `indicatif` progress bar moved with the loop; M6-05 removes it from the
-  library. The `Graph` implementations for every concrete strategy and the
-  `impl_graph_for_payoff_strategy!` macro moved from `strategies::graph` to
-  `visualization::strategies`; the macro keeps its crate-root path and the
-  `strategies::graph` module stays (empty) until the 0.22.0 breaking batch.
-  `strategies::simulation_impls` (the `BasicAble` impls for the simulation
-  containers, marked `// facade-compat: simulation`) is the one remaining
-  reverse edge; it goes with the batch.
+- **Single-leg strategy simulation lives in `backtesting`** (#505). The
+  `Simulate` implementations for `LongCall`, `LongPut`, `ShortCall` and
+  `ShortPut` moved from the strategy files to
+  `backtesting::strategy_simulation` as one generic body;
+  `strategy.simulate(&simulator, exit)` is unchanged. A new golden test
+  (`tests/unit/backtesting/single_leg_simulation_golden_test.rs`) runs the
+  four strategies over five deterministic historical paths and seven exit
+  policies (140 runs, two walks each), serialises the results with
+  `PnL.date_time` removed (it is stamped with `Utc::now()`), and compares
+  them with a golden file generated on the code before this change; every
+  other field matches byte for byte. The `indicatif` progress bar moved with
+  the loop; M6-05 removes it from the library. The `Graph` implementations
+  for every concrete strategy and the `impl_graph_for_payoff_strategy!`
+  macro moved from `strategies::graph` to `visualization::strategies`; the
+  macro keeps its crate-root path and the `strategies::graph` module stays
+  (empty) until the 0.22.0 breaking batch. Two `strategies` references to
+  upper layers remain and are listed by the boundary checker (#507) as
+  deferred edges: `strategies::simulation_impls` (the `BasicAble` impls for
+  the simulation containers) and the `Strategable: Graph` supertrait bound
+  in `strategies::base`; both go with the batch.
 - **`simulation` no longer imports `strategies` or `visualization`** (#504).
   `impl BasicAble for Simulator` / `RandomWalk` moved to
   `strategies::simulation_impls` and `impl Graph for Simulator` / `RandomWalk`

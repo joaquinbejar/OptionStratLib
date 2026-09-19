@@ -58,7 +58,7 @@ macro_rules! test_strategy_traits {
             use super::*;
             use static_assertions::assert_impl_all;
             use std::fmt;
-            use $crate::visualization::Graph; // facade-compat: visualization
+            use $crate::visualization::Graph;
 
             #[test]
             fn test_traits() {
