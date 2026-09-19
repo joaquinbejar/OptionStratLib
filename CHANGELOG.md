@@ -41,8 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`utils::logger::setup_logger` and `setup_logger_with_level`** (#506,
   multi-crate roadmap M1-09). A library must not install a global `tracing`
   subscriber; install one from your binary with
-  `tracing_subscriber::fmt().with_max_level(..).init()`. The functions still
-  work in 0.22.0 and are removed in a later 0.22 pre-release (M6-04). The
+  `tracing_subscriber::fmt().with_max_level(..).init()`. The functions are
+  deprecated on `main` after 0.21.3 and removed in 0.22.0 (M6-04, in the batch
+  that follows the version bump), so no 0.22 release ships them; the
+  deprecation is the signal for anyone building from `main` in between. The
   example binaries now take their logger from the non-published
   `osl-example-support` package under `examples/support`.
 

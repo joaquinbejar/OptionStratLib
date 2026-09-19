@@ -10,8 +10,9 @@
 //!
 //! `setup_logger` and `setup_logger_with_level` install a global `tracing`
 //! subscriber, which is an application decision rather than a library one.
-//! Both are deprecated since 0.22.0 and will be removed (multi-crate roadmap
-//! M6-04). Install the subscriber from your binary instead:
+//! Both are deprecated on `main` after 0.21.3 and removed in 0.22.0
+//! (multi-crate roadmap M6-04). Install the subscriber from your binary
+//! instead:
 //!
 //! ```rust,no_run
 //! tracing_subscriber::fmt()

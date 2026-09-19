@@ -86,8 +86,8 @@ static INIT: Once = Once::new();
 ///   wrapping the library) the second installation is silently ignored
 ///   rather than panicking.
 #[deprecated(
-    since = "0.22.0",
-    note = "a library must not install a global tracing subscriber; call `tracing_subscriber::fmt().with_max_level(..).init()` from your binary (the examples use `osl-example-support`). Removed in a later 0.22 pre-release (roadmap M6-04)."
+    since = "0.21.3",
+    note = "a library must not install a global tracing subscriber; call `tracing_subscriber::fmt().with_max_level(..).init()` from your binary (the examples use `osl-example-support`). Deprecated on main after 0.21.3 and removed in 0.22.0 (roadmap M6-04); no 0.22 release ships it."
 )]
 pub fn setup_logger() {
     INIT.call_once(|| {
@@ -124,8 +124,8 @@ pub fn setup_logger() {
 /// - If a global subscriber is already installed the second installation
 ///   is silently ignored rather than panicking.
 #[deprecated(
-    since = "0.22.0",
-    note = "a library must not install a global tracing subscriber; call `tracing_subscriber::fmt().with_max_level(..).init()` from your binary (the examples use `osl-example-support`). Removed in a later 0.22 pre-release (roadmap M6-04)."
+    since = "0.21.3",
+    note = "a library must not install a global tracing subscriber; call `tracing_subscriber::fmt().with_max_level(..).init()` from your binary (the examples use `osl-example-support`). Deprecated on main after 0.21.3 and removed in 0.22.0 (roadmap M6-04); no 0.22 release ships it."
 )]
 #[allow(unused_variables)]
 pub fn setup_logger_with_level(log_level: &str) {

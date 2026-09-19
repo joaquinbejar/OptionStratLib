@@ -65,7 +65,11 @@ mod tests {
     #[test]
     fn test_setup_is_idempotent() {
         setup_logger_with_level("WARN");
+        assert!(tracing::dispatcher::has_been_set());
+        // Later calls are no-ops: they neither panic nor replace the
+        // subscriber installed by the first call.
         setup_logger();
         setup_logger_with_level("TRACE");
+        assert!(tracing::dispatcher::has_been_set());
     }
 }
