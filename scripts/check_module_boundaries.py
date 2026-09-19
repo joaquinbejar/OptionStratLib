@@ -170,8 +170,19 @@ EDGE_RE = re.compile(r"\bcrate::([a-z_][a-z0-9_]*)(?:::([a-z_][a-z0-9_]*))?")
 
 
 def strip_comments(text: str) -> str:
+    """Drop comments; a `facade-compat` marker exempts only a `pub use` re-export.
+
+    Any other marked line (a plain import, a trait bound) keeps its code and is
+    scanned like an unmarked one, so the marker cannot hide a live edge.
+    """
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
-    return "\n".join(line.split("//")[0] if MARKER not in line else "" for line in text.splitlines())
+    out = []
+    for line in text.splitlines():
+        code = line.split("//")[0]
+        if MARKER in line and code.strip().startswith("pub use "):
+            code = ""
+        out.append(code)
+    return "\n".join(out)
 
 
 def production_lines(text: str) -> list[str]:
@@ -186,9 +197,12 @@ def production_lines(text: str) -> list[str]:
             started = False
             i += 1
             while i < len(lines):
-                depth += lines[i].count("{") - lines[i].count("}")
-                if depth > 0:
+                opens = lines[i].count("{")
+                # An item whose braces open and close on the same line
+                # (`mod tests {}`) still starts, and ends, the test item.
+                if opens:
                     started = True
+                depth += opens - lines[i].count("}")
                 if started and depth <= 0:
                     break
                 if not started and lines[i].rstrip().endswith(";"):
@@ -223,9 +237,12 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
         targets: list[str] = []
         for match in EDGE_RE.finditer(text):
             targets.append(normalise(match.group(1), match.group(2)))
-        # `use crate::{a::b, c, d::{e, f}}`, possibly spanning several lines:
-        # every entry's first segment names a module (or a root re-export).
-        for match in re.finditer(r"crate::\{", text):
+        # `use crate::{a::b, c, d::{e, f}}` and the qualified form
+        # `use crate::a::{b::c, d}`, possibly spanning several lines: the
+        # segments before the brace prefix every entry, and the first segment
+        # of the result names a module (or a root re-export).
+        for match in re.finditer(r"crate::((?:[a-z_][a-z0-9_]*::)*)\{", text):
+            prefix = [seg for seg in match.group(1).split("::") if seg]
             depth, i = 0, match.end() - 1
             while i < len(text):
                 if text[i] == "{":
@@ -236,7 +253,8 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
                         break
                 i += 1
             body = text[match.end():i]
-            for path_segments in expand_group(body):
+            for tail in expand_group(body):
+                path_segments = prefix + tail
                 if not path_segments:
                     continue
                 sub = path_segments[1] if len(path_segments) > 1 else None
@@ -347,9 +365,14 @@ def self_test() -> int:
         "comment only": (("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n"), 0),
         "test module only": (("model/x.rs", "#[cfg(test)]\nmod t {\n    use crate::pricing::black_scholes;\n}\n"), 0),
         "marked compat re-export": (("model/x.rs", "pub use crate::pricing::black_scholes; // facade-compat: pricing\n"), 0),
+        "marked plain import is not exempt": (("model/x.rs", "use crate::pricing::black_scholes; // facade-compat: pricing\n"), 1),
         "multiline import": (("model/x.rs", "use crate::{\n    Options,\n    pricing::black_scholes,\n};\n"), 1),
         "nested brace import": (("model/x.rs", "use crate::{error::{strategies::StrategyError, DecimalError}, model::Options};\n"), 1),
         "qualified error path": (("model/x.rs", "use crate::error::strategies::StrategyError;\n"), 1),
+        "qualified group": (("model/x.rs", "use crate::error::{strategies::StrategyError};\n"), 1),
+        "multiline qualified group": (("model/x.rs", "use crate::error::{\n    strategies::StrategyError,\n};\n"), 1),
+        "empty test module then import": (("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n"), 1),
+        "test module file then import": (("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n"), 1),
         "synthetic file": (("chains/generators.rs", "use crate::simulation::WalkParams;\n"), 0),
         "deferred pair in its file": (("pricing/unified.rs", "use crate::simulation::simulator::Simulator;\n"), 0),
         "deferred pair in another file": (("pricing/other.rs", "use crate::simulation::simulator::Simulator;\n"), 1),

@@ -12,11 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`make check-graph` enforces the module boundaries** (#507, multi-crate
   roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
   for `crate::<module>` references (including multi-line `use crate::{...}`
-  groups and `crate::error::<file>` paths), maps every module and every
+  groups, qualified groups such as `use crate::error::{graph::GraphError}`
+  and `crate::error::<file>` paths), maps every module and every
   error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
-  against the approved graph. Lines marked `// facade-compat: <layer>` (the
-  compatibility re-exports that become facade code at extraction) are
-  exempt; the eleven known reverse edges whose removal is a breaking change
+  against the approved graph. `pub use` lines marked `// facade-compat:
+  <layer>` (the compatibility re-exports that become facade code at
+  extraction) are exempt, and only those: a marked plain import is scanned
+  like any other; the eleven known reverse edges whose removal is a breaking change
   are listed in the script per file with the issue that removes them (the
   same module pair in any other file fails) and the run prints how many
   marked lines each layer carries; a self-test proves the scanner catches what it
