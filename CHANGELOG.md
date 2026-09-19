@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   module and are re-exported from `pnl`; the `strategies::delta_neutral::DeltaAdjustment`
   and `strategies::DeltaAdjustment` paths are re-exports of the same type.
   `pnl` no longer imports anything from `strategies`.
+- **The `OptionChain` ATM-IV adapter lives with the chain** (#510,
+  multi-crate roadmap M1-13). `impl AtmIvProvider for OptionChain` moved from
+  `volatility::traits` to `chains::chain`; the `AtmIvProvider` and
+  `VolatilitySmile` traits stay generic in `volatility`, which no longer
+  imports option chains. Behaviour and error mapping are unchanged.
 
 ## [0.21.3] - 2026-09-19
 

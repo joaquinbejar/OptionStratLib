@@ -4,6 +4,7 @@
    Date: 27/3/25
 ******************************************************************************/
 
+mod atm_iv_provider_test;
 mod composite_metrics_test;
 mod greeks_side_sign_test;
 mod greeks_snapshot_test;
