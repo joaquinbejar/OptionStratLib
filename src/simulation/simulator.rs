@@ -8,6 +8,7 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::pricing::Profit;
 use crate::pricing::monte_carlo::price_option_monte_carlo;
+use crate::pricing::unified::MonteCarloPricer;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
@@ -305,6 +306,18 @@ where
     }
 }
 
+impl MonteCarloPricer for Simulator<Positive, Positive> {
+    /// Delegates to [`Simulator::get_mc_option_price`]: the option is
+    /// priced from the terminal value of every walk the simulator holds.
+    /// Any failure is reported as [`PricingError::SimulationError`], as
+    /// the `MonteCarlo` arm of `price_option` has always done.
+    #[inline]
+    fn price_monte_carlo(&self, option: &Options) -> Result<Positive, PricingError> {
+        self.get_mc_option_price(option)
+            .map_err(|e| PricingError::simulation_error(&e.to_string()))
+    }
+}
+
 impl<X, Y> Len for Simulator<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
@@ -448,6 +461,141 @@ mod tests {
         params: &WalkParams<Positive, Positive>,
     ) -> Result<Vec<Step<Positive, Positive>>, Infallible> {
         Ok(vec![params.init_step.clone()])
+    }
+
+    /// The generic engine prices through `MonteCarloPricer` exactly what
+    /// the concrete `PricingEngine::MonteCarlo` arm prices from the same
+    /// paths, and `From<PricingEngine>` preserves the simulator.
+    #[test]
+    fn test_monte_carlo_pricer_matches_pricing_engine_on_the_same_paths() {
+        use crate::model::types::{OptionStyle, OptionType, Side};
+        use crate::pricing::{
+            GenericPricingEngine, PricingEngine, price_option, price_option_with,
+        };
+
+        let prices: Vec<Positive> = (0..12)
+            .map(|i| pos_or_panic!(100.0 + f64::from(i) * 1.5))
+            .collect();
+        let params = WalkParams {
+            size: prices.len(),
+            init_step: Step::new(
+                Positive::ONE,
+                TimeFrame::Day,
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                Positive::HUNDRED,
+            ),
+            walker: Box::new(TestWalker),
+            walk_type: WalkType::Historical {
+                timeframe: TimeFrame::Day,
+                prices,
+                symbol: None,
+            },
+        };
+        let simulator =
+            Simulator::new("MC parity".to_string(), 8, &params, generator_positive).unwrap();
+        let option = Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "TEST".to_string(),
+            strike_price: Positive::HUNDRED,
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            implied_volatility: pos_or_panic!(0.2),
+            quantity: Positive::ONE,
+            underlying_price: Positive::HUNDRED,
+            risk_free_rate: dec!(0.05),
+            option_style: OptionStyle::Call,
+            dividend_yield: Positive::ZERO,
+            exotic_params: None,
+        };
+
+        let concrete = PricingEngine::MonteCarlo {
+            simulator: simulator.clone(),
+        };
+        let expected = price_option(&option, &concrete).unwrap();
+        assert!(expected > Positive::ZERO);
+        assert_eq!(expected, simulator.get_mc_option_price(&option).unwrap());
+        assert_eq!(expected, simulator.price_monte_carlo(&option).unwrap());
+
+        let generic = GenericPricingEngine::MonteCarlo {
+            simulator: simulator.clone(),
+        };
+        assert_eq!(price_option_with(&option, &generic).unwrap(), expected);
+
+        let borrowed = GenericPricingEngine::MonteCarlo {
+            simulator: &simulator,
+        };
+        assert_eq!(price_option_with(&option, &borrowed).unwrap(), expected);
+
+        let converted: GenericPricingEngine<Simulator<Positive, Positive>> = concrete.into();
+        assert_eq!(price_option_with(&option, &converted).unwrap(), expected);
+    }
+
+    /// Moved from `pricing::monte_carlo` (#508): the Monte Carlo price
+    /// from the terminal values of a simulated year of paths lands near
+    /// the Black-Scholes price.
+    #[test]
+    fn test_monte_carlo_price_from_simulator_matches_black_scholes() {
+        use crate::model::utils::create_sample_option;
+        use crate::pricing::monte_carlo::price_option_monte_carlo;
+        use crate::{OptionStyle, Side};
+        use positive::assert_pos_relative_eq;
+
+        let walker = Box::new(TestWalker);
+        let initial_price = pos_or_panic!(1000.0);
+        let days = pos_or_panic!(365.0);
+        let volatility = pos_or_panic!(0.2);
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            initial_price,
+            Positive::ONE,
+            initial_price,
+            volatility,
+        );
+        option.risk_free_rate = dec!(0.05);
+        option.dividend_yield = pos_or_panic!(0.02);
+        option.expiration_date = ExpirationDate::Days(days);
+
+        let init_step = Step {
+            x: Xstep::new(Positive::ONE, TimeFrame::Day, ExpirationDate::Days(days)),
+            y: Ystep::new(0, initial_price),
+        };
+
+        let dt = convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Year);
+        let walk_params = WalkParams {
+            size: 365,
+            init_step,
+            walk_type: WalkType::Custom {
+                dt,
+                drift: dec!(0.02),
+                volatility,
+                vov: pos_or_panic!(0.01),
+                vol_speed: Default::default(),
+                vol_mean: pos_or_panic!(0.2),
+            },
+            walker,
+        };
+
+        let Ok(simulator) = Simulator::new(
+            "Test Simulator".to_string(),
+            100,
+            &walk_params,
+            generator_positive,
+        ) else {
+            panic!("simulator setup failed");
+        };
+
+        let get_last_positive_values = simulator.get_last_positive_values();
+
+        let result = price_option_monte_carlo(&option, &get_last_positive_values);
+        assert!(result.is_ok());
+
+        let bs = option.calculate_price_black_scholes().unwrap();
+        assert_pos_relative_eq!(
+            result.unwrap(),
+            Positive::new_decimal(bs).unwrap(),
+            pos_or_panic!(10.0)
+        );
     }
 
     // Test Simulator creation

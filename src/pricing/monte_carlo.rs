@@ -315,14 +315,6 @@ mod tests {
 mod tests_price_option_monte_carlo {
     use super::*;
     use crate::model::utils::create_sample_option;
-    use crate::simulation::generator_positive;
-    use crate::simulation::simulator::Simulator;
-    use crate::simulation::steps::{Step, Xstep, Ystep};
-    use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
-    use crate::utils::TimeFrame;
-    use crate::utils::time::convert_time_frame;
-    #[cfg(feature = "static_export")]
-    use crate::visualization::Graph;
     use crate::{ExpirationDate, OptionStyle, Side};
     use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
@@ -378,73 +370,6 @@ mod tests_price_option_monte_carlo {
             result.unwrap(),
             pos_or_panic!(4.85222766),
             pos_or_panic!(0.001)
-        );
-    }
-
-    #[test]
-    fn test_simulation() {
-        #[derive(Clone)]
-        struct TestWalker;
-        impl WalkTypeAble<Positive, Positive> for TestWalker {}
-        let walker = Box::new(TestWalker);
-        let initial_price = pos_or_panic!(1000.0);
-        let days = pos_or_panic!(365.0);
-        let volatility = pos_or_panic!(0.2);
-        let mut option = create_sample_option(
-            OptionStyle::Call,
-            Side::Long,
-            initial_price,
-            Positive::ONE,
-            initial_price,
-            volatility,
-        );
-        option.risk_free_rate = dec!(0.05);
-        option.dividend_yield = pos_or_panic!(0.02);
-        option.expiration_date = ExpirationDate::Days(days);
-
-        let init_step = Step {
-            x: Xstep::new(Positive::ONE, TimeFrame::Day, ExpirationDate::Days(days)),
-            y: Ystep::new(0, initial_price),
-        };
-
-        let dt = convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Year);
-        let walk_params = WalkParams {
-            size: 365,
-            init_step,
-            walk_type: WalkType::Custom {
-                dt,
-                drift: dec!(0.02),
-                volatility,
-                vov: pos_or_panic!(0.01),
-                vol_speed: Default::default(),
-                vol_mean: pos_or_panic!(0.2),
-            },
-            walker,
-        };
-
-        let Ok(simulator) = Simulator::new(
-            "Test Simulator".to_string(),
-            100,
-            &walk_params,
-            generator_positive,
-        ) else {
-            panic!("simulator setup failed");
-        };
-
-        #[cfg(feature = "static_export")]
-        simulator
-            .write_html("Draws/Simulation/simulator_test_montecarlo.html".as_ref())
-            .unwrap();
-        let get_last_positive_values = simulator.get_last_positive_values();
-
-        let result = price_option_monte_carlo(&option, &get_last_positive_values);
-        assert!(result.is_ok());
-
-        let bs = option.calculate_price_black_scholes().unwrap();
-        assert_pos_relative_eq!(
-            result.unwrap(),
-            Positive::new_decimal(bs).unwrap(),
-            pos_or_panic!(10.0)
         );
     }
 
