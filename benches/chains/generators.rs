@@ -1,7 +1,16 @@
+//! Benchmarks for the simulation-backed chain generators.
+//!
+//! The generators live behind the `synthetic` feature (on by default); without
+//! it this file registers a no-op so the benchmark target still compiles.
+
+#![cfg_attr(not(feature = "synthetic"), allow(dead_code, unused_imports))]
+
 use criterion::Criterion;
 use optionstratlib::ExpirationDate;
+use optionstratlib::chains::OptionChain;
+#[cfg(feature = "synthetic")]
+use optionstratlib::chains::generator_optionchain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::chains::{OptionChain, generator_optionchain};
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble, generator_positive};
 use optionstratlib::utils::{Len, TimeFrame};
@@ -91,6 +100,7 @@ fn positive_walk_params(size: usize) -> WalkParams<Positive, Positive> {
     }
 }
 
+#[cfg(feature = "synthetic")]
 pub fn benchmark_chain_generators(c: &mut Criterion) {
     let mut group = c.benchmark_group("Chain Generators");
     group.sample_size(20);
@@ -150,3 +160,8 @@ pub fn benchmark_chain_generators(c: &mut Criterion) {
 
     group.finish();
 }
+
+/// Without `synthetic` there is nothing to measure; the registration in
+/// `benches/mod.rs` stays unconditional so the target compiles either way.
+#[cfg(not(feature = "synthetic"))]
+pub fn benchmark_chain_generators(_c: &mut Criterion) {}

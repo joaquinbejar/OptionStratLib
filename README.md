@@ -826,6 +826,9 @@ optionstratlib = { version = "0.21.3", features = ["plotly"] }
 - `plotly`: Enables interactive visualization using plotly.rs
 - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 - `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data (tokio + reqwest + futures)
+- `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
+  (`chains::generator_optionchain`, `series::generator_optionseries`); disable it with
+  `default-features = false` for a market surface that never touches the simulation engine
 
 #### Building from Source
 

@@ -65,6 +65,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them, so no import changes. `ProbabilityAnalysis` and
   `StrategyProbabilityAnalysis` stay strategy-owned and consume the kernels
   downward. No formula or tolerance changed.
+### Added
+
+- **`synthetic` feature, on by default** (#512, multi-crate roadmap M1-15).
+  It gates the simulation-backed generators `chains::generator_optionchain`
+  and `series::generator_optionseries` (and the deprecated
+  `chains::generator_positive` alias), the only place where the market layer
+  depends on the simulation engine. With the default features nothing
+  changes; `default-features = false` now gives a market surface with no
+  simulation-backed generation. `make test` additionally builds that surface
+  (`cargo build --no-default-features`).
 
 ## [0.21.3] - 2026-09-19
 
