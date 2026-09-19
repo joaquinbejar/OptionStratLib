@@ -1,4 +1,4 @@
-//! Metric trait implementations for [`OptionChain`].
+//! Metric trait implementations for [`crate::chains::OptionChain`].
 //!
 //! The metric traits under `metrics::{composite, liquidity, price, risk,
 //! stress, temporal}` are analytics-owned, and `OptionChain` is a market-owned
