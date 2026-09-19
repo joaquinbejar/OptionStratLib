@@ -170,25 +170,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changed a result; the tests moved with their bodies.
   What stays, and why (every remaining hit of the boundary scan
   `rg -n 'crate::(chains|greeks|pnl|pricing|series|strategies|visualization|analytics|geometrics|curves|surfaces|metrics)' src/model`
-  is inside `#[cfg(test)]`, a doc link, a line marked `// facade-compat`, or
-  the one deferred edge below):
-  - `src/model/option.rs` `use crate::pricing::OptionPricing;` (pricing,
-    marked): the seven inherent pricing wrappers from #499 forward to the
+  is inside `#[cfg(test)]`, a doc link, or one of the deferred edges below,
+  each annotated `// deferred edge` and listed by the boundary checker):
+  - `src/model/option.rs` `use crate::pricing::OptionPricing;` (pricing): the seven inherent pricing wrappers from #499 forward to the
     trait; removing them is the 0.22 break recorded in
     `doc/API-BASELINE.md` 3.3.
   - `src/model/leg/leg_enum.rs` `use crate::greeks::Greeks;` inside the
-    five `Option` arms of `impl LegAble for Leg` (pricing, NOT marked): a
-    live core-to-pricing edge, not a compatibility re-export. `LegAble` is
+    five `Option` arms of `impl LegAble for Leg` (pricing): a live
+    core-to-pricing edge. `LegAble` is
     a core trait on a core type, so the impl cannot move under the orphan
     rule; its Greek methods (which already return the pricing-owned
     `GreeksError`) move to a pricing-owned extension trait in the batch
     behind the 0.22.0 bump. The boundary checker (#507) lists it as a
     deferred edge so M1 closes with it documented, not hidden.
-  - `src/model/trade.rs` `use crate::pnl::PnL;` (analytics, marked):
+  - `src/model/trade.rs` `use crate::pnl::PnL;` (analytics):
     `Trade::pnl() -> PnL` is public inherent API returning an
     analytics-owned type; `PnL::from(&trade)` is the 0.22 form.
   - `src/model/profit_range.rs` `ProfitRangeProbability`, `PriceTrend`,
-    `VolatilityAdjustment` (analytics, marked): the inherent
+    `VolatilityAdjustment` (analytics): the inherent
     `ProfitLossRange::calculate_probability` wrapper keeps its 0.21
     signature, which names the two analytics-owned parameter types.
   - `src/model/option.rs:7`, `src/model/position.rs:14`,

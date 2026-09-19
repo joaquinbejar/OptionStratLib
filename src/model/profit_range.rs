@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::analytics::probability::{PriceTrend, VolatilityAdjustment}; // facade-compat: analytics
-use crate::analytics::profit_range::ProfitRangeProbability; // facade-compat: analytics
+use crate::analytics::probability::{PriceTrend, VolatilityAdjustment}; // deferred edge: wrapper signature, 0.22.0 batch (#498)
+use crate::analytics::profit_range::ProfitRangeProbability; // deferred edge: forwarding wrapper, 0.22.0 batch (#498)
 use crate::error::probability::ProbabilityError;
 use crate::model::ExpirationDate;
 use positive::Positive;
@@ -144,7 +144,7 @@ impl ProfitLossRange {
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
     ) -> Result<(), ProbabilityError> {
-        // facade-compat: analytics
+        // deferred edge: forwarding wrapper over ProfitRangeProbability, removed in the 0.22.0 batch
         ProfitRangeProbability::calculate_probability(
             self,
             current_price,
