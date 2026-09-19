@@ -6,8 +6,8 @@
 
 use crate::error::PricingError;
 use crate::model::decimal::{d_div, d_mul, d_powd, d_sub};
+use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::pricing::payoff::{Payoff, PayoffInfo};
 use crate::pricing::utils::*;
 use crate::{d2f, f2d};
 use positive::Positive;

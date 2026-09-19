@@ -107,6 +107,10 @@ pub mod option;
 /// Definitions and utilities for managing trading positions, including risk metrics and exposure tracking.
 pub mod position;
 
+/// Payoff contracts at expiry: [`payoff::Payoff`], [`payoff::PayoffInfo`] and the
+/// implementation for every [`OptionType`] variant.
+pub mod payoff;
+
 mod positive_ext;
 
 /// Tools for analyzing and visualizing profit ranges across different market scenarios.
