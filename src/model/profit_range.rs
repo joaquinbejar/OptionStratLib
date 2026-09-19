@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 30/11/24
 ******************************************************************************/
-use crate::error::probability::{PriceErrorKind, ProbabilityError};
+use crate::error::probability::{
+    PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
+};
 use crate::model::ExpirationDate;
 use crate::strategies::probabilities::utils::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
@@ -104,6 +106,12 @@ impl ProfitLossRange {
     ///
     /// This function can return the following errors:
     /// * `ProbabilityError::PriceError` - If the lower bound exceeds the upper bound.
+    /// * `ProbabilityError::CalculationError` with `InvalidProbability` - If the
+    ///   probability below the upper bound comes out smaller than below the lower
+    ///   bound. A distribution function is monotone, so this only happens when
+    ///   the inputs sit past the precision of the price model (a spot near
+    ///   `Positive::MAX` with a volatility around `1e-28`); it is reported rather
+    ///   than floored to zero.
     /// * Other errors may be propagated from the underlying `calculate_single_point_probability` function.
     ///
     /// # Example
@@ -169,7 +177,34 @@ impl ProfitLossRange {
             risk_free_rate,
         )?;
 
-        self.probability = prob_below_upper - prob_below_lower;
+        // A distribution function is monotone, so `upper >= lower` must give
+        // `prob_below_upper >= prob_below_lower`; equality is a zero-width
+        // range with probability zero, which `sub_or_none` returns. A smaller
+        // probability at the upper bound is a result outside the model's
+        // precision, not a property of the range: with a spot near
+        // `Positive::MAX` and a volatility of `1e-28`, `(MAX - 4) / MAX`
+        // rounds to `0.9999999999999999999999999999` and `Decimal::checked_ln`
+        // returns `+9e-28` for it where the true value is `-1e-28`, so the
+        // lower bound comes out three standard deviations *above* the spot
+        // (`0.9987`) while the upper bound sits at the median (`0.5`). It is
+        // reported rather than floored to zero, which would be a probability
+        // nobody computed; the raw `Positive` operator aborted on it (#569).
+        // Ordinary inputs cannot reach this: the `ln` error is at the 28th
+        // decimal and only surfaces once `vol * sqrt(T)` is below `~1e-11`.
+        self.probability = prob_below_upper
+            .sub_or_none(&prob_below_lower.to_dec())
+            .ok_or_else(|| {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::InvalidProbability {
+                        value: prob_below_upper.to_f64() - prob_below_lower.to_f64(),
+                        reason: format!(
+                            "probability below the upper bound {upper} ({prob_below_upper}) is \
+                             smaller than below the lower bound {lower} ({prob_below_lower}); \
+                             the inputs are outside the precision of the price model"
+                        ),
+                    },
+                )
+            })?;
         Ok(())
     }
 
@@ -280,6 +315,30 @@ mod tests_calculate_probability {
     #[should_panic(expected = "Lower bound must be less than upper bound")]
     fn test_invalid_bounds() {
         let _ = ProfitLossRange::new(spos!(110.0), spos!(90.0), Positive::ZERO).unwrap();
+    }
+
+    /// A range whose bounds coincide has probability zero, and that is a
+    /// value. `new` rejects two equal explicit bounds, but an open upper bound
+    /// resolves to `Positive::MAX`, so a lower bound at `MAX` gives a
+    /// zero-width range through the public constructor. `sub_or_none` returns
+    /// the zero; this pins that the #569 change did not turn it into an error.
+    #[test]
+    fn test_calculate_probability_zero_width_range_is_zero() {
+        let mut range = ProfitLossRange::new(Some(Positive::MAX), None, Positive::ZERO)
+            .expect("an open upper bound is a valid range");
+        let result = range.calculate_probability(
+            &Positive::HUNDRED,
+            None,
+            None,
+            &ExpirationDate::Days(pos_or_panic!(30.0)),
+            Some(dec!(0.05)),
+        );
+
+        assert!(
+            result.is_ok(),
+            "a zero-width range is a value, not an error"
+        );
+        assert_eq!(range.probability, Positive::ZERO);
     }
 
     #[test]
