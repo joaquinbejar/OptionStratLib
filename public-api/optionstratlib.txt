@@ -271,6 +271,35 @@ impl core::fmt::Debug for optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub mod optionstratlib::backtesting::strategy_simulation
+pub struct optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>
+impl<'a, S> optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::initial_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::new(&'a S) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
+pub trait optionstratlib::backtesting::strategy_simulation::SingleLegSimulation: optionstratlib::pnl::PnLCalculator + optionstratlib::strategies::base::Positionable
+pub const optionstratlib::backtesting::strategy_simulation::SingleLegSimulation::IS_LONG: bool
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegSimulation::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegSimulation::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_call::LongCall
+pub const optionstratlib::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_put::LongPut
+pub const optionstratlib::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_call::ShortCall
+pub const optionstratlib::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_put::ShortPut
+pub const optionstratlib::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::strategy_simulation::simulate_single_leg<S, X, Y>(&S, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub mod optionstratlib::backtesting::types
 pub enum optionstratlib::backtesting::types::ExitReason
 pub optionstratlib::backtesting::types::ExitReason::Expiration
@@ -5698,6 +5727,35 @@ impl optionstratlib::metrics::risk::risk_reversal::RiskReversalCurve for options
 pub fn optionstratlib::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub mod optionstratlib::prelude::spread
 pub fn optionstratlib::prelude::spread::spread_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
+pub mod optionstratlib::prelude::strategy_simulation
+pub struct optionstratlib::prelude::strategy_simulation::SingleLegPathEvaluator<'a, S>
+impl<'a, S> optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::initial_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::new(&'a S) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
+pub trait optionstratlib::prelude::strategy_simulation::SingleLegSimulation: optionstratlib::pnl::PnLCalculator + optionstratlib::strategies::base::Positionable
+pub const optionstratlib::prelude::strategy_simulation::SingleLegSimulation::IS_LONG: bool
+pub fn optionstratlib::prelude::strategy_simulation::SingleLegSimulation::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::prelude::strategy_simulation::SingleLegSimulation::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_call::LongCall
+pub const optionstratlib::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_put::LongPut
+pub const optionstratlib::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_call::ShortCall
+pub const optionstratlib::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_put::ShortPut
+pub const optionstratlib::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::prelude::strategy_simulation::simulate_single_leg<S, X, Y>(&S, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub mod optionstratlib::prelude::stress
 pub mod optionstratlib::prelude::stress::price_shock
 pub trait optionstratlib::prelude::stress::price_shock::PriceShockCurve
@@ -8664,6 +8722,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_call::LongCall
+pub const optionstratlib::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_call::LongCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -8805,6 +8867,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_put::LongPut
+pub const optionstratlib::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_put::LongPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -10552,6 +10618,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_call::ShortCall
+pub const optionstratlib::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_call::ShortCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -10695,6 +10765,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_put::ShortPut
+pub const optionstratlib::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_put::ShortPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -15686,6 +15760,9 @@ pub optionstratlib::simulation::WalkPath::vols: core::option::Option<alloc::vec:
 pub trait optionstratlib::simulation::PathEvaluator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub type optionstratlib::simulation::PathEvaluator::Outcome
 pub fn optionstratlib::simulation::PathEvaluator::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<Self::Outcome, optionstratlib::error::simulation::SimulationError>
+impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
@@ -19730,6 +19807,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_call::LongCall
+pub const optionstratlib::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_call::LongCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -19872,6 +19953,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_put::LongPut
+pub const optionstratlib::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_put::LongPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -21075,6 +21160,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_call::ShortCall
+pub const optionstratlib::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_call::ShortCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -21219,6 +21308,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_put::ShortPut
+pub const optionstratlib::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_put::ShortPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -23343,6 +23436,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_call::LongCall
+pub const optionstratlib::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_call::LongCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -23484,6 +23581,10 @@ impl core::fmt::Debug for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::long_put::LongPut
+pub const optionstratlib::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::long_put::LongPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -24386,6 +24487,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_call::ShortCall
+pub const optionstratlib::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_call::ShortCall::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -24529,6 +24634,10 @@ impl core::fmt::Debug for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib::strategies::short_put::ShortPut
+pub const optionstratlib::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib::model::option::Options, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::greeks::Greeks for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_put::ShortPut::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
