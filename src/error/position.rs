@@ -514,8 +514,6 @@ impl PositionError {
     }
 }
 
-// Implement conversion from StrategyError to PositionError
-
 #[cfg(test)]
 mod tests {
     use super::*;
