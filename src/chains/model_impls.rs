@@ -6,12 +6,14 @@
 
 //! Market-data conversions onto the core model types.
 //!
-//! Everything that turns chain data (`OptionData`) into, or refreshes, a
-//! core value lives here: the `TryFrom<&OptionData>` conversion for
-//! `Options` and the crate-internal [`UpdateFromOptionData`] refresh used by
-//! strategy re-pricing. The impls sit in the market layer (local source
+//! Everything that turns chain data (`OptionData`, `OptionChain`) into, or
+//! refreshes, a core value lives here: the `TryFrom<&OptionData>` conversion
+//! for `Options`, the `OptionChain` to `Positive` (underlying price)
+//! conversions, and the crate-internal [`UpdateFromOptionData`] refresh used
+//! by strategy re-pricing. The impls sit in the market layer (local source
 //! type, core-owned target) so the core model never references chain types.
 
+use crate::chains::chain::OptionChain;
 use crate::chains::optiondata::OptionData;
 use crate::error::{OptionsError, PositionError};
 use crate::model::types::{OptionStyle, OptionType, Side};
@@ -172,6 +174,18 @@ impl TryFrom<&OptionData> for Options {
             dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
             exotic_params: None,
         })
+    }
+}
+
+impl From<&OptionChain> for Positive {
+    fn from(value: &OptionChain) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<OptionChain> for Positive {
+    fn from(value: OptionChain) -> Self {
+        value.underlying_price
     }
 }
 

@@ -240,6 +240,18 @@ impl Default for OptionSeries {
     }
 }
 
+impl From<&OptionSeries> for Positive {
+    fn from(value: &OptionSeries) -> Self {
+        value.underlying_price
+    }
+}
+
+impl From<OptionSeries> for Positive {
+    fn from(value: OptionSeries) -> Self {
+        value.underlying_price
+    }
+}
+
 impl Len for OptionSeries {
     fn len(&self) -> usize {
         self.chains.len()

@@ -1,6 +1,6 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
-use crate::pnl::PnL;
+use crate::pnl::PnL; // deferred edge: Trade::pnl wrapper, 0.22.0 batch (#498)
 use crate::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;

@@ -9,9 +9,7 @@
 //! This module provides additional conversions and trait implementations
 //! for the `Positive` type that are specific to the options trading domain.
 
-use crate::chains::chain::OptionChain;
 use crate::model::utils::ToRound;
-use crate::series::OptionSeries;
 use positive::Positive;
 use rust_decimal::Decimal;
 
@@ -22,30 +20,6 @@ impl ToRound for Positive {
 
     fn round_to(&self, decimal_places: u32) -> Decimal {
         Positive::round_to(self, decimal_places).to_dec()
-    }
-}
-
-impl From<&OptionChain> for Positive {
-    fn from(value: &OptionChain) -> Self {
-        value.underlying_price
-    }
-}
-
-impl From<OptionChain> for Positive {
-    fn from(value: OptionChain) -> Self {
-        value.underlying_price
-    }
-}
-
-impl From<&OptionSeries> for Positive {
-    fn from(value: &OptionSeries) -> Self {
-        value.underlying_price
-    }
-}
-
-impl From<OptionSeries> for Positive {
-    fn from(value: OptionSeries) -> Self {
-        value.underlying_price
     }
 }
 
