@@ -7,7 +7,7 @@
 //! (backtesting composes strategies and simulation; neither may depend on
 //! the other) and provides the `Simulate` implementations for the four
 //! strategies. The per-strategy differences are captured by
-//! [`SingleLegSimulation`]: the side of the leg and the fee adjustment
+//! [`crate::backtesting::strategy_simulation::SingleLegSimulation`]: the side of the leg and the fee adjustment
 //! applied to every mark after the opening one.
 //!
 //! The progress bar drawn while the walks are evaluated stays with the
