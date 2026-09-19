@@ -1,9 +1,9 @@
 use crate::ExpirationDate;
 use crate::error::{PricingError, TransactionError};
 use crate::model::Position;
+use crate::pnl::DeltaAdjustment;
 use crate::pnl::transaction::Transaction;
 use crate::pnl::utils::PnL;
-use crate::strategies::DeltaAdjustment;
 use positive::Positive;
 
 /// Defines the interface for profit and loss (PnL) calculation on financial instruments.

@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same type, so no import changes. `chains` no longer imports anything from
   `strategies`: `OptionData::get_option_for_iv` writes the implied volatility
   field directly instead of going through the strategy `BasicAble` setter.
+- **`DeltaAdjustment` is owned by the analytics layer** (#503, multi-crate
+  roadmap M1-06). The adjustment enum and `DeltaAdjustmentSameSize` moved
+  from `strategies::delta_neutral::model` to the new `pnl::adjustment`
+  module and are re-exported from `pnl`; the `strategies::delta_neutral::DeltaAdjustment`
+  and `strategies::DeltaAdjustment` paths are re-exports of the same type.
+  `pnl` no longer imports anything from `strategies`.
 
 ## [0.21.3] - 2026-09-19
 
