@@ -280,6 +280,11 @@ pub mod short_put;
 pub mod short_straddle;
 /// Short Strangle strategy implementation
 pub mod short_strangle;
+
+/// `BasicAble` implementations for the simulation containers
+/// (`Simulator`, `RandomWalk`); kept here because the trait is local to
+/// strategies and simulation must not depend on it.
+mod simulation_impls;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 

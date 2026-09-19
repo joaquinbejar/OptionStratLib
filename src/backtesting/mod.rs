@@ -373,6 +373,12 @@
 /// gain_loss_ratio: Avg gain divided by avg loss (optional).
 pub mod metrics;
 
+/// Adapters between the generic simulation contracts (`PathOutcome`,
+/// `PathStatistics`) and the strategy-bound `SimulationResult` /
+/// `SimulationStatsResult` shapes. Backtesting owns the conversion so the
+/// simulation layer never has to name a strategy.
+pub mod adapters;
+
 /// This module defines the structure that aggregates and stores all results produced during a trading backtest simulation.
 ///
 /// It includes:

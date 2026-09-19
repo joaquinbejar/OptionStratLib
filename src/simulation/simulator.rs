@@ -11,9 +11,7 @@ use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
-use crate::strategies::base::BasicAble;
 use crate::utils::Len;
-use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
 use positive::Positive;
 use rust_decimal::Decimal;
 use std::fmt::Display;
@@ -405,62 +403,6 @@ where
     }
 }
 
-impl<X, Y> BasicAble for Simulator<X, Y>
-where
-    X: AddAssign + Copy + Display + TryInto<Positive>,
-    Y: Clone + Display + TryInto<Positive>,
-{
-    fn get_title(&self) -> String {
-        self.title.clone()
-    }
-}
-
-impl<X, Y> Graph for Simulator<X, Y>
-where
-    X: Copy + TryInto<Positive> + AddAssign + Display,
-    Y: TryInto<Positive> + Display + Clone,
-{
-    fn graph_data(&self) -> GraphData {
-        let mut series: Vec<Series2D> = Vec::new();
-        let random_walks = self.get_steps();
-        for (i, steps) in random_walks.iter().enumerate() {
-            let y: Vec<Decimal> = steps
-                .iter()
-                .map(|step| step.get_graph_y_value().unwrap_or(Positive::ZERO).to_dec())
-                .collect();
-            let x: Vec<Decimal> = steps
-                .iter()
-                .map(|step| -step.get_graph_x_in_days_left().to_dec())
-                .collect();
-            let title = format!("Sim_{i}");
-            series.push(Series2D {
-                x,
-                y,
-                name: title,
-                mode: TraceMode::Lines,
-                line_color: None,
-                line_width: Some(2.0),
-            });
-        }
-        GraphData::MultiSeries(series)
-    }
-
-    fn graph_config(&self) -> GraphConfig {
-        GraphConfig {
-            title: self.get_title().to_string(),
-            x_label: Some("Date".to_string()),
-            y_label: Some("Price".to_string()),
-            z_label: None,
-            width: 1600,
-            height: 900,
-            show_legend: true,
-            color_scheme: ColorScheme::HighContrast,
-            line_style: Default::default(),
-            legend: None,
-        }
-    }
-}
-
 impl<'a, X, Y> IntoIterator for &'a Simulator<X, Y>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
@@ -490,8 +432,6 @@ mod tests {
     use rust_decimal_macros::dec;
     use std::convert::Infallible;
     use tracing::{debug, info};
-    #[cfg(feature = "plotly")]
-    use {std::fs, std::path::Path};
 
     // Helper structs and functions for testing
     #[derive(Clone)]
@@ -949,15 +889,6 @@ mod tests {
         info!("Last Values: {:?}", last_values);
         assert_eq!(last_values.len(), simulator_size);
 
-        #[cfg(feature = "plotly")]
-        {
-            let file_name = "Draws/Simulation/test_simulator.html".as_ref();
-            simulator.write_html(file_name)?;
-            if Path::new(file_name).exists() {
-                fs::remove_file(file_name)
-                    .unwrap_or_else(|_| panic!("Failed to remove {}", file_name.to_str().unwrap()));
-            }
-        }
         Ok(())
     }
 }

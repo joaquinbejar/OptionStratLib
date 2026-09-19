@@ -128,6 +128,12 @@ mod params;
 /// Exit policies are used in simulations to automatically close positions when
 /// specific conditions are met, enabling systematic strategy testing and risk management.
 pub mod exit;
+
+/// Generic path evaluation contracts: [`PathEvaluator`], [`PathOutcome`],
+/// [`PathStatistics`] and the [`evaluate_paths`] driver. They let a
+/// simulation be evaluated and summarised without naming a strategy; the
+/// backtesting layer adapts its strategy-bound result types to them.
+mod outcome;
 mod stats;
 
 /// Generic walk driver shared by every step generator.
@@ -144,6 +150,7 @@ pub(crate) mod walk_test_support;
 
 pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::{WalkPath, WalkType};
+pub use outcome::{PathEvaluator, PathOutcome, PathStatistics, evaluate_paths};
 pub use params::WalkParams;
 pub use stats::SimulationStats;
 pub use traits::{

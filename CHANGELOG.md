@@ -198,6 +198,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `model` signatures) are `error/` ownership and belong to M1-14 (#511);
   `ProfitLossRange::new` returning `ProbabilityError` is the deferred
   breaking item ADR-0001 D6 assigns to the 0.22.0 batch.
+### Added
+
+- **Generic simulation contracts** (#504, multi-crate roadmap M1-07).
+  `simulation::PathEvaluator` (one method, `evaluate_path`, with an
+  associated `Outcome`), `simulation::PathOutcome` (per-path P&L, holding
+  period, exit reason, outcome flags and premium marks, built from core types
+  only), `simulation::PathStatistics::from_outcomes` (mean, median, sample
+  standard deviation, best, worst, win rate, average holding period; the same
+  arithmetic the strategy simulations use) and `simulation::evaluate_paths`
+  (drives an evaluator over every walk of a `Simulator`). A simulation-only
+  evaluator can now generate and summarise paths without naming a strategy.
+- **Backtesting adapters** (`backtesting::adapters`): `From<PathOutcome> for
+  SimulationResult`, `From<&SimulationResult> for PathOutcome`,
+  `SimulationStatsResult::from_results` and
+  `SimulationStatsResult::from_outcomes`, so the strategy-bound result shapes
+  are derived from the generic ones in one place.
+- `SimulationStats::update_outcome` folds a `PathOutcome` into the
+  accumulator; `SimulationStats::update` now delegates to it.
+
+### Changed
+
+- **`simulation` no longer imports `strategies` or `visualization`** (#504).
+  `impl BasicAble for Simulator` / `RandomWalk` moved to
+  `strategies::simulation_impls` and `impl Graph for Simulator` / `RandomWalk`
+  moved to `visualization::simulation` (a trait impl lives with the trait when
+  the type's layer must not depend on it). Both impls behave exactly as
+  before; no import path changes. The `BasicAble` impls are scheduled for
+  removal in the 0.22.0 breaking batch (ADR-0001 D2): the inherent
+  `get_title` accessors already cover their only use. The two remaining
+  reverse edges, `Simulate::simulate` returning the backtest-owned
+  `SimulationStatsResult` and `SimulationStats` storing `SimulationResult`,
+  are marked `// facade-compat: backtest` and move with the batch.
 
 ## [0.21.3] - 2026-09-19
 
