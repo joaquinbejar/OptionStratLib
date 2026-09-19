@@ -88,7 +88,7 @@ use crate::error::decimal::DecimalError;
 use crate::model::decimal::{
     d_add, d_div, d_exp, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
 };
-use crate::prelude::simulate_returns;
+use crate::pricing::utils::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rand::random;

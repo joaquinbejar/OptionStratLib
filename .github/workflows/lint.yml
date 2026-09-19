@@ -56,3 +56,6 @@ jobs:
 
       - name: Scan banned constructs
         run: make scan-banned
+
+      - name: Check module boundaries
+        run: make check-graph

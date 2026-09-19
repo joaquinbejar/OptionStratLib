@@ -7,7 +7,8 @@ The scan follows the method recorded in `doc/DEPENDENCY-MATRIX.md`: every
 items are skipped by brace counting (the same rule `make scan-banned` uses),
 and every explicit `crate::<top_level_module>` reference is an edge from the
 file's top-level module to that module. Root re-exports such as
-`crate::Options` name no module and are ignored.
+`crate::Options` name no module and are ignored; `use crate::{...}` groups,
+including multi-line and nested ones, are expanded entry by entry.
 
 Three kinds of lines are exempt from the layer rule:
 
@@ -32,11 +33,12 @@ import re
 import sys
 from pathlib import Path
 
-SRC = Path(sys.argv[1]) / "src" if len(sys.argv) > 1 else Path.cwd() / "src"
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+SRC = Path(ARGS[0]) / "src" if ARGS else Path.cwd() / "src"
 
-# Module -> target crate layer (ADR-0001 D2). `error` is scanned as a source
-# through its own row and accepted as a target from everywhere until M1-14
-# partitions it (its removal from the "always allowed" set is tracked there).
+# Module -> target crate layer (ADR-0001 D2). Files under `src/error/` are
+# mapped one by one through ERROR_FILE_LAYER (ADR-0001 D6, M1-14); the bare
+# `error` entry only covers `src/error/mod.rs`.
 LAYER_OF = {
     "model": "core",
     "constants": "core",
@@ -57,8 +59,33 @@ LAYER_OF = {
     "strategies": "strategies",
     "backtesting": "backtest",
     "visualization": "visualization",
-    "error": "error",
+    "error": "facade",
     "prelude": "facade",
+}
+
+# `src/error/<file>.rs` -> target crate layer (ADR-0001 D6).
+ERROR_FILE_LAYER = {
+    "common": "core",
+    "decimal": "core",
+    "options": "core",
+    "position": "core",
+    "trade": "core",
+    "interpolation": "math",
+    "curves": "math",
+    "surfaces": "math",
+    "greeks": "pricing",
+    "volatility": "pricing",
+    "pricing": "pricing",
+    "simulation": "simulation",
+    "chains": "market",
+    "csv": "market",
+    "transaction": "analytics",
+    "metrics": "analytics",
+    "probability": "analytics",
+    "strategies": "strategies",
+    "graph": "visualization",
+    "unified": "facade",
+    "mod": "facade",
 }
 
 # Layer -> layers it may reference (the approved DAG, ADR-0001 D9).
@@ -78,13 +105,14 @@ ALLOWED = {
         "core", "math", "pricing", "simulation", "market", "analytics",
         "strategies", "backtest", "visualization",
     },
-    # `error` is a leaf in the target graph; its current reverse references
-    # are listed in DEFERRED.
-    "error": set(),
-    "facade": set(LAYER_OF.values()),
+    "facade": set(LAYER_OF.values()) | set(ERROR_FILE_LAYER.values()),
 }
 
-# Every layer may name `error` until M1-14 partitions it.
+# A bare `crate::error::Name` import cannot be attributed to an error file
+# without a symbol table, so `error` as a TARGET is accepted from every layer;
+# qualified `crate::error::<file>::Name` references are checked against the
+# file's layer. Enum variants that still hold a higher layer's error type are
+# the documented residue for the 0.22.0 batch (see `src/error/mod.rs`).
 ALWAYS_ALLOWED_TARGETS = {"error"}
 
 # Files whose simulation edge is the `synthetic`-gated market capability.
@@ -92,15 +120,34 @@ SYNTHETIC_FILES = {
     "chains/generators.rs",
     "series/generators.rs",
     "chains/mod.rs",
+    # `ChainError::Simulation` and `From<SimulationError> for ChainError`
+    # (ADR-0003 section 4: the payload becomes market-owned after the bump).
+    "error/chains.rs",
 }
 
 # (source module, target module) -> issue that removes the edge.
 # Populated from the state of `main` after the M1 PRs; keep it sorted.
 DEFERRED: dict[tuple[str, str], str] = {
+    # `SimulationError::GraphError(#[from] GraphError)`: variant removal,
+    # ADR-0001 D6, batch behind the 0.22.0 bump.
+    ("error/simulation", "error/graph"): "0.22.0 batch (ADR-0001 D6)",
+    # `StrategyError::Simulation(Box<SimulationError>)` and the
+    # `From<StrategyError> for SimulationError` conversion that lives next to
+    # its source: strategies must not depend on simulation once extracted
+    # (M1-08, #505); variant removal in the 0.22.0 batch.
+    ("error/strategies", "error/simulation"): "0.22.0 batch (ADR-0001 D6, #505)",
+    # `ProfitLossRange::new` returns the analytics-owned `ProbabilityError`;
+    # the core constructor gets a core-owned error in the 0.22.0 batch
+    # (ADR-0001 D6, M1-01).
+    ("model", "error/probability"): "0.22.0 batch (ADR-0001 D6, #498)",
+    # `Strategable: ... + Graph` (`src/strategies/base.rs`): the
+    # visualization supertrait bound leaves the strategy contract in the
+    # 0.22.0 batch (M1-08, #505); dropping a supertrait is a public break.
+    ("strategies", "visualization"): "0.22.0 batch (#505, Strategable: Graph bound)",
 }
 
 MARKER = "// facade-compat:"
-EDGE_RE = re.compile(r"\bcrate::([a-z_][a-z0-9_]*)")
+EDGE_RE = re.compile(r"\bcrate::([a-z_][a-z0-9_]*)(?:::([a-z_][a-z0-9_]*))?")
 
 
 def strip_comments(text: str) -> str:
@@ -135,41 +182,157 @@ def production_lines(text: str) -> list[str]:
     return out
 
 
-def scan() -> tuple[dict[tuple[str, str], list[str]], set[tuple[str, str]]]:
+def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[str, str]]]:
     edges: dict[tuple[str, str], list[str]] = {}
-    for path in sorted(SRC.rglob("*.rs")):
-        rel = path.relative_to(SRC).as_posix()
-        top = rel.split("/")[0].removesuffix(".rs")
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        parts = rel.split("/")
+        top = parts[0].removesuffix(".rs")
         if top in ("lib", "prelude"):
             continue
-        source_layer = LAYER_OF.get(top)
+        if top == "error":
+            stem = parts[1].removesuffix(".rs") if len(parts) > 1 else "mod"
+            source = f"error/{stem}"
+            source_layer = ERROR_FILE_LAYER.get(stem)
+        else:
+            source = top
+            source_layer = LAYER_OF.get(top)
         if source_layer is None:
-            print(f"unknown top-level module {top!r} in {rel}; add it to LAYER_OF", file=sys.stderr)
+            print(f"unknown module {source!r} in {rel}; add it to LAYER_OF or ERROR_FILE_LAYER", file=sys.stderr)
             sys.exit(2)
         text = "\n".join(production_lines(strip_comments(path.read_text())))
+        targets: list[str] = []
         for match in EDGE_RE.finditer(text):
-            target = match.group(1)
-            if target not in LAYER_OF or target == top:
+            targets.append(normalise(match.group(1), match.group(2)))
+        # `use crate::{a::b, c, d::{e, f}}`, possibly spanning several lines:
+        # every entry's first segment names a module (or a root re-export).
+        for match in re.finditer(r"crate::\{", text):
+            depth, i = 0, match.end() - 1
+            while i < len(text):
+                if text[i] == "{":
+                    depth += 1
+                elif text[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            body = text[match.end():i]
+            for path_segments in expand_group(body):
+                if not path_segments:
+                    continue
+                sub = path_segments[1] if len(path_segments) > 1 else None
+                targets.append(normalise(path_segments[0], sub))
+        for target in targets:
+            if target not in LAYER_OF and not target.startswith("error/"):
                 continue
-            edges.setdefault((top, target), []).append(rel)
+            if target == source:
+                continue
+            edges.setdefault((source, target), []).append(rel)
     return edges, set(edges)
 
 
-def main() -> int:
-    edges, present = scan()
+def normalise(module: str, sub: str | None) -> str:
+    """`error` plus a known file stem becomes `error/<stem>`."""
+    if module == "error" and sub in ERROR_FILE_LAYER:
+        return f"error/{sub}"
+    return module
+
+
+def split_top_level(body: str) -> list[str]:
+    """Split a brace-group body on the commas that sit at depth zero."""
+    parts, depth, current = [], 0, []
+    for ch in body:
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(ch)
+    parts.append("".join(current))
+    return parts
+
+
+def expand_group(body: str) -> list[list[str]]:
+    """Flatten `a::{b::c, d::{e, f}}` into `[[a, b, c], [a, d, e], [a, d, f]]`."""
+    paths: list[list[str]] = []
+    for entry in split_top_level(body):
+        entry = entry.strip()
+        if not entry:
+            continue
+        brace = entry.find("{")
+        if brace == -1:
+            paths.append([seg.strip() for seg in entry.split("::") if seg.strip()])
+            continue
+        prefix = [seg.strip() for seg in entry[:brace].split("::") if seg.strip()]
+        inner = entry[brace + 1 : entry.rfind("}")]
+        for tail in expand_group(inner):
+            paths.append(prefix + tail)
+    return paths
+
+
+def layer_of(name: str) -> str:
+    if name.startswith("error/"):
+        return ERROR_FILE_LAYER[name.split("/", 1)[1]]
+    return LAYER_OF[name]
+
+
+def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
     violations: list[str] = []
     for (src, dst), files in sorted(edges.items()):
         if dst in ALWAYS_ALLOWED_TARGETS:
             continue
-        src_layer, dst_layer = LAYER_OF[src], LAYER_OF[dst]
+        src_layer, dst_layer = layer_of(src), layer_of(dst)
         if dst_layer in ALLOWED[src_layer]:
             continue
-        if dst == "simulation" and src_layer == "market" and all(f in SYNTHETIC_FILES for f in files):
+        if dst_layer == "simulation" and src_layer == "market" and all(f in SYNTHETIC_FILES for f in files):
             continue
         if (src, dst) in DEFERRED:
             continue
         where = ", ".join(sorted(set(files)))
         violations.append(f"{src} -> {dst} ({src_layer} -> {dst_layer}) in {where}")
+    return violations
+
+
+def self_test() -> int:
+    """Prove the scanner sees what it must and ignores what it may."""
+    import tempfile
+
+    cases = {
+        # (file, content) -> expected violation count
+        "forbidden edge": (("model/x.rs", "use crate::pricing::black_scholes;\n"), 1),
+        "allowed edge": (("pricing/x.rs", "use crate::model::Options;\n"), 0),
+        "comment only": (("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n"), 0),
+        "test module only": (("model/x.rs", "#[cfg(test)]\nmod t {\n    use crate::pricing::black_scholes;\n}\n"), 0),
+        "marked compat re-export": (("model/x.rs", "pub use crate::pricing::black_scholes; // facade-compat: pricing\n"), 0),
+        "multiline import": (("model/x.rs", "use crate::{\n    Options,\n    pricing::black_scholes,\n};\n"), 1),
+        "nested brace import": (("model/x.rs", "use crate::{error::{strategies::StrategyError, DecimalError}, model::Options};\n"), 1),
+        "qualified error path": (("model/x.rs", "use crate::error::strategies::StrategyError;\n"), 1),
+        "synthetic file": (("chains/generators.rs", "use crate::simulation::WalkParams;\n"), 0),
+    }
+    failures = 0
+    for name, ((rel, content), expected) in cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            target = root / rel
+            target.parent.mkdir(parents=True)
+            target.write_text(content)
+            edges, _ = scan(root)
+            got = len([v for v in violations_of(edges) if (rel.split("/")[0], ) ])
+            status = "ok" if got == expected else "FAIL"
+            if got != expected:
+                failures += 1
+            print(f"self-test {status}: {name} (expected {expected}, got {got})")
+    return 1 if failures else 0
+
+
+def main() -> int:
+    if "--self-test" in sys.argv:
+        return self_test()
+    edges, present = scan()
+    violations = violations_of(edges)
     stale = [f"{s} -> {d} ({issue})" for (s, d), issue in DEFERRED.items() if (s, d) not in present]
     if stale:
         print("deferred edges no longer present, prune them from DEFERRED:")
