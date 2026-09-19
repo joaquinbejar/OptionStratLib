@@ -128,10 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pricing::OptionPricing` (`src/pricing/option_pricing.rs`), implemented for
   `Options` and re-exported through the prelude. `use
   optionstratlib::pricing::OptionPricing;` is the canonical 0.22 form; the
-  inherent methods of the same names stay as one-line forwarding wrappers
-  marked `// facade-compat: pricing` so every 0.21 call site that never
-  imported a trait keeps compiling; they are the compatibility surface and go
-  with the facade at extraction. No `Position` extension trait was needed: all
+  inherent methods of the same names stay as one-line forwarding wrappers so
+  every 0.21 call site that never imported a trait keeps compiling; the
+  wrappers are a live `model -> pricing` edge (an inherent method cannot be
+  facade code), listed by the boundary checker (#507) as deferred and
+  removed in the batch behind the 0.22.0 bump. No `Position` extension trait was needed: all
   of its P&L helpers (`total_cost`, `premium_received`,
   `net_premium_received`, `net_cost`, `fees`, `break_even`, `unrealized_pnl`,
   `pnl_at_expiration`, `max_profit`, `max_loss`) need only core data and stay

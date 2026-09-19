@@ -4,7 +4,7 @@ use crate::error::{OptionsError, OptionsResult, VolatilityError};
 use crate::model::decimal::finite_decimal;
 use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::pricing::OptionPricing; // facade-compat: pricing
+use crate::pricing::OptionPricing; // deferred edge: inherent pricing wrappers, 0.22.0 batch (#499)
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -320,7 +320,7 @@ impl Options {
     /// * The time to expiration calculation fails
     /// * The binomial price calculation fails
     pub fn calculate_price_binomial(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_price_binomial(self, no_steps)
     }
 
@@ -353,7 +353,7 @@ impl Options {
     /// `PricingError` surfaced by [`crate::pricing::generate_binomial_tree`] (e.g.
     /// [`crate::error::PricingError::BinomialNodeMissing`] or [`crate::error::PricingError::SqrtFailure`]).
     pub fn calculate_price_binomial_tree(&self, no_steps: NonZeroUsize) -> PriceBinomialTree {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_price_binomial_tree(self, no_steps)
     }
 
@@ -379,7 +379,7 @@ impl Options {
     /// or `PricingError::MethodError` when the closed-form formula fails
     /// numerically.
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_price_black_scholes(self)
     }
 
@@ -402,7 +402,7 @@ impl Options {
     /// Monte Carlo price computation fails during the execution of `price_option_monte_carlo`.
     ///
     pub fn calculate_price_montecarlo(&self, prices: &[Positive]) -> OptionsResult<Positive> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_price_montecarlo(self, prices)
     }
 
@@ -430,7 +430,7 @@ impl Options {
     /// `PricingError::ExpirationDate` or `PricingError::MethodError`
     /// when the finite-difference kernel fails to converge.
     pub fn calculate_price_telegraph(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_price_telegraph(self, no_steps)
     }
 
@@ -576,7 +576,7 @@ impl Options {
     /// [`Options::intrinsic_value`] (typically `OptionsError::PricingError`
     /// with `PricingError::ExpirationDate` as the inner cause).
     pub fn time_value(&self) -> OptionsResult<Decimal> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::time_value(self)
     }
 
@@ -709,7 +709,7 @@ impl Options {
         &self,
         market_price: Decimal,
     ) -> Result<Positive, VolatilityError> {
-        // facade-compat: pricing
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
         OptionPricing::calculate_implied_volatility(self, market_price)
     }
 }
