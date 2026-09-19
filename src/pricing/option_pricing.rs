@@ -4,16 +4,16 @@
    Date: 19/9/25
 ******************************************************************************/
 
-//! Pricing capability for the core [`Options`] contract.
+//! Pricing capability for the core [`crate::Options`] contract.
 //!
 //! [`OptionPricing`] is the pricing-owned extension trait that carries every
-//! model-based valuation of an [`Options`] contract: binomial lattice,
+//! model-based valuation of an [`crate::Options`] contract: binomial lattice,
 //! Black-Scholes closed form, Monte Carlo over supplied paths, the telegraph
 //! finite-difference kernel, the time-value decomposition and the implied
 //! volatility bisection. The core type keeps only contract data and payoff
 //! arithmetic; this trait is where the numerics attach to it.
 //!
-//! The inherent methods with the same names on [`Options`] forward here and
+//! The inherent methods with the same names on [`crate::Options`] forward here and
 //! are the 0.21 compatibility surface. Importing this trait (directly or
 //! through the prelude) is the canonical 0.22 form:
 //!
@@ -62,15 +62,15 @@ use std::num::NonZeroUsize;
 /// - Option value tree (option value at each node)
 pub type PriceBinomialTree = OptionsResult<(Decimal, Vec<Vec<Decimal>>, Vec<Vec<Decimal>>)>;
 
-/// Model-based valuation of an [`Options`] contract.
+/// Model-based valuation of an [`crate::Options`] contract.
 ///
 /// Every method is a pure function of the contract data held by the
 /// implementor plus the method's own parameters; none of them mutates the
 /// contract. Long positions report positive prices, short positions report
 /// the negated price of the equivalent long contract.
 ///
-/// The trait is implemented for [`Options`] by the pricing layer. The
-/// inherent methods of the same names on [`Options`] forward to these
+/// The trait is implemented for [`crate::Options`] by the pricing layer. The
+/// inherent methods of the same names on [`crate::Options`] forward to these
 /// implementations and exist only so that callers that never imported this
 /// trait keep compiling.
 pub trait OptionPricing {
