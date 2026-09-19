@@ -58,16 +58,53 @@ fn test_range_probability_is_bounded_by_its_tails() {
         &ExpirationDate::Days(pos_or_panic!(30.0)),
         Some(dec!(0.05)),
     );
-    let (in_range, below, above) = match result {
+    let (below, in_range, above) = match result {
         Ok(triple) => triple,
         Err(e) => panic!("kernel must evaluate an ordinary input: {e}"),
     };
-    let total = in_range.to_dec() + below.to_dec() + above.to_dec();
+    let total = below.to_dec() + in_range.to_dec() + above.to_dec();
     assert!(
         (total - dec!(1.0)).abs() < dec!(1e-9),
-        "range + tails = {total}"
+        "tails + range = {total}"
     );
     assert!(in_range > Positive::ZERO);
+
+    // The interval mass is the difference of the two single-point
+    // probabilities of staying below each bound.
+    let expiry = ExpirationDate::Days(pos_or_panic!(30.0));
+    let trend = || PriceTrend {
+        drift_rate: 0.0,
+        confidence: 0.5,
+    };
+    let below_lower = calculate_single_point_probability(
+        &Positive::HUNDRED,
+        &pos_or_panic!(95.0),
+        Some(adjustment()),
+        Some(trend()),
+        &expiry,
+        Some(dec!(0.05)),
+    )
+    .map(|(below, _)| below);
+    let below_upper = calculate_single_point_probability(
+        &Positive::HUNDRED,
+        &pos_or_panic!(105.0),
+        Some(adjustment()),
+        Some(trend()),
+        &expiry,
+        Some(dec!(0.05)),
+    )
+    .map(|(below, _)| below);
+    match (below_lower, below_upper) {
+        (Ok(lower), Ok(upper)) => {
+            let expected = upper.to_dec() - lower.to_dec();
+            assert!(
+                (in_range.to_dec() - expected).abs() < dec!(1e-9),
+                "range mass {in_range} vs upper - lower = {expected}"
+            );
+            assert!((below.to_dec() - lower.to_dec()).abs() < dec!(1e-9));
+        }
+        other => panic!("single-point kernels must evaluate: {other:?}"),
+    }
 }
 
 #[test]
