@@ -229,14 +229,21 @@ mod rnd;
 
 mod optiondata;
 
+/// Simulation-backed chain generation. This is the only place where the
+/// market layer depends on `simulation`; it is gated by the `synthetic`
+/// feature (on by default) so that a minimal market consumer never resolves
+/// the simulation engine.
+#[cfg(feature = "synthetic")]
 mod generators;
 
+#[cfg(feature = "synthetic")]
 #[deprecated(
     since = "0.17.4",
     note = "moved to `optionstratlib::simulation::generator_positive`; it never depended on option chains"
 )]
 pub use crate::simulation::generator_positive;
 pub use chain::OptionChain;
+#[cfg(feature = "synthetic")]
 pub use generators::generator_optionchain;
 pub use legs::StrategyLegs;
 pub use optiondata::OptionData;

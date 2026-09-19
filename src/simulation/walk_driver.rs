@@ -6,8 +6,8 @@
 //! Generic walk driver shared by every step generator.
 //!
 //! The three public generators (`generator_positive` here,
-//! [`crate::chains::generator_optionchain`] and
-//! [`crate::series::generator_optionseries`]) used to duplicate the same
+//! `chains::generator_optionchain` (behind the `synthetic` feature) and
+//! `series::generator_optionseries`) used to duplicate the same
 //! algorithm: dispatch on [`WalkType`], extract the walk volatility, skip the
 //! first walker value, advance the x-step until expiration, build the next
 //! y-value and cap the result at `WalkParams::size`. [`walk_steps`] is the
@@ -187,8 +187,8 @@ pub fn expanding_window_vols(
 /// construction of each y-value to `next_y`.
 ///
 /// This is the shared driver behind [`generator_positive`],
-/// [`crate::chains::generator_optionchain`] and
-/// [`crate::series::generator_optionseries`].
+/// `chains::generator_optionchain` (behind the `synthetic` feature) and
+/// `series::generator_optionseries`.
 ///
 /// # Contract
 ///
@@ -461,8 +461,8 @@ where
 /// Simulates the stochastic process selected by `walk_params.walk_type` for a plain
 /// positive value (typically an underlying price) without rebuilding option chains.
 ///
-/// # Contract (shared with [`crate::chains::generator_optionchain`] and
-/// [`crate::series::generator_optionseries`])
+/// # Contract (shared with `chains::generator_optionchain` (behind the `synthetic` feature) and
+/// `series::generator_optionseries`)
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
 /// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),

@@ -21,6 +21,7 @@ release:
 .PHONY: test
 test:
 	LOGLEVEL=WARN cargo test
+	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
 

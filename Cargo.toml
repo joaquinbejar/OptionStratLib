@@ -26,7 +26,12 @@ include = [
 
 
 [features]
-default = []
+# `synthetic` is on by default so the 0.21 surface is unchanged; it is the
+# only market-to-simulation dependency (chain and series generators built on
+# random walks) and becomes the optional `Market -> Simulation` edge once the
+# crates are split (roadmap M1-15, ADR-0003).
+default = ["synthetic"]
+synthetic = []
 plotly = ["dep:plotly"]
 static_export = [
     "plotly",
