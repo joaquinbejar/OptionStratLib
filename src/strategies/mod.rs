@@ -260,6 +260,8 @@ pub mod long_straddle;
 pub mod long_strangle;
 /// Macros for options strategies
 pub mod macros;
+
+mod model_impls;
 /// Poor Man's Covered Call strategy implementation
 pub mod poor_mans_covered_call;
 /// Probability calculations for options strategies

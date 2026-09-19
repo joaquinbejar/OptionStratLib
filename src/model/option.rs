@@ -1,34 +1,17 @@
 use crate::ExpirationDate;
-use crate::chains::OptionData;
-use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV, ZERO};
-use crate::error::{
-    GreeksError, OptionsError, OptionsResult, PricingError, StrategyError, VolatilityError,
-};
-use crate::greeks::Greeks;
-use crate::model::decimal::{d_sub, finite_decimal};
-use crate::model::expiration::resolve_expiration_date;
+use crate::constants::ZERO;
+use crate::error::{OptionsError, OptionsResult, VolatilityError};
+use crate::model::decimal::finite_decimal;
 use crate::model::payoff::{Payoff, PayoffInfo};
-use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
-use crate::model::utils::calculate_optimal_price_range;
-use crate::pnl::utils::{PnL, PnLCalculator};
-use crate::pricing::monte_carlo::price_option_monte_carlo;
-use crate::pricing::{
-    BinomialPricingParams, black_scholes, generate_binomial_tree, price_binomial, telegraph,
-};
-use crate::strategies::base::BasicAble;
-use crate::visualization::{
-    ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
-};
-use num_traits::FromPrimitive;
+use crate::model::types::{OptionStyle, OptionType, Side};
+use crate::pricing::OptionPricing; // deferred edge: inherent pricing wrappers, 0.22.0 batch (#499)
 use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 use std::num::NonZeroUsize;
-use tracing::{error, trace};
+use tracing::error;
 use utoipa::ToSchema;
 
 /// Projects a quantity-scaled `f64` payoff back onto `Decimal`, reporting the
@@ -257,22 +240,6 @@ impl Options {
         }
     }
 
-    /// Updates option parameters using data from an OptionData structure.
-    ///
-    /// This method updates the option's strike price and implied volatility based on the
-    /// values provided in the option_data parameter. If the implied volatility is not
-    /// available in the option data, it defaults to zero.
-    ///
-    /// # Arguments
-    ///
-    /// * `option_data` - A reference to an OptionData structure containing updated option parameters.
-    ///
-    pub(crate) fn update_from_option_data(&mut self, option_data: &OptionData) {
-        self.strike_price = option_data.strike_price;
-        self.implied_volatility = option_data.implied_volatility;
-        trace!("Updated Option: {:#?}", self);
-    }
-
     /// Calculates the time to expiration of the option in years.
     ///
     /// This function computes the time remaining until the option's expiration date,
@@ -353,19 +320,8 @@ impl Options {
     /// * The time to expiration calculation fails
     /// * The binomial price calculation fails
     pub fn calculate_price_binomial(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
-        let expiry = self.time_to_expiration()?;
-        let cpb = price_binomial(BinomialPricingParams {
-            asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
-            strike: self.strike_price,
-            expiry,
-            no_steps,
-            option_type: &self.option_type,
-            option_style: &self.option_style,
-            side: &self.side,
-        })?;
-        Ok(cpb)
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_price_binomial(self, no_steps)
     }
 
     /// Calculates option price using the binomial tree model.
@@ -394,34 +350,11 @@ impl Options {
     ///
     /// Returns [`OptionsError::ExpirationDate`] when the option's expiration
     /// cannot be converted to a positive year fraction, or propagates any
-    /// `PricingError` surfaced by [`generate_binomial_tree`] (e.g.
-    /// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`]).
+    /// `PricingError` surfaced by [`crate::pricing::generate_binomial_tree`] (e.g.
+    /// [`crate::error::PricingError::BinomialNodeMissing`] or [`crate::error::PricingError::SqrtFailure`]).
     pub fn calculate_price_binomial_tree(&self, no_steps: NonZeroUsize) -> PriceBinomialTree {
-        let expiry = self.time_to_expiration()?;
-        let params = BinomialPricingParams {
-            asset: self.underlying_price,
-            volatility: self.implied_volatility,
-            int_rate: self.risk_free_rate,
-            strike: self.strike_price,
-            expiry,
-            no_steps,
-            option_type: &self.option_type,
-            option_style: &self.option_style,
-            side: &self.side,
-        };
-        let (asset_tree, option_tree) = generate_binomial_tree(&params)?;
-        let root = option_tree
-            .first()
-            .and_then(|row| row.first())
-            .copied()
-            .ok_or(PricingError::BinomialNodeMissing {
-                node: "option[0][0]",
-            })?;
-        let price = match self.side {
-            Side::Long => root,
-            Side::Short => -root,
-        };
-        Ok((price, asset_tree, option_tree))
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_price_binomial_tree(self, no_steps)
     }
 
     /// Calculates option price using the Black-Scholes model.
@@ -440,13 +373,14 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Propagates any `PricingError` returned by [`black_scholes`] (wrapped as
+    /// Propagates any `PricingError` returned by [`crate::pricing::black_scholes`] (wrapped as
     /// `OptionsError::PricingError`), most commonly
     /// `PricingError::ExpirationDate` when the expiration cannot be resolved
     /// or `PricingError::MethodError` when the closed-form formula fails
     /// numerically.
     pub fn calculate_price_black_scholes(&self) -> OptionsResult<Decimal> {
-        Ok(black_scholes(self)?)
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_price_black_scholes(self)
     }
 
     /// Calculates the price of an option using the Monte Carlo simulation method.
@@ -468,7 +402,8 @@ impl Options {
     /// Monte Carlo price computation fails during the execution of `price_option_monte_carlo`.
     ///
     pub fn calculate_price_montecarlo(&self, prices: &[Positive]) -> OptionsResult<Positive> {
-        Ok(price_option_monte_carlo(self, prices)?)
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_price_montecarlo(self, prices)
     }
 
     /// Calculates option price using the Telegraph equation approach.
@@ -495,7 +430,8 @@ impl Options {
     /// `PricingError::ExpirationDate` or `PricingError::MethodError`
     /// when the finite-difference kernel fails to converge.
     pub fn calculate_price_telegraph(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
-        Ok(telegraph(self, no_steps, None, None)?)
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_price_telegraph(self, no_steps)
     }
 
     /// Calculates the intrinsic value (payoff) of the option at the current underlying price.
@@ -640,12 +576,8 @@ impl Options {
     /// [`Options::intrinsic_value`] (typically `OptionsError::PricingError`
     /// with `PricingError::ExpirationDate` as the inner cause).
     pub fn time_value(&self) -> OptionsResult<Decimal> {
-        let option_price = self.calculate_price_black_scholes()?.abs();
-        let intrinsic_value = self.intrinsic_value(self.underlying_price)?;
-        // `Decimal`'s `-` panics on overflow, which a price near the top of
-        // the range against a negative intrinsic value reaches.
-        let time_value = d_sub(option_price, intrinsic_value, "model::option::time_value")?;
-        Ok(time_value.max(Decimal::ZERO))
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::time_value(self)
     }
 
     /// Validates that the option parameters are in a valid state for calculations.
@@ -777,109 +709,8 @@ impl Options {
         &self,
         market_price: Decimal,
     ) -> Result<Positive, VolatilityError> {
-        let is_short = self.is_short();
-        let target_price = if is_short {
-            -market_price
-        } else {
-            market_price
-        };
-
-        // Initialize high and low bounds for volatility (500% max).
-        let mut high = Positive::new(5.0)?;
-        let mut low = Positive::ZERO;
-
-        // Binary search through volatilities until we find one that gives us our target price
-        // or until we reach maximum iterations
-        for _ in 0..MAX_ITERATIONS_IV {
-            // Calculate midpoint volatility
-            let mid_vol = (high.to_dec() + low.to_dec()) / Decimal::TWO;
-            // mid_vol is the average of two non-negative bounds, so it is
-            // structurally non-negative; a None here would indicate a
-            // breached invariant on the bounds themselves.
-            let volatility = Positive::new_decimal(mid_vol).map_err(|e| {
-                OptionsError::ImpliedVolatilityInvariant {
-                    reason: format!("mid_vol invariant breached: {e}"),
-                }
-            })?;
-
-            // Calculate option price at this volatility
-            let mut option_copy = self.clone();
-            option_copy.implied_volatility = volatility;
-            let price = option_copy.calculate_price_black_scholes()?;
-
-            // Adjust price for short positions
-            let actual_price = if is_short { -price } else { price };
-
-            // Check if we're close enough to the target price
-            if (actual_price - target_price).abs() < IV_TOLERANCE {
-                return Ok(volatility);
-            }
-
-            // Update bounds based on whether this price was too high or too low
-            if actual_price > target_price {
-                high = volatility;
-            } else {
-                low = volatility;
-            }
-
-            // Check if our range is too small (meaning we've converged)
-            if (high - low).to_dec() < dec!(0.0001) {
-                return Ok(volatility);
-            }
-        }
-
-        // If we haven't found a solution after max iterations
-        Err(VolatilityError::NoConvergence {
-            iterations: MAX_ITERATIONS_IV,
-            last_volatility: (high + low) / Positive::TWO,
-        })
-    }
-}
-
-impl TryFrom<&OptionData> for Options {
-    type Error = OptionsError;
-
-    fn try_from(option_data: &OptionData) -> Result<Self, Self::Error> {
-        let underlying_symbol =
-            option_data
-                .symbol
-                .clone()
-                .ok_or_else(|| OptionsError::ValidationError {
-                    field: "symbol".to_string(),
-                    reason: "OptionData must have a valid symbol".to_string(),
-                })?;
-
-        let expiration_date =
-            option_data
-                .expiration_date
-                .ok_or_else(|| OptionsError::ValidationError {
-                    field: "expiration_date".to_string(),
-                    reason: "OptionData must have a valid expiration date".to_string(),
-                })?;
-
-        let underlying_price = option_data
-            .underlying_price
-            .as_ref()
-            .map(|p| **p)
-            .ok_or_else(|| OptionsError::ValidationError {
-                field: "underlying_price".to_string(),
-                reason: "OptionData must have a valid underlying price".to_string(),
-            })?;
-
-        Ok(Options {
-            option_type: OptionType::European,
-            side: Side::Long,
-            underlying_symbol,
-            strike_price: option_data.strike_price,
-            expiration_date,
-            implied_volatility: option_data.implied_volatility,
-            quantity: Positive::ONE,
-            underlying_price,
-            risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
-            option_style: OptionStyle::Call,
-            dividend_yield: option_data.dividend_yield.unwrap_or(Positive::ZERO),
-            exotic_params: None,
-        })
+        // deferred edge: forwarding wrapper over OptionPricing, removed in the 0.22.0 batch
+        OptionPricing::calculate_implied_volatility(self, market_price)
     }
 }
 
@@ -902,267 +733,6 @@ impl Default for Options {
     }
 }
 
-impl Greeks for Options {
-    fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
-        Ok(vec![self])
-    }
-}
-
-impl PnLCalculator for Options {
-    fn calculate_pnl(
-        &self,
-        market_price: &Positive,
-        expiration_date: ExpirationDate,
-        implied_volatility: &Positive,
-    ) -> Result<PnL, PricingError> {
-        // Create a copy of the current option with updated parameters
-        let mut current_option = self.clone();
-        current_option.underlying_price = *market_price;
-        current_option.expiration_date = expiration_date;
-        current_option.implied_volatility = *implied_volatility;
-
-        // Calculate theoretical price at current market conditions
-        let current_price = current_option.calculate_price_black_scholes()?;
-
-        // Calculate initial price (when option was created)
-        let initial_price = self.calculate_price_black_scholes()?;
-
-        // Calculate initial costs (premium paid/received)
-        let (initial_costs, initial_income) = match self.side {
-            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
-            Side::Short => (Decimal::ZERO, -initial_price * self.quantity),
-        };
-
-        // Calculate unrealized PnL adjusted for position side
-        let unrealized = Some((current_price - initial_price) * self.quantity);
-
-        Ok(PnL::new(
-            None, // No realized PnL yet
-            unrealized,
-            Positive::new_decimal(initial_costs)?,
-            Positive::new_decimal(initial_income)?,
-            resolve_expiration_date(&current_option.expiration_date)?,
-        ))
-    }
-
-    fn calculate_pnl_at_expiration(
-        &self,
-        underlying_price: &Positive,
-    ) -> Result<PnL, PricingError> {
-        let realized = Some(self.payoff_at_price(underlying_price)?);
-        let initial_price = self.calculate_price_black_scholes()?;
-
-        let (initial_costs, initial_income) = match self.side {
-            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
-            Side::Short => (Decimal::ZERO, initial_price * self.quantity),
-        };
-
-        Ok(PnL::new(
-            realized, // No realized PnL yet
-            None,
-            Positive::new_decimal(initial_costs)?,
-            Positive::new_decimal(initial_income)?,
-            resolve_expiration_date(&self.expiration_date)?,
-        ))
-    }
-}
-
-impl BasicAble for Options {
-    fn get_title(&self) -> String {
-        format!(
-            "Underlying: {} @ ${:.0} {} {} {}",
-            self.underlying_symbol,
-            self.strike_price,
-            self.side,
-            self.option_style,
-            self.option_type
-        )
-    }
-    fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
-        let mut hash_set = HashSet::new();
-        hash_set.insert(OptionBasicType {
-            option_style: &self.option_style,
-            side: &self.side,
-            strike_price: &self.strike_price,
-            expiration_date: &self.expiration_date,
-        });
-        hash_set
-    }
-    fn get_symbol(&self) -> &str {
-        self.underlying_symbol.as_str()
-    }
-    fn get_strike(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.strike_price)])
-    }
-    fn get_side(&self) -> HashMap<OptionBasicType<'_>, &Side> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.side)])
-    }
-    fn get_type(&self) -> &OptionType {
-        &self.option_type
-    }
-    fn get_style(&self) -> HashMap<OptionBasicType<'_>, &OptionStyle> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.option_style)])
-    }
-    fn get_expiration(&self) -> HashMap<OptionBasicType<'_>, &ExpirationDate> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.expiration_date)])
-    }
-    fn get_implied_volatility(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.implied_volatility)])
-    }
-    fn get_quantity(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.quantity)])
-    }
-    fn get_underlying_price(&self) -> &Positive {
-        &self.underlying_price
-    }
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType<'_>, &Decimal> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.risk_free_rate)])
-    }
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        let option_basic_type = match self.get_option_basic_type().iter().next().copied() {
-            Some(option_basic_type) => option_basic_type,
-            None => return HashMap::new(),
-        };
-        HashMap::from([(option_basic_type, &self.dividend_yield)])
-    }
-    fn one_option(&self) -> &Options {
-        self
-    }
-    fn one_option_mut(&mut self) -> &mut Options {
-        self
-    }
-    fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
-        self.implied_volatility = *volatility;
-        Ok(())
-    }
-    fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
-        self.underlying_price = *price;
-        Ok(())
-    }
-    fn set_expiration_date(
-        &mut self,
-        expiration_date: ExpirationDate,
-    ) -> Result<(), StrategyError> {
-        self.expiration_date = expiration_date;
-        Ok(())
-    }
-}
-
-impl Graph for Options {
-    fn graph_data(&self) -> GraphData {
-        let range = calculate_optimal_price_range(
-            self.underlying_price,
-            self.strike_price,
-            self.implied_volatility,
-            self.expiration_date,
-        )
-        .unwrap_or_else(|_| {
-            // Fallback to a reasonable default range based on strike price
-            let lower = self.strike_price * Positive::new(0.5).unwrap_or(Positive::ONE);
-            let upper = self.strike_price * Positive::new(1.5).unwrap_or(Positive::ONE);
-            (lower, upper)
-        });
-
-        let mut positive_series = Series2D {
-            x: vec![],
-            y: vec![],
-            name: "Positive Payoff".to_string(),
-            mode: TraceMode::Lines,
-            line_color: Some("#2ca02c".to_string()),
-            line_width: Some(2.0),
-        };
-        let mut negative_series = Series2D {
-            x: vec![],
-            y: vec![],
-            name: "Negative Payoff".to_string(),
-            mode: TraceMode::Lines,
-            line_color: Some("#FF0000".to_string()),
-            line_width: Some(2.0),
-        };
-
-        let (range_start, range_end) = (
-            range.0.to_u64_checked().unwrap_or_default(),
-            range.1.to_u64_checked().unwrap_or_default(),
-        );
-        for i in range_start..range_end {
-            let profit = self
-                .payoff_at_price(&Positive::new(i as f64).unwrap_or(Positive::ONE))
-                .unwrap_or_default();
-            match profit {
-                p if p == Decimal::ZERO => {
-                    positive_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
-                    positive_series.y.push(profit);
-                    negative_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
-                    negative_series.y.push(profit);
-                }
-                p if p > Decimal::ZERO => {
-                    positive_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
-                    positive_series.y.push(profit);
-                }
-                _ => {
-                    negative_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
-                    negative_series.y.push(profit);
-                }
-            }
-        }
-        let multi_series_2d = vec![positive_series, negative_series];
-        GraphData::MultiSeries(multi_series_2d)
-    }
-
-    fn graph_config(&self) -> GraphConfig {
-        let title = self.get_title();
-        let legend = Some(vec![title.clone()]);
-        GraphConfig {
-            title,
-            width: 1600,
-            height: 900,
-            x_label: Some("Underlying Price".to_string()),
-            y_label: Some("Profit/Loss".to_string()),
-            z_label: None,
-            line_style: LineStyle::Solid,
-            color_scheme: ColorScheme::Default,
-            legend,
-            show_legend: false,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests_options {
     use super::*;
@@ -1172,32 +742,6 @@ mod tests_options {
     use chrono::{Duration, Utc};
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
-
-    /// A day count no calendar instant can hold is a value a caller can build
-    /// and hand to any public method. Both P&L entry points resolved it
-    /// through `ExpirationDate::get_date`, which aborts on the overflow
-    /// rather than reporting it, so the `Result` these return could never be
-    /// reached for that input.
-    #[test]
-    fn test_pnl_reports_an_unrepresentable_expiration_instead_of_aborting() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.expiration_date = ExpirationDate::Days(pos_or_panic!(1_000_000_000.0));
-
-        assert!(
-            option
-                .calculate_pnl_at_expiration(&Positive::HUNDRED)
-                .is_err()
-        );
-        assert!(
-            option
-                .calculate_pnl(
-                    &Positive::HUNDRED,
-                    ExpirationDate::Days(pos_or_panic!(1_000_000_000.0)),
-                    &pos_or_panic!(0.2),
-                )
-                .is_err()
-        );
-    }
 
     #[test]
     fn test_new_option() {
@@ -1991,330 +1535,6 @@ mod tests_in_the_money {
 }
 
 #[cfg(test)]
-mod tests_greeks {
-    use super::*;
-    use crate::assert_decimal_eq;
-    use crate::model::utils::create_sample_option_simplest;
-    use rust_decimal_macros::dec;
-
-    const EPSILON: Decimal = dec!(1e-6);
-
-    #[test]
-    fn test_delta() {
-        let delta = create_sample_option_simplest(OptionStyle::Call, Side::Long)
-            .delta()
-            .unwrap();
-        assert_decimal_eq!(delta, dec!(0.5338307582207135564475476937), EPSILON);
-    }
-
-    #[test]
-    fn test_delta_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.delta().unwrap(),
-            dec!(1.0676615164414271128950953874),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_gamma() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.gamma().unwrap(),
-            dec!(0.0692632117482215620683508231),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_gamma_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.gamma().unwrap(),
-            dec!(0.1385264234964431241367016462),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_theta() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.theta().unwrap(),
-            dec!(-0.0434671314177636287945041349),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_theta_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.theta().unwrap(),
-            dec!(-0.0869342628355272575890082697),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vega() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.vega().unwrap(),
-            dec!(0.1138573343806381728362131205),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vega_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.vega().unwrap(),
-            dec!(0.2277146687612763456724262410),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_rho() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.rho().unwrap(),
-            dec!(0.041863419880440417503050762),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_rho_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.rho().unwrap(),
-            dec!(0.0837268397608808350061015239),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_rho_d() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.rho_d().unwrap(),
-            dec!(-0.0438765006756750824436552223),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_rho_d_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.rho_d().unwrap(),
-            dec!(-0.0877530013513501648873104446),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vanna() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.vanna().unwrap(),
-            dec!(-0.0569286671903190864181065602),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vanna_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.vanna().unwrap(),
-            dec!(-0.1138573343806381728362131204),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vomma() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.vomma().unwrap(),
-            dec!(0.0014037205608571828124031742),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_vomma_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.vomma().unwrap(),
-            dec!(0.0028074411217143656248063484),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_veta() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000027206189), EPSILON);
-    }
-
-    #[test]
-    fn test_veta_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(option.veta().unwrap(), dec!(0.000054412378), EPSILON);
-    }
-
-    #[test]
-    fn test_vomma_and_veta_scale_linearly_in_quantity() {
-        // `vega` already carries the position size, so `vomma` and `veta` must
-        // not apply it a second time. Both are first derivatives of vega and
-        // are therefore linear, not quadratic, in quantity.
-        let single = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let vomma_per_lot = single.vomma().unwrap();
-        let veta_per_lot = single.veta().unwrap();
-
-        for lots in [2u64, 5, 10] {
-            let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-            option.quantity = pos_or_panic!(lots as f64);
-            let scale = Decimal::from(lots);
-            assert_decimal_eq!(option.vomma().unwrap(), vomma_per_lot * scale, EPSILON);
-            assert_decimal_eq!(option.veta().unwrap(), veta_per_lot * scale, EPSILON);
-        }
-    }
-
-    #[test]
-    fn test_charm() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.charm().unwrap(),
-            dec!(-0.0005546611716779658921659644),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_charm_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.charm().unwrap(),
-            dec!(-0.0011093223433559317843319287),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_color() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        assert_decimal_eq!(
-            option.color().unwrap(),
-            dec!(-0.0011648237847885846501315451),
-            EPSILON
-        );
-    }
-
-    #[test]
-    fn test_color_size() {
-        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        option.quantity = Positive::TWO;
-        assert_decimal_eq!(
-            option.color().unwrap(),
-            dec!(-0.0023296475695771693002630901),
-            EPSILON
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests_greek_trait {
-    use super::*;
-    use crate::assert_decimal_eq;
-    use crate::model::utils::create_sample_option_simplest;
-    use rust_decimal_macros::dec;
-
-    const EPSILON: Decimal = dec!(1e-6);
-
-    #[test]
-    fn test_greeks_implementation() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let greeks = option.greeks().unwrap();
-
-        assert_decimal_eq!(greeks.delta, option.delta().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.gamma, option.gamma().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.theta, option.theta().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.vega, option.vega().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.rho, option.rho().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.rho_d, option.rho_d().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.vanna, option.vanna().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.vomma, option.vomma().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.veta, option.veta().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.charm, option.charm().unwrap(), EPSILON);
-        assert_decimal_eq!(greeks.color, option.color().unwrap(), EPSILON);
-    }
-
-    #[test]
-    fn test_greeks_consistency() {
-        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
-        let greeks = option.greeks().unwrap();
-
-        assert!(
-            greeks.delta >= Decimal::NEGATIVE_ONE && greeks.delta <= Decimal::ONE,
-            "Delta should be between -1 and 1"
-        );
-        assert!(
-            greeks.gamma >= Decimal::ZERO,
-            "Gamma should be non-negative"
-        );
-        assert!(greeks.vega >= Decimal::ZERO, "Vega should be non-negative");
-    }
-
-    #[test]
-    fn test_greeks_for_different_options() {
-        let call_option = Options::new(
-            OptionType::European,
-            Side::Long,
-            "TEST".to_string(),
-            pos_or_panic!(5790.0), // strike
-            ExpirationDate::Days(pos_or_panic!(18.0)),
-            pos_or_panic!(0.1),     // initial iv
-            Positive::ONE,          // qty
-            pos_or_panic!(5781.88), // underlying
-            dec!(0.05),             // rate
-            OptionStyle::Call,
-            Positive::ZERO, // div
-            None,
-        );
-        let mut put_option = call_option.clone();
-        put_option.option_style = OptionStyle::Put;
-
-        let call_greeks = call_option.greeks().unwrap();
-        let put_greeks = put_option.greeks().unwrap();
-
-        assert_decimal_eq!(
-            call_greeks.delta + put_greeks.delta.abs(),
-            Decimal::ONE,
-            EPSILON
-        );
-        assert_decimal_eq!(call_greeks.gamma, put_greeks.gamma, EPSILON);
-        assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
-    }
-}
-
-#[cfg(test)]
 mod tests_calculate_price_binomial {
     use super::*;
     use crate::model::utils::{
@@ -2601,6 +1821,7 @@ mod tests_options_black_scholes {
 #[cfg(test)]
 mod tests_calculate_implied_volatility {
     use super::*;
+    use crate::constants::IV_TOLERANCE;
     use crate::error::VolatilityError;
     use positive::assert_pos_relative_eq;
     use rust_decimal_macros::dec;

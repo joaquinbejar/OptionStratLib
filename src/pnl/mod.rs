@@ -111,6 +111,7 @@ pub mod adjustment;
 pub mod model;
 
 mod metrics;
+mod model_impls;
 mod traits;
 mod transaction;
 /// * [`utils`] - Utility functions for data manipulation and calculations

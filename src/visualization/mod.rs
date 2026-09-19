@@ -303,6 +303,7 @@ mod config;
 mod curves;
 mod interface;
 mod model;
+mod model_impls;
 /// `Plottable` trait and `PlotBuilder`.
 mod plot_builder;
 mod styles;
