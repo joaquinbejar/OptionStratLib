@@ -3,6 +3,12 @@
    Email: jb@taunais.com
    Date: 9/2/25
 ******************************************************************************/
+//! `BasicSurfaces`: projection of an option set onto a [`crate::surfaces::Surface`] over a
+//! Greek, price or volatility axis against volatility or time. Analytics-owned
+//! because it prices `Options` and reads Greeks; `Surface` itself stays a
+//! math container. `surfaces::BasicSurfaces` is kept as a compatibility
+//! re-export.
+
 use crate::error::SurfaceError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
@@ -261,7 +267,7 @@ pub trait BasicSurfaces {
     /// # Example
     ///
     /// ```ignore
-    /// use optionstratlib::surfaces::BasicSurfaces;
+    /// use optionstratlib::analytics::projections::BasicSurfaces;
     /// use optionstratlib::model::BasicAxisTypes;
     /// use positive::pos_or_panic;
     ///

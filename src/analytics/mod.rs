@@ -14,9 +14,14 @@ pub use probability::{
     calculate_single_point_probability,
 };
 
+/// * `projections` - Option projections onto curves and surfaces
+///   (`BasicCurves`, `BasicSurfaces`) and their `OptionChain` implementations.
+pub mod projections;
+
 /// * `rnd` - Risk-neutral density and volatility-skew extraction from an
 ///   option chain (Breeden-Litzenberger), together with the
 ///   `impl RNDAnalysis for OptionChain`.
 pub mod rnd;
 
+pub use projections::{BasicCurves, BasicSurfaces};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult, RNDStatistics};

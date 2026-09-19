@@ -95,6 +95,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `OptionChain::expiration_date` field are widened from `pub(super)` /
   private to `pub(crate)` for the moved impls and their tests.
 
+- **Option projections and graph adapters moved out of the math layer**
+  (#502). `curves::basic` and `surfaces::basic` priced `Options` and read
+  Greeks (a Math-to-Pricing edge), and `curve.rs`, `surface.rs` and the three
+  `visualization/plotters.rs` files under `curves`, `surfaces` and
+  `geometrics` implemented `Graph` and `Plottable` (a Math-to-Visualization
+  edge). `BasicCurves` and `BasicSurfaces` now live in
+  `analytics::projections`, together with `impl BasicCurves for OptionChain`,
+  `impl BasicSurfaces for OptionChain` and the inherent `OptionChain`
+  wrappers (`gamma_curve`, `vanna_surface`, `theta_time_surface`, ...) that
+  call them; the wrappers keep their `OptionChain::` paths because an inherent
+  `impl` may sit in any module of the crate. `impl Graph for Curve`,
+  `impl Graph for Vec<Curve>`, `impl Graph for Surface`, the `Plottable`
+  impls, `Plottable` and `PlotBuilder` now live under `visualization`
+  (`visualization::{PlotBuilder, Plottable}` are new public paths). Every
+  0.21 path resolves as before through re-exports marked
+  `// facade-compat`: `curves::BasicCurves`, `surfaces::BasicSurfaces`,
+  `geometrics::{PlotBuilder, Plottable}`; `curves::visualization` stays as an
+  empty public module. `curves`, `surfaces` and `geometrics` no longer
+  reference `greeks`, `chains`, `metrics` or `visualization` except through
+  those marked lines. `CurveError::{Greeks, MetricsError, Graph}`,
+  `SurfaceError::Greeks` and the `SurfaceError` graph variants are left in
+  place: removing a variant is a breaking change and is batched behind the
+  0.22.0 bump (ADR-0001 D6). No interpolation, projection or rendering
+  behaviour changed.
+
 ## [0.21.3] - 2026-09-19
 
 ### Fixed

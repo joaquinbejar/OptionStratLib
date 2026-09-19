@@ -299,9 +299,15 @@
 //! Enjoy visualizing your financial data!
 
 mod config;
+/// `impl Graph` and `impl Plottable` for `Curve` and `Vec<Curve>`.
+mod curves;
 mod interface;
 mod model;
+/// `Plottable` trait and `PlotBuilder`.
+mod plot_builder;
 mod styles;
+/// `impl Graph` and `impl Plottable` for `Surface`.
+mod surfaces;
 mod tests;
 pub(crate) mod utils;
 
@@ -325,5 +331,6 @@ pub use model::{
     GraphData, Label2D, Label3D, MultiSeries2D, OutputType, Series2D, Surface3D, VisPoint2D,
     VisPoint3D,
 };
+pub use plot_builder::{PlotBuilder, Plottable};
 pub use styles::{ColorScheme, LineStyle, PlotType, TraceMode};
 pub use utils::get_color_from_scheme;

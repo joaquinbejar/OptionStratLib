@@ -14,6 +14,25 @@ pub optionstratlib::analytics::probability::VolatilityAdjustment::base_volatilit
 pub optionstratlib::analytics::probability::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
 pub fn optionstratlib::analytics::probability::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub fn optionstratlib::analytics::probability::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
+pub mod optionstratlib::analytics::projections
+pub trait optionstratlib::analytics::projections::BasicCurves
+pub fn optionstratlib::analytics::projections::BasicCurves::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::analytics::projections::BasicCurves::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+pub trait optionstratlib::analytics::projections::BasicSurfaces
+pub fn optionstratlib::analytics::projections::BasicSurfaces::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::projections::BasicSurfaces::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::projections::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::projections::BasicSurfaces::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::projections::BasicSurfaces::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub mod optionstratlib::analytics::rnd
 pub struct optionstratlib::analytics::rnd::RNDParameters
 pub optionstratlib::analytics::rnd::RNDParameters::derivative_tolerance: positive::positive::Positive
@@ -83,6 +102,24 @@ pub fn optionstratlib::analytics::rnd::RNDStatistics::new(&alloc::collections::b
 pub struct optionstratlib::analytics::VolatilityAdjustment
 pub optionstratlib::analytics::VolatilityAdjustment::base_volatility: positive::positive::Positive
 pub optionstratlib::analytics::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
+pub trait optionstratlib::analytics::BasicCurves
+pub fn optionstratlib::analytics::BasicCurves::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::analytics::BasicCurves::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+pub trait optionstratlib::analytics::BasicSurfaces
+pub fn optionstratlib::analytics::BasicSurfaces::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::BasicSurfaces::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::BasicSurfaces::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::analytics::BasicSurfaces::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub trait optionstratlib::analytics::RNDAnalysis
 pub fn optionstratlib::analytics::RNDAnalysis::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::analytics::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
@@ -538,15 +575,9 @@ pub fn optionstratlib::chains::chain::OptionChain::add_option(&mut self, positiv
 pub fn optionstratlib::chains::chain::OptionChain::atm_option_data(&self) -> core::result::Result<&optionstratlib::chains::OptionData, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::atm_strike(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::build_chain(&optionstratlib::chains::utils::OptionChainBuildParams) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::charm_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::color_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::delta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::gamma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_atm_implied_volatility(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_call_price(&self, positive::positive::Positive) -> core::option::Option<rust_decimal::decimal::Decimal>
@@ -579,23 +610,30 @@ pub async fn optionstratlib::chains::chain::OptionChain::save_to_json_async(&sel
 pub fn optionstratlib::chains::chain::OptionChain::set_from_title(&mut self, &str) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::set_optiondata_extra_params(&mut self) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>>
-pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib::chains::utils::OptionChainBuildParams, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
 pub fn optionstratlib::chains::chain::OptionChain::update_greek_snapshots(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_greeks(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_mid_prices(&mut self)
-pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+impl optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::vega_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::show(&self)
@@ -618,14 +656,20 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
-impl optionstratlib::curves::BasicCurves for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib::chains::chain::OptionChain
@@ -682,12 +726,6 @@ impl optionstratlib::metrics::temporal::theta::ThetaCurve for optionstratlib::ch
 pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::temporal::theta::ThetaSurface for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-impl optionstratlib::surfaces::BasicSurfaces for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::utils::Len for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::is_empty(&self) -> bool
 pub fn optionstratlib::chains::chain::OptionChain::len(&self) -> usize
@@ -829,15 +867,9 @@ pub fn optionstratlib::chains::chain::OptionChain::add_option(&mut self, positiv
 pub fn optionstratlib::chains::chain::OptionChain::atm_option_data(&self) -> core::result::Result<&optionstratlib::chains::OptionData, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::atm_strike(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::build_chain(&optionstratlib::chains::utils::OptionChainBuildParams) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::charm_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::color_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::delta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::gamma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_atm_implied_volatility(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_call_price(&self, positive::positive::Positive) -> core::option::Option<rust_decimal::decimal::Decimal>
@@ -870,23 +902,30 @@ pub async fn optionstratlib::chains::chain::OptionChain::save_to_json_async(&sel
 pub fn optionstratlib::chains::chain::OptionChain::set_from_title(&mut self, &str) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::set_optiondata_extra_params(&mut self) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>>
-pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib::chains::utils::OptionChainBuildParams, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
 pub fn optionstratlib::chains::chain::OptionChain::update_greek_snapshots(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_greeks(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_mid_prices(&mut self)
-pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+impl optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::vega_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::show(&self)
@@ -909,14 +948,20 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
-impl optionstratlib::curves::BasicCurves for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib::chains::chain::OptionChain
@@ -973,12 +1018,6 @@ impl optionstratlib::metrics::temporal::theta::ThetaCurve for optionstratlib::ch
 pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::temporal::theta::ThetaSurface for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-impl optionstratlib::surfaces::BasicSurfaces for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::utils::Len for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::is_empty(&self) -> bool
 pub fn optionstratlib::chains::chain::OptionChain::len(&self) -> usize
@@ -1318,7 +1357,7 @@ pub fn optionstratlib::curves::Point2D::compose(alloc::vec::Vec<utoipa::openapi:
 pub trait optionstratlib::curves::BasicCurves
 pub fn optionstratlib::curves::BasicCurves::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::curves::BasicCurves::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
-impl optionstratlib::curves::BasicCurves for optionstratlib::chains::chain::OptionChain
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
 pub trait optionstratlib::curves::Curvable
@@ -9150,15 +9189,9 @@ pub fn optionstratlib::chains::chain::OptionChain::add_option(&mut self, positiv
 pub fn optionstratlib::chains::chain::OptionChain::atm_option_data(&self) -> core::result::Result<&optionstratlib::chains::OptionData, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::atm_strike(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::build_chain(&optionstratlib::chains::utils::OptionChainBuildParams) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::charm_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::color_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::delta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::gamma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_atm_implied_volatility(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::get_call_price(&self, positive::positive::Positive) -> core::option::Option<rust_decimal::decimal::Decimal>
@@ -9191,23 +9224,30 @@ pub async fn optionstratlib::chains::chain::OptionChain::save_to_json_async(&sel
 pub fn optionstratlib::chains::chain::OptionChain::set_from_title(&mut self, &str) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::set_optiondata_extra_params(&mut self) -> core::result::Result<(), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>>
-pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib::chains::utils::OptionChainBuildParams, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
 pub fn optionstratlib::chains::chain::OptionChain::update_greek_snapshots(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_greeks(&mut self)
 pub fn optionstratlib::chains::chain::OptionChain::update_mid_prices(&mut self)
-pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
+impl optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::vega_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::vega_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::veta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::vomma_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::show(&self)
@@ -9230,14 +9270,20 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
+pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
+pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
-impl optionstratlib::curves::BasicCurves for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
-pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib::chains::chain::OptionChain
@@ -9294,12 +9340,6 @@ impl optionstratlib::metrics::temporal::theta::ThetaCurve for optionstratlib::ch
 pub fn optionstratlib::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 impl optionstratlib::metrics::temporal::theta::ThetaSurface for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-impl optionstratlib::surfaces::BasicSurfaces for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-pub fn optionstratlib::chains::chain::OptionChain::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 impl optionstratlib::utils::Len for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::is_empty(&self) -> bool
 pub fn optionstratlib::chains::chain::OptionChain::len(&self) -> usize
@@ -11921,7 +11961,7 @@ pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_pr
 pub trait optionstratlib::prelude::BasicCurves
 pub fn optionstratlib::prelude::BasicCurves::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::prelude::BasicCurves::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
-impl optionstratlib::curves::BasicCurves for optionstratlib::chains::chain::OptionChain
+impl optionstratlib::analytics::BasicCurves for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::curve(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub fn optionstratlib::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::curves::CurveError>
 pub trait optionstratlib::prelude::BasicSurfaces
@@ -11930,7 +11970,7 @@ pub fn optionstratlib::prelude::BasicSurfaces::get_surface_time_versus(&self, &o
 pub fn optionstratlib::prelude::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::prelude::BasicSurfaces::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::prelude::BasicSurfaces::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-impl optionstratlib::surfaces::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
@@ -26522,7 +26562,7 @@ pub fn optionstratlib::surfaces::BasicSurfaces::get_surface_time_versus(&self, &
 pub fn optionstratlib::surfaces::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::surfaces::BasicSurfaces::surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub fn optionstratlib::surfaces::BasicSurfaces::time_surface(&self, &optionstratlib::model::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
-impl optionstratlib::surfaces::BasicSurfaces for optionstratlib::chains::chain::OptionChain
+impl optionstratlib::analytics::BasicSurfaces for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
 pub fn optionstratlib::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib::model::BasicAxisTypes, &alloc::sync::Arc<optionstratlib::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::SurfaceError>
@@ -26689,6 +26729,29 @@ pub optionstratlib::visualization::Label2D::point: optionstratlib::visualization
 pub struct optionstratlib::visualization::Label3D
 pub optionstratlib::visualization::Label3D::label: alloc::string::String
 pub optionstratlib::visualization::Label3D::point: optionstratlib::visualization::VisPoint3D
+pub struct optionstratlib::visualization::PlotBuilder<T: optionstratlib::geometrics::Plottable + optionstratlib::visualization::Graph>
+impl<T: optionstratlib::geometrics::Plottable + optionstratlib::visualization::Graph> optionstratlib::geometrics::PlotBuilder<T>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::add_legend(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::color_scheme(self, optionstratlib::visualization::ColorScheme) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::dimensions(self, u32, u32) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::legend(self, alloc::vec::Vec<impl core::convert::Into<alloc::string::String>>) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::line_style(self, optionstratlib::visualization::LineStyle) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::save(self, impl core::convert::AsRef<std::path::Path>) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::show_legend(self, bool) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::title(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::x_label(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::y_label(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn optionstratlib::geometrics::PlotBuilder<T>::z_label(self, impl core::convert::Into<alloc::string::String>) -> Self
+impl<T: optionstratlib::geometrics::Plottable + optionstratlib::visualization::Graph> optionstratlib::visualization::Graph for optionstratlib::geometrics::PlotBuilder<T>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
+pub fn optionstratlib::geometrics::PlotBuilder<T>::graph_data(&self) -> optionstratlib::visualization::GraphData
+pub fn optionstratlib::geometrics::PlotBuilder<T>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::to_plot(&self) -> plotly::plot::Plot
+pub fn optionstratlib::geometrics::PlotBuilder<T>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
+pub fn optionstratlib::geometrics::PlotBuilder<T>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
 pub struct optionstratlib::visualization::Series2D
 pub optionstratlib::visualization::Series2D::line_color: core::option::Option<alloc::string::String>
 pub optionstratlib::visualization::Series2D::line_width: core::option::Option<f64>
@@ -27038,6 +27101,18 @@ impl optionstratlib::visualization::GraphType for optionstratlib::visualization:
 pub fn optionstratlib::visualization::Series2D::plot_type() -> optionstratlib::visualization::PlotType
 impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Surface3D
 pub fn optionstratlib::visualization::Surface3D::plot_type() -> optionstratlib::visualization::PlotType
+pub trait optionstratlib::visualization::Plottable
+pub type optionstratlib::visualization::Plottable::Error
+pub fn optionstratlib::visualization::Plottable::plot(&self) -> optionstratlib::geometrics::PlotBuilder<Self> where Self: core::marker::Sized + optionstratlib::visualization::Graph
+impl optionstratlib::geometrics::Plottable for alloc::vec::Vec<optionstratlib::curves::Curve>
+pub type alloc::vec::Vec<optionstratlib::curves::Curve>::Error = optionstratlib::error::curves::CurveError
+pub fn alloc::vec::Vec<optionstratlib::curves::Curve>::plot(&self) -> optionstratlib::geometrics::PlotBuilder<Self> where Self: core::marker::Sized
+impl optionstratlib::geometrics::Plottable for optionstratlib::curves::Curve
+pub type optionstratlib::curves::Curve::Error = optionstratlib::error::curves::CurveError
+pub fn optionstratlib::curves::Curve::plot(&self) -> optionstratlib::geometrics::PlotBuilder<Self> where Self: core::marker::Sized
+impl optionstratlib::geometrics::Plottable for optionstratlib::surfaces::Surface
+pub type optionstratlib::surfaces::Surface::Error = optionstratlib::error::SurfaceError
+pub fn optionstratlib::surfaces::Surface::plot(&self) -> optionstratlib::geometrics::PlotBuilder<Self> where Self: core::marker::Sized
 pub fn optionstratlib::visualization::get_color_from_scheme(&optionstratlib::visualization::ColorScheme, usize) -> core::option::Option<alloc::string::String>
 pub fn optionstratlib::visualization::make_scatter(&optionstratlib::visualization::Series2D) -> alloc::boxed::Box<plotly::traces::scatter::Scatter<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>
 pub fn optionstratlib::visualization::make_surface(&optionstratlib::visualization::Surface3D) -> alloc::boxed::Box<plotly::traces::surface::Surface<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>

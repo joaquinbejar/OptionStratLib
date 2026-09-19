@@ -3,6 +3,10 @@
    Email: jb@taunais.com
    Date: 21/1/25
 ******************************************************************************/
+//! `Plottable` and `PlotBuilder`: the fluent plotting entry point for any
+//! `Graph` implementor. Visualization-owned; `geometrics::{PlotBuilder,
+//! Plottable}` remain as compatibility re-exports (ADR-0001 D2, M1-05).
+
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle};
 #[cfg(feature = "static_export")]
 use {crate::error::GraphError, std::path::Path};

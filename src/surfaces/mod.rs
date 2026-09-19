@@ -6,17 +6,16 @@
 //! * `Surface`: Represents a 3D surface.  See the `surface` module for more details.
 //! * `Point3D`: Represents a point in 3D space.  See the `types` module for more details.
 //! * `utils`: Contains utility functions for working with surfaces.  See the `utils` module for more details.
-//! * `visualization`: Provides tools for visualizing surfaces.  See the `visualization` module for more details.
+//! * Plotting lives in `crate::visualization` (`Plottable` and the `Graph` impl for `Surface`);
+//!   this module keeps only the geometry.
 //!
 
-mod basic;
 mod surface;
 mod traits;
 mod types;
 mod utils;
-mod visualization;
 
-pub use basic::BasicSurfaces;
+pub use crate::analytics::projections::BasicSurfaces; // facade-compat: analytics
 pub use surface::Surface;
 pub use traits::Surfacable;
 pub use types::Point3D;

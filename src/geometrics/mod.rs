@@ -8,7 +8,6 @@ mod interpolation;
 mod utils;
 
 mod operations;
-mod visualization;
 
 mod analysis;
 
@@ -29,4 +28,7 @@ pub use operations::{
 };
 pub use utils::GeometricObject;
 pub(crate) use utils::powu_checked;
-pub use visualization::{PlotBuilder, Plottable};
+
+// `PlotBuilder` and `Plottable` are visualization-owned; the `geometrics` path
+// is a 0.21 public path kept for compatibility.
+pub use crate::visualization::{PlotBuilder, Plottable}; // facade-compat: visualization

@@ -16,7 +16,8 @@
 //! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
 //! use optionstratlib::curves::{Curve, Point2D};
-//! use optionstratlib::geometrics::{GeometricObject, Plottable};
+//! use optionstratlib::geometrics::GeometricObject;
+//! use optionstratlib::visualization::Plottable;
 //!
 //! let curve = Curve::from_vector(vec![
 //!             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
@@ -53,8 +54,23 @@
 
 use crate::curves::Curve;
 use crate::error::CurveError;
-use crate::geometrics::{PlotBuilder, Plottable};
-use crate::visualization::Graph;
+use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable};
+
+/// `Graph` adapter for a single [`Curve`]; lives in `visualization` because
+/// the trait is visualization-owned and `Curve` is a math container
+/// (ADR-0001 D2, M1-05).
+impl Graph for Curve {
+    fn graph_data(&self) -> GraphData {
+        self.clone().into()
+    }
+}
+
+/// `Graph` adapter for a family of curves drawn on one chart.
+impl Graph for Vec<Curve> {
+    fn graph_data(&self) -> GraphData {
+        self.clone().into()
+    }
+}
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
