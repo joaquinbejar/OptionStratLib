@@ -257,7 +257,7 @@ impl CustomStrategy {
             }
 
             // Calculate derivative numerically with smaller step
-            let h = p_sqrt(&self.epsilon, "strategies::custom::sqrt").ok()?;
+            let h = p_sqrt(&self.epsilon, "strategies::custom::refine_break_even_point").ok()?;
             let f_x_h = self
                 .calculate_profit_at(&x.checked_add(&h).ok()?)
                 .ok()?

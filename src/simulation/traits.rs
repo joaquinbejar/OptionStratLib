@@ -90,7 +90,7 @@ where
                 // `var` is kept in annualized-squared units, so sqrt is
                 // the annualized conditional volatility at this step; it
                 // feeds both the shock and the reported vol path.
-                let var_sqrt = p_sqrt(&var, "simulation::traits::sqrt")?;
+                let var_sqrt = p_sqrt(&var, "simulation::traits::garch_walk")?;
                 let eps = d_mul(
                     d_mul(z, var_sqrt.to_dec(), "simulation::garch::eps")?,
                     sqrt_dt_dec,
@@ -299,7 +299,7 @@ where
         } => {
             let vols = generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size)?;
 
-            let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
+            let sqrt_dt = p_sqrt(&dt, "simulation::traits::custom_walk")?;
             let mut price = params.ystep_as_positive()?.to_dec();
             let mut path = Vec::with_capacity(params.size + 1);
             let mut vols_out = Vec::with_capacity(params.size + 1);
@@ -383,7 +383,7 @@ where
                 -1
             };
 
-            let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
+            let sqrt_dt = p_sqrt(&dt, "simulation::traits::telegraph_walk")?;
             let vol_mult_up = vol_multiplier_up.unwrap_or(Positive::ONE);
             let vol_mult_down = vol_multiplier_down.unwrap_or(Positive::ONE);
 
@@ -723,7 +723,7 @@ where
                 let mut values = Vec::with_capacity(params.size);
                 let mut current_value: Positive = params.ystep_as_positive()?;
                 values.push(current_value);
-                let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
+                let sqrt_dt = p_sqrt(&dt, "simulation::traits::geometric_brownian")?;
 
                 for _ in 1..params.size {
                     // σ * √dt * Z
@@ -922,7 +922,7 @@ where
                 let mut x: Decimal = params.ystep_as_positive()?.to_dec();
                 values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
-                let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
+                let sqrt_dt = p_sqrt(&dt, "simulation::traits::jump_diffusion")?;
                 let lambda_dt = intensity.checked_mul(&dt)?;
 
                 for _ in 1..params.size {

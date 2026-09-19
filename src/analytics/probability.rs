@@ -168,8 +168,10 @@ pub fn calculate_single_point_probability(
     // to zero, where the logarithm is undefined; both are reported rather than
     // aborting.
     let log_ratio = target_price.checked_div(current_price)?.checked_ln()?;
-    let std_dev =
-        volatility.checked_mul(&p_sqrt(&time_to_expiry, "analytics::probability::sqrt")?)?;
+    let std_dev = volatility.checked_mul(&p_sqrt(
+        &time_to_expiry,
+        "analytics::probability::calculate_single_point_probability",
+    )?)?;
 
     // Calculate z-score considering drift
     // `Positive::ln` returns `Decimal` as of positive 0.6: the log of a

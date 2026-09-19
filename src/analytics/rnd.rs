@@ -261,7 +261,7 @@ impl RNDStatistics {
             variance,
             skewness,
             kurtosis,
-            volatility: p_sqrt(&variance, "analytics::rnd::sqrt")?,
+            volatility: p_sqrt(&variance, "analytics::rnd::new")?,
         })
     }
 
@@ -364,7 +364,7 @@ impl RNDStatistics {
             return Ok(Decimal::ZERO);
         }
 
-        let std_dev = p_sqrt(&variance, "analytics::rnd::sqrt")?;
+        let std_dev = p_sqrt(&variance, "analytics::rnd::calculate_skewness")?;
         let mut skewness = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
@@ -430,7 +430,7 @@ impl RNDStatistics {
         // there. Two equal masses at 100 and 100.0000000000001 standardize to
         // ±1 and carry the -2 excess kurtosis of a two-point distribution,
         // which is what this now returns instead of zero.
-        let std_dev = p_sqrt(&variance, "analytics::rnd::sqrt")?;
+        let std_dev = p_sqrt(&variance, "analytics::rnd::calculate_kurtosis")?;
         let mut fourth_moment = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 

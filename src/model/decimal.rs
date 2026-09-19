@@ -568,7 +568,9 @@ const SQRT_MAX_ITERATIONS: u32 = 1000;
 /// perfect square such as `4.0000000000000000000000000003` (#588). This
 /// version keeps the upstream initial guess and update step, so every input
 /// on which upstream converges yields the bit-identical result, and resolves
-/// an oscillation by returning the candidate whose square is closest to `x`.
+/// the period-2 oscillation the moment it appears by returning the candidate
+/// whose square is closest to `x` (a bounded iteration count is the backstop
+/// for any other non-convergence).
 ///
 /// # Errors
 ///
@@ -592,22 +594,30 @@ pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErr
         result = x;
     }
     let mut last = result.checked_add(Decimal::ONE).ok_or_else(overflow)?;
+    let mut before_last = last;
     let mut iterations = 0u32;
+    // Squared distance from `x`; a candidate whose square is not
+    // representable is treated as infinitely far so the other one wins.
+    let error_of = |candidate: Decimal| -> Decimal {
+        candidate
+            .checked_mul(candidate)
+            .and_then(|square| square.checked_sub(x))
+            .map(|d| d.abs())
+            .unwrap_or(Decimal::MAX)
+    };
     while last != result {
         iterations += 1;
-        if iterations > SQRT_MAX_ITERATIONS {
-            // Oscillation between `last` and `result`: pick the value whose
-            // square is closest to `x` instead of asserting like upstream.
-            let error_of = |candidate: Decimal| -> Result<Decimal, DecimalError> {
-                let square = candidate.checked_mul(candidate).ok_or_else(overflow)?;
-                Ok(square.checked_sub(x).ok_or_else(overflow)?.abs())
-            };
-            return if error_of(last)? <= error_of(result)? {
+        // A period-2 cycle (`result` back to the value two steps ago) is how
+        // the upstream iteration fails to converge; resolve it as soon as it
+        // appears. The iteration bound is the backstop for anything else.
+        if result == before_last || iterations > SQRT_MAX_ITERATIONS {
+            return if error_of(last) <= error_of(result) {
                 Ok(last)
             } else {
                 Ok(result)
             };
         }
+        before_last = last;
         last = result;
         let quotient = x.checked_div(result).ok_or_else(overflow)?;
         result = result
@@ -630,8 +640,8 @@ pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErr
 /// `Positive::checked_sqrt` so call sites keep their conversions.
 #[inline]
 pub(crate) fn p_sqrt(x: &Positive, op: &'static str) -> Result<Positive, PositiveError> {
-    let root = d_sqrt(x.to_dec(), op)
-        .map_err(|e| PositiveError::arithmetic_error("sqrt", &e.to_string()))?;
+    let root =
+        d_sqrt(x.to_dec(), op).map_err(|e| PositiveError::arithmetic_error(op, &e.to_string()))?;
     Positive::new_decimal(root)
 }
 
@@ -814,6 +824,77 @@ pub mod tests {
             let expected = x.sqrt().unwrap_or_default();
             assert_eq!(d_sqrt(x, "test").unwrap(), expected, "sqrt({x})");
         }
+    }
+
+    /// The bit-identical claim, checked byte for byte on a seeded sweep:
+    /// random mantissa/scale pairs plus squares of short roots nudged by a
+    /// few units in the 28th decimal (the region where upstream can
+    /// oscillate). Inputs on which upstream itself aborts are skipped
+    /// through `catch_unwind`; a converging upstream result must be
+    /// reproduced exactly, `serialize()` bytes included, so a scale
+    /// difference cannot hide behind numerical equality.
+    #[test]
+    fn test_d_sqrt_matches_upstream_on_a_seeded_sweep() {
+        use rand::{RngExt, SeedableRng};
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed_5eed_0588);
+        let mut inputs: Vec<Decimal> = Vec::with_capacity(6_000);
+        for _ in 0..4_000 {
+            let mantissa: i64 = rng.random_range(0..=i64::MAX);
+            let scale: u32 = rng.random_range(0..=28);
+            inputs.push(Decimal::new(mantissa, scale));
+        }
+        let ulp = dec!(0.0000000000000000000000000001);
+        for root in [1u32, 2, 3, 7, 12, 100, 1_000, 65_536] {
+            let square = Decimal::from(root) * Decimal::from(root);
+            for units in -6i32..=6 {
+                let nudge = ulp * Decimal::from(units);
+                if let Some(x) = square.checked_add(nudge) {
+                    inputs.push(x);
+                }
+            }
+        }
+        let mut compared = 0usize;
+        let mut skipped = 0usize;
+        for x in inputs {
+            let upstream = std::panic::catch_unwind(|| x.sqrt());
+            match upstream {
+                Ok(Some(expected)) => {
+                    let actual = d_sqrt(x, "sweep").unwrap();
+                    assert_eq!(
+                        actual.serialize(),
+                        expected.serialize(),
+                        "sqrt({x}): upstream {expected}, d_sqrt {actual}"
+                    );
+                    compared += 1;
+                }
+                Ok(None) => unreachable!("non-negative inputs only"),
+                Err(_) => {
+                    // Upstream aborted: the whole point of d_sqrt.
+                    assert!(d_sqrt(x, "sweep").is_ok(), "d_sqrt({x}) must be total");
+                    skipped += 1;
+                }
+            }
+        }
+        assert!(compared > 4_000, "compared {compared}, skipped {skipped}");
+    }
+
+    /// The reproducer resolves at the third iteration, not at the bound:
+    /// a period-2 cycle is detected as soon as it appears.
+    #[test]
+    fn test_d_sqrt_resolves_the_cycle_immediately() {
+        let x = dec!(4.0000000000000000000000000003);
+        let started = std::time::Instant::now();
+        for _ in 0..1_000 {
+            let _ = d_sqrt(x, "cycle").unwrap();
+        }
+        // A thousand calls that each ran to the 1000-iteration backstop
+        // would take on the order of a tenth of a second; immediate cycle
+        // detection keeps them in the microsecond range.
+        assert!(
+            started.elapsed() < std::time::Duration::from_millis(50),
+            "cycle detection is not immediate: {:?}",
+            started.elapsed()
+        );
     }
 
     #[test]

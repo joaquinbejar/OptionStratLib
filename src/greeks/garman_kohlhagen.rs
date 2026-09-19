@@ -265,7 +265,7 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     )?;
     let s = option.underlying_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::gamma_gk")?.to_dec();
 
     let denom = d_mul(
         s,
@@ -318,7 +318,7 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
         "greeks::gk::discount_foreign",
     )?;
     let s = option.underlying_price.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::vega_gk")?.to_dec();
 
     let leg1 = d_mul(s, exp_neg_rf_t, "greeks::gk::vega::s_df")?;
     let leg2 = d_mul(leg1, n(d1_v)?, "greeks::gk::vega::times_n")?;
@@ -369,7 +369,7 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let s = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::theta_gk")?.to_dec();
     let exp_neg_rd_t = d_exp(
         d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
         "greeks::gk::discount_domestic",

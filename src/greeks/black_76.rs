@@ -152,7 +152,7 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::black_76::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::black_76::gamma_b76")?.to_dec();
 
     let denom = d_mul(
         f,
@@ -204,7 +204,7 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
 
     let df = discount_factor(option, t.to_dec())?;
     let f = option.underlying_price.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::black_76::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::black_76::vega_b76")?.to_dec();
 
     // F * e^(-rT) * n(d1) * √T
     let leg1 = d_mul(f, df, "greeks::black_76::vega::f_df")?;
@@ -260,7 +260,7 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let k = option.strike_price.to_dec();
     let r = option.risk_free_rate;
     let sigma = option.implied_volatility.to_dec();
-    let sqrt_t = p_sqrt(&t, "greeks::black_76::sqrt")?.to_dec();
+    let sqrt_t = p_sqrt(&t, "greeks::black_76::theta_b76")?.to_dec();
 
     // Common (volatility-decay) term, negative: -F·e^(-rT)·n(d1)·σ/(2·√T)
     let two_sqrt_t = d_mul(Decimal::TWO, sqrt_t, "greeks::black_76::theta::two_sqrt_t")?;

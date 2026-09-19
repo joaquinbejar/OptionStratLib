@@ -985,7 +985,7 @@ pub fn strike_step(
     let t = days_to_exp / 365.0;
     let sigma = underlying_price
         .checked_mul(&implied_vol)?
-        .checked_mul(&p_sqrt(&t, "chains::utils::sqrt")?)?;
+        .checked_mul(&p_sqrt(&t, "chains::utils::strike_step")?)?;
     let raw_step = Positive::TWO.checked_mul(&k)?.checked_mul(&sigma)? / (size as f64 - 1.0);
 
     // Standard “nice” grids used by most exchanges
