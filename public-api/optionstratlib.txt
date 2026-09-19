@@ -2771,6 +2771,7 @@ pub fn optionstratlib::greeks::GreeksSnapshot::name() -> alloc::borrow::Cow<'sta
 pub fn optionstratlib::greeks::GreeksSnapshot::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::greeks::GreeksSnapshot
 pub fn optionstratlib::greeks::GreeksSnapshot::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub const optionstratlib::greeks::DELTA_THRESHOLD: rust_decimal::decimal::Decimal
 pub trait optionstratlib::greeks::Black76Greeks
 pub fn optionstratlib::greeks::Black76Greeks::delta_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::greeks::Black76Greeks::gamma_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -11283,6 +11284,7 @@ impl<T> core::fmt::Display for optionstratlib::prelude::Ystep<T> where T: core::
 pub fn optionstratlib::prelude::Ystep<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl<T> serde_core::ser::Serialize for optionstratlib::prelude::Ystep<T> where T: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + serde_core::ser::Serialize + core::clone::Clone
 pub fn optionstratlib::prelude::Ystep<T>::serialize<S>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
+pub const optionstratlib::prelude::DELTA_THRESHOLD: rust_decimal::decimal::Decimal
 pub trait optionstratlib::prelude::AtmIvProvider
 pub fn optionstratlib::prelude::AtmIvProvider::atm_iv(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib::error::VolatilityError>
 impl optionstratlib::volatility::AtmIvProvider for optionstratlib::chains::chain::OptionChain
