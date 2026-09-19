@@ -225,24 +225,8 @@ pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
 
-/// The `graph` module provides functionality for creating, managing, and
-/// manipulating graph data structures. Common use cases include representing
-/// networks, dependency graphs, and other graph-based relationships.
-///
-/// # Features
-/// - Supports various graph representations (e.g., directed, undirected).
-/// - Includes methods for traversing graphs (e.g., DFS, BFS).
-/// - Provides utilities for adding and removing nodes and edges.
-///
-/// # Usage
-/// To utilize this module, include it in your project and access its functions
-/// to build and interact with graph structures:
-///
-/// Note: Implementations within the `graph` module may depend on specific
-/// traits or types relevant to the graph operations.
-///
-/// For details on available graph types, functionalities, and examples, refer
-/// to the corresponding methods and structs within the module.
+/// Former home of the strategy chart construction; see the module docs.
+/// The `Graph` implementations now live in `visualization::strategies`.
 pub mod graph;
 /// Iron Butterfly strategy implementation
 pub mod iron_butterfly;

@@ -6,6 +6,8 @@
 
 mod analytics;
 
+mod backtesting;
+
 mod strategies;
 
 mod chain;

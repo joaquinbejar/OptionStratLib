@@ -379,6 +379,12 @@ pub mod metrics;
 /// simulation layer never has to name a strategy.
 pub mod adapters;
 
+/// Simulation orchestration for the single-leg strategies (`LongCall`,
+/// `LongPut`, `ShortCall`, `ShortPut`): the `Simulate` implementations,
+/// the shared per-path evaluator and the `SingleLegSimulation` contract
+/// that captures what differs between the four.
+pub mod strategy_simulation;
+
 /// This module defines the structure that aggregates and stores all results produced during a trading backtest simulation.
 ///
 /// It includes:
