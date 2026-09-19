@@ -32,7 +32,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
@@ -1876,7 +1876,7 @@ mod tests_call_butterfly_optimizable {
 mod tests_call_butterfly_probability {
     use super::*;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use num_traits::ToPrimitive;
     use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;

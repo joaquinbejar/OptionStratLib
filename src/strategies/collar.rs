@@ -70,6 +70,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::Options;
+use crate::analytics::probability::VolatilityAdjustment;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::probability::ProbabilityError;
 use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
@@ -86,7 +87,6 @@ use crate::pricing::payoff::Profit;
 use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
-use crate::strategies::probabilities::utils::VolatilityAdjustment;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use positive::Positive;

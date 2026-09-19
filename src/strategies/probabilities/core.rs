@@ -11,6 +11,9 @@ use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
 
+use crate::analytics::probability::{
+    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
+};
 use crate::error::probability::ProbabilityError;
 use crate::error::strategies::StrategyError;
 use crate::model::ProfitLossRange;
@@ -18,9 +21,6 @@ use crate::model::utils::sub_floor_zero;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
-use crate::strategies::probabilities::utils::{
-    PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
-};
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use tracing::warn;

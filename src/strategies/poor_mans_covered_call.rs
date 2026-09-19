@@ -58,7 +58,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -1825,7 +1825,7 @@ mod tests_poor_mans_covered_call_probability {
     use super::*;
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     /// Creates a test Poor Man's Covered Call with standard parameters

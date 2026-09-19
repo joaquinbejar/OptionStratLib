@@ -43,7 +43,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{core::ProbabilityAnalysis, utils::VolatilityAdjustment},
+        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
@@ -1383,7 +1383,7 @@ mod tests_short_straddle_probability {
 
     use crate::model::ExpirationDate;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     /// Helper function that creates a basic short Straddle for testing purposes
@@ -1521,7 +1521,7 @@ mod tests_short_straddle_probability_bis {
 
     use crate::model::ExpirationDate;
 
-    use crate::strategies::probabilities::utils::PriceTrend;
+    use crate::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
     fn create_test_short_straddle() -> ShortStraddle {
