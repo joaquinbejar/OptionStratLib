@@ -129,6 +129,14 @@ mod tests_strategies_utils {
     use positive::{Positive, pos_or_panic};
 
     #[test]
+    fn test_find_optimal_side_is_the_market_owned_type() {
+        // `strategies::utils::FindOptimalSide` is a re-export of the
+        // market-owned enum, not a second definition.
+        let side: crate::chains::utils::FindOptimalSide = FindOptimalSide::All;
+        assert!(matches!(side, FindOptimalSide::All));
+    }
+
+    #[test]
     fn test_optimization_criteria_variants() {
         let ratio = OptimizationCriteria::Ratio;
         let area = OptimizationCriteria::Area;

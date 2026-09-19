@@ -62,11 +62,3 @@ fn test_center_is_rejected_at_the_market_layer() {
         !option_at(Positive::HUNDRED).is_valid_optimal_side(&underlying, &FindOptimalSide::Center)
     );
 }
-
-#[test]
-fn test_strategies_path_is_the_same_type() {
-    // The historical `strategies::utils::FindOptimalSide` path is a re-export
-    // of the market-owned enum, not a second definition.
-    let from_strategies: optionstratlib::strategies::utils::FindOptimalSide = FindOptimalSide::All;
-    assert!(matches!(from_strategies, FindOptimalSide::All));
-}
