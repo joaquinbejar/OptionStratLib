@@ -198,5 +198,5 @@ pub use garman_kohlhagen::{
     GarmanKohlhagenGreeks, delta_gk, gamma_gk, rho_domestic_gk, rho_foreign_gk, theta_gk, vega_gk,
 };
 pub(crate) use utils::calculate_d_values;
-pub use utils::calculate_delta_neutral_sizes;
+pub use utils::{DELTA_THRESHOLD, calculate_delta_neutral_sizes};
 pub use utils::{big_n, calculate_d_values_black_76, d1, d2, n};

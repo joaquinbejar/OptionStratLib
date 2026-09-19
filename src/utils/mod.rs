@@ -6,12 +6,18 @@
 //!
 //! ## Core Components
 //!
-//! ### Logger (`logger.rs`)
+//! ### Logger (`logger.rs`), deprecated
 //!
-//! Provides logging functionality with configurable log levels:
+//! `setup_logger` and `setup_logger_with_level` install a global `tracing`
+//! subscriber, which is an application decision rather than a library one.
+//! Both are deprecated on `main` after 0.21.3 and removed in 0.22.0
+//! (multi-crate roadmap M6-04). Install the subscriber from your binary
+//! instead:
 //!
-//! ```rust
-//! use optionstratlib::utils::logger::{setup_logger, setup_logger_with_level};
+//! ```rust,no_run
+//! tracing_subscriber::fmt()
+//!     .with_max_level(tracing::Level::INFO)
+//!     .init();
 //! ```
 //!
 //! ### Time (`time.rs`)
@@ -114,9 +120,10 @@
 //! - ERROR
 //! - TRACE
 //!
-//! ### Example: Logging Setup
+//! ### Example: Logging Setup (deprecated API)
 //!
 //! ```rust
+//! #![allow(deprecated)]
 //! use optionstratlib::utils::logger::setup_logger_with_level;
 //! use tracing::{debug, info, warn};
 //!
@@ -191,6 +198,7 @@ mod traits;
 #[cfg(feature = "async")]
 pub use csv::read_ohlcv_from_zip_async;
 pub use csv::{OhlcvCandle, read_ohlcv_from_zip};
+#[allow(deprecated)]
 pub use logger::{setup_logger, setup_logger_with_level};
 pub use others::{
     DETERMINISTIC_RNG_DEFAULT_SEED, approx_equal, deterministic_rng, get_random_element,

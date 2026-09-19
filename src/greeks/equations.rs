@@ -2716,9 +2716,9 @@ fn color_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 pub mod tests_delta_equations {
     use super::*;
     use crate::constants::ZERO;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::{OptionStyle, Side};
     use crate::model::utils::create_sample_option;
-    use crate::strategies::DELTA_THRESHOLD;
     use positive::constants::DAYS_IN_A_YEAR;
 
     use crate::{ExpirationDate, assert_decimal_eq};

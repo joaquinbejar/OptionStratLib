@@ -2,6 +2,7 @@
 //!
 //! This example shows how to create and use different exit policies
 //! for option trading strategies.
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
 use optionstratlib::prelude::*;

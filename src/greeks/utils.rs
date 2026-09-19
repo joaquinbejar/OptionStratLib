@@ -10,13 +10,37 @@ use crate::error::greeks::{DeltaNeutralityErrorKind, GreeksError, InputErrorKind
 use crate::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, f64_to_decimal,
 };
-use crate::strategies::DELTA_THRESHOLD;
 use core::f64;
 use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use statrs::distribution::{ContinuousCDF, Normal};
+
+/// # Delta Neutrality Threshold
+///
+/// The default threshold value used to determine if an options strategy is considered delta neutral.
+///
+/// When evaluating delta neutrality, a strategy's net delta is compared against this threshold value.
+/// If the absolute value of the net delta is less than or equal to this threshold, the strategy
+/// is considered delta neutral.
+///
+/// ## Value Significance
+/// The small value (0.0001) represents a very tight threshold, meaning the strategy must have
+/// extremely minimal directional exposure to be considered neutral. This conservative threshold
+/// helps ensure strategies maintain strict delta neutrality for effective risk management.
+///
+/// ## Usage Context
+/// This constant is primarily used within delta neutrality calculations and serves as a default
+/// when a custom threshold is not specified. Functions that analyze or adjust strategies for
+/// delta neutrality may use this value when determining if additional position adjustments
+/// are necessary.
+///
+/// ## Related Components
+/// Owned by the Greeks layer because `calculate_delta_neutral_sizes` needs it;
+/// the delta-neutral strategies module re-exports it under its historical
+/// `strategies::delta_neutral::DELTA_THRESHOLD` path.
+pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
 /// Calculates the `d1` parameter used in the Black-Scholes options pricing model.
 ///

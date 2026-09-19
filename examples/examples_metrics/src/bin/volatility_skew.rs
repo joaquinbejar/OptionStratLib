@@ -13,6 +13,7 @@
 //! - PNG image: `./Draws/Metrics/volatility_skew_curve.png`
 //! - HTML interactive: `./Draws/Metrics/volatility_skew_curve.html`
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

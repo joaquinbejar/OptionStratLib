@@ -36,6 +36,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `volatility::traits` to `chains::chain`; the `AtmIvProvider` and
   `VolatilitySmile` traits stay generic in `volatility`, which no longer
   imports option chains. Behaviour and error mapping are unchanged.
+### Deprecated
+
+- **`utils::logger::setup_logger` and `setup_logger_with_level`** (#506,
+  multi-crate roadmap M1-09). A library must not install a global `tracing`
+  subscriber; install one from your binary with
+  `tracing_subscriber::fmt().with_max_level(..).init()`. The functions are
+  deprecated on `main` after 0.21.3 and removed in 0.22.0 (M6-04, in the batch
+  that follows the version bump), so no 0.22 release ships them; the
+  deprecation is the signal for anyone building from `main` in between. The
+  example binaries now take their logger from the non-published
+  `osl-example-support` package under `examples/support`.
+
+### Changed
+
+- **`DELTA_THRESHOLD` is owned by the Greeks layer** (#506). The constant
+  moved from `strategies::delta_neutral` to `greeks`, where
+  `calculate_delta_neutral_sizes` uses it; `strategies::delta_neutral::DELTA_THRESHOLD`
+  and `strategies::DELTA_THRESHOLD` are re-exports of the same constant.
+  `greeks` no longer imports anything from `strategies`.
 
 ## [0.21.3] - 2026-09-19
 

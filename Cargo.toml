@@ -101,6 +101,7 @@ crate-type = ["rlib"]
 
 [workspace]
 members = [
+    "examples/support",
     "examples/examples_chain",
     "examples/examples_curves",
     "examples/examples_exotics",

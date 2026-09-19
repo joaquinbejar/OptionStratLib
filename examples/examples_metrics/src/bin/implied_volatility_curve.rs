@@ -17,6 +17,7 @@
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::ImpliedVolatilityCurve;
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 
 fn main() -> Result<(), CurveError> {
     setup_logger();

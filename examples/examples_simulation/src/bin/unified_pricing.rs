@@ -19,6 +19,7 @@
 //! - Using the Priceable trait for clean API
 
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use std::convert::Infallible;
 use std::fmt::Display;

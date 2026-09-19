@@ -32,6 +32,7 @@
 //! - Average holding period
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_simulation.png`
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
 use indicatif::{ProgressBar, ProgressStyle};

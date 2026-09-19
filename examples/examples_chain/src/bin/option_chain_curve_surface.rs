@@ -4,6 +4,7 @@
    Date: 29/1/25
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use tracing::info;
 
 fn main() -> Result<(), optionstratlib::error::Error> {

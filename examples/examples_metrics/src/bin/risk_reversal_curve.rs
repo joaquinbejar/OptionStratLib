@@ -21,6 +21,7 @@
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::RiskReversalCurve;
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use rust_decimal::Decimal;
 
 fn main() -> Result<(), CurveError> {

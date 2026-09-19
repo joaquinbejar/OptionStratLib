@@ -19,6 +19,7 @@ use optionstratlib::error::CurveError;
 use optionstratlib::metrics::BidAskSpreadCurve;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;
+use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use rust_decimal_macros::dec;
 
