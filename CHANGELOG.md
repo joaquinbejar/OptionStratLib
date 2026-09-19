@@ -163,28 +163,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/geometrics/interpolation/traits.rs` next to the trait;
   `ProfitLossRange::calculate_probability` has its body in the new
   analytics-owned extension trait
-  `strategies::probabilities::ProfitRangeProbability`
-  (`src/strategies/probabilities/profit_range.rs`) and the inherent method is
-  a forwarding wrapper. Nothing public moved path, changed signature or
+  `analytics::profit_range::ProfitRangeProbability`
+  (`src/analytics/profit_range.rs`, built on `analytics::probability`;
+  `strategies::probabilities` re-exports it) and the inherent method is a
+  forwarding wrapper. Nothing public moved path, changed signature or
   changed a result; the tests moved with their bodies.
   What stays, and why (every remaining hit of the boundary scan
   `rg -n 'crate::(chains|greeks|pnl|pricing|series|strategies|visualization|analytics|geometrics|curves|surfaces|metrics)' src/model`
-  is either inside `#[cfg(test)]` or on a line marked `// facade-compat`):
-  - `src/model/option.rs:6` `use crate::pricing::OptionPricing;`
-    (pricing): the seven inherent pricing wrappers from #499 forward to
-    the trait; removing them is the 0.22 break recorded in
+  is inside `#[cfg(test)]`, a doc link, a line marked `// facade-compat`, or
+  the one deferred edge below):
+  - `src/model/option.rs` `use crate::pricing::OptionPricing;` (pricing,
+    marked): the seven inherent pricing wrappers from #499 forward to the
+    trait; removing them is the 0.22 break recorded in
     `doc/API-BASELINE.md` 3.3.
-  - `src/model/leg/leg_enum.rs:305,317,327,339,349` `use
-    crate::greeks::Greeks;` (pricing): `impl LegAble for Leg` is a core
-    trait on a core type, so its `Option` arm cannot move under the orphan
-    rule; the Greek methods of the core-owned `LegAble` trait (which already
-    return the pricing-owned `GreeksError`) need an ownership decision that
-    is out of scope here.
-  - `src/model/trade.rs:3` `use crate::pnl::PnL;` (analytics):
+  - `src/model/leg/leg_enum.rs` `use crate::greeks::Greeks;` inside the
+    five `Option` arms of `impl LegAble for Leg` (pricing, NOT marked): a
+    live core-to-pricing edge, not a compatibility re-export. `LegAble` is
+    a core trait on a core type, so the impl cannot move under the orphan
+    rule; its Greek methods (which already return the pricing-owned
+    `GreeksError`) move to a pricing-owned extension trait in the batch
+    behind the 0.22.0 bump. The boundary checker (#507) lists it as a
+    deferred edge so M1 closes with it documented, not hidden.
+  - `src/model/trade.rs` `use crate::pnl::PnL;` (analytics, marked):
     `Trade::pnl() -> PnL` is public inherent API returning an
     analytics-owned type; `PnL::from(&trade)` is the 0.22 form.
-  - `src/model/profit_range.rs:8-9` `ProfitRangeProbability`, `PriceTrend`,
-    `VolatilityAdjustment` (analytics): the inherent
+  - `src/model/profit_range.rs` `ProfitRangeProbability`, `PriceTrend`,
+    `VolatilityAdjustment` (analytics, marked): the inherent
     `ProfitLossRange::calculate_probability` wrapper keeps its 0.21
     signature, which names the two analytics-owned parameter types.
   - `src/model/option.rs:7`, `src/model/position.rs:14`,

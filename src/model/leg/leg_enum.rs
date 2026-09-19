@@ -302,7 +302,7 @@ impl LegAble for Leg {
     fn delta(&self) -> Result<Decimal, GreeksError> {
         match self {
             Self::Option(pos) => {
-                use crate::greeks::Greeks; // facade-compat: pricing
+                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
                 pos.delta()
             }
             Self::Spot(pos) => pos.delta(),
@@ -314,7 +314,7 @@ impl LegAble for Leg {
     fn gamma(&self) -> Result<Decimal, GreeksError> {
         match self {
             Self::Option(pos) => {
-                use crate::greeks::Greeks; // facade-compat: pricing
+                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
                 pos.gamma()
             }
             Self::Spot(_) | Self::Future(_) | Self::Perpetual(_) => Ok(Decimal::ZERO),
@@ -324,7 +324,7 @@ impl LegAble for Leg {
     fn theta(&self) -> Result<Decimal, GreeksError> {
         match self {
             Self::Option(pos) => {
-                use crate::greeks::Greeks; // facade-compat: pricing
+                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
                 pos.theta()
             }
             Self::Spot(pos) => pos.theta(),
@@ -336,7 +336,7 @@ impl LegAble for Leg {
     fn vega(&self) -> Result<Decimal, GreeksError> {
         match self {
             Self::Option(pos) => {
-                use crate::greeks::Greeks; // facade-compat: pricing
+                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
                 pos.vega()
             }
             Self::Spot(_) | Self::Future(_) | Self::Perpetual(_) => Ok(Decimal::ZERO),
@@ -346,7 +346,7 @@ impl LegAble for Leg {
     fn rho(&self) -> Result<Decimal, GreeksError> {
         match self {
             Self::Option(pos) => {
-                use crate::greeks::Greeks; // facade-compat: pricing
+                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
                 pos.rho()
             }
             Self::Spot(pos) => pos.rho(),
