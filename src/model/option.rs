@@ -351,7 +351,7 @@ impl Options {
     /// Returns [`OptionsError::ExpirationDate`] when the option's expiration
     /// cannot be converted to a positive year fraction, or propagates any
     /// `PricingError` surfaced by [`crate::pricing::generate_binomial_tree`] (e.g.
-    /// [`PricingError::BinomialNodeMissing`] or [`PricingError::SqrtFailure`]).
+    /// [`crate::error::PricingError::BinomialNodeMissing`] or [`crate::error::PricingError::SqrtFailure`]).
     pub fn calculate_price_binomial_tree(&self, no_steps: NonZeroUsize) -> PriceBinomialTree {
         // facade-compat: pricing
         OptionPricing::calculate_price_binomial_tree(self, no_steps)
