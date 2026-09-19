@@ -30,14 +30,14 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
-use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sub, d_sum_iter};
+use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter};
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
 
 use num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -1171,9 +1171,9 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         for &point in closest_points {
             let sq = squared_distance(point, xy.x, xy.y, op)
                 .map_err(interp_err(InterpolationError::Cubic))?;
-            let dist = match sq.sqrt() {
-                Some(d) => d,
-                None => {
+            let dist = match d_sqrt(sq, op) {
+                Ok(d) => d,
+                Err(_) => {
                     // sqrt only fails for negative input or a result that
                     // cannot be represented as Decimal (overflow). Squared
                     // distance is always >= 0, so this is the overflow
@@ -1369,7 +1369,7 @@ impl MetricsExtractor for Surface {
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
-        let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
+        let std_dev = d_sqrt(variance, op).unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
             mean,
@@ -1401,7 +1401,7 @@ impl MetricsExtractor for Surface {
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
-        let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
+        let std_dev = d_sqrt(variance, op).unwrap_or(Decimal::ONE);
         if std_dev.is_zero() {
             return Err(MetricsError::ShapeError(format!(
                 "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the surface is degenerate"
@@ -1592,7 +1592,7 @@ impl MetricsExtractor for Surface {
         let mean = mean_of(&z_values, op).map_err(risk_err)?;
         let sum_sq = central_moment(&z_values, mean, 2, op).map_err(risk_err)?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op).map_err(risk_err)?;
-        let volatility = variance.sqrt().unwrap_or(Decimal::ZERO);
+        let volatility = d_sqrt(variance, op).unwrap_or(Decimal::ZERO);
 
         // Value at Risk (95% confidence) using parametric method. At zero
         // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
@@ -3917,6 +3917,7 @@ mod tests_axis_operations {
 #[cfg(test)]
 mod tests_surface_geometric_transformations {
     use super::*;
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     fn create_test_surface() -> Surface {

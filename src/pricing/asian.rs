@@ -29,7 +29,6 @@ use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_
 use crate::model::types::{AsianAveragingType, OptionStyle, OptionType};
 use positive::Positive;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 
 /// Terms kept in the small-argument series for the scaled second moment.
@@ -185,7 +184,7 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         sigma.to_dec(),
         "pricing::asian::geometric::sigma_sq",
     )?;
-    let sqrt_three = Positive::new(3.0_f64.sqrt())
+    let sqrt_three = Positive::new(3.0_f64.sqrt()) // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         .map_err(|e| PricingError::method_error("geometric_asian_price", &e.to_string()))?;
     let sigma_adj = Positive::new_decimal(d_div(
         sigma.to_dec(),
@@ -385,7 +384,7 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         // back onto the input volatility.
         Decimal::ZERO
     };
-    let sigma_adj = variance.sqrt().unwrap_or(sigma_dec);
+    let sigma_adj = d_sqrt(variance, "pricing::asian::arithmetic::sigma_adj").unwrap_or(sigma_dec);
 
     // Use Black-Scholes with adjusted parameters
     let sqrt_t = d_sqrt(t_dec, "pricing::asian::arithmetic::sqrt_t")?;

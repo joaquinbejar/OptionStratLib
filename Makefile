@@ -75,8 +75,13 @@ check: test fmt-check lint scan-banned
 #     `src/model/decimal.rs` are the checked forms. `f64` has the same three
 #     method names and does *not* abort, so those call sites carry a marker
 #     saying so — grep cannot tell the receiver types apart.
-#   * `.sqrt().unwrap()` — `Decimal::sqrt` is the safe one, returning
-#     `Option`; unwrapping it puts the panic back.
+#   * `.sqrt().unwrap()` — `Decimal::sqrt` returns `Option` for negative
+#     input; unwrapping it puts that panic back.
+#   * `.sqrt()` / `.checked_sqrt()` on `Decimal` / `Positive` — upstream
+#     `Decimal::sqrt` aborts with `geo mean circuit breaker` when its Newton
+#     iteration oscillates (#588); `d_sqrt` / `p_sqrt` in
+#     `src/model/decimal.rs` are the total forms. `f64::sqrt` call sites
+#     carry a marker saying so, like `exp`/`ln`/`powd`.
 #
 # A bare `#[cfg(test)]` never truncates the scan; only the braced body of the
 # item it actually gates is skipped, brace counted (files may carry several):
@@ -140,7 +145,7 @@ scan-banned:
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)\.unwrap\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
+		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	malformed=$$(grep -rn 'scan-banned: allow' src \

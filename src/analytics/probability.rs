@@ -18,6 +18,7 @@ use crate::error::probability::{
 use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
+use crate::model::decimal::p_sqrt;
 use crate::model::utils::sub_floor_zero;
 use num_traits::ToPrimitive;
 use positive::Positive;
@@ -167,7 +168,8 @@ pub fn calculate_single_point_probability(
     // to zero, where the logarithm is undefined; both are reported rather than
     // aborting.
     let log_ratio = target_price.checked_div(current_price)?.checked_ln()?;
-    let std_dev = volatility.checked_mul(&time_to_expiry.checked_sqrt()?)?;
+    let std_dev =
+        volatility.checked_mul(&p_sqrt(&time_to_expiry, "analytics::probability::sqrt")?)?;
 
     // Calculate z-score considering drift
     // `Positive::ln` returns `Decimal` as of positive 0.6: the log of a

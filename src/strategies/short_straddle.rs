@@ -674,7 +674,7 @@ impl Strategies for ShortStraddle {
             )
         })?;
         let strike_diff = price_gap(upper, lower);
-        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64();
+        let cat = (strike_diff / 2.0_f64.sqrt()).to_f64(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         let result = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }

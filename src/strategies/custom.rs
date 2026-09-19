@@ -13,6 +13,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::chains::model_impls::UpdateFromOptionData;
+use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_div, d_mul};
 use crate::strategies::base::price_gap;
 use crate::strategies::utils::calculate_price_range_bounded;
@@ -256,7 +257,7 @@ impl CustomStrategy {
             }
 
             // Calculate derivative numerically with smaller step
-            let h = self.epsilon.checked_sqrt().ok()?;
+            let h = p_sqrt(&self.epsilon, "strategies::custom::sqrt").ok()?;
             let f_x_h = self
                 .calculate_profit_at(&x.checked_add(&h).ok()?)
                 .ok()?

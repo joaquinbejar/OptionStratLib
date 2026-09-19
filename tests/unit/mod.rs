@@ -25,3 +25,5 @@ mod utils;
 mod pricing;
 
 mod model;
+
+mod volatility;

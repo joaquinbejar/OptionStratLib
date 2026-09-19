@@ -141,7 +141,7 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
 
     if rho.abs() < 1.0 {
         let ass = (1.0 - rho) * (1.0 + rho);
-        let a = (ass).sqrt();
+        let a = (ass).sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         let bs = (h - k).powi(2);
         let c = (4.0 - hk) / 8.0;
         let d = (12.0 - hk) / 16.0;
@@ -156,9 +156,9 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
         }
 
         if -hk < 100.0 {
-            let b = ass.sqrt();
+            let b = ass.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             bvn -= (-hk / 2.0).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
-                * (2.0 * PI).sqrt()
+                * (2.0 * PI).sqrt() // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                 * standard_normal_cdf(-h / b)
                 * b
                 * (1.0 - c * bs * (1.0 - d * bs / 5.0) / 3.0);
@@ -174,7 +174,7 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
                     * w[i]
                     * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                     * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
-                        / (1.0 + (1.0 - rs).sqrt())
+                        / (1.0 + (1.0 - rs).sqrt()) // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         - (1.0 + c * rs * (1.0 + d * rs)));
             }
             let xs_tmp = xs * (1.0 + x[i]);
@@ -185,7 +185,7 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
                     * w[i]
                     * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                     * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
-                        / (1.0 + (1.0 - rs).sqrt())
+                        / (1.0 + (1.0 - rs).sqrt()) // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         - (1.0 + c * rs * (1.0 + d * rs)));
             }
         }
@@ -340,9 +340,11 @@ fn price_compound(
     let sqrt_t1 = d_sqrt(t1_dec, "pricing::compound::sqrt_t1")?;
 
     // Correlation between values at T1 and T2
-    let rho = d_div(t1_dec, t2_dec, "pricing::compound::rho_ratio")?
-        .sqrt()
-        .unwrap_or(dec!(0.5));
+    let rho = d_sqrt(
+        d_div(t1_dec, t2_dec, "pricing::compound::rho_ratio")?,
+        "pricing::compound::rho",
+    )
+    .unwrap_or(dec!(0.5));
 
     // Calculate critical price S* where underlying option value = K1
     // For simplicity, use an approximation

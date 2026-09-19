@@ -7,7 +7,7 @@
 use crate::backtesting::results::SimulationStatsResult; // deferred edge: Simulate::simulate return type, 0.22.0 batch (#504)
 use crate::error::SimulationError;
 use crate::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sub, decimal_normal_sample, finite_decimal,
+    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample, finite_decimal, p_sqrt,
 };
 use crate::simulation::model::WalkPath;
 use crate::simulation::simulator::Simulator;
@@ -15,7 +15,7 @@ use crate::simulation::{ExitPolicy, WalkParams, WalkType};
 use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::fmt::{Debug, Display};
 use std::ops::AddAssign;
@@ -74,7 +74,7 @@ where
                 .checked_mul_dec(stationary_weight)?; // 0.002
 
             // pre-compute √dt
-            let sqrt_dt = dt.to_f64().sqrt();
+            let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                 SimulationError::non_finite("simulation::garch::sqrt_dt", sqrt_dt)
             })?;
@@ -90,7 +90,7 @@ where
                 // `var` is kept in annualized-squared units, so sqrt is
                 // the annualized conditional volatility at this step; it
                 // feeds both the shock and the reported vol path.
-                let var_sqrt = var.checked_sqrt()?;
+                let var_sqrt = p_sqrt(&var, "simulation::traits::sqrt")?;
                 let eps = d_mul(
                     d_mul(z, var_sqrt.to_dec(), "simulation::garch::eps")?,
                     sqrt_dt_dec,
@@ -170,13 +170,15 @@ where
             values.push(price); // Add initial value
             vols.push(volatility);
 
-            let dt_sqrt = dt
-                .to_dec()
-                .sqrt()
-                .ok_or_else(|| SimulationError::walk_error("Heston: sqrt(dt) failed (overflow)"))?;
+            let dt_sqrt = d_sqrt(dt.to_dec(), "simulation::heston::sqrt_dt")
+                .map_err(|_| SimulationError::walk_error("Heston: sqrt(dt) failed (overflow)"))?;
             // sqrt(1 - rho^2) depends only on `rho`, hoist out of the
             // hot loop so we don't recompute it per step.
-            let one_minus_rho_sq_sqrt = (Decimal::ONE - rho * rho).sqrt().ok_or_else(|| {
+            let one_minus_rho_sq_sqrt = d_sqrt(
+                Decimal::ONE - rho * rho,
+                "simulation::heston::one_minus_rho_sq_sqrt",
+            )
+            .map_err(|_| {
                 SimulationError::walk_error(
                     "Heston: sqrt(1 - rho^2) failed (rho out of range or overflow)",
                 )
@@ -193,9 +195,10 @@ where
                 let z2 = rho * z1 + one_minus_rho_sq_sqrt * decimal_normal_sample();
 
                 // Ensure variance stays positive (modified Euler scheme with truncation)
-                let variance_sqrt = variance.sqrt().ok_or_else(|| {
-                    SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
-                })?;
+                let variance_sqrt =
+                    d_sqrt(variance, "simulation::heston::variance_sqrt").map_err(|_| {
+                        SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
+                    })?;
                 let variance_drift = d_mul(
                     d_mul(
                         kappa.to_dec(),
@@ -231,7 +234,11 @@ where
                     Decimal::TWO,
                     "simulation::heston::avg_variance",
                 )?;
-                let avg_variance_sqrt = avg_variance.sqrt().ok_or_else(|| {
+                let avg_variance_sqrt = d_sqrt(
+                    avg_variance,
+                    "simulation::heston::avg_variance_sqrt",
+                )
+                .map_err(|_| {
                     SimulationError::walk_error("Heston: sqrt(avg_variance) failed (overflow)")
                 })?;
                 let price_change = d_add(
@@ -250,7 +257,7 @@ where
                 values.push(price);
                 // Instantaneous annualized volatility after the step;
                 // CIR variance is truncated at zero so sqrt always exists.
-                let vol_step = variance.sqrt().ok_or_else(|| {
+                let vol_step = d_sqrt(variance, "simulation::heston::vol_step").map_err(|_| {
                     SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
                 })?;
                 vols.push(Positive::new_decimal(vol_step).unwrap_or(Positive::ZERO));
@@ -292,7 +299,7 @@ where
         } => {
             let vols = generate_ou_process(volatility, vol_mean, vol_speed, vov, dt, params.size)?;
 
-            let sqrt_dt = dt.checked_sqrt()?;
+            let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
             let mut price = params.ystep_as_positive()?.to_dec();
             let mut path = Vec::with_capacity(params.size + 1);
             let mut vols_out = Vec::with_capacity(params.size + 1);
@@ -376,7 +383,7 @@ where
                 -1
             };
 
-            let sqrt_dt = dt.checked_sqrt()?;
+            let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
             let vol_mult_up = vol_multiplier_up.unwrap_or(Positive::ONE);
             let vol_mult_down = vol_multiplier_down.unwrap_or(Positive::ONE);
 
@@ -651,7 +658,7 @@ where
                 values.push(start);
                 let mut x: Decimal = start.to_dec();
                 let sigma_abs = volatility.checked_mul(&start)?.to_dec();
-                let sqrt_dt = dt.to_f64().sqrt();
+                let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                 let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                     SimulationError::non_finite("simulation::brownian::sqrt_dt", sqrt_dt)
                 })?;
@@ -716,7 +723,7 @@ where
                 let mut values = Vec::with_capacity(params.size);
                 let mut current_value: Positive = params.ystep_as_positive()?;
                 values.push(current_value);
-                let sqrt_dt = dt.checked_sqrt()?;
+                let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
 
                 for _ in 1..params.size {
                     // σ * √dt * Z
@@ -783,7 +790,7 @@ where
                 let mut price: Positive = params.ystep_as_positive()?;
                 values.push(price);
 
-                let sqrt_dt = dt.to_f64().sqrt();
+                let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                 let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                     SimulationError::non_finite("simulation::log_returns::sqrt_dt", sqrt_dt)
                 })?;
@@ -915,7 +922,7 @@ where
                 let mut x: Decimal = params.ystep_as_positive()?.to_dec();
                 values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
-                let sqrt_dt = dt.checked_sqrt()?;
+                let sqrt_dt = p_sqrt(&dt, "simulation::traits::sqrt")?;
                 let lambda_dt = intensity.checked_mul(&dt)?;
 
                 for _ in 1..params.size {

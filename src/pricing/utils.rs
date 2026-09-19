@@ -13,7 +13,9 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
 use crate::greeks::{big_n, d2};
-use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sub, finite_decimal};
+use crate::model::decimal::{
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, finite_decimal,
+};
 use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::Side;
 use crate::pricing::binomial_model::BinomialPricingParams;
@@ -59,13 +61,15 @@ pub fn simulate_returns(
         let u2 = random_decimal(rng)?;
 
         // Convert to normal distribution using Box-Muller transform
-        let r = d_mul(
-            -Decimal::TWO,
-            d_ln(u1, "pricing::utils::box_muller::log_u1")?,
-            "pricing::utils::box_muller::radius_squared",
-        )?
-        .sqrt()
-        .ok_or_else(|| {
+        let r = d_sqrt(
+            d_mul(
+                -Decimal::TWO,
+                d_ln(u1, "pricing::utils::box_muller::log_u1")?,
+                "pricing::utils::box_muller::radius_squared",
+            )?,
+            "pricing::utils::box_muller::radius",
+        )
+        .map_err(|_| {
             DecimalError::arithmetic_error("sqrt", "non-finite operand in Box-Muller r")
         })?;
         let theta = d_mul(
@@ -95,7 +99,7 @@ pub fn simulate_returns(
     let adjusted_mean = d_mul(mean, time_step, "pricing::utils::simulate::adjusted_mean")?;
     let adjusted_std = d_mul(
         std_dev.to_dec(),
-        time_step.sqrt().ok_or_else(|| {
+        d_sqrt(time_step, "pricing::utils::simulate::sqrt_time_step").map_err(|_| {
             DecimalError::arithmetic_error("sqrt", "invalid (negative or non-finite) time_step")
         })?,
         "pricing::utils::simulate::adjusted_std",
@@ -150,9 +154,8 @@ pub(crate) fn calculate_up_factor(
     volatility: Positive,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    let sqrt_dt = dt
-        .sqrt()
-        .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in up factor"))?;
+    let sqrt_dt = d_sqrt(dt, "pricing::utils::up_factor::sqrt_dt")
+        .map_err(|_| DecimalError::arithmetic_error("sqrt", "non-finite dt in up factor"))?;
     d_exp(
         d_mul(
             sqrt_dt,
@@ -180,9 +183,8 @@ pub(crate) fn calculate_down_factor(
     volatility: Positive,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    let sqrt_dt = dt
-        .sqrt()
-        .ok_or_else(|| DecimalError::arithmetic_error("sqrt", "non-finite dt in down factor"))?;
+    let sqrt_dt = d_sqrt(dt, "pricing::utils::down_factor::sqrt_dt")
+        .map_err(|_| DecimalError::arithmetic_error("sqrt", "non-finite dt in down factor"))?;
     d_exp(
         d_mul(
             d_mul(
@@ -531,9 +533,8 @@ pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, PricingError> {
         PricingError::non_finite("pricing::monte_carlo::wiener_increment::sample", sample_f64)
     })?;
 
-    let sqrt_dt = dt.sqrt().ok_or_else(|| {
-        DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment")
-    })?;
+    let sqrt_dt = d_sqrt(dt, "pricing::monte_carlo::wiener_increment::sqrt_dt")
+        .map_err(|_| DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment"))?;
     Ok(d_mul(
         sample,
         sqrt_dt,

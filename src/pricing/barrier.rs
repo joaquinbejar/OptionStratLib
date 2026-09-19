@@ -10,7 +10,7 @@ use crate::greeks::big_n;
 use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use crate::model::types::{BarrierType, OptionStyle, OptionType};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 /// Prices a barrier option using the Black-Scholes analytical extension.
@@ -107,7 +107,7 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         )?,
         "pricing::barrier::lambda_discriminant",
     )?;
-    let lambda = lambda_discriminant.sqrt().ok_or_else(|| {
+    let lambda = d_sqrt(lambda_discriminant, "pricing::barrier::lambda").map_err(|_| {
         PricingError::method_error("barrier_black_scholes", "non-finite lambda discriminant")
     })?;
 

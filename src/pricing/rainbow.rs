@@ -301,7 +301,7 @@ fn monte_carlo_rainbow(
         .to_f64()
         .ok_or_else(|| PricingError::other("Failed to convert t"))?;
 
-    let sqrt_t = t_f.sqrt();
+    let sqrt_t = t_f.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
     let drift1 = (r_f - q1_f - 0.5 * sigma1_f * sigma1_f) * t_f;
     let drift2 = (r_f - q2_f - 0.5 * sigma2_f * sigma2_f) * t_f;
     let vol1 = sigma1_f * sqrt_t;
@@ -338,7 +338,7 @@ fn generate_correlated_normals(seed: u64, rho: f64) -> (f64, f64) {
     let z1 = box_muller_transform(seed);
     let z2_ind = box_muller_transform(seed.wrapping_add(1000000));
 
-    let z2 = rho * z1 + (1.0 - rho * rho).sqrt() * z2_ind;
+    let z2 = rho * z1 + (1.0 - rho * rho).sqrt() * z2_ind; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
     (z1, z2)
 }

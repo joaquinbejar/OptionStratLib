@@ -48,7 +48,7 @@ use crate::greeks::big_n;
 use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use crate::model::types::OptionStyle;
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 /// Maximum iterations for Newton-Raphson method to find critical price.
@@ -234,7 +234,7 @@ pub fn barone_adesi_whaley(
         four_m_over_k,
         "pricing::american::discriminant",
     )?;
-    let sqrt_disc = discriminant.sqrt().ok_or_else(|| {
+    let sqrt_disc = d_sqrt(discriminant, "pricing::american::sqrt_disc").map_err(|_| {
         PricingError::method_error(
             "baw",
             "cannot calculate square root of negative discriminant",

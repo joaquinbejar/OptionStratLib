@@ -128,6 +128,7 @@
 
 use crate::chains::OptionChain;
 use crate::error::ChainError;
+use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
 use crate::model::utils::sub_floor_zero;
 use chrono::{NaiveDate, Utc};
@@ -260,7 +261,7 @@ impl RNDStatistics {
             variance,
             skewness,
             kurtosis,
-            volatility: variance.checked_sqrt()?,
+            volatility: p_sqrt(&variance, "analytics::rnd::sqrt")?,
         })
     }
 
@@ -363,7 +364,7 @@ impl RNDStatistics {
             return Ok(Decimal::ZERO);
         }
 
-        let std_dev = variance.checked_sqrt()?;
+        let std_dev = p_sqrt(&variance, "analytics::rnd::sqrt")?;
         let mut skewness = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
@@ -429,7 +430,7 @@ impl RNDStatistics {
         // there. Two equal masses at 100 and 100.0000000000001 standardize to
         // ±1 and carry the -2 excess kurtosis of a two-point distribution,
         // which is what this now returns instead of zero.
-        let std_dev = variance.checked_sqrt()?;
+        let std_dev = p_sqrt(&variance, "analytics::rnd::sqrt")?;
         let mut fourth_moment = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 

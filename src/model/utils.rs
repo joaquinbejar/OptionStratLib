@@ -5,11 +5,12 @@
 ******************************************************************************/
 use crate::error::ChainError;
 use crate::model::Position;
+use crate::model::decimal::d_sqrt;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use positive::{Positive, PositiveError};
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::ops::Mul;
 
@@ -467,7 +468,7 @@ pub fn mean_and_std(vec: Vec<Positive>) -> Result<(Positive, Positive), Positive
         squared_deviations = squared_deviations.checked_add(&deviation)?;
     }
     let variance = squared_deviations.checked_div_dec(count)?;
-    let std = Positive::new(variance.to_f64().sqrt())?;
+    let std = Positive::new(variance.to_f64().sqrt())?; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
     Ok((mean, std))
 }
@@ -540,11 +541,12 @@ pub fn calculate_optimal_price_range(
 ) -> Result<(Positive, Positive), ChainError> {
     let days_to_expiry = expiration_date.get_days()?;
     let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
-    let years_to_expiry_sqrt = years_to_expiry.sqrt().ok_or_else(|| {
-        ChainError::invalid_price_calculation(
-            "sqrt() failed to calculate for years_to_expiry value",
-        )
-    })?;
+    let years_to_expiry_sqrt = d_sqrt(years_to_expiry, "model::utils::years_to_expiry_sqrt")
+        .map_err(|_| {
+            ChainError::invalid_price_calculation(
+                "sqrt() failed to calculate for years_to_expiry value",
+            )
+        })?;
 
     let confidence_interval = dec!(4.0);
     let volatility_factor = implied_volatility * years_to_expiry_sqrt * confidence_interval;

@@ -283,6 +283,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are annotated `// deferred edge`, listed by the boundary checker (#507)
   and move with the batch.
 
+### Fixed
+
+- **Every `Decimal` square root is total** (#588). Upstream
+  `rust_decimal::MathematicalOps::sqrt` aborts the process with
+  `geo mean circuit breaker` when its Newton iteration oscillates at the 28th
+  decimal instead of converging; `dec!(4.0000000000000000000000000003).sqrt()`
+  reproduces it, and `garch_volatility(&[1, 1, 1, 1], omega = 1,
+  alpha = 1e-28, beta = 1)` reaches that variance on its third step, which is
+  how the unseeded `test_garch_volatility_never_panics` property test found
+  it. `model::decimal::d_sqrt` now carries its own Newton iteration with the
+  upstream seed and update step plus a bounded loop that resolves the
+  oscillation by returning the candidate whose square is closest to the
+  input; the new crate-private `p_sqrt` routes every former
+  `Positive::checked_sqrt` call site (28) through it, and the remaining
+  `Decimal::sqrt` call sites (39, across pricing, simulation, volatility,
+  metrics, curves, surfaces and strategies) call `d_sqrt` with their previous
+  fallback or error mapping unchanged. `make scan-banned` now flags any
+  `.sqrt()` / `.checked_sqrt()` in production code; the `f64::sqrt` sites
+  carry an allow marker. No input on which upstream converged changes value:
+  `d_sqrt` yields the bit-identical result there, and the reproducer plus a
+  deterministic GARCH regression test pin the previously aborting case.
+
 ## [0.21.3] - 2026-09-19
 
 ### Fixed
