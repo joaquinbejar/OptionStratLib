@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 26/9/24
 ******************************************************************************/
+use crate::chains::utils::FindOptimalSide;
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
     adjust_volatility, default_empty_string, rounder, strike_step,
@@ -27,7 +28,6 @@ use crate::model::{
     BasicAxisTypes, ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
     reject_unrepresentable_expiration,
 };
-use crate::strategies::utils::FindOptimalSide;
 use crate::surfaces::{BasicSurfaces, Point3D, Surface};
 use crate::utils::Len;
 use crate::utils::others::get_random_element;
