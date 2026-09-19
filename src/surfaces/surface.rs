@@ -35,7 +35,6 @@ use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use crate::utils::Len;
 
-use crate::visualization::{Graph, GraphData, Surface3D};
 use num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_decimal::{Decimal, MathematicalOps};
@@ -534,17 +533,6 @@ impl Default for Surface {
             x_range: (Decimal::ZERO, Decimal::ZERO),
             y_range: (Decimal::ZERO, Decimal::ZERO),
         }
-    }
-}
-
-impl Graph for Surface {
-    fn graph_data(&self) -> GraphData {
-        GraphData::GraphSurface(Surface3D {
-            x: self.points.iter().map(|p| p.x).collect(),
-            y: self.points.iter().map(|p| p.y).collect(),
-            z: self.points.iter().map(|p| p.z).collect(),
-            name: "Surface".to_string(),
-        })
     }
 }
 
@@ -2319,12 +2307,6 @@ mod tests_surface_basic {
         assert_eq!(default.points.len(), 0);
         assert_eq!(default.x_range, (Decimal::ZERO, Decimal::ZERO));
         assert_eq!(default.y_range, (Decimal::ZERO, Decimal::ZERO));
-
-        let graph_data = surface.graph_data();
-        assert!(matches!(
-            graph_data,
-            GraphData::GraphSurface(Surface3D { .. })
-        ));
     }
 
     /// Projecting out `y` maps `(x, y, z)` to `(x, z)`, multi-valued on a

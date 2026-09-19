@@ -16,7 +16,6 @@ use crate::geometrics::{
 };
 use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sub, d_sum_iter};
 use crate::utils::Len;
-use crate::visualization::{Graph, GraphData};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, MathematicalOps};
@@ -350,18 +349,6 @@ impl Len for Curve {
 
     fn is_empty(&self) -> bool {
         self.points.is_empty()
-    }
-}
-
-impl Graph for Curve {
-    fn graph_data(&self) -> GraphData {
-        self.clone().into()
-    }
-}
-
-impl Graph for Vec<Curve> {
-    fn graph_data(&self) -> GraphData {
-        self.clone().into()
     }
 }
 

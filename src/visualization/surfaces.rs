@@ -20,7 +20,8 @@
 //! # use std::fs;
 //! use std::path::PathBuf;
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::geometrics::{GeometricObject, Plottable};
+//! use optionstratlib::geometrics::GeometricObject;
+//! use optionstratlib::visualization::Plottable;
 //! use optionstratlib::surfaces::{Point3D, Surface};
 //!
 //! # let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
@@ -49,9 +50,22 @@
 //! ```
 //!
 use crate::error::SurfaceError;
-use crate::geometrics::{PlotBuilder, Plottable};
 use crate::surfaces::Surface;
-use crate::visualization::Graph;
+use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable, Surface3D};
+
+/// `Graph` adapter for a [`Surface`]; lives in `visualization` because the
+/// trait is visualization-owned and `Surface` is a math container
+/// (ADR-0001 D2, M1-05).
+impl Graph for Surface {
+    fn graph_data(&self) -> GraphData {
+        GraphData::GraphSurface(Surface3D {
+            x: self.points.iter().map(|p| p.x).collect(),
+            y: self.points.iter().map(|p| p.y).collect(),
+            z: self.points.iter().map(|p| p.z).collect(),
+            name: "Surface".to_string(),
+        })
+    }
+}
 
 /// Plottable implementation for single Surface
 impl Plottable for Surface {
@@ -229,6 +243,25 @@ mod tests_extended {
         assert_eq!(plot.options.x_label, None);
         assert_eq!(plot.options.y_label, None);
         assert_eq!(plot.options.z_label, None);
+    }
+
+    /// Relocated from `surfaces::surface` with the `Graph` impl: a surface
+    /// projects to a `GraphSurface` payload.
+    #[test]
+    fn test_surface_graph_data_is_graph_surface() {
+        let points = BTreeSet::from_iter(vec![
+            Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)),
+            Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0)),
+            Point3D::new(dec!(1.0), dec!(1.0), dec!(2.0)),
+            Point3D::new(dec!(0.5), dec!(0.5), dec!(1.5)),
+        ]);
+        let surface = Surface::new(points);
+        let graph_data = surface.graph_data();
+        assert!(matches!(
+            graph_data,
+            GraphData::GraphSurface(Surface3D { .. })
+        ));
     }
 
     #[test]
