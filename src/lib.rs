@@ -1237,8 +1237,11 @@ pub mod model;
 /// * `analytics` - Strategy-neutral analytics: price-probability kernels and models.
 ///
 /// Evaluates lognormal price distributions at expiry from prices, volatilities
-/// and dates alone. The strategy layer builds its probability analysis on top
-/// of these kernels; nothing here depends on a concrete strategy.
+/// and dates alone, and extracts risk-neutral densities and volatility skews
+/// from an option chain (`RNDAnalysis`). The strategy layer builds its
+/// probability analysis on top of these kernels; nothing here depends on a
+/// concrete strategy, and the historical `chains` paths for the moved items
+/// are preserved by re-export.
 pub mod analytics;
 
 /// * `backtesting` - Tools for historical performance evaluation of options strategies.

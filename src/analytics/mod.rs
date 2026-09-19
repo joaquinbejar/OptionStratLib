@@ -13,3 +13,10 @@ pub use probability::{
     PriceTrend, VolatilityAdjustment, calculate_price_probability,
     calculate_single_point_probability,
 };
+
+/// * `rnd` - Risk-neutral density and volatility-skew extraction from an
+///   option chain (Breeden-Litzenberger), together with the
+///   `impl RNDAnalysis for OptionChain`.
+pub mod rnd;
+
+pub use rnd::{RNDAnalysis, RNDParameters, RNDResult, RNDStatistics};

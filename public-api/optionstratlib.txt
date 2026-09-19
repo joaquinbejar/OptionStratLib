@@ -14,12 +14,81 @@ pub optionstratlib::analytics::probability::VolatilityAdjustment::base_volatilit
 pub optionstratlib::analytics::probability::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
 pub fn optionstratlib::analytics::probability::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub fn optionstratlib::analytics::probability::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
+pub mod optionstratlib::analytics::rnd
+pub struct optionstratlib::analytics::rnd::RNDParameters
+pub optionstratlib::analytics::rnd::RNDParameters::derivative_tolerance: positive::positive::Positive
+pub optionstratlib::analytics::rnd::RNDParameters::interpolation_points: usize
+pub optionstratlib::analytics::rnd::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
+impl core::default::Default for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::default() -> Self
+impl core::fmt::Debug for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib::analytics::rnd::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib::analytics::rnd::RNDResult
+pub optionstratlib::analytics::rnd::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
+pub optionstratlib::analytics::rnd::RNDResult::statistics: optionstratlib::analytics::rnd::RNDStatistics
+impl optionstratlib::analytics::rnd::RNDResult
+pub fn optionstratlib::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
+pub struct optionstratlib::analytics::rnd::RNDStatistics
+pub optionstratlib::analytics::rnd::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::rnd::RNDStatistics::mean: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::rnd::RNDStatistics::skewness: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::rnd::RNDStatistics::variance: positive::positive::Positive
+pub optionstratlib::analytics::rnd::RNDStatistics::volatility: positive::positive::Positive
+impl optionstratlib::analytics::rnd::RNDStatistics
+pub fn optionstratlib::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
+pub trait optionstratlib::analytics::rnd::RNDAnalysis
+pub fn optionstratlib::analytics::rnd::RNDAnalysis::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::analytics::rnd::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 pub struct optionstratlib::analytics::PriceTrend
 pub optionstratlib::analytics::PriceTrend::confidence: f64
 pub optionstratlib::analytics::PriceTrend::drift_rate: f64
+pub struct optionstratlib::analytics::RNDParameters
+pub optionstratlib::analytics::RNDParameters::derivative_tolerance: positive::positive::Positive
+pub optionstratlib::analytics::RNDParameters::interpolation_points: usize
+pub optionstratlib::analytics::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
+impl core::default::Default for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::default() -> Self
+impl core::fmt::Debug for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib::analytics::rnd::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib::analytics::RNDResult
+pub optionstratlib::analytics::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
+pub optionstratlib::analytics::RNDResult::statistics: optionstratlib::analytics::rnd::RNDStatistics
+impl optionstratlib::analytics::rnd::RNDResult
+pub fn optionstratlib::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
+pub struct optionstratlib::analytics::RNDStatistics
+pub optionstratlib::analytics::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::RNDStatistics::mean: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::RNDStatistics::skewness: rust_decimal::decimal::Decimal
+pub optionstratlib::analytics::RNDStatistics::variance: positive::positive::Positive
+pub optionstratlib::analytics::RNDStatistics::volatility: positive::positive::Positive
+impl optionstratlib::analytics::rnd::RNDStatistics
+pub fn optionstratlib::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
 pub struct optionstratlib::analytics::VolatilityAdjustment
 pub optionstratlib::analytics::VolatilityAdjustment::base_volatility: positive::positive::Positive
 pub optionstratlib::analytics::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
+pub trait optionstratlib::analytics::RNDAnalysis
+pub fn optionstratlib::analytics::RNDAnalysis::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::analytics::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::analytics::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub fn optionstratlib::analytics::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub mod optionstratlib::backtesting
@@ -549,8 +618,8 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl optionstratlib::chains::RNDAnalysis for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
@@ -840,8 +909,8 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl optionstratlib::chains::RNDAnalysis for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
@@ -1025,27 +1094,27 @@ pub struct optionstratlib::chains::RNDParameters
 pub optionstratlib::chains::RNDParameters::derivative_tolerance: positive::positive::Positive
 pub optionstratlib::chains::RNDParameters::interpolation_points: usize
 pub optionstratlib::chains::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
-impl core::default::Default for optionstratlib::chains::RNDParameters
-pub fn optionstratlib::chains::RNDParameters::default() -> Self
-impl core::fmt::Debug for optionstratlib::chains::RNDParameters
-pub fn optionstratlib::chains::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::fmt::Display for optionstratlib::chains::RNDParameters
-pub fn optionstratlib::chains::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl utoipa::ToSchema for optionstratlib::chains::RNDParameters
-pub fn optionstratlib::chains::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
-pub fn optionstratlib::chains::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
-impl utoipa::__dev::ComposeSchema for optionstratlib::chains::RNDParameters
-pub fn optionstratlib::chains::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+impl core::default::Default for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::default() -> Self
+impl core::fmt::Debug for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib::analytics::rnd::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib::analytics::rnd::RNDParameters
+pub fn optionstratlib::analytics::rnd::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib::chains::RNDResult
 pub optionstratlib::chains::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
-pub optionstratlib::chains::RNDResult::statistics: optionstratlib::chains::rnd::RNDStatistics
-impl optionstratlib::chains::RNDResult
-pub fn optionstratlib::chains::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
+pub optionstratlib::chains::RNDResult::statistics: optionstratlib::analytics::rnd::RNDStatistics
+impl optionstratlib::analytics::rnd::RNDResult
+pub fn optionstratlib::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib::error::chains::ChainError>
 pub trait optionstratlib::chains::RNDAnalysis
-pub fn optionstratlib::chains::RNDAnalysis::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
+pub fn optionstratlib::chains::RNDAnalysis::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
-impl optionstratlib::chains::RNDAnalysis for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::generator_optionchain(&optionstratlib::simulation::WalkParams<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::generator_positive(&optionstratlib::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib::error::chains::ChainError>
@@ -9161,8 +9230,8 @@ impl core::fmt::Debug for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl optionstratlib::chains::RNDAnalysis for optionstratlib::chains::chain::OptionChain
-pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::chains::RNDParameters) -> core::result::Result<optionstratlib::chains::RNDResult, optionstratlib::error::chains::ChainError>
+impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::chain::OptionChain
+pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>

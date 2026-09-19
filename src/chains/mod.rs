@@ -84,6 +84,10 @@
 //!
 //! # Risk Neutral Density (RND) Analysis Module
 //!
+//! The RND surface (`RNDAnalysis`, `RNDParameters`, `RNDResult`) is owned by
+//! [`crate::analytics::rnd`]; the `chains::{RNDAnalysis, RNDParameters, RNDResult}`
+//! paths below are kept as compatibility re-exports.
+//!
 //! This module implements functionality to calculate and analyze the Risk-Neutral Density (RND)
 //! from option chains. The RND represents the market's implied probability distribution of
 //! future asset prices and is a powerful tool for understanding market expectations.
@@ -224,9 +228,6 @@ pub mod utils;
 /// * `options` - Private module with core option pricing models and option-specific functionality
 mod options;
 
-/// * `rnd` - Private module for random number generation and stochastic processes
-mod rnd;
-
 mod optiondata;
 
 /// Simulation-backed chain generation. This is the only place where the
@@ -236,6 +237,7 @@ mod optiondata;
 #[cfg(feature = "synthetic")]
 mod generators;
 
+pub use crate::analytics::rnd::{RNDAnalysis, RNDParameters, RNDResult}; // facade-compat: analytics
 #[cfg(feature = "synthetic")]
 #[deprecated(
     since = "0.17.4",
@@ -248,5 +250,4 @@ pub use generators::generator_optionchain;
 pub use legs::StrategyLegs;
 pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};
-pub use rnd::{RNDAnalysis, RNDParameters, RNDResult};
 pub use utils::{FindOptimalSide, OptionChainBuildParams};

@@ -36,7 +36,7 @@
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
-//! use optionstratlib::chains::{RNDParameters, RNDAnalysis};
+//! use optionstratlib::analytics::{RNDParameters, RNDAnalysis};
 //! use optionstratlib::chains::chain::OptionChain;
 //! use positive::{pos_or_panic, spos, Positive};
 //! use optionstratlib::ExpirationDate;
@@ -126,14 +126,20 @@
 //! The implementation focuses on numerical stability and accurate moment calculations,
 //! particularly for extreme market conditions.
 
+use crate::chains::OptionChain;
 use crate::error::ChainError;
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
+use crate::model::utils::sub_floor_zero;
+use chrono::{NaiveDate, Utc};
+use num_traits::FromPrimitive;
 use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+#[cfg(test)]
+use tracing::debug;
 use utoipa::ToSchema;
 
 /// Parameters for Risk-Neutral Density calculation
@@ -149,7 +155,7 @@ use utoipa::ToSchema;
 /// # Example
 /// ```
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::chains::RNDParameters;
+/// use optionstratlib::analytics::RNDParameters;
 /// use positive::pos_or_panic;
 /// let params = RNDParameters {
 ///     risk_free_rate: dec!(0.05),
@@ -512,6 +518,207 @@ pub trait RNDAnalysis {
     /// [`ChainError::OptionDataError`] if individual option records carry
     /// invalid volatility values.
     fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError>;
+}
+
+impl RNDAnalysis for OptionChain {
+    /// Implementation of RND calculation for option chains
+    ///
+    /// # Numerical Method
+    /// 1. Calculates second derivative of option prices
+    /// 2. Applies Breeden-Litzenberger formula
+    /// 3. Normalizes resulting densities
+    ///
+    /// # Error Conditions
+    /// * Empty option chain
+    /// * Zero derivative tolerance
+    /// * Failed density calculations
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError> {
+        let mut densities = BTreeMap::new();
+        let mut h = params.derivative_tolerance.to_dec();
+
+        // Step 1: Validate parameters
+        if h == Positive::ZERO {
+            return Err(ChainError::invalid_parameters(
+                "derivative_tolerance",
+                "must be greater than zero",
+            ));
+        }
+
+        // Step 2: Get all available strikes
+        let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
+        if strikes.is_empty() {
+            return Err(ChainError::EmptyDensities);
+        }
+
+        // Calculate minimum strike interval
+        let min_interval = strikes
+            .windows(2)
+            .filter_map(|w| match w {
+                [prev, curr] => Some(*curr - *prev),
+                _ => None,
+            })
+            .min()
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "strike_interval",
+                    "cannot determine minimum strike interval",
+                )
+            })?;
+
+        if h < min_interval.to_dec() {
+            h = min_interval.to_dec();
+        }
+
+        // Step 3: Calculate time to expiry
+        let expiration_date = self.get_expiration_date();
+        let expiry_date = NaiveDate::parse_from_str(&expiration_date, "%Y-%m-%d")?
+            .and_hms_opt(23, 59, 59)
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "expiration_date",
+                    "invalid expiration date/time components",
+                )
+            })?;
+
+        let now = Utc::now().naive_utc();
+        let time_to_expiry =
+            Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap_or_default();
+
+        // Step 4: Calculate discount factor. `Decimal::exp` aborts on overflow
+        // and on underflow; the checked helper flushes an underflowing
+        // discount to zero, which is its limit, and reports a real overflow.
+        let discount = d_exp(
+            d_mul(
+                -params.risk_free_rate,
+                time_to_expiry,
+                "chains::rnd::discount::exponent",
+            )?,
+            "chains::rnd::discount",
+        )?;
+
+        // Debug information
+        #[cfg(test)]
+        {
+            debug!("Time to expiry: {} years", time_to_expiry);
+            debug!("Discount factor: {}", discount);
+            debug!("Step size h: {}", h);
+        }
+        // Step 5: Calculate RND for each strike
+        for opt in self.options.iter() {
+            let k = opt.strike_price;
+
+            // `k + h` aborts when the bumped strike leaves the `Positive`
+            // range. A strike that cannot be bumped has no upper wing and so
+            // no finite difference; skip it exactly as a missing quote is
+            // skipped by the `if let` below.
+            let Ok(k_up) = k.checked_add_dec(h) else {
+                continue;
+            };
+
+            // Debug prices
+            #[cfg(test)]
+            {
+                debug!("Processing strike {}", k);
+                debug!("Call price at k: {:?}", self.get_call_price(k));
+                debug!("Call price at k+h: {:?}", self.get_call_price(k_up));
+                debug!(
+                    "Call price at k-h: {:?}",
+                    self.get_call_price(sub_floor_zero(k, &h))
+                );
+            }
+            if let (Some(call_price), Some(call_up), Some(call_down)) = (
+                self.get_call_price(k),
+                self.get_call_price(k_up),
+                self.get_call_price(sub_floor_zero(k, &h)),
+            ) {
+                // Calculate second derivative. `h * h` underflows to exactly
+                // zero below scale 28, which a `derivative_tolerance` under
+                // 1e-14 reaches, so the division is checked rather than raw.
+                let sum = d_add(call_up, call_down, "chains::rnd::wing_sum")?;
+                let twice_mid = d_mul(Decimal::TWO, call_price, "chains::rnd::twice_mid")?;
+                let numerator = d_sub(sum, twice_mid, "chains::rnd::curvature")?;
+                let step_squared = d_mul(h, h, "chains::rnd::step_squared")?;
+                let second_derivative =
+                    d_div(numerator, step_squared, "chains::rnd::second_derivative")?;
+
+                #[cfg(test)]
+                {
+                    debug!("Second derivative: {}", second_derivative);
+                }
+
+                // Calculate density using Breeden-Litzenberger formula
+                let density = d_mul(second_derivative, discount, "chains::rnd::density")?;
+
+                #[cfg(test)]
+                {
+                    debug!("Density: {}", density);
+                }
+
+                // Store valid density
+                if !density.is_sign_negative() && !density.is_zero() {
+                    densities.insert(k, density);
+                }
+            }
+        }
+
+        // Step 6: Validate and normalize densities
+        if densities.is_empty() {
+            return Err(ChainError::EmptyDensities);
+        }
+
+        let total = d_sum_iter(densities.values().copied(), "chains::rnd::total_density")?;
+        if !total.is_zero() {
+            for density in densities.values_mut() {
+                *density = d_div(*density, total, "chains::rnd::normalise")?;
+            }
+        }
+
+        #[cfg(test)]
+        {
+            debug!("Total number of densities: {}", densities.len());
+            debug!("Sum of densities: {}", total);
+        }
+
+        RNDResult::new(densities)
+    }
+
+    /// Implementation of volatility skew calculation
+    ///
+    /// Extracts and analyzes the relationship between strike prices
+    /// and implied volatilities.
+    ///
+    /// # Error Conditions
+    /// * Missing ATM volatility
+    /// * Insufficient valid data points
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError> {
+        let mut skew = Vec::new();
+        let atm_strike = self.underlying_price;
+        let atm_vol = self.get_atm_implied_volatility()?;
+
+        for opt in self.options.iter() {
+            // `Positive / Positive` aborts on a zero underlying and on a
+            // quotient that leaves the range, and the subtraction aborts on a
+            // volatility at the edge of it.
+            let relative_strike = opt.strike_price.checked_div(&atm_strike).map_err(|_| {
+                ChainError::invalid_parameters(
+                    "underlying_price",
+                    "relative strike is not representable against this underlying",
+                )
+            })?;
+            let vol_diff = d_sub(
+                opt.implied_volatility.to_dec(),
+                atm_vol.to_dec(),
+                "chains::skew::volatility_difference",
+            )?;
+            skew.push((relative_strike, vol_diff));
+        }
+
+        if skew.is_empty() {
+            return Err(ChainError::EmptySkewData);
+        }
+
+        Ok(skew)
+    }
 }
 
 #[cfg(test)]
@@ -1881,5 +2088,434 @@ mod rnd_coverage_tests {
 
         // The absolute skew values should be similar in a smile
         assert!((lower.abs() - higher.abs()).abs() < dec!(0.05));
+    }
+}
+
+#[cfg(test)]
+mod rnd_analysis_tests {
+    #![allow(clippy::indexing_slicing)]
+    use super::*;
+    use positive::{pos_or_panic, spos};
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard option chain for testing
+    fn create_standard_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2025-02-01".to_string(),
+            None,
+            None,
+        );
+
+        // Add a range of options with known prices and volatilities
+        let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+        let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+        let implied_vols = [0.17, 0.17, 0.17, 0.17, 0.17];
+
+        for ((&strike, &call_ask), &impl_vol) in strikes
+            .iter()
+            .zip(call_asks.iter())
+            .zip(implied_vols.iter())
+        {
+            chain.add_option(
+                pos_or_panic!(strike),
+                spos!(call_ask - 0.02), // bid slightly lower than ask
+                spos!(call_ask),
+                None,
+                None,
+                pos_or_panic!(impl_vol),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+        }
+
+        chain
+    }
+
+    mod calculate_rnd_tests {
+        use super::*;
+
+        #[test]
+        fn test_basic_rnd_calculation() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+
+            let rnd = result.unwrap();
+
+            // Verify densities exist
+            assert!(!rnd.densities.is_empty());
+
+            // Verify total probability is approximately 1
+            let total: Decimal = rnd.densities.values().sum();
+            assert!((total - dec!(1.0)).abs() < dec!(0.0001));
+
+            // Verify all densities are non-negative
+            assert!(rnd.densities.values().all(|&d| !d.is_sign_negative()));
+        }
+
+        #[test]
+        fn test_tolerance_adjustment() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.1), // Smaller than strike interval
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_default() {
+            let chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+            let params = RNDParameters::default();
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_zero_tolerance() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                derivative_tolerance: Positive::ZERO,
+                ..Default::default()
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_expired_option() {
+            let mut chain = create_standard_chain();
+            chain.expiration_date = "2023-01-01".to_string(); // Past date
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok()); // Should still work with past date
+        }
+    }
+
+    mod calculate_skew_tests {
+        use super::*;
+
+        #[test]
+        fn test_basic_skew_calculation() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew();
+
+            assert!(result.is_ok());
+            let skew = result.unwrap();
+
+            // Verify we have skew data
+            assert!(!skew.is_empty());
+
+            // Verify relative strikes are ordered
+            for window in skew.windows(2) {
+                assert!(window[0].0 < window[1].0);
+            }
+        }
+
+        #[test]
+        fn test_flat_volatility_surface() {
+            let chain = create_standard_chain(); // All vols are 0.17
+            let result = chain.calculate_skew().unwrap();
+
+            // All vol differences should be close to zero
+            for (_, vol_diff) in result {
+                assert!(vol_diff.abs() < dec!(0.0001));
+            }
+        }
+
+        #[test]
+        fn test_empty_chain_skew() {
+            let chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            let result = chain.calculate_skew();
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("cannot find ATM option for empty option chain: TEST")
+            );
+        }
+
+        #[test]
+        fn test_missing_implied_volatility() {
+            let mut chain = create_standard_chain();
+
+            // Add an option without implied volatility
+            chain.add_option(
+                pos_or_panic!(115.0),
+                spos!(0.1),
+                spos!(0.2),
+                None,
+                None,
+                pos_or_panic!(0.5),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let result = chain.calculate_skew();
+            assert!(result.is_ok()); // Should work with partial data
+        }
+
+        #[test]
+        fn test_relative_strike_calculation() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew().unwrap();
+
+            // For ATM strike (100.0), relative strike should be 1.0
+            let atm_strike = result.iter().find(|(rel_strike, _)| {
+                sub_floor_zero(*rel_strike, &Decimal::ONE) < pos_or_panic!(0.0001)
+            });
+            assert!(atm_strike.is_some());
+        }
+    }
+
+    mod calculate_rnd_tests_bis {
+        use super::*;
+
+        #[test]
+        fn test_invalid_date_format() {
+            let mut chain = create_standard_chain();
+            chain.expiration_date = "invalid_date".to_string();
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_negative_risk_free_rate() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(-0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_verify_rnd_properties() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(5.0),
+            };
+
+            let result = chain.calculate_rnd(&params).unwrap();
+            let densities = &result.densities;
+
+            // Verify mode is near the money
+            let mode = densities
+                .iter()
+                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+                .unwrap();
+            assert_eq!(*mode.0, Positive::HUNDRED);
+
+            // Verify densities decrease away from the money
+            let atm_density = densities.get(&Positive::HUNDRED).unwrap();
+            for (strike, density) in densities.iter() {
+                if strike < &pos_or_panic!(90.0) || strike > &pos_or_panic!(110.0) {
+                    assert!(density < atm_density);
+                }
+            }
+        }
+
+        #[test]
+        fn test_strike_interval_detection() {
+            let mut chain = create_standard_chain();
+
+            // Add option with different strike interval
+            chain.add_option(
+                pos_or_panic!(102.5),
+                spos!(1.0),
+                spos!(1.1),
+                None,
+                None,
+                pos_or_panic!(0.17),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.1),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+    }
+
+    mod calculate_skew_tests_bis {
+        use super::*;
+
+        #[test]
+        fn test_skew_with_smile() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            // Create new options with a volatility smile
+            let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+            let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+            let smile_vols = [0.20, 0.18, 0.17, 0.18, 0.20];
+
+            for ((&strike, &call_ask), &vol) in
+                strikes.iter().zip(call_asks.iter()).zip(smile_vols.iter())
+            {
+                chain.add_option(
+                    pos_or_panic!(strike),
+                    spos!(call_ask - 0.02),
+                    spos!(call_ask),
+                    None,
+                    None,
+                    pos_or_panic!(vol),
+                    None,
+                    None,
+                    None,
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+
+            let result = chain.calculate_skew().unwrap();
+
+            // First half of skew should be decreasing
+            for window in result.windows(2).take(result.len() / 2) {
+                assert!(window[0].1 > window[1].1);
+            }
+
+            // Second half of skew should be increasing
+            for window in result.windows(2).skip(result.len() / 2) {
+                assert!(window[0].1 < window[1].1);
+            }
+        }
+
+        #[test]
+        fn test_skew_monotonic() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            // Create new options with monotonic skew
+            let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+            let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+            let skew_vols = [0.22, 0.20, 0.17, 0.15, 0.14];
+
+            for ((&strike, &call_ask), &vol) in
+                strikes.iter().zip(call_asks.iter()).zip(skew_vols.iter())
+            {
+                chain.add_option(
+                    pos_or_panic!(strike),
+                    spos!(call_ask - 0.02),
+                    spos!(call_ask),
+                    None,
+                    None,
+                    pos_or_panic!(vol),
+                    None,
+                    None,
+                    None,
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+
+            let result = chain.calculate_skew().unwrap();
+
+            // Verify monotonic decrease
+            for window in result.windows(2) {
+                assert!(window[0].1 > window[1].1);
+            }
+        }
+
+        #[test]
+        fn test_strike_range_coverage() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew().unwrap();
+
+            // Get min and max relative strikes
+            let min_rel_strike = result.iter().map(|(k, _)| k).min().unwrap();
+            let max_rel_strike = result.iter().map(|(k, _)| k).max().unwrap();
+
+            // Verify range coverage
+            assert!(*min_rel_strike < Positive::ONE); // Have strikes below ATM
+            assert!(*max_rel_strike > Positive::ONE); // Have strikes above ATM
+        }
     }
 }
