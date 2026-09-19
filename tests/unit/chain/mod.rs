@@ -11,6 +11,7 @@ mod liquidity_metrics_test;
 mod price_metrics_test;
 mod random_walk_chain;
 mod risk_metrics_test;
+mod selection_without_strategies_test;
 mod stress_metrics_test;
 mod temporal_metrics_test;
 mod wide_spread_chain_test;

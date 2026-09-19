@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
+use crate::chains::utils::FindOptimalSide;
 use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_string_round_to_2};
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::ChainError;
@@ -10,7 +11,6 @@ use crate::error::chains::OptionDataErrorKind;
 use crate::greeks::{Greeks, GreeksSnapshot, delta, gamma};
 use crate::model::Position;
 use crate::model::utils::sub_floor_zero;
-use crate::strategies::{BasicAble, FindOptimalSide};
 use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -902,7 +902,7 @@ impl OptionData {
         initial_iv: Positive,
     ) -> Result<Options, ChainError> {
         let mut option = self.get_option(side, option_style)?;
-        let _ = option.set_implied_volatility(&initial_iv);
+        option.implied_volatility = initial_iv;
         Ok(option)
     }
 

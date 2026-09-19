@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Position` moved from `model` to `pricing::payoff`, beside the `Profit` trait
   they implement. No signature or numerical result changed; the only new
   public path is `optionstratlib::model::payoff`.
+- **`FindOptimalSide` is owned by the market layer** (#501, multi-crate
+  roadmap M1-04). The strike-selection enum moved from `strategies::utils` to
+  `chains::utils` and is re-exported from `chains`; `strategies::utils::FindOptimalSide`,
+  `strategies::FindOptimalSide` and the prelude path are re-exports of the
+  same type, so no import changes. `chains` no longer imports anything from
+  `strategies`: `OptionData::get_option_for_iv` writes the implied volatility
+  field directly instead of going through the strategy `BasicAble` setter.
 
 ## [0.21.3] - 2026-09-19
 
