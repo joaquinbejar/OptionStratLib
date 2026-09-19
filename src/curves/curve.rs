@@ -14,11 +14,11 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
-use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sub, d_sum_iter};
+use crate::model::decimal::{d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter};
 use crate::utils::Len;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -1548,7 +1548,8 @@ impl MetricsExtractor for Curve {
         // Standard Deviation
         let variance = variance_of(&y_values, mean, "Curve::compute_basic_metrics::variance")
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
-        let std_dev = variance.sqrt().unwrap_or(Decimal::ZERO);
+        let std_dev =
+            d_sqrt(variance, "Curve::compute_basic_metrics::std_dev").unwrap_or(Decimal::ZERO);
 
         Ok(BasicMetrics {
             mean,
@@ -1586,7 +1587,8 @@ impl MetricsExtractor for Curve {
         // Compute variance
         let variance = variance_of(&y_values, mean, "Curve::compute_shape_metrics::variance")
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
-        let std_dev = variance.sqrt().unwrap_or(Decimal::ONE);
+        let std_dev =
+            d_sqrt(variance, "Curve::compute_shape_metrics::std_dev").unwrap_or(Decimal::ONE);
         if std_dev.is_zero() || std_dev < dec!(1e-9) {
             return Err(MetricsError::ShapeError(format!(
                 "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the curve is degenerate"
@@ -1800,9 +1802,7 @@ impl MetricsExtractor for Curve {
             squared_deviations = d_add(squared_deviations, squared, op)
                 .map_err(|e| MetricsError::RiskError(e.to_string()))?;
         }
-        let sqrt_n = Decimal::from(y_values.len())
-            .sqrt()
-            .unwrap_or(Decimal::ZERO);
+        let sqrt_n = d_sqrt(Decimal::from(y_values.len()), op).unwrap_or(Decimal::ZERO);
         // `d_div` rejects the zero denominator, which the emptiness guard
         // above already rules out.
         let volatility = d_div(squared_deviations, sqrt_n, op)

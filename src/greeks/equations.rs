@@ -6,6 +6,7 @@
 use crate::constants::{TRADING_DAYS, ZERO};
 use crate::error::greeks::{CalculationErrorKind, GreeksError};
 use crate::greeks::utils::{big_n, d1, n};
+use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType};
 use crate::{Options, Side};
@@ -568,9 +569,9 @@ impl BlackScholesKernels {
             option.dividend_yield.to_dec(),
             "greeks::kernels::carry_rate",
         )?;
-        // `Positive::sqrt` panics on overflow; the checked counterpart
-        // surfaces it as a `PositiveError` instead.
-        let sqrt_t = t.checked_sqrt()?;
+        // `p_sqrt` is the total square root (#588); it surfaces a failure
+        // as a `PositiveError` instead of aborting.
+        let sqrt_t = p_sqrt(&t, "greeks::equations::new")?;
         let d1 = d1(
             option.underlying_price,
             option.strike_price,

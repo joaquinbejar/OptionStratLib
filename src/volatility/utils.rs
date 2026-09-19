@@ -12,7 +12,7 @@
 use crate::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use crate::error::{SimulationError, VolatilityError};
 use crate::model::decimal::{
-    d_add, d_div, d_mul, d_sub, d_sum, decimal_normal_sample, finite_decimal,
+    d_add, d_div, d_mul, d_sqrt, d_sub, d_sum, decimal_normal_sample, finite_decimal, p_sqrt,
 };
 use crate::model::utils::sub_floor_zero;
 use crate::utils::time::TimeFrame;
@@ -21,7 +21,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rand::random;
 use rayon::prelude::*;
-use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
+use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
 
 #[cfg(test)]
@@ -83,11 +83,11 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
         "volatility::constant::variance",
     )?;
 
-    let std_dev = variance
-        .sqrt()
-        .ok_or_else(|| VolatilityError::NumericalFailure {
+    let std_dev = d_sqrt(variance, "volatility::constant::std_dev").map_err(|_| {
+        VolatilityError::NumericalFailure {
             reason: "constant_volatility: sqrt(variance) failed (overflow)".to_string(),
-        })?;
+        }
+    })?;
     Ok(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO))
 }
 
@@ -166,11 +166,11 @@ pub fn ewma_volatility(
         *first_return,
         "volatility::ewma::initial_variance",
     )?;
-    let initial_std_dev = variance
-        .sqrt()
-        .ok_or_else(|| VolatilityError::NumericalFailure {
+    let initial_std_dev = d_sqrt(variance, "volatility::ewma::initial_std_dev").map_err(|_| {
+        VolatilityError::NumericalFailure {
             reason: "ewma_volatility: sqrt(initial variance) failed (overflow)".to_string(),
-        })?;
+        }
+    })?;
     let mut volatilities = vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
 
     for &return_value in &returns[1..] {
@@ -183,11 +183,11 @@ pub fn ewma_volatility(
         let return_sq = d_mul(return_value, return_value, "volatility::ewma::return_sq")?;
         let innovation = d_mul(innovation_weight, return_sq, "volatility::ewma::innovation")?;
         variance = d_add(persistent, innovation, "volatility::ewma::variance")?;
-        let std_dev = variance
-            .sqrt()
-            .ok_or_else(|| VolatilityError::NumericalFailure {
+        let std_dev = d_sqrt(variance, "volatility::ewma::std_dev").map_err(|_| {
+            VolatilityError::NumericalFailure {
                 reason: "ewma_volatility: sqrt(variance) failed (overflow)".to_string(),
-            })?;
+            }
+        })?;
         volatilities.push(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO));
     }
 
@@ -365,7 +365,7 @@ pub fn calculate_iv(
 /// - Returns [`VolatilityError::NumericalFailure`] when `returns` is
 ///   empty: the recursion has no seed variance to start from.
 /// - Returns [`VolatilityError::PositiveError`] if a running
-///   `checked_sqrt` ever rejects its operand. A variance is
+///   square root (`p_sqrt`) ever rejects its operand. A variance is
 ///   non-negative by construction here, so this arm is a guard
 ///   rather than a reachable outcome.
 pub fn garch_volatility(
@@ -400,7 +400,7 @@ pub fn garch_volatility(
         "volatility::garch::initial_variance",
     )?;
     let mut variance = to_positive_variance(seed, "initial_variance")?;
-    let mut volatilities = vec![variance.checked_sqrt()?];
+    let mut volatilities = vec![p_sqrt(&variance, "volatility::utils::garch_volatility")?];
     for &return_value in returns.iter().skip(1) {
         // GARCH(1, 1) variance recursion:
         // v' = ω + α · r² + β · v_prev.
@@ -410,7 +410,7 @@ pub fn garch_volatility(
         let persistent = d_add(omega, alpha_r2, "volatility::garch::omega_plus_alpha")?;
         let next_variance = d_add(persistent, beta_v, "volatility::garch::variance")?;
         variance = to_positive_variance(next_variance, "variance")?;
-        volatilities.push(variance.checked_sqrt()?);
+        volatilities.push(p_sqrt(&variance, "volatility::utils::garch_volatility")?);
     }
     Ok(volatilities)
 }
@@ -458,10 +458,12 @@ pub fn simulate_heston_volatility(
 ) -> Result<Vec<Positive>, VolatilityError> {
     let mut v = v0.max(Decimal::ZERO);
     let mut v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
-    let mut volatilities = vec![v_pos.checked_sqrt()?];
-    let dt_sqrt_f64 = dt
-        .sqrt()
-        .ok_or_else(|| VolatilityError::NumericalFailure {
+    let mut volatilities = vec![p_sqrt(
+        &v_pos,
+        "volatility::utils::simulate_heston_volatility",
+    )?];
+    let dt_sqrt_f64 = d_sqrt(dt, "volatility::heston::sqrt_dt")
+        .map_err(|_| VolatilityError::NumericalFailure {
             reason: "simulate_heston_volatility: sqrt(dt) failed (overflow)".to_string(),
         })?
         .to_f64()
@@ -472,7 +474,7 @@ pub fn simulate_heston_volatility(
         let dw_f64 = random::<f64>() * dt_sqrt_f64;
         let dw = finite_decimal(dw_f64)
             .ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw_f64))?;
-        let sqrt_v = v_pos.checked_sqrt()?.to_dec();
+        let sqrt_v = p_sqrt(&v_pos, "volatility::utils::simulate_heston_volatility")?.to_dec();
         // Euler step of dv = κ(θ − v)dt + ξ√v dW, every factor checked:
         // the raw operator form aborted with `Multiplication overflowed`
         // on an extreme `dt` or an extreme initial variance.
@@ -494,7 +496,10 @@ pub fn simulate_heston_volatility(
         )?;
         v = v.max(Decimal::ZERO); // Ensure variance doesn't become negative
         v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
-        volatilities.push(v_pos.checked_sqrt()?);
+        volatilities.push(p_sqrt(
+            &v_pos,
+            "volatility::utils::simulate_heston_volatility",
+        )?);
     }
     Ok(volatilities)
 }
@@ -582,7 +587,10 @@ pub fn annualized_volatility(
     volatility: Positive,
     timeframe: TimeFrame,
 ) -> Result<Positive, VolatilityError> {
-    let scale_factor = timeframe.periods_per_year().checked_sqrt()?;
+    let scale_factor = p_sqrt(
+        &timeframe.periods_per_year(),
+        "volatility::utils::annualized_volatility",
+    )?;
     Ok(volatility.checked_mul(&scale_factor)?)
 }
 
@@ -641,7 +649,7 @@ pub fn de_annualized_volatility(
             ),
         });
     }
-    let scale_factor = periods.checked_sqrt()?;
+    let scale_factor = p_sqrt(&periods, "volatility::utils::de_annualized_volatility")?;
     // Explicit rounding rather than the dependency's default, matching the
     // strategy `d_div` applies crate-wide, so a de-annualised volatility
     // rounds the same way whichever path computes it.
@@ -715,10 +723,11 @@ pub fn adjust_volatility(
     // representable. Rooting first keeps both operands far from the scale
     // limit. The division that follows chooses `MidpointNearestEven`, the
     // strategy `d_div` applies to every `Decimal` division in the crate.
-    let scale_factor = from_periods.checked_sqrt()?.checked_div_with_strategy(
-        &to_periods.checked_sqrt()?,
-        RoundingStrategy::MidpointNearestEven,
-    )?;
+    let scale_factor = p_sqrt(&from_periods, "volatility::utils::adjust_volatility")?
+        .checked_div_with_strategy(
+            &p_sqrt(&to_periods, "volatility::utils::adjust_volatility")?,
+            RoundingStrategy::MidpointNearestEven,
+        )?;
 
     Ok(volatility.checked_mul(&scale_factor)?)
 }
@@ -856,7 +865,7 @@ pub fn generate_ou_process(
     dt: Positive,
     steps: usize,
 ) -> Result<Vec<Positive>, SimulationError> {
-    let sqrt_dt = dt.checked_sqrt()?;
+    let sqrt_dt = p_sqrt(&dt, "volatility::utils::generate_ou_process")?;
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
     result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
@@ -1038,6 +1047,7 @@ mod tests_historical_volatility {
 mod tests_ewma_volatility {
     use super::*;
     use positive::assert_pos_relative_eq;
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     #[test]

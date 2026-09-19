@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
 use num_traits::{FromPrimitive, ToPrimitive};
+use positive::{Positive, PositiveError};
 use rand::distr::Distribution;
 use rand_distr::StandardNormal;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
@@ -552,19 +553,96 @@ pub(crate) fn d_powd(
         .ok_or_else(|| DecimalError::overflow(op, base, exponent))
 }
 
+/// Upper bound on the Newton steps of [`d_sqrt`]; the upstream iteration
+/// converges in a few dozen steps for every representable input and only
+/// exceeds this bound when it oscillates between two adjacent values.
+const SQRT_MAX_ITERATIONS: u32 = 1000;
+
 /// Checked square root.
 ///
-/// Crate-private helper wrapping [`MathematicalOps::sqrt`], which returns
-/// `None` for negative inputs rather than panicking, so this only has to
-/// give the failure a typed shape.
+/// Crate-private replacement for [`MathematicalOps::sqrt`]. The upstream
+/// implementation (`rust_decimal` 1.43, `maths.rs`) runs the same Newton
+/// iteration but aborts the process with `geo mean circuit breaker` when the
+/// iteration oscillates between two values that differ in the 28th decimal
+/// instead of converging, which happens for inputs a few units above a
+/// perfect square such as `4.0000000000000000000000000003` (#588). This
+/// version keeps the upstream initial guess and update step, so every input
+/// on which upstream converges yields the bit-identical result, and resolves
+/// the period-2 oscillation the moment it appears by returning the candidate
+/// whose square is closest to `x` (a bounded iteration count is the backstop
+/// for any other non-convergence).
 ///
 /// # Errors
 ///
-/// Returns [`DecimalError::ArithmeticError`] when `x` is negative.
-#[inline]
+/// Returns [`DecimalError::ArithmeticError`] when `x` is negative or when an
+/// intermediate quotient or sum leaves the representable `Decimal` range.
 pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
-    x.sqrt()
-        .ok_or_else(|| DecimalError::arithmetic_error(op, "square root of a negative value"))
+    if x.is_sign_negative() {
+        return Err(DecimalError::arithmetic_error(
+            op,
+            "square root of a negative value",
+        ));
+    }
+    if x.is_zero() {
+        return Ok(Decimal::ZERO);
+    }
+    let overflow = || DecimalError::arithmetic_error(op, "square root iteration overflowed");
+    // Same seed as upstream: half the input, or the input itself when the
+    // half is not representable.
+    let mut result = x.checked_div(Decimal::TWO).ok_or_else(overflow)?;
+    if result.is_zero() {
+        result = x;
+    }
+    let mut last = result.checked_add(Decimal::ONE).ok_or_else(overflow)?;
+    let mut before_last = last;
+    let mut iterations = 0u32;
+    // Squared distance from `x`; a candidate whose square is not
+    // representable is treated as infinitely far so the other one wins.
+    let error_of = |candidate: Decimal| -> Decimal {
+        candidate
+            .checked_mul(candidate)
+            .and_then(|square| square.checked_sub(x))
+            .map(|d| d.abs())
+            .unwrap_or(Decimal::MAX)
+    };
+    while last != result {
+        iterations += 1;
+        // A period-2 cycle (`result` back to the value two steps ago) is how
+        // the upstream iteration fails to converge; resolve it as soon as it
+        // appears. The iteration bound is the backstop for anything else.
+        if result == before_last || iterations > SQRT_MAX_ITERATIONS {
+            return if error_of(last) <= error_of(result) {
+                Ok(last)
+            } else {
+                Ok(result)
+            };
+        }
+        before_last = last;
+        last = result;
+        let quotient = x.checked_div(result).ok_or_else(overflow)?;
+        result = result
+            .checked_add(quotient)
+            .ok_or_else(overflow)?
+            .checked_div(Decimal::TWO)
+            .ok_or_else(overflow)?;
+    }
+    Ok(result)
+}
+
+/// Checked square root of a [`Positive`], routed through [`d_sqrt`] so that
+/// no production path reaches the panicking upstream `sqrt` that
+/// `Positive::checked_sqrt` still wraps (#588).
+///
+/// # Errors
+///
+/// Returns [`PositiveError::ArithmeticError`] when the iteration overflows
+/// or the root cannot be represented as a `Positive`; the error type matches
+/// `Positive::checked_sqrt` so call sites keep their conversions.
+#[inline]
+pub(crate) fn p_sqrt(x: &Positive, op: &'static str) -> Result<Positive, PositiveError> {
+    let root =
+        d_sqrt(x.to_dec(), op).map_err(|e| PositiveError::arithmetic_error(op, &e.to_string()))?;
+    Positive::new_decimal(root)
 }
 
 /// Converts a Decimal value to f64 without error checking.
@@ -712,6 +790,124 @@ pub mod tests {
         let result = decimal_to_f64(decimal);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0.0);
+    }
+
+    /// Reproducer from #588: upstream `Decimal::sqrt` aborts with
+    /// `geo mean circuit breaker` on this input because the Newton
+    /// iteration oscillates at the 28th decimal instead of converging.
+    #[test]
+    fn test_d_sqrt_resolves_upstream_circuit_breaker() {
+        let x = dec!(4.0000000000000000000000000003);
+        let root = d_sqrt(x, "test").unwrap();
+        let residual = (root * root - x).abs();
+        assert!(
+            residual <= dec!(0.0000000000000000000000000001),
+            "sqrt({x}) = {root}, residual {residual}"
+        );
+    }
+
+    /// Every input on which upstream converges must yield the bit-identical
+    /// result: same seed, same update step.
+    #[test]
+    fn test_d_sqrt_matches_upstream_on_converging_inputs() {
+        let inputs = [
+            Decimal::ZERO,
+            Decimal::ONE,
+            Decimal::TWO,
+            dec!(4),
+            dec!(0.25),
+            dec!(0.0000000000000000000000000001),
+            dec!(123456.789),
+            Decimal::MAX,
+        ];
+        for x in inputs {
+            let expected = x.sqrt().unwrap_or_default();
+            assert_eq!(d_sqrt(x, "test").unwrap(), expected, "sqrt({x})");
+        }
+    }
+
+    /// The bit-identical claim, checked byte for byte on a seeded sweep:
+    /// random mantissa/scale pairs plus squares of short roots nudged by a
+    /// few units in the 28th decimal (the region where upstream can
+    /// oscillate). Inputs on which upstream itself aborts are skipped
+    /// through `catch_unwind`; a converging upstream result must be
+    /// reproduced exactly, `serialize()` bytes included, so a scale
+    /// difference cannot hide behind numerical equality.
+    #[test]
+    fn test_d_sqrt_matches_upstream_on_a_seeded_sweep() {
+        use rand::{RngExt, SeedableRng};
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0x5eed_5eed_0588);
+        let mut inputs: Vec<Decimal> = Vec::with_capacity(6_000);
+        for _ in 0..4_000 {
+            let mantissa: i64 = rng.random_range(0..=i64::MAX);
+            let scale: u32 = rng.random_range(0..=28);
+            inputs.push(Decimal::new(mantissa, scale));
+        }
+        let ulp = dec!(0.0000000000000000000000000001);
+        for root in [1u32, 2, 3, 7, 12, 100, 1_000, 65_536] {
+            let square = Decimal::from(root) * Decimal::from(root);
+            for units in -6i32..=6 {
+                let nudge = ulp * Decimal::from(units);
+                if let Some(x) = square.checked_add(nudge) {
+                    inputs.push(x);
+                }
+            }
+        }
+        let mut compared = 0usize;
+        let mut skipped = 0usize;
+        for x in inputs {
+            let upstream = std::panic::catch_unwind(|| x.sqrt());
+            match upstream {
+                Ok(Some(expected)) => {
+                    let actual = d_sqrt(x, "sweep").unwrap();
+                    assert_eq!(
+                        actual.serialize(),
+                        expected.serialize(),
+                        "sqrt({x}): upstream {expected}, d_sqrt {actual}"
+                    );
+                    compared += 1;
+                }
+                Ok(None) => unreachable!("non-negative inputs only"),
+                Err(_) => {
+                    // Upstream aborted: the whole point of d_sqrt.
+                    assert!(d_sqrt(x, "sweep").is_ok(), "d_sqrt({x}) must be total");
+                    skipped += 1;
+                }
+            }
+        }
+        assert!(compared > 4_000, "compared {compared}, skipped {skipped}");
+    }
+
+    /// The reproducer resolves at the third iteration, not at the bound:
+    /// a period-2 cycle is detected as soon as it appears.
+    #[test]
+    fn test_d_sqrt_resolves_the_cycle_immediately() {
+        let x = dec!(4.0000000000000000000000000003);
+        let started = std::time::Instant::now();
+        for _ in 0..1_000 {
+            let _ = d_sqrt(x, "cycle").unwrap();
+        }
+        // A thousand calls that each ran to the 1000-iteration backstop
+        // would take on the order of a tenth of a second; immediate cycle
+        // detection keeps them in the microsecond range.
+        assert!(
+            started.elapsed() < std::time::Duration::from_millis(50),
+            "cycle detection is not immediate: {:?}",
+            started.elapsed()
+        );
+    }
+
+    #[test]
+    fn test_d_sqrt_rejects_negative_input() {
+        assert!(d_sqrt(dec!(-1), "test").is_err());
+        assert!(d_sqrt(dec!(-0.0000000000000000000000000001), "test").is_err());
+    }
+
+    #[test]
+    fn test_p_sqrt_matches_d_sqrt() {
+        let x = Positive::new_decimal(dec!(4.0000000000000000000000000003)).unwrap();
+        let expected = d_sqrt(x.to_dec(), "test").unwrap();
+        assert_eq!(p_sqrt(&x, "test").unwrap().to_dec(), expected);
     }
 }
 

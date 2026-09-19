@@ -24,10 +24,11 @@ use crate::metrics::{
     TimeDecayCurve, TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve,
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
+use crate::model::decimal::d_sqrt;
 use crate::model::{ExpirationDate, OptionStyle, Options, Side};
 use crate::surfaces::{Point3D, Surface};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
@@ -260,7 +261,11 @@ impl ImpliedVolatilitySurface for OptionChain {
             for days in &days_to_expiry {
                 // Scale IV using square root of time rule
                 // This projects the current IV to different time horizons
-                let time_factor = (days.to_dec() / dec!(365.0)).sqrt().unwrap_or(Decimal::ONE);
+                let time_factor = d_sqrt(
+                    days.to_dec() / dec!(365.0),
+                    "metrics::chain::iv_time_factor",
+                )
+                .unwrap_or(Decimal::ONE);
                 let adjusted_iv = opt.implied_volatility.to_dec() * time_factor;
 
                 points.insert(Point3D::new(
@@ -706,7 +711,11 @@ impl SmileDynamicsSurface for OptionChain {
 
             for days in &days_to_expiry {
                 // Smile dynamics: skew steepens for shorter expirations
-                let time_factor = (days.to_dec() / dec!(30.0)).sqrt().unwrap_or(Decimal::ONE);
+                let time_factor = d_sqrt(
+                    days.to_dec() / dec!(30.0),
+                    "metrics::chain::skew_time_factor",
+                )
+                .unwrap_or(Decimal::ONE);
                 let adjusted_skew = if time_factor > Decimal::ZERO {
                     skew / time_factor
                 } else {
@@ -825,7 +834,11 @@ impl VolumeProfileSurface for OptionChain {
                     // Volume typically increases closer to expiration
                     // Using a simple model: volume scales inversely with sqrt(time)
                     let time_factor = if day.to_dec() > Decimal::ZERO {
-                        (dec!(30.0) / day.to_dec()).sqrt().unwrap_or(Decimal::ONE)
+                        d_sqrt(
+                            dec!(30.0) / day.to_dec(),
+                            "metrics::chain::volume_time_factor",
+                        )
+                        .unwrap_or(Decimal::ONE)
                     } else {
                         Decimal::ONE
                     };

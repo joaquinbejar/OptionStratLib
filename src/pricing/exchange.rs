@@ -29,7 +29,6 @@ use crate::greeks::big_n;
 use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::{OptionType, Side};
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 
 /// Prices an Exchange option using Margrabe's formula.
@@ -150,9 +149,8 @@ fn margrabe_formula(
         "pricing::exchange::sigma_sq",
     )?;
 
-    let sigma = sigma_sq
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute combined volatility"))?;
+    let sigma = d_sqrt(sigma_sq, "pricing::exchange::sigma")
+        .map_err(|_| PricingError::other("Failed to compute combined volatility"))?;
 
     let s1_pv = d_mul(
         s1,

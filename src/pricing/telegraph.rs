@@ -86,7 +86,7 @@ use crate::Options;
 use crate::error::PricingError;
 use crate::error::decimal::DecimalError;
 use crate::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_powd, d_sub, d_sum_iter, finite_decimal,
+    d_add, d_div, d_exp, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
 };
 use crate::prelude::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -434,9 +434,8 @@ pub fn telegraph(
         "pricing::telegraph::drift",
     )?;
     let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
-    let sqrt_dt = dt
-        .sqrt()
-        .ok_or_else(|| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
+    let sqrt_dt = d_sqrt(dt, "pricing::telegraph::sqrt_dt")
+        .map_err(|_| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
     let sqrt_dt_f64 = sqrt_dt.to_f64().ok_or_else(|| {
         PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
     })?;

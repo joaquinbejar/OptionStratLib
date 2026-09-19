@@ -25,7 +25,6 @@ use crate::greeks::big_n;
 use crate::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 
 /// Prices a Spread option using Kirk's approximation or Margrabe's formula.
@@ -196,9 +195,8 @@ fn kirk_approximation(
         "pricing::spread::kirk::sigma_sq",
     )?;
 
-    let sigma = sigma_sq
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute adjusted volatility"))?;
+    let sigma = d_sqrt(sigma_sq, "pricing::spread::kirk::sigma")
+        .map_err(|_| PricingError::other("Failed to compute adjusted volatility"))?;
 
     let sqrt_t = d_sqrt(t, "pricing::spread::kirk::sqrt_t")?;
     let denominator = d_mul(sigma, sqrt_t, "pricing::spread::kirk::denominator")?;
@@ -356,9 +354,8 @@ fn margrabe_formula(
         "pricing::spread::margrabe::sigma_sq",
     )?;
 
-    let sigma = sigma_sq
-        .sqrt()
-        .ok_or_else(|| PricingError::other("Failed to compute combined volatility"))?;
+    let sigma = d_sqrt(sigma_sq, "pricing::spread::margrabe::sigma")
+        .map_err(|_| PricingError::other("Failed to compute combined volatility"))?;
 
     let sqrt_t = d_sqrt(t, "pricing::spread::margrabe::sqrt_t")?;
     let denominator = d_mul(sigma, sqrt_t, "pricing::spread::margrabe::denominator")?;
@@ -454,6 +451,7 @@ mod tests {
     use crate::ExpirationDate;
     use crate::model::option::ExoticParams;
     use positive::{Positive, pos_or_panic};
+    use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
 
     fn create_spread_option(strike: Positive, option_style: OptionStyle) -> Options {

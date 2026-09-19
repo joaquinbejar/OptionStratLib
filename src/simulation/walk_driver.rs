@@ -15,13 +15,14 @@
 //! closure that builds its `Y` value from the new price.
 
 use crate::error::{ChainError, SimulationError};
+use crate::model::decimal::d_sqrt;
 use crate::simulation::steps::{Step, Xstep, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
 use crate::utils::others::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use positive::Positive;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::fmt::Display;
 use tracing::debug;
@@ -168,7 +169,8 @@ pub fn expanding_window_vols(
             .checked_div(denom)
             .ok_or_else(|| overflow("variance"))?
             .max(Decimal::ZERO);
-        let std_dev = variance.sqrt().ok_or_else(|| overflow("volatility sqrt"))?;
+        let std_dev = d_sqrt(variance, "simulation::walk_driver::volatility_sqrt")
+            .map_err(|_| overflow("volatility sqrt"))?;
         let std_dev = Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO);
         let annualized = adjust_volatility(std_dev, timeframe, TimeFrame::Year)?;
         raw.push(Some(annualized));
