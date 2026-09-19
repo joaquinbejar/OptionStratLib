@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 8/1/25
 ******************************************************************************/
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `OperationErrorKind`.
+
 use thiserror::Error;
 
 /// Represents the types of errors that can occur during operations related to trading strategies or other processes.

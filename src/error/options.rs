@@ -58,8 +58,10 @@
 //!     Ok(price)
 //! }
 //! ```
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `OptionsError`; the `Greeks(GreeksError)` variant is a pricing reference removed in the batch behind the 0.22.0 bump.
 
-use crate::error::{DecimalError, GreeksError, PricingError};
+use crate::error::{DecimalError, GreeksError};
 use expiration_date::error::ExpirationDateError;
 use thiserror::Error;
 
@@ -395,16 +397,6 @@ impl OptionsError {
     }
 }
 
-impl From<PricingError> for OptionsError {
-    #[inline]
-    fn from(value: PricingError) -> Self {
-        Self::PricingError {
-            method: "unknown".to_string(),
-            reason: value.to_string(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -546,6 +538,7 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
+    use crate::error::PricingError;
 
     #[test]
     fn test_error_chaining_via_display() {

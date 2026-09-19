@@ -68,9 +68,10 @@
 //!
 //! A type alias `ProbabilityResult<T>` is provided for convenience when working
 //! with Results that may contain probability errors.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `ProbabilityError` and its kind enums.
 
-use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind};
-use crate::error::{GreeksError, OperationErrorKind, StrategyError};
+use crate::error::{GreeksError, OperationErrorKind};
 use thiserror::Error;
 
 /// Represents all possible errors that can occur during probability analysis calculations
@@ -406,62 +407,6 @@ impl From<crate::error::DecimalError> for ProbabilityError {
 /// Convenient type alias for Results with ProbabilityError
 pub type ProbabilityResult<T> = Result<T, ProbabilityError>;
 
-impl From<StrategyError> for ProbabilityError {
-    fn from(error: StrategyError) -> Self {
-        let reason = |r: String| {
-            ProbabilityError::CalculationError(
-                ProbabilityCalculationErrorKind::ExpectedValueError { reason: r },
-            )
-        };
-        match error {
-            StrategyError::ProfitLossError(kind) => match kind {
-                ProfitLossErrorKind::MaxProfitError { reason: r }
-                | ProfitLossErrorKind::MaxLossError { reason: r }
-                | ProfitLossErrorKind::ProfitRangeError { reason: r } => reason(r),
-            },
-            StrategyError::PriceError(kind) => match kind {
-                crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice { reason: r }
-                | crate::error::strategies::PriceErrorKind::InvalidPriceRange {
-                    start: _,
-                    end: _,
-                    reason: r,
-                } => reason(r),
-            },
-            StrategyError::BreakEvenError(kind) => match kind {
-                BreakEvenErrorKind::CalculationError { reason: r } => reason(r),
-                BreakEvenErrorKind::NoBreakEvenPoints => {
-                    reason("No break-even points found".to_string())
-                }
-            },
-            StrategyError::OperationError(kind) => match kind {
-                OperationErrorKind::NotSupported {
-                    operation,
-                    reason: strategy_type,
-                } => reason(format!(
-                    "Operation '{operation}' not supported for strategy '{strategy_type}'"
-                )),
-                OperationErrorKind::InvalidParameters {
-                    operation,
-                    reason: r,
-                } => reason(format!(
-                    "Invalid parameters for operation '{operation}': {r}"
-                )),
-            },
-            StrategyError::NotImplemented => reason("Strategy not implemented".to_string()),
-            StrategyError::GreeksError(err) => reason(err.to_string()),
-            StrategyError::PositiveError(err) => reason(err.to_string()),
-            StrategyError::Simulation(err) => reason(err.to_string()),
-            StrategyError::NumericConversion { value } => reason(format!(
-                "numeric conversion failed: {value} is not a finite Decimal"
-            )),
-            StrategyError::MissingGreek { name } => reason(format!("missing greek `{name}`")),
-            StrategyError::EmptyCollection { context } => {
-                reason(format!("empty collection: {context}"))
-            }
-        }
-    }
-}
-
 impl From<expiration_date::error::ExpirationDateError> for ProbabilityError {
     #[inline]
     fn from(err: expiration_date::error::ExpirationDateError) -> Self {
@@ -584,7 +529,9 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
+    use crate::error::StrategyError;
     use crate::error::strategies;
+    use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind};
 
     #[test]
     fn test_invalid_probability_error() {

@@ -3,6 +3,8 @@
    Email: jb@taunais.com
    Date: 22/1/25
 ******************************************************************************/
+//! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `MetricsError`.
+
 use crate::error::{CurveError, SurfaceError};
 use thiserror::Error;
 
@@ -65,4 +67,16 @@ pub enum MetricsError {
     /// such as volatility surfaces or correlation matrices.
     #[error(transparent)]
     Surface(#[from] SurfaceError),
+}
+
+// Conversions whose SOURCE error is owned by this layer and whose target
+// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
+// lower layer's error file never names a higher one.
+
+/// Wraps a metrics failure as `CurveError::MetricsError` carrying its
+/// `Display` text, so curve builders that call analytics can use `?`.
+impl From<MetricsError> for CurveError {
+    fn from(err: MetricsError) -> Self {
+        CurveError::MetricsError(err.to_string())
+    }
 }

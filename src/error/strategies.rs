@@ -67,7 +67,12 @@
 //! ## Type Alias
 //!
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **strategies**. Owns `StrategyError`, `BreakEvenErrorKind`, `ProfitLossErrorKind`.
 use crate::error::common::OperationErrorKind;
+use crate::error::position::StrategyErrorKind;
+use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
+use crate::error::simulation::SimulationError;
 use crate::error::{GreeksError, OptionsError, PositionError, TradeError};
 use thiserror::Error;
 
@@ -473,6 +478,82 @@ impl From<TradeError> for StrategyError {
             operation: "Trade".to_string(),
             reason: value.to_string(),
         })
+    }
+}
+
+// Conversions whose SOURCE error is owned by this layer and whose target
+// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
+// lower layer's error file never names a higher one.
+
+impl From<StrategyError> for PositionError {
+    fn from(error: StrategyError) -> Self {
+        PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation {
+            operation: "".to_string(),
+            strategy_type: error.to_string(),
+        })
+    }
+}
+
+impl From<StrategyError> for ProbabilityError {
+    fn from(error: StrategyError) -> Self {
+        let reason = |r: String| {
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { reason: r },
+            )
+        };
+        match error {
+            StrategyError::ProfitLossError(kind) => match kind {
+                ProfitLossErrorKind::MaxProfitError { reason: r }
+                | ProfitLossErrorKind::MaxLossError { reason: r }
+                | ProfitLossErrorKind::ProfitRangeError { reason: r } => reason(r),
+            },
+            StrategyError::PriceError(kind) => match kind {
+                crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice { reason: r }
+                | crate::error::strategies::PriceErrorKind::InvalidPriceRange {
+                    start: _,
+                    end: _,
+                    reason: r,
+                } => reason(r),
+            },
+            StrategyError::BreakEvenError(kind) => match kind {
+                BreakEvenErrorKind::CalculationError { reason: r } => reason(r),
+                BreakEvenErrorKind::NoBreakEvenPoints => {
+                    reason("No break-even points found".to_string())
+                }
+            },
+            StrategyError::OperationError(kind) => match kind {
+                OperationErrorKind::NotSupported {
+                    operation,
+                    reason: strategy_type,
+                } => reason(format!(
+                    "Operation '{operation}' not supported for strategy '{strategy_type}'"
+                )),
+                OperationErrorKind::InvalidParameters {
+                    operation,
+                    reason: r,
+                } => reason(format!(
+                    "Invalid parameters for operation '{operation}': {r}"
+                )),
+            },
+            StrategyError::NotImplemented => reason("Strategy not implemented".to_string()),
+            StrategyError::GreeksError(err) => reason(err.to_string()),
+            StrategyError::PositiveError(err) => reason(err.to_string()),
+            StrategyError::Simulation(err) => reason(err.to_string()),
+            StrategyError::NumericConversion { value } => reason(format!(
+                "numeric conversion failed: {value} is not a finite Decimal"
+            )),
+            StrategyError::MissingGreek { name } => reason(format!("missing greek `{name}`")),
+            StrategyError::EmptyCollection { context } => {
+                reason(format!("empty collection: {context}"))
+            }
+        }
+    }
+}
+
+impl From<StrategyError> for SimulationError {
+    #[inline]
+    fn from(err: StrategyError) -> Self {
+        SimulationError::Strategy(Box::new(err))
     }
 }
 

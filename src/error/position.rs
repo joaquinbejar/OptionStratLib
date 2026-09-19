@@ -68,8 +68,9 @@
 //!
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper
 //! error handling and formatting capabilities.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `PositionError`, `StrategyErrorKind` (a kind enum, no strategy type inside).
 
-use crate::error::StrategyError;
 use crate::model::types::{OptionStyle, Side};
 use thiserror::Error;
 
@@ -509,16 +510,6 @@ impl PositionError {
         PositionError::UpdateError(PositionUpdateErrorKind::PositionFieldUpdateFailure {
             field,
             reason,
-        })
-    }
-}
-
-// Implement conversion from StrategyError to PositionError
-impl From<StrategyError> for PositionError {
-    fn from(error: StrategyError) -> Self {
-        PositionError::StrategyError(StrategyErrorKind::UnsupportedOperation {
-            operation: "".to_string(),
-            strategy_type: error.to_string(),
         })
     }
 }

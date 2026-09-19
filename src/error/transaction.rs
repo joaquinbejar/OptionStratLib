@@ -1,3 +1,5 @@
+//! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `TransactionError`.
+
 use crate::OptionType;
 use thiserror::Error;
 

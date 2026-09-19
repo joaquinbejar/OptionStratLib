@@ -1,3 +1,5 @@
+//! Target crate (ADR-0001 D6, roadmap M1-14): **visualization**. Owns `GraphError`.
+
 use crate::error::{CurveError, SurfaceError};
 use thiserror::Error;
 
@@ -36,5 +38,21 @@ impl From<CurveError> for GraphError {
 impl From<SurfaceError> for GraphError {
     fn from(err: SurfaceError) -> Self {
         GraphError::Surface(err)
+    }
+}
+
+// Conversions whose SOURCE error is owned by this layer and whose target
+// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
+// lower layer's error file never names a higher one.
+
+impl From<GraphError> for CurveError {
+    fn from(err: GraphError) -> Self {
+        CurveError::Graph(Box::new(err))
+    }
+}
+
+impl From<GraphError> for SurfaceError {
+    fn from(err: GraphError) -> Self {
+        SurfaceError::Graph(Box::new(err))
     }
 }

@@ -8,6 +8,8 @@
 //!
 //! This module provides error types for handling failures in OHLCV (Open, High, Low, Close, Volume)
 //! data operations, including CSV parsing, ZIP file handling, and data validation.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **market (behind `io`)**. Owns `OhlcvError`.
 
 use thiserror::Error;
 

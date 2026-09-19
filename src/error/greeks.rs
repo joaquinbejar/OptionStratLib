@@ -32,6 +32,8 @@
 //! * Invalid time values
 //! * Invalid price values
 //! * Invalid rate values
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **pricing**. Owns `GreeksError`.
 
 use crate::error::VolatilityError;
 use crate::error::decimal;

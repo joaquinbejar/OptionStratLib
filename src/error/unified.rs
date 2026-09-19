@@ -9,6 +9,8 @@
 //! This module provides a top-level `Error` enum that encapsulates all specific
 //! error types from different modules, enabling unified error handling across
 //! the library.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **facade**. Owns `Error`, the aggregate over every component error.
 
 use thiserror::Error;
 
