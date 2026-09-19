@@ -7,70 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Every error file names its target crate and wraps only lower layers**
-  (#511, multi-crate roadmap M1-14). The `From` conversions whose source
-  error belongs to a higher layer moved next to that source
-  (`From<StrategyError> for PositionError/ProbabilityError/SimulationError`,
-  `From<PricingError> for OptionsError`, `From<MetricsError>` and
-  `From<GraphError> for CurveError`, `From<GraphError> for SurfaceError`,
-  `From<ChainError> for SimulationError/VolatilityError`); no conversion was
-  removed or changed. `error::simulation` imports `GraphError` from its
-  owning file instead of through the prelude. The ownership table is in the
-  `error` module docs; the variants that still reference a higher layer are
-  listed there and are removed after the 0.22.0 version bump.
-
-### Changed
-
-- **Payoff contracts are owned by the core model** (#500, multi-crate
-  roadmap M1-03). `Payoff`, `PayoffInfo`, the implementation for every
-  `OptionType` variant and the exotic payoff helpers now live in
-  `optionstratlib::model::payoff`; `optionstratlib::pricing::payoff` and the
-  prelude re-export them, so `use optionstratlib::pricing::{Payoff,
-  PayoffInfo}` keeps compiling. `impl Profit for Options` and `impl Profit for
-  Position` moved from `model` to `pricing::payoff`, beside the `Profit` trait
-  they implement. No signature or numerical result changed; the only new
-  public path is `optionstratlib::model::payoff`.
-- **`FindOptimalSide` is owned by the market layer** (#501, multi-crate
-  roadmap M1-04). The strike-selection enum moved from `strategies::utils` to
-  `chains::utils` and is re-exported from `chains`; `strategies::utils::FindOptimalSide`,
-  `strategies::FindOptimalSide` and the prelude path are re-exports of the
-  same type, so no import changes. `chains` no longer imports anything from
-  `strategies`: `OptionData::get_option_for_iv` writes the implied volatility
-  field directly instead of going through the strategy `BasicAble` setter.
-- **`DeltaAdjustment` is owned by the analytics layer** (#503, multi-crate
-  roadmap M1-06). The adjustment enum and `DeltaAdjustmentSameSize` moved
-  from `strategies::delta_neutral::model` to the new `pnl::adjustment`
-  module and are re-exported from `pnl`; the `strategies::delta_neutral::DeltaAdjustment`
-  and `strategies::DeltaAdjustment` paths are re-exports of the same type.
-  `pnl` no longer imports anything from `strategies`.
-- **The `OptionChain` ATM-IV adapter lives with the chain** (#510,
-  multi-crate roadmap M1-13). `impl AtmIvProvider for OptionChain` moved from
-  `volatility::traits` to `chains::chain`; the `AtmIvProvider` and
-  `VolatilitySmile` traits stay generic in `volatility`, which no longer
-  imports option chains. Behaviour and error mapping are unchanged.
-### Deprecated
-
-- **`utils::logger::setup_logger` and `setup_logger_with_level`** (#506,
-  multi-crate roadmap M1-09). A library must not install a global `tracing`
-  subscriber; install one from your binary with
-  `tracing_subscriber::fmt().with_max_level(..).init()`. The functions are
-  deprecated on `main` after 0.21.3 and removed in 0.22.0 (M6-04, in the batch
-  that follows the version bump), so no 0.22 release ships them; the
-  deprecation is the signal for anyone building from `main` in between. The
-  example binaries now take their logger from the non-published
-  `osl-example-support` package under `examples/support`.
-
-### Changed
-
-- **`DELTA_THRESHOLD` is owned by the Greeks layer** (#506). The constant
-  moved from `strategies::delta_neutral` to `greeks`, where
-  `calculate_delta_neutral_sizes` uses it; `strategies::delta_neutral::DELTA_THRESHOLD`
-  and `strategies::DELTA_THRESHOLD` are re-exports of the same constant.
-  `greeks` no longer imports anything from `strategies`.
 ### Added
 
+- **`make check-graph` enforces the module boundaries** (#507, multi-crate
+  roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
+  for `crate::<module>` references (including multi-line `use crate::{...}`
+  groups, qualified groups such as `use crate::error::{graph::GraphError}`
+  and `crate::error::<file>` paths), maps every module and every
+  error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
+  against the approved graph. `pub use` lines marked `// facade-compat:
+  <layer>` (the compatibility re-exports that become facade code at
+  extraction) are exempt, and only those: a marked plain import is scanned
+  like any other; the eleven known reverse edges whose removal is a breaking change
+  are listed in the script per file with the issue that removes them (the
+  same module pair in any other file fails) and the run prints how many
+  marked lines each layer carries; a self-test proves the scanner catches what it
+  must. The `lint` workflow runs it on every push. The last two imports
+  through `crate::prelude` inside the library (`pricing::telegraph`,
+  `strategies::delta_neutral`) now use canonical paths.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.
   `VolatilityAdjustment`, `PriceTrend`, `calculate_single_point_probability`
@@ -79,8 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them, so no import changes. `ProbabilityAnalysis` and
   `StrategyProbabilityAnalysis` stay strategy-owned and consume the kernels
   downward. No formula or tolerance changed.
-### Added
-
 - **`synthetic` feature, on by default** (#512, multi-crate roadmap M1-15).
   It gates the simulation-backed generators `chains::generator_optionchain`
   and `series::generator_optionseries` (and the deprecated
@@ -212,8 +164,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `model` signatures) are `error/` ownership and belong to M1-14 (#511);
   `ProfitLossRange::new` returning `ProbabilityError` is the deferred
   breaking item ADR-0001 D6 assigns to the 0.22.0 batch.
-### Added
-
 - **Generic simulation contracts** (#504, multi-crate roadmap M1-07).
   `simulation::PathEvaluator` (one method, `evaluate_path`, with an
   associated `Outcome`), `simulation::PathOutcome` (per-path P&L, holding
@@ -252,6 +202,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Every error file names its target crate and wraps only lower layers**
+  (#511, multi-crate roadmap M1-14). The `From` conversions whose source
+  error belongs to a higher layer moved next to that source
+  (`From<StrategyError> for PositionError/ProbabilityError/SimulationError`,
+  `From<PricingError> for OptionsError`, `From<MetricsError>` and
+  `From<GraphError> for CurveError`, `From<GraphError> for SurfaceError`,
+  `From<ChainError> for SimulationError/VolatilityError`); no conversion was
+  removed or changed. `error::simulation` imports `GraphError` from its
+  owning file instead of through the prelude. The ownership table is in the
+  `error` module docs; the variants that still reference a higher layer are
+  listed there and are removed after the 0.22.0 version bump.
+- **Payoff contracts are owned by the core model** (#500, multi-crate
+  roadmap M1-03). `Payoff`, `PayoffInfo`, the implementation for every
+  `OptionType` variant and the exotic payoff helpers now live in
+  `optionstratlib::model::payoff`; `optionstratlib::pricing::payoff` and the
+  prelude re-export them, so `use optionstratlib::pricing::{Payoff,
+  PayoffInfo}` keeps compiling. `impl Profit for Options` and `impl Profit for
+  Position` moved from `model` to `pricing::payoff`, beside the `Profit` trait
+  they implement. No signature or numerical result changed; the only new
+  public path is `optionstratlib::model::payoff`.
+- **`FindOptimalSide` is owned by the market layer** (#501, multi-crate
+  roadmap M1-04). The strike-selection enum moved from `strategies::utils` to
+  `chains::utils` and is re-exported from `chains`; `strategies::utils::FindOptimalSide`,
+  `strategies::FindOptimalSide` and the prelude path are re-exports of the
+  same type, so no import changes. `chains` no longer imports anything from
+  `strategies`: `OptionData::get_option_for_iv` writes the implied volatility
+  field directly instead of going through the strategy `BasicAble` setter.
+- **`DeltaAdjustment` is owned by the analytics layer** (#503, multi-crate
+  roadmap M1-06). The adjustment enum and `DeltaAdjustmentSameSize` moved
+  from `strategies::delta_neutral::model` to the new `pnl::adjustment`
+  module and are re-exported from `pnl`; the `strategies::delta_neutral::DeltaAdjustment`
+  and `strategies::DeltaAdjustment` paths are re-exports of the same type.
+  `pnl` no longer imports anything from `strategies`.
+- **The `OptionChain` ATM-IV adapter lives with the chain** (#510,
+  multi-crate roadmap M1-13). `impl AtmIvProvider for OptionChain` moved from
+  `volatility::traits` to `chains::chain`; the `AtmIvProvider` and
+  `VolatilitySmile` traits stay generic in `volatility`, which no longer
+  imports option chains. Behaviour and error mapping are unchanged.
+- **`DELTA_THRESHOLD` is owned by the Greeks layer** (#506). The constant
+  moved from `strategies::delta_neutral` to `greeks`, where
+  `calculate_delta_neutral_sizes` uses it; `strategies::delta_neutral::DELTA_THRESHOLD`
+  and `strategies::DELTA_THRESHOLD` are re-exports of the same constant.
+  `greeks` no longer imports anything from `strategies`.
 - **Single-leg strategy simulation lives in `backtesting`** (#505). The
   `Simulate` implementations for `LongCall`, `LongPut`, `ShortCall` and
   `ShortPut` moved from the strategy files to
@@ -296,6 +289,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SimulationStatsResult` and `SimulationStats` storing `SimulationResult`,
   are annotated `// deferred edge`, listed by the boundary checker (#507)
   and move with the batch.
+
+### Deprecated
+
+- **`utils::logger::setup_logger` and `setup_logger_with_level`** (#506,
+  multi-crate roadmap M1-09). A library must not install a global `tracing`
+  subscriber; install one from your binary with
+  `tracing_subscriber::fmt().with_max_level(..).init()`. The functions are
+  deprecated on `main` after 0.21.3 and removed in 0.22.0 (M6-04, in the batch
+  that follows the version bump), so no 0.22 release ships them; the
+  deprecation is the signal for anyone building from `main` in between. The
+  example binaries now take their logger from the non-published
+  `osl-example-support` package under `examples/support`.
 
 ### Fixed
 

@@ -12,6 +12,7 @@
 use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
 use super::optimizer::AdjustmentOptimizer;
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
+use crate::error::OperationErrorKind;
 use crate::error::greeks::DeltaNeutralityErrorKind;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::{GreeksError, PositionError, StrategyError};
@@ -55,7 +56,6 @@ use crate::greeks::calculate_delta_neutral_sizes;
 use crate::model::decimal::{d_div, d_sub};
 use crate::model::types::{Action, OptionStyle};
 use crate::model::{Trade, TradeStatusAble};
-use crate::prelude::OperationErrorKind;
 use crate::strategies::Strategies;
 use crate::strategies::base::Positionable;
 use crate::{Options, Side};

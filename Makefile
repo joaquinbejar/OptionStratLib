@@ -60,7 +60,17 @@ clean:
 
 # Pre-push checks
 .PHONY: check
-check: test fmt-check lint scan-banned
+check: test fmt-check lint scan-banned check-graph
+
+# Fails on any production `crate::<module>` reference that crosses a
+# forbidden layer boundary of the multi-crate target graph (ADR-0001 D9,
+# doc/DEPENDENCY-MATRIX.md). Known reverse edges whose removal is a breaking
+# change wait in the script's DEFERRED list with the issue that removes
+# them; the self-test proves the scanner catches what it must.
+.PHONY: check-graph
+check-graph:
+	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
+	@python3 scripts/check_module_boundaries.py
 
 # Fails when a panicking construct reappears in production code.
 #
