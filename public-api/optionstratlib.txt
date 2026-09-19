@@ -138,6 +138,7 @@ pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core
 pub fn optionstratlib::analytics::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub fn optionstratlib::analytics::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
 pub mod optionstratlib::backtesting
+pub mod optionstratlib::backtesting::adapters
 pub mod optionstratlib::backtesting::metrics
 pub struct optionstratlib::backtesting::metrics::AdvancedRiskMetrics
 pub optionstratlib::backtesting::metrics::AdvancedRiskMetrics::expected_shortfall: core::option::Option<rust_decimal::decimal::Decimal>
@@ -235,6 +236,10 @@ pub optionstratlib::backtesting::results::SimulationResult::min_premium: rust_de
 pub optionstratlib::backtesting::results::SimulationResult::pnl: optionstratlib::pnl::utils::PnL
 pub optionstratlib::backtesting::results::SimulationResult::risk_metrics: core::option::Option<optionstratlib::risk::RiskMetricsSimulation>
 pub optionstratlib::backtesting::results::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib::backtesting::SimulationResult> for optionstratlib::simulation::PathOutcome
+pub fn optionstratlib::simulation::PathOutcome::from(&optionstratlib::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib::simulation::PathOutcome> for optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::SimulationResult::from(optionstratlib::simulation::PathOutcome) -> Self
 impl core::fmt::Debug for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationResult
@@ -256,6 +261,9 @@ pub optionstratlib::backtesting::results::SimulationStatsResult::std_dev_pnl: ru
 pub optionstratlib::backtesting::results::SimulationStatsResult::total_simulations: usize
 pub optionstratlib::backtesting::results::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
 pub optionstratlib::backtesting::results::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib::backtesting::SimulationStatsResult
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib::simulation::PathOutcome>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_individual_results(&self)
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_summary(&self)
@@ -488,6 +496,10 @@ pub optionstratlib::backtesting::SimulationResult::min_premium: rust_decimal::de
 pub optionstratlib::backtesting::SimulationResult::pnl: optionstratlib::pnl::utils::PnL
 pub optionstratlib::backtesting::SimulationResult::risk_metrics: core::option::Option<optionstratlib::risk::RiskMetricsSimulation>
 pub optionstratlib::backtesting::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib::backtesting::SimulationResult> for optionstratlib::simulation::PathOutcome
+pub fn optionstratlib::simulation::PathOutcome::from(&optionstratlib::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib::simulation::PathOutcome> for optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::SimulationResult::from(optionstratlib::simulation::PathOutcome) -> Self
 impl core::fmt::Debug for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationResult
@@ -509,6 +521,9 @@ pub optionstratlib::backtesting::SimulationStatsResult::std_dev_pnl: rust_decima
 pub optionstratlib::backtesting::SimulationStatsResult::total_simulations: usize
 pub optionstratlib::backtesting::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
 pub optionstratlib::backtesting::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib::backtesting::SimulationStatsResult
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib::simulation::PathOutcome>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_individual_results(&self)
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_summary(&self)
@@ -5325,6 +5340,7 @@ pub use optionstratlib::prelude::pos_or_panic
 pub use optionstratlib::prelude::spos
 pub use optionstratlib::prelude::trace
 pub use optionstratlib::prelude::warn
+pub mod optionstratlib::prelude::adapters
 pub mod optionstratlib::prelude::american
 pub fn optionstratlib::prelude::american::barone_adesi_whaley(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, &financial_types::OptionStyle) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub mod optionstratlib::prelude::asian
@@ -5609,6 +5625,10 @@ pub optionstratlib::prelude::results::SimulationResult::min_premium: rust_decima
 pub optionstratlib::prelude::results::SimulationResult::pnl: optionstratlib::pnl::utils::PnL
 pub optionstratlib::prelude::results::SimulationResult::risk_metrics: core::option::Option<optionstratlib::risk::RiskMetricsSimulation>
 pub optionstratlib::prelude::results::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib::backtesting::SimulationResult> for optionstratlib::simulation::PathOutcome
+pub fn optionstratlib::simulation::PathOutcome::from(&optionstratlib::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib::simulation::PathOutcome> for optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::SimulationResult::from(optionstratlib::simulation::PathOutcome) -> Self
 impl core::fmt::Debug for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationResult
@@ -5630,6 +5650,9 @@ pub optionstratlib::prelude::results::SimulationStatsResult::std_dev_pnl: rust_d
 pub optionstratlib::prelude::results::SimulationStatsResult::total_simulations: usize
 pub optionstratlib::prelude::results::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
 pub optionstratlib::prelude::results::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib::backtesting::SimulationStatsResult
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib::simulation::PathOutcome>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_individual_results(&self)
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_summary(&self)
@@ -11114,6 +11137,10 @@ pub optionstratlib::prelude::SimulationResult::min_premium: rust_decimal::decima
 pub optionstratlib::prelude::SimulationResult::pnl: optionstratlib::pnl::utils::PnL
 pub optionstratlib::prelude::SimulationResult::risk_metrics: core::option::Option<optionstratlib::risk::RiskMetricsSimulation>
 pub optionstratlib::prelude::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib::backtesting::SimulationResult> for optionstratlib::simulation::PathOutcome
+pub fn optionstratlib::simulation::PathOutcome::from(&optionstratlib::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib::simulation::PathOutcome> for optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::SimulationResult::from(optionstratlib::simulation::PathOutcome) -> Self
 impl core::fmt::Debug for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationResult
@@ -11129,6 +11156,7 @@ pub fn optionstratlib::simulation::SimulationStats::new() -> Self
 pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
 pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::simulation::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
 impl core::default::Default for optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::default() -> Self
 pub struct optionstratlib::prelude::SimulationStatsResult
@@ -11143,6 +11171,9 @@ pub optionstratlib::prelude::SimulationStatsResult::std_dev_pnl: rust_decimal::d
 pub optionstratlib::prelude::SimulationStatsResult::total_simulations: usize
 pub optionstratlib::prelude::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
 pub optionstratlib::prelude::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib::backtesting::SimulationStatsResult
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib::simulation::PathOutcome>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
 impl optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_individual_results(&self)
 pub fn optionstratlib::backtesting::SimulationStatsResult::print_summary(&self)
@@ -15600,12 +15631,41 @@ pub fn optionstratlib::simulation::WalkType::name() -> alloc::borrow::Cow<'stati
 pub fn optionstratlib::simulation::WalkType::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::simulation::WalkType
 pub fn optionstratlib::simulation::WalkType::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib::simulation::PathOutcome
+pub optionstratlib::simulation::PathOutcome::avg_premium: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathOutcome::exit_reason: optionstratlib::simulation::exit::ExitPolicy
+pub optionstratlib::simulation::PathOutcome::expiration_premium: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib::simulation::PathOutcome::expired: bool
+pub optionstratlib::simulation::PathOutcome::hit_stop_loss: bool
+pub optionstratlib::simulation::PathOutcome::hit_take_profit: bool
+pub optionstratlib::simulation::PathOutcome::holding_period: usize
+pub optionstratlib::simulation::PathOutcome::max_premium: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathOutcome::min_premium: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathOutcome::pnl: core::option::Option<rust_decimal::decimal::Decimal>
+impl core::convert::From<&optionstratlib::backtesting::SimulationResult> for optionstratlib::simulation::PathOutcome
+pub fn optionstratlib::simulation::PathOutcome::from(&optionstratlib::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib::simulation::PathOutcome> for optionstratlib::backtesting::SimulationResult
+pub fn optionstratlib::backtesting::SimulationResult::from(optionstratlib::simulation::PathOutcome) -> Self
+pub struct optionstratlib::simulation::PathStatistics
+pub optionstratlib::simulation::PathStatistics::average_holding_period: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::average_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::best_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::loss_count: usize
+pub optionstratlib::simulation::PathStatistics::median_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::profitable_count: usize
+pub optionstratlib::simulation::PathStatistics::std_dev_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::total_paths: usize
+pub optionstratlib::simulation::PathStatistics::win_rate: rust_decimal::decimal::Decimal
+pub optionstratlib::simulation::PathStatistics::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib::simulation::PathStatistics
+pub fn optionstratlib::simulation::PathStatistics::from_outcomes(&[optionstratlib::simulation::PathOutcome]) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::simulation::SimulationStats
 impl optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::new() -> Self
 pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
 pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::simulation::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
 impl core::default::Default for optionstratlib::simulation::SimulationStats
 pub fn optionstratlib::simulation::SimulationStats::default() -> Self
 pub struct optionstratlib::simulation::WalkParams<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display + core::marker::Sized, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::marker::Sized + core::clone::Clone
@@ -15623,6 +15683,9 @@ pub fn optionstratlib::simulation::WalkParams<X, Y>::fmt(&self, &mut core::fmt::
 pub struct optionstratlib::simulation::WalkPath
 pub optionstratlib::simulation::WalkPath::prices: alloc::vec::Vec<positive::positive::Positive>
 pub optionstratlib::simulation::WalkPath::vols: core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
+pub trait optionstratlib::simulation::PathEvaluator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub type optionstratlib::simulation::PathEvaluator::Outcome
+pub fn optionstratlib::simulation::PathEvaluator::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<Self::Outcome, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
@@ -15656,6 +15719,7 @@ impl<T, X, Y> optionstratlib::simulation::WalkTypeAbleClone<X, Y> for T where T:
 pub fn T::clone_box(&self) -> alloc::boxed::Box<dyn optionstratlib::simulation::WalkTypeAble<X, Y>>
 pub fn optionstratlib::simulation::check_exit_policy(&optionstratlib::simulation::exit::ExitPolicy, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize, positive::positive::Positive, positive::positive::Positive, bool) -> core::option::Option<optionstratlib::simulation::exit::ExitPolicy>
 pub fn optionstratlib::simulation::custom_walk<X, Y>(&optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib::simulation::WalkPath, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::simulation::evaluate_paths<X, Y, E>(&E, &optionstratlib::simulation::simulator::Simulator<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<alloc::vec::Vec<<E as optionstratlib::simulation::PathEvaluator>::Outcome>, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone, E: optionstratlib::simulation::PathEvaluator<X, Y>
 pub fn optionstratlib::simulation::expanding_window_vols(&[positive::positive::Positive], optionstratlib::utils::time::TimeFrame) -> core::result::Result<core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::simulation::garch_walk<X, Y>(&optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib::simulation::WalkPath, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::generator_positive(&optionstratlib::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib::error::chains::ChainError>

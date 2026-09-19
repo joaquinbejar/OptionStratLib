@@ -3,10 +3,10 @@
    Email: jb@taunais.com
    Date: 8/11/25
 ******************************************************************************/
-use crate::backtesting::results::SimulationResult;
+use crate::backtesting::results::SimulationResult; // deferred edge: SimulationStats stores the backtest result, 0.22.0 batch (#504)
 use crate::error::SimulationError;
 use crate::model::decimal::d_add;
-use crate::simulation::ExitPolicy;
+use crate::simulation::{ExitPolicy, PathOutcome};
 use prettytable::{Cell, Row, Table, format};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -82,6 +82,11 @@ impl SimulationStats {
 
     /// Updates statistics with results from a single simulation run.
     ///
+    /// The counters are driven by the generic [`PathOutcome`] view of the
+    /// result through [`SimulationStats::update_outcome`]; the result
+    /// itself is then stored for [`SimulationStats::print_individual_results`].
+    /// Only the realized leg of the P&L feeds the totals, as it always has.
+    ///
     /// # Parameters
     ///
     /// * `result` - The simulation result containing all metrics
@@ -101,33 +106,65 @@ impl SimulationStats {
     /// outcome counters and stored result never landed, which would report
     /// every derived ratio against a denominator nobody can see.
     pub fn update(&mut self, result: SimulationResult) -> Result<(), SimulationError> {
+        let outcome = PathOutcome {
+            pnl: result.pnl.realized,
+            holding_period: result.holding_period,
+            exit_reason: result.exit_reason.clone(),
+            hit_take_profit: result.hit_take_profit,
+            hit_stop_loss: result.hit_stop_loss,
+            expired: result.expired,
+            max_premium: result.max_premium,
+            min_premium: result.min_premium,
+            avg_premium: result.avg_premium,
+            expiration_premium: result.expiration_premium,
+        };
+        self.update_outcome(&outcome)?;
+        // The counters have committed; storing the result cannot fail.
+        self.results.push(result);
+        Ok(())
+    }
+
+    /// Folds one generic path outcome into the counters.
+    ///
+    /// This is the strategy-agnostic half of [`SimulationStats::update`]:
+    /// it advances the run count, the outcome counters, the exit-reason
+    /// distribution, the P&L total and extremes, and the average holding
+    /// period. `outcome.pnl` is the figure summed and compared; a `None`
+    /// counts as zero in the total and leaves the extremes untouched.
+    ///
+    /// # Errors
+    ///
+    /// Same contract as [`SimulationStats::update`]: the accumulator is
+    /// left untouched when the P&L total overflows `Decimal` or a counter
+    /// overflows.
+    pub fn update_outcome(&mut self, outcome: &PathOutcome) -> Result<(), SimulationError> {
         let total_simulations = checked_increment(self.total_simulations, "total_simulations")?;
         let total_pnl = d_add(
             self.total_pnl,
-            result.pnl.realized.unwrap_or(dec!(0.0)),
+            outcome.pnl.unwrap_or(dec!(0.0)),
             "simulation::stats::total_pnl",
         )?;
 
         let mut profitable_closes = self.profitable_closes;
         let mut loss_closes = self.loss_closes;
         let mut expired_trades = self.expired_trades;
-        if result.hit_take_profit {
+        if outcome.hit_take_profit {
             profitable_closes = checked_increment(profitable_closes, "profitable_closes")?;
-        } else if result.hit_stop_loss {
+        } else if outcome.hit_stop_loss {
             loss_closes = checked_increment(loss_closes, "loss_closes")?;
-        } else if result.expired {
+        } else if outcome.expired {
             expired_trades = checked_increment(expired_trades, "expired_trades")?;
         }
 
         let exit_reason_count = checked_increment(
             self.exit_reasons
-                .get(&result.exit_reason)
+                .get(&outcome.exit_reason)
                 .copied()
                 .unwrap_or(0),
             "exit_reasons",
         )?;
 
-        let (max_profit, max_loss) = match result.pnl.realized {
+        let (max_profit, max_loss) = match outcome.pnl {
             Some(realized) => (self.max_profit.max(realized), self.max_loss.min(realized)),
             None => (self.max_profit, self.max_loss),
         };
@@ -136,21 +173,20 @@ impl SimulationStats {
         // underflow and the division cannot be by zero.
         let total_holding = self.avg_holding_period * (total_simulations - 1) as f64;
         let avg_holding_period =
-            (total_holding + result.holding_period as f64) / total_simulations as f64;
+            (total_holding + outcome.holding_period as f64) / total_simulations as f64;
 
         // Every fallible step above has succeeded, so the writes below commit
-        // the result as a whole.
+        // the outcome as a whole.
         self.total_simulations = total_simulations;
         self.total_pnl = total_pnl;
         self.profitable_closes = profitable_closes;
         self.loss_closes = loss_closes;
         self.expired_trades = expired_trades;
         self.exit_reasons
-            .insert(result.exit_reason.clone(), exit_reason_count);
+            .insert(outcome.exit_reason.clone(), exit_reason_count);
         self.max_profit = max_profit;
         self.max_loss = max_loss;
         self.avg_holding_period = avg_holding_period;
-        self.results.push(result);
         Ok(())
     }
 
@@ -382,6 +418,38 @@ mod tests {
             holding_period,
             exit_reason,
         }
+    }
+
+    #[test]
+    fn test_update_outcome_drives_counters_without_storing_a_result() {
+        let mut stats = SimulationStats::new();
+        let outcome = PathOutcome {
+            pnl: Some(dec!(40.0)),
+            holding_period: 8,
+            exit_reason: ExitPolicy::ProfitPercent(dec!(0.5)),
+            hit_take_profit: true,
+            ..PathOutcome::default()
+        };
+        stats.update_outcome(&outcome).unwrap();
+        stats
+            .update_outcome(&PathOutcome {
+                pnl: None,
+                holding_period: 2,
+                exit_reason: ExitPolicy::Expiration,
+                expired: true,
+                ..PathOutcome::default()
+            })
+            .unwrap();
+
+        assert_eq!(stats.total_simulations, 2);
+        assert_eq!(stats.profitable_closes, 1);
+        assert_eq!(stats.expired_trades, 1);
+        assert_eq!(stats.total_pnl, dec!(40.0));
+        assert_eq!(stats.max_profit, dec!(40.0));
+        assert_eq!(stats.max_loss, dec!(40.0));
+        assert_eq!(stats.avg_holding_period, 5.0);
+        assert_eq!(stats.exit_reasons.len(), 2);
+        assert!(stats.results.is_empty());
     }
 
     #[test]
