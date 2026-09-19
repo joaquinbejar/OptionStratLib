@@ -266,7 +266,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Monte Carlo arm is the same `get_mc_option_price` call, failures still
   reported as `PricingError::SimulationError`). Numerical Greeks are
   untouched. The `simulation` import in `pricing::unified` is the one
-  remaining reverse edge, marked `// facade-compat: simulation`; per
+  remaining reverse edge, marked `// deferred edge` (listed by the boundary checker); per
   ADR-0001 D3 the 0.22.0 batch makes `GenericPricingEngine` the only engine
   and the facade aliases `PricingEngine` to
   `GenericPricingEngine<Simulator<Positive, Positive>>`.

@@ -3,7 +3,7 @@ use crate::error::{PricingError, PricingResult};
 use crate::pricing::black_76::black_76;
 use crate::pricing::black_scholes_model::black_scholes;
 use crate::pricing::garman_kohlhagen::garman_kohlhagen;
-use crate::simulation::simulator::Simulator; // facade-compat: simulation
+use crate::simulation::simulator::Simulator; // deferred edge: PricingEngine::MonteCarlo field, 0.22.0 batch (#508, ADR-0001 D3)
 use positive::Positive;
 
 /// Contract a Monte Carlo pricer fulfils for the generic dispatcher.
@@ -21,7 +21,9 @@ pub trait MonteCarloPricer: Send + Sync {
     ///
     /// Returns [`PricingError::SimulationError`] when the simulation
     /// cannot price the option (no paths, an invalid payoff, or no
-    /// simulator configured), or any other `PricingError` the payoff
+    /// simulator configured). The shipped implementors (`Simulator` and
+    /// `NoMonteCarlo`) report every failure through that variant; a
+    /// third-party pricer may surface any other `PricingError` its payoff
     /// evaluation raises.
     fn price_monte_carlo(&self, option: &Options) -> PricingResult<Positive>;
 }
