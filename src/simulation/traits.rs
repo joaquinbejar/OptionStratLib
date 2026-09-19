@@ -4,7 +4,7 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::backtesting::results::SimulationStatsResult; // facade-compat: backtest
+use crate::backtesting::results::SimulationStatsResult; // deferred edge: Simulate::simulate return type, 0.22.0 batch (#504)
 use crate::error::SimulationError;
 use crate::model::decimal::{
     d_add, d_div, d_exp, d_mul, d_sub, decimal_normal_sample, finite_decimal,

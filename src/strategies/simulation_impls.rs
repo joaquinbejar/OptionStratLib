@@ -11,8 +11,8 @@
 //! side can host them, and the inherent accessors already cover the only
 //! use they had.
 
-use crate::simulation::randomwalk::RandomWalk; // facade-compat: simulation
-use crate::simulation::simulator::Simulator; // facade-compat: simulation
+use crate::simulation::randomwalk::RandomWalk; // deferred edge: 0.22.0 batch (#505)
+use crate::simulation::simulator::Simulator; // deferred edge: 0.22.0 batch (#505)
 use crate::strategies::base::BasicAble;
 use positive::Positive;
 use std::fmt::Display;

@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 8/11/25
 ******************************************************************************/
-use crate::backtesting::results::SimulationResult; // facade-compat: backtest
+use crate::backtesting::results::SimulationResult; // deferred edge: SimulationStats stores the backtest result, 0.22.0 batch (#504)
 use crate::error::SimulationError;
 use crate::model::decimal::d_add;
 use crate::simulation::{ExitPolicy, PathOutcome};

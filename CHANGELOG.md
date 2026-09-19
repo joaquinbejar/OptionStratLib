@@ -229,7 +229,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `get_title` accessors already cover their only use. The two remaining
   reverse edges, `Simulate::simulate` returning the backtest-owned
   `SimulationStatsResult` and `SimulationStats` storing `SimulationResult`,
-  are marked `// facade-compat: backtest` and move with the batch.
+  are annotated `// deferred edge`, listed by the boundary checker (#507)
+  and move with the batch.
 
 ## [0.21.3] - 2026-09-19
 

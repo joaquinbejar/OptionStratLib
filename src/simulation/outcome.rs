@@ -120,10 +120,12 @@ impl PathStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`SimulationError::Decimal`] when a sum, difference or
-    /// product leaves the representable `Decimal` range, and
-    /// [`SimulationError::InvalidParameters`] when a quotient does or the
-    /// holding-period total overflows `usize`.
+    /// Returns [`SimulationError::Decimal`] when a sum, difference,
+    /// product, or the median and variance quotients (which go through
+    /// `d_div`) leave the representable `Decimal` range, and
+    /// [`SimulationError::InvalidParameters`] when one of the three
+    /// unrounded quotients (mean, win rate, average holding period) does or
+    /// the holding-period total overflows `usize`.
     #[must_use = "the statistics are the only product of this call"]
     pub fn from_outcomes(outcomes: &[PathOutcome]) -> Result<Self, SimulationError> {
         let total_paths = outcomes.len();
