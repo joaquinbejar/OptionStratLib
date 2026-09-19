@@ -1,4 +1,3 @@
-use crate::chains::chain::OptionChain;
 use crate::curves::Curve;
 use crate::error::VolatilityError;
 use positive::Positive;
@@ -108,17 +107,6 @@ pub trait AtmIvProvider {
 impl AtmIvProvider for Positive {
     fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
         Ok(self)
-    }
-}
-
-impl AtmIvProvider for OptionChain {
-    fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
-        match self.get_atm_implied_volatility() {
-            Ok(iv) => Ok(iv),
-            Err(e) => Err(VolatilityError::AtmIvUnavailable {
-                source: Box::new(VolatilityError::from(e)),
-            }),
-        }
     }
 }
 
@@ -297,92 +285,6 @@ mod tests_volatility_traits {
         // As AtmIvProvider
         let iv_result = provider_with_iv.atm_iv();
         assert!(iv_result.is_ok());
-    }
-
-    #[test]
-    fn test_atm_iv_provider_for_option_chain_success() {
-        use crate::chains::chain::OptionChain;
-
-        let mut chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2025-12-31".to_string(),
-            Some(dec!(0.05)),
-            None,
-        );
-
-        // Add options with implied volatility
-        chain.add_option(
-            pos_or_panic!(95.0),
-            Some(pos_or_panic!(6.0)),
-            Some(pos_or_panic!(6.5)),
-            Some(Positive::ONE),
-            Some(pos_or_panic!(1.5)),
-            pos_or_panic!(0.25),
-            Some(dec!(0.7)),
-            Some(dec!(-0.3)),
-            Some(dec!(0.02)),
-            None,
-            None,
-            None,
-        );
-
-        chain.add_option(
-            Positive::HUNDRED,
-            Some(pos_or_panic!(3.0)),
-            Some(pos_or_panic!(3.5)),
-            Some(pos_or_panic!(3.0)),
-            Some(pos_or_panic!(3.5)),
-            pos_or_panic!(0.20),
-            Some(dec!(0.5)),
-            Some(dec!(-0.5)),
-            Some(dec!(0.025)),
-            None,
-            None,
-            None,
-        );
-
-        chain.add_option(
-            pos_or_panic!(105.0),
-            Some(Positive::ONE),
-            Some(pos_or_panic!(1.5)),
-            Some(pos_or_panic!(6.0)),
-            Some(pos_or_panic!(6.5)),
-            pos_or_panic!(0.22),
-            Some(dec!(0.3)),
-            Some(dec!(-0.7)),
-            Some(dec!(0.02)),
-            None,
-            None,
-            None,
-        );
-
-        let result = chain.atm_iv();
-        assert!(result.is_ok());
-        let iv = result.unwrap();
-        assert!(*iv > Positive::ZERO);
-    }
-
-    #[test]
-    fn test_atm_iv_provider_for_option_chain_empty() {
-        use crate::chains::chain::OptionChain;
-
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2025-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.atm_iv();
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        assert!(
-            error
-                .to_string()
-                .contains("ATM implied volatility is not available")
-        );
     }
 
     #[test]
