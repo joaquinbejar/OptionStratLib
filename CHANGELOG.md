@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-09-18
+
 ### Changed
 
 - Dependencies updated to latest stable versions (`rust_decimal` 1.42 -> 1.43;
@@ -1121,7 +1123,9 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.21.2...HEAD
+[0.21.2]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.2
+[0.21.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.1
 [0.21.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.0
 [0.20.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.20.0
 [0.19.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.19.1
