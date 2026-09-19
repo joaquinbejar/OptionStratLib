@@ -22,7 +22,8 @@ Three kinds of lines are exempt from the layer rule:
   that no longer exists is reported so the list can be pruned.
 
 Exit status is 1 on any other cross-layer edge, 0 otherwise. Run
-`make check-graph`.
+`make check-graph`; an optional first argument names the crate root to scan
+(default: the current directory).
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ import re
 import sys
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+SRC = Path(sys.argv[1]) / "src" if len(sys.argv) > 1 else Path.cwd() / "src"
 
 # Module -> target crate layer (ADR-0001 D2). `error` is scanned as a source
 # through its own row and accepted as a target from everywhere until M1-14
