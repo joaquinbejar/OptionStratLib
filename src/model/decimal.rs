@@ -577,6 +577,16 @@ const SQRT_MAX_ITERATIONS: u32 = 1000;
 /// Returns [`DecimalError::ArithmeticError`] when `x` is negative or when an
 /// intermediate quotient or sum leaves the representable `Decimal` range.
 pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    sqrt_with_iterations(x, op).map(|(value, _)| value)
+}
+
+/// The Newton iteration behind [`d_sqrt`], reporting how many steps it took.
+///
+/// The count is what proves the period-2 cycle is resolved as soon as it
+/// appears rather than at the backstop; a test that measured elapsed time
+/// instead failed under coverage instrumentation, which slows every call
+/// (#604).
+fn sqrt_with_iterations(x: Decimal, op: &'static str) -> Result<(Decimal, u32), DecimalError> {
     if x.is_sign_negative() {
         return Err(DecimalError::arithmetic_error(
             op,
@@ -584,7 +594,7 @@ pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErr
         ));
     }
     if x.is_zero() {
-        return Ok(Decimal::ZERO);
+        return Ok((Decimal::ZERO, 0));
     }
     let overflow = || DecimalError::arithmetic_error(op, "square root iteration overflowed");
     // Same seed as upstream: half the input, or the input itself when the
@@ -612,9 +622,9 @@ pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErr
         // appears. The iteration bound is the backstop for anything else.
         if result == before_last || iterations > SQRT_MAX_ITERATIONS {
             return if error_of(last) <= error_of(result) {
-                Ok(last)
+                Ok((last, iterations))
             } else {
-                Ok(result)
+                Ok((result, iterations))
             };
         }
         before_last = last;
@@ -626,7 +636,7 @@ pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErr
             .checked_div(Decimal::TWO)
             .ok_or_else(overflow)?;
     }
-    Ok(result)
+    Ok((result, iterations))
 }
 
 /// Checked square root of a [`Positive`], routed through [`d_sqrt`] so that
@@ -881,20 +891,23 @@ pub mod tests {
     /// The reproducer resolves at the third iteration, not at the bound:
     /// a period-2 cycle is detected as soon as it appears.
     #[test]
-    fn test_d_sqrt_resolves_the_cycle_immediately() {
-        let x = dec!(4.0000000000000000000000000003);
-        let started = std::time::Instant::now();
-        for _ in 0..1_000 {
-            let _ = d_sqrt(x, "cycle").unwrap();
-        }
-        // A thousand calls that each ran to the 1000-iteration backstop
-        // would take on the order of a tenth of a second; immediate cycle
-        // detection keeps them in the microsecond range.
+    fn test_d_sqrt_resolves_the_cycle_in_a_few_iterations() {
+        // The property is a count, not a duration: the period-2 cycle is
+        // resolved as soon as it appears instead of running to the
+        // 1000-iteration backstop. A wall-clock assertion here failed under
+        // coverage instrumentation, which slows every call (#604).
+        let oscillating = dec!(4.0000000000000000000000000003);
+        let (_, iterations) = sqrt_with_iterations(oscillating, "cycle").unwrap();
         assert!(
-            started.elapsed() < std::time::Duration::from_millis(50),
-            "cycle detection is not immediate: {:?}",
-            started.elapsed()
+            iterations < 10,
+            "cycle detection is not immediate: {iterations} iterations"
         );
+        assert!(iterations < SQRT_MAX_ITERATIONS);
+        // Control: an input upstream converges on takes a comparable number
+        // of steps, so the bound above is not vacuous.
+        let (_, converging) =
+            sqrt_with_iterations(dec!(4.0000000000000000000000000004), "control").unwrap();
+        assert!(converging < 60, "control took {converging} iterations");
     }
 
     #[test]
