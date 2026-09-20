@@ -383,6 +383,8 @@ pub mod adapters;
 /// `LongPut`, `ShortCall`, `ShortPut`): the `Simulate` implementations,
 /// the shared per-path evaluator and the `SingleLegSimulation` contract
 /// that captures what differs between the four.
+pub mod stats;
+
 pub mod strategy_simulation;
 
 /// This module defines the structure that aggregates and stores all results produced during a trading backtest simulation.
@@ -418,4 +420,6 @@ pub mod types;
 
 pub use metrics::*;
 pub use results::*;
+pub use stats::SimulationStats;
+pub use strategy_simulation::Simulate;
 pub use types::*;

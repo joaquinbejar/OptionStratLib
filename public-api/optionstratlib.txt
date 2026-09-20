@@ -301,6 +301,16 @@ impl core::fmt::Debug for optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib::backtesting::SimulationStatsResult
 pub fn optionstratlib::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub mod optionstratlib::backtesting::stats
+pub struct optionstratlib::backtesting::stats::SimulationStats
+impl optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::default() -> Self
 pub mod optionstratlib::backtesting::strategy_simulation
 pub struct optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>
 impl<'a, S> optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation
@@ -309,6 +319,16 @@ pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<
 impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
+pub trait optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::backtesting::strategy_simulation::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::backtesting::strategy_simulation::SingleLegSimulation: optionstratlib::pnl::PnLCalculator + optionstratlib::strategies::base::Positionable
 pub const optionstratlib::backtesting::strategy_simulation::SingleLegSimulation::IS_LONG: bool
 pub fn optionstratlib::backtesting::strategy_simulation::SingleLegSimulation::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
@@ -568,6 +588,15 @@ pub fn optionstratlib::backtesting::SimulationResult::name() -> alloc::borrow::C
 pub fn optionstratlib::backtesting::SimulationResult::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib::backtesting::SimulationStats
+impl optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::default() -> Self
 pub struct optionstratlib::backtesting::SimulationStatsResult
 pub optionstratlib::backtesting::SimulationStatsResult::average_holding_period: rust_decimal::decimal::Decimal
 pub optionstratlib::backtesting::SimulationStatsResult::average_pnl: rust_decimal::decimal::Decimal
@@ -645,6 +674,16 @@ pub optionstratlib::backtesting::VolatilityData::avg_iv_traded: core::option::Op
 pub optionstratlib::backtesting::VolatilityData::implied_volatility_used: bool
 pub optionstratlib::backtesting::VolatilityData::iv_percentile_traded: core::option::Option<rust_decimal::decimal::Decimal>
 pub optionstratlib::backtesting::VolatilityData::iv_rank_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub trait optionstratlib::backtesting::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::backtesting::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::chains
 pub mod optionstratlib::chains::chain
 pub struct optionstratlib::chains::chain::OptionChain
@@ -5757,6 +5796,16 @@ impl optionstratlib::metrics::risk::risk_reversal::RiskReversalCurve for options
 pub fn optionstratlib::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub mod optionstratlib::prelude::spread
 pub fn optionstratlib::prelude::spread::spread_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
+pub mod optionstratlib::prelude::stats
+pub struct optionstratlib::prelude::stats::SimulationStats
+impl optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::default() -> Self
 pub mod optionstratlib::prelude::strategy_simulation
 pub struct optionstratlib::prelude::strategy_simulation::SingleLegPathEvaluator<'a, S>
 impl<'a, S> optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation
@@ -5765,6 +5814,16 @@ pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<
 impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
+pub trait optionstratlib::prelude::strategy_simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::prelude::strategy_simulation::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::prelude::strategy_simulation::SingleLegSimulation: optionstratlib::pnl::PnLCalculator + optionstratlib::strategies::base::Positionable
 pub const optionstratlib::prelude::strategy_simulation::SingleLegSimulation::IS_LONG: bool
 pub fn optionstratlib::prelude::strategy_simulation::SingleLegSimulation::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib::error::simulation::SimulationError>
@@ -8917,7 +8976,7 @@ pub fn optionstratlib::strategies::long_call::LongCall::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::long_call::LongCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::prelude::LongPut
 pub optionstratlib::prelude::LongPut::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -9062,7 +9121,7 @@ pub fn optionstratlib::strategies::long_put::LongPut::name() -> alloc::borrow::C
 pub fn optionstratlib::strategies::long_put::LongPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::prelude::LongStraddle
 pub optionstratlib::prelude::LongStraddle::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -10816,7 +10875,7 @@ pub fn optionstratlib::strategies::short_call::ShortCall::name() -> alloc::borro
 pub fn optionstratlib::strategies::short_call::ShortCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::prelude::ShortPut
 pub optionstratlib::prelude::ShortPut::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -10963,7 +11022,7 @@ pub fn optionstratlib::strategies::short_put::ShortPut::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::short_put::ShortPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::prelude::ShortStraddle
 pub optionstratlib::prelude::ShortStraddle::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -11291,14 +11350,23 @@ pub fn optionstratlib::backtesting::SimulationResult::schemas(&mut alloc::vec::V
 impl utoipa::__dev::ComposeSchema for optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::SimulationResult::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib::prelude::SimulationStats
-impl optionstratlib::simulation::SimulationStats
-pub fn optionstratlib::simulation::SimulationStats::new() -> Self
-pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
-pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
-pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
-pub fn optionstratlib::simulation::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
-impl core::default::Default for optionstratlib::simulation::SimulationStats
-pub fn optionstratlib::simulation::SimulationStats::default() -> Self
+pub struct optionstratlib::prelude::SimulationStats
+impl optionstratlib::backtesting::stats::SimulationStats
+impl optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib::backtesting::stats::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+pub fn optionstratlib::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib::backtesting::stats::SimulationStats
+impl core::default::Default for optionstratlib::backtesting::stats::SimulationStats
+pub fn optionstratlib::backtesting::stats::SimulationStats::default() -> Self
+pub fn optionstratlib::backtesting::stats::SimulationStats::default() -> Self
 pub struct optionstratlib::prelude::SimulationStatsResult
 pub optionstratlib::prelude::SimulationStatsResult::average_holding_period: rust_decimal::decimal::Decimal
 pub optionstratlib::prelude::SimulationStatsResult::average_pnl: rust_decimal::decimal::Decimal
@@ -14370,14 +14438,24 @@ pub fn optionstratlib::prelude::RiskReversalCurve::risk_reversal_curve(&self) ->
 impl optionstratlib::metrics::risk::risk_reversal::RiskReversalCurve for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
 pub trait optionstratlib::prelude::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub trait optionstratlib::prelude::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::prelude::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::prelude::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::prelude::SmileDynamicsCurve
 pub fn optionstratlib::prelude::SmileDynamicsCurve::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib::curves::Curve, optionstratlib::error::curves::CurveError>
@@ -15859,15 +15937,6 @@ pub optionstratlib::simulation::PathStatistics::win_rate: rust_decimal::decimal:
 pub optionstratlib::simulation::PathStatistics::worst_pnl: rust_decimal::decimal::Decimal
 impl optionstratlib::simulation::PathStatistics
 pub fn optionstratlib::simulation::PathStatistics::from_outcomes(&[optionstratlib::simulation::PathOutcome]) -> core::result::Result<Self, optionstratlib::error::simulation::SimulationError>
-pub struct optionstratlib::simulation::SimulationStats
-impl optionstratlib::simulation::SimulationStats
-pub fn optionstratlib::simulation::SimulationStats::new() -> Self
-pub fn optionstratlib::simulation::SimulationStats::print_individual_results(&self)
-pub fn optionstratlib::simulation::SimulationStats::print_summary(&self)
-pub fn optionstratlib::simulation::SimulationStats::update(&mut self, optionstratlib::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
-pub fn optionstratlib::simulation::SimulationStats::update_outcome(&mut self, &optionstratlib::simulation::PathOutcome) -> core::result::Result<(), optionstratlib::error::simulation::SimulationError>
-impl core::default::Default for optionstratlib::simulation::SimulationStats
-pub fn optionstratlib::simulation::SimulationStats::default() -> Self
 pub struct optionstratlib::simulation::WalkParams<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display + core::marker::Sized, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::marker::Sized + core::clone::Clone
 pub optionstratlib::simulation::WalkParams::init_step: optionstratlib::prelude::Step<X, Y>
 pub optionstratlib::simulation::WalkParams::size: usize
@@ -15889,16 +15958,6 @@ pub fn optionstratlib::simulation::PathEvaluator::evaluate_path(&self, &optionst
 impl<S, X, Y> optionstratlib::simulation::PathEvaluator<X, Y> for optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub type optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib::backtesting::SimulationResult
 pub fn optionstratlib::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationResult, optionstratlib::error::simulation::SimulationError>
-pub trait optionstratlib::simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib::simulation::Simulate::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub trait optionstratlib::simulation::WalkTypeAble<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone: optionstratlib::simulation::WalkTypeAbleClone<X, Y>
 pub fn optionstratlib::simulation::WalkTypeAble::brownian(&self, &optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::simulation::WalkTypeAble::custom(&self, &optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
@@ -20065,7 +20124,7 @@ pub fn optionstratlib::strategies::long_call::LongCall::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::long_call::LongCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::strategies::long_put
 pub struct optionstratlib::strategies::long_put::LongPut
@@ -20211,7 +20270,7 @@ pub fn optionstratlib::strategies::long_put::LongPut::name() -> alloc::borrow::C
 pub fn optionstratlib::strategies::long_put::LongPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::strategies::long_straddle
 pub struct optionstratlib::strategies::long_straddle::LongStraddle
@@ -21418,7 +21477,7 @@ pub fn optionstratlib::strategies::short_call::ShortCall::name() -> alloc::borro
 pub fn optionstratlib::strategies::short_call::ShortCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::strategies::short_put
 pub struct optionstratlib::strategies::short_put::ShortPut
@@ -21566,7 +21625,7 @@ pub fn optionstratlib::strategies::short_put::ShortPut::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::short_put::ShortPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::strategies::short_straddle
 pub struct optionstratlib::strategies::short_straddle::ShortStraddle
@@ -23694,7 +23753,7 @@ pub fn optionstratlib::strategies::long_call::LongCall::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::long_call::LongCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_call::LongCall
 pub fn optionstratlib::strategies::long_call::LongCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_call::LongCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::strategies::LongPut
 pub optionstratlib::strategies::LongPut::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -23839,7 +23898,7 @@ pub fn optionstratlib::strategies::long_put::LongPut::name() -> alloc::borrow::C
 pub fn optionstratlib::strategies::long_put::LongPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::long_put::LongPut
 pub fn optionstratlib::strategies::long_put::LongPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::long_put::LongPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::strategies::LongStraddle
 pub optionstratlib::strategies::LongStraddle::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -24745,7 +24804,7 @@ pub fn optionstratlib::strategies::short_call::ShortCall::name() -> alloc::borro
 pub fn optionstratlib::strategies::short_call::ShortCall::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_call::ShortCall
 pub fn optionstratlib::strategies::short_call::ShortCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_call::ShortCall::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::strategies::ShortPut
 pub optionstratlib::strategies::ShortPut::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -24892,7 +24951,7 @@ pub fn optionstratlib::strategies::short_put::ShortPut::name() -> alloc::borrow:
 pub fn optionstratlib::strategies::short_put::ShortPut::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::short_put::ShortPut
 pub fn optionstratlib::strategies::short_put::ShortPut::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<X, Y> optionstratlib::simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::simulation::SimulationError>
 pub struct optionstratlib::strategies::ShortStraddle
 pub optionstratlib::strategies::ShortStraddle::break_even_points: alloc::vec::Vec<positive::positive::Positive>

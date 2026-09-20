@@ -149,8 +149,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     # `PricingEngine::MonteCarlo` still stores the concrete `Simulator`.
     ("pricing", "simulation"): (frozenset({"pricing/unified.rs"}), "0.22.0 batch (#508, ADR-0001 D3)"),
     # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`
-    # stores `SimulationResult` (both embed analytics types).
-    ("simulation", "backtesting"): (frozenset({"simulation/stats.rs", "simulation/traits.rs"}), "0.22.0 batch (#504)"),
     # `impl BasicAble for Simulator/RandomWalk` lives in strategies.
     ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
     # `Strategable: ... + Graph` supertrait bound.
