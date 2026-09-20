@@ -1,0 +1,12 @@
+    Building probe v0.1.0 (current)
+       Built [   0.517s] (current)
+     Parsing probe v0.1.0 (current)
+      Parsed [   0.002s] (current)
+    Building probe v0.1.0 (baseline)
+       Built [   0.176s] (baseline)
+     Parsing probe v0.1.0 (baseline)
+      Parsed [   0.001s] (baseline)
+    Checking probe v0.1.0 -> v0.1.0 (no change; assume minor)
+     Checked [   0.009s] 196 checks: 196 pass, 58 skip
+     Summary no semver update required
+    Finished [   0.859s] probe
