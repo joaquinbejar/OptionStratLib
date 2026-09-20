@@ -14,41 +14,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   read as a reference to the facade-level `error` module, so a lower layer
   naming a higher layer's error type in a signature was never reported.
   `scripts/check_module_boundaries.py` now maps every public type defined
-  under `src/error/` to its file, resolves names through each file's `use`
-  bindings (bare, grouped, nested, `as` aliases, file-qualified paths,
-  `super::`/`self::` paths, globs and paths in expression position) and
-  through the crate's `pub use` re-export graph, and ignores names bound from
-  outside the crate (`use std::io::Error`). Twenty further reverse edges
-  become visible, none of them new: the `PricingError`/`GreeksError` channels
-  of `LegAble`, `ChainError` in `model::utils` and `geometrics`,
-  `MetricsError` in curves, surfaces and geometrics, `SimulationError` in
+  under `src/error/` to its file and resolves names through each file's `use`
+  bindings and the crate's re-export graph: bare, grouped, nested, `as`
+  aliases, file-qualified paths, `self::`/`super::` paths (including a
+  binding that is private in the parent module), the uniform bare-relative
+  form used by the crate's `mod.rs` files, module aliases
+  (`use crate::error as err`), `pub type` aliases over an error type (the
+  edge reaches every consumer of the alias, not only its definition), globs,
+  and paths in expression position. Names bound from outside the crate
+  (`use std::io::Error`) raise no edge, a glob name shadowed by a local
+  definition or another import is ignored, and a type defined by two error
+  files is ambiguous, so every candidate is taken rather than the first one
+  silently. A `// facade-compat` `pub use` still raises no edge itself, but
+  the type it re-exports is resolved for every consumer of that path, so the
+  marker cannot launder a higher layer's type into a lower one. Twenty
+  further reverse edges become visible, none of them new: the
+  `PricingError`/`GreeksError` channels of `LegAble` and `Position`,
+  `ChainError` in `model::utils` and the `ResultPoint` alias, `MetricsError`
+  in curves, surfaces and geometrics, `SimulationError` in
   `volatility::utils`, `OhlcvError` in `utils::csv`, the unified `Error` in
   `utils::others`, and the enum variants inside `src/error/` that hold a
-  higher layer's error. All are recorded in the script's `DEFERRED` table,
-  file by file, with the issue that owns each resolution (31 deferred edges
-  in total), so `make check-graph` still passes while the debt is printed on
-  every run. New `--inventory` mode prints the deferred edges and the
-  `facade-compat` lines as tables. The self-test grows to 28 cases covering
-  every resolution shape, including a foreign `Error` that must not create an
-  edge and a re-export of a re-export. The script's docstring states what the
-  resolver does not see (names reached through a type alias defined in
-  another file, macro-generated code).
-- **`make check-graph` enforces the module boundaries** (#507, multi-crate
-  roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
-  for `crate::<module>` references (including multi-line `use crate::{...}`
-  groups, qualified groups such as `use crate::error::{graph::GraphError}`
-  and `crate::error::<file>` paths), maps every module and every
-  error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
-  against the approved graph. `pub use` lines marked `// facade-compat:
-  <layer>` (the compatibility re-exports that become facade code at
-  extraction) are exempt, and only those: a marked plain import is scanned
-  like any other; the eleven known reverse edges whose removal is a breaking change
-  are listed in the script per file with the issue that removes them (the
-  same module pair in any other file fails) and the run prints how many
-  marked lines each layer carries; a self-test proves the scanner catches what it
-  must. The `lint` workflow runs it on every push. The last two imports
-  through `crate::prelude` inside the library (`pricing::telegraph`,
-  `strategies::delta_neutral`) now use canonical paths.
+  higher layer's error. All are recorded in `DEFERRED`, file by file, with
+  the issue that owns each resolution (31 entries), so `make check-graph`
+  still passes while the debt is printed on every run. New `--inventory`
+  mode prints the deferred edges, the `facade-compat` lines (with source
+  layer and compat target) and the ambiguous error names as tables. The
+  self-test grows to 37 cases, several of which assert which file carries
+  the edge, and the module docstring states what the resolver does not see.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.
   `VolatilityAdjustment`, `PriceTrend`, `calculate_single_point_probability`

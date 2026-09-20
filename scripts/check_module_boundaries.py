@@ -174,7 +174,7 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
             "model/leg/traits.rs", "model/leg/leg_enum.rs", "model/leg/spot.rs",
             "model/leg/future.rs", "model/leg/perpetual.rs", "model/position.rs",
         }),
-        "M1 exit proposal row 5 (#498)",
+        "retype to a core error (M1 exit proposal D3 row 5, #507)",
     ),
     # The Greek methods of `LegAble` report `GreeksError`; they move to the
     # pricing-owned extension trait with the methods themselves.
@@ -188,21 +188,29 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     # `Options::calculate_implied_volatility` wrapper signature.
     ("model", "error/volatility"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499)"),
     # `calculate_optimal_price_range` is a chain helper living in core.
-    ("model", "error/chains"): (frozenset({"model/utils.rs"}), "re-home to chains::utils (#498)"),
+    ("model", "error/chains"): (frozenset({"model/utils.rs"}), "re-home to chains::utils (M1 exit proposal D2, #507)"),
     # `utils::csv` is market-owned (ADR-0001 D2), behind the I/O feature.
-    ("utils", "error/csv"): (frozenset({"utils/csv.rs"}), "re-home to market (ADR-0001 D2, M3-05 #525)"),
+    ("utils", "error/csv"): (frozenset({"utils/csv.rs"}), "re-home to market (ADR-0001 D2, #525)"),
     # `process_n_times_iter` returns the facade-level unified `Error`.
     ("utils", "error/unified"): (frozenset({"utils/others.rs"}), "facade-owned or retyped (ADR-0001 D2, #506)"),
     # `MetricsError` is defined under analytics today but depends only on
     # `CurveError`/`SurfaceError`; re-homing it to math dissolves these three.
-    ("curves", "error/metrics"): (frozenset({"curves/curve.rs"}), "re-home MetricsError to math (#511)"),
-    ("surfaces", "error/metrics"): (frozenset({"surfaces/surface.rs"}), "re-home MetricsError to math (#511)"),
-    ("geometrics", "error/metrics"): (frozenset({"geometrics/analysis/traits.rs"}), "re-home MetricsError to math (#511)"),
+    ("curves", "error/metrics"): (frozenset({"curves/curve.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
+    ("surfaces", "error/metrics"): (frozenset({"surfaces/surface.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
+    ("geometrics", "error/metrics"): (frozenset({"geometrics/analysis/traits.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
     # `pub type ResultPoint<P> = Result<P, ChainError>` used by the curve and
-    # surface constructors.
-    ("geometrics", "error/chains"): (frozenset({"geometrics/construction/types.rs"}), "retype ResultPoint (#511)"),
+    # surface constructors; the alias carries the edge to everyone who
+    # re-exports or names it (the `surfaces` uses are `#[cfg(test)]`).
+    ("geometrics", "error/chains"): (
+        frozenset({
+            "geometrics/construction/types.rs",
+            "geometrics/construction/mod.rs",
+            "geometrics/mod.rs",
+        }),
+        "retype ResultPoint (M1 exit proposal D3 row 6, #507)",
+    ),
     # `generate_ou_process` is a simulation kernel living in volatility.
-    ("volatility", "error/simulation"): (frozenset({"volatility/utils.rs"}), "re-home to simulation (#502)"),
+    ("volatility", "error/simulation"): (frozenset({"volatility/utils.rs"}), "re-home to simulation (M1 exit proposal D2, #507)"),
     # The `synthetic` chain walk driver belongs with the market generators.
     ("simulation", "error/chains"): (frozenset({"simulation/walk_driver.rs"}), "re-home to market synthetic (#512)"),
     # Variant payloads that hold a higher layer's error (ADR-0001 D6, #511):
@@ -272,6 +280,16 @@ def production_lines(text: str) -> list[str]:
     return out
 
 
+def module_paths(src: Path) -> set[tuple[str, ...]]:
+    """Every module path in the tree, ancestors included (`error` as well as `error::chains`)."""
+    modules: set[tuple[str, ...]] = set()
+    for path in src.rglob("*.rs"):
+        parts = module_path_of(path.relative_to(src).as_posix())
+        for i in range(len(parts) + 1):
+            modules.add(parts[:i])
+    return modules
+
+
 def module_path_of(rel: str) -> tuple[str, ...]:
     """`model/leg/foo.rs` -> (model, leg, foo); `model/mod.rs` -> (model,); `lib.rs` -> ()."""
     parts = rel.removesuffix(".rs").split("/")
@@ -283,6 +301,8 @@ def module_path_of(rel: str) -> tuple[str, ...]:
 
 
 TYPE_DEF_RE = re.compile(r"^\s*pub(?:\([^)]*\))?\s+(?:enum|struct|type)\s+([A-Z][A-Za-z0-9_]*)", re.M)
+LOCAL_DEF_RE = re.compile(r"\b(?:enum|struct|type|trait|union)\s+([A-Z][A-Za-z0-9_]*)")
+ALIAS_DEF_RE = re.compile(r"^\s*pub(?:\([^)]*\))?\s+type\s+([A-Z][A-Za-z0-9_]*)[^=;]*=\s*([^;]+);", re.M)
 USE_RE = re.compile(r"\buse\s+([^;]+);", re.S)
 IDENT_RE = re.compile(r"\b([A-Z][A-Za-z0-9_]*)\b")
 # `crate::error::Name`, `crate::error::<file>::Name`, or `crate::<mods>::Name`
@@ -290,25 +310,37 @@ IDENT_RE = re.compile(r"\b([A-Z][A-Za-z0-9_]*)\b")
 QUALIFIED_RE = re.compile(r"\bcrate::((?:[a-z_][a-z0-9_]*::)+)([A-Z][A-Za-z0-9_]*)\b")
 
 
-def error_types(src: Path = SRC) -> dict[str, str]:
-    """Every public type defined under `src/error/` -> the file stem that owns it."""
-    names: dict[str, str] = {}
+def error_types(src: Path = SRC) -> tuple[dict[str, str], set[str]]:
+    """Public types defined under `src/error/` -> owning file stem, plus the ambiguous names.
+
+    A name defined in two error files cannot be resolved from a bare
+    `crate::error::Name`, so it is reported as ambiguous and every candidate
+    is taken (the conservative direction: a real inversion is never silent).
+    """
+    candidates: dict[str, set[str]] = {}
     for path in sorted((src / "error").glob("*.rs")) if (src / "error").is_dir() else []:
         stem = path.stem
         if stem == "mod":
             continue
         text = "\n".join(production_lines(strip_comments(path.read_text(), exempt_marked=False)))
         for name in TYPE_DEF_RE.findall(text):
-            names.setdefault(name, stem)
-    return names
+            candidates.setdefault(name, set()).add(stem)
+    names = {name: sorted(stems)[0] for name, stems in candidates.items()}
+    ambiguous = {name for name, stems in candidates.items() if len(stems) > 1}
+    AMBIGUOUS_STEMS.clear()
+    AMBIGUOUS_STEMS.update({name: sorted(stems) for name, stems in candidates.items() if len(stems) > 1})
+    return names, ambiguous
+
+
+# Error type name -> every file that defines it, when more than one does.
+AMBIGUOUS_STEMS: dict[str, list[str]] = {}
 
 
 def use_entries(text: str) -> list[tuple[list[str], str | None]]:
     """Every `use` declaration in `text`, one entry per imported path.
 
     Returns `(segments, alias)`; a glob ends in `*`, `self` is kept as a
-    segment. `pub use` lines that carry the facade-compat marker were already
-    blanked by `strip_comments`.
+    segment so `use crate::error::{self as err}` can bind a module alias.
     """
     entries: list[tuple[list[str], str | None]] = []
     for match in USE_RE.finditer(text):
@@ -331,8 +363,13 @@ def use_entries(text: str) -> list[tuple[list[str], str | None]]:
     return entries
 
 
-def absolute(segments: list[str], module: tuple[str, ...]) -> list[str] | None:
-    """Turn `crate::`, `super::` and `self::` paths into crate-relative segments; `None` when foreign."""
+def absolute(segments: list[str], module: tuple[str, ...], modules: set[tuple[str, ...]] | None = None) -> list[str] | None:
+    """Crate-relative segments for a `use` path, or `None` when it names another crate.
+
+    Handles `crate::`, `self::`, `super::` and the uniform (bare-relative)
+    form `use chain::OptionChain;` that names a submodule of the current
+    module, which is the house style in this crate's `mod.rs` files.
+    """
     if not segments:
         return None
     head, rest = segments[0], segments[1:]
@@ -346,93 +383,145 @@ def absolute(segments: list[str], module: tuple[str, ...]) -> list[str] | None:
             base = base[:-1]
             rest = rest[1:]
         return base[:-1] + rest
+    if modules is not None and (tuple(module) + (head,)) in modules:
+        return list(module) + segments
     return None
 
 
-def reexport_map(src: Path, types: dict[str, str]) -> dict[tuple[tuple[str, ...], str], str]:
-    """(module path, name) -> error file stem, for every `pub use` that re-exports an error type.
+def resolution_tables(
+    src: Path, types: dict[str, str]
+) -> tuple[dict[tuple[tuple[str, ...], str], str], dict[tuple[tuple[str, ...], str], str]]:
+    """`(module, name)` -> error file stem, for public re-exports and for every binding.
 
-    Iterated to a fixed point so a re-export of a re-export resolves too.
+    The public table answers "can any module reach this type through that
+    path"; the binding table also holds private `use` lines, which a child
+    module reaches through `super::`. Both are iterated to a fixed point so a
+    re-export of a re-export resolves.
     """
-    table: dict[tuple[tuple[str, ...], str], str] = {}
+    public: dict[tuple[tuple[str, ...], str], str] = {}
+    private: dict[tuple[tuple[str, ...], str], str] = {}
     for name, stem in types.items():
-        table[(("error",), name)] = stem
-        table[(("error", stem), name)] = stem
-    files = []
+        public[(("error",), name)] = stem
+        public[(("error", stem), name)] = stem
+    files: list[tuple[tuple[str, ...], list[str], list[str]]] = []
+    modules = module_paths(src)
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
         text = "\n".join(production_lines(strip_comments(path.read_text(), exempt_marked=False)))
-        module = module_path_of(rel)
         pubs = [m.group(0) for m in re.finditer(r"\bpub(?:\([^)]*\))?\s+use\s+[^;]+;", text, re.S)]
-        files.append((module, pubs))
-    changed = True
-    while changed:
-        changed = False
-        for module, pubs in files:
-            for decl in pubs:
-                for segments, alias in use_entries(decl):
-                    abs_path = absolute(segments, module)
-                    if abs_path is None or not abs_path:
-                        continue
-                    if abs_path[-1] == "*":
-                        prefix = tuple(abs_path[:-1])
-                        for (mod, name), stem in list(table.items()):
-                            if mod == prefix and (module, name) not in table:
-                                table[(module, name)] = stem
+        alls = [m.group(0) for m in re.finditer(r"\buse\s+[^;]+;", text, re.S)]
+        files.append((module_path_of(rel), pubs, alls))
+        # `pub type Alias<..> = .. SomeError ..` makes the alias a path to the
+        # error type for every consumer of the alias.
+        for alias_name, rhs in ALIAS_DEF_RE.findall(text):
+            for ident in IDENT_RE.findall(rhs):
+                stem = types.get(ident)
+                if stem is not None:
+                    public[(module_path_of(rel), alias_name)] = stem
+                    break
+    for table, selector in ((public, 1), (private, 2)):
+        changed = True
+        while changed:
+            changed = False
+            for module, pubs, alls in files:
+                for decl in (pubs if selector == 1 else alls):
+                    for segments, alias in use_entries(decl):
+                        abs_path = absolute(segments, module, modules)
+                        if not abs_path:
+                            continue
+                        if abs_path[-1] == "*":
+                            prefix = tuple(abs_path[:-1])
+                            source = {**public, **table}
+                            for (mod, name), stem in list(source.items()):
+                                if mod == prefix and (module, name) not in table:
+                                    table[(module, name)] = stem
+                                    changed = True
+                            continue
+                        source = public if selector == 1 else {**public, **private}
+                        stem = source.get((tuple(abs_path[:-1]), abs_path[-1]))
+                        if stem is not None:
+                            key = (module, alias or abs_path[-1])
+                            if key not in table:
+                                table[key] = stem
                                 changed = True
-                        continue
-                    stem = table.get((tuple(abs_path[:-1]), abs_path[-1]))
-                    if stem is not None:
-                        key = (module, alias or abs_path[-1])
-                        if key not in table:
-                            table[key] = stem
-                            changed = True
-    return table
+    return public, private
 
 
 def resolve_error_refs(
     text: str,
     module: tuple[str, ...],
     types: dict[str, str],
-    reexports: dict[tuple[tuple[str, ...], str], str],
+    ambiguous: set[str],
+    public: dict[tuple[tuple[str, ...], str], str],
+    private: dict[tuple[tuple[str, ...], str], str],
+    modules: set[tuple[str, ...]],
 ) -> set[str]:
     """Error file stems a production file refers to, through any resolvable path."""
     stems: set[str] = set()
-    bound_foreign: set[str] = set()
+    shadowed: set[str] = set()
     glob_names: dict[str, str] = {}
+    module_aliases: dict[str, tuple[str, ...]] = {}
+    # A type defined in this file shadows a glob-imported name of the same name.
+    shadowed.update(LOCAL_DEF_RE.findall(text))
+
+    def lookup(mods: tuple[str, ...], name: str) -> str | None:
+        stem = public.get((mods, name))
+        if stem is not None:
+            return stem
+        # A private binding in an ancestor module is visible through `super::`.
+        if mods == module[: len(mods)]:
+            return private.get((mods, name))
+        return None
+
+    def record(name: str, mods: tuple[str, ...]) -> None:
+        if name in ambiguous and mods == ("error",):
+            stems.update(AMBIGUOUS_STEMS.get(name, []))
+            return
+        stem = lookup(mods, name)
+        if stem is not None:
+            stems.add(stem)
+
     for segments, alias in use_entries(text):
-        abs_path = absolute(segments, module)
+        abs_path = absolute(segments, module, modules)
         local = alias or segments[-1]
         if abs_path is None:
-            bound_foreign.add(local)
+            shadowed.add(local)
             continue
-        if not abs_path or abs_path[-1] == "self":
+        if not abs_path:
+            continue
+        if abs_path[-1] == "self":
+            module_aliases[local] = tuple(abs_path[:-1])
             continue
         if abs_path[-1] == "*":
             prefix = tuple(abs_path[:-1])
-            for (mod, name), stem in reexports.items():
-                if mod == prefix:
+            for (mods, name), stem in {**public, **private}.items():
+                if mods == prefix:
                     glob_names[name] = stem
             continue
-        stem = reexports.get((tuple(abs_path[:-1]), abs_path[-1]))
-        if stem is not None:
-            stems.add(stem)
+        if alias and tuple(abs_path) in modules:
+            module_aliases[alias] = tuple(abs_path)
+            continue
+        shadowed.add(local)
+        record(abs_path[-1], tuple(abs_path[:-1]))
+    for alias_name, mods in module_aliases.items():
+        for match in re.finditer(rf"\b{re.escape(alias_name)}::((?:[a-z_][a-z0-9_]*::)*)([A-Z][A-Za-z0-9_]*)\b", text):
+            tail = tuple(seg for seg in match.group(1).split("::") if seg)
+            record(match.group(2), mods + tail)
     for match in QUALIFIED_RE.finditer(text):
         mods = tuple(seg for seg in match.group(1).split("::") if seg)
-        stem = reexports.get((mods, match.group(2)))
-        if stem is not None:
-            stems.add(stem)
+        record(match.group(2), mods)
     if glob_names:
         for ident in set(IDENT_RE.findall(text)):
-            if ident in glob_names and ident not in bound_foreign:
+            if ident in glob_names and ident not in shadowed:
                 stems.add(glob_names[ident])
     return stems
 
 
 def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[str, str]]]:
     edges: dict[tuple[str, str], list[str]] = {}
-    types = error_types(src)
-    reexports = reexport_map(src, types)
+    types, ambiguous = error_types(src)
+    public, private = resolution_tables(src, types)
+    modules = module_paths(src)
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
         parts = rel.split("/")
@@ -476,7 +565,7 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
                 sub = path_segments[1] if len(path_segments) > 1 else None
                 targets.append(normalise(path_segments[0], sub))
         # Error types, by the file that defines them (#590).
-        for stem in resolve_error_refs(text, module_path_of(rel), types, reexports):
+        for stem in resolve_error_refs(text, module_path_of(rel), types, ambiguous, public, private, modules):
             if stem in ERROR_FILE_LAYER:
                 targets.append(f"error/{stem}")
         for target in targets:
@@ -583,7 +672,10 @@ def self_test() -> int:
 
     # Each case is a list of (file, content) pairs, so a fixture can span the
     # defining module, a re-exporting module and the consumer (#590).
-    cases: dict[str, tuple[list[tuple[str, str]], int]] = {
+    # `(files, expected violations[, substring the violation text must contain])`:
+    # the substring pins WHICH file carries the edge, so a case cannot pass on
+    # a violation raised somewhere else in the fixture.
+    cases: dict[str, tuple, ] = {
         "forbidden edge": ([("model/x.rs", "use crate::pricing::black_scholes;\n")], 1),
         "allowed edge": ([("pricing/x.rs", "use crate::model::Options;\n")], 0),
         "comment only": ([("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n")], 0),
@@ -643,13 +735,74 @@ def self_test() -> int:
         ),
         "allowed error direction": ([err, ("strategies/x.rs", "use crate::error::StrategyError;\n")], 0),
         "error module itself": ([err, ("model/x.rs", "use crate::error::{self};\n")], 0),
+        "module alias": (
+            [err, ("model/x.rs", "use crate::error as errors;\nfn f() -> errors::StrategyError { todo!() }\n")],
+            1,
+            "model/x.rs",
+        ),
+        "module alias through self": (
+            [err, ("model/x.rs", "use crate::error::{self as errors};\nfn f() -> errors::strategies::StrategyError { todo!() }\n")],
+            1,
+            "model/x.rs",
+        ),
+        "uniform (bare-relative) re-export hop": (
+            [
+                err,
+                ("curves/inner.rs", "pub use crate::error::StrategyError;\n"),
+                ("curves/mod.rs", "pub use inner::StrategyError; // facade-compat: strategies\n"),
+                ("pricing/x.rs", "use crate::curves::StrategyError;\n"),
+            ],
+            2,
+            "pricing/x.rs",
+        ),
+        "private parent binding seen through super": (
+            [
+                err,
+                ("model/position/mod.rs", "use crate::error::StrategyError;\npub mod child;\n"),
+                ("model/position/child.rs", "use super::StrategyError;\nfn f() -> StrategyError { todo!() }\n"),
+            ],
+            1,
+            "model/position/child.rs",
+        ),
+        "glob name shadowed by a local definition": (
+            [err, ("model/x.rs", "use crate::error::*;\npub struct StrategyError;\nfn f() -> StrategyError { todo!() }\n")],
+            0,
+        ),
+        "glob name shadowed by an explicit import": (
+            [
+                err,
+                ("model/local.rs", "pub struct StrategyError;\n"),
+                ("model/x.rs", "use crate::error::*;\nuse crate::model::local::StrategyError;\nfn f() -> StrategyError { todo!() }\n"),
+            ],
+            0,
+        ),
+        "type alias over an error reaches its consumer": (
+            [
+                err,
+                ("curves/alias.rs", "pub type StratResult<T> = Result<T, crate::error::StrategyError>;\n"),
+                ("pricing/x.rs", "use crate::curves::alias::StratResult;\nfn f() -> StratResult<u8> { todo!() }\n"),
+            ],
+            2,
+            "pricing/x.rs",
+        ),
+        "ambiguous error name takes every candidate": (
+            [
+                ("error/strategies.rs", "pub enum Kind { A }\n"),
+                ("error/decimal.rs", "pub enum Kind { A }\n"),
+                ("model/x.rs", "use crate::error::Kind;\n"),
+            ],
+            1,
+            "model -> error/strategies",
+        ),
         "alias defined in an allowed layer": (
             [err, ("strategies/alias.rs", "pub type StratResult<T> = Result<T, crate::error::StrategyError>;\n")],
             0,
         ),
     }
     failures = 0
-    for name, (files, expected) in cases.items():
+    for name, case in cases.items():
+        files, expected = case[0], case[1]
+        needle = case[2] if len(case) > 2 else None
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "src"
             for rel, content in files:
@@ -657,11 +810,13 @@ def self_test() -> int:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(content)
             edges, _ = scan(root)
-            got = len(violations_of(edges))
-            status = "ok" if got == expected else "FAIL"
-            if got != expected:
+            found = violations_of(edges)
+            got = len(found)
+            ok = got == expected and (needle is None or any(needle in item for item in found))
+            if not ok:
                 failures += 1
-            print(f"self-test {status}: {name} (expected {expected}, got {got})")
+            detail = f" [{needle}]" if needle else ""
+            print(f"self-test {'ok' if ok else 'FAIL'}: {name}{detail} (expected {expected}, got {got})")
     # A deferred entry whose edge is gone must be reported as stale.
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "src"
@@ -685,13 +840,25 @@ def inventory(src: Path = SRC) -> int:
         state = "" if (source, target) in present else " (stale)"
         print(f"| {source} -> {target}{state} | {', '.join(sorted(files))} | {issue} |")
     print()
-    print("| facade-compat line | Layer |")
-    print("| --- | --- |")
+    print("| File | Source layer | Compat target |")
+    print("| --- | --- | --- |")
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
+        parts = rel.split("/")
+        top = parts[0].removesuffix(".rs")
+        if top == "error":
+            source_layer = ERROR_FILE_LAYER.get(parts[1].removesuffix(".rs") if len(parts) > 1 else "mod", "facade")
+        else:
+            source_layer = LAYER_OF.get(top, "facade")
         for number, line in enumerate(path.read_text().splitlines(), 1):
             if MARKER in line:
-                print(f"| {rel}:{number} | {line.split(MARKER, 1)[1].strip()} |")
+                print(f"| {rel}:{number} | {source_layer} | {line.split(MARKER, 1)[1].strip()} |")
+    if AMBIGUOUS_STEMS:
+        print()
+        print("| Ambiguous error type | Defined in |")
+        print("| --- | --- |")
+        for name, stems in sorted(AMBIGUOUS_STEMS.items()):
+            print(f"| {name} | {', '.join(f'error/{stem}.rs' for stem in stems)} |")
     return 0
 
 
