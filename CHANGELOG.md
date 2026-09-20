@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Migration notes for 0.22
+
+- **The manifest declares 0.22.0** (#602). For a 0.x crate the breaking bump
+  is the minor digit, so this is what authorises the incompatible changes of
+  the multi-crate migration. Nothing is tagged, released or published by this
+  change; that is the rest of Milestone 8, once every issue of the migration
+  is closed.
+- **The `synthetic` feature is required for the generator functions**
+  (#512, landed as #578; surfaced by the accepted-breaks gate of #592).
+  `chains::generator_positive`, `chains::generator_optionchain`,
+  `series::generator_optionseries` and their prelude paths existed in 0.21.3
+  with any feature set; they now exist only when `synthetic` is enabled. The
+  feature is on by default, so a build that takes the default features is
+  unaffected; a build with `default-features = false` must list `synthetic`
+  explicitly.
+
 ### Added
 
 - **The boundary checker resolves error types to their owning file** (#590,
