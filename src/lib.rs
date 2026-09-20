@@ -1279,6 +1279,7 @@ pub mod curves;
 /// calculation errors, and input/output errors.
 pub mod error;
 
+
 /// * `geometrics` - Mathematical utilities for geometric calculations relevant to options.
 ///
 /// Provides specialized geometric functions and algorithms for options pricing and modeling,

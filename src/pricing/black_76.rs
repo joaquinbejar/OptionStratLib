@@ -246,7 +246,7 @@ mod tests {
     use super::*;
     use crate::ExpirationDate;
     use crate::pricing::black_scholes_model::black_scholes;
-    use crate::pricing::unified::{PricingEngine, price_option};
+    use crate::pricing::{ClosedFormEngine, price_option_with};
     use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
 
@@ -561,7 +561,7 @@ mod tests {
     #[test]
     fn test_pricing_engine_closed_form_black_76_dispatch() {
         let option = create_option(20.0, 20.0, dec!(0.09), 122.4, 0.25, OptionStyle::Call);
-        let price_via_engine = price_option(&option, &PricingEngine::ClosedFormBlack76).unwrap();
+        let price_via_engine = price_option_with(&option, &ClosedFormEngine::ClosedFormBlack76).unwrap();
         let price_direct = black_76(&option).unwrap();
         assert_eq!(price_via_engine.to_dec(), price_direct);
     }
@@ -572,7 +572,7 @@ mod tests {
         // so a short position must surface as the magnitude.
         let mut option = create_option(20.0, 20.0, dec!(0.09), 122.4, 0.25, OptionStyle::Call);
         option.side = Side::Short;
-        let price_via_engine = price_option(&option, &PricingEngine::ClosedFormBlack76).unwrap();
+        let price_via_engine = price_option_with(&option, &ClosedFormEngine::ClosedFormBlack76).unwrap();
         let price_direct = black_76(&option).unwrap();
         assert_eq!(price_via_engine.to_dec(), price_direct.abs());
     }

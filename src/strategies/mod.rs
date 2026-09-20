@@ -202,6 +202,8 @@
 /// This module provides implementations of various options trading strategies and utility functions
 /// for options trading analysis. Each submodule represents a specific strategy or utility.
 pub mod base;
+/// Combination search shared by the strategy optimisers.
+pub mod combinations;
 /// Bear Call Spread strategy implementation
 pub mod bear_call_spread;
 /// Bear Put Spread strategy implementation  
@@ -272,6 +274,7 @@ mod simulation_impls;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 
+pub use combinations::process_n_times_iter;
 pub use base::{BasicAble, Strategable, Strategies, StrategyBasics, Validable};
 pub use bear_call_spread::BearCallSpread;
 pub use bear_put_spread::BearPutSpread;

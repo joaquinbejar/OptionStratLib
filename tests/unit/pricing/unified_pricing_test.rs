@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pricing::{Priceable, PricingEngine, price_option};
+use optionstratlib::pricing::{ClosedFormEngine, GenericPricingEngine, Priceable, price_option_with};
 use optionstratlib::simulation::simulator::Simulator;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
@@ -66,9 +66,9 @@ fn create_test_option() -> Options {
 #[test]
 fn test_price_option_black_scholes() {
     let option = create_test_option();
-    let engine = PricingEngine::ClosedFormBS;
+    let engine = ClosedFormEngine::ClosedFormBS;
 
-    let result = price_option(&option, &engine);
+    let result = price_option_with(&option, &engine);
 
     assert!(result.is_ok(), "Black-Scholes pricing should succeed");
     let price = result.unwrap();
@@ -84,7 +84,7 @@ fn test_price_option_black_scholes() {
 #[test]
 fn test_priceable_trait_black_scholes() {
     let option = create_test_option();
-    let engine = PricingEngine::ClosedFormBS;
+    let engine = ClosedFormEngine::ClosedFormBS;
 
     let result = option.price(&engine);
 
@@ -125,8 +125,8 @@ fn test_price_option_monte_carlo() -> Result<(), Box<dyn Error>> {
     };
     let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
-    let engine = PricingEngine::MonteCarlo { simulator };
-    let result = price_option(&option, &engine);
+    let engine = GenericPricingEngine::MonteCarlo { simulator };
+    let result = price_option_with(&option, &engine);
 
     assert!(result.is_ok(), "Monte Carlo pricing should succeed");
     let price = result.unwrap();
@@ -163,7 +163,7 @@ fn test_priceable_trait_monte_carlo() -> Result<(), Box<dyn Error>> {
     };
     let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
-    let engine = PricingEngine::MonteCarlo { simulator };
+    let engine = GenericPricingEngine::MonteCarlo { simulator };
     let result = option.price(&engine);
 
     assert!(
@@ -181,8 +181,8 @@ fn test_put_option_pricing() {
     option.option_style = OptionStyle::Put;
     option.underlying_price = pos_or_panic!(95.0); // Out of the money put
 
-    let engine = PricingEngine::ClosedFormBS;
-    let result = price_option(&option, &engine);
+    let engine = ClosedFormEngine::ClosedFormBS;
+    let result = price_option_with(&option, &engine);
 
     assert!(result.is_ok(), "Put option pricing should succeed");
     let price = result.unwrap();
@@ -194,8 +194,8 @@ fn test_short_position_pricing() {
     let mut option = create_test_option();
     option.side = Side::Short;
 
-    let engine = PricingEngine::ClosedFormBS;
-    let result = price_option(&option, &engine);
+    let engine = ClosedFormEngine::ClosedFormBS;
+    let result = price_option_with(&option, &engine);
 
     // Short positions should return negative prices in Black-Scholes
     // but the unified API should handle this appropriately
@@ -235,8 +235,8 @@ fn test_monte_carlo_with_heston() -> Result<(), Box<dyn Error>> {
     };
     let simulator = Simulator::new("Heston Test".to_string(), 500, &params, simple_generator)?;
 
-    let engine = PricingEngine::MonteCarlo { simulator };
-    let result = price_option(&option, &engine);
+    let engine = GenericPricingEngine::MonteCarlo { simulator };
+    let result = price_option_with(&option, &engine);
 
     assert!(result.is_ok(), "Heston model pricing should succeed");
     let price = result.unwrap();
@@ -281,8 +281,8 @@ fn test_monte_carlo_with_jump_diffusion() -> Result<(), Box<dyn Error>> {
         simple_generator,
     )?;
 
-    let engine = PricingEngine::MonteCarlo { simulator };
-    let result = price_option(&option, &engine);
+    let engine = GenericPricingEngine::MonteCarlo { simulator };
+    let result = price_option_with(&option, &engine);
 
     assert!(
         result.is_ok(),
@@ -326,8 +326,8 @@ fn test_monte_carlo_with_telegraph() -> Result<(), Box<dyn Error>> {
     };
     let simulator = Simulator::new("Telegraph Test".to_string(), 500, &params, simple_generator)?;
 
-    let engine = PricingEngine::MonteCarlo { simulator };
-    let result = price_option(&option, &engine);
+    let engine = GenericPricingEngine::MonteCarlo { simulator };
+    let result = price_option_with(&option, &engine);
 
     assert!(result.is_ok(), "Telegraph model pricing should succeed");
     let price = result.unwrap();
@@ -341,8 +341,8 @@ fn test_error_handling() {
     let mut option = create_test_option();
     option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.1)); // Very short expiry
 
-    let engine = PricingEngine::ClosedFormBS;
-    let result = price_option(&option, &engine);
+    let engine = ClosedFormEngine::ClosedFormBS;
+    let result = price_option_with(&option, &engine);
 
     // Should still work, even with edge cases
     assert!(result.is_ok(), "Should handle edge cases gracefully");

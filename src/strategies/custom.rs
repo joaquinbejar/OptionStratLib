@@ -38,9 +38,9 @@ use crate::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
         probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        combinations::process_n_times_iter,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
-    utils::process_n_times_iter,
 };
 use num_traits::ToPrimitive;
 use positive::Positive;

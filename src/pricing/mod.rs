@@ -308,11 +308,13 @@ pub(crate) mod utils;
 /// Unified pricing system for options.
 ///
 /// This module provides a single, consistent API for pricing options using different models.
-/// It includes the `PricingEngine` enum for selecting pricing methods, the `price_option`
-/// function as the main entry point, and the `Priceable` trait for trait-based pricing.
-/// `GenericPricingEngine<M>` and `price_option_with` are the same dispatcher generic
-/// over its Monte Carlo pricer (`MonteCarloPricer`, `NoMonteCarlo`), so a caller that
-/// only needs the closed forms carries no simulator (`ClosedFormEngine`).
+/// `GenericPricingEngine<M>` selects the method, `price_option_with` is the
+/// entry point and `Priceable` is its trait form. The engine is generic over
+/// its Monte Carlo pricer (`MonteCarloPricer`, with `NoMonteCarlo` for none),
+/// so a caller that only needs the closed forms carries no simulator and
+/// pricing does not depend on simulation: use the `ClosedFormEngine` alias
+/// for that case, and `GenericPricingEngine::MonteCarlo { simulator }` with
+/// any `MonteCarloPricer`, such as `simulation::Simulator`.
 ///
 /// ## Features
 /// - Black-Scholes closed-form pricing
@@ -322,7 +324,7 @@ pub(crate) mod utils;
 ///
 /// ## Example
 /// ```rust
-/// use optionstratlib::pricing::{PricingEngine, Priceable};
+/// use optionstratlib::pricing::{ClosedFormEngine, Priceable};
 /// use optionstratlib::{Options, ExpirationDate};
 /// use positive::{Positive, pos_or_panic};
 /// use optionstratlib::model::types::{OptionStyle, OptionType, Side};
@@ -342,7 +344,7 @@ pub(crate) mod utils;
 ///     exotic_params: None,
 /// };
 ///
-/// let engine = PricingEngine::ClosedFormBS;
+/// let engine = ClosedFormEngine::ClosedFormBS;
 /// let price = option.price(&engine)?;
 /// # Ok::<(), optionstratlib::error::PricingError>(())
 /// ```
@@ -371,6 +373,6 @@ pub use spread::spread_black_scholes;
 pub use telegraph::{TelegraphProcess, telegraph};
 pub use unified::{
     ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, Priceable,
-    PricingEngine, price_option, price_option_with,
+    price_option_with,
 };
 pub use utils::{probability_keep_under_strike, simulate_returns};

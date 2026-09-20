@@ -304,6 +304,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The pricing dispatcher becomes the generic engine, and the combination
+  helper joins strategies** (#598, multi-crate roadmap M1). `PricingEngine`
+  stored a concrete `Simulator`, so pricing named simulation, and
+  `price_option` / `Priceable` existed to dispatch over it. The
+  component-level form of #508, `GenericPricingEngine<M>` with the
+  `MonteCarloPricer` contract, already did that work without the dependency,
+  so the concrete enum, `price_option` and the `From<PricingEngine>`
+  conversion are **removed**: one engine type, parameterised by its Monte
+  Carlo pricer. `Priceable` moves to `pricing` and is generic over that
+  pricer, so `option.price(&engine)` keeps working for every arm, including
+  `GenericPricingEngine::MonteCarlo { simulator }`. Callers replace
+  `price_option(&o, &PricingEngine::ClosedFormBS)` with
+  `price_option_with(&o, &ClosedFormEngine::ClosedFormBS)`, and
+  `PricingEngine::MonteCarlo { simulator }` with
+  `GenericPricingEngine::MonteCarlo { simulator }`.
+  `utils::others::process_n_times_iter`, whose only production consumer is
+  `strategies::custom`, moves to `strategies::combinations` and reports
+  `StrategyError` instead of the crate-level unified `Error`. Two reverse
+  edges are gone (`pricing -> simulation`, `utils -> error/unified`) and no
+  compatibility alias is left behind.
+
 - **`Simulate` and `SimulationStats` move to backtesting** (#595, multi-crate
   roadmap M1, decision D2). Both are backtest concepts that happened to live
   under `src/simulation/`: `Simulate::simulate` returns the backtest-owned
