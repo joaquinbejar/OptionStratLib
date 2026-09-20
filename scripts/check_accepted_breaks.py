@@ -86,6 +86,7 @@ CHECKED_RE = re.compile(r"^\s*Checked \[[^\]]*\] (\d+) checks: (\d+) pass(?:, (\
 SUMMARY_RE = re.compile(r"^\s*Summary ", re.M)
 IMPL_VERSION_RE = re.compile(r"cargo-semver-checks/tree/v([0-9.]+)/")
 TRUNCATION_RE = re.compile(r"^\s*(\.\.\.|and \d+ more|\[truncated\])", re.M)
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 # An item line is indented by exactly two spaces. Cargo's own progress lines
 # are indented by four or more and start with a status word, and they can be
 # interleaved with the report because stdout and stderr are read together.
@@ -129,6 +130,7 @@ def parse_report(text: str, returncode: int, tool: str, lints: set[str]) -> set[
     """`(lint, item)` pairs, or raise. Never returns an empty set on doubt."""
     if returncode not in (0, 100):
         raise ReportError(f"cargo-semver-checks exited {returncode}, report not usable:\n{text[-800:]}")
+    text = ANSI_ESCAPE_RE.sub("", text)
     checked = CHECKED_RE.search(text)
     if checked is None or not SUMMARY_RE.search(text):
         raise ReportError("incomplete or unrecognised report: no `Checked`/`Summary` line")
@@ -545,6 +547,12 @@ def self_test() -> int:
     ok = parse_report(good, 0, tool, lints) == set()
     failures += 0 if ok else 1
     print(f"self-test {'ok' if ok else 'FAIL'}: a clean report yields no finding")
+    # ANSI colour escapes in CI output must not make the report unreadable.
+    coloured = good.replace("Checked ", "\x1b[32mChecked ").replace("Summary ", "\x1b[1mSummary ")
+    coloured = coloured.replace("checks:", "checks:\x1b[0m").replace("Summary ", "Summary \x1b[0m")
+    ok = parse_report(coloured, 0, tool, lints) == set()
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: ANSI-coloured clean report yields no finding")
     return 1 if failures else 0
 
 
