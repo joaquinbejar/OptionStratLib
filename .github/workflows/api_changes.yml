@@ -1,0 +1,63 @@
+# Reports the public API changes a pull request makes, per feature surface.
+#
+# 0.22.0 is under development and compatibility with the published 0.21.3 is
+# not a requirement, so this job is a report, not an authorisation gate: it
+# lists what the change adds, removes or reshapes so a reviewer can judge it.
+# It fails only on a tool, build or parser problem, because an unreadable
+# report must never be mistaken for "no change".
+#
+# Six surfaces, because an item can leave the default surface and stay behind
+# a feature, which a single `--all-features` run cannot see.
+name: API CHANGES
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: full
+  # Pinned: the parser is written against this report grammar.
+  SEMVER_CHECKS_VERSION: 0.50.0
+
+jobs:
+  api-changes:
+    name: api-changes (${{ matrix.surface }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        surface: [none, default, plotly, static_export, async, all]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The comparison needs the pull request's base commit.
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: api-changes-${{ matrix.surface }}
+      - name: Install cargo-semver-checks ${{ env.SEMVER_CHECKS_VERSION }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks@${{ env.SEMVER_CHECKS_VERSION }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parser self-test
+        run: python3 scripts/report_api_changes.py --self-test
+      - name: Report the API changes of this pull request
+        run: |
+          python3 scripts/report_api_changes.py \
+            --surface ${{ matrix.surface }} \
+            --baseline ${{ github.event.pull_request.base.sha }} \
+            --base-sha ${{ github.event.pull_request.base.sha }} \
+            --head-sha ${{ github.event.pull_request.head.sha }}

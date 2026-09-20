@@ -60,7 +60,7 @@ clean:
 
 # Pre-push checks
 .PHONY: check
-check: test fmt-check lint scan-banned check-graph check-breaks
+check: test fmt-check lint scan-banned check-graph check-api-report
 
 # Fails on any production `crate::<module>` reference that crosses a
 # forbidden layer boundary of the multi-crate target graph (ADR-0001 D9,
@@ -72,18 +72,15 @@ check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
 	@python3 scripts/check_module_boundaries.py
 
-# The accepted-breaks register: parses the `cargo-semver-checks` report and
-# compares it with `public-api/accepted-breaks.toml`, so an authorised
-# incompatible change is expected exactly once and anything else fails
-# (#592). `check-breaks` runs the parser's self-test only; the three
-# comparisons need a baseline and run in CI (`accepted_breaks.yml`) or with
-# `scripts/check_accepted_breaks.py --check C3 --surface default --baseline
-# <rev>`. Needs Python 3.11 or newer for `tomllib`.
+# Reports the public API changes of a pull request per feature surface
+# (#606). `check-api-report` runs the parser's self-test only; the comparison
+# needs a baseline and runs in CI (`api_changes.yml`) or with
+# `scripts/report_api_changes.py --surface default --baseline <rev>`.
 PYTHON311 ?= $(shell command -v python3.13 || command -v python3.12 || command -v python3.11 || echo python3)
-.PHONY: check-breaks
-check-breaks:
-	@$(PYTHON311) scripts/check_accepted_breaks.py --self-test > /dev/null || ($(PYTHON311) scripts/check_accepted_breaks.py --self-test; exit 1)
-	@echo "accepted-breaks: parser self-test OK"
+.PHONY: check-api-report
+check-api-report:
+	@$(PYTHON311) scripts/report_api_changes.py --self-test > /dev/null || ($(PYTHON311) scripts/report_api_changes.py --self-test; exit 1)
+	@echo "api-changes: parser self-test OK"
 
 # Fails when a panicking construct reappears in production code.
 #
