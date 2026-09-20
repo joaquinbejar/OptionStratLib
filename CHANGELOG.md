@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `d_sqrt` cycle test no longer measures wall-clock time** (#604). It
+  asserted that a thousand calls on the oscillating input finish in under
+  50 ms, which is a statement about an instrumented build: under
+  `cargo tarpaulin` every call is slower and the `code_coverage_report` job
+  failed while every other job passed. The property it exists for is a
+  count, so the Newton loop now reports its iterations through the
+  crate-private `sqrt_with_iterations`, which `d_sqrt` wraps, and the test
+  asserts the period-2 cycle resolves in fewer than ten iterations against a
+  converging control. `d_sqrt`'s signature, results and errors are
+  unchanged.
 ### Migration notes for 0.22
 
 - **The manifest declares 0.22.0** (#602). For a 0.x crate the breaking bump
