@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The boundary checker resolves error types to their owning file** (#590,
+  follow-up of #507). A reference spelled `crate::error::Name` used to be
+  read as a reference to the facade-level `error` module, so a lower layer
+  naming a higher layer's error type in a signature was never reported.
+  `scripts/check_module_boundaries.py` now maps every public type defined
+  under `src/error/` to its file, resolves names through each file's `use`
+  bindings (bare, grouped, nested, `as` aliases, file-qualified paths,
+  `super::`/`self::` paths, globs and paths in expression position) and
+  through the crate's `pub use` re-export graph, and ignores names bound from
+  outside the crate (`use std::io::Error`). Twenty further reverse edges
+  become visible, none of them new: the `PricingError`/`GreeksError` channels
+  of `LegAble`, `ChainError` in `model::utils` and `geometrics`,
+  `MetricsError` in curves, surfaces and geometrics, `SimulationError` in
+  `volatility::utils`, `OhlcvError` in `utils::csv`, the unified `Error` in
+  `utils::others`, and the enum variants inside `src/error/` that hold a
+  higher layer's error. All are recorded in the script's `DEFERRED` table,
+  file by file, with the issue that owns each resolution (31 deferred edges
+  in total), so `make check-graph` still passes while the debt is printed on
+  every run. New `--inventory` mode prints the deferred edges and the
+  `facade-compat` lines as tables. The self-test grows to 28 cases covering
+  every resolution shape, including a foreign `Error` that must not create an
+  edge and a re-export of a re-export. The script's docstring states what the
+  resolver does not see (names reached through a type alias defined in
+  another file, macro-generated code).
 - **`make check-graph` enforces the module boundaries** (#507, multi-crate
   roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
   for `crate::<module>` references (including multi-line `use crate::{...}`

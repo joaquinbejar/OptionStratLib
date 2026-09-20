@@ -117,8 +117,9 @@ ALLOWED = {
 # A bare `crate::error::Name` import cannot be attributed to an error file
 # without a symbol table, so `error` as a TARGET is accepted from every layer;
 # qualified `crate::error::<file>::Name` references are checked against the
-# file's layer. Enum variants that still hold a higher layer's error type are
-# the documented residue for the 0.22.0 batch (see `src/error/mod.rs`).
+# file's layer. `error` alone (the module itself, `use crate::error::{self}`)
+# names no type and stays allowed; every type reference is resolved to its
+# file by `error_types` / `resolve_error_refs` below (#590).
 ALWAYS_ALLOWED_TARGETS = {"error"}
 
 # Files whose simulation edge is the `synthetic`-gated market capability.
@@ -163,23 +164,79 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     # `StrategyError::Simulation(Box<SimulationError>)` and the conversion
     # that lives next to its source.
     ("error/strategies", "error/simulation"): (frozenset({"error/strategies.rs"}), "0.22.0 batch (ADR-0001 D6, #505)"),
+    # --- Surfaced by the error-type resolver (#590). Each entry names the
+    # issue that owns its resolution; none is new debt, all were invisible
+    # because the reference is spelled `crate::error::Name`.
+    # `LegAble::pnl_at_price` and `Position::pnl_at_expiration` report
+    # `PricingError`; the retype to a core-owned error is the core boundary.
+    ("model", "error/pricing"): (
+        frozenset({
+            "model/leg/traits.rs", "model/leg/leg_enum.rs", "model/leg/spot.rs",
+            "model/leg/future.rs", "model/leg/perpetual.rs", "model/position.rs",
+        }),
+        "M1 exit proposal row 5 (#498)",
+    ),
+    # The Greek methods of `LegAble` report `GreeksError`; they move to the
+    # pricing-owned extension trait with the methods themselves.
+    ("model", "error/greeks"): (
+        frozenset({
+            "model/leg/traits.rs", "model/leg/leg_enum.rs", "model/leg/spot.rs",
+            "model/leg/future.rs", "model/leg/perpetual.rs",
+        }),
+        "0.22.0 batch (#498, ADR-0001 D6)",
+    ),
+    # `Options::calculate_implied_volatility` wrapper signature.
+    ("model", "error/volatility"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499)"),
+    # `calculate_optimal_price_range` is a chain helper living in core.
+    ("model", "error/chains"): (frozenset({"model/utils.rs"}), "re-home to chains::utils (#498)"),
+    # `utils::csv` is market-owned (ADR-0001 D2), behind the I/O feature.
+    ("utils", "error/csv"): (frozenset({"utils/csv.rs"}), "re-home to market (ADR-0001 D2, M3-05 #525)"),
+    # `process_n_times_iter` returns the facade-level unified `Error`.
+    ("utils", "error/unified"): (frozenset({"utils/others.rs"}), "facade-owned or retyped (ADR-0001 D2, #506)"),
+    # `MetricsError` is defined under analytics today but depends only on
+    # `CurveError`/`SurfaceError`; re-homing it to math dissolves these three.
+    ("curves", "error/metrics"): (frozenset({"curves/curve.rs"}), "re-home MetricsError to math (#511)"),
+    ("surfaces", "error/metrics"): (frozenset({"surfaces/surface.rs"}), "re-home MetricsError to math (#511)"),
+    ("geometrics", "error/metrics"): (frozenset({"geometrics/analysis/traits.rs"}), "re-home MetricsError to math (#511)"),
+    # `pub type ResultPoint<P> = Result<P, ChainError>` used by the curve and
+    # surface constructors.
+    ("geometrics", "error/chains"): (frozenset({"geometrics/construction/types.rs"}), "retype ResultPoint (#511)"),
+    # `generate_ou_process` is a simulation kernel living in volatility.
+    ("volatility", "error/simulation"): (frozenset({"volatility/utils.rs"}), "re-home to simulation (#502)"),
+    # The `synthetic` chain walk driver belongs with the market generators.
+    ("simulation", "error/chains"): (frozenset({"simulation/walk_driver.rs"}), "re-home to market synthetic (#512)"),
+    # Variant payloads that hold a higher layer's error (ADR-0001 D6, #511):
+    # `OptionsError::Greeks`, `CurveError::{Greeks, Graph}`,
+    # `SurfaceError::{Greeks, Graph}`, `VolatilityError::Chain`,
+    # `SimulationError::{Chain, Strategy}`.
+    ("error/options", "error/greeks"): (frozenset({"error/options.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/curves", "error/greeks"): (frozenset({"error/curves.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/curves", "error/graph"): (frozenset({"error/curves.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/surfaces", "error/greeks"): (frozenset({"error/surfaces.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/surfaces", "error/graph"): (frozenset({"error/surfaces.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/volatility", "error/chains"): (frozenset({"error/volatility.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/simulation", "error/chains"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
+    ("error/simulation", "error/strategies"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
 }
 
 MARKER = "// facade-compat:"
 EDGE_RE = re.compile(r"\bcrate::([a-z_][a-z0-9_]*)(?:::([a-z_][a-z0-9_]*))?")
 
 
-def strip_comments(text: str) -> str:
+def strip_comments(text: str, *, exempt_marked: bool = True) -> str:
     """Drop comments; a `facade-compat` marker exempts only a `pub use` re-export.
 
     Any other marked line (a plain import, a trait bound) keeps its code and is
     scanned like an unmarked one, so the marker cannot hide a live edge.
+    `exempt_marked=False` keeps the marked re-exports too: the re-export map
+    must follow them, because a marked line keeps a type reachable under
+    another path and its consumers are not exempt (#590).
     """
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     out = []
     for line in text.splitlines():
         code = line.split("//")[0]
-        if MARKER in line and code.strip().startswith("pub use "):
+        if exempt_marked and MARKER in line and code.strip().startswith("pub use "):
             code = ""
         out.append(code)
     return "\n".join(out)
@@ -215,8 +272,167 @@ def production_lines(text: str) -> list[str]:
     return out
 
 
+def module_path_of(rel: str) -> tuple[str, ...]:
+    """`model/leg/foo.rs` -> (model, leg, foo); `model/mod.rs` -> (model,); `lib.rs` -> ()."""
+    parts = rel.removesuffix(".rs").split("/")
+    if parts[-1] == "mod":
+        parts = parts[:-1]
+    if parts == ["lib"]:
+        return ()
+    return tuple(parts)
+
+
+TYPE_DEF_RE = re.compile(r"^\s*pub(?:\([^)]*\))?\s+(?:enum|struct|type)\s+([A-Z][A-Za-z0-9_]*)", re.M)
+USE_RE = re.compile(r"\buse\s+([^;]+);", re.S)
+IDENT_RE = re.compile(r"\b([A-Z][A-Za-z0-9_]*)\b")
+# `crate::error::Name`, `crate::error::<file>::Name`, or `crate::<mods>::Name`
+# in any position (a `use` or an expression path).
+QUALIFIED_RE = re.compile(r"\bcrate::((?:[a-z_][a-z0-9_]*::)+)([A-Z][A-Za-z0-9_]*)\b")
+
+
+def error_types(src: Path = SRC) -> dict[str, str]:
+    """Every public type defined under `src/error/` -> the file stem that owns it."""
+    names: dict[str, str] = {}
+    for path in sorted((src / "error").glob("*.rs")) if (src / "error").is_dir() else []:
+        stem = path.stem
+        if stem == "mod":
+            continue
+        text = "\n".join(production_lines(strip_comments(path.read_text(), exempt_marked=False)))
+        for name in TYPE_DEF_RE.findall(text):
+            names.setdefault(name, stem)
+    return names
+
+
+def use_entries(text: str) -> list[tuple[list[str], str | None]]:
+    """Every `use` declaration in `text`, one entry per imported path.
+
+    Returns `(segments, alias)`; a glob ends in `*`, `self` is kept as a
+    segment. `pub use` lines that carry the facade-compat marker were already
+    blanked by `strip_comments`.
+    """
+    entries: list[tuple[list[str], str | None]] = []
+    for match in USE_RE.finditer(text):
+        body = match.group(1).strip()
+        brace = body.find("{")
+        if brace == -1:
+            groups = [[seg.strip() for seg in body.split("::") if seg.strip()]]
+        else:
+            prefix = [seg.strip() for seg in body[:brace].split("::") if seg.strip()]
+            groups = [prefix + tail for tail in expand_group(body[brace + 1 : body.rfind("}")])]
+        for segments in groups:
+            if not segments:
+                continue
+            alias = None
+            last = segments[-1]
+            if " as " in last:
+                last, alias = (part.strip() for part in last.split(" as ", 1))
+                segments = segments[:-1] + [last]
+            entries.append((segments, alias))
+    return entries
+
+
+def absolute(segments: list[str], module: tuple[str, ...]) -> list[str] | None:
+    """Turn `crate::`, `super::` and `self::` paths into crate-relative segments; `None` when foreign."""
+    if not segments:
+        return None
+    head, rest = segments[0], segments[1:]
+    if head == "crate":
+        return rest
+    if head == "self":
+        return list(module) + rest
+    if head == "super":
+        base = list(module)
+        while rest and rest[0] == "super":
+            base = base[:-1]
+            rest = rest[1:]
+        return base[:-1] + rest
+    return None
+
+
+def reexport_map(src: Path, types: dict[str, str]) -> dict[tuple[tuple[str, ...], str], str]:
+    """(module path, name) -> error file stem, for every `pub use` that re-exports an error type.
+
+    Iterated to a fixed point so a re-export of a re-export resolves too.
+    """
+    table: dict[tuple[tuple[str, ...], str], str] = {}
+    for name, stem in types.items():
+        table[(("error",), name)] = stem
+        table[(("error", stem), name)] = stem
+    files = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        text = "\n".join(production_lines(strip_comments(path.read_text(), exempt_marked=False)))
+        module = module_path_of(rel)
+        pubs = [m.group(0) for m in re.finditer(r"\bpub(?:\([^)]*\))?\s+use\s+[^;]+;", text, re.S)]
+        files.append((module, pubs))
+    changed = True
+    while changed:
+        changed = False
+        for module, pubs in files:
+            for decl in pubs:
+                for segments, alias in use_entries(decl):
+                    abs_path = absolute(segments, module)
+                    if abs_path is None or not abs_path:
+                        continue
+                    if abs_path[-1] == "*":
+                        prefix = tuple(abs_path[:-1])
+                        for (mod, name), stem in list(table.items()):
+                            if mod == prefix and (module, name) not in table:
+                                table[(module, name)] = stem
+                                changed = True
+                        continue
+                    stem = table.get((tuple(abs_path[:-1]), abs_path[-1]))
+                    if stem is not None:
+                        key = (module, alias or abs_path[-1])
+                        if key not in table:
+                            table[key] = stem
+                            changed = True
+    return table
+
+
+def resolve_error_refs(
+    text: str,
+    module: tuple[str, ...],
+    types: dict[str, str],
+    reexports: dict[tuple[tuple[str, ...], str], str],
+) -> set[str]:
+    """Error file stems a production file refers to, through any resolvable path."""
+    stems: set[str] = set()
+    bound_foreign: set[str] = set()
+    glob_names: dict[str, str] = {}
+    for segments, alias in use_entries(text):
+        abs_path = absolute(segments, module)
+        local = alias or segments[-1]
+        if abs_path is None:
+            bound_foreign.add(local)
+            continue
+        if not abs_path or abs_path[-1] == "self":
+            continue
+        if abs_path[-1] == "*":
+            prefix = tuple(abs_path[:-1])
+            for (mod, name), stem in reexports.items():
+                if mod == prefix:
+                    glob_names[name] = stem
+            continue
+        stem = reexports.get((tuple(abs_path[:-1]), abs_path[-1]))
+        if stem is not None:
+            stems.add(stem)
+    for match in QUALIFIED_RE.finditer(text):
+        mods = tuple(seg for seg in match.group(1).split("::") if seg)
+        stem = reexports.get((mods, match.group(2)))
+        if stem is not None:
+            stems.add(stem)
+    if glob_names:
+        for ident in set(IDENT_RE.findall(text)):
+            if ident in glob_names and ident not in bound_foreign:
+                stems.add(glob_names[ident])
+    return stems
+
+
 def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[str, str]]]:
     edges: dict[tuple[str, str], list[str]] = {}
+    types = error_types(src)
+    reexports = reexport_map(src, types)
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
         parts = rel.split("/")
@@ -259,6 +475,10 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
                     continue
                 sub = path_segments[1] if len(path_segments) > 1 else None
                 targets.append(normalise(path_segments[0], sub))
+        # Error types, by the file that defines them (#590).
+        for stem in resolve_error_refs(text, module_path_of(rel), types, reexports):
+            if stem in ERROR_FILE_LAYER:
+                targets.append(f"error/{stem}")
         for target in targets:
             if target not in LAYER_OF and not target.startswith("error/"):
                 continue
@@ -358,32 +578,84 @@ def self_test() -> int:
     """Prove the scanner sees what it must and ignores what it may."""
     import tempfile
 
-    cases = {
-        # (file, content) -> expected violation count
-        "forbidden edge": (("model/x.rs", "use crate::pricing::black_scholes;\n"), 1),
-        "allowed edge": (("pricing/x.rs", "use crate::model::Options;\n"), 0),
-        "comment only": (("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n"), 0),
-        "test module only": (("model/x.rs", "#[cfg(test)]\nmod t {\n    use crate::pricing::black_scholes;\n}\n"), 0),
-        "marked compat re-export": (("model/x.rs", "pub use crate::pricing::black_scholes; // facade-compat: pricing\n"), 0),
-        "marked plain import is not exempt": (("model/x.rs", "use crate::pricing::black_scholes; // facade-compat: pricing\n"), 1),
-        "multiline import": (("model/x.rs", "use crate::{\n    Options,\n    pricing::black_scholes,\n};\n"), 1),
-        "nested brace import": (("model/x.rs", "use crate::{error::{strategies::StrategyError, DecimalError}, model::Options};\n"), 1),
-        "qualified error path": (("model/x.rs", "use crate::error::strategies::StrategyError;\n"), 1),
-        "qualified group": (("model/x.rs", "use crate::error::{strategies::StrategyError};\n"), 1),
-        "multiline qualified group": (("model/x.rs", "use crate::error::{\n    strategies::StrategyError,\n};\n"), 1),
-        "empty test module then import": (("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n"), 1),
-        "test module file then import": (("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n"), 1),
-        "synthetic file": (("chains/generators.rs", "use crate::simulation::WalkParams;\n"), 0),
-        "deferred pair in its file": (("pricing/unified.rs", "use crate::simulation::simulator::Simulator;\n"), 0),
-        "deferred pair in another file": (("pricing/other.rs", "use crate::simulation::simulator::Simulator;\n"), 1),
+    # A minimal `src/error/strategies.rs` so the resolver has a type to own.
+    err = ("error/strategies.rs", "pub enum StrategyError { A }\n")
+
+    # Each case is a list of (file, content) pairs, so a fixture can span the
+    # defining module, a re-exporting module and the consumer (#590).
+    cases: dict[str, tuple[list[tuple[str, str]], int]] = {
+        "forbidden edge": ([("model/x.rs", "use crate::pricing::black_scholes;\n")], 1),
+        "allowed edge": ([("pricing/x.rs", "use crate::model::Options;\n")], 0),
+        "comment only": ([("model/x.rs", "// use crate::pricing::black_scholes;\n/* crate::chains::X */\n")], 0),
+        "test module only": ([("model/x.rs", "#[cfg(test)]\nmod t {\n    use crate::pricing::black_scholes;\n}\n")], 0),
+        "marked compat re-export": ([("model/x.rs", "pub use crate::pricing::black_scholes; // facade-compat: pricing\n")], 0),
+        "marked plain import is not exempt": ([("model/x.rs", "use crate::pricing::black_scholes; // facade-compat: pricing\n")], 1),
+        "multiline import": ([("model/x.rs", "use crate::{\n    Options,\n    pricing::black_scholes,\n};\n")], 1),
+        "nested brace import": ([err, ("model/x.rs", "use crate::{error::{strategies::StrategyError, DecimalError}, model::Options};\n")], 1),
+        "qualified error path": ([err, ("model/x.rs", "use crate::error::strategies::StrategyError;\n")], 1),
+        "qualified group": ([err, ("model/x.rs", "use crate::error::{strategies::StrategyError};\n")], 1),
+        "multiline qualified group": ([err, ("model/x.rs", "use crate::error::{\n    strategies::StrategyError,\n};\n")], 1),
+        "empty test module then import": ([("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n")], 1),
+        "test module file then import": ([("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n")], 1),
+        "synthetic file": ([("chains/generators.rs", "use crate::simulation::WalkParams;\n")], 0),
+        "deferred pair in its file": ([("pricing/unified.rs", "use crate::simulation::simulator::Simulator;\n")], 0),
+        "deferred pair in another file": ([("pricing/other.rs", "use crate::simulation::simulator::Simulator;\n")], 1),
+        # --- error-type resolution (#590)
+        "bare error import": ([err, ("model/x.rs", "use crate::error::StrategyError;\n")], 1),
+        "error import with alias": ([err, ("model/x.rs", "use crate::error::StrategyError as SE;\nfn f() -> SE { todo!() }\n")], 1),
+        "error import in a group": ([err, ("model/x.rs", "use crate::error::{DecimalError, StrategyError};\n")], 1),
+        "error path in expression position": ([err, ("model/x.rs", "fn f() { let _ = crate::error::StrategyError::A; }\n")], 1),
+        # The consumer's module edge (pricing -> curves) is allowed and the
+        # re-export itself carries the compat marker, so the single violation
+        # can only come from resolving the re-exported type. A marked `pub use`
+        # is still followed by the resolver: it keeps a path alive, it does not
+        # hide the type from consumers.
+        "error re-exported from another module": (
+            [
+                err,
+                ("curves/mod.rs", "pub use crate::error::StrategyError; // facade-compat: strategies\n"),
+                ("pricing/x.rs", "use crate::curves::StrategyError;\n"),
+            ],
+            1,
+        ),
+        "re-export of a re-export": (
+            [
+                err,
+                ("curves/mod.rs", "pub use crate::error::StrategyError; // facade-compat: strategies\n"),
+                ("surfaces/mod.rs", "pub use crate::curves::StrategyError; // facade-compat: strategies\n"),
+                ("pricing/x.rs", "use crate::surfaces::StrategyError;\n"),
+            ],
+            1,
+        ),
+        "super import inside a submodule": (
+            [
+                err,
+                ("model/leg/mod.rs", "use crate::error::StrategyError;\n"),
+                ("model/leg/x.rs", "use super::StrategyError;\n"),
+            ],
+            1,
+        ),
+        "glob import from the error module": ([err, ("model/x.rs", "use crate::error::*;\nfn f() -> StrategyError { todo!() }\n")], 1),
+        "glob import without using the name": ([err, ("model/x.rs", "use crate::error::*;\nfn f() -> u8 { 0 }\n")], 0),
+        "foreign Error of the same name": (
+            [("error/unified.rs", "pub enum Error { A }\n"), ("model/x.rs", "use std::io::Error;\nfn f() -> Error { todo!() }\n")],
+            0,
+        ),
+        "allowed error direction": ([err, ("strategies/x.rs", "use crate::error::StrategyError;\n")], 0),
+        "error module itself": ([err, ("model/x.rs", "use crate::error::{self};\n")], 0),
+        "alias defined in an allowed layer": (
+            [err, ("strategies/alias.rs", "pub type StratResult<T> = Result<T, crate::error::StrategyError>;\n")],
+            0,
+        ),
     }
     failures = 0
-    for name, ((rel, content), expected) in cases.items():
+    for name, (files, expected) in cases.items():
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "src"
-            target = root / rel
-            target.parent.mkdir(parents=True)
-            target.write_text(content)
+            for rel, content in files:
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
             edges, _ = scan(root)
             got = len(violations_of(edges))
             status = "ok" if got == expected else "FAIL"
@@ -394,7 +666,7 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp) / "src"
         (root / "model").mkdir(parents=True)
-        (root / "model" / "x.rs").write_text("use crate::error::DecimalError;\n")
+        (root / "model" / "x.rs").write_text("pub fn nothing() {}\n")
         _, present = scan(root)
         stale = [key for key in DEFERRED if key not in present]
         ok = len(stale) == len(DEFERRED)
@@ -404,9 +676,30 @@ def self_test() -> int:
     return 1 if failures else 0
 
 
+def inventory(src: Path = SRC) -> int:
+    """Print the deferred edges and the facade-compat lines as a table."""
+    _, present = scan(src)
+    print("| Edge | Files | Owner |")
+    print("| --- | --- | --- |")
+    for (source, target), (files, issue) in sorted(DEFERRED.items()):
+        state = "" if (source, target) in present else " (stale)"
+        print(f"| {source} -> {target}{state} | {', '.join(sorted(files))} | {issue} |")
+    print()
+    print("| facade-compat line | Layer |")
+    print("| --- | --- |")
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        for number, line in enumerate(path.read_text().splitlines(), 1):
+            if MARKER in line:
+                print(f"| {rel}:{number} | {line.split(MARKER, 1)[1].strip()} |")
+    return 0
+
+
 def main() -> int:
     if "--self-test" in sys.argv:
         return self_test()
+    if "--inventory" in sys.argv:
+        return inventory()
     edges, present = scan()
     violations = violations_of(edges)
     stale = [f"{s} -> {d} ({meta[1]})" for (s, d), meta in DEFERRED.items() if (s, d) not in present]
