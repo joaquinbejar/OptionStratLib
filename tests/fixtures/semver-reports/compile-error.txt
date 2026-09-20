@@ -1,0 +1,29 @@
+    Building probe v0.1.0 (current)
+error: running cargo-doc on crate 'probe' failed with output:
+-----
+ Documenting probe v0.1.0 (<root>/broken)
+error: this file contains an unclosed delimiter
+ --> <root>/broken/src/lib.rs:1:15
+  |
+1 | pub fn oops( {
+  |            - -^
+  |            | |
+  |            | unclosed delimiter
+  |            unclosed delimiter
+
+error: could not document `probe`
+
+-----
+
+error: failed to build rustdoc for crate probe v0.1.0
+note: this is usually due to a compilation error in the crate,
+      and is unlikely to be a bug in cargo-semver-checks
+note: the following command can be used to reproduce the error:
+      cargo new --lib example &&
+          cd example &&
+          echo '[workspace]' >> Cargo.toml &&
+          cargo add --path <root>/broken --features default,extra &&
+          cargo check &&
+          cargo doc
+
+error: aborting due to failure to build rustdoc for crate probe v0.1.0

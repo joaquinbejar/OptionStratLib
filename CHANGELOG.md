@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   asserts the period-2 cycle resolves in fewer than ten iterations against a
   converging control. `d_sqrt`'s signature, results and errors are
   unchanged.
+### Migration notes for 0.22
+
+- **The manifest declares 0.22.0** (#602). For a 0.x crate the breaking bump
+  is the minor digit, so this is what authorises the incompatible changes of
+  the multi-crate migration. Nothing is tagged, released or published by this
+  change; that is the rest of Milestone 8, once every issue of the migration
+  is closed.
+- **The `synthetic` feature is required for the generator functions**
+  (#512, landed as #578; surfaced by the accepted-breaks gate of #592).
+  `chains::generator_positive`, `chains::generator_optionchain`,
+  `series::generator_optionseries` and their prelude paths existed in 0.21.3
+  with any feature set; they now exist only when `synthetic` is enabled. The
+  feature is on by default, so a build that takes the default features is
+  unaffected; a build with `default-features = false` must list `synthetic`
+  explicitly.
 
 ### Added
 
@@ -56,6 +71,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   layer and compat target) and the ambiguous error names as tables. The
   self-test grows to 40 cases, several of which assert which file carries
   the edge, and the module docstring states what the resolver does not see.
+- **Accepted-breaks register and three-baseline semver gate** (#592,
+  multi-crate roadmap M1-17). The 0.22 migration needs incompatible changes
+  while the manifests stay at 0.21.3 and nothing is published, so
+  `cargo semver-checks` reports every removal against the published crate.
+  `public-api/accepted-breaks.toml` is now the only place where such a report
+  may be expected instead of failing, and `scripts/check_accepted_breaks.py`
+  compares the two. Three comparisons run per feature surface: **C1** against
+  the published 0.21.3 (what a consumer of the release sees), **C2** against
+  the newest commit carrying an `Accepted-Breaks:` trailer among the
+  ancestors of the state *before* the change under test (so an integrating
+  push is never compared with itself), and **C3** against the pull request's
+  base, taken from the first parent of the merge commit CI checks out, which
+  is the only comparison that sees the removal of an item added after 0.21.3.
+  All six surfaces (`none`, `default`, `plotly`, `static_export`, `async`,
+  `all`) run on every pull request, because an item can leave the default
+  surface and stay behind a feature, which `--all-features` cannot see. The
+  parser is fail-closed: a non-zero, non-100 exit, a missing summary, a block
+  count that disagrees with it, a truncation marker, an unknown lint or an
+  unpinned tool version, or an item line with no item, is an error, never
+  "zero breaks"; sixteen fixtures under `tests/fixtures/semver-reports/`
+  (six real reports, eight derived defects, one duplicate-item case and the
+  reproducible four-step sequence script with its recorded output) are parsed
+  by `--self-test`, which `make check-breaks` runs. The register's structure
+  is enforced in code (an approved entry needs an approval reference pointing
+  at the register issue, a decision and a migration note, and may not store a
+  commit SHA), `--verify-approvals` reads each approval comment and checks
+  its author is the register's owner, and a pull request that moves one of
+  its own entries to `approved` is refused: authorisation belongs to a
+  separate change. An authorised break is expected by C1 for ever and by C2
+  or C3 only while it is inside that comparison's delta, so an ordinary pull
+  request stays green without a label once a break has landed; the sequence
+  fixture runs the register comparison itself and records its 24 verdicts. The register ships with no approved entry, the
+  workflow is informational and the existing `semver` job is unchanged. Its
+  first run already found one real incompatibility on `main`: the `synthetic`
+  gate (#512) removes `chains::generator_positive`,
+  `chains::generator_optionchain`, `series::generator_optionseries` and their
+  prelude paths from every surface that does not enable the feature, which a
+  consumer building with `default-features = false` had in 0.21.3. The
+  finding is recorded as a `proposed` register entry (AB-01) and waits for
+  the owner's decision on #592; until then the job reports without blocking.
+- **`make check-graph` enforces the module boundaries** (#507, multi-crate
+  roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
+  for `crate::<module>` references (including multi-line `use crate::{...}`
+  groups, qualified groups such as `use crate::error::{graph::GraphError}`
+  and `crate::error::<file>` paths), maps every module and every
+  error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
+  against the approved graph. `pub use` lines marked `// facade-compat:
+  <layer>` (the compatibility re-exports that become facade code at
+  extraction) are exempt, and only those: a marked plain import is scanned
+  like any other; the eleven known reverse edges whose removal is a breaking change
+  are listed in the script per file with the issue that removes them (the
+  same module pair in any other file fails) and the run prints how many
+  marked lines each layer carries; a self-test proves the scanner catches what it
+  must. The `lint` workflow runs it on every push. The last two imports
+  through `crate::prelude` inside the library (`pricing::telegraph`,
+  `strategies::delta_neutral`) now use canonical paths.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.
   `VolatilityAdjustment`, `PriceTrend`, `calculate_single_point_probability`
@@ -232,6 +303,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   engine into `GenericPricingEngine<Simulator<Positive, Positive>>`.
 
 ### Changed
+
+- **`ProfitLossRange` moves to the analytics layer** (#594, multi-crate
+  roadmap M1, decision D2). The type sat in `src/model/profit_range.rs`, in
+  the core layer, while every part of it belonged to analytics: its
+  `calculate_probability` forwards to
+  `analytics::profit_range::ProfitRangeProbability`, its signature names
+  `analytics::probability::{PriceTrend, VolatilityAdjustment}` and its
+  constructor reports `ProbabilityError`. It now lives beside that trait in
+  `src/analytics/profit_range.rs`; `model::ProfitLossRange` and the prelude
+  path are downward re-exports, so no 0.21 path changes. The two reverse
+  edges the boundary checker tolerated for this file (`model -> analytics`,
+  `model -> error/probability`) are gone, leaving 29. Bodies and tests moved
+  unchanged.
+
 
 - **Every error file names its target crate and wraps only lower layers**
   (#511, multi-crate roadmap M1-14). The `From` conversions whose source
