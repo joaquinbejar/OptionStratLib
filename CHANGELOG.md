@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still passes while the debt is printed on every run. New `--inventory`
   mode prints the deferred edges, the `facade-compat` lines (with source
   layer and compat target) and the ambiguous error names as tables. The
-  self-test grows to 39 cases, several of which assert which file carries
+  self-test grows to 40 cases, several of which assert which file carries
   the edge, and the module docstring states what the resolver does not see.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.

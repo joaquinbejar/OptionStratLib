@@ -413,39 +413,42 @@ def resolution_tables(
         alls = [m.group(0) for m in re.finditer(r"\buse\s+[^;]+;", text, re.S)]
         files.append((module_path_of(rel), pubs, alls))
         aliases.append((module_path_of(rel), text))
-    for table, selector in ((public, 1), (private, 2)):
-        changed = True
-        while changed:
-            changed = False
-            for module, pubs, alls in files:
-                for decl in (pubs if selector == 1 else alls):
-                    for segments, alias in use_entries(decl):
-                        abs_path = absolute(segments, module, modules)
-                        if not abs_path:
-                            continue
-                        if abs_path[-1] == "*":
-                            prefix = tuple(abs_path[:-1])
-                            source = {**public, **table}
-                            for (mod, name), stem in list(source.items()):
-                                if mod == prefix and (module, name) not in table:
-                                    table[(module, name)] = stem
-                                    changed = True
-                            continue
-                        source = public if selector == 1 else {**public, **private}
-                        stem = source.get((tuple(abs_path[:-1]), abs_path[-1]))
-                        if stem is not None:
-                            key = (module, alias or abs_path[-1])
-                            if key not in table:
-                                table[key] = stem
-                                changed = True
-    # `pub type Alias<..> = .. SomeError ..` makes the alias a path to the
-    # error type for every consumer of the alias. The right-hand side is
-    # resolved through the defining file's own bindings, never by spelling:
-    # `use std::io::Error; pub type IoResult<T> = Result<T, Error>;` names a
-    # foreign type, not this crate's unified `Error`.
-    added = True
-    while added:
-        added = False
+    # One fixed point over both passes: a `pub use` can make an alias
+    # resolvable and an alias can make a later `pub use` resolvable, so the
+    # two must be iterated together, not one after the other.
+    progress = True
+    while progress:
+        progress = False
+        for table, selector in ((public, 1), (private, 2)):
+            changed = True
+            while changed:
+                changed = False
+                for module, pubs, alls in files:
+                    for decl in (pubs if selector == 1 else alls):
+                        for segments, alias in use_entries(decl):
+                            abs_path = absolute(segments, module, modules)
+                            if not abs_path:
+                                continue
+                            if abs_path[-1] == "*":
+                                prefix = tuple(abs_path[:-1])
+                                source = {**public, **table}
+                                for (mod, name), stem in list(source.items()):
+                                    if mod == prefix and (module, name) not in table:
+                                        table[(module, name)] = stem
+                                        changed = progress = True
+                                continue
+                            source = public if selector == 1 else {**public, **private}
+                            stem = source.get((tuple(abs_path[:-1]), abs_path[-1]))
+                            if stem is not None:
+                                key = (module, alias or abs_path[-1])
+                                if key not in table:
+                                    table[key] = stem
+                                    changed = progress = True
+        # `pub type Alias<..> = .. SomeError ..` makes the alias a path to the
+        # error type for every consumer of the alias. The right-hand side is
+        # resolved through the defining file's own bindings, never by
+        # spelling: `use std::io::Error; pub type IoResult<T> = Result<T,
+        # Error>;` names a foreign type, not this crate's unified `Error`.
         for module, text in aliases:
             local = file_error_bindings(text, module, public, private, modules)
             for alias_name, rhs in ALIAS_DEF_RE.findall(text):
@@ -462,7 +465,7 @@ def resolution_tables(
                             break
                 if stem is not None and (module, alias_name) not in public:
                     public[(module, alias_name)] = stem
-                    added = True
+                    progress = True
     return public, private
 
 
@@ -820,6 +823,16 @@ def self_test() -> int:
                 ("model/x.rs", "use crate::error::*;\nuse crate::model::local::StrategyError;\nfn f() -> StrategyError { todo!() }\n"),
             ],
             0,
+        ),
+        "re-export of an alias resolves": (
+            [
+                err,
+                ("strategies/mod.rs", "pub type StratResult<T> = Result<T, crate::error::StrategyError>;\n"),
+                ("curves/mod.rs", "pub use crate::strategies::StratResult; // facade-compat: strategies\n"),
+                ("pricing/x.rs", "use crate::curves::StratResult;\nfn f() -> StratResult<u8> { todo!() }\n"),
+            ],
+            1,
+            "pricing/x.rs",
         ),
         "alias over a foreign error of the same name": (
             [
