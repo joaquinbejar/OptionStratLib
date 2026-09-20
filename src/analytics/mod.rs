@@ -26,8 +26,9 @@ pub mod rnd;
 pub use projections::{BasicCurves, BasicSurfaces};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult, RNDStatistics};
 
-/// * `profit_range` - The [`profit_range::ProfitRangeProbability`] extension
+/// * `profit_range` - [`profit_range::ProfitLossRange`] and the
+///   [`profit_range::ProfitRangeProbability`] extension
 ///   trait that fills a core `ProfitLossRange` with its expiry probability.
 pub mod profit_range;
 
-pub use profit_range::ProfitRangeProbability;
+pub use profit_range::{ProfitLossRange, ProfitRangeProbability};

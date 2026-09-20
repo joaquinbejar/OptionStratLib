@@ -292,6 +292,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`ProfitLossRange` moves to the analytics layer** (#594, multi-crate
+  roadmap M1, decision D2). The type sat in `src/model/profit_range.rs`, in
+  the core layer, while every part of it belonged to analytics: its
+  `calculate_probability` forwards to
+  `analytics::profit_range::ProfitRangeProbability`, its signature names
+  `analytics::probability::{PriceTrend, VolatilityAdjustment}` and its
+  constructor reports `ProbabilityError`. It now lives beside that trait in
+  `src/analytics/profit_range.rs`; `model::ProfitLossRange` and the prelude
+  path are downward re-exports, so no 0.21 path changes. The two reverse
+  edges the boundary checker tolerated for this file (`model -> analytics`,
+  `model -> error/probability`) are gone, leaving 29. Bodies and tests moved
+  unchanged.
+
+
 - **Every error file names its target crate and wraps only lower layers**
   (#511, multi-crate roadmap M1-14). The `From` conversions whose source
   error belongs to a higher layer moved next to that source
