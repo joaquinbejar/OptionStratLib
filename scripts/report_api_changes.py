@@ -2,11 +2,19 @@
 """Report the public API changes a pull request makes, per feature surface.
 
 0.22.0 is under development and compatibility with the published 0.21.3 is
-not a requirement, so this is a **report**, not a gate: it lists what the
-change adds, removes or reshapes so a reviewer can judge it, and it does not
-ask for per-item authorisation. What it still fails on is a tool, build or
-parser problem, because an unreadable report must never be mistaken for "no
-change".
+not a requirement, so this is a **report**, not a gate: it lists the items a
+change removes or reshapes so a reviewer can judge them, and it asks for no
+per-item authorisation. What it still fails on is a tool, build or parser
+problem, because an unreadable report must never be mistaken for "nothing to
+review".
+
+Scope, stated exactly: these are `cargo-semver-checks` findings, so the
+report covers **removals and incompatible reshaping**, not additions.
+`cargo-semver-checks` says nothing about a new public item, and an empty
+report here means "nothing incompatible", never "the public API is
+unchanged". Additions are covered by the checked-in snapshot
+(`make public-api-check`), which fails until the author regenerates it, so
+every addition reaches the reviewer as a diff in the pull request.
 
 Why per surface: an item can leave the default surface and stay behind a
 feature, which a single `--all-features` run cannot see. The six surfaces are
@@ -175,10 +183,28 @@ def surface_flags(surface: dict) -> list[str]:
     return flags
 
 
-def run_semver(baseline: str, surface: dict, published: str | None, cwd: Path = ROOT) -> tuple[str, int]:
-    command = ["cargo", "semver-checks", *surface_flags(surface)]
-    command += ["--baseline-version", published] if published else ["--baseline-rev", baseline]
-    done = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
+def semver_command(baseline: str, surface: dict) -> list[str]:
+    """The exact command the report runs.
+
+    `--release-type patch` forces "no breaking change is allowed" whatever
+    the two manifests declare. Without it the verdict is decided by the
+    version numbers: against a 0.21.3 baseline a 0.22.0 tree skips every
+    lint and reports success, which would make this report blind precisely
+    while the migration removes things.
+    """
+    return [
+        "cargo",
+        "semver-checks",
+        *surface_flags(surface),
+        "--release-type",
+        "patch",
+        "--baseline-rev",
+        baseline,
+    ]
+
+
+def run_semver(baseline: str, surface: dict, cwd: Path = ROOT) -> tuple[str, int]:
+    done = subprocess.run(semver_command(baseline, surface), cwd=cwd, capture_output=True, text=True, check=False)
     return done.stdout + done.stderr, done.returncode
 
 
@@ -228,6 +254,12 @@ def self_test() -> int:
     ok = len(same) == 2
     failures += 0 if ok else 1
     print(f"self-test {'ok' if ok else 'FAIL'}: one item under two lints is two findings ({sorted(same)})")
+    # The executed command must carry the release-type override, or the
+    # manifest version decides which lints run at all.
+    command = semver_command("abc1234", SURFACES["default"])
+    ok = command[command.index("--release-type") + 1] == "patch" and "--baseline-rev" in command
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: the command forces --release-type patch ({' '.join(command[2:])})")
     # `good` must parse to nothing at all.
     ok = parse_report(good, 0, tool, lints) == set()
     failures += 0 if ok else 1
@@ -275,7 +307,7 @@ def main() -> int:
     try:
         if args.base_sha and args.head_sha:
             assert_synthetic(args.base_sha, args.head_sha, cwd=args.root)
-        text, code = run_semver(args.baseline, SURFACES[args.surface], None, cwd=args.root)
+        text, code = run_semver(args.baseline, SURFACES[args.surface], cwd=args.root)
         found = parse_report(text, code, TOOL, known_lints())
     except ReportError as error:
         # A report we cannot read is a failure: it must never be mistaken for
@@ -283,7 +315,10 @@ def main() -> int:
         print(f"api-changes: {error}", file=sys.stderr)
         return 2
     if not found:
-        print(f"api-changes: {args.surface} unchanged against {args.baseline[:12]}")
+        print(
+            f"api-changes: {args.surface} has no removal or incompatible reshaping "
+            f"against {args.baseline[:12]} (additions are shown by the public-api snapshot diff)"
+        )
         return 0
     print(f"api-changes: {args.surface} against {args.baseline[:12]}, {len(found)} item(s) for review")
     for lint, item in sorted(found):

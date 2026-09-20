@@ -8,13 +8,17 @@
 #
 # Six surfaces, because an item can leave the default surface and stay behind
 # a feature, which a single `--all-features` run cannot see.
+#
+# Scope: these are cargo-semver-checks findings, so the report covers
+# removals and incompatible reshaping, not additions. Additions reach the
+# reviewer through the checked-in public-api snapshot, which `make
+# public-api-check` refuses until it is regenerated.
 name: API CHANGES
 
 on:
+  # Every pull request, whatever it targets: a stacked pull request based on
+  # another branch needs the same report against its own base.
   pull_request:
-    branches:
-      - main
-      - 'release/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

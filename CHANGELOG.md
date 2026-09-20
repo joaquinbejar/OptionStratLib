@@ -26,8 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the published crate, the `v0.21.3` reference, the register of
   individually authorised breaks and its approval flow. What replaces it is
   a report: `scripts/report_api_changes.py` lists, per feature surface, the
-  public API a pull request adds, removes or reshapes against its own base,
-  so a reviewer judges the change instead of authorising it item by item.
+  public items a pull request removes or reshapes incompatibly against its
+  own base, so a reviewer judges the change instead of authorising it item by
+  item. Additions are not `cargo-semver-checks` findings and reach the
+  reviewer through the public-api snapshot, which `make public-api-check`
+  refuses until it is regenerated.
   The job still fails on a tool, build or parser problem, because an
   unreadable report must never be read as "no change". The `synthetic`
   requirement previously recorded as AB-01 is superseded by this policy and
