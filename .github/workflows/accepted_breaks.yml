@@ -1,0 +1,90 @@
+# Accepted-breaks gate (#592).
+#
+# Three comparisons per feature surface, all against `public-api/accepted-breaks.toml`:
+#
+#   C1 cumulative    baseline = the published 0.21.3
+#   C2 reference     baseline = the newest `Accepted-Breaks:` commit BEFORE the
+#                    change under test (never the commit itself)
+#   C3 incremental   baseline = the first parent of the merge commit CI checks
+#                    out, which is the pull request's base
+#
+# The job is informational until its implementation has been reviewed: it is
+# not a required check and it does not replace the `semver` job, which keeps
+# running unchanged.
+name: ACCEPTED BREAKS
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUST_BACKTRACE: full
+  # Pinned: the parser is written against this report grammar and refuses any
+  # other version (the register records it too).
+  SEMVER_CHECKS_VERSION: 0.50.0
+
+jobs:
+  accepted-breaks:
+    name: accepted-breaks (${{ matrix.surface }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every surface on every pull request: a change can leave the default
+        # surface and stay behind a feature, which `--all-features` cannot see.
+        surface: [none, default, plotly, static_export, async, all]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # C2 walks the history for the trailer and C3 needs the merge
+          # commit's parents.
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-semver-checks ${{ env.SEMVER_CHECKS_VERSION }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks@${{ env.SEMVER_CHECKS_VERSION }}
+      - name: Parser self-test
+        run: python3 scripts/check_accepted_breaks.py --self-test
+      - name: Resolve baselines
+        id: bases
+        run: |
+          set -eu
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            echo "pin=--base-sha $base --head-sha $head" >> "$GITHUB_OUTPUT"
+            echo "incremental=$base" >> "$GITHUB_OUTPUT"
+            before="$base"
+            echo "landed_only=" >> "$GITHUB_OUTPUT"
+          else
+            echo "pin=" >> "$GITHUB_OUTPUT"
+            echo "incremental=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
+            before="$(git rev-parse HEAD^)"
+            echo "landed_only=--landed-only" >> "$GITHUB_OUTPUT"
+          fi
+          # The reference is searched among the ancestors of the state BEFORE
+          # the change under test, so an integrating push is never compared
+          # with itself.
+          ref=$(git log --format=%H --grep='^Accepted-Breaks:' "$before" | head -1)
+          [ -n "$ref" ] || ref=$(git rev-parse v0.21.3)
+          echo "reference=$ref" >> "$GITHUB_OUTPUT"
+          echo "reference=$ref before=$before"
+      - name: C1 cumulative against the published 0.21.3
+        run: python3 scripts/check_accepted_breaks.py --check C1 --surface ${{ matrix.surface }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+      - name: C2 against the controlled reference
+        run: python3 scripts/check_accepted_breaks.py --check C2 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.reference }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+      - name: C3 incremental against the pull request base
+        run: python3 scripts/check_accepted_breaks.py --check C3 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.incremental }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}

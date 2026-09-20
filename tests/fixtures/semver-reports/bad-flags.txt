@@ -1,0 +1,5 @@
+error: the argument '--baseline-root <MANIFEST_ROOT>' cannot be used with '--baseline-version <X.Y.Z>'
+
+Usage: cargo semver-checks --baseline-root <MANIFEST_ROOT>
+
+For more information, try '--help'.

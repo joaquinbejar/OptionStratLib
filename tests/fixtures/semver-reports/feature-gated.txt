@@ -1,0 +1,23 @@
+    Building probe v0.1.0 (current)
+       Built [   0.347s] (current)
+     Parsing probe v0.1.0 (current)
+      Parsed [   0.002s] (current)
+    Building probe v0.1.0 (baseline)
+       Built [   0.231s] (baseline)
+     Parsing probe v0.1.0 (baseline)
+      Parsed [   0.001s] (baseline)
+    Checking probe v0.1.0 -> v0.1.0 (no change; assume minor)
+     Checked [   0.008s] 196 checks: 195 pass, 1 fail, 0 warn, 58 skip
+
+--- failure function_missing: pub fn removed or renamed ---
+
+Description:
+A publicly-visible function cannot be imported by its prior path. A `pub use` may have been removed, or the function itself may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#item-remove
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/function_missing.ron
+
+Failed in:
+  function probe::gated_by_default, previously in file <root>/gbase/src/lib.rs:1
+
+     Summary semver requires new major version: 1 major and 0 minor checks failed
+    Finished [   0.834s] probe

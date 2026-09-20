@@ -1,0 +1,145 @@
+    Building probe v0.1.0 (current)
+       Built [   0.627s] (current)
+     Parsing probe v0.1.0 (current)
+      Parsed [   0.002s] (current)
+    Building probe v0.1.0 (baseline)
+       Built [   0.218s] (baseline)
+     Parsing probe v0.1.0 (baseline)
+      Parsed [   0.001s] (baseline)
+    Checking probe v0.1.0 -> v0.1.0 (no change; assume minor)
+     Checked [   0.009s] 196 checks: 189 pass, 7 fail, 0 warn, 58 skip
+
+--- failure enum_marked_non_exhaustive: enum marked #[non_exhaustive] ---
+
+Description:
+A public enum has been marked #[non_exhaustive]. Pattern-matching on it outside of its crate must now include a wildcard pattern like `_`, or it will fail to compile.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#attr-adding-non-exhaustive
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/enum_marked_non_exhaustive.ron
+
+Failed in:
+  enum E in <root>/current/src/lib.rs:5
+
+--- failure enum_variant_missing: pub enum variant removed or renamed ---
+
+Description:
+A publicly-visible enum has at least one variant that is no longer available under its prior name. It may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#item-remove
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/enum_variant_missing.ron
+
+Failed in:
+  variant E::B, previously in file <root>/baseline/src/lib.rs:5
+
+--- failure function_missing: pub fn removed or renamed ---
+
+Description:
+A publicly-visible function cannot be imported by its prior path. A `pub use` may have been removed, or the function itself may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#item-remove
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/function_missing.ron
+
+Failed in:
+  function probe::many_22, previously in file <root>/baseline/src/lib.rs:33
+  function probe::many_47, previously in file <root>/baseline/src/lib.rs:58
+  function probe::many_9, previously in file <root>/baseline/src/lib.rs:20
+  function probe::many_34, previously in file <root>/baseline/src/lib.rs:45
+  function probe::many_59, previously in file <root>/baseline/src/lib.rs:70
+  function probe::many_21, previously in file <root>/baseline/src/lib.rs:32
+  function probe::many_46, previously in file <root>/baseline/src/lib.rs:57
+  function probe::many_8, previously in file <root>/baseline/src/lib.rs:19
+  function probe::many_33, previously in file <root>/baseline/src/lib.rs:44
+  function probe::many_58, previously in file <root>/baseline/src/lib.rs:69
+  function probe::many_20, previously in file <root>/baseline/src/lib.rs:31
+  function probe::many_45, previously in file <root>/baseline/src/lib.rs:56
+  function probe::many_7, previously in file <root>/baseline/src/lib.rs:18
+  function probe::many_32, previously in file <root>/baseline/src/lib.rs:43
+  function probe::many_57, previously in file <root>/baseline/src/lib.rs:68
+  function probe::many_19, previously in file <root>/baseline/src/lib.rs:30
+  function probe::many_44, previously in file <root>/baseline/src/lib.rs:55
+  function probe::many_6, previously in file <root>/baseline/src/lib.rs:17
+  function probe::many_31, previously in file <root>/baseline/src/lib.rs:42
+  function probe::many_56, previously in file <root>/baseline/src/lib.rs:67
+  function probe::many_18, previously in file <root>/baseline/src/lib.rs:29
+  function probe::removed_fn, previously in file <root>/baseline/src/lib.rs:2
+  function probe::many_43, previously in file <root>/baseline/src/lib.rs:54
+  function probe::many_5, previously in file <root>/baseline/src/lib.rs:16
+  function probe::many_30, previously in file <root>/baseline/src/lib.rs:41
+  function probe::many_55, previously in file <root>/baseline/src/lib.rs:66
+  function probe::many_17, previously in file <root>/baseline/src/lib.rs:28
+  function probe::many_42, previously in file <root>/baseline/src/lib.rs:53
+  function probe::many_4, previously in file <root>/baseline/src/lib.rs:15
+  function probe::many_29, previously in file <root>/baseline/src/lib.rs:40
+  function probe::many_54, previously in file <root>/baseline/src/lib.rs:65
+  function probe::many_16, previously in file <root>/baseline/src/lib.rs:27
+  function probe::inner::only_path, previously in file <root>/baseline/src/lib.rs:7
+  function probe::many_41, previously in file <root>/baseline/src/lib.rs:52
+  function probe::many_3, previously in file <root>/baseline/src/lib.rs:14
+  function probe::many_28, previously in file <root>/baseline/src/lib.rs:39
+  function probe::many_53, previously in file <root>/baseline/src/lib.rs:64
+  function probe::many_15, previously in file <root>/baseline/src/lib.rs:26
+  function probe::many_40, previously in file <root>/baseline/src/lib.rs:51
+  function probe::many_2, previously in file <root>/baseline/src/lib.rs:13
+  function probe::many_27, previously in file <root>/baseline/src/lib.rs:38
+  function probe::many_52, previously in file <root>/baseline/src/lib.rs:63
+  function probe::many_14, previously in file <root>/baseline/src/lib.rs:25
+  function probe::many_39, previously in file <root>/baseline/src/lib.rs:50
+  function probe::many_1, previously in file <root>/baseline/src/lib.rs:12
+  function probe::many_26, previously in file <root>/baseline/src/lib.rs:37
+  function probe::many_51, previously in file <root>/baseline/src/lib.rs:62
+  function probe::many_13, previously in file <root>/baseline/src/lib.rs:24
+  function probe::many_38, previously in file <root>/baseline/src/lib.rs:49
+  function probe::many_0, previously in file <root>/baseline/src/lib.rs:11
+  function probe::many_25, previously in file <root>/baseline/src/lib.rs:36
+  function probe::many_50, previously in file <root>/baseline/src/lib.rs:61
+  function probe::many_12, previously in file <root>/baseline/src/lib.rs:23
+  function probe::many_37, previously in file <root>/baseline/src/lib.rs:48
+  function probe::many_24, previously in file <root>/baseline/src/lib.rs:35
+  function probe::many_49, previously in file <root>/baseline/src/lib.rs:60
+  function probe::many_11, previously in file <root>/baseline/src/lib.rs:22
+  function probe::many_36, previously in file <root>/baseline/src/lib.rs:47
+  function probe::many_23, previously in file <root>/baseline/src/lib.rs:34
+  function probe::many_48, previously in file <root>/baseline/src/lib.rs:59
+  function probe::many_10, previously in file <root>/baseline/src/lib.rs:21
+  function probe::many_35, previously in file <root>/baseline/src/lib.rs:46
+
+--- failure inherent_method_missing: pub method removed or renamed ---
+
+Description:
+A publicly-visible method or associated fn is no longer available under its prior name. It may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#item-remove
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/inherent_method_missing.ron
+
+Failed in:
+  S::m1, previously in file <root>/baseline/src/lib.rs:4
+  S::m2, previously in file <root>/baseline/src/lib.rs:4
+
+--- failure struct_missing: pub struct removed or renamed ---
+
+Description:
+A publicly-visible struct cannot be imported by its prior path. A `pub use` may have been removed, or the struct itself may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#item-remove
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/struct_missing.ron
+
+Failed in:
+  struct probe::TwiceAlias, previously in file <root>/baseline/src/lib.rs:7
+
+--- failure trait_method_added: pub trait method added ---
+
+Description:
+A non-sealed public trait added a new method without a default implementation, which breaks downstream implementations of the trait
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#trait-new-item-no-default
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/trait_method_added.ron
+
+Failed in:
+  trait method probe::T::c in file <root>/current/src/lib.rs:6
+
+--- failure trait_method_missing: pub trait method removed or renamed ---
+
+Description:
+A trait method is no longer callable, and may have been renamed or removed entirely.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#trait-item-signature
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.50.0/src/lints/trait_method_missing.ron
+
+Failed in:
+  method a of trait T, previously in file <root>/baseline/src/lib.rs:6
+
+     Summary semver requires new major version: 7 major and 0 minor checks failed
+    Finished [   1.103s] probe

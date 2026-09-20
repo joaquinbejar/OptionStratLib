@@ -1,0 +1,71 @@
+# Register of authorised incompatible changes for the 0.22 migration.
+#
+# The manifests stay at 0.21.3 and nothing is published while the migration
+# runs, so `cargo semver-checks` compares against the published 0.21.3 and
+# reports every removal. This file is the only place where such a report is
+# allowed to be expected rather than a failure, and every entry is authorised
+# by the repository owner on the register tracking issue before it may land.
+#
+# Schema and verdicts: `scripts/check_accepted_breaks.py` (module docstring).
+# Nothing here is approved by the file itself; see `status` and `approval`.
+
+[register]
+# The comparison baselines. `initial_reference` is used by C2 until the first
+# commit carrying an `Accepted-Breaks:` trailer exists on `main`.
+published = "0.21.3"
+initial_reference = "v0.21.3"
+# The login whose comment on `issue` may set `status = "approved"`.
+owner = "joaquinbejar"
+issue = 592
+# The report grammar changes between releases; the parser is written against
+# this exact version and refuses any other.
+tool = "cargo-semver-checks 0.50.0"
+
+# Surfaces every comparison runs on. `default` is spelled explicitly so the
+# set cannot drift with the manifest.
+[[register.surfaces]]
+id = "none"
+features = []
+default_features = false
+
+[[register.surfaces]]
+id = "default"
+features = ["synthetic"]
+default_features = false
+
+[[register.surfaces]]
+id = "plotly"
+features = ["plotly"]
+default_features = false
+
+[[register.surfaces]]
+id = "static_export"
+features = ["static_export", "plotly"]
+default_features = false
+
+[[register.surfaces]]
+id = "async"
+features = ["async"]
+default_features = false
+
+[[register.surfaces]]
+id = "all"
+all_features = true
+
+# No break is authorised yet. An entry looks like this (see the docstring):
+#
+# [[break]]
+# id = "AB-01"
+# surfaces = ["none", "default", "plotly", "static_export", "async", "all"]
+# baseline = ["0.21.3", "reference", "incremental"]
+# findings = [
+#   { check = "C1", lint = "function_missing", item = "function optionstratlib::utils::logger::setup_logger" },
+#   { check = "C2", lint = "function_missing", item = "function optionstratlib::utils::logger::setup_logger" },
+#   { check = "C3", lint = "function_missing", item = "function optionstratlib::utils::logger::setup_logger" },
+# ]
+# decision = "M1-EXIT-PROPOSAL D4"
+# issue = 506
+# migration = "call tracing_subscriber::fmt().with_max_level(..).init() from the binary"
+# status = "proposed"
+# approval = { ref = "", date = "" }
+# landed = { pr = 0 }

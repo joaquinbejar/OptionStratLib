@@ -43,6 +43,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   layer and compat target) and the ambiguous error names as tables. The
   self-test grows to 40 cases, several of which assert which file carries
   the edge, and the module docstring states what the resolver does not see.
+- **Accepted-breaks register and three-baseline semver gate** (#592,
+  multi-crate roadmap M1-17). The 0.22 migration needs incompatible changes
+  while the manifests stay at 0.21.3 and nothing is published, so
+  `cargo semver-checks` reports every removal against the published crate.
+  `public-api/accepted-breaks.toml` is now the only place where such a report
+  may be expected instead of failing, and `scripts/check_accepted_breaks.py`
+  compares the two. Three comparisons run per feature surface: **C1** against
+  the published 0.21.3 (what a consumer of the release sees), **C2** against
+  the newest commit carrying an `Accepted-Breaks:` trailer among the
+  ancestors of the state *before* the change under test (so an integrating
+  push is never compared with itself), and **C3** against the pull request's
+  base, taken from the first parent of the merge commit CI checks out, which
+  is the only comparison that sees the removal of an item added after 0.21.3.
+  All six surfaces (`none`, `default`, `plotly`, `static_export`, `async`,
+  `all`) run on every pull request, because an item can leave the default
+  surface and stay behind a feature, which `--all-features` cannot see. The
+  parser is fail-closed: a non-zero, non-100 exit, a missing summary, a block
+  count that disagrees with it, a truncation marker, an unknown lint or an
+  unpinned tool version is an error, never "zero breaks"; fourteen fixtures
+  under `tests/fixtures/semver-reports/` (six real reports, six derived
+  defects, one duplicate-item case and the reproducible four-step sequence
+  script with its recorded output) are parsed by `--self-test`, which
+  `make check-breaks` runs. The register ships with no approved entry, the
+  workflow is informational and the existing `semver` job is unchanged.
+- **`make check-graph` enforces the module boundaries** (#507, multi-crate
+  roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
+  for `crate::<module>` references (including multi-line `use crate::{...}`
+  groups, qualified groups such as `use crate::error::{graph::GraphError}`
+  and `crate::error::<file>` paths), maps every module and every
+  error file to its target crate (ADR-0001 D2 and D6) and fails on any edge
+  against the approved graph. `pub use` lines marked `// facade-compat:
+  <layer>` (the compatibility re-exports that become facade code at
+  extraction) are exempt, and only those: a marked plain import is scanned
+  like any other; the eleven known reverse edges whose removal is a breaking change
+  are listed in the script per file with the issue that removes them (the
+  same module pair in any other file fails) and the run prints how many
+  marked lines each layer carries; a self-test proves the scanner catches what it
+  must. The `lint` workflow runs it on every push. The last two imports
+  through `crate::prelude` inside the library (`pricing::telegraph`,
+  `strategies::delta_neutral`) now use canonical paths.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.
   `VolatilityAdjustment`, `PriceTrend`, `calculate_single_point_probability`
