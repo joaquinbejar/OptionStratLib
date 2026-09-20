@@ -12,7 +12,7 @@
 use crate::Options;
 use crate::error::greeks::GreeksError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
-use crate::pricing::unified::{Priceable, PricingEngine};
+use crate::pricing::{ClosedFormEngine, price_option_with};
 use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -40,8 +40,8 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.underlying_price =
         Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
-    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
+    let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
+    let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
 
     let diff = d_sub(
         p_plus.to_dec(),
@@ -74,9 +74,9 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.underlying_price =
         Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
-    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
-    let p = option.price(&PricingEngine::ClosedFormBS)?;
+    let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
+    let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
+    let p = price_option_with(option, &ClosedFormEngine::ClosedFormBS)?;
 
     // Central-second-difference numerator:
     //   p_plus - 2*p + p_minus.
@@ -108,8 +108,8 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
     opt_minus.implied_volatility =
         Positive::new_decimal((option.implied_volatility.to_dec() - H).abs())?;
 
-    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
-    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
+    let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
+    let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
 
     let diff = d_sub(
         p_plus.to_dec(),
@@ -164,8 +164,8 @@ pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_minus = option.clone();
     opt_minus.risk_free_rate -= H;
 
-    let p_plus = opt_plus.price(&PricingEngine::ClosedFormBS)?;
-    let p_minus = opt_minus.price(&PricingEngine::ClosedFormBS)?;
+    let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
+    let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
 
     let diff = d_sub(
         p_plus.to_dec(),

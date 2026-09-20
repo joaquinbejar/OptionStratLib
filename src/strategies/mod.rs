@@ -216,6 +216,8 @@ pub mod bull_put_spread;
 pub mod call_butterfly;
 /// Collar strategy implementation
 pub mod collar;
+/// Combination search shared by the strategy optimisers.
+pub mod combinations;
 /// Covered Call strategy implementation
 pub mod covered_call;
 /// Custom strategy implementation and utilities
@@ -281,6 +283,7 @@ pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
 pub use call_butterfly::CallButterfly;
 pub use collar::Collar;
+pub use combinations::process_n_times_iter;
 pub use covered_call::CoveredCall;
 pub use delta_neutral::{
     AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,

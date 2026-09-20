@@ -153,7 +153,7 @@ mod tests {
     use super::*;
     use crate::ExpirationDate;
     use crate::model::types::{OptionStyle, Side};
-    use crate::pricing::unified::{PricingEngine, price_option};
+    use crate::pricing::{ClosedFormEngine, price_option_with};
     use positive::{Positive, pos_or_panic};
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
@@ -530,7 +530,7 @@ mod tests {
     fn test_pricing_engine_closed_form_gk_dispatch_long() {
         let option = create_fx_option(1.25, 1.2, dec!(0.05), 0.03, 180.0, 0.15, OptionStyle::Call);
         let direct = garman_kohlhagen(&option).unwrap();
-        let via_engine = price_option(&option, &PricingEngine::ClosedFormGK).unwrap();
+        let via_engine = price_option_with(&option, &ClosedFormEngine::ClosedFormGK).unwrap();
         assert_eq!(via_engine.to_dec(), direct);
     }
 
@@ -540,7 +540,7 @@ mod tests {
             create_fx_option(1.25, 1.2, dec!(0.05), 0.03, 180.0, 0.15, OptionStyle::Call);
         option.side = Side::Short;
         let direct = garman_kohlhagen(&option).unwrap();
-        let via_engine = price_option(&option, &PricingEngine::ClosedFormGK).unwrap();
+        let via_engine = price_option_with(&option, &ClosedFormEngine::ClosedFormGK).unwrap();
         assert_eq!(via_engine.to_dec(), direct.abs());
     }
 }

@@ -463,15 +463,13 @@ mod tests {
         Ok(vec![params.init_step.clone()])
     }
 
-    /// The generic engine prices through `MonteCarloPricer` exactly what
-    /// the concrete `PricingEngine::MonteCarlo` arm prices from the same
-    /// paths, and `From<PricingEngine>` preserves the simulator.
+    /// The engine prices through `MonteCarloPricer` exactly what the
+    /// simulator produces from the same paths, whether the engine owns the
+    /// simulator or borrows it.
     #[test]
-    fn test_monte_carlo_pricer_matches_pricing_engine_on_the_same_paths() {
+    fn test_monte_carlo_pricer_matches_the_simulator_on_the_same_paths() {
         use crate::model::types::{OptionStyle, OptionType, Side};
-        use crate::pricing::{
-            GenericPricingEngine, PricingEngine, price_option, price_option_with,
-        };
+        use crate::pricing::{GenericPricingEngine, price_option_with};
 
         let prices: Vec<Positive> = (0..12)
             .map(|i| pos_or_panic!(100.0 + f64::from(i) * 1.5))
@@ -508,12 +506,8 @@ mod tests {
             exotic_params: None,
         };
 
-        let concrete = PricingEngine::MonteCarlo {
-            simulator: simulator.clone(),
-        };
-        let expected = price_option(&option, &concrete).unwrap();
+        let expected = simulator.get_mc_option_price(&option).unwrap();
         assert!(expected > Positive::ZERO);
-        assert_eq!(expected, simulator.get_mc_option_price(&option).unwrap());
         assert_eq!(expected, simulator.price_monte_carlo(&option).unwrap());
 
         let generic = GenericPricingEngine::MonteCarlo {
@@ -525,9 +519,6 @@ mod tests {
             simulator: &simulator,
         };
         assert_eq!(price_option_with(&option, &borrowed).unwrap(), expected);
-
-        let converted: GenericPricingEngine<Simulator<Positive, Positive>> = concrete.into();
-        assert_eq!(price_option_with(&option, &converted).unwrap(), expected);
     }
 
     /// Moved from `pricing::monte_carlo` (#508): the Monte Carlo price

@@ -9,10 +9,10 @@
 //! Demonstrates pricing European FX options using the Garman–Kohlhagen
 //! (1983) model: the Hull canonical example (USD/GBP, 4-month ATM), an
 //! ITM EUR/USD scenario with FX put-call-parity check, dispatch through
-//! the unified `PricingEngine`, and the symmetric-rate degenerate case.
+//! the generic pricing engine, and the symmetric-rate degenerate case.
 
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pricing::{PricingEngine, garman_kohlhagen, price_option};
+use optionstratlib::pricing::{ClosedFormEngine, garman_kohlhagen, price_option_with};
 use optionstratlib::{ExpirationDate, Options};
 use positive::pos_or_panic;
 use rust_decimal::MathematicalOps;
@@ -103,11 +103,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ---- Example 3: Unified API dispatch --------------------------------
     info!("");
-    info!("Example 3: Unified API via PricingEngine::ClosedFormGK");
+    info!("Example 3: Unified API via ClosedFormEngine::ClosedFormGK");
     let direct = garman_kohlhagen(&option2)?;
-    let via_engine = price_option(&option2, &PricingEngine::ClosedFormGK)?;
+    let via_engine = price_option_with(&option2, &ClosedFormEngine::ClosedFormGK)?;
     info!("  Direct garman_kohlhagen()   = {}", direct);
-    info!("  Via PricingEngine dispatch  = {}", via_engine);
+    info!("  Via the generic engine      = {}", via_engine);
 
     // ---- Example 4: Symmetric rates collapse to forward parity ----------
     info!("");

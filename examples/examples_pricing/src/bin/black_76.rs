@@ -8,11 +8,11 @@
 //!
 //! Demonstrates pricing options on futures and forwards using the Black-76
 //! model, including the Hull canonical example, an in-the-money commodity
-//! futures call, dispatch through the unified `PricingEngine`, and the
+//! futures call, dispatch through the generic pricing engine, and the
 //! short-side sign convention.
 
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pricing::{PricingEngine, black_76, price_option};
+use optionstratlib::pricing::{ClosedFormEngine, black_76, price_option_with};
 use optionstratlib::{ExpirationDate, Options};
 use positive::pos_or_panic;
 use rust_decimal::MathematicalOps;
@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ---- Example 3: Unified PricingEngine dispatch -----------------------
     info!("");
-    info!("Example 3: Unified API via PricingEngine::ClosedFormBlack76");
+    info!("Example 3: Unified API via ClosedFormEngine::ClosedFormBlack76");
     let option3 = Options::new(
         OptionType::European,
         Side::Long,
@@ -116,9 +116,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None,
     );
     let price_direct = black_76(&option3)?;
-    let price_via_engine = price_option(&option3, &PricingEngine::ClosedFormBlack76)?;
+    let price_via_engine = price_option_with(&option3, &ClosedFormEngine::ClosedFormBlack76)?;
     info!("  Direct black_76()         = {}", price_direct);
-    info!("  Via PricingEngine dispatch = {}", price_via_engine);
+    info!("  Via the generic engine     = {}", price_via_engine);
 
     // ---- Example 4: Short side sign convention ---------------------------
     info!("");

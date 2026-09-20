@@ -146,8 +146,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("model", "greeks"): (frozenset({"model/leg/leg_enum.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
     # `Trade::pnl() -> PnL` is public inherent API returning an analytics type.
     ("model", "pnl"): (frozenset({"model/trade.rs"}), "0.22.0 batch (#498)"),
-    # `PricingEngine::MonteCarlo` still stores the concrete `Simulator`.
-    ("pricing", "simulation"): (frozenset({"pricing/unified.rs"}), "0.22.0 batch (#508, ADR-0001 D3)"),
     # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`
     # `impl BasicAble for Simulator/RandomWalk` lives in strategies.
     ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
@@ -185,8 +183,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("model", "error/chains"): (frozenset({"model/utils.rs"}), "re-home to chains::utils (M1 exit proposal D2, #507)"),
     # `utils::csv` is market-owned (ADR-0001 D2), behind the I/O feature.
     ("utils", "error/csv"): (frozenset({"utils/csv.rs"}), "re-home to market (ADR-0001 D2, #525)"),
-    # `process_n_times_iter` returns the facade-level unified `Error`.
-    ("utils", "error/unified"): (frozenset({"utils/others.rs"}), "facade-owned or retyped (ADR-0001 D2, #506)"),
     # `MetricsError` is defined under analytics today but depends only on
     # `CurveError`/`SurfaceError`; re-homing it to math dissolves these three.
     ("curves", "error/metrics"): (frozenset({"curves/curve.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
@@ -732,8 +728,8 @@ def self_test() -> int:
         "empty test module then import": ([("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n")], 1),
         "test module file then import": ([("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n")], 1),
         "synthetic file": ([("chains/generators.rs", "use crate::simulation::WalkParams;\n")], 0),
-        "deferred pair in its file": ([("pricing/unified.rs", "use crate::simulation::simulator::Simulator;\n")], 0),
-        "deferred pair in another file": ([("pricing/other.rs", "use crate::simulation::simulator::Simulator;\n")], 1),
+        "deferred pair in its file": ([("model/trade.rs", "use crate::pnl::PnL;\n")], 0),
+        "deferred pair in another file": ([("model/other.rs", "use crate::pnl::PnL;\n")], 1),
         # --- error-type resolution (#590)
         "bare error import": ([err, ("model/x.rs", "use crate::error::StrategyError;\n")], 1),
         "error import with alias": ([err, ("model/x.rs", "use crate::error::StrategyError as SE;\nfn f() -> SE { todo!() }\n")], 1),

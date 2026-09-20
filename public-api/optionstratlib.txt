@@ -4374,7 +4374,7 @@ pub fn optionstratlib::model::option::Options::calculate_price_montecarlo(&self,
 pub fn optionstratlib::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib::model::option::Options::time_value(&self) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::strategies::base::BasicAble for optionstratlib::model::option::Options
 pub fn optionstratlib::model::option::Options::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
 pub fn optionstratlib::model::option::Options::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
@@ -4699,7 +4699,7 @@ pub fn optionstratlib::model::option::Options::calculate_price_montecarlo(&self,
 pub fn optionstratlib::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib::model::option::Options::time_value(&self) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::strategies::base::BasicAble for optionstratlib::model::option::Options
 pub fn optionstratlib::model::option::Options::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
 pub fn optionstratlib::model::option::Options::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
@@ -6056,16 +6056,6 @@ pub optionstratlib::prelude::unified::GenericPricingEngine::ClosedFormBlack76
 pub optionstratlib::prelude::unified::GenericPricingEngine::ClosedFormGK
 pub optionstratlib::prelude::unified::GenericPricingEngine::MonteCarlo
 pub optionstratlib::prelude::unified::GenericPricingEngine::MonteCarlo::simulator: M
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
-#[non_exhaustive] pub enum optionstratlib::prelude::unified::PricingEngine
-pub optionstratlib::prelude::unified::PricingEngine::ClosedFormBS
-pub optionstratlib::prelude::unified::PricingEngine::ClosedFormBlack76
-pub optionstratlib::prelude::unified::PricingEngine::ClosedFormGK
-pub optionstratlib::prelude::unified::PricingEngine::MonteCarlo
-pub optionstratlib::prelude::unified::PricingEngine::MonteCarlo::simulator: optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
 pub struct optionstratlib::prelude::unified::NoMonteCarlo
 impl optionstratlib::pricing::unified::MonteCarloPricer for optionstratlib::pricing::unified::NoMonteCarlo
 pub fn optionstratlib::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib::model::option::Options) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
@@ -6078,10 +6068,9 @@ pub fn optionstratlib::simulation::simulator::Simulator<positive::positive::Posi
 impl<M> optionstratlib::pricing::unified::MonteCarloPricer for &M where M: optionstratlib::pricing::unified::MonteCarloPricer + ?core::marker::Sized
 pub fn &M::price_monte_carlo(&self, &optionstratlib::model::option::Options) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
 pub trait optionstratlib::prelude::unified::Priceable
-pub fn optionstratlib::prelude::unified::Priceable::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::prelude::unified::Priceable::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
-pub fn optionstratlib::prelude::unified::price_option(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub fn optionstratlib::prelude::unified::price_option_with<M>(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub type optionstratlib::prelude::unified::ClosedFormEngine = optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::pricing::unified::NoMonteCarlo>
 pub enum optionstratlib::prelude::AdjustmentAction
@@ -6367,8 +6356,6 @@ pub optionstratlib::prelude::GenericPricingEngine::ClosedFormBlack76
 pub optionstratlib::prelude::GenericPricingEngine::ClosedFormGK
 pub optionstratlib::prelude::GenericPricingEngine::MonteCarlo
 pub optionstratlib::prelude::GenericPricingEngine::MonteCarlo::simulator: M
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
 pub enum optionstratlib::prelude::GraphData
 pub optionstratlib::prelude::GraphData::GraphSurface(optionstratlib::visualization::Surface3D)
 pub optionstratlib::prelude::GraphData::MultiSeries(optionstratlib::visualization::MultiSeries2D)
@@ -6545,14 +6532,6 @@ impl core::convert::From<optionstratlib::error::position::PositionError> for opt
 pub fn optionstratlib::error::strategies::StrategyError::from(optionstratlib::error::position::PositionError) -> Self
 impl core::convert::From<optionstratlib::error::strategies::StrategyError> for optionstratlib::error::position::PositionError
 pub fn optionstratlib::error::position::PositionError::from(optionstratlib::error::strategies::StrategyError) -> Self
-#[non_exhaustive] pub enum optionstratlib::prelude::PricingEngine
-pub optionstratlib::prelude::PricingEngine::ClosedFormBS
-pub optionstratlib::prelude::PricingEngine::ClosedFormBlack76
-pub optionstratlib::prelude::PricingEngine::ClosedFormGK
-pub optionstratlib::prelude::PricingEngine::MonteCarlo
-pub optionstratlib::prelude::PricingEngine::MonteCarlo::simulator: optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
 pub enum optionstratlib::prelude::PricingError
 pub optionstratlib::prelude::PricingError::BinomialNodeMissing
 pub optionstratlib::prelude::PricingError::BinomialNodeMissing::node: &'static str
@@ -9816,7 +9795,7 @@ pub fn optionstratlib::model::option::Options::calculate_price_montecarlo(&self,
 pub fn optionstratlib::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib::model::option::Options::time_value(&self) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::strategies::base::BasicAble for optionstratlib::model::option::Options
 pub fn optionstratlib::model::option::Options::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
 pub fn optionstratlib::model::option::Options::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
@@ -14080,9 +14059,9 @@ pub fn optionstratlib::prelude::PriceShockSurface::price_shock_surface(&self, (p
 impl optionstratlib::metrics::stress::price_shock::PriceShockSurface for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib::surfaces::Surface, optionstratlib::error::SurfaceError>
 pub trait optionstratlib::prelude::Priceable
-pub fn optionstratlib::prelude::Priceable::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::prelude::Priceable::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub trait optionstratlib::prelude::ProbabilityAnalysis: optionstratlib::strategies::base::Strategies + optionstratlib::prelude::Profit
 pub fn optionstratlib::prelude::ProbabilityAnalysis::analyze_probabilities(&self, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>) -> core::result::Result<optionstratlib::strategies::probabilities::StrategyProbabilityAnalysis, optionstratlib::error::probability::ProbabilityError>
 pub fn optionstratlib::prelude::ProbabilityAnalysis::calculate_extreme_probabilities(&self, core::option::Option<optionstratlib::analytics::probability::VolatilityAdjustment>, core::option::Option<optionstratlib::analytics::probability::PriceTrend>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::probability::ProbabilityError>
@@ -15203,7 +15182,6 @@ pub fn optionstratlib::prelude::monte_carlo_option_pricing(&optionstratlib::mode
 pub fn optionstratlib::prelude::n(rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::prelude::power_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::prelude::price_binomial(optionstratlib::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::prelude::price_option(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
 pub fn optionstratlib::prelude::price_option_with<M>(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub fn optionstratlib::prelude::probability_keep_under_strike(optionstratlib::model::option::Options, core::option::Option<positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::prelude::quanto_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
@@ -15323,16 +15301,6 @@ pub optionstratlib::pricing::unified::GenericPricingEngine::ClosedFormBlack76
 pub optionstratlib::pricing::unified::GenericPricingEngine::ClosedFormGK
 pub optionstratlib::pricing::unified::GenericPricingEngine::MonteCarlo
 pub optionstratlib::pricing::unified::GenericPricingEngine::MonteCarlo::simulator: M
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
-#[non_exhaustive] pub enum optionstratlib::pricing::unified::PricingEngine
-pub optionstratlib::pricing::unified::PricingEngine::ClosedFormBS
-pub optionstratlib::pricing::unified::PricingEngine::ClosedFormBlack76
-pub optionstratlib::pricing::unified::PricingEngine::ClosedFormGK
-pub optionstratlib::pricing::unified::PricingEngine::MonteCarlo
-pub optionstratlib::pricing::unified::PricingEngine::MonteCarlo::simulator: optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
 pub struct optionstratlib::pricing::unified::NoMonteCarlo
 impl optionstratlib::pricing::unified::MonteCarloPricer for optionstratlib::pricing::unified::NoMonteCarlo
 pub fn optionstratlib::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib::model::option::Options) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
@@ -15345,10 +15313,9 @@ pub fn optionstratlib::simulation::simulator::Simulator<positive::positive::Posi
 impl<M> optionstratlib::pricing::unified::MonteCarloPricer for &M where M: optionstratlib::pricing::unified::MonteCarloPricer + ?core::marker::Sized
 pub fn &M::price_monte_carlo(&self, &optionstratlib::model::option::Options) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
 pub trait optionstratlib::pricing::unified::Priceable
-pub fn optionstratlib::pricing::unified::Priceable::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::pricing::unified::Priceable::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
-pub fn optionstratlib::pricing::unified::price_option(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub fn optionstratlib::pricing::unified::price_option_with<M>(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub type optionstratlib::pricing::unified::ClosedFormEngine = optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::pricing::unified::NoMonteCarlo>
 #[non_exhaustive] pub enum optionstratlib::pricing::GenericPricingEngine<M: optionstratlib::pricing::unified::MonteCarloPricer>
@@ -15357,16 +15324,6 @@ pub optionstratlib::pricing::GenericPricingEngine::ClosedFormBlack76
 pub optionstratlib::pricing::GenericPricingEngine::ClosedFormGK
 pub optionstratlib::pricing::GenericPricingEngine::MonteCarlo
 pub optionstratlib::pricing::GenericPricingEngine::MonteCarlo::simulator: M
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
-#[non_exhaustive] pub enum optionstratlib::pricing::PricingEngine
-pub optionstratlib::pricing::PricingEngine::ClosedFormBS
-pub optionstratlib::pricing::PricingEngine::ClosedFormBlack76
-pub optionstratlib::pricing::PricingEngine::ClosedFormGK
-pub optionstratlib::pricing::PricingEngine::MonteCarlo
-pub optionstratlib::pricing::PricingEngine::MonteCarlo::simulator: optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>
-impl core::convert::From<optionstratlib::pricing::unified::PricingEngine> for optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>
-pub fn optionstratlib::pricing::unified::GenericPricingEngine<optionstratlib::simulation::simulator::Simulator<positive::positive::Positive, positive::positive::Positive>>::from(optionstratlib::pricing::unified::PricingEngine) -> Self
 pub struct optionstratlib::pricing::BinomialPricingParams<'a>
 pub optionstratlib::pricing::BinomialPricingParams::asset: positive::positive::Positive
 pub optionstratlib::pricing::BinomialPricingParams::expiry: positive::positive::Positive
@@ -15435,9 +15392,9 @@ pub fn optionstratlib::pricing::Payoff::payoff(&self, &optionstratlib::model::pa
 impl optionstratlib::model::payoff::Payoff for option_type::option_type::OptionType
 pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib::model::payoff::PayoffInfo) -> f64
 pub trait optionstratlib::pricing::Priceable
-pub fn optionstratlib::pricing::Priceable::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::pricing::Priceable::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub trait optionstratlib::pricing::Profit
 pub fn optionstratlib::pricing::Profit::calculate_profit_at(&self, &positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::pricing::Profit::get_point_at_price(&self, &positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib::error::pricing::PricingError>
@@ -15535,7 +15492,6 @@ pub fn optionstratlib::pricing::lookback_black_scholes(&optionstratlib::model::o
 pub fn optionstratlib::pricing::monte_carlo_option_pricing(&optionstratlib::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::pricing::power_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::pricing::price_binomial(optionstratlib::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::pricing::price_option(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
 pub fn optionstratlib::pricing::price_option_with<M>(&optionstratlib::model::option::Options, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 pub fn optionstratlib::pricing::probability_keep_under_strike(optionstratlib::model::option::Options, core::option::Option<positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::pricing::quanto_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
@@ -18538,6 +18494,8 @@ pub fn optionstratlib::strategies::collar::Collar::schemas(&mut alloc::vec::Vec<
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::collar::Collar
 pub fn optionstratlib::strategies::collar::Collar::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub const optionstratlib::strategies::collar::COLLAR_DESCRIPTION: &str
+pub mod optionstratlib::strategies::combinations
+pub fn optionstratlib::strategies::combinations::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib::error::strategies::StrategyError> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
 pub mod optionstratlib::strategies::covered_call
 pub struct optionstratlib::strategies::covered_call::CoveredCall
 pub optionstratlib::strategies::covered_call::CoveredCall::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -26865,6 +26823,7 @@ pub fn optionstratlib::strategies::aggregate_premiums(&[&optionstratlib::model::
 pub fn optionstratlib::strategies::calculate_profit_ratio(positive::positive::Positive, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::credit_spread_break_even(positive::positive::Positive, positive::positive::Positive, bool) -> positive::positive::Positive
 pub fn optionstratlib::strategies::debit_spread_break_even(positive::positive::Positive, positive::positive::Positive, bool) -> positive::positive::Positive
+pub fn optionstratlib::strategies::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib::error::strategies::StrategyError> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
 pub mod optionstratlib::surfaces
 pub struct optionstratlib::surfaces::Point3D
 pub optionstratlib::surfaces::Point3D::x: rust_decimal::decimal::Decimal
@@ -27047,7 +27006,6 @@ pub fn optionstratlib::utils::others::approx_equal(f64, f64) -> bool
 pub fn optionstratlib::utils::others::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::utils::others::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib::utils::others::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
-pub fn optionstratlib::utils::others::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib::error::unified::Error> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
 pub fn optionstratlib::utils::others::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub mod optionstratlib::utils::time
 pub enum optionstratlib::utils::time::TimeFrame
@@ -27132,7 +27090,6 @@ pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::len(&self) -> usi
 pub fn optionstratlib::utils::approx_equal(f64, f64) -> bool
 pub fn optionstratlib::utils::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib::utils::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
-pub fn optionstratlib::utils::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib::error::unified::Error> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
 pub fn optionstratlib::utils::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::utils::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError>
 pub async fn optionstratlib::utils::read_ohlcv_from_zip_async(alloc::string::String, core::option::Option<alloc::string::String>, core::option::Option<alloc::string::String>) -> core::result::Result<alloc::vec::Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError>
@@ -27686,7 +27643,7 @@ pub fn optionstratlib::model::option::Options::calculate_price_montecarlo(&self,
 pub fn optionstratlib::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib::model::option::Options::time_value(&self) -> optionstratlib::error::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib::pricing::unified::Priceable for optionstratlib::model::option::Options
-pub fn optionstratlib::model::option::Options::price(&self, &optionstratlib::pricing::unified::PricingEngine) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive>
+pub fn optionstratlib::model::option::Options::price<M>(&self, &optionstratlib::pricing::unified::GenericPricingEngine<M>) -> optionstratlib::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib::pricing::unified::MonteCarloPricer
 impl optionstratlib::strategies::base::BasicAble for optionstratlib::model::option::Options
 pub fn optionstratlib::model::option::Options::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
 pub fn optionstratlib::model::option::Options::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>

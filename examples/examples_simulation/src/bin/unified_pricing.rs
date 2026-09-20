@@ -83,8 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. Black-Scholes Pricing
     info!("1. Black-Scholes Closed-Form Pricing:");
-    let bs_engine = PricingEngine::ClosedFormBS;
-    match price_option(&option, &bs_engine) {
+    let bs_engine = ClosedFormEngine::ClosedFormBS;
+    match price_option_with(&option, &bs_engine) {
         Ok(price) => info!("   Price: ${:.4}", price),
         Err(e) => info!("   Error: {}", e),
     }
@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo_generator,
     )?;
 
-    let mc_engine = PricingEngine::MonteCarlo {
+    let mc_engine = GenericPricingEngine::MonteCarlo {
         simulator: gbm_simulator,
     };
     match option.price(&mc_engine) {
@@ -161,7 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo_generator,
     )?;
 
-    let heston_engine = PricingEngine::MonteCarlo {
+    let heston_engine = GenericPricingEngine::MonteCarlo {
         simulator: heston_simulator,
     };
     match option.price(&heston_engine) {
@@ -194,7 +194,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo_generator,
     )?;
 
-    let jump_engine = PricingEngine::MonteCarlo {
+    let jump_engine = GenericPricingEngine::MonteCarlo {
         simulator: jump_simulator,
     };
     match option.price(&jump_engine) {
@@ -228,7 +228,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         demo_generator,
     )?;
 
-    let telegraph_engine = PricingEngine::MonteCarlo {
+    let telegraph_engine = GenericPricingEngine::MonteCarlo {
         simulator: telegraph_simulator,
     };
     match option.price(&telegraph_engine) {
