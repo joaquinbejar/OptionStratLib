@@ -86,7 +86,13 @@ CHECKED_RE = re.compile(r"^\s*Checked \[[^\]]*\] (\d+) checks: (\d+) pass(?:, (\
 SUMMARY_RE = re.compile(r"^\s*Summary ", re.M)
 IMPL_VERSION_RE = re.compile(r"cargo-semver-checks/tree/v([0-9.]+)/")
 TRUNCATION_RE = re.compile(r"^\s*(\.\.\.|and \d+ more|\[truncated\])", re.M)
-ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+ANSI_ESCAPE_RE = re.compile(
+    r"\x1B(?:"
+    r"\[[0-?]*[ -/]*[@-~]"            # CSI
+    r"|][^\x1B\x07]*(?:\x07|\x1B\\)"  # OSC
+    r"|[@-Z\\-_]"                      # Fe escape
+    r")"
+)
 # An item line is indented by exactly two spaces. Cargo's own progress lines
 # are indented by four or more and start with a status word, and they can be
 # interleaved with the report because stdout and stderr are read together.
@@ -112,7 +118,7 @@ def load_register(path: Path = REGISTER) -> dict:
 LINTS = FIXTURES / "lints-0.50.0.txt"
 
 
-def known_lints(_text: str | None = None, path: Path = LINTS) -> set[str]:
+def known_lints(path: Path = LINTS) -> set[str]:
     """The lint inventory of the pinned tool, read from a checked-in list.
 
     Deliberately not derived from the report under test: a list taken from
@@ -141,6 +147,8 @@ def parse_report(text: str, returncode: int, tool: str, lints: set[str]) -> set[
         raise ReportError("report contains a truncation marker; the finding list is not complete")
     expected_failures = int(checked.group(3) or 0)
     blocks = list(FAILURE_RE.finditer(text))
+    if returncode == 0 and blocks:
+        raise ReportError("report exited successfully but still contains failure blocks")
     if len(blocks) != expected_failures:
         raise ReportError(f"report announces {expected_failures} failing checks but contains {len(blocks)} failure blocks")
     findings: set[tuple[str, str]] = set()
@@ -207,10 +215,9 @@ def landing_commit(entry_id: str, cwd: Path = ROOT) -> str | None:
         ["git", "log", "--format=%H%x00%B%x00", f"--grep=^{TRAILER}", "HEAD"],
         cwd=cwd, capture_output=True, text=True, check=False,
     ).stdout
-    for chunk in out.split("\x00\n"):
-        if not chunk.strip():
-            continue
-        sha, _, message = chunk.partition("\x00")
+    parts = [chunk for chunk in out.split("\x00") if chunk]
+    for index in range(0, len(parts) - 1, 2):
+        sha, message = parts[index].strip(), parts[index + 1]
         for line in message.splitlines():
             if line.startswith(TRAILER) and entry_id in [part.strip() for part in line[len(TRAILER):].split(",")]:
                 return sha.strip()
@@ -289,7 +296,7 @@ def authorised(entry: dict, register: dict) -> str | None:
 def expected(
     register: dict, check: str, surface: str, landed_only: bool,
     baseline: str = "", pr: int | None = None, cwd: Path = ROOT, scope: bool = True,
-) -> tuple[set[tuple[str, str]], set[tuple[str, str]], dict[tuple[str, str], str], set[tuple[str, str]]]:
+) -> tuple[set[tuple[str, str]], set[tuple[str, str]], dict[tuple[str, str], set[str]], set[tuple[str, str]]]:
     """`(expected, unapproved, elsewhere, tolerated)` for one check and surface.
 
     `elsewhere` holds findings the register declares for *other* checks or
@@ -300,7 +307,7 @@ def expected(
     """
     ready: set[tuple[str, str]] = set()
     pending: set[tuple[str, str]] = set()
-    elsewhere: dict[tuple[str, str], str] = {}
+    elsewhere: dict[tuple[str, str], set[str]] = {}
     tolerated: set[tuple[str, str]] = set()
     for entry in register.get("break", []):
         here = surface in entry.get("surfaces", [])
@@ -311,7 +318,9 @@ def expected(
         for finding in entry.get("findings", []):
             key = (finding["lint"], finding["item"])
             if not here or finding.get("check") != check:
-                elsewhere.setdefault(key, f"{entry.get('id', '?')} declares it for {finding.get('check')}/{entry.get('surfaces', [])}")
+                elsewhere.setdefault(key, set()).add(
+                    f"{entry.get('id', '?')} declares it for {finding.get('check')}/{entry.get('surfaces', [])}"
+                )
                 continue
             if refusal is None and (entry.get("status") == "landed" or not landed_only) and within:
                 ready.add(key)
@@ -336,7 +345,8 @@ def verdicts(
     for lint, item in sorted(found - ready - pending - set(elsewhere) - tolerated):
         problems.append(f"unforeseen break on {surface}/{check}: {lint} {item}")
     for lint, item in sorted(found & set(elsewhere)):
-        problems.append(f"misdeclared break on {surface}/{check}: {lint} {item} ({elsewhere[(lint, item)]})")
+        where = "; ".join(sorted(elsewhere[(lint, item)]))
+        problems.append(f"misdeclared break on {surface}/{check}: {lint} {item} ({where})")
     for lint, item in sorted(found & pending):
         problems.append(f"unapproved break on {surface}/{check}: {lint} {item} (entry is not approved)")
     for lint, item in sorted(ready - found):
@@ -467,7 +477,7 @@ def self_test() -> int:
         ("failure block without items", "no-items.txt", 100, ReportError),
         ("blank line inside an item list", "blank-line-in-list.txt", 100, 69),
         ("wrapped item line", "wrapped-item.txt", 100, ReportError),
-        ("success exit but findings present", "clean.txt", 0, set()),
+        ("success exit but findings present", "breaks.txt", 0, ReportError),
     ]
     failures = 0
     for name, fixture, code, want in cases:

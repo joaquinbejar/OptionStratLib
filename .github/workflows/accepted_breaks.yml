@@ -36,6 +36,10 @@ jobs:
   accepted-breaks:
     name: accepted-breaks (${{ matrix.surface }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     # The job reports, it does not block, while the register still holds a
     # `proposed` entry. Its first run found a real incompatibility that
     # landed before the register existed (the `synthetic` gate of #512
@@ -86,24 +90,45 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
             head="${{ github.event.pull_request.head.sha }}"
-            echo "pin=--base-sha $base --head-sha $head --pr ${{ github.event.pull_request.number }} --against $base" >> "$GITHUB_OUTPUT"
+            echo "pin=--base-sha $base --head-sha $head --pr ${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
             echo "incremental=$base" >> "$GITHUB_OUTPUT"
             before="$base"
+            against="$base"
+            against_flag="--against $against"
+            c2_enabled="true"
+            c3_enabled="true"
             echo "landed_only=" >> "$GITHUB_OUTPUT"
           else
             echo "pin=" >> "$GITHUB_OUTPUT"
-            echo "incremental=$(git rev-parse HEAD^)" >> "$GITHUB_OUTPUT"
-            before="$(git rev-parse HEAD^)"
+            parent="$(git rev-parse HEAD^ 2>/dev/null || true)"
+            if [ -z "$parent" ]; then
+              parent=""
+              before="$(git rev-parse HEAD)"
+              against_flag=""
+              c2_enabled="false"
+              c3_enabled="false"
+            else
+              against_flag="--against $parent"
+              before="$parent"
+              c2_enabled="true"
+              c3_enabled="true"
+            fi
+            echo "incremental=$parent" >> "$GITHUB_OUTPUT"
             echo "landed_only=--landed-only" >> "$GITHUB_OUTPUT"
           fi
           # The reference itself is resolved by the script, which owns the
           # rule and the register's `initial_reference`; the workflow only
           # says which state precedes the change under test.
           echo "before=$before" >> "$GITHUB_OUTPUT"
+          echo "against_flag=$against_flag" >> "$GITHUB_OUTPUT"
+          echo "c2_enabled=$c2_enabled" >> "$GITHUB_OUTPUT"
+          echo "c3_enabled=$c3_enabled" >> "$GITHUB_OUTPUT"
           echo "before=$before"
       - name: C1 cumulative against the published 0.21.3
-        run: python3 scripts/check_accepted_breaks.py --check C1 --surface ${{ matrix.surface }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+        run: python3 scripts/check_accepted_breaks.py --check C1 --surface ${{ matrix.surface }} ${{ steps.bases.outputs.against_flag }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
       - name: C2 against the controlled reference
-        run: python3 scripts/check_accepted_breaks.py --check C2 --surface ${{ matrix.surface }} --before ${{ steps.bases.outputs.before }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+        if: ${{ steps.bases.outputs.c2_enabled == 'true' }}
+        run: python3 scripts/check_accepted_breaks.py --check C2 --surface ${{ matrix.surface }} --before ${{ steps.bases.outputs.before }} ${{ steps.bases.outputs.against_flag }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
       - name: C3 incremental against the pull request base
-        run: python3 scripts/check_accepted_breaks.py --check C3 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.incremental }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+        if: ${{ steps.bases.outputs.c3_enabled == 'true' }}
+        run: python3 scripts/check_accepted_breaks.py --check C3 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.incremental }} ${{ steps.bases.outputs.against_flag }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}

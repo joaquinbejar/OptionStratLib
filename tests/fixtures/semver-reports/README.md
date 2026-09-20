@@ -67,7 +67,7 @@ label.
 `lints-0.50.0.txt` is the lint inventory of the pinned tool
 (`cargo semver-checks --list`), used to reject an unknown lint. It is
 deliberately not derived from the report under test, which by construction
-contains only lints that report names.
+contains only lints that the report names.
 
 `sequence-results.txt` is the recorded output; re-running reproduces it with
 different SHAs. It also shows, on the integrating push, the commit the wrong
