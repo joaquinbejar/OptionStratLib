@@ -320,6 +320,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`Simulate` and `SimulationStats` move to backtesting** (#595, multi-crate
+  roadmap M1, decision D2). Both are backtest concepts that happened to live
+  under `src/simulation/`: `Simulate::simulate` returns the backtest-owned
+  `SimulationStatsResult` and every implementation of the trait already lives
+  in `backtesting::strategy_simulation`, while `SimulationStats` stores
+  `Vec<SimulationResult>`. The trait joins its implementations and the struct
+  becomes `src/backtesting/stats.rs`; `backtesting::{Simulate, SimulationStats}` is now
+  the only defining path; the simulation layer no longer re-exports them, and
+  the prelude takes both from their owner. Code that imported
+  `optionstratlib::simulation::Simulate` imports
+  `optionstratlib::backtesting::Simulate`, or the prelude. The simulation layer
+  no longer names a backtest type: the `simulation -> backtesting` deferred
+  edge is gone, leaving 28. Bodies, bounds and tests moved unchanged.
+
 - **`ProfitLossRange` moves to the analytics layer** (#594, multi-crate
   roadmap M1, decision D2). The type sat in `src/model/profit_range.rs`, in
   the core layer, while every part of it belonged to analytics: its

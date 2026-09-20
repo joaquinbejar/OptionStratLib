@@ -10,14 +10,14 @@
 //! only when a numerical change is intended and reviewed.
 
 use optionstratlib::ExpirationDate;
+use optionstratlib::backtesting::Simulate;
 use optionstratlib::backtesting::results::SimulationStatsResult;
 use optionstratlib::model::Options;
 use optionstratlib::model::position::Position;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::simulation::steps::Step;
 use optionstratlib::simulation::{
-    ExitPolicy, Simulate, WalkParams, WalkType, WalkTypeAble, generator_positive,
-    simulator::Simulator,
+    ExitPolicy, WalkParams, WalkType, WalkTypeAble, generator_positive, simulator::Simulator,
 };
 use optionstratlib::strategies::base::Positionable;
 use optionstratlib::strategies::{LongCall, LongPut, ShortCall, ShortPut};

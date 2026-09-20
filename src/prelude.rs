@@ -125,9 +125,10 @@ pub use rust_decimal_macros::dec;
 pub use std::path::Path;
 
 // Simulation types and functions
+pub use crate::backtesting::{Simulate, SimulationStats};
 pub use crate::simulation::{
-    ExitPolicy, Simulate, SimulationStats, WalkParams, WalkPath, WalkType, WalkTypeAble,
-    WalkTypeAbleClone, check_exit_policy, expanding_window_vols, generator_positive,
+    ExitPolicy, WalkParams, WalkPath, WalkType, WalkTypeAble, WalkTypeAbleClone, check_exit_policy,
+    expanding_window_vols, generator_positive,
     randomwalk::RandomWalk,
     simulator::Simulator,
     steps::{Step, Xstep, Ystep},
