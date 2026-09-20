@@ -174,9 +174,10 @@ mod utils;
 
 pub use utils::{
     adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,
-    de_annualized_volatility, ewma_volatility, garch_volatility, generate_ou_process,
-    historical_volatility, implied_volatility, simulate_heston_volatility,
-    uncertain_volatility_bounds, volatility_for_dt,
+    de_annualized_volatility, ewma_volatility, garch_volatility, historical_volatility,
+    implied_volatility, simulate_heston_volatility, uncertain_volatility_bounds, volatility_for_dt,
 };
 
 pub use traits::{AtmIvProvider, VolatilitySmile};
+
+pub use crate::simulation::ou::generate_ou_process; // facade-compat: simulation

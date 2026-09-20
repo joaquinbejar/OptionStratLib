@@ -866,6 +866,17 @@ impl<'de> serde_core::de::Deserialize<'de> for optionstratlib::chains::chain::Op
 pub fn optionstratlib::chains::chain::OptionChain::deserialize<D>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error> where D: serde_core::de::Deserializer<'de>
 pub const optionstratlib::chains::chain::SKEW_SLOPE: rust_decimal::decimal::Decimal
 pub const optionstratlib::chains::chain::SKEW_SMILE_CURVE: rust_decimal::decimal::Decimal
+pub mod optionstratlib::chains::csv
+pub struct optionstratlib::chains::csv::OhlcvCandle
+pub optionstratlib::chains::csv::OhlcvCandle::close: rust_decimal::decimal::Decimal
+pub optionstratlib::chains::csv::OhlcvCandle::date: chrono::naive::date::NaiveDate
+pub optionstratlib::chains::csv::OhlcvCandle::high: rust_decimal::decimal::Decimal
+pub optionstratlib::chains::csv::OhlcvCandle::low: rust_decimal::decimal::Decimal
+pub optionstratlib::chains::csv::OhlcvCandle::open: rust_decimal::decimal::Decimal
+pub optionstratlib::chains::csv::OhlcvCandle::time: alloc::string::String
+pub optionstratlib::chains::csv::OhlcvCandle::volume: u64
+pub fn optionstratlib::chains::csv::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::chains::csv::OhlcvCandle>, optionstratlib::error::OhlcvError>
+pub async fn optionstratlib::chains::csv::read_ohlcv_from_zip_async(alloc::string::String, core::option::Option<alloc::string::String>, core::option::Option<alloc::string::String>) -> core::result::Result<alloc::vec::Vec<optionstratlib::chains::csv::OhlcvCandle>, optionstratlib::error::OhlcvError>
 pub mod optionstratlib::chains::utils
 pub enum optionstratlib::chains::utils::FindOptimalSide
 pub optionstratlib::chains::utils::FindOptimalSide::All
@@ -926,6 +937,7 @@ pub fn optionstratlib::chains::utils::OptionChainParams::get_params(&self, posit
 impl optionstratlib::chains::utils::OptionChainParams for optionstratlib::chains::chain::OptionChain
 pub fn optionstratlib::chains::chain::OptionChain::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib::chains::utils::OptionDataPriceParams, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::utils::adjust_volatility(&core::option::Option<positive::positive::Positive>, &core::option::Option<rust_decimal::decimal::Decimal>, &core::option::Option<rust_decimal::decimal::Decimal>, &positive::positive::Positive, &positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
+pub fn optionstratlib::chains::utils::calculate_optimal_price_range(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::utils::strike_step(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize, core::option::Option<positive::positive::Positive>) -> core::result::Result<positive::positive::Positive, optionstratlib::error::chains::ChainError>
 pub enum optionstratlib::chains::FindOptimalSide
 pub optionstratlib::chains::FindOptimalSide::All
@@ -15239,7 +15251,7 @@ pub fn optionstratlib::prelude::price_option_with<M>(&optionstratlib::model::opt
 pub fn optionstratlib::prelude::probability_keep_under_strike(optionstratlib::model::option::Options, core::option::Option<positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
 pub fn optionstratlib::prelude::quanto_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
 pub fn optionstratlib::prelude::rainbow_black_scholes(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::pricing::PricingError>
-pub fn optionstratlib::prelude::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError>
+pub fn optionstratlib::prelude::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::chains::csv::OhlcvCandle>, optionstratlib::error::OhlcvError>
 pub fn optionstratlib::prelude::rho(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::prelude::rho_b76(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
 pub fn optionstratlib::prelude::rho_d(&optionstratlib::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::greeks::GreeksError>
@@ -15675,6 +15687,8 @@ pub fn optionstratlib::simulation::exit::ExitPolicy::schemas(&mut alloc::vec::Ve
 impl utoipa::__dev::ComposeSchema for optionstratlib::simulation::exit::ExitPolicy
 pub fn optionstratlib::simulation::exit::ExitPolicy::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub fn optionstratlib::simulation::exit::check_exit_policy(&optionstratlib::simulation::exit::ExitPolicy, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize, positive::positive::Positive, positive::positive::Positive, bool) -> core::option::Option<optionstratlib::simulation::exit::ExitPolicy>
+pub mod optionstratlib::simulation::ou
+pub fn optionstratlib::simulation::ou::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::simulation::randomwalk
 pub struct optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 impl<X, Y> optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
@@ -16034,6 +16048,7 @@ pub fn optionstratlib::simulation::custom_walk<X, Y>(&optionstratlib::simulation
 pub fn optionstratlib::simulation::evaluate_paths<X, Y, E>(&E, &optionstratlib::simulation::simulator::Simulator<X, Y>, &optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<alloc::vec::Vec<<E as optionstratlib::simulation::PathEvaluator>::Outcome>, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone, E: optionstratlib::simulation::PathEvaluator<X, Y>
 pub fn optionstratlib::simulation::expanding_window_vols(&[positive::positive::Positive], optionstratlib::utils::time::TimeFrame) -> core::result::Result<core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::simulation::garch_walk<X, Y>(&optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib::simulation::WalkPath, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib::simulation::generate_ou_process(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::simulation::SimulationError>
 pub fn optionstratlib::simulation::generator_positive(&optionstratlib::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::simulation::heston_walk<X, Y>(&optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib::simulation::WalkPath, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::telegraph_walk<X, Y>(&optionstratlib::simulation::WalkParams<X, Y>) -> core::result::Result<optionstratlib::simulation::WalkPath, optionstratlib::error::simulation::SimulationError> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
@@ -27184,8 +27199,8 @@ pub fn optionstratlib::utils::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib::utils::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
 pub fn optionstratlib::utils::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib::error::unified::Error> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
 pub fn optionstratlib::utils::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib::error::decimal::DecimalError>
-pub fn optionstratlib::utils::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError>
-pub async fn optionstratlib::utils::read_ohlcv_from_zip_async(alloc::string::String, core::option::Option<alloc::string::String>, core::option::Option<alloc::string::String>) -> core::result::Result<alloc::vec::Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError>
+pub fn optionstratlib::utils::read_ohlcv_from_zip(&str, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<optionstratlib::chains::csv::OhlcvCandle>, optionstratlib::error::OhlcvError>
+pub async fn optionstratlib::utils::read_ohlcv_from_zip_async(alloc::string::String, core::option::Option<alloc::string::String>, core::option::Option<alloc::string::String>) -> core::result::Result<alloc::vec::Vec<optionstratlib::chains::csv::OhlcvCandle>, optionstratlib::error::OhlcvError>
 pub fn optionstratlib::utils::setup_logger()
 pub fn optionstratlib::utils::setup_logger_with_level(&str)
 pub mod optionstratlib::visualization

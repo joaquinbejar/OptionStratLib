@@ -86,7 +86,7 @@ ERROR_FILE_LAYER = {
     "chains": "market",
     "csv": "market",
     "transaction": "analytics",
-    "metrics": "analytics",
+    "metrics": "math",  # depends only on CurveError/SurfaceError (M1 D2)
     "probability": "analytics",
     "strategies": "strategies",
     "graph": "visualization",
@@ -180,15 +180,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ),
     # `Options::calculate_implied_volatility` wrapper signature.
     ("model", "error/volatility"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499)"),
-    # `calculate_optimal_price_range` is a chain helper living in core.
-    ("model", "error/chains"): (frozenset({"model/utils.rs"}), "re-home to chains::utils (M1 exit proposal D2, #507)"),
-    # `utils::csv` is market-owned (ADR-0001 D2), behind the I/O feature.
-    ("utils", "error/csv"): (frozenset({"utils/csv.rs"}), "re-home to market (ADR-0001 D2, #525)"),
-    # `MetricsError` is defined under analytics today but depends only on
-    # `CurveError`/`SurfaceError`; re-homing it to math dissolves these three.
-    ("curves", "error/metrics"): (frozenset({"curves/curve.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
-    ("surfaces", "error/metrics"): (frozenset({"surfaces/surface.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
-    ("geometrics", "error/metrics"): (frozenset({"geometrics/analysis/traits.rs"}), "re-home MetricsError to math (M1 exit proposal D2, #507)"),
     # `pub type ResultPoint<P> = Result<P, ChainError>` used by the curve and
     # surface constructors; the alias carries the edge to everyone who
     # re-exports or names it (the `surfaces` uses are `#[cfg(test)]`).
@@ -200,8 +191,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         }),
         "retype ResultPoint (M1 exit proposal D3 row 6, #507)",
     ),
-    # `generate_ou_process` is a simulation kernel living in volatility.
-    ("volatility", "error/simulation"): (frozenset({"volatility/utils.rs"}), "re-home to simulation (M1 exit proposal D2, #507)"),
     # The `synthetic` chain walk driver belongs with the market generators.
     ("simulation", "error/chains"): (frozenset({"simulation/walk_driver.rs"}), "re-home to market synthetic (#512)"),
     # Variant payloads that hold a higher layer's error (ADR-0001 D6, #511):

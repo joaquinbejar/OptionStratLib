@@ -183,7 +183,6 @@ pub mod others;
 /// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV
 /// parsing.
-mod csv;
 /// This module contains the file reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in various file formats, including CSV and JSON.
 pub mod file;
@@ -196,8 +195,8 @@ pub mod time;
 mod traits;
 
 #[cfg(feature = "async")]
-pub use csv::read_ohlcv_from_zip_async;
-pub use csv::{OhlcvCandle, read_ohlcv_from_zip};
+pub use crate::chains::csv::read_ohlcv_from_zip_async; // facade-compat: market
+pub use crate::chains::csv::{OhlcvCandle, read_ohlcv_from_zip}; // facade-compat: market
 #[allow(deprecated)]
 pub use logger::{setup_logger, setup_logger_with_level};
 pub use others::{
