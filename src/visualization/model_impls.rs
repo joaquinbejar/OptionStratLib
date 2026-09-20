@@ -12,7 +12,7 @@
 //! in the visualization layer (local trait, core-owned type) so the core
 //! model never references chart types.
 
-use crate::model::utils::calculate_optimal_price_range;
+use crate::chains::utils::calculate_optimal_price_range;
 use crate::model::{Options, Position};
 use crate::strategies::base::BasicAble;
 use crate::visualization::{

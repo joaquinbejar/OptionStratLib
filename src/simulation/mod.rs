@@ -154,4 +154,6 @@ pub use params::WalkParams;
 pub use traits::{
     WalkTypeAble, WalkTypeAbleClone, custom_walk, garch_walk, heston_walk, telegraph_walk,
 };
+pub mod ou;
+pub use ou::generate_ou_process;
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};

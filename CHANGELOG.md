@@ -320,6 +320,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Four misplaced helpers return to their owning layer** (#599, multi-crate
+  roadmap M1). Each edge existed only because of where a file sat.
+  `model::utils::calculate_optimal_price_range` is a chain helper reporting
+  `ChainError` and moves to `chains::utils`; the private `utils::csv` module
+  (`OhlcvCandle`, `read_ohlcv_from_zip`, `read_ohlcv_from_zip_async`,
+  `OhlcvError`) is market-data I/O and moves to `chains::csv`;
+  `volatility::utils::generate_ou_process` is a mean-reverting path
+  generator reporting `SimulationError` and moves to `simulation::ou`. Each
+  is reachable at its owner's path only, and the prelude keeps exporting
+  `OhlcvCandle` and `read_ohlcv_from_zip`, from there. `MetricsError` is
+  reclassified as math-owned with no code move: its only crate references
+  are `CurveError` and `SurfaceError`, both math, and the metric traits that
+  report it live in `curves`, `surfaces` and `geometrics`; the `metrics`
+  module itself stays in analytics. Four reverse edges gone, leaving 20.
+
 - **The pricing dispatcher becomes the generic engine, and the combination
   helper joins strategies** (#598, multi-crate roadmap M1). `PricingEngine`
   stored a concrete `Simulator`, so pricing named simulation, and

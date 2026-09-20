@@ -20,12 +20,12 @@
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
 
+use optionstratlib::simulation::ou::generate_ou_process;
 use optionstratlib::utils::time::TimeFrame;
 use optionstratlib::volatility::{
     adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,
-    de_annualized_volatility, ewma_volatility, garch_volatility, generate_ou_process,
-    historical_volatility, implied_volatility, simulate_heston_volatility,
-    uncertain_volatility_bounds, volatility_for_dt,
+    de_annualized_volatility, ewma_volatility, garch_volatility, historical_volatility,
+    implied_volatility, simulate_heston_volatility, uncertain_volatility_bounds, volatility_for_dt,
 };
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::Positive;

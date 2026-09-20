@@ -3,7 +3,7 @@
 //! `process_n_times_iter` walks every combination of `n` legs and collects
 //! what the caller builds from each one. The only consumer is
 //! [`crate::strategies::custom`], so the helper is strategies-owned and
-//! reports [`StrategyError`] (ADR-0001 D2, amended: ownership follows the
+//! reports [`crate::error::StrategyError`] (ADR-0001 D2, amended: ownership follows the
 //! responsibility, not the historical signature).
 
 use crate::error::StrategyError;

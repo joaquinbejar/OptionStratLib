@@ -9,8 +9,8 @@ use crate::model::decimal::{
     d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample, finite_decimal, p_sqrt,
 };
 use crate::simulation::model::WalkPath;
+use crate::simulation::ou::generate_ou_process;
 use crate::simulation::{WalkParams, WalkType};
-use crate::volatility::generate_ou_process;
 use num_traits::ToPrimitive;
 use positive::Positive;
 use rust_decimal::Decimal;

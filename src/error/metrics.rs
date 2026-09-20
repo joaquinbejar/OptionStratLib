@@ -3,7 +3,11 @@
    Email: jb@taunais.com
    Date: 22/1/25
 ******************************************************************************/
-//! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `MetricsError`.
+//! Target crate (ADR-0001 D6, amended by M1 decision D2): **math**. Owns
+//! `MetricsError`, whose only crate references are `CurveError` and
+//! `SurfaceError`, both math-owned; the metric traits that report it live in
+//! `curves`, `surfaces` and `geometrics`. The `metrics` *module* stays in
+//! analytics: it is the chain analytics built on top, not this error.
 
 use crate::error::{CurveError, SurfaceError};
 use thiserror::Error;

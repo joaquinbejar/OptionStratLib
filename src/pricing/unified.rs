@@ -115,13 +115,13 @@ fn price_closed_form_gk(option: &Options) -> PricingResult<Positive> {
 
 /// Prices an option with a [`GenericPricingEngine`].
 ///
-/// The generic counterpart of [`price_option`]: the closed-form arms are
+/// The one dispatcher: the closed-form arms are
 /// the same functions, and the Monte Carlo arm calls
 /// [`MonteCarloPricer::price_monte_carlo`] on `M`.
 ///
 /// # Errors
 ///
-/// Same as [`price_option`]; with [`NoMonteCarlo`] the `MonteCarlo` arm
+/// With [`NoMonteCarlo`] the `MonteCarlo` arm
 /// returns [`PricingError::SimulationError`].
 #[must_use = "the price is the only product of this call"]
 pub fn price_option_with<M>(
