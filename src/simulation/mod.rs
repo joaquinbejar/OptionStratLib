@@ -134,7 +134,6 @@ pub mod exit;
 /// simulation be evaluated and summarised without naming a strategy; the
 /// backtesting layer adapts its strategy-bound result types to them.
 mod outcome;
-mod stats;
 
 /// Generic walk driver shared by every step generator.
 ///
@@ -148,12 +147,13 @@ mod walk_driver;
 #[cfg(test)]
 pub(crate) mod walk_test_support;
 
+pub use crate::backtesting::stats::SimulationStats; // facade-compat: backtest
+pub use crate::backtesting::strategy_simulation::Simulate; // facade-compat: backtest
 pub use exit::{ExitPolicy, check_exit_policy};
 pub use model::{WalkPath, WalkType};
 pub use outcome::{PathEvaluator, PathOutcome, PathStatistics, evaluate_paths};
 pub use params::WalkParams;
-pub use stats::SimulationStats;
 pub use traits::{
-    Simulate, WalkTypeAble, WalkTypeAbleClone, custom_walk, garch_walk, heston_walk, telegraph_walk,
+    WalkTypeAble, WalkTypeAbleClone, custom_walk, garch_walk, heston_walk, telegraph_walk,
 };
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};
