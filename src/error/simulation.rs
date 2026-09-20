@@ -1,7 +1,6 @@
 //! Target crate (ADR-0001 D6, roadmap M1-14): **simulation**. Owns `SimulationError`; the `Strategy`, `Chain` and `GraphError` variants are upper-layer references removed in the batch behind the 0.22.0 bump.
 
-use crate::error::graph::GraphError;
-use crate::error::{ChainError, DecimalError, OptionsError, PricingError, StrategyError};
+use crate::error::{DecimalError, OptionsError, PricingError};
 use expiration_date::error::ExpirationDateError;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -101,18 +100,6 @@ pub enum SimulationError {
     #[error(transparent)]
     ExpirationDate(#[from] ExpirationDateError),
 
-    /// Strategy-layer error surfaced during simulation.
-    #[error(transparent)]
-    Strategy(Box<StrategyError>),
-
-    /// Chain domain error surfaced during simulation.
-    #[error(transparent)]
-    Chain(Box<ChainError>),
-
-    /// Error during graph generation.
-    #[error(transparent)]
-    GraphError(#[from] GraphError),
-
     /// Positive value errors
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
@@ -134,6 +121,10 @@ pub enum SimulationError {
         /// The offending `f64` value (`NaN`, `+∞`, or `-∞`).
         value: f64,
     },
+    /// A volatility failure raised by the pricing capability this layer
+    /// depends on. Boxed because `VolatilityError` is the larger enum.
+    #[error(transparent)]
+    Volatility(Box<crate::error::VolatilityError>),
 }
 
 impl SimulationError {
@@ -189,10 +180,10 @@ impl SimulationError {
 impl From<crate::error::VolatilityError> for SimulationError {
     #[inline]
     fn from(err: crate::error::VolatilityError) -> Self {
-        // Route through the existing lossless Chain wrapper: ChainError
-        // already models volatility failures and SimulationError is not
-        // extensible without a breaking change.
-        SimulationError::Chain(Box::new(ChainError::from(err)))
+        // Volatility is a pricing capability simulation depends on, so the
+        // cause stays typed. Only the market wrapper it used to route
+        // through was the problem, never the payload.
+        SimulationError::Volatility(Box::new(err))
     }
 }
 
@@ -200,3 +191,52 @@ impl From<crate::error::VolatilityError> for SimulationError {
 ///
 /// This is a convenience type for functions that return simulation results.
 pub type SimulationResult<T> = Result<T, SimulationError>;
+
+#[cfg(test)]
+mod tests_typed_causes {
+    use super::*;
+    use crate::error::VolatilityError;
+
+    /// The conversion a simulation kernel uses when a volatility call fails
+    /// keeps the pricing cause, so a caller can match on it instead of
+    /// reading a message.
+    #[test]
+    fn test_a_volatility_failure_keeps_its_variant_through_the_conversion() {
+        let cause = VolatilityError::NumericalFailure {
+            reason: "constant_volatility: sqrt(variance) failed".to_string(),
+        };
+
+        let error = SimulationError::from(cause);
+
+        match error {
+            SimulationError::Volatility(inner) => match *inner {
+                VolatilityError::NumericalFailure { reason } => {
+                    assert!(reason.contains("constant_volatility"), "{reason}");
+                }
+                other => panic!("the volatility variant was not preserved: {other:?}"),
+            },
+            other => panic!("expected SimulationError::Volatility, got {other:?}"),
+        }
+    }
+
+    /// A non-finite volatility keeps its structured payload rather than
+    /// becoming an invalid-parameters string.
+    #[test]
+    fn test_a_non_finite_volatility_keeps_its_payload() {
+        let cause = VolatilityError::NonFinite {
+            context: "ou_process",
+            value: f64::NAN,
+        };
+
+        match SimulationError::from(cause) {
+            SimulationError::Volatility(inner) => match *inner {
+                VolatilityError::NonFinite { context, value } => {
+                    assert_eq!(context, "ou_process");
+                    assert!(value.is_nan());
+                }
+                other => panic!("the payload was lost: {other:?}"),
+            },
+            other => panic!("expected SimulationError::Volatility, got {other:?}"),
+        }
+    }
+}

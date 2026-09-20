@@ -15,7 +15,7 @@
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 
-fn main() -> Result<(), CurveError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     let option_chain =

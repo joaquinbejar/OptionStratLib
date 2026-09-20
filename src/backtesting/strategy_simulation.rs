@@ -14,7 +14,7 @@
 //! loop; M6-05 removes it from the library.
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
-use crate::error::SimulationError;
+use crate::error::{BacktestError, SimulationError};
 use crate::model::decimal::{d_add, d_div, d_sub};
 use crate::pnl::{PnL, PnLCalculator};
 use crate::simulation::randomwalk::RandomWalk;
@@ -87,7 +87,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, SimulationError>;
+    ) -> Result<SimulationStatsResult, BacktestError>;
 }
 
 /// Premium move, as a fraction of the opening premium, at which an exit
@@ -116,7 +116,7 @@ pub trait SingleLegSimulation: PnLCalculator + Positionable {
     /// # Errors
     ///
     /// Returns [`SimulationError`] when the adjustment cannot be computed.
-    fn mark_adjustment(&self) -> Result<Positive, SimulationError> {
+    fn mark_adjustment(&self) -> Result<Positive, BacktestError> {
         Ok(Positive::ZERO)
     }
 
@@ -157,7 +157,10 @@ impl SingleLegSimulation for ShortCall {
 impl SingleLegSimulation for ShortPut {
     const IS_LONG: bool = false;
 
-    fn mark_adjustment(&self) -> Result<Positive, SimulationError> {
+    fn mark_adjustment(&self) -> Result<Positive, BacktestError> {
+        // Backtesting composes both layers, so the strategy failure stays
+        // typed in the backtest error; neither `StrategyError` nor
+        // `SimulationError` may name the other.
         Ok(self.get_fees()?)
     }
 }
@@ -165,14 +168,12 @@ impl SingleLegSimulation for ShortPut {
 /// Divides without the default rounding of [`d_div`]; the average premium
 /// has always been formed with the raw `Decimal` operator.
 #[inline]
-fn div_unrounded(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, SimulationError> {
+fn div_unrounded(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, BacktestError> {
     if rhs.is_zero() {
-        return Err(SimulationError::invalid_parameters(&format!(
-            "{op}: division by zero"
-        )));
+        return Err(SimulationError::invalid_parameters(&format!("{op}: division by zero")).into());
     }
     lhs.checked_div(rhs).ok_or_else(|| {
-        SimulationError::invalid_parameters(&format!("{op}: {lhs} / {rhs} overflowed"))
+        SimulationError::invalid_parameters(&format!("{op}: {lhs} / {rhs} overflowed")).into()
     })
 }
 
@@ -196,7 +197,7 @@ where
     ///
     /// Returns the [`SimulationError`] raised when the strategy has no
     /// single leg or the closed-form price fails.
-    pub fn new(strategy: &'a S) -> Result<Self, SimulationError> {
+    pub fn new(strategy: &'a S) -> Result<Self, BacktestError> {
         let initial_premium = strategy
             .simulated_option()?
             .calculate_price_black_scholes()?
@@ -222,12 +223,13 @@ where
     Y: Into<Positive> + Display + Clone,
 {
     type Outcome = SimulationResult;
+    type Error = BacktestError;
 
     fn evaluate_path(
         &self,
         random_walk: &RandomWalk<X, Y>,
         exit: &ExitPolicy,
-    ) -> Result<SimulationResult, SimulationError> {
+    ) -> Result<SimulationResult, BacktestError> {
         let option = self.strategy.simulated_option()?;
         let initial_premium = self.initial_premium;
         let mark_adjustment = self.strategy.mark_adjustment()?.to_dec();
@@ -406,7 +408,7 @@ pub fn simulate_single_leg<S, X, Y>(
     strategy: &S,
     sim: &Simulator<X, Y>,
     exit: ExitPolicy,
-) -> Result<SimulationStatsResult, SimulationError>
+) -> Result<SimulationStatsResult, BacktestError>
 where
     S: SingleLegSimulation,
     X: Copy + Into<Positive> + AddAssign + Display,
@@ -438,7 +440,7 @@ where
 
     progress_bar.finish_with_message("Simulations completed!");
 
-    SimulationStatsResult::from_results(simulation_results)
+    Ok(SimulationStatsResult::from_results(simulation_results)?)
 }
 
 impl<X, Y> Simulate<X, Y> for LongCall
@@ -450,7 +452,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, SimulationError> {
+    ) -> Result<SimulationStatsResult, BacktestError> {
         simulate_single_leg(self, sim, exit)
     }
 }
@@ -464,7 +466,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, SimulationError> {
+    ) -> Result<SimulationStatsResult, BacktestError> {
         simulate_single_leg(self, sim, exit)
     }
 }
@@ -478,7 +480,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, SimulationError> {
+    ) -> Result<SimulationStatsResult, BacktestError> {
         simulate_single_leg(self, sim, exit)
     }
 }
@@ -492,7 +494,7 @@ where
         &self,
         sim: &Simulator<X, Y>,
         exit: ExitPolicy,
-    ) -> Result<SimulationStatsResult, SimulationError> {
+    ) -> Result<SimulationStatsResult, BacktestError> {
         simulate_single_leg(self, sim, exit)
     }
 }
@@ -682,13 +684,16 @@ mod tests_single_leg_contract {
             Err(SimulationError::InvalidParameters { .. })
         ));
         let leg = create_test_long_call().get_positions().unwrap()[0].clone();
+        // The cause stays typed inside the backtest error rather than
+        // being flattened into a message.
         assert!(matches!(
             Legs(vec![leg.clone(), leg]).simulated_option(),
             Err(SimulationError::InvalidParameters { .. })
         ));
         assert!(matches!(
             SingleLegPathEvaluator::new(&Legs(Vec::new())),
-            Err(SimulationError::InvalidParameters { .. })
+            Err(BacktestError::Simulation(inner))
+                if matches!(*inner, SimulationError::InvalidParameters { .. })
         ));
     }
 

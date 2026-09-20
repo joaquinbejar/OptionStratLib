@@ -3045,8 +3045,12 @@ impl AtmIvProvider for OptionChain {
     fn atm_iv(&self) -> Result<&Positive, VolatilityError> {
         match self.get_atm_implied_volatility() {
             Ok(iv) => Ok(iv),
+            // The chain error stays in the market layer; pricing hears the
+            // reason, not the type.
             Err(e) => Err(VolatilityError::AtmIvUnavailable {
-                source: Box::new(VolatilityError::from(e)),
+                source: Box::new(VolatilityError::NumericalFailure {
+                    reason: e.to_string(),
+                }),
             }),
         }
     }

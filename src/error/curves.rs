@@ -7,7 +7,7 @@
 //! Target crate (ADR-0001 D6, roadmap M1-14): **math**. Owns `CurveError`; the `MetricsError`, `Greeks` and `Graph` variants are analytics, pricing and visualization references removed in the batch behind the 0.22.0 bump.
 
 use crate::error::common::OperationErrorKind;
-use crate::error::{GraphError, GreeksError, InterpolationError, OptionsError, PositionError};
+use crate::error::{InterpolationError, OptionsError, PositionError};
 use thiserror::Error;
 
 /// Represents different types of errors that can occur in the `curves` module.
@@ -154,17 +154,9 @@ pub enum CurveError {
     #[error(transparent)]
     Options(#[from] OptionsError),
 
-    /// Error from Greeks calculations
-    #[error(transparent)]
-    Greeks(#[from] GreeksError),
-
     /// Error from interpolation operations  
     #[error("Interpolation error: {0}")]
     InterpolationOp(String),
-
-    /// Error from graph operations
-    #[error(transparent)]
-    Graph(Box<GraphError>),
 }
 
 /// Provides helper methods for constructing specific variants of the `CurvesError` type.

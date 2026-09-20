@@ -9,7 +9,7 @@
 //! math container. `surfaces::BasicSurfaces` is kept as a compatibility
 //! re-export.
 
-use crate::error::SurfaceError;
+use crate::error::ProjectionError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
 use crate::surfaces::Surface;
@@ -38,22 +38,22 @@ pub trait BasicSurfaces {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A constructed surface or an error if creation fails
+    /// * `Result<Surface, ProjectionError>` - A constructed surface or an error if creation fails
     ///
     /// # Errors
     ///
-    /// Returns [`SurfaceError::ConstructionError`] when the sampling
-    /// grid is empty or the requested axis is not available, and
-    /// propagates [`SurfaceError::Point3DError`] or
-    /// [`SurfaceError::OperationError`] from the per-sample
-    /// evaluator.
+    /// Returns [`ProjectionError::NoPoints`] when the sampling grid is
+    /// empty, [`ProjectionError::UnsupportedAxis`] when the requested
+    /// axis is not available, and propagates the typed cause of every
+    /// per-sample failure as [`ProjectionError::Surface`] or
+    /// [`ProjectionError::Greek`].
     fn surface(
         &self,
         axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         volatility: Option<Vec<Positive>>,
         side: &Side,
-    ) -> Result<Surface, SurfaceError>;
+    ) -> Result<Surface, ProjectionError>;
 
     /// Calculates the relationship between strike price, implied volatility, and a selected
     /// option metric for a given option.
@@ -68,19 +68,20 @@ pub trait BasicSurfaces {
     ///
     /// # Returns
     ///
-    /// * `Result<(Decimal, Decimal, Decimal), SurfaceError>` - A tuple containing:
+    /// * `Result<(Decimal, Decimal, Decimal), ProjectionError>` - A tuple containing:
     ///   - Strike price
     ///   - Implied volatility
     ///   - Calculated metric value
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the selected axis is not supported or if any calculation fails.
+    /// Returns [`ProjectionError::UnsupportedAxis`] if the selected axis is not supported, or the
+    /// typed cause of any failed calculation.
     fn get_surface_strike_versus(
         &self,
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
-    ) -> Result<(Decimal, Decimal, Decimal), SurfaceError> {
+    ) -> Result<(Decimal, Decimal, Decimal), ProjectionError> {
         // Create a modified copy of the option with the specified volatility
         let option_with_vol = (**option).clone();
 
@@ -88,47 +89,65 @@ pub trait BasicSurfaces {
             BasicAxisTypes::Delta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.delta()?,
+                option_with_vol
+                    .delta()
+                    .map_err(|e| ProjectionError::greek("delta", e))?,
             )),
             BasicAxisTypes::Gamma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.gamma()?,
+                option_with_vol
+                    .gamma()
+                    .map_err(|e| ProjectionError::greek("gamma", e))?,
             )),
             BasicAxisTypes::Theta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.theta()?,
+                option_with_vol
+                    .theta()
+                    .map_err(|e| ProjectionError::greek("theta", e))?,
             )),
             BasicAxisTypes::Vega => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.vega()?,
+                option_with_vol
+                    .vega()
+                    .map_err(|e| ProjectionError::greek("vega", e))?,
             )),
             BasicAxisTypes::Vanna => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.vanna()?,
+                option_with_vol
+                    .vanna()
+                    .map_err(|e| ProjectionError::greek("vanna", e))?,
             )),
             BasicAxisTypes::Vomma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.vomma()?,
+                option_with_vol
+                    .vomma()
+                    .map_err(|e| ProjectionError::greek("vomma", e))?,
             )),
             BasicAxisTypes::Veta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.veta()?,
+                option_with_vol
+                    .veta()
+                    .map_err(|e| ProjectionError::greek("veta", e))?,
             )),
             BasicAxisTypes::Charm => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.charm()?,
+                option_with_vol
+                    .charm()
+                    .map_err(|e| ProjectionError::greek("charm", e))?,
             )),
             BasicAxisTypes::Color => Ok((
                 option_with_vol.strike_price.to_dec(),
                 option_with_vol.implied_volatility.to_dec(),
-                option_with_vol.color()?,
+                option_with_vol
+                    .color()
+                    .map_err(|e| ProjectionError::greek("color", e))?,
             )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
@@ -137,12 +156,9 @@ pub trait BasicSurfaces {
             )),
 
             // Catch-all for unsupported combinations
-            _ => Err(SurfaceError::OperationError(
-                crate::error::OperationErrorKind::InvalidParameters {
-                    operation: "get_strike_volatility_versus".to_string(),
-                    reason: format!("Axis: {axis:?} not supported"),
-                },
-            )),
+            _ => Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            }),
         }
     }
 
@@ -160,20 +176,21 @@ pub trait BasicSurfaces {
     ///
     /// # Returns
     ///
-    /// * `Result<(Decimal, Decimal, Decimal), SurfaceError>` - A tuple containing:
+    /// * `Result<(Decimal, Decimal, Decimal), ProjectionError>` - A tuple containing:
     ///   - Strike price
     ///   - The provided volatility value
     ///   - Calculated metric value
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the selected axis is not supported or if any calculation fails.
+    /// Returns [`ProjectionError::UnsupportedAxis`] if the selected axis is not supported, or the
+    /// typed cause of any failed calculation.
     fn get_surface_volatility_versus(
         &self,
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
         volatility: Positive,
-    ) -> Result<(Decimal, Decimal, Decimal), SurfaceError> {
+    ) -> Result<(Decimal, Decimal, Decimal), ProjectionError> {
         // Create a modified copy of the option with the specified volatility
         let mut option_with_vol = (**option).clone();
         option_with_vol.implied_volatility = volatility;
@@ -181,47 +198,65 @@ pub trait BasicSurfaces {
             BasicAxisTypes::Delta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.delta()?,
+                option_with_vol
+                    .delta()
+                    .map_err(|e| ProjectionError::greek("delta", e))?,
             )),
             BasicAxisTypes::Gamma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.gamma()?,
+                option_with_vol
+                    .gamma()
+                    .map_err(|e| ProjectionError::greek("gamma", e))?,
             )),
             BasicAxisTypes::Theta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.theta()?,
+                option_with_vol
+                    .theta()
+                    .map_err(|e| ProjectionError::greek("theta", e))?,
             )),
             BasicAxisTypes::Vega => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.vega()?,
+                option_with_vol
+                    .vega()
+                    .map_err(|e| ProjectionError::greek("vega", e))?,
             )),
             BasicAxisTypes::Vanna => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.vanna()?,
+                option_with_vol
+                    .vanna()
+                    .map_err(|e| ProjectionError::greek("vanna", e))?,
             )),
             BasicAxisTypes::Vomma => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.vomma()?,
+                option_with_vol
+                    .vomma()
+                    .map_err(|e| ProjectionError::greek("vomma", e))?,
             )),
             BasicAxisTypes::Veta => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.veta()?,
+                option_with_vol
+                    .veta()
+                    .map_err(|e| ProjectionError::greek("veta", e))?,
             )),
             BasicAxisTypes::Charm => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.charm()?,
+                option_with_vol
+                    .charm()
+                    .map_err(|e| ProjectionError::greek("charm", e))?,
             )),
             BasicAxisTypes::Color => Ok((
                 option_with_vol.strike_price.to_dec(),
                 volatility.to_dec(),
-                option_with_vol.color()?,
+                option_with_vol
+                    .color()
+                    .map_err(|e| ProjectionError::greek("color", e))?,
             )),
             BasicAxisTypes::Price => Ok((
                 option_with_vol.strike_price.to_dec(),
@@ -230,12 +265,9 @@ pub trait BasicSurfaces {
             )),
 
             // Catch-all for unsupported combinations
-            _ => Err(SurfaceError::OperationError(
-                crate::error::OperationErrorKind::InvalidParameters {
-                    operation: "get_strike_volatility_versus".to_string(),
-                    reason: format!("Axis: {axis:?} not supported"),
-                },
-            )),
+            _ => Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            }),
         }
     }
 
@@ -255,14 +287,15 @@ pub trait BasicSurfaces {
     ///
     /// # Returns
     ///
-    /// * `Result<(Decimal, Decimal, Decimal), SurfaceError>` - A tuple containing:
+    /// * `Result<(Decimal, Decimal, Decimal), ProjectionError>` - A tuple containing:
     ///   - Strike price
     ///   - Days to expiration
     ///   - Calculated metric value
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the selected axis is not supported or if any calculation fails.
+    /// Returns [`ProjectionError::UnsupportedAxis`] if the selected axis is not supported, or the
+    /// typed cause of any failed calculation.
     ///
     /// # Example
     ///
@@ -286,7 +319,7 @@ pub trait BasicSurfaces {
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
         days_to_expiry: Positive,
-    ) -> Result<(Decimal, Decimal, Decimal), SurfaceError> {
+    ) -> Result<(Decimal, Decimal, Decimal), ProjectionError> {
         use crate::ExpirationDate;
 
         // Create a modified copy of the option with the specified time to expiration
@@ -297,47 +330,65 @@ pub trait BasicSurfaces {
             BasicAxisTypes::Delta => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.delta()?,
+                option_with_time
+                    .delta()
+                    .map_err(|e| ProjectionError::greek("delta", e))?,
             )),
             BasicAxisTypes::Gamma => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.gamma()?,
+                option_with_time
+                    .gamma()
+                    .map_err(|e| ProjectionError::greek("gamma", e))?,
             )),
             BasicAxisTypes::Theta => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.theta()?,
+                option_with_time
+                    .theta()
+                    .map_err(|e| ProjectionError::greek("theta", e))?,
             )),
             BasicAxisTypes::Vega => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.vega()?,
+                option_with_time
+                    .vega()
+                    .map_err(|e| ProjectionError::greek("vega", e))?,
             )),
             BasicAxisTypes::Vanna => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.vanna()?,
+                option_with_time
+                    .vanna()
+                    .map_err(|e| ProjectionError::greek("vanna", e))?,
             )),
             BasicAxisTypes::Vomma => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.vomma()?,
+                option_with_time
+                    .vomma()
+                    .map_err(|e| ProjectionError::greek("vomma", e))?,
             )),
             BasicAxisTypes::Veta => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.veta()?,
+                option_with_time
+                    .veta()
+                    .map_err(|e| ProjectionError::greek("veta", e))?,
             )),
             BasicAxisTypes::Charm => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.charm()?,
+                option_with_time
+                    .charm()
+                    .map_err(|e| ProjectionError::greek("charm", e))?,
             )),
             BasicAxisTypes::Color => Ok((
                 option_with_time.strike_price.to_dec(),
                 days_to_expiry.to_dec(),
-                option_with_time.color()?,
+                option_with_time
+                    .color()
+                    .map_err(|e| ProjectionError::greek("color", e))?,
             )),
             BasicAxisTypes::Price => Ok((
                 option_with_time.strike_price.to_dec(),
@@ -346,12 +397,9 @@ pub trait BasicSurfaces {
             )),
 
             // Catch-all for unsupported combinations
-            _ => Err(SurfaceError::OperationError(
-                crate::error::OperationErrorKind::InvalidParameters {
-                    operation: "get_surface_time_versus".to_string(),
-                    reason: format!("Axis: {axis:?} not supported"),
-                },
-            )),
+            _ => Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            }),
         }
     }
 
@@ -374,22 +422,21 @@ pub trait BasicSurfaces {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A constructed surface or an error if creation fails
+    /// * `Result<Surface, ProjectionError>` - A constructed surface or an error if creation fails
     ///
     /// # Errors
     ///
-    /// Returns [`SurfaceError::ConstructionError`] when no expiration
-    /// shift produced a valid grid, and propagates
-    /// [`SurfaceError::Point3DError`] or
-    /// [`SurfaceError::OperationError`] from the per-sample
-    /// evaluator.
+    /// Returns [`ProjectionError::NoPoints`] when no expiration shift
+    /// produced a valid grid, and propagates the typed cause of every
+    /// per-sample failure as [`ProjectionError::Surface`] or
+    /// [`ProjectionError::Greek`].
     fn time_surface(
         &self,
         axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         days_to_expiry: Vec<Positive>,
         side: &Side,
-    ) -> Result<Surface, SurfaceError>;
+    ) -> Result<Surface, ProjectionError>;
 }
 
 #[cfg(test)]
@@ -410,7 +457,7 @@ mod tests_basic_surfaces {
             _option_style: &OptionStyle,
             _volatility: Option<Vec<Positive>>,
             _side: &Side,
-        ) -> Result<Surface, SurfaceError> {
+        ) -> Result<Surface, ProjectionError> {
             Ok(Surface::default())
         }
 
@@ -420,7 +467,7 @@ mod tests_basic_surfaces {
             _option_style: &OptionStyle,
             _days_to_expiry: Vec<Positive>,
             _side: &Side,
-        ) -> Result<Surface, SurfaceError> {
+        ) -> Result<Surface, ProjectionError> {
             Ok(Surface::default())
         }
     }
@@ -578,10 +625,10 @@ mod tests_basic_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::OperationError(error)) => {
-                assert!(error.to_string().contains("not supported"));
+            Err(ProjectionError::UnsupportedAxis { axis }) => {
+                assert!(!axis.is_empty(), "the unsupported axis is reported");
             }
-            _ => panic!("Expected OperationError"),
+            other => panic!("expected UnsupportedAxis, got {other:?}"),
         }
     }
 
@@ -607,7 +654,7 @@ mod tests_basic_surfaces {
         );
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, SurfaceError::OperationError(_)));
+        assert!(matches!(err, ProjectionError::UnsupportedAxis { .. }));
     }
 
     #[test]
@@ -875,10 +922,10 @@ mod tests_basic_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::OperationError(error)) => {
-                assert!(error.to_string().contains("not supported"));
+            Err(ProjectionError::UnsupportedAxis { axis }) => {
+                assert!(!axis.is_empty(), "the unsupported axis is reported");
             }
-            _ => panic!("Expected OperationError"),
+            other => panic!("expected UnsupportedAxis, got {other:?}"),
         }
     }
 

@@ -17,7 +17,7 @@
 use crate::analytics::projections::{BasicCurves, BasicSurfaces};
 use crate::chains::OptionChain;
 use crate::curves::{Curve, Point2D};
-use crate::error::{CurveError, SurfaceError};
+use crate::error::ProjectionError;
 use crate::model::{BasicAxisTypes, OptionStyle, Options, Side};
 use crate::surfaces::{Point3D, Surface};
 use positive::Positive;
@@ -30,12 +30,14 @@ impl BasicCurves for OptionChain {
         axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         side: &Side,
-    ) -> Result<Curve, CurveError> {
+    ) -> Result<Curve, ProjectionError> {
         if axis == &BasicAxisTypes::UnderlyingPrice
             || axis == &BasicAxisTypes::Strike
             || axis == &BasicAxisTypes::Expiration
         {
-            return Err(CurveError::ConstructionError("Axis not valid".to_string()));
+            return Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            });
         }
         let points = self
             .get_single_iter()
@@ -77,14 +79,14 @@ impl BasicSurfaces for OptionChain {
         option_style: &OptionStyle,
         volatility: Option<Vec<Positive>>,
         side: &Side,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         if axis == &BasicAxisTypes::UnderlyingPrice
             || axis == &BasicAxisTypes::Strike
             || axis == &BasicAxisTypes::Expiration
         {
-            return Err(SurfaceError::ConstructionError(
-                "Axis not valid".to_string(),
-            ));
+            return Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            });
         }
 
         let mut points = BTreeSet::new();
@@ -100,9 +102,7 @@ impl BasicSurfaces for OptionChain {
             let option: Arc<Options> = match option {
                 Ok(o) => Arc::new(o),
                 Err(_) => {
-                    return Err(SurfaceError::ConstructionError(
-                        "Failed to retrieve option data".to_string(),
-                    ));
+                    return Err(ProjectionError::MissingOptionData);
                 }
             };
 
@@ -129,9 +129,7 @@ impl BasicSurfaces for OptionChain {
         }
 
         if points.is_empty() {
-            return Err(SurfaceError::ConstructionError(
-                "No valid points generated for surface".to_string(),
-            ));
+            return Err(ProjectionError::NoPoints { kind: "surface" });
         }
 
         Ok(Surface::new(points))
@@ -143,15 +141,15 @@ impl BasicSurfaces for OptionChain {
         option_style: &OptionStyle,
         days_to_expiry: Vec<Positive>,
         side: &Side,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         if axis == &BasicAxisTypes::UnderlyingPrice
             || axis == &BasicAxisTypes::Strike
             || axis == &BasicAxisTypes::Expiration
             || axis == &BasicAxisTypes::Volatility
         {
-            return Err(SurfaceError::ConstructionError(
-                "Axis not valid for time surface".to_string(),
-            ));
+            return Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            });
         }
 
         let mut points = BTreeSet::new();
@@ -166,9 +164,7 @@ impl BasicSurfaces for OptionChain {
             let option: Arc<Options> = match option {
                 Ok(o) => Arc::new(o),
                 Err(_) => {
-                    return Err(SurfaceError::ConstructionError(
-                        "Failed to retrieve option data".to_string(),
-                    ));
+                    return Err(ProjectionError::MissingOptionData);
                 }
             };
 
@@ -183,9 +179,9 @@ impl BasicSurfaces for OptionChain {
         }
 
         if points.is_empty() {
-            return Err(SurfaceError::ConstructionError(
-                "No valid points generated for time surface".to_string(),
-            ));
+            return Err(ProjectionError::NoPoints {
+                kind: "time surface",
+            });
         }
 
         Ok(Surface::new(points))
@@ -200,14 +196,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing gamma data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing gamma data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn gamma_curve(&self) -> Result<Curve, CurveError> {
+    pub fn gamma_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
     }
 
@@ -218,14 +214,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing delta data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing delta data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn delta_curve(&self) -> Result<Curve, CurveError> {
+    pub fn delta_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
     }
 
@@ -236,14 +232,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing vega data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing vega data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn vega_curve(&self) -> Result<Curve, CurveError> {
+    pub fn vega_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
     }
 
@@ -254,14 +250,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing theta data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing theta data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn theta_curve(&self) -> Result<Curve, CurveError> {
+    pub fn theta_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
     }
 
@@ -272,14 +268,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing vanna data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing vanna data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn vanna_curve(&self) -> Result<Curve, CurveError> {
+    pub fn vanna_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Vanna, &OptionStyle::Call, &Side::Long)
     }
 
@@ -290,14 +286,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing veta data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing veta data points,
     ///   or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn veta_curve(&self) -> Result<Curve, CurveError> {
+    pub fn veta_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Veta, &OptionStyle::Call, &Side::Long)
     }
 
@@ -308,13 +304,13 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing charm data points, or an error if curve generation fails
+    /// * `Result<Curve, ProjectionError>` - A curve object containing charm data points, or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing
     /// data or calculation errors
-    pub fn charm_curve(&self) -> Result<Curve, CurveError> {
+    pub fn charm_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Charm, &OptionStyle::Call, &Side::Long)
     }
 
@@ -325,13 +321,13 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing color data points, or an error if curve generation fails
+    /// * `Result<Curve, ProjectionError>` - A curve object containing color data points, or an error if curve generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `CurveError` if the curve cannot be generated due to missing
+    /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing
     /// data or calculation errors
-    pub fn color_curve(&self) -> Result<Curve, CurveError> {
+    pub fn color_curve(&self) -> Result<Curve, ProjectionError> {
         self.curve(&BasicAxisTypes::Color, &OptionStyle::Call, &Side::Long)
     }
 
@@ -349,12 +345,12 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Veta data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Veta data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
     ///
     /// # Example
@@ -368,7 +364,7 @@ impl OptionChain {
     pub fn veta_time_surface(
         &self,
         days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         self.time_surface(
             &BasicAxisTypes::Veta,
             &OptionStyle::Call,
@@ -391,12 +387,12 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Theta data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Theta data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
     ///
     /// # Example
@@ -410,7 +406,7 @@ impl OptionChain {
     pub fn theta_time_surface(
         &self,
         days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         self.time_surface(
             &BasicAxisTypes::Theta,
             &OptionStyle::Call,
@@ -432,12 +428,12 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Charm data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Charm data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
     ///
     /// # Example
@@ -451,7 +447,7 @@ impl OptionChain {
     pub fn charm_time_surface(
         &self,
         days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         self.time_surface(
             &BasicAxisTypes::Charm,
             &OptionStyle::Call,
@@ -473,12 +469,12 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Color data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Color data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
     ///
     /// # Example
@@ -492,7 +488,7 @@ impl OptionChain {
     pub fn color_time_surface(
         &self,
         days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, SurfaceError> {
+    ) -> Result<Surface, ProjectionError> {
         self.time_surface(
             &BasicAxisTypes::Color,
             &OptionStyle::Call,
@@ -515,14 +511,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Vanna data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Vanna data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
-    pub fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, SurfaceError> {
+    pub fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
         self.surface(
             &BasicAxisTypes::Vanna,
             &OptionStyle::Call,
@@ -544,14 +540,14 @@ impl OptionChain {
     ///
     /// # Returns
     ///
-    /// * `Result<Surface, SurfaceError>` - A surface object containing Vomma data points,
+    /// * `Result<Surface, ProjectionError>` - A surface object containing Vomma data points,
     ///   or an error if surface generation fails
     ///
     /// # Errors
     ///
-    /// Returns a `SurfaceError` if the surface cannot be generated due to missing data
+    /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
-    pub fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, SurfaceError> {
+    pub fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
         self.surface(
             &BasicAxisTypes::Vomma,
             &OptionStyle::Call,
@@ -833,10 +829,11 @@ mod tests_option_chain_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "Axis not valid");
+            Err(ProjectionError::UnsupportedAxis { axis }) => {
+                // The rejected axis is a field, not text to parse.
+                assert!(!axis.is_empty(), "the unsupported axis is reported");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 
@@ -894,10 +891,10 @@ mod tests_option_chain_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "No valid points generated for surface");
+            Err(ProjectionError::NoPoints { kind }) => {
+                assert_eq!(kind, "surface");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 
@@ -984,10 +981,10 @@ mod tests_option_chain_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "No valid points generated for surface");
+            Err(ProjectionError::NoPoints { kind }) => {
+                assert_eq!(kind, "surface");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 
@@ -1096,10 +1093,11 @@ mod tests_option_chain_time_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "Axis not valid for time surface");
+            Err(ProjectionError::UnsupportedAxis { axis }) => {
+                // The rejected axis is a field, not text to parse.
+                assert!(!axis.is_empty(), "the unsupported axis is reported");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 
@@ -1117,10 +1115,10 @@ mod tests_option_chain_time_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "No valid points generated for time surface");
+            Err(ProjectionError::NoPoints { kind }) => {
+                assert_eq!(kind, "time surface");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 
@@ -1237,10 +1235,10 @@ mod tests_option_chain_time_surfaces {
 
         assert!(result.is_err());
         match result {
-            Err(SurfaceError::ConstructionError(msg)) => {
-                assert_eq!(msg, "No valid points generated for time surface");
+            Err(ProjectionError::NoPoints { kind }) => {
+                assert_eq!(kind, "time surface");
             }
-            _ => panic!("Expected ConstructionError"),
+            other => panic!("unexpected projection error: {other:?}"),
         }
     }
 

@@ -64,6 +64,14 @@ pub enum Error {
     #[error(transparent)]
     Curve(#[from] crate::error::CurveError),
 
+    /// Curve and surface projections built from option data.
+    #[error(transparent)]
+    Projection(#[from] crate::error::ProjectionError),
+
+    /// Backtest runs, which compose a strategy and a simulation.
+    #[error(transparent)]
+    Backtest(#[from] crate::error::BacktestError),
+
     /// Decimal operation errors.
     #[error(transparent)]
     Decimal(#[from] crate::error::DecimalError),

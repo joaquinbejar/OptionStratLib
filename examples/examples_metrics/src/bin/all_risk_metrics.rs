@@ -26,7 +26,7 @@ use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use rust_decimal::Decimal;
 
-fn main() -> Result<(), CurveError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     tracing::info!("=== OptionStratLib Risk Metrics Demo ===\n");

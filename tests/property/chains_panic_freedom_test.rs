@@ -20,7 +20,7 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::chains::OptionData;
 use optionstratlib::chains::utils::adjust_volatility;
-use optionstratlib::error::{ChainError, SimulationError};
+use optionstratlib::error::SimulationError;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{
     ExitPolicy, WalkParams, WalkType, WalkTypeAble, check_exit_policy, expanding_window_vols,
@@ -412,7 +412,7 @@ proptest! {
         let params = walk_params(size, walk_type, start, days);
         let _: Result<Vec<Step<Positive, Positive>>, SimulationError> =
             walk_steps(&params, |price, _volatility, _x| Ok(Some(*price)));
-        let _: Result<Vec<Step<Positive, Positive>>, ChainError> = generator_positive(&params);
+        let _: Result<Vec<Step<Positive, Positive>>, SimulationError> = generator_positive(&params);
     }
 
     /// Advancing and rewinding a time step returns for an expiration already

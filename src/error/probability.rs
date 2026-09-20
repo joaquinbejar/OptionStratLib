@@ -746,10 +746,10 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_strategy_error_simulation_conversion() {
-        let strategy_error = StrategyError::Simulation(Box::new(
-            crate::error::SimulationError::walk_error("simulation failed"),
-        ));
+    fn test_strategy_error_converts_to_expected_value_error() {
+        // The strategies error still reaches analytics, which is the
+        // downward direction; what is gone is the simulation payload.
+        let strategy_error = StrategyError::NotImplemented;
         let converted_error: ProbabilityError = strategy_error.into();
         assert!(matches!(
             converted_error,

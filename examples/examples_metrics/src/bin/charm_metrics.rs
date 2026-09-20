@@ -22,7 +22,7 @@ use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use rust_decimal_macros::dec;
-fn main() -> Result<(), CurveError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Build a synthetic option chain

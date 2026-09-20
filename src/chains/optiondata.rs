@@ -1375,7 +1375,7 @@ impl OptionData {
     /// * Possible errors include missing option data, calculation failures, or invalid parameters.
     pub fn get_deltas(&self) -> Result<DeltasInStrike, ChainError> {
         let options_in_strike = self.get_options_in_strike()?;
-        Ok(options_in_strike.deltas()?)
+        options_in_strike.deltas()
     }
 
     /// Validates if an option strike price is valid according to the specified search strategy.

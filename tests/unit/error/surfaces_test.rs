@@ -40,36 +40,37 @@ fn test_from_options_error() {
 }
 
 #[test]
-fn test_from_greeks_error() {
-    // Create a Greeks error
+fn test_surface_error_does_not_absorb_a_greeks_error() {
+    // As for curves: the surface error carries the reason, not the pricing
+    // error type (#511).
     let greeks_error = GreeksError::invalid_volatility(-1.0, "greeks error test");
+    let surface_error = SurfaceError::AnalysisError(format!("delta: {greeks_error}"));
 
-    // Convert to SurfaceError
-    let surface_error = SurfaceError::from(greeks_error);
-
-    // Verify the conversion was successful
     match surface_error {
-        SurfaceError::Greeks(_) => {
-            // The fact that we reached this arm means the conversion was successful
+        SurfaceError::AnalysisError(reason) => {
+            assert!(
+                reason.contains("delta"),
+                "the failing Greek is named: {reason}"
+            );
+            assert!(
+                reason.contains("greeks error test"),
+                "the original reason survives: {reason}"
+            );
         }
-        _ => panic!("Expected Greeks variant, got something else"),
+        other => panic!("expected AnalysisError, got {other:?}"),
     }
 }
 
 #[test]
-fn test_from_graph_error() {
-    // Create a graph error
-    let graph_error = GraphError::Render("graph error test".to_string());
+fn test_graph_error_keeps_its_own_direction() {
+    // A rendering failure is visualization's, and `GraphError` wraps the
+    // math error, never the other way round (#511).
+    let surface_error = SurfaceError::AnalysisError("surface analysis".to_string());
+    let graph_error = GraphError::from(surface_error);
 
-    // Convert to SurfaceError
-    let surface_error = SurfaceError::from(graph_error);
-
-    // Verify the conversion was successful
-    match surface_error {
-        SurfaceError::Graph(_) => {
-            // The fact that we reached this arm means the conversion was successful
-        }
-        _ => panic!("Expected Graph variant, got something else"),
+    match graph_error {
+        GraphError::Surface(_) => {}
+        other => panic!("expected GraphError::Surface, got {other:?}"),
     }
 }
 

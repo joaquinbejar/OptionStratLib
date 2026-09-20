@@ -1,6 +1,6 @@
 use optionstratlib::prelude::*;
 
-fn main() -> Result<(), GraphError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let series = Series2D {
         x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
         y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],

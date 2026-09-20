@@ -5,9 +5,7 @@
 ******************************************************************************/
 //! Target crate (ADR-0001 D6, roadmap M1-14): **math**. Owns `SurfaceError`; the `Greeks` and graph variants are removed in the batch behind the 0.22.0 bump.
 
-use crate::error::{
-    GraphError, GreeksError, InterpolationError, OperationErrorKind, OptionsError, PositionError,
-};
+use crate::error::{InterpolationError, OperationErrorKind, OptionsError, PositionError};
 use thiserror::Error;
 
 /// Error variants that can occur when working with surface-related operations.
@@ -80,14 +78,6 @@ pub enum SurfaceError {
     /// Error from options operations
     #[error(transparent)]
     Options(#[from] OptionsError),
-
-    /// Error from Greeks calculations
-    #[error(transparent)]
-    Greeks(#[from] GreeksError),
-
-    /// Error from graph operations
-    #[error(transparent)]
-    Graph(Box<GraphError>),
 }
 
 /// Provides helper methods for constructing specific variants of the `SurfaceError` type.

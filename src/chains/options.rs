@@ -4,7 +4,7 @@
    Date: 12/12/24
 ******************************************************************************/
 use crate::Options;
-use crate::error::OptionsError;
+use crate::error::ChainError;
 use crate::greeks::Greeks;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
@@ -102,7 +102,10 @@ impl OptionsInStrike {
     /// This method will return an error if any of the underlying delta calculations fail,
     /// which may occur due to invalid option parameters or computation errors.
     ///
-    pub fn deltas(&self) -> Result<DeltasInStrike, OptionsError> {
+    pub fn deltas(&self) -> Result<DeltasInStrike, ChainError> {
+        // Market may depend on pricing, so the Greek failure stays typed:
+        // `ChainError::GreeksError` carries it as it always did, and the
+        // core `OptionsError` no longer has to name a pricing type.
         Ok(DeltasInStrike {
             long_call: self.long_call.delta()?,
             short_call: self.short_call.delta()?,
