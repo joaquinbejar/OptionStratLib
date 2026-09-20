@@ -146,10 +146,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("model", "greeks"): (frozenset({"model/leg/leg_enum.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
     # `Trade::pnl() -> PnL` is public inherent API returning an analytics type.
     ("model", "pnl"): (frozenset({"model/trade.rs"}), "0.22.0 batch (#498)"),
-    # `ProfitLossRange::calculate_probability` wrapper and its parameter types.
-    ("model", "analytics"): (frozenset({"model/profit_range.rs"}), "0.22.0 batch (#498)"),
-    # `ProfitLossRange::new` returns the analytics-owned `ProbabilityError`.
-    ("model", "error/probability"): (frozenset({"model/profit_range.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
     # `PricingEngine::MonteCarlo` still stores the concrete `Simulator`.
     ("pricing", "simulation"): (frozenset({"pricing/unified.rs"}), "0.22.0 batch (#508, ADR-0001 D3)"),
     # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`

@@ -16,7 +16,6 @@
 //! * `types` - Essential type definitions and enums
 //! * `utils` - Utility functions for model operations and calculations
 //! * `format` - Display and Debug implementations for model types
-//! * `profit_range` - Calculations for profit/loss ranges
 //!
 //! ## Key Features
 //!
@@ -114,7 +113,6 @@ pub mod payoff;
 mod positive_ext;
 
 /// Tools for analyzing and visualizing profit ranges across different market scenarios.
-mod profit_range;
 
 /// Common type definitions used throughout the options strategy library.
 pub mod types;
@@ -132,6 +130,7 @@ mod expiration;
 pub mod leg;
 mod trade;
 
+pub use crate::analytics::profit_range::ProfitLossRange; // facade-compat: analytics
 pub use axis::BasicAxisTypes;
 pub use balance::*;
 pub use expiration::ExpirationDate;
@@ -139,6 +138,5 @@ pub use expiration::ExpirationDateError;
 pub use expiration::{reject_unrepresentable_expiration, resolve_expiration_date};
 pub use option::Options;
 pub use position::Position;
-pub use profit_range::ProfitLossRange;
 pub use trade::{Trade, TradeAble, TradeStatus, TradeStatusAble, save_trades};
 pub use types::{OptionStyle, OptionType, RainbowType, Side};
