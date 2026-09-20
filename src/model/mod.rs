@@ -112,8 +112,6 @@ pub mod payoff;
 
 mod positive_ext;
 
-/// Tools for analyzing and visualizing profit ranges across different market scenarios.
-
 /// Common type definitions used throughout the options strategy library.
 pub mod types;
 
