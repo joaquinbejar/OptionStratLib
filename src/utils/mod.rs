@@ -53,7 +53,8 @@
 //! General-purpose utility functions:
 //!
 //! ```rust
-//! use optionstratlib::utils::others::{approx_equal, get_random_element, process_n_times_iter};
+//! use optionstratlib::strategies::process_n_times_iter;
+//! use optionstratlib::utils::others::{approx_equal, get_random_element};
 //! use std::collections::BTreeSet;
 //!
 //! // Approximate equality comparison
@@ -183,7 +184,6 @@ pub mod others;
 /// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV
 /// parsing.
-mod csv;
 /// This module contains the file reader and writer for OHLCV data.  It provides functionality for
 /// reading and writing OHLCV data in various file formats, including CSV and JSON.
 pub mod file;
@@ -195,9 +195,6 @@ pub mod time;
 /// convenience.
 mod traits;
 
-#[cfg(feature = "async")]
-pub use csv::read_ohlcv_from_zip_async;
-pub use csv::{OhlcvCandle, read_ohlcv_from_zip};
 #[allow(deprecated)]
 pub use logger::{setup_logger, setup_logger_with_level};
 pub use others::{

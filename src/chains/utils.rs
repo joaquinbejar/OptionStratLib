@@ -3,8 +3,80 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use crate::model::decimal::p_sqrt;
+use crate::model::decimal::{d_sqrt, p_sqrt};
 use positive::Positive;
+use std::ops::Mul;
+
+/// Calculates the optimal price range for an option based on its underlying price,
+/// strike price, implied volatility, and expiration date.
+///
+/// # Parameters
+/// - `underlying_price`: The price of the underlying asset, represented as a `Positive`.
+/// - `strike_price`: The strike price of the option, represented as a `Positive`.
+/// - `implied_volatility`: The market's implied volatility for the option, represented as a `Positive`.
+/// - `expiration_date`: The expiration date of the option, passed as an `ExpirationDate`.
+///
+/// # Returns
+/// A `Result` containing a tuple of two `Positive` values:
+/// - The `min_price` represents the lower bound of the price range.
+/// - The `max_price` represents the upper bound of the price range.
+///
+/// On success, the returned tuple includes both values rounded to a "nice" step value
+/// for better usability. On failure, an error boxed in `ChainError` is returned.
+///
+/// # Calculations
+/// 1. Determines the number of years to expiration by calculating days to expiry
+///    and converting it into a fractional year.
+/// 2. Determines the `volatility_factor` which adjusts for time-decay and a
+///    confidence interval (set to 4.0 in this implementation).
+/// 3. Calculates the lower and upper bounds of the price range based on the
+///    `underlying_price` and the `volatility_factor`.
+/// 4. Computes an adjusted range (`min_price` and `max_price`) by scaling
+///    the `strike_price` by 70% and 130%, ensuring bounds are within realistic margins.
+/// 5. Divides the adjusted range into increments (`step`) for easier rounding before
+///    smoothing both bounds to user-friendly values.
+///
+/// # Errors
+/// The function will return an error if:
+/// - The extraction of `days_to_expiry` from the `expiration_date` fails.
+/// - `years_to_expiry.sqrt()` returns a `None` (e.g. if `years_to_expiry` is negative, which it shouldn't be).
+///
+/// # Note
+/// The constants such as the confidence interval (`4.0`) and scaling factors
+/// for the `strike_price` (`0.7` and `1.3`) might be subject to change based
+/// on different financial models or strategies.
+pub fn calculate_optimal_price_range(
+    underlying_price: Positive,
+    strike_price: Positive,
+    implied_volatility: Positive,
+    expiration_date: ExpirationDate,
+) -> Result<(Positive, Positive), ChainError> {
+    let days_to_expiry = expiration_date.get_days()?;
+    let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
+    let years_to_expiry_sqrt = d_sqrt(years_to_expiry, "chains::utils::years_to_expiry_sqrt")
+        .map_err(|_| {
+            ChainError::invalid_price_calculation(
+                "sqrt() failed to calculate for years_to_expiry value",
+            )
+        })?;
+
+    let confidence_interval = dec!(4.0);
+    let volatility_factor = implied_volatility * years_to_expiry_sqrt * confidence_interval;
+
+    let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
+    let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
+
+    let min_price = lower_bound.min(strike_price.mul(dec!(0.7)));
+    let max_price = upper_bound.max(strike_price.mul(dec!(1.3)));
+
+    let step = (max_price - min_price) / dec!(20.0);
+    let rounded_step = step.round_to_nice_number();
+
+    let min_price_rounded = (min_price / rounded_step).floor() * rounded_step;
+    let max_price_rounded = (max_price / rounded_step).ceiling() * rounded_step;
+
+    Ok((min_price_rounded, max_price_rounded))
+}
 
 /// Defines the strategy for finding optimal pricing sides.
 ///
@@ -109,6 +181,25 @@ impl Display for FindOptimalSide {
 
 #[cfg(test)]
 mod tests_find_optimal_side {
+    #[test]
+    fn test_calculate_optimal_price_range() {
+        let underlying_price = pos_or_panic!(100.0);
+        let strike_price = pos_or_panic!(90.0);
+        let implied_volatility = pos_or_panic!(0.20);
+        let expiration_date = ExpirationDate::Days(Positive::TWO);
+
+        let (min_price, max_price) = calculate_optimal_price_range(
+            underlying_price,
+            strike_price,
+            implied_volatility,
+            expiration_date,
+        )
+        .unwrap();
+
+        assert_eq!(min_price, pos_or_panic!(62.0));
+        assert_eq!(max_price, pos_or_panic!(118.0));
+    }
+
     use super::*;
 
     #[test]

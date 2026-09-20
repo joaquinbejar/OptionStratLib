@@ -1,4 +1,4 @@
-use optionstratlib::utils::read_ohlcv_from_zip_async;
+use optionstratlib::chains::csv::read_ohlcv_from_zip_async;
 use osl_example_support::setup_logger;
 use std::error::Error;
 use tracing::{error, info};
@@ -13,8 +13,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Reading OHLCV data from {} asynchronously...", zip_path);
 
     // We'll read without date filters first
-    let result: Result<Vec<optionstratlib::utils::OhlcvCandle>, optionstratlib::error::OhlcvError> =
-        read_ohlcv_from_zip_async(zip_path.to_string(), None, None).await;
+    let result: Result<
+        Vec<optionstratlib::chains::csv::OhlcvCandle>,
+        optionstratlib::error::OhlcvError,
+    > = read_ohlcv_from_zip_async(zip_path.to_string(), None, None).await;
 
     match result {
         Ok(candles) => {

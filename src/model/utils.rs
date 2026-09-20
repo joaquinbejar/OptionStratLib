@@ -3,16 +3,13 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
-use crate::error::ChainError;
 use crate::model::Position;
-use crate::model::decimal::d_sqrt;
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use positive::{Positive, PositiveError};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::ops::Mul;
 
 /// Build a `Positive` from a compile-time non-negative `Decimal` literal.
 ///
@@ -495,77 +492,6 @@ pub trait ToRound {
     fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
-/// Calculates the optimal price range for an option based on its underlying price,
-/// strike price, implied volatility, and expiration date.
-///
-/// # Parameters
-/// - `underlying_price`: The price of the underlying asset, represented as a `Positive`.
-/// - `strike_price`: The strike price of the option, represented as a `Positive`.
-/// - `implied_volatility`: The market's implied volatility for the option, represented as a `Positive`.
-/// - `expiration_date`: The expiration date of the option, passed as an `ExpirationDate`.
-///
-/// # Returns
-/// A `Result` containing a tuple of two `Positive` values:
-/// - The `min_price` represents the lower bound of the price range.
-/// - The `max_price` represents the upper bound of the price range.
-///
-/// On success, the returned tuple includes both values rounded to a "nice" step value
-/// for better usability. On failure, an error boxed in `ChainError` is returned.
-///
-/// # Calculations
-/// 1. Determines the number of years to expiration by calculating days to expiry
-///    and converting it into a fractional year.
-/// 2. Determines the `volatility_factor` which adjusts for time-decay and a
-///    confidence interval (set to 4.0 in this implementation).
-/// 3. Calculates the lower and upper bounds of the price range based on the
-///    `underlying_price` and the `volatility_factor`.
-/// 4. Computes an adjusted range (`min_price` and `max_price`) by scaling
-///    the `strike_price` by 70% and 130%, ensuring bounds are within realistic margins.
-/// 5. Divides the adjusted range into increments (`step`) for easier rounding before
-///    smoothing both bounds to user-friendly values.
-///
-/// # Errors
-/// The function will return an error if:
-/// - The extraction of `days_to_expiry` from the `expiration_date` fails.
-/// - `years_to_expiry.sqrt()` returns a `None` (e.g. if `years_to_expiry` is negative, which it shouldn't be).
-///
-/// # Note
-/// The constants such as the confidence interval (`4.0`) and scaling factors
-/// for the `strike_price` (`0.7` and `1.3`) might be subject to change based
-/// on different financial models or strategies.
-pub fn calculate_optimal_price_range(
-    underlying_price: Positive,
-    strike_price: Positive,
-    implied_volatility: Positive,
-    expiration_date: ExpirationDate,
-) -> Result<(Positive, Positive), ChainError> {
-    let days_to_expiry = expiration_date.get_days()?;
-    let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
-    let years_to_expiry_sqrt = d_sqrt(years_to_expiry, "model::utils::years_to_expiry_sqrt")
-        .map_err(|_| {
-            ChainError::invalid_price_calculation(
-                "sqrt() failed to calculate for years_to_expiry value",
-            )
-        })?;
-
-    let confidence_interval = dec!(4.0);
-    let volatility_factor = implied_volatility * years_to_expiry_sqrt * confidence_interval;
-
-    let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
-    let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
-
-    let min_price = lower_bound.min(strike_price.mul(dec!(0.7)));
-    let max_price = upper_bound.max(strike_price.mul(dec!(1.3)));
-
-    let step = (max_price - min_price) / dec!(20.0);
-    let rounded_step = step.round_to_nice_number();
-
-    let min_price_rounded = (min_price / rounded_step).floor() * rounded_step;
-    let max_price_rounded = (max_price / rounded_step).ceiling() * rounded_step;
-
-    Ok((min_price_rounded, max_price_rounded))
-}
-
 /// Generates a price vector for the payoff graph
 #[must_use]
 pub fn generate_price_points(
@@ -763,30 +689,5 @@ mod tests_mean_and_std {
 
         assert_relative_eq!(mean.to_f64(), 0.13456786, epsilon = 0.00000001);
         assert_relative_eq!(std.to_f64(), 0.00907213, epsilon = 0.00000001);
-    }
-}
-
-#[cfg(test)]
-mod tests_model_utils {
-    use super::*;
-    use positive::pos_or_panic;
-
-    #[test]
-    fn test_calculate_optimal_price_range() {
-        let underlying_price = pos_or_panic!(100.0);
-        let strike_price = pos_or_panic!(90.0);
-        let implied_volatility = pos_or_panic!(0.20);
-        let expiration_date = ExpirationDate::Days(Positive::TWO);
-
-        let (min_price, max_price) = calculate_optimal_price_range(
-            underlying_price,
-            strike_price,
-            implied_volatility,
-            expiration_date,
-        )
-        .unwrap();
-
-        assert_eq!(min_price, pos_or_panic!(62.0));
-        assert_eq!(max_price, pos_or_panic!(118.0));
     }
 }

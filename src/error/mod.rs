@@ -99,11 +99,11 @@
 //! | Target crate | Files |
 //! | --- | --- |
 //! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs` |
-//! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs` |
+//! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs` |
 //! | simulation | `simulation.rs` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`) |
-//! | analytics | `transaction.rs`, `metrics.rs`, `probability.rs` |
+//! | analytics | `transaction.rs`, `probability.rs` |
 //! | strategies | `strategies.rs` |
 //! | visualization | `graph.rs` |
 //! | facade | `unified.rs`, this file's re-exports |
