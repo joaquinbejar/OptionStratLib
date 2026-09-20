@@ -404,6 +404,7 @@ def resolution_tables(
         public[(("error",), name)] = stem
         public[(("error", stem), name)] = stem
     files: list[tuple[tuple[str, ...], list[str], list[str]]] = []
+    aliases: list[tuple[tuple[str, ...], str]] = []
     modules = module_paths(src)
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
@@ -411,14 +412,7 @@ def resolution_tables(
         pubs = [m.group(0) for m in re.finditer(r"\bpub(?:\([^)]*\))?\s+use\s+[^;]+;", text, re.S)]
         alls = [m.group(0) for m in re.finditer(r"\buse\s+[^;]+;", text, re.S)]
         files.append((module_path_of(rel), pubs, alls))
-        # `pub type Alias<..> = .. SomeError ..` makes the alias a path to the
-        # error type for every consumer of the alias.
-        for alias_name, rhs in ALIAS_DEF_RE.findall(text):
-            for ident in IDENT_RE.findall(rhs):
-                stem = types.get(ident)
-                if stem is not None:
-                    public[(module_path_of(rel), alias_name)] = stem
-                    break
+        aliases.append((module_path_of(rel), text))
     for table, selector in ((public, 1), (private, 2)):
         changed = True
         while changed:
@@ -444,7 +438,58 @@ def resolution_tables(
                             if key not in table:
                                 table[key] = stem
                                 changed = True
+    # `pub type Alias<..> = .. SomeError ..` makes the alias a path to the
+    # error type for every consumer of the alias. The right-hand side is
+    # resolved through the defining file's own bindings, never by spelling:
+    # `use std::io::Error; pub type IoResult<T> = Result<T, Error>;` names a
+    # foreign type, not this crate's unified `Error`.
+    added = True
+    while added:
+        added = False
+        for module, text in aliases:
+            local = file_error_bindings(text, module, public, private, modules)
+            for alias_name, rhs in ALIAS_DEF_RE.findall(text):
+                stem = None
+                for match in QUALIFIED_RE.finditer(rhs):
+                    mods = tuple(seg for seg in match.group(1).split("::") if seg)
+                    stem = public.get((mods, match.group(2)))
+                    if stem is not None:
+                        break
+                if stem is None:
+                    for ident in IDENT_RE.findall(rhs):
+                        if ident in local:
+                            stem = local[ident]
+                            break
+                if stem is not None and (module, alias_name) not in public:
+                    public[(module, alias_name)] = stem
+                    added = True
     return public, private
+
+
+def file_error_bindings(
+    text: str,
+    module: tuple[str, ...],
+    public: dict[tuple[tuple[str, ...], str], str],
+    private: dict[tuple[tuple[str, ...], str], str],
+    modules: set[tuple[str, ...]],
+) -> dict[str, str]:
+    """Names this file explicitly binds to a crate error type, by local spelling.
+
+    A name bound from another crate (`use std::io::Error`) is absent, so an
+    alias over it is never attributed to a crate error.
+    """
+    bound: dict[str, str] = {}
+    for segments, alias in use_entries(text):
+        abs_path = absolute(segments, module, modules)
+        if not abs_path or abs_path[-1] in ("*", "self"):
+            continue
+        mods, name = tuple(abs_path[:-1]), abs_path[-1]
+        stem = public.get((mods, name))
+        if stem is None and mods == module[: len(mods)]:
+            stem = private.get((mods, name))
+        if stem is not None:
+            bound[alias or name] = stem
+    return bound
 
 
 def resolve_error_refs(
@@ -775,6 +820,23 @@ def self_test() -> int:
                 ("model/x.rs", "use crate::error::*;\nuse crate::model::local::StrategyError;\nfn f() -> StrategyError { todo!() }\n"),
             ],
             0,
+        ),
+        "alias over a foreign error of the same name": (
+            [
+                ("error/unified.rs", "pub enum Error { A }\n"),
+                ("curves/alias.rs", "use std::io::Error;\npub type IoResult<T> = Result<T, Error>;\n"),
+                ("pricing/x.rs", "use crate::curves::alias::IoResult;\nfn f() -> IoResult<u8> { todo!() }\n"),
+            ],
+            0,
+        ),
+        "alias over a qualified crate error": (
+            [
+                err,
+                ("curves/alias.rs", "pub type StratResult<T> = Result<T, crate::error::strategies::StrategyError>;\n"),
+                ("pricing/x.rs", "use crate::curves::alias::StratResult;\nfn f() -> StratResult<u8> { todo!() }\n"),
+            ],
+            2,
+            "pricing/x.rs",
         ),
         "type alias over an error reaches its consumer": (
             [

@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   binding that is private in the parent module), the uniform bare-relative
   form used by the crate's `mod.rs` files, module aliases
   (`use crate::error as err`), `pub type` aliases over an error type (the
-  edge reaches every consumer of the alias, not only its definition), globs,
+  edge reaches every consumer of the alias, and the right-hand side is
+  resolved through the defining file's bindings, so an alias over a foreign
+  `Error` creates none), globs,
   and paths in expression position. Names bound from outside the crate
   (`use std::io::Error`) raise no edge, a glob name shadowed by a local
   definition or another import is ignored, and a type defined by two error
@@ -39,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still passes while the debt is printed on every run. New `--inventory`
   mode prints the deferred edges, the `facade-compat` lines (with source
   layer and compat target) and the ambiguous error names as tables. The
-  self-test grows to 37 cases, several of which assert which file carries
+  self-test grows to 39 cases, several of which assert which file carries
   the edge, and the module docstring states what the resolver does not see.
 - **`optionstratlib::analytics` module** (#513, multi-crate roadmap M1-16):
   the strategy-neutral home of the price-probability kernels.
