@@ -348,6 +348,7 @@ pub(crate) mod utils;
 /// ```
 pub mod unified;
 
+pub use crate::facade::pricing_engine::{Priceable, PricingEngine, price_option}; // facade-compat: facade
 pub use american::barone_adesi_whaley;
 pub use asian::asian_black_scholes;
 pub use barrier::barrier_black_scholes;
@@ -370,7 +371,6 @@ pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
 pub use telegraph::{TelegraphProcess, telegraph};
 pub use unified::{
-    ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, Priceable,
-    PricingEngine, price_option, price_option_with,
+    ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, price_option_with,
 };
 pub use utils::{probability_keep_under_strike, simulate_returns};

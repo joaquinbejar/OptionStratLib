@@ -1279,6 +1279,10 @@ pub mod curves;
 /// calculation errors, and input/output errors.
 pub mod error;
 
+/// Items that compose two components and belong to neither; see
+/// [`crate::facade`].
+pub mod facade;
+
 /// * `geometrics` - Mathematical utilities for geometric calculations relevant to options.
 ///
 /// Provides specialized geometric functions and algorithms for options pricing and modeling,

@@ -220,6 +220,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The cross-component dispatchers move to facade-owned files** (#598,
+  multi-crate roadmap M1, decision D2). `PricingEngine`, `price_option`,
+  `Priceable` and `From<PricingEngine> for GenericPricingEngine<Simulator>`
+  made pricing name the concrete simulation engine, and
+  `utils::others::process_n_times_iter` made the core layer name the
+  facade-level unified `Error`. Neither composes anything a component owns,
+  so both move to the new `optionstratlib::facade` module, the layer that may
+  depend on everything and becomes the facade crate's own code at extraction.
+  `pricing::{PricingEngine, price_option, Priceable}` and
+  `utils::others::process_n_times_iter` are re-exports marked
+  `// facade-compat: facade`, so no 0.21 path changes;
+  `GenericPricingEngine`, `MonteCarloPricer`, `NoMonteCarlo`,
+  `ClosedFormEngine` and `price_option_with` stay in pricing, where they
+  belong. `greeks::numerical` now prices through the component-level
+  `price_option_with(&option, &ClosedFormEngine::ClosedFormBS)` instead of
+  `Priceable::price(&PricingEngine::ClosedFormBS)`: the same Black-Scholes
+  arm, without the facade type. Two more reverse edges gone
+  (`pricing -> simulation`, `utils -> error/unified`), leaving 26.
+
 - **`Simulate` and `SimulationStats` move to backtesting** (#595, multi-crate
   roadmap M1, decision D2). Both are backtest concepts that happened to live
   under `src/simulation/`: `Simulate::simulate` returns the backtest-owned
