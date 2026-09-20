@@ -6,7 +6,7 @@
 
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{BarrierType, OptionStyle, OptionType, Side};
-use optionstratlib::pricing::unified::{Priceable, PricingEngine};
+use optionstratlib::pricing::{ClosedFormEngine, Priceable};
 use optionstratlib::{ExpirationDate, Options};
 use positive::pos_or_panic;
 use prettytable::{Table, row};
@@ -64,7 +64,7 @@ fn main() {
                 exotic_params: None,
             };
 
-            let price = option.price(&PricingEngine::ClosedFormBS).unwrap();
+            let price = option.price(&ClosedFormEngine::ClosedFormBS).unwrap();
             let delta = option.delta().unwrap();
             let gamma = option.gamma().unwrap();
             let vega = option.vega().unwrap();
