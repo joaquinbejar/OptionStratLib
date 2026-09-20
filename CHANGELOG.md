@@ -21,6 +21,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unchanged.
 ### Migration notes for 0.22
 
+- **Compatibility with 0.21.3 is not a requirement of 0.22.0** (#606). The
+  machinery built to preserve it is retired: the cumulative comparison
+  against the published crate, the `v0.21.3` reference, the register of
+  individually authorised breaks and its approval flow. What replaces it is
+  a report: `scripts/report_api_changes.py` lists, per feature surface, the
+  public items a pull request removes or reshapes incompatibly against its
+  own base, so a reviewer judges the change instead of authorising it item by
+  item. Additions are not `cargo-semver-checks` findings and reach the
+  reviewer through the public-api snapshot, which `make public-api-check`
+  refuses until it is regenerated.
+  The job still fails on a tool, build or parser problem, because an
+  unreadable report must never be read as "no change". The `synthetic`
+  requirement previously recorded as AB-01 is superseded by this policy and
+  stays documented as the migration note below. History, tags and past
+  releases are untouched.
+
 - **The manifest declares 0.22.0** (#602). For a 0.x crate the breaking bump
   is the minor digit, so this is what authorises the incompatible changes of
   the multi-crate migration. Nothing is tagged, released or published by this

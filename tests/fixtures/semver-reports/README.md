@@ -38,37 +38,19 @@ and the rules exist so a future version cannot degrade silently.
 | `blank-line-in-list.txt` | a blank line inside a `Failed in:` list, which must not truncate it (all 69 items still parse) |
 | `wrapped-item.txt` | an item line split in two, whose continuation has no item text: refused rather than counted as a phantom finding |
 
-## Sequence test
+## What the fixtures are for
 
-`sequence.sh [workdir]` builds a throwaway git repository with a probe crate
-at 0.21.3 and walks it through the four states the gate must tell apart,
-running C1, C2 and C3 on each, twice: as a pull request (on the synthetic
-merge commit) and as the push that integrates it.
+`scripts/report_api_changes.py --self-test` parses every file here. They pin
+the report grammar of the pinned tool version and the parser's fail-closed
+rules: an unreadable or unexpected report must fail the job, never be read as
+"this pull request changes no API".
 
-```
-step 1  normal PR adds `added_fn`                     C1 -  C2 -  C3 -
-step 2  authorised break removes `old_fn` (in 0.21.3) C1 x  C2 x  C3 x
-step 3  normal, unlabelled PR changes a body          C1 x  C2 -  C3 -
-step 4  authorised break removes `added_fn`           C1 -  C2 x  C3 x
-```
-
-Step 3 is why an ordinary pull request needs no label once a break has
-landed: C1 keeps reporting it (and the register keeps accounting for it)
-while C2 and C3 stay green. Step 4 is why C1 alone is not enough: an item
-added after 0.21.3 and removed later is invisible to it.
-
-Each state also runs the register comparison itself (`check_accepted_breaks.py`
-against a register the fixture writes into the probe repository), so the
-policy is exercised, not only the tool: 24 verdicts, all passing, including
-step 3, where the landed AB-01 is still expected by C1 and no longer demanded
-by C2 or C3, which is what keeps an ordinary pull request green without a
-label.
-
-`lints-0.50.0.txt` is the lint inventory of the pinned tool
+`lints-0.50.0.txt` is the lint inventory of that version
 (`cargo semver-checks --list`), used to reject an unknown lint. It is
 deliberately not derived from the report under test, which by construction
-contains only lints that the report names.
+contains only lints that report names.
 
-`sequence-results.txt` is the recorded output; re-running reproduces it with
-different SHAs. It also shows, on the integrating push, the commit the wrong
-(inclusive) reference rule would have selected: the commit under test itself.
+The sequence fixture that exercised the accepted-breaks register was removed
+with the register itself (#606): 0.22.0 is under development and
+compatibility with the published 0.21.3 is no longer a requirement, so there
+is no per-item authorisation left to test.
