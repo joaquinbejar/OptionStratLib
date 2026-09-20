@@ -75,7 +75,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or C3 only while it is inside that comparison's delta, so an ordinary pull
   request stays green without a label once a break has landed; the sequence
   fixture runs the register comparison itself and records its 24 verdicts. The register ships with no approved entry, the
-  workflow is informational and the existing `semver` job is unchanged.
+  workflow is informational and the existing `semver` job is unchanged. Its
+  first run already found one real incompatibility on `main`: the `synthetic`
+  gate (#512) removes `chains::generator_positive`,
+  `chains::generator_optionchain`, `series::generator_optionseries` and their
+  prelude paths from every surface that does not enable the feature, which a
+  consumer building with `default-features = false` had in 0.21.3. The
+  finding is recorded as a `proposed` register entry (AB-01) and waits for
+  the owner's decision on #592; until then the job reports without blocking.
 - **`make check-graph` enforces the module boundaries** (#507, multi-crate
   roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
   for `crate::<module>` references (including multi-line `use crate::{...}`

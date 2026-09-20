@@ -36,6 +36,14 @@ jobs:
   accepted-breaks:
     name: accepted-breaks (${{ matrix.surface }})
     runs-on: ubuntu-latest
+    # The job reports, it does not block, while the register still holds a
+    # `proposed` entry. Its first run found a real incompatibility that
+    # landed before the register existed (the `synthetic` gate of #512
+    # removes the chain and series generators from every surface that does
+    # not enable the feature), and only the repository owner can authorise
+    # it on #592. Turning this to a required check is the step that follows
+    # that decision, not something this pull request may do for itself.
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:

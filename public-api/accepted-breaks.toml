@@ -71,3 +71,38 @@ all_features = true
 # status = "proposed"
 # approval = { ref = "", date = "" }
 # landed = { pr = 0 }
+
+# --- Findings of the gate's first run, recorded, NOT approved ------------
+#
+# `synthetic` (#512, merged as #578) gates the simulation-backed chain and
+# series generators. It is on by default, so the default surface is
+# unchanged, but a consumer building with `default-features = false` had
+# these functions in 0.21.3 and does not have them now. C1 reports it on
+# every surface that does not enable `synthetic`.
+#
+# This is a real incompatibility that landed before the register existed,
+# and only the repository owner can authorise it, on issue #592. Until then
+# the entries stay `proposed`, the accepted-breaks job reports them, and its
+# result does not block: see the `continue-on-error` note in
+# `.github/workflows/accepted_breaks.yml`.
+#
+# The alternative to approving is to make the generators available without
+# the feature again, which undoes part of #512.
+
+[[break]]
+id = "AB-01"
+surfaces = ["none", "plotly", "async"]
+baseline = ["0.21.3"]
+findings = [
+  { check = "C1", lint = "function_missing", item = "function optionstratlib::chains::generator_positive" },
+  { check = "C1", lint = "function_missing", item = "function optionstratlib::chains::generator_optionchain" },
+  { check = "C1", lint = "function_missing", item = "function optionstratlib::series::generator_optionseries" },
+  { check = "C1", lint = "function_missing", item = "function optionstratlib::prelude::generator_optionchain" },
+  { check = "C1", lint = "function_missing", item = "function optionstratlib::prelude::generator_optionseries" },
+]
+decision = "pending owner decision on #592"
+issue = 512
+migration = "enable the `synthetic` feature, which is on by default; a build with `default-features = false` must list it explicitly"
+status = "proposed"
+approval = { ref = "", date = "" }
+landed = { pr = 578 }
