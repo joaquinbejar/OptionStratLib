@@ -52,12 +52,25 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Up to six rustdoc builds per surface (current tree plus the three
+          # baselines, which cargo-semver-checks caches per revision).
+          key: accepted-breaks-${{ matrix.surface }}
       - name: Install cargo-semver-checks ${{ env.SEMVER_CHECKS_VERSION }}
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-semver-checks@${{ env.SEMVER_CHECKS_VERSION }}
-      - name: Parser self-test
+      - uses: actions/setup-python@v5
+        with:
+          # `tomllib`, used to read the register.
+          python-version: '3.12'
+      - name: Parser self-test and register rules
         run: python3 scripts/check_accepted_breaks.py --self-test
+      - name: Verify every approval comment
+        run: python3 scripts/check_accepted_breaks.py --verify-approvals
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Resolve baselines
         id: bases
         run: |
@@ -65,7 +78,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
             head="${{ github.event.pull_request.head.sha }}"
-            echo "pin=--base-sha $base --head-sha $head" >> "$GITHUB_OUTPUT"
+            echo "pin=--base-sha $base --head-sha $head --pr ${{ github.event.pull_request.number }} --against $base" >> "$GITHUB_OUTPUT"
             echo "incremental=$base" >> "$GITHUB_OUTPUT"
             before="$base"
             echo "landed_only=" >> "$GITHUB_OUTPUT"
@@ -75,16 +88,14 @@ jobs:
             before="$(git rev-parse HEAD^)"
             echo "landed_only=--landed-only" >> "$GITHUB_OUTPUT"
           fi
-          # The reference is searched among the ancestors of the state BEFORE
-          # the change under test, so an integrating push is never compared
-          # with itself.
-          ref=$(git log --format=%H --grep='^Accepted-Breaks:' "$before" | head -1)
-          [ -n "$ref" ] || ref=$(git rev-parse v0.21.3)
-          echo "reference=$ref" >> "$GITHUB_OUTPUT"
-          echo "reference=$ref before=$before"
+          # The reference itself is resolved by the script, which owns the
+          # rule and the register's `initial_reference`; the workflow only
+          # says which state precedes the change under test.
+          echo "before=$before" >> "$GITHUB_OUTPUT"
+          echo "before=$before"
       - name: C1 cumulative against the published 0.21.3
         run: python3 scripts/check_accepted_breaks.py --check C1 --surface ${{ matrix.surface }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
       - name: C2 against the controlled reference
-        run: python3 scripts/check_accepted_breaks.py --check C2 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.reference }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
+        run: python3 scripts/check_accepted_breaks.py --check C2 --surface ${{ matrix.surface }} --before ${{ steps.bases.outputs.before }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}
       - name: C3 incremental against the pull request base
         run: python3 scripts/check_accepted_breaks.py --check C3 --surface ${{ matrix.surface }} --baseline ${{ steps.bases.outputs.incremental }} ${{ steps.bases.outputs.pin }} ${{ steps.bases.outputs.landed_only }}

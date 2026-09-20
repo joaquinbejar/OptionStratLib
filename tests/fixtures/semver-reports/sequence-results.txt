@@ -1,50 +1,82 @@
 
 == Step 1: normal PR adds added_fn
-   base.sha=79e45f7 head.sha=05eafad synthetic=912dbf9
-  as PR  tree=912dbf9
+   base.sha=d45a699 head.sha=1fa42c0 synthetic=2138f94
+  as PR  tree=2138f94
     C1 published-0.21.3 (rc=0): <none>
-    C2 reference=79e45f7 (rc=0): <none>
-    C3 incremental=79e45f7 (rc=0): <none>
-  as push to main  tree=57242ba
+    C2 reference=d45a699 (rc=0): <none>
+    C3 incremental=d45a699 (rc=0): <none>
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (0 authorised findings)
+  as push to main  tree=09775ef
     C1 published-0.21.3 (rc=0): <none>
-    C2 reference=79e45f7 (rc=0): <none>
-    C3 incremental=79e45f7 (rc=0): <none>
-   [wrong C2, inclusive] would be 79e45f7
+    C2 reference=d45a699 (rc=0): <none>
+    C3 incremental=d45a699 (rc=0): <none>
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (0 authorised findings)
+   [wrong C2, inclusive] would be d45a699
 
 == Step 2: approved break removes old_fn
-   base.sha=57242ba head.sha=4446d26 synthetic=1033038
-  as PR  tree=1033038
+   base.sha=09775ef head.sha=9e0ab7b synthetic=b95d935
+  as PR  tree=b95d935
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=79e45f7 (rc=100): function_missing function probe::old_fn;
-    C3 incremental=57242ba (rc=100): function_missing function probe::old_fn;
-  as push to main  tree=11135ca
+    C2 reference=d45a699 (rc=100): function_missing function probe::old_fn;
+    C3 incremental=09775ef (rc=100): function_missing function probe::old_fn;
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (1 authorised findings)
+  as push to main  tree=06acecc
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=79e45f7 (rc=100): function_missing function probe::old_fn;
-    C3 incremental=57242ba (rc=100): function_missing function probe::old_fn;
-   [wrong C2, inclusive] would be 11135ca
+    C2 reference=d45a699 (rc=100): function_missing function probe::old_fn;
+    C3 incremental=09775ef (rc=100): function_missing function probe::old_fn;
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (1 authorised findings)
+   [wrong C2, inclusive] would be 06acecc
 
 == Step 3: normal PR changes a body
-   base.sha=11135ca head.sha=b8f7ce6 synthetic=2f3d16d
-  as PR  tree=2f3d16d
+   base.sha=06acecc head.sha=62db283 synthetic=bd1d77d
+  as PR  tree=bd1d77d
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=11135ca (rc=0): <none>
-    C3 incremental=11135ca (rc=0): <none>
-  as push to main  tree=a4e2ee2
+    C2 reference=06acecc (rc=0): <none>
+    C3 incremental=06acecc (rc=0): <none>
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (0 authorised findings)
+  as push to main  tree=ffdf8ab
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=11135ca (rc=0): <none>
-    C3 incremental=11135ca (rc=0): <none>
-   [wrong C2, inclusive] would be 11135ca
+    C2 reference=06acecc (rc=0): <none>
+    C3 incremental=06acecc (rc=0): <none>
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (0 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (0 authorised findings)
+   [wrong C2, inclusive] would be 06acecc
 
 == Step 4: approved break removes added_fn
-   base.sha=a4e2ee2 head.sha=6c36101 synthetic=7213d03
-  as PR  tree=7213d03
+   base.sha=ffdf8ab head.sha=59190d3 synthetic=f28d336
+  as PR  tree=f28d336
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=11135ca (rc=100): function_missing function probe::added_fn;
-    C3 incremental=a4e2ee2 (rc=100): function_missing function probe::added_fn;
-  as push to main  tree=b04394d
+    C2 reference=06acecc (rc=100): function_missing function probe::added_fn;
+    C3 incremental=ffdf8ab (rc=100): function_missing function probe::added_fn;
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (1 authorised findings)
+  as push to main  tree=c2a7129
     C1 published-0.21.3 (rc=100): function_missing function probe::old_fn;
-    C2 reference=11135ca (rc=100): function_missing function probe::added_fn;
-    C3 incremental=a4e2ee2 (rc=100): function_missing function probe::added_fn;
-   [wrong C2, inclusive] would be b04394d
+    C2 reference=06acecc (rc=100): function_missing function probe::added_fn;
+    C3 incremental=ffdf8ab (rc=100): function_missing function probe::added_fn;
+    register verdicts:
+      accepted-breaks OK: none/C1 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C2 matches the register (1 authorised findings)
+      accepted-breaks OK: none/C3 matches the register (1 authorised findings)
+   [wrong C2, inclusive] would be c2a7129
 
 DONE

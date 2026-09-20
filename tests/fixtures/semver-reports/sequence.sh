@@ -17,6 +17,8 @@
 # integrates it.
 set -u
 WORK=${1:-$(mktemp -d)}
+SCRIPT=$(cd "$(dirname "$0")/../../.." && pwd)/scripts/check_accepted_breaks.py
+PY=$(command -v python3.13 || command -v python3.12 || command -v python3.11 || command -v python3)
 R=$WORK/repo
 OUT=$WORK/results.txt
 : > "$OUT"
@@ -56,6 +58,63 @@ reference() {
   [ -n "$sha" ] && echo "$sha" || git -C "$R" rev-parse v0.21.3
 }
 
+# The register the probe repository is checked against: step 2 and step 4
+# land one authorised break each, declared per check exactly as the policy
+# requires (C1 only sees the removal of an item that existed in 0.21.3).
+write_register() {
+  mkdir -p "$R/public-api"
+  cat > "$R/public-api/accepted-breaks.toml" <<REG
+[register]
+# The probe was never published, so C1 falls back to `initial_reference`,
+# which plays the published crate's role in the fixture.
+initial_reference = "v0.21.3"
+owner = "joaquinbejar"
+repo = "joaquinbejar/OptionStratLib"
+issue = 592
+tool = "cargo-semver-checks 0.50.0"
+
+[[register.surfaces]]
+id = "none"
+features = []
+$1
+REG
+}
+
+AB01='[[break]]
+id = "AB-01"
+surfaces = ["none"]
+decision = "sequence fixture"
+issue = 592
+migration = "call the replacement"
+status = "landed"
+approval = { ref = "https://github.com/joaquinbejar/OptionStratLib/issues/592#issuecomment-1" }
+landed = { pr = 1 }
+findings = [
+  { check = "C1", lint = "function_missing", item = "function probe::old_fn" },
+  { check = "C2", lint = "function_missing", item = "function probe::old_fn" },
+  { check = "C3", lint = "function_missing", item = "function probe::old_fn" },
+]'
+AB02='[[break]]
+id = "AB-02"
+surfaces = ["none"]
+decision = "sequence fixture"
+issue = 592
+migration = "call the replacement"
+status = "landed"
+approval = { ref = "https://github.com/joaquinbejar/OptionStratLib/issues/592#issuecomment-2" }
+landed = { pr = 2 }
+findings = [
+  { check = "C2", lint = "function_missing", item = "function probe::added_fn" },
+  { check = "C3", lint = "function_missing", item = "function probe::added_fn" },
+]'
+
+# $1 = worktree, $2 = check, $3 = baseline, $4 = pr number (or empty)
+policy() {
+  local wt=$1 check=$2 base=$3 pr=$4 extra=""
+  [ -n "$pr" ] && extra="--pr $pr"
+  ( cd "$wt" && CARGO_TARGET_DIR=$WORK/target "$PY" "$SCRIPT"       --check "$check" --surface none --baseline "$base" --register "$wt/public-api/accepted-breaks.toml"       --root "$wt" $extra 2>&1 | tail -2 | sed 's/^/      /' )
+}
+
 # $1 = worktree to check, $2 = baseline rev, $3 = label
 check() {
   local wt=$1 base=$2 label=$3 out
@@ -74,13 +133,20 @@ state() { # $1 = commit under test (synthetic merge or main tip), $2 = label, $3
   check "$wt" "$(git -C "$R" rev-parse v0.21.3)" "C1 published-0.21.3"
   check "$wt" "$c2base" "C2 reference=$(git -C "$R" rev-parse --short "$c2base")"
   check "$wt" "$c3base" "C3 incremental=$(git -C "$R" rev-parse --short "$c3base")"
+  if [ -f "$wt/public-api/accepted-breaks.toml" ]; then
+    log "    register verdicts:"
+    log "$(policy "$wt" C1 "$(git -C "$R" rev-parse v0.21.3)" "$PR_NUMBER")"
+    log "$(policy "$wt" C2 "$c2base" "$PR_NUMBER")"
+    log "$(policy "$wt" C3 "$c3base" "$PR_NUMBER")"
+  fi
   git -C "$R" worktree remove --force "$wt" 2>/dev/null
 }
 
-pr() { # $1 = branch, $2 = commit message, $3 = trailer or empty, $4... = sed script applied to src/lib.rs
-  local branch=$1 msg=$2 trailer=$3; shift 3
+pr() { # $1 = branch, $2 = commit message, $3 = trailer, $4 = register body, $5 = PR number, $6... = the change
+  local branch=$1 msg=$2 trailer=$3 register=$4; PR_NUMBER=$5; shift 5
   git -C "$R" checkout -q -b "$branch" main
   "$@"
+  write_register "$register"
   git -C "$R" add -A
   if [ -n "$trailer" ]; then
     git -C "$R" commit -q -m "$msg" -m "$trailer"
@@ -114,14 +180,20 @@ pr() { # $1 = branch, $2 = commit message, $3 = trailer or empty, $4... = sed sc
   log "   [wrong C2, inclusive] would be $(git -C "$R" rev-parse --short "$(reference "$tip")")"
 }
 
+# BSD and GNU sed disagree about `-i`; edit through a temporary file instead.
+edit() { sed "$1" "$R/src/lib.rs" > "$R/src/lib.rs.tmp" && mv "$R/src/lib.rs.tmp" "$R/src/lib.rs"; }
 add_fn()    { printf 'pub fn added_fn() -> u32 { 3 }\n' >> "$R/src/lib.rs"; }
-rm_old()    { sed -i '' '/pub fn old_fn/d' "$R/src/lib.rs"; }
-touch_body(){ sed -i '' 's/pub fn keep(&self) -> u32 { 2 }/pub fn keep(\&self) -> u32 { 2 + 0 }/' "$R/src/lib.rs"; }
-rm_added()  { sed -i '' '/pub fn added_fn/d' "$R/src/lib.rs"; }
+rm_old()    { edit '/pub fn old_fn/d'; }
+touch_body(){ edit 's/pub fn keep(&self) -> u32 { 2 }/pub fn keep(\&self) -> u32 { 2 + 0 }/'; }
+rm_added()  { edit '/pub fn added_fn/d'; }
 
-pr step1-add   "Step 1: normal PR adds added_fn"              ""                              add_fn
-pr step2-break "Step 2: approved break removes old_fn"        "Accepted-Breaks: AB-01"        rm_old
-pr step3-noop  "Step 3: normal PR changes a body"             ""                              touch_body
-pr step4-break "Step 4: approved break removes added_fn"      "Accepted-Breaks: AB-02"        rm_added
+# The register grows with the run: nothing at step 1, AB-01 from step 2,
+# AB-01 + AB-02 from step 4. The `landed.pr` numbers match the step.
+pr step1-add   "Step 1: normal PR adds added_fn"          ""                       ""                     1 add_fn
+pr step2-break "Step 2: approved break removes old_fn"    "Accepted-Breaks: AB-01" "$AB01"                1 rm_old
+pr step3-noop  "Step 3: normal PR changes a body"         ""                       "$AB01"                3 touch_body
+pr step4-break "Step 4: approved break removes added_fn"  "Accepted-Breaks: AB-02" "$AB01
+
+$AB02"                2 rm_added
 log ""
 log "DONE"

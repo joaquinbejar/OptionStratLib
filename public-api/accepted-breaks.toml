@@ -16,37 +16,39 @@ published = "0.21.3"
 initial_reference = "v0.21.3"
 # The login whose comment on `issue` may set `status = "approved"`.
 owner = "joaquinbejar"
+repo = "joaquinbejar/OptionStratLib"
 issue = 592
 # The report grammar changes between releases; the parser is written against
 # this exact version and refuses any other.
 tool = "cargo-semver-checks 0.50.0"
 
-# Surfaces every comparison runs on. `default` is spelled explicitly so the
-# set cannot drift with the manifest.
+# Surfaces every comparison runs on. `default` is spelled out rather than
+# taken from the manifest, so a change to the default feature set is visible
+# here as a diff instead of silently moving the surface.
+#
+# `repo` is only used to read approval comments (`--verify-approvals`).
+# Every surface but `all` is built with `--only-explicit-features`, so
+# `features` is the complete list asked for; Cargo still pulls in whatever
+# those features imply (`static_export` implies `plotly` and `async`).
 [[register.surfaces]]
 id = "none"
 features = []
-default_features = false
 
 [[register.surfaces]]
 id = "default"
 features = ["synthetic"]
-default_features = false
 
 [[register.surfaces]]
 id = "plotly"
 features = ["plotly"]
-default_features = false
 
 [[register.surfaces]]
 id = "static_export"
-features = ["static_export", "plotly"]
-default_features = false
+features = ["static_export"]
 
 [[register.surfaces]]
 id = "async"
 features = ["async"]
-default_features = false
 
 [[register.surfaces]]
 id = "all"

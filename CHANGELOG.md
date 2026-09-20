@@ -61,11 +61,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   surface and stay behind a feature, which `--all-features` cannot see. The
   parser is fail-closed: a non-zero, non-100 exit, a missing summary, a block
   count that disagrees with it, a truncation marker, an unknown lint or an
-  unpinned tool version is an error, never "zero breaks"; fourteen fixtures
-  under `tests/fixtures/semver-reports/` (six real reports, six derived
-  defects, one duplicate-item case and the reproducible four-step sequence
-  script with its recorded output) are parsed by `--self-test`, which
-  `make check-breaks` runs. The register ships with no approved entry, the
+  unpinned tool version, or an item line with no item, is an error, never
+  "zero breaks"; sixteen fixtures under `tests/fixtures/semver-reports/`
+  (six real reports, eight derived defects, one duplicate-item case and the
+  reproducible four-step sequence script with its recorded output) are parsed
+  by `--self-test`, which `make check-breaks` runs. The register's structure
+  is enforced in code (an approved entry needs an approval reference pointing
+  at the register issue, a decision and a migration note, and may not store a
+  commit SHA), `--verify-approvals` reads each approval comment and checks
+  its author is the register's owner, and a pull request that moves one of
+  its own entries to `approved` is refused: authorisation belongs to a
+  separate change. An authorised break is expected by C1 for ever and by C2
+  or C3 only while it is inside that comparison's delta, so an ordinary pull
+  request stays green without a label once a break has landed; the sequence
+  fixture runs the register comparison itself and records its 24 verdicts. The register ships with no approved entry, the
   workflow is informational and the existing `semver` job is unchanged.
 - **`make check-graph` enforces the module boundaries** (#507, multi-crate
   roadmap M1-10). `scripts/check_module_boundaries.py` scans production code
