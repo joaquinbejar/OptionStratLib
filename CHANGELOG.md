@@ -20,6 +20,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The two forbidden edges M1-10 owned are removed, not deferred** (#507).
+  `geometrics -> error/chains` came from `pub type ResultPoint<Point> =
+  Result<Point, ChainError>`: the math layer's construction API named a market
+  error, and the alias carried the edge to everyone who re-exported it.
+  `ConstructionMethod` now carries the error type it reports
+  (`ConstructionMethod<Point, Input, Error>`) and `GeometricObject::construct`
+  binds it to `Self::Error`, so a parametric generator for a `Curve` reports a
+  `CurveError` and one for a `Surface` a `SurfaceError`. `ResultPoint` is
+  removed rather than retyped: it was an alias for `Result` and said nothing
+  the new signature does not. The construction boundary no longer does
+  `map_err(|e| ConstructionError(e.to_string()))`, so the generator's error is
+  returned unchanged.
+- **`CurveError` and `SurfaceError` gained a `Generator` variant** (#507),
+  built through `CurveError::generator` / `SurfaceError::generator`. A
+  parametric generator is written by the caller, so its failure belongs to
+  whichever layer wrote it and the math layer cannot name that type without
+  depending on the layer above. The cause travels as a boxed `source`: still
+  reachable through `std::error::Error::source` and downcastable to the
+  original type, which the curve and surface tests assert by downcasting back
+  to `ChainError`.
+- **`LegAble::pnl_at_price` and `Position::pnl_at_expiration` report
+  `PositionError`** (#507), as do `unrealized_pnl`, `roe_percentage`,
+  `margin_ratio` and `effective_leverage` on the future and perpetual legs.
+  They reported `PricingError`, which made core depend on a pricing-owned
+  error for failures that are all core-owned: `DecimalError`, `PositiveError`
+  and `OptionsError`. `PositionError` gained an `Options` variant for the
+  last of those and already carried the other two. Callers in the pricing and
+  strategy layers are unaffected in behaviour: `PricingError` and
+  `StrategyError` both already convert from `PositionError`.
+
+### Added
+
+- **A `## Module Boundaries` section in the crate docs** (#507) with the layer
+  DAG, the per-file partition of `src/error` and `src/utils`, the single
+  feature-gated edge, and the two commands that enforce them. `AGENTS.md` and
+  `CLAUDE.md` carry the same graph, and the retired accepted-breaks section is
+  gone from both.
+- **A self-test refusing a deferred edge with no owning issue** (#507), so the
+  tolerated list cannot grow an entry that nobody has to remove.
+
+### Changed
+
 - **The market-to-simulation edge is now proven to be behind `synthetic`, not
   just declared to be** (#512). `ChainError::Simulation` and its
   `From<SimulationError>` conversion were ungated, so a consumer building with
@@ -37,10 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   self-test cases cover the rule.
 - **`make check-feature-trees` pins the dependency graph of both market
   surfaces** (#512), from `tests/fixtures/feature-trees/{minimal,synthetic}.txt`.
-  Each fixture holds the whole graph as a sorted `parent -> child` edge list, so
-  a dependency added, removed or re-parented shows up even when it lands on both
-  surfaces at once; the difference between the two is derived and printed, and
-  is empty today because the feature gates source rather than crates. The graph
+  Each fixture holds the whole graph as a sorted `parent -> child` edge list
+  plus the features enabled on each package, so a dependency added, removed,
+  re-parented or promoted from transitive to direct shows up, as does a feature
+  the flag turns on for a package both surfaces already share. The difference
+  between the two is derived and printed; today it is `optionstratlib
+  [synthetic]` against `optionstratlib []`, the feature itself and no crate. The graph
   is resolved with `cargo tree --target all` so it is the same on every host,
   and nodes carry no version because `Cargo.lock` is not committed; #616 tracks
   that decision. The check runs in the lint workflow, and

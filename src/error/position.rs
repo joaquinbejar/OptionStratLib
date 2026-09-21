@@ -146,6 +146,17 @@ pub enum PositionError {
     /// `PositionError`.
     #[error(transparent)]
     PositiveError(#[from] positive::PositiveError),
+
+    /// Contract-level failures propagated from the option the position
+    /// holds.
+    ///
+    /// Produced when `Options::intrinsic_value` surfaces an
+    /// [`crate::error::OptionsError`] inside a `Position` or `Leg` P&L
+    /// method. Both types are core-owned, so the position layer reports a
+    /// contract failure with its own error instead of borrowing the pricing
+    /// layer's (roadmap M1-10).
+    #[error(transparent)]
+    Options(#[from] crate::error::OptionsError),
 }
 
 /// Specific errors that can occur in strategy operations

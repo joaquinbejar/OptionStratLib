@@ -333,7 +333,7 @@ impl Strategies for ShortPut {
 impl Profit for ShortPut {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        self.short_put.pnl_at_expiration(&price)
+        Ok(self.short_put.pnl_at_expiration(&price)?)
     }
 }
 

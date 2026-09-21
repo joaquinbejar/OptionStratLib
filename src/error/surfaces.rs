@@ -45,6 +45,18 @@ pub enum SurfaceError {
     #[error("Operation error: {0}")]
     OperationError(OperationErrorKind),
 
+    /// A caller-supplied parametric generator failed.
+    ///
+    /// `ConstructionMethod::Parametric` takes a closure written by the
+    /// caller, so its failure belongs to whichever layer wrote it, and the
+    /// math layer cannot name that type without depending on the layer
+    /// above. The cause therefore travels boxed: it stays reachable through
+    /// `std::error::Error::source` and downcastable to the original type,
+    /// instead of being flattened into a message at the construction
+    /// boundary (roadmap M1-10).
+    #[error("parametric generator failed: {0}")]
+    Generator(#[source] Box<dyn std::error::Error + Send + Sync>),
+
     /// A rendering operation failed. Preserves the backend discriminator so
     /// callers can distinguish plotters output paths from other backends
     /// without resorting to a `String` catch-all.
@@ -174,6 +186,19 @@ impl SurfaceError {
 /// ## Debugging:
 /// The resulting `SurfaceError` will include contextual details, making it
 /// straightforward to trace and debug the underlying issue.
+impl SurfaceError {
+    /// Wraps a caller-supplied parametric generator failure, keeping the
+    /// original error reachable as the variant's `source`.
+    #[cold]
+    #[must_use]
+    pub fn generator<E>(error: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        SurfaceError::Generator(Box::new(error))
+    }
+}
+
 impl From<InterpolationError> for SurfaceError {
     fn from(err: InterpolationError) -> Self {
         SurfaceError::AnalysisError(err.to_string())

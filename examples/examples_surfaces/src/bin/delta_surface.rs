@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
 
             // Calculate delta
-            let delta_value = delta(&option)?;
+            let delta_value = delta(&option).map_err(SurfaceError::generator)?;
 
             // Create a 3D point with underlying price (x), strike price (y), and delta (z)
             Ok(Point3D::new(t.x, t.y, delta_value))

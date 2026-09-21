@@ -383,7 +383,7 @@ impl GeometricObject<Point2D, Decimal> for Curve {
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        T: Into<ConstructionMethod<Point2D, Decimal>>,
+        T: Into<ConstructionMethod<Point2D, Decimal, CurveError>>,
     {
         let method = method.into();
         match method {
@@ -424,7 +424,7 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                             .map_err(construction_err)?;
                         let t = d_add(t_start, offset, "Curve::construct::t")
                             .map_err(construction_err)?;
-                        f(t).map_err(|e| CurveError::ConstructionError(e.to_string()))
+                        f(t)
                     })
                     .collect();
 
@@ -3722,11 +3722,11 @@ mod tests_extended {
 
     #[test]
     fn test_construct_parametric_invalid_function() {
-        let f = |_t: Decimal| -> Result<Point2D, ChainError> {
-            Err(ChainError::invalid_parameters(
+        let f = |_t: Decimal| -> Result<Point2D, CurveError> {
+            Err(CurveError::generator(ChainError::invalid_parameters(
                 "parametric_f",
                 "Function evaluation failed",
-            ))
+            )))
         };
         let params = ConstructionParams::D2 {
             t_start: Decimal::ZERO,
@@ -3739,9 +3739,14 @@ mod tests_extended {
         });
         assert!(result.is_err());
         let error = result.unwrap_err();
+        // The generator's own error survives the construction boundary: it is
+        // still a `ChainError`, not a message (roadmap M1-10).
         match error {
-            CurveError::ConstructionError(reason) => {
-                assert!(reason.contains("Function evaluation failed"));
+            CurveError::Generator(source) => {
+                let cause = source
+                    .downcast_ref::<ChainError>()
+                    .expect("the generator's ChainError must survive boxing");
+                assert!(cause.to_string().contains("Function evaluation failed"));
             }
             _ => {
                 panic!("Unexpected error type");
@@ -4795,9 +4800,8 @@ mod tests_curve_len_and_geometric {
         // Test ConstructionMethod errors (lines 168-175, 179, 181, 189)
         let result = Curve::construct(ConstructionMethod::Parametric {
             f: Box::new(|_| {
-                Err(crate::error::ChainError::invalid_parameters(
-                    "parametric_f",
-                    "Test error",
+                Err(CurveError::generator(
+                    crate::error::ChainError::invalid_parameters("parametric_f", "Test error"),
                 ))
             }),
             params: ConstructionParams::D2 {
@@ -4809,10 +4813,10 @@ mod tests_curve_len_and_geometric {
 
         assert!(result.is_err());
         match result {
-            Err(CurveError::ConstructionError(msg)) => {
-                assert!(msg.contains("Test error"));
+            Err(CurveError::Generator(source)) => {
+                assert!(source.to_string().contains("Test error"));
             }
-            _ => panic!("Expected ConstructionError"),
+            _ => panic!("Expected Generator"),
         }
 
         // Test invalid params

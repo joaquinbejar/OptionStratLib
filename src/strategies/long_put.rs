@@ -327,7 +327,7 @@ impl Strategies for LongPut {
 impl Profit for LongPut {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        self.long_put.pnl_at_expiration(&price)
+        Ok(self.long_put.pnl_at_expiration(&price)?)
     }
 }
 

@@ -331,7 +331,7 @@ impl Strategies for ShortCall {
 impl Profit for ShortCall {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        self.short_call.pnl_at_expiration(&price)
+        Ok(self.short_call.pnl_at_expiration(&price)?)
     }
 }
 

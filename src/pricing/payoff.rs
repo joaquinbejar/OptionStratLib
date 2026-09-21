@@ -97,6 +97,6 @@ impl Profit for Position {
     /// * `Result<Decimal, PricingError>` - The calculated profit as a Decimal if successful,
     ///   or an error if the calculation fails.
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
-        self.pnl_at_expiration(&Some(price))
+        Ok(self.pnl_at_expiration(&Some(price))?)
     }
 }

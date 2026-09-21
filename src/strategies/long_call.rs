@@ -321,7 +321,7 @@ impl Strategies for LongCall {
 impl Profit for LongCall {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
-        self.long_call.pnl_at_expiration(&price)
+        Ok(self.long_call.pnl_at_expiration(&price)?)
     }
 }
 
