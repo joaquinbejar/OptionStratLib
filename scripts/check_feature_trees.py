@@ -36,11 +36,17 @@ Usage:
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# CI sets `CARGO_TERM_COLOR=always`, so `--color never` alone is not enough on
+# every cargo version; the output is stripped as well, or a coloured `(*)`
+# marker would be read as a package's feature list.
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 FIXTURES = ROOT / "tests" / "fixtures" / "feature-trees"
 
 # name -> the cargo feature flags that select the surface.
@@ -61,8 +67,8 @@ def edges(flags: list[str]) -> list[str]:
     """The edges and per-package features `cargo tree` resolves for a surface."""
     result = subprocess.run(
         [
-            "cargo", "tree", "--target", "all", "-e", "no-dev",
-            "--prefix", "depth", "--format", "{p} {f}", *flags,
+            "cargo", "tree", "--color", "never", "--target", "all",
+            "-e", "no-dev", "--prefix", "depth", "--format", "{p} {f}", *flags,
         ],
         cwd=ROOT,
         capture_output=True,
@@ -76,7 +82,7 @@ def edges(flags: list[str]) -> list[str]:
     found: set[str] = set()
     features: dict[str, set[str]] = {}
     stack: list[str] = []
-    for line in result.stdout.splitlines():
+    for line in ANSI_RE.sub("", result.stdout).splitlines():
         line = line.rstrip()
         if not line or not line[0].isdigit():
             continue
