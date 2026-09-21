@@ -52,7 +52,6 @@ statrs = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 num-traits = { workspace = true }
 serde_json = { workspace = true }
 csv = { workspace = true }

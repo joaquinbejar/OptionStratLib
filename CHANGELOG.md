@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`setup_logger` and `setup_logger_with_level` are gone, and the library no
+  longer depends on `tracing-subscriber`** (#506, #545). Installing a global
+  subscriber is an application decision, not a library one
+  (`rules/global_rules.md`, "Logging & Observability"), and a library that
+  installs one silently wins the race against the binary that wanted its own.
+  `optionstratlib::utils::logger`, the two functions and the
+  `prelude::setup_logger` re-export are removed rather than deprecated, and
+  `tracing-subscriber` is dropped from the crate's dependencies. Call
+  `tracing_subscriber::fmt().with_max_level(..).init()` from your binary; the
+  example binaries take theirs from the unpublished `osl-example-support`
+  workspace member. `tracing` itself and every instrumented span are
+  unchanged.
+
+### Changed
+
+- **`src/utils` carries a per-file owner instead of a blanket `core`** (#506).
+  It was the one catch-all helper module left, so the ownership was implicit
+  and nothing stopped a new helper from landing there. `others.rs` is split
+  into `numeric.rs` (`approx_equal`, `calculate_log_returns`) and `rng.rs`
+  (`deterministic_rng`, `get_random_element`, `random_decimal`,
+  `DETERMINISTIC_RNG_DEFAULT_SEED`), each file names one concern, and
+  `scripts/check_module_boundaries.py` gained `UTILS_FILE_LAYER`, which
+  resolves `src/utils/<file>.rs` to its owning layer the way `ERROR_FILE_LAYER`
+  already did for `src/error`. A new file in `src/utils` that is not listed
+  there fails the graph check, and a helper that grows an edge above its
+  owner's layer fails it too. Three self-test cases cover the new resolution.
+  Public paths change: `utils::others::approx_equal` is
+  `utils::numeric::approx_equal`, `utils::others::calculate_log_returns` is
+  `utils::numeric::calculate_log_returns` (also re-exported from the prelude
+  and from `utils`), and the `rng` helpers keep their `utils::` re-exports.
+- **`prepare_file_path` moved to `visualization`** (#506). Preparing a path on
+  disk exists to write a rendered chart and `visualization::plotly` is its only
+  production caller, so it sits with its owner as
+  `optionstratlib::visualization::prepare_file_path` rather than in the shared
+  helper module. Behaviour is unchanged.
+
 ### Fixed
 
 - **The `d_sqrt` cycle test no longer measures wall-clock time** (#604). It

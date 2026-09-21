@@ -20,7 +20,7 @@ use crate::model::{
     reject_unrepresentable_expiration,
 };
 use crate::utils::Len;
-use crate::utils::others::get_random_element;
+use crate::utils::rng::get_random_element;
 use crate::volatility::{AtmIvProvider, VolatilitySmile};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};

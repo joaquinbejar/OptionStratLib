@@ -253,7 +253,7 @@ fn extreme_walk_type() -> impl Strategy<Value = WalkType> {
                 vol_multiplier_up: Some(Positive::MAX),
                 vol_multiplier_down: Some(Positive::MAX),
             },
-            // Drives `utils::others::calculate_log_returns` through
+            // Drives `utils::numeric::calculate_log_returns` through
             // `walk_volatility` and `expanding_window_vols`: a zero price has
             // no log return and a `1e-28` / `MAX` pair has no representable
             // ratio.

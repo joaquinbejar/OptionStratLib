@@ -1,28 +1,48 @@
 //! # Utils Module
 //!
-//! This module provides various utility functions, types, and tools for common tasks
-//! across the library, including logging, time handling, testing, and general-purpose
-//! utilities.
+//! Cross-cutting helpers whose defining owner is the `core` layer: they
+//! depend on nothing above `core` and every layer may call them. This
+//! module is deliberately *not* a catch-all. Each file below names one
+//! concern and one owner, and the ownership is machine-checked by
+//! `scripts/check_module_boundaries.py` (`UTILS_FILE_LAYER`), so a helper
+//! that grows a dependency on a higher layer fails the graph check instead
+//! of quietly turning this module back into a shared dumping ground
+//! (ADR-0001 D2, roadmap M1-09).
 //!
-//! ## Core Components
+//! | File | Owner | Contents |
+//! |------|-------|----------|
+//! | `numeric.rs` | core | `approx_equal`, `calculate_log_returns` |
+//! | `rng.rs` | core | `deterministic_rng`, `get_random_element`, `random_decimal`, `DETERMINISTIC_RNG_DEFAULT_SEED` |
+//! | `time.rs` | core | `TimeFrame`, `units_per_year`, `convert_time_frame`, date formatting |
+//! | `traits.rs` | core | `Len` |
 //!
-//! ### Logger (`logger.rs`), deprecated
+//! Helpers that used to live here and now sit with their owner:
 //!
-//! `setup_logger` and `setup_logger_with_level` install a global `tracing`
-//! subscriber, which is an application decision rather than a library one.
-//! Both are deprecated on `main` after 0.21.3 and removed in 0.22.0
-//! (multi-crate roadmap M6-04). Install the subscriber from your binary
-//! instead:
+//! - `prepare_file_path` is `visualization::prepare_file_path`: preparing a
+//!   path on disk exists to write a rendered chart, and nothing below
+//!   `visualization` calls it.
+//! - CSV and OHLCV parsing belong to `market` (`chains`), re-homed in M1-08.
+//! - `setup_logger` / `setup_logger_with_level` are **removed**. Installing a
+//!   global `tracing` subscriber is an application decision, not a library
+//!   one (`rules/global_rules.md`, "Logging & Observability"), so the library
+//!   no longer depends on `tracing-subscriber` at all. Install one from your
+//!   binary:
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! tracing_subscriber::fmt()
 //!     .with_max_level(tracing::Level::INFO)
 //!     .init();
 //! ```
 //!
-//! ### Time (`time.rs`)
+//! The example binaries take theirs from the unpublished `osl-example-support`
+//! workspace member, which is where application-side wiring belongs.
 //!
-//! Handles various time frames for financial calculations:
+//! Every other module keeps its own `utils.rs` (`greeks::utils`,
+//! `chains::utils`, `strategies::utils`, ...). Those are owned by their
+//! parent module by construction and are checked as part of it; nothing is
+//! promoted here just because more than one caller wants it.
+//!
+//! ## Time frames
 //!
 //! ```rust
 //! use positive::pos_or_panic;
@@ -35,171 +55,45 @@
 //! let periods = custom.periods_per_year(); // Returns 365.0
 //! ```
 //!
-//! ### Testing (`tests.rs`)
+//! Time-frame conversions are constant-time; they read the predefined
+//! period constants in `crate::constants`.
 //!
-//! Provides testing utilities and macros for relative equality assertions:
-//!
-//! ```rust
-//! use positive::{Positive,assert_pos_relative_eq,pos_or_panic};
-//!
-//! let a = Positive::ONE;
-//! let b = pos_or_panic!(1.0001);
-//! let epsilon = pos_or_panic!(0.001);
-//! assert_pos_relative_eq!(a, b, epsilon);
-//! ```
-//!
-//! ### Other Utilities (`others.rs`)
-//!
-//! General-purpose utility functions:
+//! ## Numeric comparison
 //!
 //! ```rust
-//! use optionstratlib::strategies::process_n_times_iter;
-//! use optionstratlib::utils::others::{approx_equal, get_random_element};
-//! use std::collections::BTreeSet;
+//! use optionstratlib::utils::numeric::approx_equal;
 //!
-//! // Approximate equality comparison
-//! let equal = approx_equal(1.0, 1.0001);
-//!
-//! // Get random element from a set
-//! let mut set = BTreeSet::new();
-//! set.insert(1);
-//! set.insert(2);
-//! let random = get_random_element(&set);
-//!
-//! // Process combinations
-//! let numbers = vec![1, 2, 3];
-//! let result = process_n_times_iter(&numbers, 2, |combination| {
-//!     vec![combination[0] + combination[1]]
-//! });
+//! assert!(approx_equal(1.0, 1.000_000_01));
+//! assert!(!approx_equal(1.0, 1.1));
 //! ```
 //!
-//! ## Time Frame Support
+//! ## Randomness
 //!
-//! The module supports various time frames for financial calculations:
-//!
-//! - Microsecond
-//! - Millisecond
-//! - Second
-//! - Minute
-//! - Hour
-//! - Day
-//! - Week
-//! - Month
-//! - Quarter
-//! - Year
-//! - Custom periods
-//!
-//! ### Example: Time Frame Usage
+//! Every Monte-Carlo or simulation test seeds deterministically, so an
+//! upstream precision shift cannot flip an assertion by luck:
 //!
 //! ```rust
-//! use tracing::info;
-//! use positive::pos_or_panic;
-//! use optionstratlib::utils::time::TimeFrame;
+//! use optionstratlib::utils::deterministic_rng;
+//! use rand::RngExt;
 //!
-//! let timeframes = vec![
-//!     TimeFrame::Day,
-//!     TimeFrame::Week,
-//!     TimeFrame::Month,
-//!     TimeFrame::Custom(pos_or_panic!(360.0))
-//! ];
-//!
-//! for tf in timeframes {
-//!     info!("Periods per year: {}", tf.periods_per_year());
-//! }
+//! let mut rng = deterministic_rng(42);
+//! let _: u64 = rng.random();
 //! ```
 //!
-//! ## Logging Configuration
-//!
-//! Log levels can be configured through:
-//! - Environment variable `LOGLEVEL`
-//! - Direct specification in code
-//!
-//! Supported levels:
-//! - DEBUG
-//! - INFO
-//! - WARN
-//! - ERROR
-//! - TRACE
-//!
-//! ### Example: Logging Setup (deprecated API)
-//!
-//! ```rust
-//! #![allow(deprecated)]
-//! use optionstratlib::utils::logger::setup_logger_with_level;
-//! use tracing::{debug, info, warn};
-//!
-//! // Setup with specific level
-//!
-//!
-//! // Log messages
-//! debug!("Detailed information for debugging");
-//! info!("General information about program execution");
-//! warn!("Warning messages for potentially harmful situations");
-//! ```
-//!
-//! ## Testing Utilities
-//!
-//! The module provides testing utilities for:
-//! - Relative equality comparisons for Positive
-//! - Approximate floating-point comparisons
-//! - Random element selection testing
-//!
-//! ### Example: Testing Positive Values
-//!
-//! ```rust
-//! use positive::{Positive,pos_or_panic,assert_pos_relative_eq};
-//!
-//! fn test_values() {
-//!     let a = Positive::ONE;
-//!     let b = pos_or_panic!(1.0001);
-//!     let epsilon = pos_or_panic!(0.001);
-//!     assert_pos_relative_eq!(a, b, epsilon);
-//! }
-//! ```
-//!
-//! ## Performance Considerations
-//!
-//! - Logger initialization is thread-safe and happens only once
-//! - Time frame calculations are constant-time operations
-//! - Random element selection is O(n) where n is the set size
-//! - Process combinations has complexity based on combination size
-//!
-//! ## Implementation Notes
-//!
-//! - Logger uses the `tracing` crate for structured logging
-//! - Time frames use predefined constants for standard periods
-//! - Testing utilities provide accurate floating-point comparisons
-//! - Utility functions handle edge cases and error conditions
+//! Random element selection is O(n) in the size of the set.
 
-/// This module contains the logger setup and configuration.  It provides functionality for
-/// initializing the logger, setting log levels, and formatting log messages.  It uses the `tracing`
-/// crate for structured logging and supports various log levels.
-pub mod logger;
-
-/// This module contains other miscellaneous modules and functions.  It acts as a container for
-/// functionality that doesn't fit neatly into the main project structure.  More specific
-/// documentation can be found within each sub-module.
-pub mod others;
-
-/// This module contains the CSV reader and writer for OHLCV data.  It provides functionality for
-/// reading and writing OHLCV data in CSV format, as well as handling errors related to CSV
-/// parsing.
-/// This module contains the file reader and writer for OHLCV data.  It provides functionality for
-/// reading and writing OHLCV data in various file formats, including CSV and JSON.
-pub mod file;
-/// Module for time-related utilities.
+/// Tolerance-based `f64` comparison and the logarithmic-return transform.
+pub mod numeric;
+/// Deterministic seeding and generic random-sampling helpers.
+pub mod rng;
+/// Time frames, period conversions and date formatting.
 pub mod time;
-
-/// This module contains traits and type definitions used throughout the library.  It provides
-/// functionality for defining and implementing common traits, as well as type aliases for
-/// convenience.
+/// Traits shared across the library.
 mod traits;
 
-#[allow(deprecated)]
-pub use logger::{setup_logger, setup_logger_with_level};
-pub use others::{
-    DETERMINISTIC_RNG_DEFAULT_SEED, approx_equal, deterministic_rng, get_random_element,
-    random_decimal,
+pub use numeric::{approx_equal, calculate_log_returns};
+pub use rng::{
+    DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng, get_random_element, random_decimal,
 };
 pub use time::TimeFrame;
 pub use traits::Len;
