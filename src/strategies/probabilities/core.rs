@@ -196,7 +196,10 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
             // A distribution function is monotone over an ascending price
             // range, so each step's marginal mass is non-negative; equality is
-            // a zero-width step with mass zero, which `sub_or_none` returns. A
+            // a step carrying zero mass, which `sub_or_none` returns. The
+            // prices stay distinct: two adjacent grid points far into a tail
+            // can round to the same `Decimal` probability, and zero is still
+            // the right mass for that step. A
             // smaller probability at the higher price is a result outside the
             // model's precision, not a property of the range: near
             // `Positive::MAX` with a volatility around `1e-28`, a ratio that
@@ -748,6 +751,7 @@ mod tests_marginal_probability_inversion {
     use super::*;
     use crate::ExpirationDate;
     use crate::strategies::BullCallSpread;
+    use crate::strategies::base::{BasicAble, Strategies};
     use rust_decimal_macros::dec;
 
     fn spread(spot: f64, volatility: f64) -> Result<BullCallSpread, StrategyError> {
@@ -774,16 +778,20 @@ mod tests_marginal_probability_inversion {
     /// consecutive prices, and #570 replaced the floor on that subtraction
     /// with the same report `ProfitLossRange::calculate_probability` uses.
     ///
-    /// The inversion itself is not reachable here through the public API: the
-    /// grid steps by `spot / 100`, so a ratio close enough to one to invert
-    /// `checked_ln` needs a spot near `Positive::MAX`, and the profit
-    /// computation overflows before the probabilities are touched (measured:
-    /// `7.9e28` reports `arithmetic error during mul_f64: overflow`). The
-    /// report is therefore a guard, and these tests pin the other half of the
-    /// contract, that it does not misfire on the extreme inputs that *are*
-    /// reachable. If the grid or the price model changes so the inversion
-    /// becomes reachable, it errors rather than silently under-weighting a
-    /// step.
+    /// The inversion itself is not reachable here through the public API, and
+    /// the limit is the display range rather than the probabilities. The grid
+    /// steps by `spot / 100`, so a ratio close enough to one to invert
+    /// `checked_ln` needs a spot near `Positive::MAX`, and
+    /// `get_best_range_to_show` scales the highest point by
+    /// `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` (1.02) before a single
+    /// probability is computed. Measured at `7.9e28`, `get_range_to_show`
+    /// reports `mul_f64: overflow` while `calculate_profit_at` on the same
+    /// strategy still returns `Ok(-24.18)`, so the range, not the profit, is
+    /// what stops it. The report is therefore a guard, and these tests pin the
+    /// other half of the contract, that it does not misfire on the extreme
+    /// inputs that *are* reachable. If the range bounds or the price model
+    /// change so the inversion becomes reachable, it errors rather than
+    /// silently under-weighting a step.
     #[test]
     fn test_degenerate_volatility_at_a_large_spot_still_succeeds() {
         for spot in [1e15f64, 1e20, 1e26, 1e28] {
@@ -797,6 +805,34 @@ mod tests_marginal_probability_inversion {
                 "a monotone grid must not report an inversion at {spot:e}, got {result:?}"
             );
         }
+    }
+
+    /// Pins the reachability claim above rather than leaving it a comment: at
+    /// `7.9e28` the display range is what fails, not the profit evaluation, so
+    /// `expected_value` never reaches the subtraction the guard protects. If a
+    /// later change lifts the range limit, this test starts failing and the
+    /// guard's comment has to be revisited with it.
+    #[test]
+    fn test_the_display_range_is_what_stops_an_extreme_spot() {
+        let strategy = match spread(7.9e28, 1e-28) {
+            Ok(strategy) => strategy,
+            Err(error) => panic!("the probe spread must construct at 7.9e28: {error:?}"),
+        };
+
+        assert!(
+            strategy.get_range_to_show().is_err(),
+            "the 1.02 upper-bound scaling must overflow at 7.9e28"
+        );
+        assert!(
+            strategy
+                .calculate_profit_at(strategy.get_underlying_price())
+                .is_ok(),
+            "the profit evaluation still succeeds, so the range is the limit"
+        );
+        assert!(
+            strategy.expected_value(None, None).is_err(),
+            "expected_value fails on the range, before any probability"
+        );
     }
 
     /// The ordinary path keeps working, including with a volatility

@@ -265,8 +265,10 @@ pub fn calculate_price_probability(
     )?;
 
     // A distribution function is monotone, so `upper >= lower` must give
-    // `prob_below_upper >= prob_below_lower`; equality is a zero-width range
-    // with probability zero, which `sub_or_none` returns. A smaller
+    // `prob_below_upper >= prob_below_lower`; equality carries zero mass,
+    // which `sub_or_none` returns. Equality does not mean the bounds
+    // coincide: two distinct bounds far into a tail can round to the same
+    // `Decimal`, and zero is still the right mass for them. A smaller
     // probability at the upper bound is a result outside the model's
     // precision, not a property of the range: with a spot near `Positive::MAX`
     // and a volatility of `1e-28`, `(MAX - 4) / MAX` rounds to
@@ -791,10 +793,12 @@ mod tests_probability_inversion {
         );
     }
 
-    /// Equality is a value, not an error: coincident bounds are a zero-width
-    /// range whose probability is zero, and the triple still sums to one.
+    /// Equal CDF values are a value, not an error: the mass between the
+    /// bounds is zero and the triple still sums to one. Coincident bounds are
+    /// the clearest way to produce that, but not the only one, since two
+    /// distinct bounds far into a tail can round to the same `Decimal`.
     #[test]
-    fn test_zero_width_range_is_zero_and_the_triple_sums_to_one() {
+    fn test_equal_cdf_values_give_zero_mass_and_the_triple_sums_to_one() {
         let result = calculate_price_probability(
             &Positive::HUNDRED,
             &Positive::HUNDRED,
@@ -807,7 +811,7 @@ mod tests_probability_inversion {
 
         let (below, inside, above) = match result {
             Ok(triple) => triple,
-            other => panic!("a zero-width range is a value, got {other:?}"),
+            other => panic!("equal CDF values are a value, got {other:?}"),
         };
         assert_eq!(inside, Positive::ZERO);
         assert_eq!(
