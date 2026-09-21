@@ -79,10 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   self-test cases cover the rule.
 - **`make check-feature-trees` pins the dependency graph of both market
   surfaces** (#512), from `tests/fixtures/feature-trees/{minimal,synthetic}.txt`.
-  Each fixture holds the whole graph as a sorted `parent -> child` edge list, so
-  a dependency added, removed or re-parented shows up even when it lands on both
-  surfaces at once; the difference between the two is derived and printed, and
-  is empty today because the feature gates source rather than crates. The graph
+  Each fixture holds the whole graph as a sorted `parent -> child` edge list
+  plus the features enabled on each package, so a dependency added, removed,
+  re-parented or promoted from transitive to direct shows up, as does a feature
+  the flag turns on for a package both surfaces already share. The difference
+  between the two is derived and printed; today it is `optionstratlib
+  [synthetic]` against `optionstratlib []`, the feature itself and no crate. The graph
   is resolved with `cargo tree --target all` so it is the same on every host,
   and nodes carry no version because `Cargo.lock` is not committed; #616 tracks
   that decision. The check runs in the lint workflow, and

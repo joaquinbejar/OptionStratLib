@@ -59,6 +59,14 @@ pub enum ConstructionParams {
 /// The generic parameters allow flexibility in the types of points and input parameters used:
 /// - `Point`: The type representing a coordinate in the geometric space
 /// - `Input`: The parameter type passed to parametric functions (typically `Decimal` for 2D or `(Decimal, Decimal)` for 3D)
+/// - `Error`: The error the parametric generator reports.
+///   [`crate::geometrics::GeometricObject::construct`] binds it to the
+///   object's own `Self::Error`, so a generator for a
+///   [`crate::curves::Curve`] returns [`crate::error::CurveError`] and one
+///   for a [`crate::surfaces::Surface`] returns
+///   [`crate::error::SurfaceError`]. The generator's own failure travels in
+///   that type's `Generator` variant, which keeps the original cause as its
+///   `source` rather than flattening it at the construction boundary.
 pub enum ConstructionMethod<Point, Input, Error> {
     /// Construct a geometric object from an explicit set of points.
     ///

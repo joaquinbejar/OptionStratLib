@@ -406,10 +406,10 @@ impl Position {
     ///
     /// # Errors
     ///
-    /// Returns [`PositionError`] wrapping any
-    /// [`PositionValidationErrorKind`] surfaced by the internal Black–Scholes
-    /// evaluation, or `PositionError::PositionError` when the
-    /// implied-volatility recomputation at `price` fails.
+    /// Returns [`PositionError::DecimalError`] when the premium and fee
+    /// deductions, or the scaling by the contract quantity, leave the
+    /// representable `Decimal` range. Nothing is repriced here: the result is
+    /// arithmetic over the stored premium, fees and quantity.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         // Per-contract P&L (Long: price - premium - fees; Short: premium -
         // price - fees) then scaled by the contract quantity. Each step is a
