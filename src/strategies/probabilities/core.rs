@@ -779,27 +779,72 @@ mod tests_marginal_probability_inversion {
     /// with the same report `ProfitLossRange::calculate_probability` uses.
     ///
     /// The inversion itself is not reachable here through the public API, and
-    /// the limit is the display range rather than the probabilities. The grid
-    /// steps by `spot / 100`, so a ratio close enough to one to invert
-    /// `checked_ln` needs a spot near `Positive::MAX`, and
-    /// `get_best_range_to_show` scales the highest point by
-    /// `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` (1.02) before a single
-    /// probability is computed. Measured at `7.9e28`, `get_range_to_show`
-    /// reports `mul_f64: overflow` while `calculate_profit_at` on the same
-    /// strategy still returns `Ok(-24.18)`, so the range, not the profit, is
-    /// what stops it. The report is therefore a guard, and these tests pin the
-    /// other half of the contract, that it does not misfire on the extreme
-    /// inputs that *are* reachable. If the range bounds or the price model
-    /// change so the inversion becomes reachable, it errors rather than
-    /// silently under-weighting a step.
+    /// two independent limits stop it before the subtraction:
+    ///
+    /// * **The display range.** The grid steps by `spot / 100`, so a ratio
+    ///   close enough to one to invert `checked_ln` needs a spot near
+    ///   `Positive::MAX`, and `get_best_range_to_show` scales the highest
+    ///   point by `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` (1.02) before a single
+    ///   probability is computed. Measured at `7.9e28`, `get_range_to_show`
+    ///   reports `mul_f64: overflow` while `calculate_profit_at` on the same
+    ///   strategy still returns `Ok(-24.18)`, so the range, not the profit, is
+    ///   what stops it.
+    /// * **The volatility.** The inversion needs a volatility around `1e-28`,
+    ///   and at that value the z-score leaves the finite range: the kernel
+    ///   reports a conversion failure at every spot from `1e3` to `1e28`
+    ///   rather than producing two CDF values to subtract. `1e-20` and above
+    ///   succeed everywhere in that span.
+    ///
+    /// The report is therefore a guard, and these tests pin the other half of
+    /// the contract, that it does not misfire on the extreme inputs that *are*
+    /// reachable. If either limit is lifted so the inversion becomes
+    /// reachable, it errors rather than silently under-weighting a step.
+    fn adjustment(volatility: f64) -> Option<VolatilityAdjustment> {
+        Some(VolatilityAdjustment {
+            base_volatility: Positive::new(volatility)
+                .expect("the probe volatility is positive and finite"),
+            std_dev_adjustment: Positive::ZERO,
+        })
+    }
+
+    /// The volatility has to be passed to `expected_value`, not just stored on
+    /// the strategy: `calculate_single_point_probability` substitutes a
+    /// hardcoded `0.2` when `volatility_adj` is `None` and never reads the
+    /// strategy's own implied volatility, so `None` here would exercise the
+    /// ordinary path under an extreme-sounding name.
+    ///
+    /// At the smallest volatility the model can hold, the guard is never
+    /// reached: the z-score leaves the finite range and the kernel reports a
+    /// conversion failure instead of producing two CDF values to subtract.
+    /// That is a typed error, not a silent wrong answer, which is the property
+    /// worth pinning.
     #[test]
-    fn test_degenerate_volatility_at_a_large_spot_still_succeeds() {
-        for spot in [1e15f64, 1e20, 1e26, 1e28] {
+    fn test_degenerate_volatility_is_reported_before_the_subtraction() {
+        for spot in [1e3f64, 1e15, 1e28] {
             let strategy = match spread(spot, 1e-28) {
                 Ok(strategy) => strategy,
                 Err(error) => panic!("the probe spread must construct at {spot:e}: {error:?}"),
             };
-            let result = strategy.expected_value(None, None);
+            let result = strategy.expected_value(adjustment(1e-28), None);
+            assert!(
+                result.is_err(),
+                "a non-finite z-score must be reported at {spot:e}, got {result:?}"
+            );
+        }
+    }
+
+    /// One order of magnitude up from that limit the kernel is well defined
+    /// again, and the guard must not fire: these are the most extreme inputs
+    /// that actually reach the subtraction, and every step's mass is
+    /// non-negative on all of them.
+    #[test]
+    fn test_extreme_but_workable_volatility_does_not_trip_the_guard() {
+        for spot in [1e3f64, 1e6, 1e15, 1e20, 1e28] {
+            let strategy = match spread(spot, 1e-20) {
+                Ok(strategy) => strategy,
+                Err(error) => panic!("the probe spread must construct at {spot:e}: {error:?}"),
+            };
+            let result = strategy.expected_value(adjustment(1e-20), None);
             assert!(
                 result.is_ok(),
                 "a monotone grid must not report an inversion at {spot:e}, got {result:?}"
@@ -830,7 +875,7 @@ mod tests_marginal_probability_inversion {
             "the profit evaluation still succeeds, so the range is the limit"
         );
         assert!(
-            strategy.expected_value(None, None).is_err(),
+            strategy.expected_value(adjustment(1e-20), None).is_err(),
             "expected_value fails on the range, before any probability"
         );
     }

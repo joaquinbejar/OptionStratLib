@@ -33,14 +33,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Ok(0)`.
 
   For `expected_value` the inversion is not reachable through the public API
-  today, and the limit is the display range rather than the probabilities.
+  today, stopped by two independent limits. The display range is one:
   `get_best_range_to_show` scales the highest point by
   `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` (1.02), so a spot large enough for a
   consecutive price ratio to round to one overflows there before a single
   probability is computed; measured at `7.9e28`, `get_range_to_show` reports
   `mul_f64: overflow` while `calculate_profit_at` on the same strategy still
-  returns `Ok(-24.18)`. The report is a guard there, and the tests pin that it
-  does not misfire on the extreme inputs that are reachable.
+  returns `Ok(-24.18)`. The volatility is the other: the inversion needs a
+  volatility around `1e-28`, and at that value the z-score leaves the finite
+  range, so the kernel reports a conversion failure at every spot from `1e3` to
+  `1e28` instead of producing two CDF values to subtract, while `1e-20` and
+  above succeed everywhere in that span. The report is a guard there, and the
+  tests pin both limits and that the guard does not misfire on the extreme
+  inputs that are reachable.
 
 - **The coverage job stopped reporting `Timed out waiting for test response`.**
   `cargo tarpaulin` is installed unpinned in CI. `--timeout` budgets one whole
