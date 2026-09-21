@@ -300,8 +300,9 @@ coverage:
 	export RUST_lOG=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	# `--timeout` is the per-test deadline; cargo-tarpaulin 0.37.4 reads 0
-	# literally instead of as "no deadline", so it carries a real value.
+	# `--timeout` budgets one whole test binary's run under the LLVM engine,
+	# not one test; tarpaulin enforces it from 0.37.4 on, so it carries a real
+	# value. Raise it when a binary grows, not when a single test gets slower.
 	cargo tarpaulin --verbose --all-features --workspace --timeout 1200 --out Xml --output-dir coverage
 
 .PHONY: coverage-html
