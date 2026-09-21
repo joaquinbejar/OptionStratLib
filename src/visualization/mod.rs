@@ -301,6 +301,9 @@
 mod config;
 /// `impl Graph` and `impl Plottable` for `Curve` and `Vec<Curve>`.
 mod curves;
+/// Filesystem preparation for chart export. Owned by `visualization`:
+/// writing a rendered chart to disk is the only production use of it.
+pub mod file;
 mod interface;
 mod model;
 mod model_impls;
@@ -329,6 +332,7 @@ pub use {
 pub use default::Graph;
 
 pub use config::GraphConfig;
+pub use file::prepare_file_path;
 pub use interface::GraphType;
 pub use model::{
     GraphData, Label2D, Label3D, MultiSeries2D, OutputType, Series2D, Surface3D, VisPoint2D,

@@ -413,7 +413,7 @@ mod tests {
     fn test_generator_optionchain_historical_multi_step() {
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
         use crate::simulation::walk_test_support::RampWalker;
-        use crate::utils::others::calculate_log_returns;
+        use crate::utils::numeric::calculate_log_returns;
         use crate::volatility::{adjust_volatility as annualize, constant_volatility};
         use rust_decimal::Decimal;
 

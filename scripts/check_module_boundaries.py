@@ -95,6 +95,21 @@ ERROR_FILE_LAYER = {
     "mod": "facade",
 }
 
+# `src/utils/<file>.rs` -> target crate layer (ADR-0001 D2, M1-09).
+# `src/utils` is the one crate-level helper module, so every file in it
+# carries an explicit owner rather than inheriting a blanket `core`. A new
+# file that is not listed here fails the check, which is what keeps the
+# module from drifting back into a catch-all. Domain-local helpers
+# (`greeks/utils.rs`, `chains/utils.rs`, ...) are owned by their parent
+# module and need no entry.
+UTILS_FILE_LAYER = {
+    "numeric": "core",
+    "rng": "core",
+    "time": "core",
+    "traits": "core",
+    "mod": "core",
+}
+
 # Layer -> layers it may reference (the approved DAG, ADR-0001 D9).
 ALLOWED = {
     "core": {"core"},
@@ -113,7 +128,7 @@ ALLOWED = {
         "core", "math", "pricing", "simulation", "market", "analytics",
         "strategies", "backtest", "visualization",
     },
-    "facade": set(LAYER_OF.values()) | set(ERROR_FILE_LAYER.values()),
+    "facade": set(LAYER_OF.values()) | set(ERROR_FILE_LAYER.values()) | set(UTILS_FILE_LAYER.values()),
 }
 
 # A bare `crate::error::Name` import cannot be attributed to an error file
@@ -542,11 +557,19 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
             stem = parts[1].removesuffix(".rs") if len(parts) > 1 else "mod"
             source = f"error/{stem}"
             source_layer = ERROR_FILE_LAYER.get(stem)
+        elif top == "utils":
+            stem = parts[1].removesuffix(".rs") if len(parts) > 1 else "mod"
+            source = f"utils/{stem}"
+            source_layer = UTILS_FILE_LAYER.get(stem)
         else:
             source = top
             source_layer = LAYER_OF.get(top)
         if source_layer is None:
-            print(f"unknown module {source!r} in {rel}; add it to LAYER_OF or ERROR_FILE_LAYER", file=sys.stderr)
+            print(
+                f"unknown module {source!r} in {rel}; add it to LAYER_OF, "
+                "ERROR_FILE_LAYER or UTILS_FILE_LAYER",
+                file=sys.stderr,
+            )
             sys.exit(2)
         text = "\n".join(production_lines(strip_comments(path.read_text())))
         targets: list[str] = []
@@ -579,7 +602,11 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
             if stem in ERROR_FILE_LAYER:
                 targets.append(f"error/{stem}")
         for target in targets:
-            if target not in LAYER_OF and not target.startswith("error/"):
+            if (
+                target not in LAYER_OF
+                and not target.startswith("error/")
+                and not target.startswith("utils/")
+            ):
                 continue
             if target == source:
                 continue
@@ -588,9 +615,11 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
 
 
 def normalise(module: str, sub: str | None) -> str:
-    """`error` plus a known file stem becomes `error/<stem>`."""
+    """`error`/`utils` plus a known file stem becomes `<module>/<stem>`."""
     if module == "error" and sub in ERROR_FILE_LAYER:
         return f"error/{sub}"
+    if module == "utils" and sub in UTILS_FILE_LAYER:
+        return f"utils/{sub}"
     return module
 
 
@@ -632,6 +661,8 @@ def expand_group(body: str) -> list[list[str]]:
 def layer_of(name: str) -> str:
     if name.startswith("error/"):
         return ERROR_FILE_LAYER[name.split("/", 1)[1]]
+    if name.startswith("utils/"):
+        return UTILS_FILE_LAYER[name.split("/", 1)[1]]
     return LAYER_OF[name]
 
 
@@ -665,6 +696,8 @@ def marked_lines(src: Path = SRC) -> dict[str, int]:
         top = parts[0].removesuffix(".rs")
         if top == "error":
             layer = ERROR_FILE_LAYER.get(parts[1].removesuffix(".rs") if len(parts) > 1 else "mod", "facade")
+        elif top == "utils":
+            layer = UTILS_FILE_LAYER.get(parts[1].removesuffix(".rs") if len(parts) > 1 else "mod", "core")
         else:
             layer = LAYER_OF.get(top, "facade")
         n = sum(1 for line in path.read_text().splitlines() if MARKER in line)
@@ -700,6 +733,14 @@ def self_test() -> int:
         "empty test module then import": ([("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n")], 1),
         "test module file then import": ([("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n")], 1),
         "synthetic file": ([("chains/generators.rs", "use crate::simulation::WalkParams;\n")], 0),
+        # --- per-file ownership of `src/utils` (M1-09)
+        "utils file is scanned as its own owner": (
+            [("utils/rng.rs", "use crate::strategies::Strategy;\n")], 1, "utils/rng -> strategies",
+        ),
+        "utils file keeps its allowed edges": ([("utils/numeric.rs", "use crate::model::Options;\n")], 0),
+        "a utils target resolves to the owning file": (
+            [("model/x.rs", "use crate::utils::rng::deterministic_rng;\n")], 0,
+        ),
         "deferred pair in its file": ([("model/trade.rs", "use crate::pnl::PnL;\n")], 0),
         "deferred pair in another file": ([("model/other.rs", "use crate::pnl::PnL;\n")], 1),
         # --- error-type resolution (#590)

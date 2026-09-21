@@ -20,8 +20,6 @@ mod pnl;
 
 mod lib_test;
 
-mod utils;
-
 mod pricing;
 
 mod model;

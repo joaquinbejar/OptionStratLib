@@ -19,7 +19,7 @@ use crate::model::decimal::d_sqrt;
 use crate::simulation::steps::{Step, Xstep, Ystep};
 use crate::simulation::{WalkParams, WalkType};
 use crate::utils::TimeFrame;
-use crate::utils::others::calculate_log_returns;
+use crate::utils::numeric::calculate_log_returns;
 use crate::volatility::{adjust_volatility, constant_volatility};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -90,7 +90,7 @@ where
 ///
 /// # Errors
 ///
-/// Propagates errors from [`crate::utils::others::calculate_log_returns`] /
+/// Propagates errors from [`crate::utils::numeric::calculate_log_returns`] /
 /// [`crate::volatility::adjust_volatility`] and surfaces arithmetic overflow as
 /// [`SimulationError`], keeping the driver free of chain-layer error types.
 ///

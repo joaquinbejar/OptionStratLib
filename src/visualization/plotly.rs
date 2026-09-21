@@ -3,8 +3,8 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::error::GraphError;
-use crate::utils::file::prepare_file_path;
 use crate::visualization::OutputType;
+use crate::visualization::file::prepare_file_path;
 use crate::visualization::{GraphConfig, GraphData, make_scatter, make_surface, pick_color};
 use plotly::layout::Axis;
 use plotly::{Layout, Plot, common};
