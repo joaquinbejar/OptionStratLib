@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The coverage job stopped reporting `Timed out waiting for test response`.**
+  `cargo tarpaulin` is installed unpinned in CI. `--timeout` budgets one whole
+  test binary's run under the LLVM engine, and it was `0`, which nothing
+  enforced until 0.37.4 replaced the blocking wait on the child process with
+  polling. From that release a zero budget expires immediately, so every run
+  failed a few tests in, on source that had not changed and that 0.37.3 had
+  covered successfully minutes earlier. The flag now carries an explicit
+  1200s per binary, in the workflow and in both `make coverage` targets.
+
 ### Removed
 
 - **`setup_logger` and `setup_logger_with_level` are gone, and the library no

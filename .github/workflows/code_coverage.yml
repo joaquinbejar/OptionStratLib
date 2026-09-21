@@ -91,8 +91,15 @@ jobs:
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # GENERATE CODE COVERAGE REPORT
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      # `--timeout` budgets one whole test binary's run under the LLVM
+      # engine, not one test. It was `0`, which nothing enforced until
+      # tarpaulin 0.37.4 replaced the blocking wait on the child process
+      # with polling; from there a zero budget expires immediately and the
+      # run reports `Timed out waiting for test response`. 1200s is the
+      # budget per binary, so raise it when a binary grows, not when a
+      # single test gets slower.
       - name: Generate code coverage report.
-        run: cargo tarpaulin --color Always --engine llvm --verbose --tests --all-targets --all-features --workspace --timeout 0 --out Xml
+        run: cargo tarpaulin --color Always --engine llvm --verbose --tests --all-targets --all-features --workspace --timeout 1200 --out Xml
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # UPLOAD CODE COVERAGE REPORT TO CODECOV.IO
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
