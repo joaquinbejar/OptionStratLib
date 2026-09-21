@@ -18,6 +18,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   covered successfully minutes earlier. The flag now carries an explicit
   1200s per binary, in the workflow and in both `make coverage` targets.
 
+### Changed
+
+- **The market-to-simulation edge is now proven to be behind `synthetic`, not
+  just declared to be** (#512). `ChainError::Simulation` and its
+  `From<SimulationError>` conversion were ungated, so a consumer building with
+  `default-features = false` still named a simulation type through the market
+  error enum. Both are now `#[cfg(feature = "synthetic")]`, which is the last
+  simulation reference in the minimal market surface. `make check-graph` gained
+  a gate check: every production `crate::simulation` reference under
+  `src/chains`, `src/series` and in the market-owned `src/error/chains.rs` must
+  sit under the feature attribute, carried either by the item or by the `mod`
+  declaration that brings the file in. Attributes are attached to the item that
+  follows them and each gated item's whole extent is marked, so a gated sibling
+  cannot lend its gate to the next declaration or enum variant, and a reference
+  deep inside a gated function or `impl` is still recognised as gated. Listing a
+  file in `SYNTHETIC_FILES` no longer launders an ungated edge, and eleven
+  self-test cases cover the rule.
+- **`make check-feature-trees` pins the dependency graph of both market
+  surfaces** (#512), from `tests/fixtures/feature-trees/{minimal,synthetic}.txt`.
+  Each fixture holds the whole graph as a sorted `parent -> child` edge list, so
+  a dependency added, removed or re-parented shows up even when it lands on both
+  surfaces at once; the difference between the two is derived and printed, and
+  is empty today because the feature gates source rather than crates. The graph
+  is resolved with `cargo tree --target all` so it is the same on every host,
+  and nodes carry no version because `Cargo.lock` is not committed; #616 tracks
+  that decision. The check runs in the lint workflow, and
+  `make feature-trees-update` records an intended change.
+
+### Removed
+
+- **`chains::generator_positive` is gone** (#512). It was a deprecated
+  re-export of `simulation::generator_positive`, a generic walk generator that
+  never depended on option chains, and it was the market layer's only
+  re-export of a simulation function it does not own. Use
+  `optionstratlib::simulation::generator_positive`, which the prelude already
+  exports.
+
 ### Removed
 
 - **`setup_logger` and `setup_logger_with_level` are gone, and the library no

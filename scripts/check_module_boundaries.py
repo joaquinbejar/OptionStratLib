@@ -139,18 +139,24 @@ ALLOWED = {
 # file by `error_types` / `resolve_error_refs` below (#590).
 ALWAYS_ALLOWED_TARGETS = {"error"}
 
-# Files whose simulation edge is the `synthetic`-gated market capability.
-# File-level on purpose: the only simulation references in `chains/mod.rs`
-# are the `#[cfg(feature = "synthetic")]` re-exports, and the generator
-# modules are compiled only under that feature.
+# Files whose simulation edge is the `synthetic`-gated market capability
+# (ADR-0003, roadmap M1-15). File-level on purpose: the generator modules are
+# declared `#[cfg(feature = "synthetic")]` and compile only under it, and in
+# `error/chains.rs` the gate sits on the `Simulation` variant and its `From`
+# impl. `synthetic_gate_violations` proves each of these references really is
+# behind the feature, so listing a file here cannot launder an ungated edge.
 SYNTHETIC_FILES = {
     "chains/generators.rs",
     "series/generators.rs",
-    "chains/mod.rs",
-    # `ChainError::Simulation` and `From<SimulationError> for ChainError`
-    # (ADR-0003 section 4: the payload becomes market-owned after the bump).
+    # `ChainError::Simulation` and `From<SimulationError> for ChainError`.
     "error/chains.rs",
 }
+
+# `#[cfg(feature = "synthetic")]`, however the attribute is spaced.
+SYNTHETIC_CFG_RE = re.compile(r'#\[cfg\(feature\s*=\s*"synthetic"\)\]')
+
+# Modules whose minimal (non-`synthetic`) surface must name no simulation type.
+MINIMAL_MARKET_MODULES = ("chains", "series")
 
 # (source module, target module) -> (files that may carry the edge, the issue
 # that removes it). Scoped to files on purpose: a new file introducing the
@@ -542,6 +548,41 @@ def resolve_error_refs(
     return stems
 
 
+def module_targets(text: str) -> list[str]:
+    """Every `crate::<module>` reference in `text`, grouped forms expanded.
+
+    Shared by the layer scan and the `synthetic` gate check so the two cannot
+    disagree about what counts as a reference: a plain `crate::simulation::X`
+    and a grouped `use crate::{simulation::X}` resolve to the same target.
+    """
+    targets: list[str] = []
+    for match in EDGE_RE.finditer(text):
+        targets.append(normalise(match.group(1), match.group(2)))
+    # `use crate::{a::b, c, d::{e, f}}` and the qualified form
+    # `use crate::a::{b::c, d}`, possibly spanning several lines: the
+    # segments before the brace prefix every entry, and the first segment
+    # of the result names a module (or a root re-export).
+    for match in re.finditer(r"crate::((?:[a-z_][a-z0-9_]*::)*)\{", text):
+        prefix = [seg for seg in match.group(1).split("::") if seg]
+        depth, i = 0, match.end() - 1
+        while i < len(text):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        body = text[match.end():i]
+        for tail in expand_group(body):
+            path_segments = prefix + tail
+            if not path_segments:
+                continue
+            sub = path_segments[1] if len(path_segments) > 1 else None
+            targets.append(normalise(path_segments[0], sub))
+    return targets
+
+
 def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[str, str]]]:
     edges: dict[tuple[str, str], list[str]] = {}
     types, ambiguous = error_types(src)
@@ -572,31 +613,7 @@ def scan(src: Path = SRC) -> tuple[dict[tuple[str, str], list[str]], set[tuple[s
             )
             sys.exit(2)
         text = "\n".join(production_lines(strip_comments(path.read_text())))
-        targets: list[str] = []
-        for match in EDGE_RE.finditer(text):
-            targets.append(normalise(match.group(1), match.group(2)))
-        # `use crate::{a::b, c, d::{e, f}}` and the qualified form
-        # `use crate::a::{b::c, d}`, possibly spanning several lines: the
-        # segments before the brace prefix every entry, and the first segment
-        # of the result names a module (or a root re-export).
-        for match in re.finditer(r"crate::((?:[a-z_][a-z0-9_]*::)*)\{", text):
-            prefix = [seg for seg in match.group(1).split("::") if seg]
-            depth, i = 0, match.end() - 1
-            while i < len(text):
-                if text[i] == "{":
-                    depth += 1
-                elif text[i] == "}":
-                    depth -= 1
-                    if depth == 0:
-                        break
-                i += 1
-            body = text[match.end():i]
-            for tail in expand_group(body):
-                path_segments = prefix + tail
-                if not path_segments:
-                    continue
-                sub = path_segments[1] if len(path_segments) > 1 else None
-                targets.append(normalise(path_segments[0], sub))
+        targets: list[str] = list(module_targets(text))
         # Error types, by the file that defines them (#590).
         for stem in resolve_error_refs(text, module_path_of(rel), types, ambiguous, public, private, modules):
             if stem in ERROR_FILE_LAYER:
@@ -664,6 +681,195 @@ def layer_of(name: str) -> str:
     if name.startswith("utils/"):
         return UTILS_FILE_LAYER[name.split("/", 1)[1]]
     return LAYER_OF[name]
+
+
+STRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'')
+
+MOD_DECL_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;")
+
+# An attribute line, including the opening line of a multi-line attribute.
+ATTR_START_RE = re.compile(r"^\s*#!?\[")
+
+
+def _code_only(line: str) -> str:
+    """The line with string and char literals blanked out.
+
+    Brace counting drives the scope tracker below, and a format placeholder
+    inside an attribute (`#[error("... {reason}")]`) or a message body would
+    otherwise open or close a scope that does not exist.
+    """
+    return STRING_RE.sub('""', line)
+
+
+def _items(lines: list[str]):
+    """Yield `(attributes, head_index, end_index)` per top-of-scope item.
+
+    An "item" is anything an attribute can sit on: a `mod` declaration, a
+    `fn`, an `impl`, a `struct`, an enum variant, a `use`. Attributes are
+    attached to the item that *follows* them, never to a sliding window, so a
+    gated sibling cannot lend its gate to the next one. The item's extent runs
+    to the matching close brace when it opens one, and to the terminating `;`
+    or `,` when it does not, so a reference anywhere inside a gated item's
+    body counts as gated however deep it sits.
+    """
+    pending: list[str] = []
+    pending_start: int | None = None
+    i = 0
+    n = len(lines)
+    while i < n:
+        raw = lines[i]
+        line = _code_only(raw)
+        if not line.strip():
+            i += 1
+            continue
+        if ATTR_START_RE.match(line):
+            if pending_start is None:
+                pending_start = i
+            # An attribute may span several lines; consume until its brackets
+            # balance so the item head is the line after it, not inside it.
+            depth = line.count("[") - line.count("]")
+            attr = [raw]
+            while depth > 0 and i + 1 < n:
+                i += 1
+                attr.append(lines[i])
+                inner = _code_only(lines[i])
+                depth += inner.count("[") - inner.count("]")
+            pending.append("\n".join(attr))
+            i += 1
+            continue
+
+        head = i
+        # Walk to the end of this item.
+        depth = line.count("{") - line.count("}")
+        opened = "{" in line
+        end = i
+        if not opened and not line.rstrip().endswith((";", ",")):
+            # A head that spans several lines before its brace or terminator.
+            while end + 1 < n:
+                end += 1
+                inner = _code_only(lines[end])
+                depth += inner.count("{") - inner.count("}")
+                if "{" in inner:
+                    opened = True
+                    break
+                if inner.rstrip().endswith((";", ",")) and depth <= 0:
+                    break
+        if opened:
+            while depth > 0 and end + 1 < n:
+                end += 1
+                inner = _code_only(lines[end])
+                depth += inner.count("{") - inner.count("}")
+
+        yield pending, pending_start if pending_start is not None else head, head, end
+        pending = []
+        pending_start = None
+        i = end + 1
+
+
+def _gated_line_numbers(lines: list[str]) -> set[int]:
+    """Indices of lines that sit inside a `synthetic`-gated item.
+
+    Recursive, because an item nested in a gated one is gated too: the whole
+    extent of a gated item is marked, and the contents of every other item are
+    scanned for gated items of their own.
+    """
+    gated: set[int] = set()
+
+    def walk(offset: int, body: list[str]) -> None:
+        for attrs, attr_start, head, end in _items(body):
+            if any(SYNTHETIC_CFG_RE.search(a) for a in attrs):
+                gated.update(range(offset + attr_start, offset + end + 1))
+                continue
+            if end > head:
+                walk(offset + head + 1, body[head + 1 : end])
+
+    walk(0, lines)
+    return gated
+
+
+def gated_module_files(src: Path = SRC) -> set[str]:
+    """Files whose `mod` declaration carries the `synthetic` gate.
+
+    A file brought in by `#[cfg(feature = "synthetic")] mod generators;`
+    compiles only under the feature, so every reference in it is gated. The
+    declaration is matched through the item walker, so the attribute has to
+    sit on *that* declaration and not merely near it.
+    """
+    gated: set[str] = set()
+    for path in src.rglob("*.rs"):
+        lines = strip_comments(path.read_text()).splitlines()
+        gated_lines = _gated_line_numbers(lines)
+        parent = path.parent.relative_to(src).as_posix()
+        for i, line in enumerate(lines):
+            match = MOD_DECL_RE.match(_code_only(line))
+            if not match or i not in gated_lines:
+                continue
+            name = match.group(1)
+            gated.add(f"{parent}/{name}.rs" if parent != "." else f"{name}.rs")
+            gated.add(f"{parent}/{name}/mod.rs" if parent != "." else f"{name}/mod.rs")
+    return gated
+
+
+def synthetic_gate_violations(src: Path = SRC) -> list[str]:
+    """Prove the market-to-simulation edge really is behind `synthetic`.
+
+    `SYNTHETIC_FILES` says an edge is the optional market capability; this
+    says it is *gated*. A production `crate::simulation` reference in market
+    code (or in the market-owned `error/chains.rs`) counts as gated when the
+    item carrying it sits under `#[cfg(feature = "synthetic")]`, either on
+    the item itself, on an item enclosing it, or on the `mod` declaration that
+    brings the whole file in. Anything else is in the minimal market surface
+    and is reported, so "minimal market names no simulation type" is checked
+    rather than asserted (roadmap M1-15).
+    """
+    gated_modules = gated_module_files(src)
+
+    problems: list[str] = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        top = rel.split("/")[0]
+        if top not in MINIMAL_MARKET_MODULES and rel != "error/chains.rs":
+            continue
+        if rel in gated_modules:
+            continue
+        lines = production_lines(strip_comments(path.read_text()))
+        gated_lines = _gated_line_numbers(lines)
+        for start, end in _ungated_spans(lines, gated_lines):
+            span = lines[start : end + 1]
+            text = "\n".join(span)
+            # The same extraction the layer scan uses, so a grouped
+            # `use crate::{simulation::X}` counts exactly as a plain
+            # `use crate::simulation::X` does.
+            names_simulation = "simulation" in module_targets(text)
+            if not names_simulation and "SimulationError" not in text:
+                continue
+            for offset, line in enumerate(span):
+                if "simulation" in line or "SimulationError" in line:
+                    problems.append(f"{rel}:{start + offset + 1}: {line.strip()}")
+    return problems
+
+
+def _ungated_spans(lines: list[str], gated: set[int]) -> list[tuple[int, int]]:
+    """Maximal runs of consecutive ungated line indices.
+
+    References are resolved per run rather than per line, because a grouped
+    or multi-line `use` spells one reference across several lines. A run never
+    straddles a gated item, so a span is entirely inside or entirely outside
+    the feature.
+    """
+    spans: list[tuple[int, int]] = []
+    start: int | None = None
+    for i in range(len(lines)):
+        if i in gated:
+            if start is not None:
+                spans.append((start, i - 1))
+                start = None
+            continue
+        if start is None:
+            start = i
+    if start is not None:
+        spans.append((start, len(lines) - 1))
+    return spans
 
 
 def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
@@ -906,6 +1112,130 @@ def self_test() -> int:
         print(f"self-test {'ok' if ok else 'FAIL'}: stale deferred entries are detected ({len(stale)} of {len(DEFERRED)})")
         if not ok:
             failures += 1
+    # The synthetic gate: a simulation reference in market code counts only
+    # when the feature attribute really carries it (M1-15).
+    gate_cases = {
+        "ungated variant in market error": (
+            {"error/chains.rs": "pub enum ChainError {\n    Simulation(Box<crate::error::SimulationError>),\n}\n"},
+            1,
+        ),
+        "variant gated on the item": (
+            {"error/chains.rs": 'pub enum ChainError {\n    #[cfg(feature = "synthetic")]\n    Simulation(Box<crate::error::SimulationError>),\n}\n'},
+            0,
+        ),
+        "file gated at its mod declaration": (
+            {
+                "chains/mod.rs": '#[cfg(feature = "synthetic")]\nmod generators;\n',
+                "chains/generators.rs": "use crate::simulation::WalkParams;\n",
+            },
+            0,
+        ),
+        "ungated mod declaration": (
+            {
+                "chains/mod.rs": "mod generators;\n",
+                "chains/generators.rs": "use crate::simulation::WalkParams;\n",
+            },
+            1,
+        ),
+        "test module is not the minimal surface": (
+            {"chains/x.rs": "#[cfg(test)]\nmod t {\n    use crate::simulation::WalkParams;\n}\n"},
+            0,
+        ),
+        "a module outside market is not checked": (
+            {"strategies/x.rs": "use crate::simulation::WalkParams;\n"},
+            0,
+        ),
+        # A gated sibling must not lend its gate to the next item: the
+        # attribute belongs to the declaration it sits on, not to a window.
+        "gated sibling does not gate the next mod declaration": (
+            {
+                "chains/mod.rs": '#[cfg(feature = "synthetic")]\nmod other;\nmod generators;\n',
+                "chains/other.rs": "pub fn nothing() {}\n",
+                "chains/generators.rs": "use crate::simulation::WalkParams;\n",
+            },
+            1,
+        ),
+        "gated sibling does not gate the next enum variant": (
+            {
+                "error/chains.rs": (
+                    "pub enum ChainError {\n"
+                    '    #[cfg(feature = "synthetic")]\n'
+                    "    Gated(u8),\n"
+                    "    Simulation(Box<crate::error::SimulationError>),\n"
+                    "}\n"
+                ),
+            },
+            1,
+        ),
+        # The gate covers the whole item, however deep the reference sits.
+        "gated function body, reference far from the attribute": (
+            {
+                "chains/x.rs": (
+                    '#[cfg(feature = "synthetic")]\n'
+                    "fn build() {\n"
+                    + "    let _padding = 0;\n" * 12
+                    + "    let _ = crate::simulation::WalkParams::default();\n"
+                    "}\n"
+                ),
+            },
+            0,
+        ),
+        "an ungated function body is still reported however deep": (
+            {
+                "chains/x.rs": (
+                    "fn build() {\n"
+                    + "    let _padding = 0;\n" * 12
+                    + "    let _ = crate::simulation::WalkParams::default();\n"
+                    "}\n"
+                ),
+            },
+            1,
+        ),
+        # The main scanner expands grouped imports, so the gate check must
+        # see them too or `SYNTHETIC_FILES` would exempt an edge nothing
+        # proved to be gated.
+        "grouped import is a reference": (
+            {"chains/x.rs": "use crate::{simulation::WalkParams};\n"},
+            1,
+        ),
+        "grouped import inside a gated item": (
+            {
+                "chains/x.rs": '#[cfg(feature = "synthetic")]\nmod inner {\n    use crate::{simulation::WalkParams};\n}\n',
+            },
+            0,
+        ),
+        "multiline grouped import is a reference": (
+            {
+                "chains/x.rs": "use crate::{\n    model::Options,\n    simulation::WalkParams,\n};\n",
+            },
+            1,
+        ),
+        "a gated impl block gates its methods": (
+            {
+                "chains/x.rs": (
+                    '#[cfg(feature = "synthetic")]\n'
+                    "impl Chain {\n"
+                    "    fn build(&self) {\n"
+                    "        let _ = crate::simulation::WalkParams::default();\n"
+                    "    }\n"
+                    "}\n"
+                ),
+            },
+            0,
+        ),
+    }
+    for name, (files, expected) in gate_cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            for rel, content in files.items():
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            got = len(synthetic_gate_violations(root))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: synthetic gate, {name} (expected {expected}, got {got})")
     return 1 if failures else 0
 
 
@@ -955,6 +1285,12 @@ def main() -> int:
     if violations:
         print("forbidden module edges (see doc/DEPENDENCY-MATRIX.md, ADR-0001 D9):")
         for item in violations:
+            print(f"  {item}")
+        return 1
+    ungated = synthetic_gate_violations()
+    if ungated:
+        print('market code names a simulation type outside `#[cfg(feature = "synthetic")]` (ADR-0003, M1-15):')
+        for item in ungated:
             print(f"  {item}")
         return 1
     deferred_count = sum(1 for key in DEFERRED if key in present)
