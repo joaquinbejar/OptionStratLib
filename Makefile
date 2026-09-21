@@ -300,7 +300,9 @@ coverage:
 	export RUST_lOG=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --verbose --all-features --workspace --timeout 0 --out Xml --output-dir coverage
+	# `--timeout` is the per-test deadline; cargo-tarpaulin 0.37.4 reads 0
+	# literally instead of as "no deadline", so it carries a real value.
+	cargo tarpaulin --verbose --all-features --workspace --timeout 1200 --out Xml --output-dir coverage
 
 .PHONY: coverage-html
 coverage-html:
@@ -308,7 +310,7 @@ coverage-html:
 	export RUST_lOG=WARN
 	cargo install cargo-tarpaulin
 	mkdir -p coverage
-	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 0 --out Html --output-dir coverage
+	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 1200 --out Html --output-dir coverage
 
 .PHONY: open-coverage
 open-coverage:

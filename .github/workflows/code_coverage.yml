@@ -91,8 +91,12 @@ jobs:
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # GENERATE CODE COVERAGE REPORT
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      # `--timeout` is the per-test deadline. It was `0`, which older
+      # cargo-tarpaulin read as "no deadline"; 0.37.4 reads it literally
+      # and every test reports `Timed out waiting for test response`, so
+      # the value is now an explicit, generous one.
       - name: Generate code coverage report.
-        run: cargo tarpaulin --color Always --engine llvm --verbose --tests --all-targets --all-features --workspace --timeout 0 --out Xml
+        run: cargo tarpaulin --color Always --engine llvm --verbose --tests --all-targets --all-features --workspace --timeout 1200 --out Xml
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # UPLOAD CODE COVERAGE REPORT TO CODECOV.IO
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
