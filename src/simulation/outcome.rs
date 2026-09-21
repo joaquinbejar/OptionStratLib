@@ -276,6 +276,13 @@ where
     /// What one evaluated path produces.
     type Outcome;
 
+    /// What one evaluated path reports when it fails.
+    ///
+    /// The evaluator lives in the caller's layer, so it reports the caller's
+    /// error: a backtest reports `BacktestError`, keeping the strategy and
+    /// simulation causes typed, without simulation naming either.
+    type Error: From<SimulationError>;
+
     /// Evaluates `walk` under `exit`.
     ///
     /// # Errors
@@ -286,7 +293,7 @@ where
         &self,
         walk: &RandomWalk<X, Y>,
         exit: &ExitPolicy,
-    ) -> Result<Self::Outcome, SimulationError>;
+    ) -> Result<Self::Outcome, Self::Error>;
 }
 
 /// Runs `evaluator` over every walk in `sim`, in order.
@@ -303,7 +310,7 @@ pub fn evaluate_paths<X, Y, E>(
     evaluator: &E,
     sim: &Simulator<X, Y>,
     exit: &ExitPolicy,
-) -> Result<Vec<E::Outcome>, SimulationError>
+) -> Result<Vec<E::Outcome>, E::Error>
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
@@ -434,6 +441,7 @@ mod tests {
 
     impl PathEvaluator<Positive, Positive> for LastMinusFirst {
         type Outcome = PathOutcome;
+        type Error = SimulationError;
 
         fn evaluate_path(
             &self,
@@ -516,6 +524,7 @@ mod tests {
 
     impl PathEvaluator<Positive, Positive> for AlwaysFails {
         type Outcome = ();
+        type Error = SimulationError;
 
         fn evaluate_path(
             &self,

@@ -9,7 +9,7 @@
 //! `curves::BasicCurves` is kept as a compatibility re-export.
 
 use crate::curves::Curve;
-use crate::error::CurveError;
+use crate::error::ProjectionError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
 use crate::{OptionStyle, Options, Side};
@@ -44,22 +44,21 @@ pub trait BasicCurves {
     ///
     /// # Returns
     ///
-    /// * `Result<Curve, CurveError>` - A curve object containing the plotted data points,
+    /// * `Result<Curve, ProjectionError>` - A curve object containing the plotted data points,
     ///   or an error if the curve could not be generated
     ///
     /// # Errors
     ///
-    /// Returns [`CurveError::ConstructionError`] when no strikes
-    /// produced valid samples for the requested axis, and propagates
-    /// any `CurveError::GreeksError` or
-    /// [`CurveError::InterpolationError`] surfaced by the per-strike
-    /// evaluator.
+    /// Returns [`ProjectionError::NoPoints`] when no strikes produced
+    /// valid samples for the requested axis, and propagates the typed
+    /// cause of every per-strike failure as [`ProjectionError::Greek`]
+    /// or [`ProjectionError::Curve`].
     fn curve(
         &self,
         axis: &BasicAxisTypes,
         option_style: &OptionStyle,
         side: &Side,
-    ) -> Result<Curve, CurveError>;
+    ) -> Result<Curve, ProjectionError>;
 
     /// Generates coordinate pairs for a specific option and axis type.
     ///
@@ -74,30 +73,69 @@ pub trait BasicCurves {
     ///
     /// # Returns
     ///
-    /// * `Result<(Decimal, Decimal), CurveError>` - A tuple containing (strike price, metric value),
+    /// * `Result<(Decimal, Decimal), ProjectionError>` - A tuple containing (strike price, metric value),
     ///   or an error if the values could not be extracted
     ///
     /// # Errors
     ///
-    /// Returns [`CurveError::ConstructionError`] when the requested
-    /// axis metric is not available for the option data (e.g.
-    /// missing implied volatility) and propagates any
-    /// `CurveError::GreeksError` surfaced while computing Greeks-
-    /// based axes.
+    /// Returns [`ProjectionError::UnsupportedAxis`] when the requested
+    /// axis metric is not available for the option data (e.g. missing
+    /// implied volatility) and [`ProjectionError::Greek`], carrying the
+    /// underlying [`crate::error::GreeksError`], while computing Greeks-based axes.
     fn get_curve_strike_versus(
         &self,
         axis: &BasicAxisTypes,
         option: &Arc<Options>,
-    ) -> Result<(Decimal, Decimal), CurveError> {
+    ) -> Result<(Decimal, Decimal), ProjectionError> {
         match axis {
-            BasicAxisTypes::Delta => Ok((option.strike_price.to_dec(), option.delta()?)),
-            BasicAxisTypes::Gamma => Ok((option.strike_price.to_dec(), option.gamma()?)),
-            BasicAxisTypes::Theta => Ok((option.strike_price.to_dec(), option.theta()?)),
-            BasicAxisTypes::Vanna => Ok((option.strike_price.to_dec(), option.vanna()?)),
-            BasicAxisTypes::Vega => Ok((option.strike_price.to_dec(), option.vega()?)),
-            BasicAxisTypes::Veta => Ok((option.strike_price.to_dec(), option.veta()?)),
-            BasicAxisTypes::Charm => Ok((option.strike_price.to_dec(), option.charm()?)),
-            BasicAxisTypes::Color => Ok((option.strike_price.to_dec(), option.color()?)),
+            BasicAxisTypes::Delta => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .delta()
+                    .map_err(|e| ProjectionError::greek("delta", e))?,
+            )),
+            BasicAxisTypes::Gamma => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .gamma()
+                    .map_err(|e| ProjectionError::greek("gamma", e))?,
+            )),
+            BasicAxisTypes::Theta => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .theta()
+                    .map_err(|e| ProjectionError::greek("theta", e))?,
+            )),
+            BasicAxisTypes::Vanna => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .vanna()
+                    .map_err(|e| ProjectionError::greek("vanna", e))?,
+            )),
+            BasicAxisTypes::Vega => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .vega()
+                    .map_err(|e| ProjectionError::greek("vega", e))?,
+            )),
+            BasicAxisTypes::Veta => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .veta()
+                    .map_err(|e| ProjectionError::greek("veta", e))?,
+            )),
+            BasicAxisTypes::Charm => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .charm()
+                    .map_err(|e| ProjectionError::greek("charm", e))?,
+            )),
+            BasicAxisTypes::Color => Ok((
+                option.strike_price.to_dec(),
+                option
+                    .color()
+                    .map_err(|e| ProjectionError::greek("color", e))?,
+            )),
             BasicAxisTypes::Volatility => Ok((
                 option.strike_price.to_dec(),
                 option.implied_volatility.to_dec(),
@@ -107,12 +145,9 @@ pub trait BasicCurves {
                 option.calculate_price_black_scholes()?,
             )),
             // Catch-all for unsupported combinations
-            _ => Err(CurveError::OperationError(
-                crate::error::OperationErrorKind::InvalidParameters {
-                    operation: "get_axis_value".to_string(),
-                    reason: format!("Axis: {axis:?} not supported"),
-                },
-            )),
+            _ => Err(ProjectionError::UnsupportedAxis {
+                axis: format!("{axis:?}"),
+            }),
         }
     }
 }
@@ -121,7 +156,7 @@ pub trait BasicCurves {
 mod tests_basic_curves_trait {
     use super::*;
     use crate::curves::Point2D;
-    use crate::error::OperationErrorKind;
+
     use crate::model::types::{OptionStyle, Side};
     use crate::{ExpirationDate, OptionType};
     use positive::{Positive, pos_or_panic};
@@ -156,7 +191,7 @@ mod tests_basic_curves_trait {
             axis: &BasicAxisTypes,
             _option_style: &OptionStyle,
             _side: &Side,
-        ) -> Result<Curve, CurveError> {
+        ) -> Result<Curve, ProjectionError> {
             // Simplified implementation for testing
             let option = create_test_option();
             let point = self.get_curve_strike_versus(axis, &option)?;
@@ -347,38 +382,30 @@ mod tests_basic_curves_trait {
 
         assert!(result.is_err());
         match result {
-            Err(CurveError::OperationError(
-                crate::error::OperationErrorKind::InvalidParameters { operation, reason },
-            )) => {
-                assert_eq!(operation, "get_axis_value");
-                assert!(reason.contains("not supported"));
-                assert!(reason.contains("Expiration"));
+            // The axis is a field of the variant, so a caller matches on it
+            // instead of parsing a message.
+            Err(ProjectionError::UnsupportedAxis { axis }) => {
+                assert_eq!(axis, "Expiration");
             }
-            _ => panic!("Expected OperationError with InvalidParameters"),
+            other => panic!("expected UnsupportedAxis, got {other:?}"),
         }
     }
 
     // Add to src/curves/basic.rs in the tests_basic_curves_trait module
 
     #[test]
-    fn test_invalid_axis_error_message() {
-        // Test the specific error message format for an unsupported axis
+    fn test_unsupported_axis_names_the_axis_in_its_message() {
         let test_curves = TestBasicCurves;
         let option = create_test_option();
 
-        // Line 81: Tests the specific error formatting for the OperationErrorKind::InvalidParameters
         let result = test_curves.get_curve_strike_versus(&BasicAxisTypes::Expiration, &option);
 
         assert!(result.is_err());
-        if let Err(CurveError::OperationError(OperationErrorKind::InvalidParameters {
-            operation,
-            reason,
-        })) = result
-        {
-            assert_eq!(operation, "get_axis_value");
-            assert!(reason.contains("Axis: Expiration not supported"));
-        } else {
-            panic!("Expected OperationError with InvalidParameters");
+        if let Err(error) = result {
+            assert!(
+                error.to_string().contains("unsupported axis `Expiration`"),
+                "{error}"
+            );
         }
     }
 
@@ -401,5 +428,71 @@ mod tests_basic_curves_trait {
         assert!(curve_call_short.is_ok());
         assert!(curve_put_long.is_ok());
         assert!(curve_put_short.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_typed_projection_errors {
+    use super::*;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+    use std::sync::Arc;
+
+    struct Probe;
+
+    impl BasicCurves for Probe {
+        fn curve(
+            &self,
+            _axis: &BasicAxisTypes,
+            _option_style: &OptionStyle,
+            _side: &Side,
+        ) -> Result<Curve, ProjectionError> {
+            unreachable!("the probe only exercises get_curve_strike_versus")
+        }
+    }
+
+    /// A zero strike is rejected by the Greek kernels, so the projection
+    /// must report that failure with the pricing cause intact rather than
+    /// as a formatted string.
+    fn zero_strike_option() -> Arc<Options> {
+        Arc::new(Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "TEST".to_string(),
+            strike_price: Positive::ZERO,
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            implied_volatility: pos_or_panic!(0.2),
+            quantity: Positive::ONE,
+            underlying_price: Positive::HUNDRED,
+            risk_free_rate: dec!(0.05),
+            option_style: OptionStyle::Call,
+            dividend_yield: Positive::ZERO,
+            exotic_params: None,
+        })
+    }
+
+    #[test]
+    fn test_a_greek_failure_reaches_the_caller_typed() {
+        let option = zero_strike_option();
+        let result = Probe.get_curve_strike_versus(&BasicAxisTypes::Delta, &option);
+
+        match result {
+            Err(ProjectionError::Greek { greek, source }) => {
+                assert_eq!(greek, "delta");
+                // The pricing variant survives: no parsing of a message.
+                assert!(
+                    matches!(*source, crate::error::GreeksError::InputError(_)),
+                    "the GreeksError variant was lost: {source:?}"
+                );
+                assert!(
+                    source.to_string().contains("Strike"),
+                    "the pricing reason survives: {source}"
+                );
+            }
+            Ok(value) => panic!("expected a Greek failure, got {value:?}"),
+            Err(other) => panic!("expected ProjectionError::Greek, got {other:?}"),
+        }
     }
 }

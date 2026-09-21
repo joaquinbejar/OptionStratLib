@@ -320,6 +320,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Errors no longer carry a higher layer's error** (#511, multi-crate
+  roadmap M1-14). Eleven variants existed only to wrap the error of a layer
+  above: `OptionsError::Greeks`, `CurveError::{Greeks, Graph}`,
+  `SurfaceError::{Greeks, Graph}`, `VolatilityError::Chain`,
+  `SimulationError::{Strategy, Chain, GraphError}` and
+  `StrategyError::Simulation`. They are removed with their conversions, and
+  the layer that composes both now owns an error that keeps each cause
+  **typed**, never a formatted message: `SimulationError::Volatility` holds
+  the pricing failure, the new analytics-owned `ProjectionError` holds the
+  `GreeksError` behind a named Greek, the new backtest-owned `BacktestError`
+  holds the strategy and simulation failures, and `ChainError` keeps holding
+  the Greek failure of a strike aggregation. `PathEvaluator` gains an
+  associated `Error` type so an evaluator reports its own layer's error.
+  Where a cause is reported: the analytics projections report a Greek
+  failure as `CurveError::MetricsError` / `SurfaceError::AnalysisError` naming
+  the Greek, `chains::options::deltas` reports `OptionsError::greeks_error`,
+  backtesting reports a strategy fee failure as
+  `SimulationError::InvalidParameters`, and the IV solver reports
+  `VolatilityError::NumericalFailure`. `simulation::generator_positive` now
+  reports `SimulationError` instead of the market `ChainError` it never
+  belonged to. Ten reverse edges disappear from the boundary report.
+  Example binaries that mixed a math error with a rendering error in their
+  `main` now return `Box<dyn std::error::Error>`, which is what mixing two
+  layers' errors in one entry point actually means.
+
+
 - **Four misplaced helpers return to their owning layer** (#599, multi-crate
   roadmap M1). Each edge existed only because of where a file sat.
   `model::utils::calculate_optimal_price_range` is a chain helper reporting

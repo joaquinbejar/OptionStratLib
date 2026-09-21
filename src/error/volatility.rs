@@ -6,7 +6,7 @@
 
 //! Target crate (ADR-0001 D6, roadmap M1-14): **pricing**. Owns `VolatilityError`; the `Chain(ChainError)` variant is a market reference removed in the batch behind the 0.22.0 bump.
 
-use crate::error::{GreeksError, OptionsError};
+use crate::error::OptionsError;
 use positive::Positive;
 use thiserror::Error;
 
@@ -51,10 +51,6 @@ pub enum VolatilityError {
     /// Newton-Raphson method and vega is zero, making it impossible to converge.
     #[error("Vega is zero, cannot calculate implied volatility")]
     ZeroVega,
-
-    /// Error related to Greeks calculations.
-    #[error(transparent)]
-    Greeks(#[from] GreeksError),
 
     /// Error related to option calculations.
     #[error(transparent)]
@@ -116,14 +112,6 @@ pub enum VolatilityError {
         #[source]
         source: Box<VolatilityError>,
     },
-
-    /// A chain-layer error surfaced while retrieving volatility data
-    /// (e.g. empty option chain, ATM lookup failure on a chain).
-    ///
-    /// Boxed to avoid infinite enum size through the `ChainError::Volatility`
-    /// cycle.
-    #[error(transparent)]
-    Chain(Box<crate::error::ChainError>),
 
     /// Positive value errors
     #[error(transparent)]
@@ -244,19 +232,24 @@ mod tests_volatility_errors {
     }
 
     #[test]
-    fn test_from_greeks_error() {
+    fn test_a_greeks_failure_is_reported_as_a_numerical_failure() {
+        // Volatility and Greeks are both pricing capabilities, but the IV
+        // solver reports its own failure rather than re-wrapping the Greek
+        // one (#511); the reason still reaches the caller.
         let greeks_error = GreeksError::InputError(InputErrorKind::InvalidVolatility {
             value: 0.0,
             reason: "Volatility cannot be zero".to_string(),
         });
 
-        let implied_vol_error: VolatilityError = greeks_error.into();
+        let implied_vol_error = VolatilityError::NumericalFailure {
+            reason: format!("vega: {greeks_error}"),
+        };
 
         match implied_vol_error {
-            VolatilityError::Greeks(_) => {
-                // Conversion successful
+            VolatilityError::NumericalFailure { reason } => {
+                assert!(reason.contains("Volatility cannot be zero"), "{reason}");
             }
-            _ => panic!("Wrong error variant"),
+            other => panic!("expected NumericalFailure, got {other:?}"),
         }
     }
 

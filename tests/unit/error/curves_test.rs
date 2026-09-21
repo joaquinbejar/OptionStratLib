@@ -21,19 +21,25 @@ fn test_curve_error_from_options_error() {
 }
 
 #[test]
-fn test_curve_error_from_greeks_error() {
-    // Create a GreeksError
+fn test_curve_error_does_not_absorb_a_greeks_error() {
+    // The math layer no longer carries a pricing payload (#511). Analytics,
+    // which owns the projection, maps the Greek failure into the curve error
+    // it reports, keeping the reason.
     let greeks_error = GreeksError::invalid_volatility(-1.0, "greeks error test");
+    let curve_error = CurveError::MetricsError(format!("delta: {greeks_error}"));
 
-    // Convert to CurveError using From trait
-    let curve_error: CurveError = greeks_error.into();
-
-    // Verify the conversion was successful
     match curve_error {
-        CurveError::Greeks(_) => {
-            // The fact that we reached this arm means the conversion was successful
+        CurveError::MetricsError(reason) => {
+            assert!(
+                reason.contains("delta"),
+                "the failing Greek is named: {reason}"
+            );
+            assert!(
+                reason.contains("greeks error test"),
+                "the original reason survives: {reason}"
+            );
         }
-        _ => panic!("Expected Greeks variant, got something else"),
+        other => panic!("expected MetricsError, got {other:?}"),
     }
 }
 
@@ -72,19 +78,14 @@ fn test_curve_error_from_metrics_error() {
 }
 
 #[test]
-fn test_curve_error_from_graph_error() {
-    // Create a GraphError
-    let graph_error = GraphError::Render("graph error test".to_string());
+fn test_graph_error_wraps_the_curve_error() {
+    // The direction is visualization over math, never the reverse (#511).
+    let curve_error = CurveError::MetricsError("curve metrics".to_string());
+    let graph_error = GraphError::from(curve_error);
 
-    // Convert to CurveError using From trait
-    let curve_error: CurveError = graph_error.into();
-
-    // Verify the conversion was successful
-    match curve_error {
-        CurveError::Graph(_) => {
-            // The fact that we reached this arm means the conversion was successful
-        }
-        _ => panic!("Expected Graph variant, got something else"),
+    match graph_error {
+        GraphError::Curve(_) => {}
+        other => panic!("expected GraphError::Curve, got {other:?}"),
     }
 }
 

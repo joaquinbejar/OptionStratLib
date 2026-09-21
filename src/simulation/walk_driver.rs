@@ -14,7 +14,7 @@
 //! single implementation of that algorithm; each generator only supplies the
 //! closure that builds its `Y` value from the new price.
 
-use crate::error::{ChainError, SimulationError};
+use crate::error::SimulationError;
 use crate::model::decimal::d_sqrt;
 use crate::simulation::steps::{Step, Xstep, Ystep};
 use crate::simulation::{WalkParams, WalkType};
@@ -484,16 +484,14 @@ where
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
-/// random-walk generator returns an error — including
+/// Returns [`SimulationError`] if the random-walk generator fails — including
 /// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
 /// prices than `walk_params.size`.
 pub fn generator_positive(
     walk_params: &WalkParams<Positive, Positive>,
-) -> Result<Vec<Step<Positive, Positive>>, ChainError> {
-    // ChainError-typed adapter over the generic driver, kept for API
-    // compatibility with the chain/series generator family; the driver
-    // itself is error-generic and does not depend on the chains layer.
+) -> Result<Vec<Step<Positive, Positive>>, SimulationError> {
+    // The generator reports the error of its own layer (#511); a market
+    // market caller maps it into its own error where it uses it.
     walk_steps(walk_params, |new_price, _volatility, _x_step| {
         Ok(Some(*new_price))
     })
@@ -835,7 +833,7 @@ mod tests {
         let mut calls = 0;
         let steps = match walk_steps(
             &walk_params,
-            |price, _vol, _x| -> Result<Option<Positive>, ChainError> {
+            |price, _vol, _x| -> Result<Option<Positive>, SimulationError> {
                 calls += 1;
                 if calls > 3 {
                     Ok(None)
@@ -1001,10 +999,11 @@ mod tests {
             }),
         };
 
-        let double = |price: &Positive,
-                      _vol: Option<Positive>,
-                      _x: &Xstep<Positive>|
-         -> Result<Option<Positive>, ChainError> { Ok(Some(*price * 2.0)) };
+        let double =
+            |price: &Positive,
+             _vol: Option<Positive>,
+             _x: &Xstep<Positive>|
+             -> Result<Option<Positive>, SimulationError> { Ok(Some(*price * 2.0)) };
 
         let serial = match walk_steps(&walk_params, double) {
             Ok(steps) => steps,
@@ -1059,9 +1058,9 @@ mod tests {
         // speculative error must be discarded and the walk succeed.
         let steps = match walk_steps_par(
             &make_params(),
-            |price: &Positive, _vol, _x| -> Result<Option<Positive>, ChainError> {
+            |price: &Positive, _vol, _x| -> Result<Option<Positive>, SimulationError> {
                 if *price == pos_or_panic!(103.0) {
-                    Err(ChainError::invalid_parameters("test", "speculative error"))
+                    Err(SimulationError::invalid_parameters("speculative error"))
                 } else if *price == pos_or_panic!(102.0) {
                     Ok(None)
                 } else {
@@ -1080,9 +1079,9 @@ mod tests {
         // driver.
         let result = walk_steps_par(
             &make_params(),
-            |price: &Positive, _vol, _x| -> Result<Option<Positive>, ChainError> {
+            |price: &Positive, _vol, _x| -> Result<Option<Positive>, SimulationError> {
                 if *price == pos_or_panic!(101.0) {
-                    Err(ChainError::invalid_parameters("test", "early error"))
+                    Err(SimulationError::invalid_parameters("early error"))
                 } else if *price == pos_or_panic!(102.0) {
                     Ok(None)
                 } else {

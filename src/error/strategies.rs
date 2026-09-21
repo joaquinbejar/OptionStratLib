@@ -72,7 +72,6 @@
 use crate::error::common::OperationErrorKind;
 use crate::error::position::StrategyErrorKind;
 use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
-use crate::error::simulation::SimulationError;
 use crate::error::{GreeksError, OptionsError, PositionError, TradeError};
 use thiserror::Error;
 
@@ -118,10 +117,6 @@ pub enum StrategyError {
     /// Indicates a feature or operation that has not been implemented yet
     #[error("Not implemented")]
     NotImplemented,
-
-    /// A simulation-layer error surfaced while evaluating a strategy.
-    #[error(transparent)]
-    Simulation(Box<crate::error::SimulationError>),
 
     /// Greeks errors
     #[error(transparent)]
@@ -456,13 +451,6 @@ impl From<OptionsError> for StrategyError {
     }
 }
 
-impl From<crate::error::SimulationError> for StrategyError {
-    #[inline]
-    fn from(err: crate::error::SimulationError) -> Self {
-        StrategyError::Simulation(Box::new(err))
-    }
-}
-
 impl From<crate::error::PricingError> for StrategyError {
     fn from(err: crate::error::PricingError) -> Self {
         StrategyError::OperationError(OperationErrorKind::InvalidParameters {
@@ -538,7 +526,6 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::NotImplemented => reason("Strategy not implemented".to_string()),
             StrategyError::GreeksError(err) => reason(err.to_string()),
             StrategyError::PositiveError(err) => reason(err.to_string()),
-            StrategyError::Simulation(err) => reason(err.to_string()),
             StrategyError::NumericConversion { value } => reason(format!(
                 "numeric conversion failed: {value} is not a finite Decimal"
             )),
@@ -547,13 +534,6 @@ impl From<StrategyError> for ProbabilityError {
                 reason(format!("empty collection: {context}"))
             }
         }
-    }
-}
-
-impl From<StrategyError> for SimulationError {
-    #[inline]
-    fn from(err: StrategyError) -> Self {
-        SimulationError::Strategy(Box::new(err))
     }
 }
 
@@ -703,10 +683,12 @@ mod tests_extended {
     use super::*;
 
     #[test]
-    fn test_strategy_error_simulation() {
-        let sim_error = crate::error::SimulationError::walk_error("simulation failure");
-        let error = StrategyError::from(sim_error);
-        assert!(matches!(error, StrategyError::Simulation(_)));
+    fn test_strategy_error_does_not_wrap_a_simulation_error() {
+        // The strategies layer no longer carries a simulation payload
+        // (#511): a caller that runs a simulation reports it in its own
+        // error, which is what `backtesting` does.
+        let error = StrategyError::operation_not_supported("simulate", "strategies");
+        assert!(matches!(error, StrategyError::OperationError(_)));
     }
 
     #[test]

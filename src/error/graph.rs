@@ -45,14 +45,6 @@ impl From<SurfaceError> for GraphError {
 // sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
 // lower layer's error file never names a higher one.
 
-impl From<GraphError> for CurveError {
-    fn from(err: GraphError) -> Self {
-        CurveError::Graph(Box::new(err))
-    }
-}
-
-impl From<GraphError> for SurfaceError {
-    fn from(err: GraphError) -> Self {
-        SurfaceError::Graph(Box::new(err))
-    }
-}
+// A rendering failure is not a curve or surface failure: visualization
+// reports it, and the math layer no longer carries a variant for it
+// (#511). `GraphError::{Curve, Surface}` keep the downward direction.

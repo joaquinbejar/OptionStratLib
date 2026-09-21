@@ -103,7 +103,7 @@
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs` |
 //! | simulation | `simulation.rs` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`) |
-//! | analytics | `transaction.rs`, `probability.rs` |
+//! | analytics | `transaction.rs`, `probability.rs`, `projections.rs` |
 //! | strategies | `strategies.rs` |
 //! | visualization | `graph.rs` |
 //! | facade | `unified.rs`, this file's re-exports |
@@ -207,7 +207,13 @@ mod interpolation;
 /// * Risk metric validation
 /// * Statistical measurement errors
 /// * Benchmark comparison issues
+/// Backtest-owned failures (a strategy driven through a simulation).
+mod backtesting;
+
 mod metrics;
+
+/// Analytics-owned projection failures (curves and surfaces from option data).
+mod projections;
 
 /// ### Surface Errors (`SurfaceError`)
 /// Covers:
@@ -257,6 +263,7 @@ mod csv;
 /// Provides a single error type for unified error handling across modules.
 pub mod unified;
 
+pub use backtesting::BacktestError;
 pub use chains::ChainError;
 pub use common::OperationErrorKind;
 pub use csv::OhlcvError;
@@ -270,6 +277,7 @@ pub use options::{OptionsError, OptionsResult};
 pub use position::PositionError;
 pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
+pub use projections::ProjectionError;
 pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
 pub use surfaces::SurfaceError;

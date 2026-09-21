@@ -88,6 +88,8 @@ ERROR_FILE_LAYER = {
     "metrics": "math",  # depends only on CurveError/SurfaceError (M1 D2)
     "probability": "analytics",
     "strategies": "strategies",
+    "backtesting": "backtest",
+    "projections": "analytics",
     "graph": "visualization",
     "unified": "facade",
     "mod": "facade",
@@ -151,11 +153,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
     # `Strategable: ... + Graph` supertrait bound.
     ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
-    # `SimulationError::GraphError(#[from] GraphError)`.
-    ("error/simulation", "error/graph"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6)"),
-    # `StrategyError::Simulation(Box<SimulationError>)` and the conversion
-    # that lives next to its source.
-    ("error/strategies", "error/simulation"): (frozenset({"error/strategies.rs"}), "0.22.0 batch (ADR-0001 D6, #505)"),
     # --- Surfaced by the error-type resolver (#590). Each entry names the
     # issue that owns its resolution; none is new debt, all were invisible
     # because the reference is spelled `crate::error::Name`.
@@ -190,20 +187,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         }),
         "retype ResultPoint (M1 exit proposal D3 row 6, #507)",
     ),
-    # The `synthetic` chain walk driver belongs with the market generators.
-    ("simulation", "error/chains"): (frozenset({"simulation/walk_driver.rs"}), "re-home to market synthetic (#512)"),
-    # Variant payloads that hold a higher layer's error (ADR-0001 D6, #511):
-    # `OptionsError::Greeks`, `CurveError::{Greeks, Graph}`,
-    # `SurfaceError::{Greeks, Graph}`, `VolatilityError::Chain`,
-    # `SimulationError::{Chain, Strategy}`.
-    ("error/options", "error/greeks"): (frozenset({"error/options.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/curves", "error/greeks"): (frozenset({"error/curves.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/curves", "error/graph"): (frozenset({"error/curves.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/surfaces", "error/greeks"): (frozenset({"error/surfaces.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/surfaces", "error/graph"): (frozenset({"error/surfaces.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/volatility", "error/chains"): (frozenset({"error/volatility.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/simulation", "error/chains"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
-    ("error/simulation", "error/strategies"): (frozenset({"error/simulation.rs"}), "0.22.0 batch (ADR-0001 D6, #511)"),
 }
 
 MARKER = "// facade-compat:"

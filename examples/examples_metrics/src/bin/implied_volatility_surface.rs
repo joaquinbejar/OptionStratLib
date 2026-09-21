@@ -20,7 +20,7 @@ use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
-fn main() -> Result<(), SurfaceError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     setup_logger();
 
     // Load option chain from JSON file

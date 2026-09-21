@@ -61,7 +61,7 @@
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `OptionsError`; the `Greeks(GreeksError)` variant is a pricing reference removed in the batch behind the 0.22.0 bump.
 
-use crate::error::{DecimalError, GreeksError};
+use crate::error::DecimalError;
 use expiration_date::error::ExpirationDateError;
 use thiserror::Error;
 
@@ -185,10 +185,6 @@ pub enum OptionsError {
     /// Error when DecimalError occurs
     #[error(transparent)]
     Decimal(#[from] DecimalError),
-
-    /// Error when GreeksError occurs
-    #[error(transparent)]
-    Greeks(#[from] GreeksError),
 
     /// Expiration-date conversion error surfaced during options operations.
     #[error(transparent)]
