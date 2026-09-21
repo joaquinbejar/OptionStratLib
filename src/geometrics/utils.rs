@@ -71,7 +71,7 @@ pub trait GeometricObject<Point: Clone, Input> {
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        T: Into<ConstructionMethod<Point, Input>>;
+        T: Into<ConstructionMethod<Point, Input, Self::Error>>;
 
     /// Returns the points of the geometric object as a `Vec` of references.
     /// Equivalent to calling the `vector()` method.
@@ -138,7 +138,7 @@ mod tests_geometric_object {
         fn construct<T>(method: T) -> Result<Self, Self::Error>
         where
             Self: Sized,
-            T: Into<ConstructionMethod<TestPoint, Decimal>>,
+            T: Into<ConstructionMethod<TestPoint, Decimal, Self::Error>>,
         {
             let method = method.into();
             match method {

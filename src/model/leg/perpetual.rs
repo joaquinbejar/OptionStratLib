@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError, PricingError};
+use crate::error::{GreeksError, PositionError};
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::{Fundable, LegAble, Marginable};
 use crate::model::types::Side;
@@ -267,9 +267,9 @@ impl PerpetualPosition {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::Decimal`] when the price difference or the
+    /// Returns [`PositionError::DecimalError`] when the price difference or the
     /// quantity scaling leaves the representable `Decimal` range.
-    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         let price_change = d_sub(
             current_price.to_dec(),
             self.entry_price.to_dec(),
@@ -303,9 +303,9 @@ impl PerpetualPosition {
     /// # Errors
     ///
     /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
-    /// [`PricingError::Decimal`] when the ratio or its percentage scaling
+    /// [`PositionError::DecimalError`] when the ratio or its percentage scaling
     /// leaves the representable `Decimal` range.
-    pub fn roe_percentage(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+    pub fn roe_percentage(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         if self.margin == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
@@ -338,9 +338,9 @@ impl PerpetualPosition {
     /// # Errors
     ///
     /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
-    /// [`PricingError::Decimal`] when the equity sum or the ratio leaves the
+    /// [`PositionError::DecimalError`] when the equity sum or the ratio leaves the
     /// representable `Decimal` range.
-    pub fn margin_ratio(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+    pub fn margin_ratio(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         // Formed here rather than read from `notional_value_at_price`, whose
         // raw product aborts for a quantity and price whose product leaves
         // the `Positive` range — before this `Result` could report it.
@@ -385,9 +385,9 @@ impl PerpetualPosition {
     /// # Errors
     ///
     /// Propagates [`PerpetualPosition::unrealized_pnl`], and returns
-    /// [`PricingError::Decimal`] when the equity sum or the quotient leaves
+    /// [`PositionError::DecimalError`] when the equity sum or the quotient leaves
     /// the representable `Decimal` range.
-    pub fn effective_leverage(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+    pub fn effective_leverage(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         let equity = d_add(
             self.margin.to_dec(),
             self.unrealized_pnl(current_price)?,
@@ -419,7 +419,7 @@ impl LegAble for PerpetualPosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
         Ok(d_sub(
             self.unrealized_pnl(price)?,
             self.fees.to_dec(),

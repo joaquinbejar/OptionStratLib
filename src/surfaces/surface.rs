@@ -649,10 +649,10 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     /// This function creates a Surface object from either a set of 3D points or a parametric function.
     ///
     /// # Parameters
-    /// * `method` - A construction method that can be converted into a `ConstructionMethod<Point3D, Point2D>`
+    /// * `method` - A construction method that can be converted into a `ConstructionMethod<Point3D, Point2D, SurfaceError>`
     ///
     /// # Type Parameters
-    /// * `T` - Type that can be converted into a `ConstructionMethod<Point3D, Point2D>`
+    /// * `T` - Type that can be converted into a `ConstructionMethod<Point3D, Point2D, SurfaceError>`
     ///
     /// # Returns
     /// * `Result<Self, Self::Error>` - Either a successfully constructed Surface or an error
@@ -684,7 +684,8 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     /// # fn run() -> Result<(), optionstratlib::error::Error> {
     /// use rust_decimal_macros::dec;
     /// use optionstratlib::curves::Point2D;
-    /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, ResultPoint};
+    /// use optionstratlib::error::SurfaceError;
+    /// use optionstratlib::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
     /// use optionstratlib::surfaces::{Point3D, Surface};
     /// let params = ConstructionParams::D3 {
     ///     x_start: dec!(-1.0),
@@ -696,7 +697,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     /// };
     ///
     /// // Parametric function defining a paraboloid: z = x² + y²
-    /// let f = Box::new(|p: Point2D| -> ResultPoint<Point3D> {
+    /// let f = Box::new(|p: Point2D| -> Result<Point3D, SurfaceError> {
     ///     Ok(Point3D {
     ///         x: p.x,
     ///         y: p.y,
@@ -711,7 +712,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
     fn construct<T>(method: T) -> Result<Self, Self::Error>
     where
         Self: Sized,
-        T: Into<ConstructionMethod<Point3D, Point2D>>,
+        T: Into<ConstructionMethod<Point3D, Point2D, SurfaceError>>,
     {
         let method = method.into();
         match method {
@@ -765,7 +766,7 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                                 d_mul(y_step, Decimal::from(j), op).map_err(construction_err)?;
                             let y = d_add(y_start, y_offset, op).map_err(construction_err)?;
                             let t = Point2D::new(x, y);
-                            f(t).map_err(|e| SurfaceError::ConstructionError(e.to_string()))
+                            f(t)
                         })
                     })
                     .collect();
@@ -2464,7 +2465,6 @@ mod tests_surface_basic {
 #[cfg(test)]
 mod tests_surface_geometric_object {
     use super::*;
-    use crate::geometrics::ResultPoint;
     use rust_decimal_macros::dec;
 
     // Helper function to create test points
@@ -2528,8 +2528,8 @@ mod tests_surface_geometric_object {
     #[test]
     fn test_construct_parametric() {
         // Create a simple parametric function that creates a basic surface
-        let parametric_func: Box<dyn Fn(Point2D) -> ResultPoint<Point3D> + Send + Sync> =
-            Box::new(move |t: Point2D| -> ResultPoint<Point3D> {
+        let parametric_func: Box<dyn Fn(Point2D) -> Result<Point3D, SurfaceError> + Send + Sync> =
+            Box::new(move |t: Point2D| -> Result<Point3D, SurfaceError> {
                 Ok(Point3D::new(
                     t.x,
                     t.y,
@@ -2560,8 +2560,8 @@ mod tests_surface_geometric_object {
 
     #[test]
     fn test_construct_parametric_invalid_params() {
-        let parametric_func: Box<dyn Fn(Point2D) -> ResultPoint<Point3D> + Send + Sync> =
-            Box::new(move |_: Point2D| -> ResultPoint<Point3D> {
+        let parametric_func: Box<dyn Fn(Point2D) -> Result<Point3D, SurfaceError> + Send + Sync> =
+            Box::new(move |_: Point2D| -> Result<Point3D, SurfaceError> {
                 Ok(Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0)))
             });
 
@@ -2583,12 +2583,11 @@ mod tests_surface_geometric_object {
     #[test]
     fn test_construct_parametric_error_handling() {
         // Parametric function that sometimes fails
-        let parametric_func: Box<dyn Fn(Point2D) -> ResultPoint<Point3D> + Send + Sync> =
-            Box::new(move |t: Point2D| -> ResultPoint<Point3D> {
+        let parametric_func: Box<dyn Fn(Point2D) -> Result<Point3D, SurfaceError> + Send + Sync> =
+            Box::new(move |t: Point2D| -> Result<Point3D, SurfaceError> {
                 if t.x > dec!(0.5) && t.y > dec!(0.5) {
-                    Err(crate::error::ChainError::invalid_parameters(
-                        "parametric_f",
-                        "Test error",
+                    Err(SurfaceError::generator(
+                        crate::error::ChainError::invalid_parameters("parametric_f", "Test error"),
                     ))
                 } else {
                     Ok(Point3D::new(t.x, t.y, t.x * t.y))
@@ -2609,7 +2608,17 @@ mod tests_surface_geometric_object {
             params,
         });
 
-        assert!(matches!(result, Err(SurfaceError::ConstructionError(_))));
+        // The generator's own error survives: still a `ChainError`, not a
+        // message (roadmap M1-10).
+        match result {
+            Err(SurfaceError::Generator(source)) => {
+                let cause = source
+                    .downcast_ref::<crate::error::ChainError>()
+                    .expect("the generator's ChainError must survive boxing");
+                assert!(cause.to_string().contains("Test error"));
+            }
+            other => panic!("expected SurfaceError::Generator, got {other:?}"),
+        }
     }
 
     #[test]

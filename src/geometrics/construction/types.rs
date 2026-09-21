@@ -4,16 +4,9 @@
    Date: 26/8/24
 ******************************************************************************/
 
-use crate::error::ChainError;
 use rust_decimal::Decimal;
 use std::collections::BTreeSet;
 use utoipa::ToSchema;
-
-/// A result type for geometric point operations that may fail.
-///
-/// This type alias provides a consistent way to handle point generation operations
-/// that could result in errors, encapsulating the resulting point or an error.
-pub type ResultPoint<Point> = Result<Point, ChainError>;
 
 /// Parameters for constructing geometric objects in different dimensions.
 ///
@@ -66,7 +59,7 @@ pub enum ConstructionParams {
 /// The generic parameters allow flexibility in the types of points and input parameters used:
 /// - `Point`: The type representing a coordinate in the geometric space
 /// - `Input`: The parameter type passed to parametric functions (typically `Decimal` for 2D or `(Decimal, Decimal)` for 3D)
-pub enum ConstructionMethod<Point, Input> {
+pub enum ConstructionMethod<Point, Input, Error> {
     /// Construct a geometric object from an explicit set of points.
     ///
     /// This method uses a sorted collection of points to directly define
@@ -83,7 +76,11 @@ pub enum ConstructionMethod<Point, Input> {
     Parametric {
         /// Function that maps from parameter space to point coordinates.
         /// Must be thread-safe to support parallel computation.
-        f: Box<dyn Fn(Input) -> ResultPoint<Point> + Send + Sync>,
+        ///
+        /// It reports the constructed object's own error type, so a failure
+        /// reaches the caller as the variant the generator raised instead of
+        /// being flattened into a string at the construction boundary.
+        f: Box<dyn Fn(Input) -> Result<Point, Error> + Send + Sync>,
 
         /// Parameters defining the domain for sampling the parametric function
         params: ConstructionParams,

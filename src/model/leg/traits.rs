@@ -13,7 +13,7 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-use crate::error::{GreeksError, PositionError, PricingError};
+use crate::error::{GreeksError, PositionError};
 use crate::model::types::Side;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -62,13 +62,13 @@ pub trait LegAble {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::Decimal`] when the price difference, the
+    /// Returns [`PositionError::DecimalError`] when the price difference, the
     /// quantity scaling or the fee deduction leaves the representable
-    /// `Decimal` range, and [`PricingError::Positive`] when a fee total
+    /// `Decimal` range, and [`PositionError::PositiveError`] when a fee total
     /// leaves the `Positive` range. Option legs additionally propagate
     /// whatever [`crate::model::position::Position::pnl_at_expiration`]
     /// reports.
-    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError>;
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError>;
 
     /// Returns the total cost to establish this position.
     ///
@@ -327,7 +327,7 @@ mod tests {
             self.side
         }
 
-        fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+        fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
             let value_change = (price.to_dec() - self.cost_basis.to_dec()) * self.quantity.to_dec();
             Ok(match self.side {
                 Side::Long => value_change,

@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError, PricingError};
+use crate::error::{GreeksError, PositionError};
 use crate::model::ExpirationDate;
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
@@ -246,10 +246,10 @@ impl FuturePosition {
     ///
     /// # Errors
     ///
-    /// Returns [`PricingError::Decimal`] when the price difference, the
+    /// Returns [`PositionError::DecimalError`] when the price difference, the
     /// quantity scaling or the contract-size scaling leaves the representable
     /// `Decimal` range.
-    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PricingError> {
+    pub fn unrealized_pnl(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         let price_change = d_sub(
             current_price.to_dec(),
             self.entry_price.to_dec(),
@@ -325,7 +325,7 @@ impl LegAble for FuturePosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
         Ok(d_sub(
             self.unrealized_pnl(price)?,
             self.fees.to_dec(),

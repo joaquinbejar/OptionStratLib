@@ -35,7 +35,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError, PricingError};
+use crate::error::{GreeksError, PositionError};
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
@@ -249,7 +249,7 @@ impl LegAble for SpotPosition {
         self.side
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
         let price_change = d_sub(
             price.to_dec(),
             self.cost_basis.to_dec(),

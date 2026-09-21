@@ -33,7 +33,7 @@
 //! assert!(spot_leg.is_spot());
 //! ```
 
-use crate::error::{GreeksError, PositionError, PricingError};
+use crate::error::{GreeksError, PositionError};
 use crate::model::leg::future::FuturePosition;
 use crate::model::leg::perpetual::PerpetualPosition;
 use crate::model::leg::spot::SpotPosition;
@@ -260,7 +260,7 @@ impl LegAble for Leg {
         }
     }
 
-    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PricingError> {
+    fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
         match self {
             // The option arm used to swallow the failure as
             // `unwrap_or(Decimal::ZERO)`, which reported a break-even where

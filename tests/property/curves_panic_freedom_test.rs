@@ -258,7 +258,7 @@ proptest! {
             f: Box::new(|t: Decimal| Ok(Point2D::new(t, t))),
             params: ConstructionParams::D2 { t_start: start, t_end: end, steps },
         });
-        let _ = Curve::construct(ConstructionMethod::<Point2D, Decimal>::FromData {
+        let _ = Curve::construct(ConstructionMethod::<Point2D, Decimal, optionstratlib::error::CurveError>::FromData {
             points: BTreeSet::new(),
         });
     }
@@ -387,7 +387,7 @@ proptest! {
                 x_start, x_end, y_start, y_end, x_steps, y_steps,
             },
         });
-        let _ = Surface::construct(ConstructionMethod::<Point3D, Point2D>::FromData {
+        let _ = Surface::construct(ConstructionMethod::<Point3D, Point2D, optionstratlib::error::SurfaceError>::FromData {
             points: BTreeSet::new(),
         });
     }

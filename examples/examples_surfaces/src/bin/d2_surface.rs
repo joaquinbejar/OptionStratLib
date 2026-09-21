@@ -28,7 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dec!(0.05),
                 pos_or_panic!(30.0),
                 pos_or_panic!(0.2),
-            )?;
+            )
+            .map_err(SurfaceError::generator)?;
 
             // Create a 3D point with underlying price (x), strike price (y), and delta (z)
             Ok(Point3D::new(t.x, t.y, delta_value))

@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use crate::error::position::PositionValidationErrorKind;
-use crate::error::{PositionError, PricingError, TradeError};
+use crate::error::{PositionError, TradeError};
 use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::trade::TradeStatusAble;
@@ -297,7 +297,7 @@ impl Position {
     ///
     /// # Returns
     ///
-    /// * `Result<Decimal, PricingError>` - The calculated profit or loss as a Decimal value,
+    /// * `Result<Decimal, PositionError>` - The calculated profit or loss as a Decimal value,
     ///   or an error if the calculation fails.
     ///
     /// # Examples
@@ -336,8 +336,8 @@ impl Position {
     ///
     /// Propagates any `OptionsError` returned by the underlying payoff
     /// evaluation ([`Options::intrinsic_value`] or [`Options::payoff`]),
-    /// wrapped as `PricingError::OptionError`.
-    pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PricingError> {
+    /// wrapped as `PositionError::Options`.
+    pub fn pnl_at_expiration(&self, price: &Option<&Positive>) -> Result<Decimal, PositionError> {
         // P&L = intrinsic_value - total_cost + premium_received.
         // All three terms are monetary and the composition surfaces the
         // user-visible P&L, so the fused arithmetic goes through `d_add` /
@@ -355,7 +355,7 @@ impl Position {
             premium_recv,
             "position::pnl_at_expiration::total",
         )
-        .map_err(PricingError::from)
+        .map_err(PositionError::from)
     }
 
     /// Calculates the unrealized profit and loss (PnL) for an options position at a given price.
@@ -408,7 +408,7 @@ impl Position {
     ///
     /// Returns [`PositionError`] wrapping any
     /// [`PositionValidationErrorKind`] surfaced by the internal Black–Scholes
-    /// evaluation, or `PositionError::PricingError` when the
+    /// evaluation, or `PositionError::PositionError` when the
     /// implied-volatility recomputation at `price` fails.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
         // Per-contract P&L (Long: price - premium - fees; Short: premium -

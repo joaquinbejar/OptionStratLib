@@ -177,15 +177,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     # --- Surfaced by the error-type resolver (#590). Each entry names the
     # issue that owns its resolution; none is new debt, all were invisible
     # because the reference is spelled `crate::error::Name`.
-    # `LegAble::pnl_at_price` and `Position::pnl_at_expiration` report
-    # `PricingError`; the retype to a core-owned error is the core boundary.
-    ("model", "error/pricing"): (
-        frozenset({
-            "model/leg/traits.rs", "model/leg/leg_enum.rs", "model/leg/spot.rs",
-            "model/leg/future.rs", "model/leg/perpetual.rs", "model/position.rs",
-        }),
-        "retype to a core error (M1 exit proposal D3 row 5, #507)",
-    ),
     # The Greek methods of `LegAble` report `GreeksError`; they move to the
     # pricing-owned extension trait with the methods themselves.
     ("model", "error/greeks"): (
@@ -197,17 +188,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ),
     # `Options::calculate_implied_volatility` wrapper signature.
     ("model", "error/volatility"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499)"),
-    # `pub type ResultPoint<P> = Result<P, ChainError>` used by the curve and
-    # surface constructors; the alias carries the edge to everyone who
-    # re-exports or names it (the `surfaces` uses are `#[cfg(test)]`).
-    ("geometrics", "error/chains"): (
-        frozenset({
-            "geometrics/construction/types.rs",
-            "geometrics/construction/mod.rs",
-            "geometrics/mod.rs",
-        }),
-        "retype ResultPoint (M1 exit proposal D3 row 6, #507)",
-    ),
 }
 
 MARKER = "// facade-compat:"
@@ -1236,6 +1216,15 @@ def self_test() -> int:
             if not ok:
                 failures += 1
             print(f"self-test {'ok' if ok else 'FAIL'}: synthetic gate, {name} (expected {expected}, got {got})")
+    # Every tolerated edge must name the issue that removes it, so M1 cannot
+    # close with an undocumented production edge (roadmap M1-10).
+    unowned = [f"{s} -> {d}" for (s, d), (_, owner) in DEFERRED.items() if not re.search(r"#\d+", owner)]
+    ok = not unowned
+    if not ok:
+        failures += 1
+        for item in unowned:
+            print(f"  deferred edge without an owning issue: {item}")
+    print(f"self-test {'ok' if ok else 'FAIL'}: every deferred edge names an owning issue ({len(DEFERRED)} entries)")
     return 1 if failures else 0
 
 

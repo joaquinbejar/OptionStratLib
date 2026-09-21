@@ -16,12 +16,13 @@
 //! 1. [Introduction](#introduction)
 //! 2. [Features](#features)
 //! 3. [Core Modules](#core-modules)
-//! 4. [Trading Strategies](#trading-strategies)
-//! 5. [Setup Instructions](#setup-instructions)
-//! 6. [Library Usage](#library-usage)
-//! 7. [Usage Examples](#usage-examples)
-//! 8. [Testing](#testing)
-//! 9. [Contribution and Contact](#contribution-and-contact)
+//! 4. [Module Boundaries](#module-boundaries)
+//! 5. [Trading Strategies](#trading-strategies)
+//! 6. [Setup Instructions](#setup-instructions)
+//! 7. [Library Usage](#library-usage)
+//! 8. [Usage Examples](#usage-examples)
+//! 9. [Testing](#testing)
+//! 10. [Contribution and Contact](#contribution-and-contact)
 //!
 //! ## Introduction
 //!
@@ -365,6 +366,70 @@
 //! - Comprehensive error types for each module
 //! - Type-safe error propagation
 //! - Detailed error reporting
+//!
+//!
+//! ## Module Boundaries
+//!
+//! The modules form a directed acyclic graph of layers. Every module belongs
+//! to exactly one layer and may reference only its own layer and the ones
+//! below it. This is the graph the 0.22 workspace split follows, so the
+//! layers, not the module names, are what a future crate boundary cuts along
+//! (ADR-0001 D9).
+//!
+//! ```mermaid
+//! flowchart BT
+//!     CORE["core — model, constants, utils"]
+//!     MATH["math — geometrics, curves, surfaces"]
+//!     PRICING["pricing — pricing, greeks, volatility"]
+//!     SIM["simulation"]
+//!     MARKET["market — chains, series"]
+//!     ANALYTICS["analytics — analytics, pnl, risk, metrics"]
+//!     STRAT["strategies"]
+//!     BACKTEST["backtesting"]
+//!     VIS["visualization"]
+//!
+//!     MATH --> CORE
+//!     PRICING --> MATH
+//!     SIM --> PRICING
+//!     MARKET --> PRICING
+//!     MARKET -. "synthetic (optional)" .-> SIM
+//!     ANALYTICS --> MARKET
+//!     STRAT --> ANALYTICS
+//!     BACKTEST --> STRAT
+//!     BACKTEST --> SIM
+//!     VIS --> BACKTEST
+//! ```
+//!
+//! Two rules make the graph checkable rather than aspirational:
+//!
+//! - **`src/error` is partitioned, not a layer of its own.** Each file under
+//!   `src/error` belongs to the layer that raises it, so a lower layer
+//!   returning a higher layer's error is a forbidden edge even though both
+//!   types live in the same directory. `src/utils` is partitioned the same
+//!   way, per file.
+//! - **The one optional edge is `market -> simulation`, gated by
+//!   `synthetic`.** Building with `default-features = false` leaves a market
+//!   surface that names no simulation type, including through `ChainError`.
+//!
+//! ### Enforcement
+//!
+//! ```sh
+//! make check-graph           # layer DAG, error/utils partition, synthetic gate
+//! make check-feature-trees   # the dependency graph of each market surface
+//! ```
+//!
+//! Both run in CI on every pull request. `check-graph` resolves each
+//! `crate::error::Name` reference to the file that defines it, follows
+//! re-exports and aliases, and ignores `#[cfg(test)]` items, so a violation
+//! cannot hide behind a bare import path or a test module. It also runs a
+//! self-test proving the scanner catches what it must.
+//!
+//! Known reverse edges whose removal is a breaking change wait in the
+//! script's `DEFERRED` table, scoped to the exact files that carry them and
+//! each naming the issue that removes it; the same module pair in any other
+//! file is a fresh violation, and an entry whose edge has disappeared is
+//! reported so the list gets pruned. `python3 scripts/check_module_boundaries.py
+//! --inventory` prints the current table.
 //!
 //! ## Core Components
 //!
