@@ -14,10 +14,9 @@ use positive::pos_or_panic;
 use crate::analytics::probability::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
 };
-use crate::error::probability::ProbabilityError;
+use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
 use crate::error::strategies::StrategyError;
 use crate::model::ProfitLossRange;
-use crate::model::utils::sub_floor_zero;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
@@ -150,6 +149,14 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// `probability_at` (typically
     /// `ProbabilityCalculationErrorKind::InvalidProbabilityRange`
     /// for malformed volatility adjustments).
+    ///
+    /// Also returns
+    /// [`ProbabilityCalculationErrorKind::InvalidProbability`] when the
+    /// cumulative probability at a price is smaller than at the previous one.
+    /// A distribution function is monotone over an ascending range, so this
+    /// only happens when the inputs sit past the precision of the price model;
+    /// it is reported rather than floored to zero, which would weight the
+    /// expected value by a distribution that does not sum to one.
     fn expected_value(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -187,11 +194,32 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 None,
             )?;
 
-            // The CDF is monotone over an ascending price range, so the
-            // marginal mass is non-negative; flooring absorbs the rounding of
-            // the `Decimal -> f64 -> Decimal` round trip inside `big_n`
-            // instead of aborting on a difference of one ulp.
-            let marginal_prob = sub_floor_zero(prob.0, &last_prob);
+            // A distribution function is monotone over an ascending price
+            // range, so each step's marginal mass is non-negative; equality is
+            // a zero-width step with mass zero, which `sub_or_none` returns. A
+            // smaller probability at the higher price is a result outside the
+            // model's precision, not a property of the range: near
+            // `Positive::MAX` with a volatility around `1e-28`, a ratio that
+            // rounds to `0.9999999999999999999999999999` makes
+            // `Decimal::checked_ln` return `+9e-28` where the true value is
+            // `-1e-28`, which puts the lower price above the spot. Flooring
+            // that to zero dropped the step silently and left the expected
+            // value weighted by a distribution that does not sum to one, so it
+            // is reported (#570, same rule as
+            // `ProfitLossRange::calculate_probability`, #569).
+            let marginal_prob = prob.0.sub_or_none(&last_prob).ok_or_else(|| {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::InvalidProbability {
+                        value: prob.0.to_f64() - last_prob.to_f64().unwrap_or(f64::NAN),
+                        reason: format!(
+                            "cumulative probability at {price} ({}) is smaller than at \
+                             the previous price ({last_prob}); the inputs are outside \
+                             the precision of the price model",
+                            prob.0
+                        ),
+                    },
+                )
+            })?;
             probabilities.push(marginal_prob);
             last_prob = prob.0.to_dec();
         }
@@ -711,6 +739,84 @@ mod tests_expected_value {
         assert!(
             result.unwrap() >= Positive::ZERO,
             "Expected value should be non-negative"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_marginal_probability_inversion {
+    use super::*;
+    use crate::ExpirationDate;
+    use crate::strategies::BullCallSpread;
+    use rust_decimal_macros::dec;
+
+    fn spread(spot: f64, volatility: f64) -> Result<BullCallSpread, StrategyError> {
+        BullCallSpread::new(
+            "PROBE".to_string(),
+            Positive::new(spot).expect("the probe spot is positive and finite"),
+            Positive::new(spot).expect("the probe spot is positive and finite"),
+            Positive::new(spot * 1.000_000_1).expect("the probe strike is positive and finite"),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::new(volatility).expect("the probe volatility is positive and finite"),
+            dec!(0.05),
+            Positive::ZERO,
+            Positive::ONE,
+            pos_or_panic!(27.26),
+            pos_or_panic!(5.33),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.55),
+            pos_or_panic!(0.54),
+        )
+    }
+
+    /// `expected_value` weights each profit by the marginal mass between two
+    /// consecutive prices, and #570 replaced the floor on that subtraction
+    /// with the same report `ProfitLossRange::calculate_probability` uses.
+    ///
+    /// The inversion itself is not reachable here through the public API: the
+    /// grid steps by `spot / 100`, so a ratio close enough to one to invert
+    /// `checked_ln` needs a spot near `Positive::MAX`, and the profit
+    /// computation overflows before the probabilities are touched (measured:
+    /// `7.9e28` reports `arithmetic error during mul_f64: overflow`). The
+    /// report is therefore a guard, and these tests pin the other half of the
+    /// contract, that it does not misfire on the extreme inputs that *are*
+    /// reachable. If the grid or the price model changes so the inversion
+    /// becomes reachable, it errors rather than silently under-weighting a
+    /// step.
+    #[test]
+    fn test_degenerate_volatility_at_a_large_spot_still_succeeds() {
+        for spot in [1e15f64, 1e20, 1e26, 1e28] {
+            let strategy = match spread(spot, 1e-28) {
+                Ok(strategy) => strategy,
+                Err(error) => panic!("the probe spread must construct at {spot:e}: {error:?}"),
+            };
+            let result = strategy.expected_value(None, None);
+            assert!(
+                result.is_ok(),
+                "a monotone grid must not report an inversion at {spot:e}, got {result:?}"
+            );
+        }
+    }
+
+    /// The ordinary path keeps working, including with a volatility
+    /// adjustment, which is what exercises the two independent round trips
+    /// through `big_n`.
+    #[test]
+    fn test_ordinary_spread_expected_value_is_unaffected() {
+        let strategy = match spread(2505.8, 0.2) {
+            Ok(strategy) => strategy,
+            Err(error) => panic!("the ordinary spread must construct: {error:?}"),
+        };
+        let adjustment = Some(VolatilityAdjustment {
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
+        });
+
+        let result = strategy.expected_value(adjustment, None);
+        assert!(
+            result.is_ok(),
+            "an ordinary spread must not report an inversion, got {result:?}"
         );
     }
 }
