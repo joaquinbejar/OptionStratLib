@@ -1291,7 +1291,6 @@ impl optionstratlib::analytics::rnd::RNDAnalysis for optionstratlib::chains::cha
 pub fn optionstratlib::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib::analytics::rnd::RNDResult, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib::error::chains::ChainError>
 pub fn optionstratlib::chains::generator_optionchain(&optionstratlib::simulation::WalkParams<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, optionstratlib::chains::chain::OptionChain>>, optionstratlib::error::chains::ChainError>
-pub fn optionstratlib::chains::generator_positive(&optionstratlib::simulation::WalkParams<positive::positive::Positive, positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, positive::positive::Positive>>, optionstratlib::error::simulation::SimulationError>
 pub mod optionstratlib::constants
 pub const optionstratlib::constants::DEFAULT_BINOMIAL_STEPS: core::num::nonzero::NonZeroUsize
 pub const optionstratlib::constants::DEFAULT_MC_PATHS: core::num::nonzero::NonZeroUsize

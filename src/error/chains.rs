@@ -52,13 +52,13 @@
 //! * `From<csv::Error>` and `From<serde_json::Error>` to `FileErrorKind::ParseError`
 //! * `From<DecimalError>`, `From<GreeksError>`, `From<OptionsError>` to the
 //!   appropriate `OptionDataErrorKind` variant
-//! * `From<CurveError>`, `From<VolatilityError>`, `From<SimulationError>`,
+//! * `From<CurveError>`, `From<VolatilityError>`, `From<SimulationError>` (under `synthetic`),
 //!   `From<ExpirationDateError>` with typed wrapping (see variants below)
 //!
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper
 //! error handling and formatting.
 //!
-//! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`; the `Simulation(SimulationError)` payload follows ADR-0003 section 4 after the bump.
+//! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`; the `Simulation(SimulationError)` variant is gated by `synthetic` (ADR-0003 section 4, M1-15), so the minimal market surface names no simulation type.
 
 use crate::error::{DecimalError, GreeksError, OptionsError};
 use positive::Positive;
@@ -185,6 +185,11 @@ pub enum ChainError {
     Volatility(Box<crate::error::VolatilityError>),
 
     /// A simulation-layer error surfaced during chain construction.
+    ///
+    /// Gated by `synthetic` (ADR-0003, roadmap M1-15): the simulation-backed
+    /// generators are the only producers, so a minimal market consumer never
+    /// names a simulation type through this enum.
+    #[cfg(feature = "synthetic")]
     #[error(transparent)]
     Simulation(Box<crate::error::SimulationError>),
 
@@ -692,6 +697,7 @@ impl From<crate::error::CurveError> for ChainError {
     }
 }
 
+#[cfg(feature = "synthetic")]
 impl From<crate::error::SimulationError> for ChainError {
     #[inline]
     fn from(err: crate::error::SimulationError) -> Self {

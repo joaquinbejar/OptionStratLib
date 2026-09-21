@@ -72,6 +72,20 @@ check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
 	@python3 scripts/check_module_boundaries.py
 
+# Pins the dependency graph of the market surface without `synthetic` and with
+# it (roadmap M1-15), one fixture each, as a `parent -> child` edge list
+# resolved with `cargo tree --target all` so it is host-independent. The
+# difference between the two is derived and printed; it is empty while this is
+# one crate, which is the point. Run `make feature-trees-update` to record an
+# intended change.
+.PHONY: check-feature-trees
+check-feature-trees:
+	@python3 scripts/check_feature_trees.py
+
+.PHONY: feature-trees-update
+feature-trees-update:
+	@python3 scripts/check_feature_trees.py --update
+
 # Reports the public API changes of a pull request per feature surface
 # (#606). `check-api-report` runs the parser's self-test only; the comparison
 # needs a baseline and runs in CI (`api_changes.yml`) or with

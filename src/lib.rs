@@ -822,8 +822,11 @@
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 //! - `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data (tokio + reqwest + futures)
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
-//!   (`chains::generator_optionchain`, `series::generator_optionseries`); disable it with
-//!   `default-features = false` for a market surface that never touches the simulation engine
+//!   (`chains::generator_optionchain`, `series::generator_optionseries`) and the
+//!   `ChainError::Simulation` variant that carries their failures; disable it with
+//!   `default-features = false` for a market surface that names no simulation type at all.
+//!   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
+//!   dependency graphs
 //!
 //! ### Building from Source
 //!

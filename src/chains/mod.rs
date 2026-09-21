@@ -243,12 +243,6 @@ pub(crate) mod model_impls;
 mod generators;
 
 pub use crate::analytics::rnd::{RNDAnalysis, RNDParameters, RNDResult}; // facade-compat: analytics
-#[cfg(feature = "synthetic")]
-#[deprecated(
-    since = "0.17.4",
-    note = "moved to `optionstratlib::simulation::generator_positive`; it never depended on option chains"
-)]
-pub use crate::simulation::generator_positive;
 pub use chain::OptionChain;
 #[cfg(feature = "synthetic")]
 pub use generators::generator_optionchain;
