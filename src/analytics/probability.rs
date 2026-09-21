@@ -19,7 +19,6 @@ use crate::f2du;
 use crate::greeks::big_n;
 use crate::model::ExpirationDate;
 use crate::model::decimal::p_sqrt;
-use crate::model::utils::sub_floor_zero;
 use num_traits::ToPrimitive;
 use positive::Positive;
 #[cfg(test)]
@@ -215,9 +214,18 @@ pub fn calculate_single_point_probability(
 ///
 /// Returns an error if:
 /// * Lower bound is greater than upper bound
+///   ([`ProbabilityError::PriceError`] with
+///   [`PriceErrorKind::InvalidPriceRange`]).
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
 /// * Trend confidence is not between 0 and 1
+/// * The probability below the upper bound is smaller than below the lower
+///   bound ([`ProbabilityError::CalculationError`] with
+///   [`ProbabilityCalculationErrorKind::InvalidProbability`]). A distribution
+///   function is monotone, so this only happens when the inputs sit past the
+///   precision of the price model (a spot near `Positive::MAX` with a
+///   volatility around `1e-28`); it is reported rather than floored to zero,
+///   which would return a triple that does not sum to one.
 pub fn calculate_price_probability(
     current_price: &Positive,
     lower_bound: &Positive,
@@ -256,12 +264,32 @@ pub fn calculate_price_probability(
         risk_free_rate,
     )?;
 
-    // Calculate the three required probabilities. The normal CDF is monotone,
-    // so the mass in the range is non-negative by construction; flooring
-    // absorbs the rounding of the two independent `Decimal -> f64 -> Decimal`
-    // round trips rather than aborting on a difference of one ulp.
+    // A distribution function is monotone, so `upper >= lower` must give
+    // `prob_below_upper >= prob_below_lower`; equality carries zero mass,
+    // which `sub_or_none` returns. Equality does not mean the bounds
+    // coincide: two distinct bounds far into a tail can round to the same
+    // `Decimal`, and zero is still the right mass for them. A smaller
+    // probability at the upper bound is a result outside the model's
+    // precision, not a property of the range: with a spot near `Positive::MAX`
+    // and a volatility of `1e-28`, `(MAX - 4) / MAX` rounds to
+    // `0.9999999999999999999999999999` and `Decimal::checked_ln` returns
+    // `+9e-28` for it where the true value is `-1e-28`, so the lower bound
+    // lands three standard deviations above the spot. Flooring that to zero
+    // returned a triple summing to 1.5 instead of 1, so it is reported
+    // (#570, same rule as `ProfitLossRange::calculate_probability`, #569).
     let prob_below_range = prob_below_lower;
-    let prob_in_range = sub_floor_zero(prob_below_upper, prob_below_lower.to_dec_ref());
+    let prob_in_range = prob_below_upper
+        .sub_or_none(prob_below_lower.to_dec_ref())
+        .ok_or_else(|| {
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability {
+                    value: prob_below_upper.to_f64() - prob_below_lower.to_f64(),
+                    reason: format!(
+                        "probability below the upper bound {upper_bound}                          ({prob_below_upper}) is smaller than below the lower bound                          {lower_bound} ({prob_below_lower}); the inputs are outside                          the precision of the price model"
+                    ),
+                },
+            )
+        })?;
     let prob_above_range = prob_above_upper;
 
     Ok((prob_below_range, prob_in_range, prob_above_range))
@@ -694,6 +722,129 @@ mod tests_calculate_price_probability {
             (prob_below + prob_in_range + prob_above).to_f64(),
             1.0,
             epsilon = 1e-10
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_probability_inversion {
+    use super::*;
+    use crate::ExpirationDate;
+    use rust_decimal::Decimal;
+
+    /// The `(below, in, above)` triple is a partition of the outcome space, so
+    /// it sums to one or the call fails. Before #570 the middle term was
+    /// floored to zero on an inverted CDF difference and this input returned
+    /// `(1, 0, 0.5)`, a triple summing to 1.5 that no distribution produces.
+    ///
+    /// Reaching it needs a spot near `Positive::MAX` with a volatility around
+    /// `1e-28`: `(MAX - 4) / MAX` rounds to `0.9999999999999999999999999999`
+    /// at `Decimal`'s twenty-eight places and `checked_ln` returns `+9e-28`
+    /// for it where the true value is `-1e-28`, which puts the lower bound
+    /// three standard deviations above the spot.
+    #[test]
+    fn test_inverted_cdf_difference_is_reported_not_floored() {
+        let lower = Positive::MAX - Decimal::from(4);
+        let result = calculate_price_probability(
+            &Positive::MAX,
+            &lower,
+            &Positive::MAX,
+            Some(VolatilityAdjustment {
+                base_volatility: Positive::new(1e-28)
+                    .expect("1e-28 is a representable positive volatility"),
+                std_dev_adjustment: Positive::ZERO,
+            }),
+            None,
+            &ExpirationDate::Days(pos_or_panic!(365.0)),
+            None,
+        );
+
+        match result {
+            Err(ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability { .. },
+            )) => {}
+            other => panic!("expected InvalidProbability, got {other:?}"),
+        }
+    }
+
+    /// The same shape at a volatility the model can still represent: the
+    /// inversion is smaller (the triple used to sum to 1.0000007) but it is
+    /// the same defect and gets the same answer.
+    #[test]
+    fn test_near_precision_inversion_is_reported() {
+        let lower = Positive::MAX - Decimal::from(4);
+        let result = calculate_price_probability(
+            &Positive::MAX,
+            &lower,
+            &Positive::MAX,
+            Some(VolatilityAdjustment {
+                base_volatility: Positive::new(1e-20)
+                    .expect("1e-20 is a representable positive volatility"),
+                std_dev_adjustment: Positive::ZERO,
+            }),
+            None,
+            &ExpirationDate::Days(Positive::ONE),
+            None,
+        );
+
+        assert!(
+            result.is_err(),
+            "an inverted CDF difference must be reported, got {result:?}"
+        );
+    }
+
+    /// Equal CDF values are a value, not an error: the mass between the
+    /// bounds is zero and the triple still sums to one. Coincident bounds are
+    /// the clearest way to produce that, but not the only one, since two
+    /// distinct bounds far into a tail can round to the same `Decimal`.
+    #[test]
+    fn test_equal_cdf_values_give_zero_mass_and_the_triple_sums_to_one() {
+        let result = calculate_price_probability(
+            &Positive::HUNDRED,
+            &Positive::HUNDRED,
+            &Positive::HUNDRED,
+            None,
+            None,
+            &ExpirationDate::Days(pos_or_panic!(30.0)),
+            Some(dec!(0.05)),
+        );
+
+        let (below, inside, above) = match result {
+            Ok(triple) => triple,
+            other => panic!("equal CDF values are a value, got {other:?}"),
+        };
+        assert_eq!(inside, Positive::ZERO);
+        assert_eq!(
+            below.to_dec() + inside.to_dec() + above.to_dec(),
+            Decimal::ONE,
+        );
+    }
+
+    /// An ordinary range: the partition property holds on the inputs callers
+    /// actually pass, which is what makes the error path unreachable for them.
+    #[test]
+    fn test_ordinary_range_triple_sums_to_one() {
+        let result = calculate_price_probability(
+            &Positive::HUNDRED,
+            &pos_or_panic!(95.0),
+            &pos_or_panic!(105.0),
+            Some(VolatilityAdjustment {
+                base_volatility: pos_or_panic!(0.2),
+                std_dev_adjustment: pos_or_panic!(0.1),
+            }),
+            None,
+            &ExpirationDate::Days(pos_or_panic!(30.0)),
+            Some(dec!(0.05)),
+        );
+
+        let (below, inside, above) = match result {
+            Ok(triple) => triple,
+            other => panic!("an ordinary range must succeed, got {other:?}"),
+        };
+        assert!(inside > Positive::ZERO);
+        assert_eq!(
+            below.to_dec() + inside.to_dec() + above.to_dec(),
+            Decimal::ONE,
         );
     }
 }

@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`calculate_price_probability` and `expected_value` no longer floor an
+  inverted CDF difference to zero** (#570). Both subtracted the probability
+  below the lower bound from the one below the upper bound through
+  `sub_floor_zero`, attributing any negative result to "a difference of one
+  ulp" in the `Decimal -> f64 -> Decimal` round trip. That attribution was
+  wrong. With a spot near `Positive::MAX` and a volatility of `1e-28`,
+  `(MAX - 4) / MAX` rounds to `0.9999999999999999999999999999` at `Decimal`'s
+  twenty-eight places and `Decimal::checked_ln` returns `+9e-28` for it where
+  the true value is `-1e-28`, which puts the lower bound three standard
+  deviations above the spot. Measured on that input,
+  `calculate_price_probability` returned `(1, 0, 0.5)`: a
+  `(below, in, above)` triple summing to **1.5**, silently.
+
+  Both sites now follow the rule #569 established in
+  `ProfitLossRange::calculate_probability`: equality is a zero-width range
+  with probability zero, and an inversion is
+  `ProbabilityCalculationErrorKind::InvalidProbability`. The three comments
+  describing the subtraction now give the same mechanism instead of two
+  contradictory ones. Ordinary inputs cannot reach it, so no caller that was
+  getting a right answer starts getting an error: a probe over 21,168
+  combinations found no inversions and 9,555 exact equalities, which stay
+  `Ok(0)`.
+
+  For `expected_value` the inversion is not reachable through the public API
+  today, stopped by two independent limits. The display range is one:
+  `get_best_range_to_show` scales the highest point by
+  `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER` (1.02), so a spot large enough for a
+  consecutive price ratio to round to one overflows there before a single
+  probability is computed; measured at `7.9e28`, `get_range_to_show` reports
+  `mul_f64: overflow` while `calculate_profit_at` on the same strategy still
+  returns `Ok(-24.18)`. The volatility is the other: the inversion needs a
+  volatility around `1e-28`, and at that value the z-score leaves the finite
+  range, so the kernel reports a conversion failure at every spot from `1e3` to
+  `1e28` instead of producing two CDF values to subtract, while `1e-20` and
+  above succeed everywhere in that span. The report is a guard there, and the
+  tests pin both limits and that the guard does not misfire on the extreme
+  inputs that are reachable.
+
 - **The coverage job stopped reporting `Timed out waiting for test response`.**
   `cargo tarpaulin` is installed unpinned in CI. `--timeout` budgets one whole
   test binary's run under the LLVM engine, and it was `0`, which nothing

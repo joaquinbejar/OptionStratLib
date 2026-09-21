@@ -312,8 +312,10 @@ impl ProfitRangeProbability for ProfitLossRange {
         )?;
 
         // A distribution function is monotone, so `upper >= lower` must give
-        // `prob_below_upper >= prob_below_lower`; equality is a zero-width
-        // range with probability zero, which `sub_or_none` returns. A smaller
+        // `prob_below_upper >= prob_below_lower`; equality carries zero mass,
+        // which `sub_or_none` returns. Equality does not mean the bounds
+        // coincide: two distinct bounds far into a tail can round to the same
+        // `Decimal`, and zero is still the right probability. A smaller
         // probability at the upper bound is a result outside the model's
         // precision, not a property of the range: with a spot near
         // `Positive::MAX` and a volatility of `1e-28`, `(MAX - 4) / MAX`
