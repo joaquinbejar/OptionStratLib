@@ -347,6 +347,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Standalone pricing regression suites** (#526) in `optionstratlib-pricing`,
+  run without market, simulation, strategies or the facade:
+  - `pricing_identities`: parity for Black-Scholes, Black-76 and
+    Garman-Kohlhagen, side symmetry, Greek identities, exotic reductions and
+    the zero-time and zero-vol limits over a parameter grid.
+  - `analytic_references`: published values from Hull and Haug, with the
+    tolerance their printed precision allows.
+  - `convergence`: binomial to Black-Scholes, and numerical against
+    closed-form Greeks.
+  - `implied_volatility`: IV round trips.
+
+  55 tests pass. Ten pre-existing numerical defects they found are filed
+  with ready-to-merge tests instead of being merged as ignored tests:
+  barrier (#646), fixed-strike lookback (#647), American edge cases (#648),
+  gap put (#649), quanto and Kirk spread (#650), Monte Carlo discounting
+  (#651) and IV solvers with no solution (#652).
+
 - **`make check-float-boundary` guards the public `f64` surface of the
   component crates** (#522). It reads the `public-api/optionstratlib-*.txt`
   snapshots and fails on any `f64` outside the error types' own items
