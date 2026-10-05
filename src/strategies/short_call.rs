@@ -22,6 +22,7 @@ use crate::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
 use crate::pnl::{PnL, PnLCalculator};
+use crate::pricing::OptionPricing;
 use crate::pricing::payoff::Profit;
 use crate::strategies::base::Optimizable;
 use crate::strategies::base::price_gap;

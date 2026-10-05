@@ -435,6 +435,7 @@ mod tests {
     use super::*;
     use crate::ExpirationDate;
     use crate::error::SimulationError;
+    use crate::pricing::OptionPricing;
     use crate::simulation::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,

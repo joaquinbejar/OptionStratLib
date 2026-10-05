@@ -17,6 +17,7 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::model::Options;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib::pricing::OptionPricing;
 use optionstratlib::pricing::{black_76, black_scholes, garman_kohlhagen};
 use positive::Positive;
 use proptest::prelude::*;

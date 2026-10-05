@@ -39,6 +39,7 @@ use tracing::{debug, trace};
 
 use super::adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentPlan};
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
+use crate::pricing::OptionPricing;
 
 /// Portfolio-level adjustment optimizer.
 ///

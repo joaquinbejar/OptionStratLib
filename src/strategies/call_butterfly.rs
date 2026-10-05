@@ -9,6 +9,7 @@ use super::base::{
 };
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::BreakEvenErrorKind;
+use crate::pricing::OptionPricing;
 use crate::test_strategy_traits;
 use crate::{
     ExpirationDate, Options,

@@ -6,6 +6,7 @@
 use crate::error::PricingError;
 use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::position::Position;
+use crate::pricing::OptionPricing;
 use positive::Positive;
 use rust_decimal::Decimal;
 

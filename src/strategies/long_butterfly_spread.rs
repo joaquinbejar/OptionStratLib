@@ -8,6 +8,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
+use crate::pricing::OptionPricing;
 use crate::strategies::base::price_gap;
 use crate::{
     ExpirationDate, Options,

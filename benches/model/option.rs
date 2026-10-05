@@ -8,6 +8,7 @@ use criterion::Criterion;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::nz;
 use optionstratlib::pnl::utils::PnLCalculator;
+use optionstratlib::pricing::OptionPricing;
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
