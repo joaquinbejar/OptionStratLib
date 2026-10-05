@@ -1,0 +1,19 @@
+//! Option projections onto the math containers: `BasicCurves` (an option set
+//! onto a [`optionstratlib_math::curves::Curve`]) and `BasicSurfaces` (onto a
+//! [`optionstratlib_math::surfaces::Surface`]), plus their `OptionChain` implementations.
+//!
+//! These traits price `Options` and read Greeks, so they are analytics, not
+//! geometry (ADR-0001 D4). `Curve` and `Surface` live in
+//! `optionstratlib-math`, which knows nothing about options.
+
+/// `impl BasicCurves for OptionChain`, `impl BasicSurfaces for OptionChain`
+/// and the `OptionChainProjections` trait implemented for it.
+mod chain;
+/// `BasicCurves` trait.
+mod curves;
+/// `BasicSurfaces` trait.
+mod surfaces;
+
+pub use chain::OptionChainProjections;
+pub use curves::BasicCurves;
+pub use surfaces::BasicSurfaces;

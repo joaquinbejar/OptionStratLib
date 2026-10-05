@@ -1,0 +1,721 @@
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 20/12/24
+******************************************************************************/
+
+//! # Probability Error Module
+//!
+//! This module provides error handling for probability analysis and calculations in option trading.
+//! It defines a comprehensive error system to handle various scenarios in probability calculations,
+//! profit/loss analysis, and option pricing.
+//!
+//! ## Main Error Types
+//!
+//! ### Probability Error (`ProbabilityError`)
+//! Main error enum with four variants:
+//! * `CalculationError` - For probability calculation failures
+//! * `RangeError` - For profit/loss range analysis errors
+//! * `ExpirationError` - For expiration date related errors
+//! * `PriceError` - For price calculation and validation errors
+//!
+//! ### Calculation Errors (`ProbabilityCalculationErrorKind`)
+//! Handles specific calculation failures:
+//! * Invalid probability values
+//! * Expected value calculation errors
+//! * Volatility adjustment errors
+//! * Price trend errors
+//!
+//! ### Range Errors (`ProfitLossRangeErrorKind`)
+//! Manages profit/loss analysis errors:
+//! * Invalid profit ranges
+//! * Invalid loss ranges
+//! * Break-even point errors
+//!
+//! ### Price Errors (`PriceErrorKind`)
+//! Handles pricing-related errors:
+//! * Invalid underlying prices
+//! * Invalid price ranges
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! use optionstratlib_analytics::error::probability::{ProbabilityError, ProbabilityResult};
+//!
+//! fn calculate_probability(value: f64) -> ProbabilityResult<f64> {
+//!     if value < 0.0 || value > 1.0 {
+//!         return Err(ProbabilityError::invalid_probability(
+//!             value,
+//!             "Probability must be between 0 and 1"
+//!         ));
+//!     }
+//!     Ok(value)
+//! }
+//! ```
+//!
+//! ## Error Creation Helpers
+//!
+//! The module provides helper methods for creating common errors:
+//! * `invalid_probability` - Creates an error for invalid probability values
+//! * `invalid_profit_range` - Creates an error for invalid profit ranges
+//! * `invalid_expiration` - Creates an error for invalid expiration dates
+//!
+//! ## Type Conversions
+//!
+//! Implements conversions from:
+//! * `String` to `ProbabilityError`
+//! * `&str` to `ProbabilityError`
+//!
+//! A type alias `ProbabilityResult<T>` is provided for convenience when working
+//! with Results that may contain probability errors.
+//!
+//! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `ProbabilityError` and its kind enums.
+
+use optionstratlib_core::error::OperationErrorKind;
+use optionstratlib_pricing::error::GreeksError;
+use thiserror::Error;
+
+/// Represents all possible errors that can occur during probability analysis calculations
+///
+/// This enum serves as the top-level error type for the probability analysis system,
+/// encapsulating various categories of errors that might occur during financial calculations
+/// related to probabilities, prices, ranges, and expirations.
+///
+/// # Variants
+///
+/// * `CalculationError` - Errors that occur during probability calculations themselves,
+///   such as invalid probability values, expected value errors, or problems with
+///   volatility adjustments.
+///
+/// * `RangeError` - Errors related to profit and loss ranges, such as invalid profit
+///   ranges, loss ranges, or break-even point calculations.
+///
+/// * `ExpirationError` - Errors related to expiration dates and risk-free rates in
+///   options calculations.
+///
+/// * `PriceError` - Errors related to price parameters, such as invalid underlying
+///   prices or invalid price ranges.
+///
+/// * `NoPositions` - No positions available for probability analysis.
+/// * `MissingMetric` - A required metric is missing from the strategy evaluation.
+///
+/// * `NoPositions` - Error indicating that no positions were available for analysis.
+///
+/// # Usage
+///
+/// This error type is typically returned from functions that perform financial probability
+/// analysis, risk assessment, or option pricing. It provides a structured way to handle
+/// the various error conditions that might arise during these calculations.
+#[derive(Error, Debug)]
+pub enum ProbabilityError {
+    /// Errors related to probability calculations
+    ///
+    /// Wraps a `ProbabilityCalculationErrorKind` that provides specific details
+    /// about what went wrong during probability calculations.
+    #[error("Probability calculation error: {0}")]
+    CalculationError(ProbabilityCalculationErrorKind),
+
+    /// Errors related to profit/loss ranges
+    ///
+    /// Wraps a `ProfitLossRangeErrorKind` that provides specific details
+    /// about what went wrong with profit or loss range calculations.
+    #[error("Profit/loss range error: {0}")]
+    RangeError(ProfitLossRangeErrorKind),
+
+    /// Errors related to expiration dates
+    ///
+    /// Wraps an `ExpirationErrorKind` that provides specific details
+    /// about what went wrong with expiration dates or risk-free rates.
+    #[error("Expiration error: {0}")]
+    ExpirationError(ExpirationErrorKind),
+
+    /// Errors related to price parameters
+    ///
+    /// Wraps a `PriceErrorKind` that provides specific details
+    /// about what went wrong with price-related calculations.
+    #[error("Price error: {0}")]
+    PriceError(PriceErrorKind),
+
+    /// Error indicating no positions are available for analysis
+    ///
+    /// Contains a string description explaining why positions are missing
+    /// or why they cannot be analyzed.
+    #[error("No positions available: {0}")]
+    NoPositions(String),
+
+    /// A required metric is missing from the strategy evaluation.
+    #[error("missing metric `{metric}` for probability analysis")]
+    MissingMetric {
+        /// Identifier of the missing metric (e.g. `"max_profit"`).
+        metric: &'static str,
+    },
+
+    /// Positive value errors
+    #[error(transparent)]
+    PositiveError(#[from] optionstratlib_core::model::PositiveError),
+}
+
+/// Error types that can occur during financial probability calculations.
+///
+/// This enum represents specific error categories that may arise when performing
+/// probability-related calculations for financial models, risk assessments, and
+/// statistical analysis of market scenarios. It provides structured error information
+/// with detailed context about what caused the calculation to fail.
+///
+/// # Variants
+///
+/// * `InvalidProbability` - Represents errors where a probability value falls outside
+///   the valid range \[0,1\] or otherwise violates mathematical constraints of probability theory.
+///
+/// * `ExpectedValueError` - Represents errors in the calculation of expected values,
+///   such as invalid inputs, numerical overflow/underflow, or unsupported distributions.
+///
+/// * `VolatilityAdjustmentError` - Represents errors that occur when attempting to
+///   adjust calculations for volatility, including invalid volatility inputs or
+///   mathematical errors in the adjustment process.
+///
+/// * `TrendError` - Represents errors related to price trend calculations, such as
+///   insufficient historical data, invalid trend parameters, or statistical anomalies.
+///
+/// # Usage
+///
+/// This error type is typically used in financial modeling components that deal with
+/// probabilistic outcomes, such as Monte Carlo simulations, risk models, and
+/// probability-based trading strategies.
+#[derive(Error, Debug)]
+pub enum ProbabilityCalculationErrorKind {
+    /// Error indicating an invalid probability value
+    ///
+    /// This variant is used when a probability calculation produces a result that
+    /// violates fundamental probability constraints (e.g., not in range \[0,1\])
+    /// or other mathematical properties required for valid statistical analysis.
+    #[error("Invalid probability value {value}: {reason}")]
+    InvalidProbability {
+        /// The problematic probability value that caused the error
+        value: f64,
+        /// Detailed explanation of why the probability is invalid
+        reason: String,
+    },
+
+    /// Error in the calculation of expected values
+    ///
+    /// This variant is used when expected value calculations fail due to
+    /// mathematical constraints, invalid inputs, or problems with the
+    /// underlying probability distribution.
+    #[error("Expected value calculation error: {reason}")]
+    ExpectedValueError {
+        /// Detailed explanation of the error in expected value calculation
+        reason: String,
+    },
+
+    /// Error when adjusting calculations for volatility
+    ///
+    /// This variant is used when volatility-related adjustments to probability
+    /// calculations encounter problems, such as extreme volatility values or
+    /// mathematical errors in the adjustment algorithms.
+    #[error("Volatility adjustment error: {reason}")]
+    VolatilityAdjustmentError {
+        /// Detailed explanation of the volatility adjustment error
+        reason: String,
+    },
+
+    /// Error in price trend calculations or analysis
+    ///
+    /// This variant is used when trend-related probability calculations fail,
+    /// such as issues with trend detection, invalid trend parameters, or
+    /// insufficient data for meaningful trend analysis.
+    #[error("Price trend error: {reason}")]
+    TrendError {
+        /// Detailed explanation of the trend calculation error
+        reason: String,
+    },
+}
+
+/// Enum representing errors that occur during profit and loss range calculations in options strategies.
+///
+/// This enum captures three main categories of errors that can occur when calculating, validating,
+/// or processing profit and loss ranges and break-even points in financial calculations. It provides
+/// structured error information with detailed descriptions of why the ranges are invalid.
+///
+/// # Variants
+///
+/// * `InvalidProfitRange` - Represents errors related to profit range calculations,
+///   such as inconsistent boundaries, mathematically impossible ranges, or other
+///   logical errors in profit projections.
+///
+/// * `InvalidLossRange` - Represents errors related to loss range calculations,
+///   including boundary issues, logical inconsistencies, or other problems that
+///   prevent accurate loss estimation.
+///
+/// * `InvalidBreakEvenPoints` - Represents errors in break-even point calculations,
+///   which can include missing break-even points, multiple unexpected points, or
+///   other calculation anomalies.
+///
+/// # Usage
+///
+/// This error type is typically used in financial strategy analysis, particularly in
+/// options trading calculations where understanding the ranges of potential profit and loss
+/// is critical for risk assessment and decision making.
+#[derive(Error, Debug)]
+pub enum ProfitLossRangeErrorKind {
+    /// Error indicating an invalid or problematic profit range calculation
+    ///
+    /// This variant is used when the calculated profit range contains errors,
+    /// inconsistencies, or values that don't align with the underlying strategy.
+    #[error("Invalid profit range '{range}': {reason}")]
+    InvalidProfitRange {
+        /// String representation of the problematic range
+        range: String,
+        /// Detailed explanation of why the profit range is invalid
+        reason: String,
+    },
+
+    /// Error indicating an invalid or problematic loss range calculation
+    ///
+    /// This variant is used when the calculated loss range contains errors,
+    /// inconsistencies, or values that don't make mathematical sense.
+    #[error("Invalid loss range '{range}': {reason}")]
+    InvalidLossRange {
+        /// String representation of the problematic range
+        range: String,
+        /// Detailed explanation of why the loss range is invalid
+        reason: String,
+    },
+
+    /// Error indicating problems with break-even point calculations
+    ///
+    /// This variant is used when break-even points couldn't be properly calculated,
+    /// are missing, or contain unexpected values.
+    #[error("Invalid break-even points: {reason}")]
+    InvalidBreakEvenPoints {
+        /// Detailed explanation of the issue with break-even calculations
+        reason: String,
+    },
+}
+
+/// Enum representing errors related to expiration dates and interest rates in options calculations.
+///
+/// This enum captures two main categories of errors that can occur when validating or
+/// processing expiration dates and risk-free rates for financial calculations. It provides
+/// structured error information that includes detailed reasons for the error occurrence.
+///
+/// # Variants
+///
+/// * `InvalidExpiration` - Represents errors related to option expiration dates,
+///   such as dates in the past, invalid formats, or dates that don't align with
+///   market standards.
+///
+/// * `InvalidRiskFreeRate` - Represents errors related to risk-free rate values,
+///   such as negative rates, unreasonably high rates, or other invalid inputs
+///   that would cause calculation issues.
+///
+/// # Usage
+///
+/// This error type is typically used in option pricing models, risk assessment,
+/// and other financial calculations where expiration dates and risk-free rates
+/// are critical input parameters.
+#[derive(Error, Debug)]
+pub enum ExpirationErrorKind {
+    /// Error indicating an invalid or problematic expiration date
+    ///
+    /// This variant is used when the provided expiration date doesn't meet
+    /// the required criteria for option calculations.
+    #[error("Invalid expiration: {reason}")]
+    InvalidExpiration {
+        /// Detailed explanation of why the expiration date is invalid
+        reason: String,
+    },
+
+    /// Error indicating an invalid or problematic risk-free rate
+    ///
+    /// This variant is used when the provided risk-free rate is outside
+    /// acceptable bounds or otherwise unsuitable for financial calculations.
+    #[error("Invalid risk-free rate {rate:?}: {reason}")]
+    InvalidRiskFreeRate {
+        /// The problematic rate value that caused the error, if available
+        rate: Option<f64>,
+        /// Detailed explanation of why the risk-free rate is invalid
+        reason: String,
+    },
+}
+
+/// Enum that represents various errors that can occur during price calculations and validations.
+///
+/// This enum provides specific error variants for different types of pricing issues that may
+/// arise in financial calculations, particularly in options pricing contexts. Each variant
+/// contains detailed information about the error condition to aid in debugging and error handling.
+///
+/// ## Error Types
+///
+/// * `InvalidUnderlyingPrice` - Errors related to the underlying asset price
+/// * `InvalidPriceRange` - Errors related to price range validations
+///
+#[derive(Error, Debug)]
+pub enum PriceErrorKind {
+    /// Error indicating that the underlying asset price is invalid.
+    ///
+    /// This error occurs when the price of the underlying asset does not meet
+    /// required validation criteria (e.g., non-negative, within expected bounds).
+    ///
+    #[error("Invalid underlying price {price}: {reason}")]
+    InvalidUnderlyingPrice {
+        /// * `price` - The invalid price value that triggered the error       
+        price: f64,
+        /// * `reason` - A detailed explanation of why the price is considered invalid
+        reason: String,
+    },
+    /// Error indicating that a price range specification is invalid.
+    ///
+    /// This error occurs when a specified price range is inconsistent, malformed,
+    /// or does not meet required validation criteria for financial calculations.
+    ///
+    #[error("Invalid price range '{range}': {reason}")]
+    InvalidPriceRange {
+        /// * `range` - String representation of the invalid price range      
+        range: String,
+        /// * `reason` - A detailed explanation of why the price range is considered invalid
+        reason: String,
+    },
+}
+
+impl From<GreeksError> for ProbabilityError {
+    #[inline]
+    fn from(error: GreeksError) -> Self {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
+    }
+}
+
+impl From<optionstratlib_pricing::error::PricingError> for ProbabilityError {
+    #[inline]
+    fn from(error: optionstratlib_pricing::error::PricingError) -> Self {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
+    }
+}
+
+impl From<optionstratlib_core::error::DecimalError> for ProbabilityError {
+    #[inline]
+    fn from(error: optionstratlib_core::error::DecimalError) -> Self {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: error.to_string(),
+        })
+    }
+}
+
+/// Convenient type alias for Results with ProbabilityError
+pub type ProbabilityResult<T> = Result<T, ProbabilityError>;
+
+impl From<optionstratlib_core::model::ExpirationDateError> for ProbabilityError {
+    #[inline]
+    fn from(err: optionstratlib_core::model::ExpirationDateError) -> Self {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
+            reason: err.to_string(),
+        })
+    }
+}
+
+impl From<OperationErrorKind> for ProbabilityError {
+    fn from(error: OperationErrorKind) -> Self {
+        match error {
+            OperationErrorKind::InvalidParameters { operation, reason } => {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!("Invalid parameters for operation '{operation}': {reason}"),
+                    },
+                )
+            }
+            OperationErrorKind::NotSupported { operation, reason } => {
+                ProbabilityError::CalculationError(
+                    ProbabilityCalculationErrorKind::ExpectedValueError {
+                        reason: format!("Operation '{operation}' not supported: {reason}"),
+                    },
+                )
+            }
+        }
+    }
+}
+
+// Helper functions to create common errors
+impl ProbabilityError {
+    /// Creates a new invalid probability error
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn invalid_probability(value: f64, reason: &str) -> Self {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::InvalidProbability {
+            value,
+            reason: reason.to_string(),
+        })
+    }
+
+    /// Creates a new invalid profit range error
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn invalid_profit_range(range: &str, reason: &str) -> Self {
+        ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidProfitRange {
+            range: range.to_string(),
+            reason: reason.to_string(),
+        })
+    }
+
+    /// Creates a new invalid expiration error
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn invalid_expiration(reason: &str) -> Self {
+        ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration {
+            reason: reason.to_string(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_probability_error() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        assert!(matches!(
+            error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_missing_metric_variant() {
+        let error = ProbabilityError::MissingMetric {
+            metric: "max_profit",
+        };
+        assert_eq!(
+            error.to_string(),
+            "missing metric `max_profit` for probability analysis"
+        );
+    }
+
+    #[test]
+    fn test_error_formatting() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        let error_string = error.to_string();
+        assert!(error_string.contains("Invalid probability"));
+        assert!(error_string.contains("1.2"));
+        assert!(error_string.contains("Probability cannot exceed 1.0"));
+    }
+
+    #[test]
+    fn test_expiration_error_display() {
+        let error = ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidExpiration {
+            reason: "Cannot be in the past".to_string(),
+        });
+        assert!(error.to_string().contains("Cannot be in the past"));
+    }
+
+    #[test]
+    fn test_price_error_display() {
+        let error = ProbabilityError::PriceError(PriceErrorKind::InvalidUnderlyingPrice {
+            price: -10.0,
+            reason: "Price cannot be negative".to_string(),
+        });
+        assert!(error.to_string().contains("Price cannot be negative"));
+        assert!(error.to_string().contains("-10"));
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_invalid_probability_error() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        assert!(matches!(
+            error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::InvalidProbability { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_error_formatting() {
+        let error = ProbabilityError::invalid_probability(1.2, "Probability cannot exceed 1.0");
+        let error_string = error.to_string();
+        assert!(error_string.contains("Invalid probability"));
+        assert!(error_string.contains("1.2"));
+        assert!(error_string.contains("Probability cannot exceed 1.0"));
+    }
+
+    #[test]
+    fn test_profit_loss_range_error_display() {
+        let error = ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidProfitRange {
+            range: "100-200".to_string(),
+            reason: "Invalid range".to_string(),
+        });
+        assert!(error.to_string().contains("100-200"));
+        assert!(error.to_string().contains("Invalid range"));
+
+        let error =
+            ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
+                reason: "No break-even points found".to_string(),
+            });
+        assert!(error.to_string().contains("No break-even points found"));
+    }
+
+    #[test]
+    fn test_calculation_error_display() {
+        let error = ProbabilityError::CalculationError(
+            ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                reason: "Invalid volatility adjustment".to_string(),
+            },
+        );
+        assert!(error.to_string().contains("Invalid volatility adjustment"));
+
+        let error =
+            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
+                reason: "Invalid trend".to_string(),
+            });
+        assert!(error.to_string().contains("Invalid trend"));
+    }
+
+    #[test]
+    fn test_expiration_error() {
+        let error = ProbabilityError::ExpirationError(ExpirationErrorKind::InvalidRiskFreeRate {
+            rate: Some(0.05),
+            reason: "Rate out of bounds".to_string(),
+        });
+        assert!(error.to_string().contains("0.05"));
+        assert!(error.to_string().contains("Rate out of bounds"));
+    }
+
+    #[test]
+    fn test_greeks_error_conversion() {
+        let greeks_error = GreeksError::invalid_volatility(-0.5, "negative");
+        let prob_error: ProbabilityError = greeks_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_no_positions_error() {
+        let error = ProbabilityError::NoPositions("No positions found".to_string());
+        assert!(error.to_string().contains("No positions found"));
+    }
+
+    #[test]
+    fn test_probability_result_type() {
+        let success: ProbabilityResult<f64> = Ok(0.5);
+        let failure: ProbabilityResult<f64> =
+            Err(ProbabilityError::invalid_probability(1.5, "Value too high"));
+
+        assert!(success.is_ok());
+        assert!(failure.is_err());
+    }
+
+    #[test]
+    fn test_probability_error_missing_metric() {
+        let error = ProbabilityError::MissingMetric {
+            metric: "max_profit",
+        };
+        assert_eq!(
+            format!("{error}"),
+            "missing metric `max_profit` for probability analysis"
+        );
+    }
+
+    #[test]
+    fn test_price_error_invalid_price_range() {
+        let error = PriceErrorKind::InvalidPriceRange {
+            range: "0-100".to_string(),
+            reason: "Negative values are not allowed".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Invalid price range '0-100': Negative values are not allowed"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_range_error_invalid_loss_range() {
+        let error = ProfitLossRangeErrorKind::InvalidLossRange {
+            range: "-50-0".to_string(),
+            reason: "Range must be positive".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Invalid loss range '-50-0': Range must be positive"
+        );
+    }
+
+    #[test]
+    fn test_operation_error_invalid_parameters() {
+        let error = OperationErrorKind::InvalidParameters {
+            operation: "Calculate P/L".to_string(),
+            reason: "Invalid input values".to_string(),
+        };
+        let converted_error: ProbabilityError = error.into();
+        assert_eq!(
+            format!("{converted_error}"),
+            "Probability calculation error: Expected value calculation error: Invalid parameters for operation 'Calculate P/L': Invalid input values"
+        );
+    }
+
+    #[test]
+    fn test_invalid_profit_range_constructor() {
+        let error = ProbabilityError::invalid_profit_range("0-100", "Range mismatch");
+        assert_eq!(
+            format!("{error}"),
+            "Profit/loss range error: Invalid profit range '0-100': Range mismatch"
+        );
+    }
+
+    #[test]
+    fn test_invalid_expiration_constructor() {
+        let error = ProbabilityError::invalid_expiration("Expiration date invalid");
+        assert_eq!(
+            format!("{error}"),
+            "Expiration error: Invalid expiration: Expiration date invalid"
+        );
+    }
+
+    #[test]
+    fn test_operation_error_invalid_parameters_bis() {
+        let error = OperationErrorKind::InvalidParameters {
+            operation: "Calculate P/L".to_string(),
+            reason: "Invalid input values".to_string(),
+        };
+        let converted_error: ProbabilityError = error.into();
+        assert!(matches!(
+            converted_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_operation_error_not_supported() {
+        let error = OperationErrorKind::NotSupported {
+            operation: "Hedging".to_string(),
+            reason: "Operation not implemented".to_string(),
+        };
+        let converted_error = ProbabilityError::CalculationError(
+            ProbabilityCalculationErrorKind::ExpectedValueError {
+                reason: format!("Operation {error}"),
+            },
+        );
+        assert_eq!(
+            format!("{converted_error}"),
+            "Probability calculation error: Expected value calculation error: Operation Operation 'Hedging' is not supported for strategy 'Operation not implemented'"
+        );
+    }
+}

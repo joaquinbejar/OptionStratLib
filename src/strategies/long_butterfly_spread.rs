@@ -3219,12 +3219,23 @@ mod tests_butterfly_optimizable {
 #[cfg(test)]
 mod tests_butterfly_probability {
     use super::*;
-    use crate::analytics::probability::flat_volatility_0_2;
+    use crate::analytics::probability::VolatilityAdjustment;
 
     use crate::model::ExpirationDate;
 
     use crate::strategies::probabilities::calculate_price_probability;
     use rust_decimal_macros::dec;
+
+    /// The flat 0.2 volatility the probability kernels used to substitute
+    /// for `None`, spelled out here because the analytics crate's own test
+    /// helper is not visible outside it.
+    fn flat_volatility_0_2() -> VolatilityAdjustment {
+        VolatilityAdjustment {
+            base_volatility: Positive::new_decimal(rust_decimal::Decimal::new(2, 1))
+                .unwrap_or(Positive::ONE),
+            std_dev_adjustment: Positive::ZERO,
+        }
+    }
 
     fn create_test_long() -> LongButterflySpread {
         LongButterflySpread::new(

@@ -1,0 +1,47 @@
+[package]
+name = "optionstratlib-analytics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Strategy-neutral analytics of OptionStratLib: P&L, risk, probability kernels, option-chain metrics and projections."
+readme = "README.md"
+keywords = ["finance", "options", "pnl", "risk", "analytics"]
+categories = ["finance", "mathematics"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on the analytics types (ADR-0002).
+schema = [
+    "dep:utoipa",
+    "optionstratlib-core/schema",
+    "optionstratlib-math/schema",
+    "optionstratlib-pricing/schema",
+    "optionstratlib-market/schema",
+]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-math = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+optionstratlib-market = { workspace = true }
+chrono = { workspace = true }
+lazy_static = { workspace = true }
+num-traits = { workspace = true }
+pretty-simple-display = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The chain fixtures the metric and projection tests read are JSON files.
+optionstratlib-market = { workspace = true, features = ["io"] }
+approx = { workspace = true }
+tempfile = { workspace = true }

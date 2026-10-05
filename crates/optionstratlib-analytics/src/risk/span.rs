@@ -1,0 +1,434 @@
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 2/10/24
+******************************************************************************/
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
+use optionstratlib_core::model::position::Position;
+use optionstratlib_pricing::error::PricingError;
+use optionstratlib_pricing::pricing::OptionPricing;
+use rust_decimal::Decimal;
+
+/// Represents parameters for calculating margin requirements using the
+/// Standard Portfolio Analysis of Risk (SPAN) methodology.
+///
+/// This structure contains the key parameters needed to calculate margin requirements
+/// for derivatives positions using the SPAN methodology developed by the Chicago
+/// Mercantile Exchange. These parameters control the risk scenarios that will be
+/// evaluated when determining potential portfolio losses.
+///
+/// The SPAN methodology evaluates positions under various market scenarios combining price
+/// movements, volatility changes, and time decay effects to determine appropriate margin
+/// requirements.
+#[derive(Debug, Clone)]
+pub struct SPANMargin {
+    /// Minimum charge applied to short option positions, typically expressed as a
+    /// percentage of the underlying asset value. This serves as a risk floor for
+    /// short positions regardless of other factors.
+    short_option_minimum: Decimal,
+
+    /// The range of price movements to consider when generating price scenarios,
+    /// usually expressed as a percentage. Determines how far up and down the
+    /// underlying price might move in the risk analysis.
+    price_scan_range: Decimal,
+
+    /// The range of volatility changes to consider when generating volatility scenarios,
+    /// usually expressed as a percentage. Controls how much implied volatility might
+    /// increase or decrease in the risk analysis.
+    volatility_scan_range: Decimal,
+}
+
+/// Scales `value` by `factor`, flooring at zero when the factor is negative.
+///
+/// A scan range past 100% makes one of the SPAN factors negative, and a
+/// negative price or volatility is outside the domain rather than a number to
+/// report. The multiplication itself is left untouched so a representable
+/// scenario keeps exactly the value the raw operator produced.
+///
+/// # Errors
+///
+/// Returns [`PricingError::Positive`] when the scaled value leaves the
+/// representable range.
+fn scale_or_floor(value: Positive, factor: Decimal) -> Result<Positive, PricingError> {
+    if factor <= Decimal::ZERO {
+        return Ok(Positive::ZERO);
+    }
+    Ok(value.checked_mul_dec(factor)?)
+}
+
+#[allow(dead_code)]
+impl SPANMargin {
+    /// Creates a new SPAN margin calculator with the specified risk parameters.
+    ///
+    /// This constructor initializes a SPANMargin structure with the key parameters needed
+    /// for calculating margin requirements using the Standard Portfolio Analysis of Risk
+    /// methodology.
+    ///
+    /// # Parameters
+    ///
+    /// * `short_option_minimum` - The minimum charge applied to short option positions,
+    ///   typically expressed as a percentage of the underlying asset value.
+    ///
+    /// * `price_scan_range` - The range of price movements to consider when generating
+    ///   price scenarios, expressed as a decimal percentage (e.g., 0.05 for 5%).
+    ///   Determines how far up and down the underlying price might move in risk analysis.
+    ///
+    /// * `volatility_scan_range` - The range of volatility changes to consider when
+    ///   generating volatility scenarios, expressed as a decimal percentage.
+    ///   Controls potential implied volatility fluctuations in risk analysis.
+    ///
+    /// # Returns
+    ///
+    /// A new `SPANMargin` instance configured with the provided parameters.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use rust_decimal_macros::dec;
+    /// use optionstratlib_analytics::risk::SPANMargin;
+    ///
+    /// let margin_calculator = SPANMargin::new(
+    ///     dec!(0.05),  // 5% short option minimum
+    ///     dec!(0.10),  // 10% price scan range
+    ///     dec!(0.15)   // 15% volatility scan range
+    /// );
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn new(
+        short_option_minimum: Decimal,
+        price_scan_range: Decimal,
+        volatility_scan_range: Decimal,
+    ) -> Self {
+        SPANMargin {
+            short_option_minimum,
+            price_scan_range,
+            volatility_scan_range,
+        }
+    }
+
+    /// Calculates the margin requirement for a given position based on SPAN methodology.
+    ///
+    /// This method determines the margin requirement by:
+    /// 1. Calculating a risk array representing potential losses across different price and
+    ///    volatility scenarios
+    /// 2. Determining the minimum margin requirement for short options positions
+    /// 3. Taking the maximum value between the highest potential loss and the short option minimum
+    ///
+    /// The margin requirement helps ensure traders maintain sufficient funds to cover potential
+    /// losses in adverse market conditions.
+    ///
+    /// # Arguments
+    /// * `position` - The option position for which to calculate margin requirements
+    ///
+    /// # Returns
+    /// * `Result<Decimal, PricingError>` - The calculated margin
+    ///   requirement for the position, or the underlying Black-Scholes
+    ///   pricing error if any scenario fails to price. Returning a
+    ///   typed error rather than silently falling back to `ZERO`
+    ///   prevents margin underestimation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the propagated `PricingError` from
+    /// `Options::calculate_price_black_scholes` if any scenario price
+    /// cannot be computed.
+    pub fn calculate_margin(&self, position: &Position) -> Result<Decimal, PricingError> {
+        let risk_array = self.calculate_risk_array(position)?;
+        let short_option_minimum = self.calculate_short_option_minimum(position)?;
+        // risk_array is structurally non-empty (price_scenarios x
+        // volatility_scenarios is at least 1x1) so the max_by is
+        // expected to succeed; the fallback to ZERO + warn is a
+        // defensive guard rather than an expected error path.
+        let max_loss = risk_array
+            .into_iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .unwrap_or_else(|| {
+                tracing::warn!(
+                    "calculate_margin: empty risk_array for position {}; using ZERO",
+                    position.option.underlying_symbol
+                );
+                Decimal::ZERO
+            });
+        Ok(max_loss.max(short_option_minimum))
+    }
+
+    /// Calculates a risk array for a given position using SPAN (Standard Portfolio Analysis of Risk) methodology.
+    ///
+    /// This function generates multiple price and volatility scenarios for the underlying asset and
+    /// calculates potential losses for each scenario combination. The resulting vector contains loss
+    /// values for all scenarios, which can be used for risk analysis and margin calculations.
+    ///
+    /// # Parameters
+    /// - `&self`: Reference to the SPAN margin calculator instance.
+    /// - `position`: Reference to the `Position` for which to calculate risk.
+    ///
+    /// # Returns
+    /// A vector of `Decimal` values representing potential losses under different price and
+    /// volatility scenarios. Each value corresponds to the theoretical loss in a specific scenario.
+    ///
+    /// # Algorithm
+    /// The function:
+    /// 1. Generates multiple price scenarios based on the underlying asset price.
+    /// 2. Generates multiple volatility scenarios based on the option's implied volatility.
+    /// 3. Creates a risk matrix by calculating the potential loss for each price-volatility
+    ///    scenario combination.
+    ///
+    /// # Example Use Case
+    /// This is typically used in risk management systems to determine the appropriate
+    /// margin requirements for option positions.
+    fn calculate_risk_array(&self, position: &Position) -> Result<Vec<Decimal>, PricingError> {
+        let mut risk_array = Vec::new();
+        let option = &position.option;
+        let price_scenarios = self.generate_price_scenarios(option.underlying_price)?;
+        let volatility_scenarios = self.generate_volatility_scenarios(option.implied_volatility)?;
+        for &price in &price_scenarios {
+            for &volatility in &volatility_scenarios {
+                let scenario_loss = self.calculate_scenario_loss(position, price, volatility)?;
+                risk_array.push(scenario_loss);
+            }
+        }
+        Ok(risk_array)
+    }
+
+    /// Generates a vector of price scenarios for risk analysis based on the underlying asset price.
+    ///
+    /// This function creates three price scenarios for risk assessment:
+    /// - Downside scenario: The underlying price decreased by the price scan range percentage
+    /// - Base scenario: The current underlying price (unchanged)
+    /// - Upside scenario: The underlying price increased by the price scan range percentage
+    ///
+    /// The scenarios are used in SPAN margin calculations to evaluate potential portfolio
+    /// performance across different market conditions.
+    ///
+    /// # Arguments
+    ///
+    /// * `underlying_price` - The current price of the underlying asset as a `Positive` value
+    ///
+    /// # Returns
+    ///
+    /// A vector of three `Positive` values representing the price scenarios
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when the upside scenario leaves the
+    /// representable range.
+    #[inline]
+    fn generate_price_scenarios(
+        &self,
+        underlying_price: Positive,
+    ) -> Result<Vec<Positive>, PricingError> {
+        // A scan range past 100% shocks the underlying below zero, where it
+        // cannot trade: zero is the floor of the price domain, not an abort.
+        // The factor is applied in one multiplication, exactly as before, so
+        // every representable scenario keeps its last digit.
+        Ok(vec![
+            scale_or_floor(
+                underlying_price,
+                d_sub(
+                    Decimal::ONE,
+                    self.price_scan_range,
+                    "SPANMargin::price_scenario_down",
+                )?,
+            )?,
+            underlying_price,
+            scale_or_floor(
+                underlying_price,
+                d_add(
+                    Decimal::ONE,
+                    self.price_scan_range,
+                    "SPANMargin::price_scenario_up",
+                )?,
+            )?,
+        ])
+    }
+
+    /// Generates a vector of implied volatility scenarios for risk analysis.
+    ///
+    /// This function creates three volatility scenarios for risk assessment:
+    /// - Low volatility scenario: Current volatility decreased by the volatility scan range percentage
+    /// - Base scenario: The current implied volatility (unchanged)
+    /// - High volatility scenario: Current volatility increased by the volatility scan range percentage
+    ///
+    /// These scenarios are essential for evaluating how changes in market volatility might
+    /// affect option prices and portfolio risk in the SPAN methodology.
+    ///
+    /// # Arguments
+    ///
+    /// * `implied_volatility` - The current implied volatility as a `Positive` value
+    ///
+    /// # Returns
+    ///
+    /// A vector of three `Positive` values representing the volatility scenarios
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Positive`] when the upside scenario leaves the
+    /// representable range.
+    #[inline]
+    fn generate_volatility_scenarios(
+        &self,
+        implied_volatility: Positive,
+    ) -> Result<Vec<Positive>, PricingError> {
+        // Same floor as the price scenarios: a scan range past 100% would
+        // shock volatility below zero, which no option carries.
+        Ok(vec![
+            scale_or_floor(
+                implied_volatility,
+                d_sub(
+                    Decimal::ONE,
+                    self.volatility_scan_range,
+                    "SPANMargin::volatility_scenario_down",
+                )?,
+            )?,
+            implied_volatility,
+            scale_or_floor(
+                implied_volatility,
+                d_add(
+                    Decimal::ONE,
+                    self.volatility_scan_range,
+                    "SPANMargin::volatility_scenario_up",
+                )?,
+            )?,
+        ])
+    }
+
+    /// Calculates the potential profit or loss for a position in a given price and volatility scenario.
+    ///
+    /// This function computes how the value of an option position would change under different
+    /// market conditions by comparing the current option price with the theoretical price in the scenario.
+    ///
+    /// # Arguments
+    /// * `position` - The option position to evaluate, containing the option details and position information
+    /// * `scenario_price` - The hypothetical price of the underlying asset in the scenario
+    /// * `scenario_volatility` - The hypothetical implied volatility level in the scenario
+    ///
+    /// # Returns
+    /// A `Decimal` representing the profit (positive) or loss (negative) based on the scenario.
+    /// For long positions, a higher scenario price results in positive returns.
+    /// For short positions, the sign is flipped (losses when scenario price increases).
+    ///
+    fn calculate_scenario_loss(
+        &self,
+        position: &Position,
+        scenario_price: Positive,
+        scenario_volatility: Positive,
+    ) -> Result<Decimal, PricingError> {
+        let option = &position.option;
+        // Propagate BS pricing errors instead of falling back to ZERO,
+        // which would underestimate margin requirements (Copilot review
+        // on PR #355).
+        let current_price = option.calculate_price_black_scholes()?;
+        let mut scenario_option = option.clone();
+        scenario_option.underlying_price = scenario_price;
+        scenario_option.implied_volatility = scenario_volatility;
+        let scenario_price = scenario_option.calculate_price_black_scholes()?;
+        let move_in_value = d_sub(
+            scenario_price,
+            current_price,
+            "SPANMargin::scenario_value_move",
+        )?;
+        let sign = if option.is_short() {
+            Decimal::NEGATIVE_ONE
+        } else {
+            Decimal::ONE
+        };
+        Ok(d_mul(
+            d_mul(
+                move_in_value,
+                option.quantity.to_dec(),
+                "SPANMargin::scenario_loss",
+            )?,
+            sign,
+            "SPANMargin::scenario_loss",
+        )?)
+    }
+
+    /// Calculates the minimum margin requirement for short option positions.
+    ///
+    /// This method implements part of the SPAN (Standard Portfolio Analysis of Risk) margin
+    /// methodology by calculating the minimum margin requirement specifically for short option
+    /// positions. Short options carry inherent risk that requires a baseline margin regardless
+    /// of other factors.
+    ///
+    /// # Arguments
+    /// * `position` - A reference to a `Position` containing the option details.
+    ///
+    /// # Returns
+    /// * `Decimal` - The calculated minimum margin requirement for short option positions.
+    ///   Returns zero for long positions as this minimum applies only to short positions.
+    ///
+    /// # Behavior
+    /// For short options, the minimum margin is calculated as:
+    /// `short_option_minimum * underlying_price * quantity`
+    ///
+    /// For long options, the function returns zero as the short option minimum doesn't apply.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::Decimal`] when the product leaves the `Decimal`
+    /// range.
+    #[inline]
+    fn calculate_short_option_minimum(&self, position: &Position) -> Result<Decimal, PricingError> {
+        let option = &position.option;
+        if option.is_short() {
+            Ok(d_mul(
+                d_mul(
+                    self.short_option_minimum,
+                    option.underlying_price.to_dec(),
+                    "SPANMargin::short_option_minimum",
+                )?,
+                option.quantity.to_dec(),
+                "SPANMargin::short_option_minimum",
+            )?)
+        } else {
+            Ok(Decimal::ZERO)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_span {
+    use super::*;
+    use optionstratlib_core::model::types::{OptionStyle, Side};
+    use optionstratlib_core::model::utils::create_sample_option;
+
+    use chrono::Utc;
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+    use tracing::info;
+
+    #[test]
+    fn test_span_margin() -> Result<(), PricingError> {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(155.0),
+            Positive::ONE,
+            pos_or_panic!(150.0),
+            pos_or_panic!(0.2),
+        );
+
+        let position = Position {
+            option,
+            premium: pos_or_panic!(5.0),
+            date: Utc::now(),
+            open_fee: pos_or_panic!(0.5),
+            close_fee: pos_or_panic!(0.5),
+            epic: Some("Epic123".to_string()),
+            extra_fields: None,
+        };
+
+        let span = SPANMargin::new(
+            dec!(0.1),  // short_option_minimum (10%)
+            dec!(0.05), // price_scan_range (5%)
+            dec!(0.1),  // volatility_scan_range (10%)
+        );
+
+        let margin = span.calculate_margin(&position)?;
+        assert!(margin > Decimal::ZERO, "Margin should be positive");
+        info!("Calculated margin: {}", margin);
+        Ok(())
+    }
+}

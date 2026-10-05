@@ -1,4 +1,5 @@
-//! Facade paths and direct-component paths name the same types (#520, #528).
+//! Facade paths and direct-component paths name the same types (#520, #528,
+//! #529).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -203,4 +204,37 @@ fn test_market_types_through_facade_modules_and_prelude() {
 
     let _: optionstratlib_market::error::ChainError =
         optionstratlib::error::ChainError::invalid_strike(-1.0, "probe");
+}
+
+fn analytics_pnl(value: optionstratlib_analytics::pnl::PnL) -> optionstratlib_analytics::pnl::PnL {
+    value
+}
+
+#[test]
+fn test_analytics_items_through_facade_modules_and_prelude() {
+    let pnl = analytics_pnl(optionstratlib::pnl::PnL::new(
+        Some(dec!(10.0)),
+        None,
+        optionstratlib::prelude::Positive::ONE,
+        optionstratlib::prelude::Positive::ZERO,
+        chrono::Utc::now(),
+    ));
+    let from_prelude: optionstratlib::prelude::PnL = pnl;
+    assert_eq!(from_prelude.realized, Some(dec!(10.0)));
+
+    same_item(
+        optionstratlib::analytics::calculate_price_probability,
+        optionstratlib_analytics::analytics::calculate_price_probability,
+    );
+    same_item(
+        optionstratlib::risk::SPANMargin::new,
+        optionstratlib_analytics::risk::SPANMargin::new,
+    );
+
+    let _: optionstratlib_analytics::error::TransactionError =
+        optionstratlib::error::TransactionError::other("probe");
+    let _: optionstratlib_analytics::error::ProbabilityError =
+        optionstratlib::prelude::ProbabilityError::invalid_probability(1.5, "probe");
+    let _: optionstratlib_analytics::error::probability::ProbabilityResult<()> =
+        optionstratlib::error::probability::ProbabilityResult::<()>::Ok(());
 }
