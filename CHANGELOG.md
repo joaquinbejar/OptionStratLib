@@ -62,6 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking: dependencies moved to the utoipa 6 line.** `utoipa` 5.5 -> 6.0,
+  `positive` 0.6 -> 0.7, `expiration_date` 0.3 -> 0.4, `option_type`
+  0.3 -> 0.4 and `financial_types` 0.2 -> 0.3. All five appear in the public
+  API (`Positive`, `ExpirationDate`, `OptionType`, `Side`, `OptionStyle` and
+  the `utoipa::ToSchema` impls on public types), so consumers must move to
+  the same versions in the same step; crates still on utoipa 5 should stay on
+  0.21. The sibling crates were already on utoipa 6 and need Rust 1.88 or
+  newer; this crate declares no `rust-version` and builds on stable. No
+  source change was required. `uuid` 1.26 -> 1.27; every other dependency was
+  already at its latest stable minor.
 - **The two forbidden edges M1-10 owned are removed, not deferred** (#507).
   `geometrics -> error/chains` came from `pub type ResultPoint<Point> =
   Result<Point, ChainError>`: the math layer's construction API named a market
