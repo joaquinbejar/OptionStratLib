@@ -37,8 +37,14 @@ fn close(value: Decimal, expected: Decimal, tolerance: Decimal) -> bool {
 fn test_prelude_prices_hull_example() {
     let call = black_scholes(&hull_option(OptionStyle::Call));
     let put = black_scholes(&hull_option(OptionStyle::Put));
-    assert!(matches!(call, Ok(price) if close(price, dec!(4.76), dec!(0.005))), "{call:?}");
-    assert!(matches!(put, Ok(price) if close(price, dec!(0.81), dec!(0.005))), "{put:?}");
+    assert!(
+        matches!(call, Ok(price) if close(price, dec!(4.76), dec!(0.005))),
+        "{call:?}"
+    );
+    assert!(
+        matches!(put, Ok(price) if close(price, dec!(0.81), dec!(0.005))),
+        "{put:?}"
+    );
 }
 
 #[test]

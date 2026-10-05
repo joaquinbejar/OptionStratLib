@@ -50,7 +50,13 @@ fn test_build_a_chain_through_the_prelude() {
 
 #[test]
 fn test_hand_built_chain_reads_back() {
-    let mut chain = OptionChain::new("XYZ", Positive::HUNDRED, "2030-01-17".to_string(), None, None);
+    let mut chain = OptionChain::new(
+        "XYZ",
+        Positive::HUNDRED,
+        "2030-01-17".to_string(),
+        None,
+        None,
+    );
     chain.add_option(
         Positive::HUNDRED,
         spos!(4.9),

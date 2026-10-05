@@ -118,6 +118,23 @@ tree-consumer-core-pricing:
 	cargo tree --manifest-path $(FIXTURE_PRICING_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py pricing-only
 
+# The facade built with one capability each (#528): `pricing` alone and
+# `market` alone, each consumed through the prelude and the canonical paths.
+FACADE_FIXTURES := facade-pricing facade-market
+
+.PHONY: check-consumer-facade
+check-consumer-facade:
+	@for fixture in $(FACADE_FIXTURES); do \
+		manifest=fixtures/consumers/$$fixture/Cargo.toml; \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo clippy --manifest-path $$manifest --all-targets -- -D warnings || exit 1; \
+	done
+
+.PHONY: test-consumer-facade
+test-consumer-facade:
+	@for fixture in $(FACADE_FIXTURES); do \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
+	done
+
 .PHONY: check-graph
 check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
