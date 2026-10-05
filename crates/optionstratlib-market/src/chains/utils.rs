@@ -3,8 +3,8 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
-use crate::model::decimal::{d_sqrt, p_sqrt};
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_sqrt, p_sqrt};
 use std::ops::Mul;
 
 /// Calculates the optimal price range for an option based on its underlying price,
@@ -217,15 +217,15 @@ mod tests_find_optimal_side {
 }
 
 #[cfg(test)]
-use positive::pos_or_panic;
+use optionstratlib_core::pos_or_panic;
 
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
-use crate::model::ExpirationDate;
-use crate::model::decimal::f64_to_decimal;
-use crate::model::utils::ToRound;
 use num_traits::ToPrimitive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::decimal::f64_to_decimal;
+use optionstratlib_core::model::utils::ToRound;
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -464,10 +464,15 @@ impl OptionChainBuildParams {
         self.price_params.underlying_price = price;
     }
 
-    /// Sets the implied volatility value for this option pricing parameter.
-    ///
-    /// # Arguments
-    /// * `implied_vol` - A positive decimal value representing the implied volatility.
+    /// Sets the expiration of the chain to build, overriding the one in the
+    /// price parameters.
+    #[inline]
+    pub fn set_expiration_date(&mut self, expiration_date: ExpirationDate) {
+        self.price_params.expiration_date = Some(expiration_date);
+    }
+
+    /// Sets the implied volatility used to price every strike of the chain.
+    #[inline]
     pub fn set_implied_volatility(&mut self, implied_vol: Positive) {
         self.implied_volatility = implied_vol;
     }
@@ -1115,11 +1120,11 @@ pub fn strike_step(
 #[cfg(test)]
 mod tests_strike_step {
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::OptionChain;
 
-    use crate::utils::Len;
+    use optionstratlib_core::utils::Len;
     #[test]
     fn basic() {
         let step = strike_step(
@@ -1280,7 +1285,7 @@ mod tests_rounder {
 mod tests_parse {
     use super::*;
 
-    use positive::spos;
+    use optionstratlib_core::spos;
     use std::f64::consts::PI;
 
     #[test]
@@ -1315,7 +1320,7 @@ mod tests_parse {
 #[cfg(test)]
 mod tests_parse_bis {
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -1644,7 +1649,7 @@ mod tests_option_data_price_params {
     use super::*;
 
     use num_traits::ToPrimitive;
-    use positive::spos;
+    use optionstratlib_core::spos;
     use rust_decimal_macros::dec;
 
     fn get_params() -> OptionDataPriceParams {
@@ -1750,7 +1755,7 @@ mod tests_option_data_price_params {
 #[cfg(test)]
 mod tests_option_chain_build_params {
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -1900,7 +1905,7 @@ mod tests_random_positions_params_extended {
 #[cfg(test)]
 mod tests_sample {
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::chain::OptionChain;
 

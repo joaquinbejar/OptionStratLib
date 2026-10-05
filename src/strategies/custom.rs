@@ -13,7 +13,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::analytics::ProfitLossRange;
-use crate::chains::model_impls::UpdateFromOptionData;
+use crate::chains::UpdateFromOptionData;
 use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_div, d_mul};
 use crate::strategies::base::price_gap;

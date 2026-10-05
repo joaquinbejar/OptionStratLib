@@ -7,10 +7,10 @@
 //! Verifies that a chain built through the normal path carries the full
 //! twelve-greek snapshot on every strike, for both option styles.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::OptionChain;
-use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use positive::{Positive, pos_or_panic, spos};
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+use optionstratlib_market::chains::OptionChain;
+use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use rust_decimal_macros::dec;
 
 fn build_params() -> OptionChainBuildParams {

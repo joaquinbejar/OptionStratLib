@@ -31,7 +31,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::error::OhlcvError;
+/// use optionstratlib_market::error::OhlcvError;
 ///
 /// fn read_data() -> Result<(), OhlcvError> {
 ///     Err(OhlcvError::IoError {

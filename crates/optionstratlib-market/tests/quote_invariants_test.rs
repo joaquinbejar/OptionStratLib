@@ -12,9 +12,9 @@
 //! land on it twice and come out locked; the ask is lifted a tick instead, so
 //! the thinnest market this generator emits is one tick wide.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::OptionData;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
+use optionstratlib_market::chains::OptionData;
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

@@ -11,15 +11,15 @@
 //! the largest, rates far outside anything a market quotes. The assertion is
 //! deliberately weak: whatever comes back, it must come back.
 
-use optionstratlib::chains::OptionChain;
-use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use optionstratlib::greeks::Greeks;
-use optionstratlib::model::ExpirationDate;
-use optionstratlib::model::Options;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pricing::OptionPricing;
-use optionstratlib::pricing::{black_76, black_scholes, garman_kohlhagen};
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Options;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_market::chains::OptionChain;
+use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+use optionstratlib_pricing::greeks::Greeks;
+use optionstratlib_pricing::pricing::OptionPricing;
+use optionstratlib_pricing::pricing::{black_76, black_scholes, garman_kohlhagen};
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

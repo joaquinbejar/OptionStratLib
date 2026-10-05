@@ -7,12 +7,13 @@
 //! `optionstratlib-math`, which knows nothing about options.
 
 /// `impl BasicCurves for OptionChain`, `impl BasicSurfaces for OptionChain`
-/// and the inherent projection wrappers on `OptionChain`.
+/// and the `OptionChainProjections` trait implemented for it.
 mod chain;
 /// `BasicCurves` trait.
 mod curves;
 /// `BasicSurfaces` trait.
 mod surfaces;
 
+pub use chain::OptionChainProjections;
 pub use curves::BasicCurves;
 pub use surfaces::BasicSurfaces;

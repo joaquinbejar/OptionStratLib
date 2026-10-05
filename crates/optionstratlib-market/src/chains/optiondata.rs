@@ -8,13 +8,13 @@ use crate::chains::utils::{OptionDataPriceParams, default_empty_string, empty_st
 use crate::chains::{DeltasInStrike, OptionsInStrike};
 use crate::error::ChainError;
 use crate::error::chains::OptionDataErrorKind;
-use crate::greeks::{Greeks, GreeksSnapshot, delta, gamma};
-use crate::model::Position;
-use crate::model::utils::sub_floor_zero;
-use crate::pricing::OptionPricing;
-use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
-use positive::Positive;
+use optionstratlib_core::model::Position;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::utils::sub_floor_zero;
+use optionstratlib_core::model::{ExpirationDate, OptionStyle, Options, Side};
+use optionstratlib_pricing::greeks::{Greeks, GreeksSnapshot, delta, gamma};
+use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -22,7 +22,6 @@ use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
 use tracing::{debug, error, trace, warn};
-use utoipa::ToSchema;
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
 ///
@@ -71,7 +70,8 @@ use utoipa::ToSchema;
 ///
 /// This struct implements Serialize and Deserialize traits, with fields that are `None`
 /// being skipped during serialization to produce more compact JSON output.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionData {
     /// The strike price of the option, represented as a positive floating-point number.
     #[serde(rename = "strike_price")]
@@ -183,7 +183,7 @@ pub struct OptionData {
     /// flips sign with it. Scaling by position size is likewise the consumer's
     /// job.
     ///
-    /// [`crate::greeks::Greeks`] signs an aggregate position by each leg's
+    /// [`optionstratlib_pricing::greeks::Greeks`] signs an aggregate position by each leg's
     /// [`Side`] for you. These fields do not, by construction: they are built
     /// through `get_option(Side::Long, style)`, so they stay per-long-contract
     /// and the caller owns both the sign and the size.
@@ -734,14 +734,14 @@ impl OptionData {
     ///
     /// A call option is considered valid when all required data is present:
     /// * The strike price is greater than zero
-    /// * Implied volatility is available
     /// * Both bid and ask prices for the call option are available
     ///
     /// # Returns
     ///
     /// `true` if all required call option data is present, `false` otherwise.
     #[inline]
-    pub(crate) fn valid_call(&self) -> bool {
+    #[must_use]
+    pub fn valid_call(&self) -> bool {
         self.strike_price > Positive::ZERO && self.call_bid.is_some() && self.call_ask.is_some()
     }
 
@@ -749,14 +749,14 @@ impl OptionData {
     ///
     /// A put option is considered valid when all required data is present:
     /// * The strike price is greater than zero
-    /// * Implied volatility is available
     /// * Both bid and ask prices for the put option are available
     ///
     /// # Returns
     ///
     /// `true` if all required put option data is present, `false` otherwise.
     #[inline]
-    pub(crate) fn valid_put(&self) -> bool {
+    #[must_use]
+    pub fn valid_put(&self) -> bool {
         self.strike_price > Positive::ZERO && self.put_bid.is_some() && self.put_ask.is_some()
     }
 
@@ -854,16 +854,7 @@ impl OptionData {
     ///
     /// Returns `ChainError::invalid_volatility` if neither the input parameters nor the object
     /// itself contains a valid implied volatility value.
-    ///
-    /// `pub(crate)` rather than `pub(super)` because the analytics-owned
-    /// `impl <MetricTrait> for OptionChain` blocks in `metrics::chain` and the
-    /// `BasicCurves` / `BasicSurfaces` projections build per-strike contracts
-    /// through it.
-    pub(crate) fn get_option(
-        &self,
-        side: Side,
-        option_style: OptionStyle,
-    ) -> Result<Options, ChainError> {
+    pub fn get_option(&self, side: Side, option_style: OptionStyle) -> Result<Options, ChainError> {
         let mut option = Options::try_from(self)
             .map_err(|e| ChainError::OptionDataError(OptionDataErrorKind::Other(e.to_string())))?;
         option.side = side;
@@ -1319,7 +1310,7 @@ impl OptionData {
     /// Builds the greek snapshot for one option style, or `None` if it cannot
     /// be computed.
     ///
-    /// `alpha` is mapped to `None` when the underlying [`crate::greeks::alpha`]
+    /// `alpha` is mapped to `None` when the underlying [`optionstratlib_pricing::greeks::alpha`]
     /// returns its `Decimal::MAX` sentinel. Publishing that sentinel would put
     /// a 29-digit number on the wire that consumers would read as a real
     /// value. The guard is defensive: `alpha` tests gamma first and returns
@@ -1591,7 +1582,7 @@ impl fmt::Display for OptionData {
 #[cfg(test)]
 mod optiondata_coverage_tests {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create test option data
@@ -1773,7 +1764,7 @@ mod optiondata_coverage_tests {
 #[cfg(test)]
 mod tests_greeks_snapshot {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     fn option_data_with_expiry(expiration_date: ExpirationDate) -> OptionData {
@@ -1928,9 +1919,9 @@ mod tests_greeks_snapshot {
 #[cfg(test)]
 mod tests_get_position {
     use super::*;
-    use crate::model::ExpirationDate;
     use chrono::{Duration, Utc};
-    use positive::{assert_pos_relative_eq, pos_or_panic, spos};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::{assert_pos_relative_eq, pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard test option data
@@ -2388,7 +2379,7 @@ mod tests_get_position {
 #[cfg(test)]
 mod tests_check_convert_implied_volatility {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     #[test]
     fn test_check_and_convert_implied_volatility_over_one() {
@@ -2459,9 +2450,9 @@ mod tests_check_convert_implied_volatility {
 #[cfg(test)]
 mod tests_get_option_for_iv {
     use super::*;
-    use crate::OptionType;
-    use crate::model::ExpirationDate;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::OptionType;
+    use optionstratlib_core::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     // Helper function to create a standard OptionDataPriceParams for testing
@@ -2595,7 +2586,7 @@ mod tests_get_option_for_iv {
 #[cfg(test)]
 mod tests_quotable_price {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     const STRIKE: Positive = Positive::HUNDRED;
 
@@ -2646,7 +2637,7 @@ mod tests_quotable_price {
 #[cfg(test)]
 mod tests_some_price_is_none {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
 
     #[test]
     fn test_some_price_is_none_all_prices_present() {
@@ -2820,7 +2811,7 @@ mod tests_some_price_is_none {
 #[cfg(test)]
 mod tests_is_valid_optimal_side_deltable {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -3023,7 +3014,7 @@ mod tests_is_valid_optimal_side_deltable {
 #[cfg(test)]
 mod tests_set_mid_prices {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
 
     #[test]
     fn test_set_mid_prices_with_both_call_prices() {
@@ -3193,7 +3184,7 @@ mod tests_set_mid_prices {
 #[cfg(test)]
 mod tests_get_mid_prices {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
 
     #[test]
     fn test_get_mid_prices_with_both_mid_prices() {
@@ -3336,7 +3327,7 @@ mod tests_get_mid_prices {
 #[cfg(test)]
 mod tests_current_deltas {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -3471,7 +3462,7 @@ mod tests_current_deltas {
 #[cfg(test)]
 mod tests_spreads {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
 
     #[test]
     fn test_get_call_spread_some() {
@@ -3731,8 +3722,8 @@ mod tests_spreads {
 #[cfg(test)]
 mod tests_validate_option_data {
     use super::*;
-    use positive::pos_or_panic;
-    use positive::spos;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::spos;
     use rust_decimal_macros::dec;
 
     #[test]
@@ -3874,7 +3865,7 @@ mod tests_validate_option_data {
 #[cfg(test)]
 mod tests_apply_spread_widen_and_floor {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
     use rust_decimal_macros::dec;
 
     /// A quote with a mid and no bid/ask, which is what `build_chain` produces
@@ -4085,8 +4076,8 @@ mod tests_apply_spread_widen_and_floor {
 #[cfg(test)]
 mod tests_random_element {
     use super::*;
-    use crate::utils::rng::get_random_element;
-    use positive::{Positive, pos_or_panic};
+    use optionstratlib_core::utils::rng::get_random_element;
+    use optionstratlib_core::{model::Positive, pos_or_panic};
     use std::collections::BTreeSet;
 
     #[test]

@@ -1,0 +1,50 @@
+[package]
+name = "optionstratlib-market"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Option chains and option series of OptionStratLib: building, parsing, and CSV, JSON and ZIP I/O."
+readme = "README.md"
+keywords = ["finance", "options", "option-chain", "market-data"]
+categories = ["finance", "data-structures"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `tokio`-backed `*_async` readers and writers (ADR-0003).
+async = ["dep:tokio"]
+# `ToSchema` derives on the market types (ADR-0002).
+schema = [
+    "dep:utoipa",
+    "optionstratlib-core/schema",
+    "optionstratlib-math/schema",
+    "optionstratlib-pricing/schema",
+]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-math = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+chrono = { workspace = true }
+csv = { workspace = true }
+num-traits = { workspace = true }
+pretty-simple-display = { workspace = true }
+prettytable-rs = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, optional = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+mockall = { workspace = true }
+tempfile = { workspace = true }
+proptest = { workspace = true }

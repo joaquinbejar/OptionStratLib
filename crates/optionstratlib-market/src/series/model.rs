@@ -1,9 +1,9 @@
-use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
-use crate::utils::Len;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::Len;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
@@ -11,11 +11,24 @@ use serde::{Deserialize, Serialize};
 use serde::{Deserializer, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
-use utoipa::ToSchema;
 
 /// Represents a series of option chains for an underlying asset,
 /// providing detailed information about its options market and related financial data.
-#[derive(DebugPretty, DisplaySimple, Clone, ToSchema)]
+///
+/// # Serialization
+///
+/// The 0.22 contract (JSON shown; any serde format works) is an object with
+/// `symbol`, `underlying_price`, `chains`, and the optional
+/// `risk_free_rate` and `dividend_yield`, which are omitted when `None`.
+/// `chains` is a map from an expiration date written as `YYYY-MM-DD` to the
+/// [`OptionChain`] for that date, ordered by date. Deserialization parses
+/// each key back with `ExpirationDate::from_string_to_days`, so an expiry
+/// stored as an absolute date comes back as a day count from the moment of
+/// reading, so the variant does not round-trip, and today each date can come
+/// back one day earlier (#643). A key that is not a date is an error, not a
+/// skipped chain.
+#[derive(DebugPretty, DisplaySimple, Clone)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionSeries {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -410,12 +423,12 @@ impl<'de> Deserialize<'de> for OptionSeries {
 #[cfg(test)]
 mod tests_option_series {
     use super::*;
-    use positive::{Positive, pos_or_panic, spos};
+    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
 
     use crate::chains::OptionChain;
     use crate::series::params::OptionSeriesBuildParams;
-    use crate::utils::Len;
-    use crate::utils::time::get_x_days_formatted_pos;
+    use optionstratlib_core::utils::Len;
+    use optionstratlib_core::utils::time::get_x_days_formatted_pos;
 
     use rust_decimal_macros::dec;
 
@@ -737,6 +750,86 @@ mod tests_option_series {
         use super::*;
 
         use serde_json;
+
+        fn chain(symbol: &str, expiration: &str) -> OptionChain {
+            OptionChain::new(
+                symbol,
+                Positive::HUNDRED,
+                expiration.to_string(),
+                None,
+                None,
+            )
+        }
+
+        #[test]
+        fn test_round_trip_keeps_every_chain_and_date() {
+            let mut original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
+            original.chains.insert(
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                chain("TEST", "2030-01-15"),
+            );
+            original.chains.insert(
+                ExpirationDate::Days(pos_or_panic!(60.0)),
+                chain("TEST", "2030-02-14"),
+            );
+            original.risk_free_rate = Some(dec!(0.05));
+
+            let json = match serde_json::to_string(&original) {
+                Ok(json) => json,
+                Err(error) => panic!("serialize: {error}"),
+            };
+            let back: OptionSeries = match serde_json::from_str(&json) {
+                Ok(series) => series,
+                Err(error) => panic!("deserialize: {error}"),
+            };
+
+            assert_eq!(back.symbol, original.symbol);
+            assert_eq!(back.underlying_price, original.underlying_price);
+            assert_eq!(back.risk_free_rate, original.risk_free_rate);
+            assert_eq!(back.dividend_yield, None);
+            assert_eq!(back.chains.len(), 2);
+            let dates = |series: &OptionSeries| -> Vec<String> {
+                series
+                    .chains
+                    .keys()
+                    .map(|date| match date.get_date_string() {
+                        Ok(date) => date,
+                        Err(error) => panic!("date string: {error}"),
+                    })
+                    .collect()
+            };
+            // Each key may come back one day earlier (#643); pin that bound
+            // until the conversion is fixed, then tighten to equality.
+            for (read, written) in dates(&back).iter().zip(dates(&original).iter()) {
+                let parse = |date: &str| match chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") {
+                    Ok(date) => date,
+                    Err(error) => panic!("date {date}: {error}"),
+                };
+                let shift = (parse(written) - parse(read)).num_days();
+                assert!((0..=1).contains(&shift), "{written} read back as {read}");
+            }
+            let expirations: Vec<String> = back
+                .chains
+                .values()
+                .map(OptionChain::get_expiration_date)
+                .collect();
+            assert_eq!(expirations, vec!["2030-01-15", "2030-02-14"]);
+        }
+
+        #[test]
+        fn test_deserialize_rejects_a_key_that_is_not_a_date() {
+            let chain_json = match serde_json::to_string(&chain("TEST", "2030-01-15")) {
+                Ok(json) => json,
+                Err(error) => panic!("serialize chain: {error}"),
+            };
+            let json = format!(
+                r#"{{"symbol":"TEST","underlying_price":"100","chains":{{"not-a-date":{chain_json}}}}}"#
+            );
+            match serde_json::from_str::<OptionSeries>(&json) {
+                Err(error) => assert!(error.to_string().contains("Invalid date format")),
+                Ok(_) => panic!("a non-date chain key must be rejected"),
+            }
+        }
 
         #[test]
         fn test_serialization_minimal() {

@@ -1,5 +1,5 @@
 use crate::chains::OptionChainBuildParams;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +26,26 @@ pub struct OptionSeriesBuildParams {
 }
 
 impl OptionSeriesBuildParams {
+    /// The parameters every chain of the series is built from.
+    #[inline]
+    #[must_use]
+    pub fn chain_params(&self) -> &OptionChainBuildParams {
+        &self.chain_params
+    }
+
+    /// The days to expiration of the chains to build, one per chain.
+    #[inline]
+    #[must_use]
+    pub fn series(&self) -> &[Positive] {
+        &self.series
+    }
+
+    /// Replaces the days to expiration of the chains to build.
+    #[inline]
+    pub fn set_series(&mut self, series: Vec<Positive>) {
+        self.series = series;
+    }
+
     /// Constructs a new instance of the `Self` type.
     ///
     /// # Parameters
@@ -93,10 +113,10 @@ impl OptionSeriesBuildParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use positive::{Positive, pos_or_panic, spos};
+    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
 
-    use crate::ExpirationDate;
     use crate::chains::utils::OptionDataPriceParams;
+    use optionstratlib_core::model::ExpirationDate;
     use rust_decimal_macros::dec;
 
     #[test]

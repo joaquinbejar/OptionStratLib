@@ -58,7 +58,7 @@ fn create_chain_from_step(
         chain_params.set_implied_volatility(volatility);
     }
     if let Some(exp_date) = expiration_date {
-        chain_params.price_params.expiration_date = Some(exp_date);
+        chain_params.set_expiration_date(exp_date);
     }
 
     OptionChain::build_chain(&chain_params)
@@ -81,7 +81,7 @@ fn create_chain_from_step(
 /// closure.
 ///
 /// # Contract (shared with [`crate::simulation::generator_positive`] and
-/// [`crate::series::generator_optionseries`])
+/// [`crate::synthetic::generator_optionseries`])
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
 /// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
@@ -102,7 +102,8 @@ fn create_chain_from_step(
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
+/// Returns [`ChainError::Generator`] (via the `From<SimulationError>` conversion, its
+/// source downcasts to `SimulationError`) if the
 /// random-walk generator returns an error — including
 /// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
 /// prices than `walk_params.size` — and propagates errors from the historical helpers
@@ -568,9 +569,9 @@ mod generators_coverage_tests {
     use positive::{Positive, spos};
 
     use crate::ExpirationDate;
-    use crate::chains::generators::generator_optionchain;
     use crate::simulation::steps::{Step, Xstep, Ystep};
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
+    use crate::synthetic::generator_optionchain;
     use crate::utils::TimeFrame;
     use crate::utils::time::get_tomorrow_formatted;
     use rust_decimal_macros::dec;

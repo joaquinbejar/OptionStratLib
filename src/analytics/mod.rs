@@ -23,7 +23,7 @@ pub mod projections;
 ///   `impl RNDAnalysis for OptionChain`.
 pub mod rnd;
 
-pub use projections::{BasicCurves, BasicSurfaces};
+pub use projections::{BasicCurves, BasicSurfaces, OptionChainProjections};
 pub use rnd::{RNDAnalysis, RNDParameters, RNDResult, RNDStatistics};
 
 /// * `profit_range` - [`profit_range::ProfitLossRange`] and the

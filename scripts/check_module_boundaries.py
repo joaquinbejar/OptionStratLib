@@ -15,7 +15,7 @@ Three kinds of lines are exempt from the layer rule:
 * lines carrying `// facade-compat: <layer>`: compatibility re-exports that
   keep a 0.21 path alive from a lower module and become the facade crate's
   own module files at extraction time;
-* files listed in `SYNTHETIC_FILES`: the market-to-simulation edge that the
+* files listed in `SYNTHETIC_FILES` (empty since #524, market is a crate): the market-to-simulation edge that the
   `synthetic` feature gates (ADR-0003);
 * edges listed in `DEFERRED`, scoped to the files that carry them: known
   violations whose removal is a breaking change batched behind the 0.22.0
@@ -93,6 +93,10 @@ LAYER_OF = {
     "visualization": "visualization",
     "error": "facade",
     "prelude": "facade",
+    # The simulation-backed chain and series generators: market data built by
+    # the simulation engine, so they sit above both until M5 moves them into
+    # `optionstratlib-market` behind its `synthetic` feature (#524).
+    "synthetic": "facade",
 }
 
 # `src/error/<file>.rs` -> target crate layer (ADR-0001 D6).
@@ -166,23 +170,21 @@ ALLOWED = {
 # file by `error_types` / `resolve_error_refs` below (#590).
 ALWAYS_ALLOWED_TARGETS = {"error"}
 
-# Files whose simulation edge is the `synthetic`-gated market capability
-# (ADR-0003, roadmap M1-15). File-level on purpose: the generator modules are
-# declared `#[cfg(feature = "synthetic")]` and compile only under it, and in
-# `error/chains.rs` the gate sits on the `Simulation` variant and its `From`
-# impl. `synthetic_gate_violations` proves each of these references really is
-# behind the feature, so listing a file here cannot launder an ungated edge.
-SYNTHETIC_FILES = {
-    "chains/generators.rs",
-    "series/generators.rs",
-    # `ChainError::Simulation` and `From<SimulationError> for ChainError`.
-    "error/chains.rs",
-}
+# Facade files whose market-to-simulation edge is the `synthetic`-gated
+# capability (ADR-0003, roadmap M1-15). Empty since #524: market is its own
+# crate, so the crate graph forbids the edge outright, and the generators
+# live in the facade-layer `synthetic` module, which may name both layers.
+# `synthetic_gate_violations` still proves that module sits behind the
+# feature. A path listed here that no longer exists is reported as stale.
+SYNTHETIC_FILES: set[str] = set()
 
 # `#[cfg(feature = "synthetic")]`, however the attribute is spaced.
 SYNTHETIC_CFG_RE = re.compile(r'#\[cfg\(feature\s*=\s*"synthetic"\)\]')
 
-# Modules whose minimal (non-`synthetic`) surface must name no simulation type.
+# Modules whose minimal (non-`synthetic`) surface must name no simulation
+# type, when market files sit in a scanned `src/` (the self-test fixtures).
+# The market crate itself is held to it by the crate graph and the
+# forbidden-package check (#524).
 MINIMAL_MARKET_MODULES = ("chains", "series")
 
 # (source module, target module) -> (files that may carry the edge, the issue
@@ -305,7 +307,12 @@ def error_types(src: Path = SRC) -> tuple[dict[str, str], set[str]]:
     is taken (the conservative direction: a real inversion is never silent).
     """
     candidates: dict[str, set[str]] = {}
-    for path in sorted((src / "error").glob("*.rs")) if (src / "error").is_dir() else []:
+    # The facade's own error files, plus those of the extracted component
+    # crates: the facade re-exports their types through `crate::error`, and
+    # their file stems keep the layer `ERROR_FILE_LAYER` gives them (#524).
+    error_files = sorted((src / "error").glob("*.rs")) if (src / "error").is_dir() else []
+    error_files += sorted(src.parent.glob("crates/*/src/error/*.rs"))
+    for path in error_files:
         stem = path.stem
         if stem == "mod":
             continue
@@ -829,6 +836,10 @@ def synthetic_gate_violations(src: Path = SRC) -> list[str]:
     gated_modules = gated_module_files(src)
 
     problems: list[str] = []
+    # The facade's `synthetic` module holds the generators until M5 (#524):
+    # it must be declared under the feature, which gates every file in it.
+    if any(src.glob("synthetic/*.rs")) and "synthetic/mod.rs" not in gated_modules:
+        problems.append('synthetic/mod.rs: `mod synthetic` must be declared under #[cfg(feature = "synthetic")]')
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
         top = rel.split("/")[0]
@@ -979,6 +990,19 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
     }),
+    # ADR-0002 `osl-fixture-market-minimal` row. `csv` and `zip` are still
+    # mandatory until #525 gates them behind `io`.
+    "optionstratlib-market": frozenset({
+        "tokio", "reqwest", "futures", "plotly", "plotly_static", "plotters",
+        "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
+}
+
+# Packages a component's optional features are allowed to bring in: removed
+# from its forbidden set for the all-features tree only.
+FEATURE_ALLOWED_PACKAGES: dict[str, frozenset[str]] = {
+    # `async` = `tokio`-backed `*_async` readers and writers.
+    "optionstratlib-market": frozenset({"tokio"}),
 }
 
 
@@ -1000,7 +1024,10 @@ def forbidden_package_violations(trees: dict[tuple[str, str], set[str]]) -> list
     """`(crate, feature set) -> resolved packages`, checked against FORBIDDEN_PACKAGES."""
     found = []
     for (crate, features), packages in sorted(trees.items()):
-        for name in sorted(packages & FORBIDDEN_PACKAGES.get(crate, frozenset())):
+        forbidden = FORBIDDEN_PACKAGES.get(crate, frozenset())
+        if features == "all features":
+            forbidden = forbidden - FEATURE_ALLOWED_PACKAGES.get(crate, frozenset())
+        for name in sorted(packages & forbidden):
             found.append(f"{crate} ({features}) resolves {name}")
     return found
 
@@ -1173,7 +1200,6 @@ def self_test() -> int:
         "multiline qualified group": ([err, ("model/x.rs", "use crate::error::{\n    strategies::StrategyError,\n};\n")], 1),
         "empty test module then import": ([("model/x.rs", "#[cfg(test)]\nmod tests {}\nuse crate::strategies::Strategy;\n")], 1),
         "test module file then import": ([("model/x.rs", "#[cfg(test)]\nmod tests;\nuse crate::strategies::Strategy;\n")], 1),
-        "synthetic file": ([("chains/generators.rs", "use crate::simulation::WalkParams;\n")], 0),
         # --- per-file ownership of `src/utils` (M1-09)
         "utils file is scanned as its own owner": (
             [("utils/rng.rs", "use crate::strategies::Strategy;\n")], 1, "utils/rng -> strategies",
@@ -1354,6 +1380,14 @@ def self_test() -> int:
     # The synthetic gate: a simulation reference in market code counts only
     # when the feature attribute really carries it (M1-15).
     gate_cases = {
+        "facade synthetic module ungated": (
+            {"lib.rs": "pub mod synthetic;\n", "synthetic/mod.rs": "mod chains;\n", "synthetic/chains.rs": "use crate::simulation::X;\n"},
+            1,
+        ),
+        "facade synthetic module gated": (
+            {"lib.rs": '#[cfg(feature = "synthetic")]\npub mod synthetic;\n', "synthetic/mod.rs": "mod chains;\n", "synthetic/chains.rs": "use crate::simulation::X;\n"},
+            0,
+        ),
         "ungated variant in market error": (
             {"error/chains.rs": "pub enum ChainError {\n    Simulation(Box<crate::error::SimulationError>),\n}\n"},
             1,
@@ -1567,6 +1601,8 @@ def self_test() -> int:
         "math may use rayon": ({("optionstratlib-math", "default"): {"rayon"}}, 0),
         "math pulls csv through a feature": ({("optionstratlib-math", "all features"): {"csv"}}, 1),
         "unlisted crate is not checked": ({("examples_chain", "default"): {"plotly"}}, 0),
+        "market tokio only with features": ({("optionstratlib-market", "all features"): {"tokio"}}, 0),
+        "market tokio by default": ({("optionstratlib-market", "default"): {"tokio"}}, 1),
     }
     for name, (trees_case, expected) in forbidden_cases.items():
         got = len(forbidden_package_violations(trees_case))
@@ -1574,6 +1610,25 @@ def self_test() -> int:
         if not ok:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: forbidden packages, {name} (expected {expected}, got {got})")
+
+    # Error types defined in a component crate keep their file's layer (#524).
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "src"
+        files = {
+            "src/error/simulation.rs": "pub enum SimulationError { A }\nimpl From<SimulationError> for crate::error::ChainError {}\n",
+            "src/error/mod.rs": "pub use optionstratlib_market::error::ChainError;\n",
+            "crates/optionstratlib-market/src/error/chains.rs": "pub enum ChainError { A }\n",
+        }
+        for rel, content in files.items():
+            target = Path(tmp) / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        edges, _ = scan(root)
+        got = len(violations_of(edges))
+        ok = got == 1
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: a component crate's error type keeps its layer (expected 1, got {got})")
 
     pricing_rules = INTRA_CRATE_RULES["optionstratlib-pricing"]
     intra_cases = {
@@ -1672,6 +1727,12 @@ def main() -> int:
         print("deferred edges no longer present, prune them from DEFERRED:")
         for item in stale:
             print(f"  {item}")
+    stale_synthetic = sorted(f for f in SYNTHETIC_FILES if not (SRC / f).exists())
+    if stale_synthetic:
+        print("SYNTHETIC_FILES entries no longer present, prune them:")
+        for item in stale_synthetic:
+            print(f"  {item}")
+        return 1
     if violations:
         print("forbidden module edges (see doc/DEPENDENCY-MATRIX.md, ADR-0001 D9):")
         for item in violations:

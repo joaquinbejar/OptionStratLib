@@ -3,10 +3,10 @@
 //! roadmap M1-13, #510): the trait stays generic in pricing and the impl
 //! lives with the market-owned type.
 
-use optionstratlib::chains::chain::OptionChain;
-use optionstratlib::error::VolatilityError;
-use optionstratlib::volatility::AtmIvProvider;
-use positive::{Positive, pos_or_panic};
+use optionstratlib_core::{model::Positive, pos_or_panic};
+use optionstratlib_market::chains::chain::OptionChain;
+use optionstratlib_pricing::error::VolatilityError;
+use optionstratlib_pricing::volatility::AtmIvProvider;
 use rust_decimal_macros::dec;
 
 #[test]

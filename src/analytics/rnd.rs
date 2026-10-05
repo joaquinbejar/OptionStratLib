@@ -1839,9 +1839,9 @@ mod statistical_validation_tests {
 
 #[cfg(test)]
 mod chain_test {
+    use crate::analytics::rnd::{RNDAnalysis, RNDParameters};
     use crate::chains::chain::OptionChain;
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::chains::{RNDAnalysis, RNDParameters};
     use crate::{ExpirationDate, assert_decimal_eq};
     use positive::{Positive, pos_or_panic, spos};
     use rust_decimal::Decimal;
@@ -2015,9 +2015,9 @@ mod chain_test {
 mod rnd_coverage_tests {
     use super::*;
 
+    use crate::analytics::rnd::RNDAnalysis;
+    use crate::analytics::rnd::RNDResult;
     use crate::chains::OptionChain;
-    use crate::chains::RNDAnalysis;
-    use crate::chains::RNDResult;
 
     use positive::{pos_or_panic, spos};
     use std::collections::BTreeMap;
@@ -2222,7 +2222,7 @@ mod rnd_analysis_tests {
         #[test]
         fn test_expired_option() {
             let mut chain = create_standard_chain();
-            chain.expiration_date = "2023-01-01".to_string(); // Past date
+            chain.set_expiration_date("2023-01-01".to_string()); // Past date
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
@@ -2329,7 +2329,7 @@ mod rnd_analysis_tests {
         #[test]
         fn test_invalid_date_format() {
             let mut chain = create_standard_chain();
-            chain.expiration_date = "invalid_date".to_string();
+            chain.set_expiration_date("invalid_date".to_string());
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),

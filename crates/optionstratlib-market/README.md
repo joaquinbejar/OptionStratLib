@@ -1,0 +1,28 @@
+# optionstratlib-market
+
+Market data of [OptionStratLib](https://github.com/joaquinbejar/OptionStratLib):
+option chains and option series, their build parameters, parsing, and CSV,
+JSON and ZIP readers and writers. The crate depends on `optionstratlib-core`,
+`optionstratlib-math` and `optionstratlib-pricing`, and on no analytics,
+strategy, simulation, backtesting or plotting code.
+
+| Module   | Contents                                                                  |
+|----------|---------------------------------------------------------------------------|
+| `chains` | `OptionChain`, `OptionData`, build parameters, strategy-leg lookups, OHLCV readers |
+| `series` | `OptionSeries` across expirations and its build parameters                |
+| `error`  | `ChainError`, `OhlcvError`                                                |
+
+Analyses over a chain (risk-neutral density, projections, metrics) are
+analytics; chain and series generators driven by a random walk need the
+simulation engine. The `optionstratlib` facade provides both.
+
+## Features
+
+| Feature  | Default | Effect                                                               |
+|----------|---------|----------------------------------------------------------------------|
+| `async`  | no      | `tokio`-backed `*_async` readers and writers on `spawn_blocking`      |
+| `schema` | no      | Derives `utoipa::ToSchema` on market types and enables `schema` below |
+
+## License
+
+MIT

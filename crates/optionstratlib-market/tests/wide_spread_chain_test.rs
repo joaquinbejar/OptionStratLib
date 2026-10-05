@@ -13,10 +13,10 @@
 //! truncated the chain: the cheap out-of-the-money wings — the long legs of
 //! every defined-risk structure — disappeared exactly as they decayed.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::OptionChain;
-use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-use positive::{Positive, pos_or_panic, spos};
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+use optionstratlib_market::chains::OptionChain;
+use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use rust_decimal_macros::dec;
 
 const CHAIN_SIZE: usize = 10;

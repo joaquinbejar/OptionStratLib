@@ -188,7 +188,17 @@ impl BasicSurfaces for OptionChain {
     }
 }
 
-impl OptionChain {
+/// Greek and volatility projections of an option chain onto curves and
+/// surfaces: one point per strike (curves) or per strike and volatility or
+/// horizon (surfaces), each from the long-call view of the chain.
+///
+/// Analytics-owned because each projection prices options and reads
+/// Greeks; `OptionChain` itself is market data (`optionstratlib-market`).
+/// Bring the trait into scope to call the methods. It is not in the prelude:
+/// there `theta_curve`, `charm_curve` and `color_curve` name the
+/// `ThetaCurve`, `CharmCurve` and `ColorCurve` metrics, which return the same
+/// points.
+pub trait OptionChainProjections {
     /// Generates a gamma curve for visualization and analysis.
     ///
     /// Creates a curve representing gamma values across different strike prices
@@ -203,9 +213,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn gamma_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
-    }
+    fn gamma_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a delta curve for visualization and analysis.
     ///
@@ -221,9 +229,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn delta_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
-    }
+    fn delta_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a vega curve for visualization and analysis.
     ///
@@ -239,9 +245,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn vega_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
-    }
+    fn vega_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a theta curve for visualization and analysis.
     ///
@@ -257,9 +261,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn theta_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
-    }
+    fn theta_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a vanna curve for visualization and analysis.
     ///
@@ -275,9 +277,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn vanna_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Vanna, &OptionStyle::Call, &Side::Long)
-    }
+    fn vanna_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a veta curve for visualization and analysis.
     ///
@@ -293,9 +293,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing data
     /// or calculation errors
-    pub fn veta_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Veta, &OptionStyle::Call, &Side::Long)
-    }
+    fn veta_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a charm curve for visualization and analysis.
     ///
@@ -310,9 +308,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing
     /// data or calculation errors
-    pub fn charm_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Charm, &OptionStyle::Call, &Side::Long)
-    }
+    fn charm_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a color curve for visualization and analysis.
     ///
@@ -327,9 +323,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the curve cannot be generated due to missing
     /// data or calculation errors
-    pub fn color_curve(&self) -> Result<Curve, ProjectionError> {
-        self.curve(&BasicAxisTypes::Color, &OptionStyle::Call, &Side::Long)
-    }
+    fn color_curve(&self) -> Result<Curve, ProjectionError>;
 
     /// Generates a Veta time surface for visualization and analysis.
     ///
@@ -361,17 +355,7 @@ impl OptionChain {
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let veta_surface = chain.veta_time_surface(days)?;
     /// ```
-    pub fn veta_time_surface(
-        &self,
-        days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, ProjectionError> {
-        self.time_surface(
-            &BasicAxisTypes::Veta,
-            &OptionStyle::Call,
-            days_to_expiry,
-            &Side::Long,
-        )
-    }
+    fn veta_time_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, ProjectionError>;
 
     /// Generates a Theta time surface for visualization and analysis.
     ///
@@ -403,17 +387,8 @@ impl OptionChain {
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let theta_surface = chain.theta_time_surface(days)?;
     /// ```
-    pub fn theta_time_surface(
-        &self,
-        days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, ProjectionError> {
-        self.time_surface(
-            &BasicAxisTypes::Theta,
-            &OptionStyle::Call,
-            days_to_expiry,
-            &Side::Long,
-        )
-    }
+    fn theta_time_surface(&self, days_to_expiry: Vec<Positive>)
+    -> Result<Surface, ProjectionError>;
 
     /// Generates a Charm time surface for visualization and analysis.
     ///
@@ -444,17 +419,8 @@ impl OptionChain {
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let charm_surface = chain.charm_time_surface(days)?;
     /// ```
-    pub fn charm_time_surface(
-        &self,
-        days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, ProjectionError> {
-        self.time_surface(
-            &BasicAxisTypes::Charm,
-            &OptionStyle::Call,
-            days_to_expiry,
-            &Side::Long,
-        )
-    }
+    fn charm_time_surface(&self, days_to_expiry: Vec<Positive>)
+    -> Result<Surface, ProjectionError>;
 
     /// Generates a Color time surface for visualization and analysis.
     ///
@@ -485,17 +451,8 @@ impl OptionChain {
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0), pos_or_panic!(90.0)];
     /// let color_surface = chain.color_time_surface(days)?;
     /// ```
-    pub fn color_time_surface(
-        &self,
-        days_to_expiry: Vec<Positive>,
-    ) -> Result<Surface, ProjectionError> {
-        self.time_surface(
-            &BasicAxisTypes::Color,
-            &OptionStyle::Call,
-            days_to_expiry,
-            &Side::Long,
-        )
-    }
+    fn color_time_surface(&self, days_to_expiry: Vec<Positive>)
+    -> Result<Surface, ProjectionError>;
 
     /// Generates a Vanna volatility surface for visualization and analysis.
     ///
@@ -518,14 +475,7 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
-    pub fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
-        self.surface(
-            &BasicAxisTypes::Vanna,
-            &OptionStyle::Call,
-            Some(volatilities),
-            &Side::Long,
-        )
-    }
+    fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError>;
 
     /// Generates a Vomma volatility surface for visualization and analysis.
     ///
@@ -547,7 +497,97 @@ impl OptionChain {
     ///
     /// Returns a [`ProjectionError`] if the surface cannot be generated due to missing data
     /// or calculation errors
-    pub fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
+    fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError>;
+}
+
+impl OptionChainProjections for OptionChain {
+    fn gamma_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Gamma, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn delta_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Delta, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn vega_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Vega, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn theta_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Theta, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn vanna_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Vanna, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn veta_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Veta, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn charm_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Charm, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn color_curve(&self) -> Result<Curve, ProjectionError> {
+        self.curve(&BasicAxisTypes::Color, &OptionStyle::Call, &Side::Long)
+    }
+
+    fn veta_time_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, ProjectionError> {
+        self.time_surface(
+            &BasicAxisTypes::Veta,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    fn theta_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, ProjectionError> {
+        self.time_surface(
+            &BasicAxisTypes::Theta,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    fn charm_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, ProjectionError> {
+        self.time_surface(
+            &BasicAxisTypes::Charm,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    fn color_time_surface(
+        &self,
+        days_to_expiry: Vec<Positive>,
+    ) -> Result<Surface, ProjectionError> {
+        self.time_surface(
+            &BasicAxisTypes::Color,
+            &OptionStyle::Call,
+            days_to_expiry,
+            &Side::Long,
+        )
+    }
+
+    fn vanna_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
+        self.surface(
+            &BasicAxisTypes::Vanna,
+            &OptionStyle::Call,
+            Some(volatilities),
+            &Side::Long,
+        )
+    }
+
+    fn vomma_surface(&self, volatilities: Vec<Positive>) -> Result<Surface, ProjectionError> {
         self.surface(
             &BasicAxisTypes::Vomma,
             &OptionStyle::Call,
@@ -1288,5 +1328,692 @@ mod tests_option_chain_time_surfaces {
         ];
         let chain_result = chain.color_time_surface(days_to_expiry);
         assert!(chain_result.is_ok());
+    }
+}
+
+// Projection tests moved here from optionstratlib-market when the chain
+// moved out of the facade (#524): `OptionChainProjections` is analytics-owned.
+#[cfg(test)]
+mod tests_gamma_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+
+    use optionstratlib_core::model::Positive;
+
+    use optionstratlib_core::utils::time::get_x_days_formatted;
+
+    // Helper function to create a test chain with predefined gamma values
+    fn create_test_chain_with_gamma() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        option_chain.set_expiration_date(get_x_days_formatted(30));
+        option_chain
+    }
+
+    #[test]
+    fn test_gamma_curve() {
+        let mut chain = create_test_chain_with_gamma();
+        chain.update_greeks();
+        let result = chain.gamma_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_gamma_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.gamma_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_delta_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+    use crate::chains::chain::OptionChain;
+    use crate::curves::Point2D;
+
+    use optionstratlib_core::model::Positive;
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined delta values
+    fn create_test_chain_with_delta() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_delta_curve() {
+        let mut chain = create_test_chain_with_delta();
+        chain.update_greeks();
+        let result = chain.delta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_delta_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.delta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_delta_curve_shape() {
+        let mut chain = create_test_chain_with_delta();
+        chain.update_greeks();
+        let curve = chain.delta_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the delta curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check delta bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_vega_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+    use crate::chains::chain::OptionChain;
+    use crate::curves::Point2D;
+
+    use optionstratlib_core::model::Positive;
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined vega values
+    fn create_test_chain_with_vega() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_vega_curve() {
+        let mut chain = create_test_chain_with_vega();
+        chain.update_greeks();
+        let result = chain.vega_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_vega_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.vega_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_vega_curve_shape() {
+        let mut chain = create_test_chain_with_vega();
+        chain.update_greeks();
+        let curve = chain.vega_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the vega curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check vega bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_theta_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+    use crate::chains::chain::OptionChain;
+    use crate::curves::Point2D;
+
+    use optionstratlib_core::model::Positive;
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with predefined theta values
+    fn create_test_chain_with_theta() -> OptionChain {
+        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+    }
+
+    #[test]
+    fn test_theta_curve() {
+        let mut chain = create_test_chain_with_theta();
+        chain.update_greeks();
+        let result = chain.theta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_theta_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.theta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+
+    #[test]
+    fn test_theta_curve_shape() {
+        let mut chain = create_test_chain_with_theta();
+        chain.update_greeks();
+        let curve = chain.theta_curve().unwrap();
+
+        // Get sorted points by strike
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+
+        // Verify the theta curve shape:
+        // 1. Delta should be roughly between 0 and 1 for calls
+        // 2. Should decrease as strike increases
+        for point in &points {
+            // Check theta bounds for call options
+            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
+            assert!(point.y <= dec!(1.1));
+        }
+
+        // Check monotonic decrease
+        for i in 1..points.len() {
+            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_vanna_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+
+    use optionstratlib_core::model::Positive;
+
+    // Helper function to create a test chain for vanna calculations
+    fn create_test_chain_with_vanna() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct vanna calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_vanna_curve() {
+        let mut chain = create_test_chain_with_vanna();
+        chain.update_greeks();
+        let result = chain.vanna_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_vanna_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.vanna_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_veta_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+
+    use optionstratlib_core::model::Positive;
+
+    // Helper function to create a test chain for veta calculations
+    fn create_test_chain_with_veta() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct veta calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_veta_curve() {
+        let mut chain = create_test_chain_with_veta();
+        chain.update_greeks();
+        let result = chain.veta_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_veta_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.veta_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_charm_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+
+    use optionstratlib_core::model::Positive;
+
+    // Helper function to create a test chain for charm calculations
+    fn create_test_chain_with_charm() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct charm calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_charm_curve() {
+        let mut chain = create_test_chain_with_charm();
+        chain.update_greeks();
+        let result = chain.charm_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_charm_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.charm_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_color_calculations_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+
+    use optionstratlib_core::model::Positive;
+
+    // Helper function to create a test chain for charm calculations
+    fn create_test_chain_with_color() -> OptionChain {
+        let mut option_chain =
+            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        // It is necessary to update the expiration date of all the options in the chain
+        // with a relative number of days in order to have a correct color calculation
+        option_chain.update_expiration_date("30.0".to_string());
+        option_chain
+    }
+
+    #[test]
+    fn test_color_curve() {
+        let mut chain = create_test_chain_with_color();
+        chain.update_greeks();
+        let result = chain.color_curve();
+
+        assert!(result.is_ok());
+        let curve = result.unwrap();
+
+        // Test that curve contains points
+        assert!(!curve.points.is_empty());
+
+        // For each strike in the chain, there should be a corresponding point
+        assert_eq!(curve.points.len(), chain.options.len());
+
+        // Test x range of curve matches strike range
+        let first_strike = chain.options.iter().next().unwrap().strike_price;
+        let last_strike = chain.options.iter().last().unwrap().strike_price;
+        assert_eq!(curve.x_range.0, first_strike.to_dec());
+        assert_eq!(curve.x_range.1, last_strike.to_dec());
+    }
+
+    #[test]
+    fn test_color_curve_empty_chain() {
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        let result = chain.color_curve();
+        // Should return error or empty curve depending on implementation
+        if let Ok(curve) = result {
+            assert!(curve.points.is_empty())
+        }
+    }
+}
+
+#[cfg(test)]
+mod chain_coverage_tests_projections {
+    #![allow(clippy::indexing_slicing)]
+
+    use super::OptionChainProjections;
+
+    use crate::chains::chain::OptionChain;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::Positive;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::spos;
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with specific characteristics
+    fn create_test_chain() -> OptionChain {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            5,
+            spos!(5.0),
+            dec!(-0.3),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+
+        OptionChain::build_chain(&params).unwrap()
+    }
+
+    #[test]
+    fn test_all_curves() {
+        let mut chain = create_test_chain();
+
+        // Update Greeks to ensure they are populated
+        chain.update_greeks();
+
+        // Test various curve calculations
+        let gamma_curve = chain.gamma_curve();
+        assert!(gamma_curve.is_ok());
+
+        let delta_curve = chain.delta_curve();
+        assert!(delta_curve.is_ok());
+
+        let vega_curve = chain.vega_curve();
+        assert!(vega_curve.is_ok());
+
+        let theta_curve = chain.theta_curve();
+        assert!(theta_curve.is_ok());
+
+        let vanna_curve = chain.vanna_curve();
+        assert!(vanna_curve.is_ok());
+
+        let veta_curve = chain.veta_curve();
+        assert!(veta_curve.is_ok());
+
+        let charm_curve = chain.charm_curve();
+        assert!(charm_curve.is_ok());
+
+        let color_curve = chain.color_curve();
+        assert!(color_curve.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod chain_coverage_tests_bis_projections {
+    use super::OptionChainProjections;
+    use crate::chains::chain::OptionChain;
+    use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::Positive;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::spos;
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a test chain with specific characteristics
+    fn create_test_chain() -> OptionChain {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            None,
+            5,
+            spos!(5.0),
+            dec!(-0.3),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                spos!(0.02),
+                Some("AAPL".to_string()),
+            ),
+            pos_or_panic!(0.17),
+        );
+
+        OptionChain::build_chain(&params).unwrap()
+    }
+
+    #[test]
+    fn test_all_curves() {
+        let mut chain = create_test_chain();
+
+        // Update Greeks to ensure they are populated
+        chain.update_greeks();
+
+        // Test various curve calculations
+        let gamma_curve = chain.gamma_curve();
+        assert!(gamma_curve.is_ok());
+
+        let delta_curve = chain.delta_curve();
+        assert!(delta_curve.is_ok());
+
+        let vega_curve = chain.vega_curve();
+        assert!(vega_curve.is_ok());
+
+        let theta_curve = chain.theta_curve();
+        assert!(theta_curve.is_ok());
+
+        let vanna_curve = chain.vanna_curve();
+        assert!(vanna_curve.is_ok());
+
+        let veta_curve = chain.veta_curve();
+        assert!(veta_curve.is_ok());
+
+        let charm_curve = chain.charm_curve();
+        assert!(charm_curve.is_ok());
+
+        let color_curve = chain.color_curve();
+        assert!(color_curve.is_ok());
     }
 }
