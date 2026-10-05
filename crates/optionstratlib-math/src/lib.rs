@@ -27,6 +27,19 @@
 //! `BasicSurfaces`) belong to the analytics layer, and plotting to
 //! visualization; the `optionstratlib` facade provides both.
 //!
+//! ## Behaviour that lives outside this crate
+//!
+//! Some capabilities take a math type as input but belong to a higher layer,
+//! so they are implemented there, not here (#517):
+//!
+//! | Capability | Where | Owner |
+//! | --- | --- | --- |
+//! | `BasicCurves`, `BasicSurfaces`: projecting an option set onto a `Curve` or `Surface` (prices options, reads Greeks) | `optionstratlib::analytics` | analytics; final adapter in M4-01 (#529) |
+//! | `Graph` and `Plottable` for `Curve`, `Vec<Curve>` and `Surface` | `optionstratlib::visualization` | visualization; graph adapters in M6-02 (#543) |
+//!
+//! Rendering failures are `GraphError`s of the visualization layer; the math
+//! errors carry no rendering variant.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the math types

@@ -58,10 +58,7 @@ fn test_graph_error_from_box_dyn_error() {
 #[test]
 fn test_graph_error_from_curve_error() {
     // Create a CurveError
-    let curve_error = CurveError::RenderError {
-        backend: "plotters",
-        reason: "Invalid curve data".to_string(),
-    };
+    let curve_error = CurveError::ConstructionError("Invalid curve data".to_string());
 
     // Convert to GraphError using From trait
     let graph_error: GraphError = curve_error.into();
@@ -78,10 +75,7 @@ fn test_graph_error_from_curve_error() {
 #[test]
 fn test_graph_error_from_surface_error() {
     // Create a SurfaceError
-    let surface_error = SurfaceError::RenderError {
-        backend: "plotters",
-        reason: "Invalid surface data".to_string(),
-    };
+    let surface_error = SurfaceError::ConstructionError("Invalid surface data".to_string());
 
     // Convert to GraphError using From trait
     let graph_error: GraphError = surface_error.into();

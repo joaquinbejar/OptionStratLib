@@ -120,17 +120,6 @@ pub enum CurveError {
     #[error("parametric generator failed: {0}")]
     Generator(#[source] Box<dyn std::error::Error + Send + Sync>),
 
-    /// A rendering operation failed. Preserves the backend discriminator so
-    /// callers can distinguish plotters output paths from other backends
-    /// without resorting to a `String` catch-all.
-    #[error("rendering failed ({backend}): {reason}")]
-    RenderError {
-        /// Identifier of the rendering backend that failed (e.g. `"plotters"`).
-        backend: &'static str,
-        /// Detailed, human-readable reason for the failure.
-        reason: String,
-    },
-
     /// Error during curve interpolation
     #[error("Interpolation error: {0}")]
     InterpolationError(
@@ -282,15 +271,6 @@ mod tests {
         };
         assert_eq!(error.to_string(), "Error: Invalid coordinates");
 
-        let error = CurveError::RenderError {
-            backend: "plotters",
-            reason: "rendering failed".to_string(),
-        };
-        assert_eq!(
-            error.to_string(),
-            "rendering failed (plotters): rendering failed"
-        );
-
         let error = CurveError::operation_not_supported("calculate", "Strategy");
         assert_eq!(
             error.to_string(),
@@ -338,21 +318,6 @@ mod tests {
     }
 
     #[test]
-    fn test_render_error_constructor() {
-        let error = CurveError::RenderError {
-            backend: "plotters",
-            reason: "Draw error".to_string(),
-        };
-        match error {
-            CurveError::RenderError { backend, reason } => {
-                assert_eq!(backend, "plotters");
-                assert_eq!(reason, "Draw error");
-            }
-            _ => panic!("Wrong error variant"),
-        }
-    }
-
-    #[test]
     fn test_from_position_error() {
         let position_error = PositionError::unsupported_operation("TestStruct", "test_op");
         let curves_error = CurveError::from(position_error);
@@ -369,12 +334,6 @@ mod tests {
     fn test_debug_implementation() {
         let error = CurveError::Point2DError {
             reason: "test debug",
-        };
-        assert!(format!("{error:?}").contains("test debug"));
-
-        let error = CurveError::RenderError {
-            backend: "plotters",
-            reason: "test debug".to_string(),
         };
         assert!(format!("{error:?}").contains("test debug"));
     }

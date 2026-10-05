@@ -47,8 +47,12 @@ checks apply, both read from `cargo metadata`:
   the facade) depends on one directly, so every crate agrees on what
   `Positive` or `Side` is (ADR-0001 D8, #515).
 
-All three read `cargo metadata`, so `make check-graph` needs a Rust
-toolchain on the PATH; a failing `cargo metadata` fails the check.
+* the forbidden packages: each extracted component's resolved normal tree,
+  with default features and with all of them, holds none of the packages the
+  ADR-0002 fixture table lists as absent (`FORBIDDEN_PACKAGES`, #517).
+
+These read `cargo metadata` and `cargo tree`, so `make check-graph` needs a
+Rust toolchain on the PATH; a failing cargo command fails the check.
 
 Exit status is 1 on any other cross-layer edge, 0 otherwise. Run
 `make check-graph`; an optional first argument names the crate root to scan
@@ -949,6 +953,52 @@ FOUNDATIONAL = ("positive", "expiration_date", "financial_types", "option_type")
 FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
 
 
+# External packages that must not appear in a component's resolved normal
+# dependency tree (`cargo tree -p <crate> -e normal`). Core's list is the
+# "must be absent" column of the ADR-0002 `osl-fixture-core-only` row; ADR-0002
+# has no math row, so math's list is the `osl-fixture-pricing-only` row plus
+# ADR-0002 §3 ("no visualization, no I/O") plus `plotters`. Other
+# `optionstratlib-*` crates are excluded by `crate_graph_violations`, not
+# here. Checked with default features
+# and with `--all-features`, so neither an optional dependency nor a feature
+# can bring one in (#517). `utoipa` is missing from both lists only because
+# `expiration_date` 0.4.0 forces `positive/utoipa` on every build (#628); it
+# goes back in once that is fixed upstream.
+FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
+    "optionstratlib-core": frozenset({
+        "statrs", "rayon", "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static",
+        "tracing-subscriber", "indicatif", "prettytable-rs",
+    }),
+    "optionstratlib-math": frozenset({
+        "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
+        "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
+    }),
+}
+
+
+def resolved_tree(root: Path, crate: str, all_features: bool) -> set[str]:
+    """Package names in `crate`'s normal dependency tree."""
+    import subprocess
+
+    command = [
+        "cargo", "tree", "-p", crate, "-e", "normal", "--prefix", "none", "--format", "{p}",
+        "--manifest-path", str(root / "Cargo.toml"),
+    ]
+    if all_features:
+        command.append("--all-features")
+    out = subprocess.run(command, check=True, capture_output=True, text=True)
+    return {line.split()[0] for line in out.stdout.splitlines() if line.strip()}
+
+
+def forbidden_package_violations(trees: dict[tuple[str, str], set[str]]) -> list[str]:
+    """`(crate, feature set) -> resolved packages`, checked against FORBIDDEN_PACKAGES."""
+    found = []
+    for (crate, features), packages in sorted(trees.items()):
+        for name in sorted(packages & FORBIDDEN_PACKAGES.get(crate, frozenset())):
+            found.append(f"{crate} ({features}) resolves {name}")
+    return found
+
+
 def foundational_violations(metadata: dict) -> list[str]:
     """Misaligned requirements or duplicate resolved versions of a foundational crate."""
     found: list[str] = []
@@ -1394,6 +1444,8 @@ def self_test() -> int:
         "core depends on the facade": ([pkg("optionstratlib-core", ("optionstratlib",))], 1),
         "core dev-depends on the facade": ([pkg("optionstratlib-core", ("optionstratlib", "dev"))], 1),
         "core depends on math": ([pkg("optionstratlib-core", ("optionstratlib-math",))], 1),
+        "math depends on pricing": ([pkg("optionstratlib-math", ("optionstratlib-pricing",))], 1),
+        "math depends on visualization": ([pkg("optionstratlib-math", ("optionstratlib-visualization",))], 1),
         "math depends on core": ([pkg("optionstratlib-math", ("optionstratlib-core",))], 0),
         "facade depends on core": ([pkg("optionstratlib", ("optionstratlib-core",))], 0),
         "unknown component": ([pkg("optionstratlib-extra")], 1),
@@ -1460,6 +1512,21 @@ def self_test() -> int:
         if not ok:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: foundational crates, {name} (expected {expected}, got {got})")
+
+    forbidden_cases = {
+        "clean math tree": ({("optionstratlib-math", "default"): {"rayon", "statrs", "optionstratlib-core"}}, 0),
+        "math pulls plotly": ({("optionstratlib-math", "all features"): {"rayon", "plotly"}}, 1),
+        "core pulls rayon": ({("optionstratlib-core", "default"): {"rayon"}}, 1),
+        "math may use rayon": ({("optionstratlib-math", "default"): {"rayon"}}, 0),
+        "math pulls csv through a feature": ({("optionstratlib-math", "all features"): {"csv"}}, 1),
+        "unlisted crate is not checked": ({("examples_chain", "default"): {"plotly"}}, 0),
+    }
+    for name, (trees_case, expected) in forbidden_cases.items():
+        got = len(forbidden_package_violations(trees_case))
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: forbidden packages, {name} (expected {expected}, got {got})")
 
     redefinition_cases = {
         "facade model file once core is a crate": (["model/x.rs"], [pkg("optionstratlib-core")], 1),
@@ -1556,6 +1623,16 @@ def main() -> int:
         ("facade files in a layer that a workspace crate owns (one canonical definition):",
          facade_redefinitions(SRC, packages)),
     ]
+    trees = {
+        (crate, label): resolved_tree(SRC.parent, crate, all_features)
+        for crate in sorted(FORBIDDEN_PACKAGES)
+        if any(p["name"] == crate for p in packages)
+        for label, all_features in (("default", False), ("all features", True))
+    }
+    crate_rules.append((
+        "component crates resolve a forbidden package (ADR-0002 fixture table, #517):",
+        forbidden_package_violations(trees),
+    ))
     failed = False
     for heading, items in crate_rules:
         if items:
@@ -1571,6 +1648,7 @@ def main() -> int:
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
     print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
+    print(f"OK: no forbidden package in {', '.join(sorted({c for c, _ in trees})) or 'any component'} (default and all features)")
     return 0
 
 

@@ -161,25 +161,6 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_map_err_to_render_error() {
-        let result: Result<(), SurfaceError> =
-            Err(std::io::Error::other("Test error")).map_err(|e| SurfaceError::RenderError {
-                backend: "plotters",
-                reason: e.to_string(),
-            });
-
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            SurfaceError::RenderError { backend, reason } => {
-                assert_eq!(backend, "plotters");
-                assert_eq!(reason, "Test error");
-            }
-            _ => panic!("Unexpected error type"),
-        }
-    }
-
-    #[test]
     fn test_configure_chart_mesh() {
         let mut chart = MockChart::new();
         chart
@@ -262,20 +243,5 @@ mod tests_extended {
             graph_data,
             GraphData::GraphSurface(Surface3D { .. })
         ));
-    }
-
-    #[test]
-    fn test_draw_series_error() {
-        let error = SurfaceError::RenderError {
-            backend: "plotters",
-            reason: "Draw error".to_string(),
-        };
-        match error {
-            SurfaceError::RenderError { backend, reason } => {
-                assert_eq!(backend, "plotters");
-                assert_eq!(reason, "Draw error");
-            }
-            _ => panic!("Unexpected error type"),
-        }
     }
 }
