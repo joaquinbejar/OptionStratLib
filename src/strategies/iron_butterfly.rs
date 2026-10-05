@@ -1108,10 +1108,10 @@ impl ProbabilityAnalysis for IronButterfly {
 
         profit_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1151,10 +1151,10 @@ impl ProbabilityAnalysis for IronButterfly {
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1162,10 +1162,10 @@ impl ProbabilityAnalysis for IronButterfly {
 
         loss_range_upper.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),

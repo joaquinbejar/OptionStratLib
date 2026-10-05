@@ -1046,10 +1046,10 @@ impl ProbabilityAnalysis for CallButterfly {
 
         profit_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1091,10 +1091,10 @@ impl ProbabilityAnalysis for CallButterfly {
 
         loss_range_lower.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1102,10 +1102,10 @@ impl ProbabilityAnalysis for CallButterfly {
 
         loss_range_upper.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -2061,14 +2061,32 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_high_volatility_scenario() {
+        // This structure is short the two middle calls, so it is short
+        // volatility: wider price distributions push the spot away from the
+        // profit zone and the expected value falls. `None` prices at the
+        // strategy's own implied volatility, so raising the legs' IV from
+        // 0.18 to 0.5 must lower it. (Before #619 `None` priced at a hidden
+        // flat 0.2 and the 0.5 below never reached the model.)
+        let base = create_test_butterfly();
+        let base_ev = match base.expected_value(None, None) {
+            Ok(ev) => ev,
+            Err(error) => panic!("expected value at the base volatility: {error}"),
+        };
+
         let mut butterfly = create_test_butterfly();
         butterfly.long_call.option.implied_volatility = pos_or_panic!(0.5);
         butterfly.short_call_low.option.implied_volatility = pos_or_panic!(0.5);
         butterfly.short_call_high.option.implied_volatility = pos_or_panic!(0.5);
+        let high_ev = match butterfly.expected_value(None, None) {
+            Ok(ev) => ev,
+            Err(error) => panic!("expected value at 0.5 volatility: {error}"),
+        };
 
-        let analysis = butterfly.analyze_probabilities(None, None).unwrap();
-        // Higher volatility should increase potential profit/loss ranges
-        assert!(analysis.expected_value > pos_or_panic!(10.0));
+        assert!(base_ev > Positive::ZERO, "base expected value {base_ev}");
+        assert!(
+            high_ev < base_ev,
+            "a short-volatility structure must lose expected value as volatility rises: {high_ev} vs {base_ev}"
+        );
     }
 
     #[test]

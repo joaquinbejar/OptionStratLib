@@ -923,10 +923,10 @@ impl ProbabilityAnalysis for CustomStrategy {
         for range in profit_ranges.iter_mut() {
             range.calculate_probability(
                 &self.underlying_price,
-                Some(VolatilityAdjustment {
+                VolatilityAdjustment {
                     base_volatility: mean_volatility,
                     std_dev_adjustment: std_dev,
-                }),
+                },
                 None, // PriceTrend
                 &expiration,
                 risk_free_rate,
@@ -960,10 +960,10 @@ impl ProbabilityAnalysis for CustomStrategy {
         for range in loss_ranges.iter_mut() {
             range.calculate_probability(
                 &self.underlying_price,
-                Some(VolatilityAdjustment {
+                VolatilityAdjustment {
                     base_volatility: mean_volatility,
                     std_dev_adjustment: std_dev,
-                }),
+                },
                 None, // PriceTrend
                 &expiration,
                 risk_free_rate,

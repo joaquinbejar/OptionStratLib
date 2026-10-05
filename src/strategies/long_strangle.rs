@@ -976,10 +976,10 @@ impl ProbabilityAnalysis for LongStrangle {
 
         lower_profit_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -990,10 +990,10 @@ impl ProbabilityAnalysis for LongStrangle {
 
         upper_profit_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1031,10 +1031,10 @@ impl ProbabilityAnalysis for LongStrangle {
 
         loss_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),

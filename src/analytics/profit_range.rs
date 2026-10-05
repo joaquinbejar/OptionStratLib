@@ -97,8 +97,8 @@ impl ProfitLossRange {
     /// # Parameters
     ///
     /// * `current_price` - The current market price of the underlying asset.
-    /// * `volatility_adj` - Optional adjustment for volatility parameters, including base volatility and
-    ///   standard deviation adjustments. If None, default volatility settings will be used.
+    /// * `volatility` - Volatility to price the range at. Required: the kernel
+    ///   has no default volatility (see [`VolatilityAdjustment`]).
     /// * `trend` - Optional price trend parameters, including drift rate and confidence level.
     ///   If None, no trend assumption will be applied.
     /// * `expiration_date` - The date when the probability calculation applies, specified either as
@@ -140,10 +140,10 @@ impl ProfitLossRange {
     ///
     /// let result = range.calculate_probability(
     ///     &pos_or_panic!(55.0),
-    ///     Some(VolatilityAdjustment {
+    ///     VolatilityAdjustment {
     ///         base_volatility: pos_or_panic!(0.2),
     ///         std_dev_adjustment: Positive::ONE
-    ///     }),
+    ///     },
     ///     None,
     ///     &ExpirationDate::Days(pos_or_panic!(30.0)),
     ///     Some(dec!(0.03)),
@@ -152,7 +152,7 @@ impl ProfitLossRange {
     pub fn calculate_probability(
         &mut self,
         current_price: &Positive,
-        volatility_adj: Option<VolatilityAdjustment>,
+        volatility: VolatilityAdjustment,
         trend: Option<PriceTrend>,
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
@@ -162,7 +162,7 @@ impl ProfitLossRange {
         ProfitRangeProbability::calculate_probability(
             self,
             current_price,
-            volatility_adj,
+            volatility,
             trend,
             expiration_date,
             risk_free_rate,
@@ -210,8 +210,8 @@ pub trait ProfitRangeProbability {
     /// # Parameters
     ///
     /// * `current_price` - The current market price of the underlying asset.
-    /// * `volatility_adj` - Optional adjustment for volatility parameters, including base volatility and
-    ///   standard deviation adjustments. If None, default volatility settings will be used.
+    /// * `volatility` - Volatility to price the range at. Required: the kernel
+    ///   has no default volatility (see [`VolatilityAdjustment`]).
     /// * `trend` - Optional price trend parameters, including drift rate and confidence level.
     ///   If None, no trend assumption will be applied.
     /// * `expiration_date` - The date when the probability calculation applies, specified either as
@@ -253,10 +253,10 @@ pub trait ProfitRangeProbability {
     ///
     /// let result = range.calculate_probability(
     ///     &pos_or_panic!(55.0),
-    ///     Some(VolatilityAdjustment {
+    ///     VolatilityAdjustment {
     ///         base_volatility: pos_or_panic!(0.2),
     ///         std_dev_adjustment: Positive::ONE
-    ///     }),
+    ///     },
     ///     None,
     ///     &ExpirationDate::Days(pos_or_panic!(30.0)),
     ///     Some(dec!(0.03)),
@@ -265,7 +265,7 @@ pub trait ProfitRangeProbability {
     fn calculate_probability(
         &mut self,
         current_price: &Positive,
-        volatility_adj: Option<VolatilityAdjustment>,
+        volatility: VolatilityAdjustment,
         trend: Option<PriceTrend>,
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
@@ -276,7 +276,7 @@ impl ProfitRangeProbability for ProfitLossRange {
     fn calculate_probability(
         &mut self,
         current_price: &Positive,
-        volatility_adj: Option<VolatilityAdjustment>,
+        volatility: VolatilityAdjustment,
         trend: Option<PriceTrend>,
         expiration_date: &ExpirationDate,
         risk_free_rate: Option<Decimal>,
@@ -295,7 +295,7 @@ impl ProfitRangeProbability for ProfitLossRange {
         let (prob_below_lower, _) = calculate_single_point_probability(
             current_price,
             &self.lower_bound.unwrap_or(Positive::ZERO),
-            volatility_adj.clone(),
+            volatility,
             trend.clone(),
             expiration_date,
             risk_free_rate,
@@ -305,7 +305,7 @@ impl ProfitRangeProbability for ProfitLossRange {
         let (prob_below_upper, _) = calculate_single_point_probability(
             current_price,
             &self.upper_bound.unwrap_or(Positive::MAX),
-            volatility_adj,
+            volatility,
             trend,
             expiration_date,
             risk_free_rate,
@@ -348,6 +348,7 @@ impl ProfitRangeProbability for ProfitLossRange {
 #[cfg(test)]
 mod tests_calculate_probability {
     use super::*;
+    use crate::analytics::probability::flat_volatility_0_2;
     use positive::{pos_or_panic, spos};
 
     use positive::constants::DAYS_IN_A_YEAR;
@@ -363,7 +364,7 @@ mod tests_calculate_probability {
         let mut range = create_basic_range();
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -391,7 +392,7 @@ mod tests_calculate_probability {
             .expect("an open upper bound is a valid range");
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -407,10 +408,10 @@ mod tests_calculate_probability {
     #[test]
     fn test_with_volatility_adjustment() {
         let mut range = create_basic_range();
-        let vol_adj = Some(VolatilityAdjustment {
+        let vol_adj = VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.25),
             std_dev_adjustment: pos_or_panic!(0.05),
-        });
+        };
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
@@ -434,7 +435,7 @@ mod tests_calculate_probability {
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             trend,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -454,7 +455,7 @@ mod tests_calculate_probability {
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             trend,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -470,7 +471,7 @@ mod tests_calculate_probability {
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -486,7 +487,7 @@ mod tests_calculate_probability {
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -499,10 +500,10 @@ mod tests_calculate_probability {
     #[test]
     fn test_combined_adjustments() {
         let mut range = create_basic_range();
-        let vol_adj = Some(VolatilityAdjustment {
+        let vol_adj = VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.25),
             std_dev_adjustment: pos_or_panic!(0.05),
-        });
+        };
         let trend = Some(PriceTrend {
             drift_rate: 0.10,
             confidence: 0.95,
@@ -534,7 +535,7 @@ mod tests_calculate_probability {
         for expiration in expirations {
             let result = range.calculate_probability(
                 &Positive::HUNDRED,
-                None,
+                flat_volatility_0_2(),
                 None,
                 &expiration,
                 Some(dec!(0.05)),
@@ -555,7 +556,7 @@ mod tests_calculate_probability {
         for price in extreme_prices {
             let result = range.calculate_probability(
                 &price,
-                None,
+                flat_volatility_0_2(),
                 None,
                 &ExpirationDate::Days(pos_or_panic!(30.0)),
                 Some(dec!(0.05)),

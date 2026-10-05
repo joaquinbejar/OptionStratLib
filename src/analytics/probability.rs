@@ -24,15 +24,33 @@ use positive::Positive;
 #[cfg(test)]
 use positive::pos_or_panic;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 
-/// Struct to hold volatility adjustment parameters
-#[derive(Debug, Clone)]
+/// Volatility used by the probability kernels.
+///
+/// The kernels price at `base_volatility * (1 + std_dev_adjustment)`. They
+/// have no default: a caller that wants the volatility of a strategy asks the
+/// strategy for it (`ProbabilityAnalysis::reference_volatility`) rather than
+/// letting the kernel guess one.
+#[derive(Debug, Clone, Copy)]
 pub struct VolatilityAdjustment {
-    /// Base volatility
+    /// Annualized base volatility, as a fraction (`0.2` is 20%). Must be
+    /// strictly positive.
     pub base_volatility: Positive,
-    /// Number of standard deviations to adjust
+    /// Relative widening applied on top of the base: `0` leaves it unchanged,
+    /// `0.1` widens it by 10%.
     pub std_dev_adjustment: Positive,
+}
+
+/// The 0.2 volatility the kernels used to substitute when given `None`;
+/// tests that relied on that default now ask for it explicitly, so the numbers
+/// they pin are unchanged and the dependency is visible.
+#[cfg(test)]
+pub(crate) fn flat_volatility_0_2() -> VolatilityAdjustment {
+    VolatilityAdjustment {
+        base_volatility: Positive::new_decimal(rust_decimal::Decimal::new(2, 1))
+            .unwrap_or(Positive::ONE),
+        std_dev_adjustment: Positive::ZERO,
+    }
 }
 
 /// Struct to hold price trend parameters
@@ -54,8 +72,8 @@ pub struct PriceTrend {
 ///
 /// - `current_price`: The current stock price, represented as a `Positive`.
 /// - `target_price`: The target stock price to evaluate, represented as a `Positive`.
-/// - `volatility_adj`: An optional `VolatilityAdjustment` which includes base volatility
-///   and a standard deviation adjustment.
+/// - `volatility`: The `VolatilityAdjustment` to price at. Required: the kernel
+///   has no default volatility.
 /// - `trend`: An optional `PriceTrend` providing the annual drift rate and confidence
 ///   level for the trend.
 /// - `expiration_date`: The date to which the probability is calculated, of type `ExpirationDate`.
@@ -74,7 +92,8 @@ pub struct PriceTrend {
 ///   ([`ProbabilityError::PriceError`] with
 ///   [`PriceErrorKind::InvalidUnderlyingPrice`]).
 /// - `time_to_expiry` is not positive, indicating the expiration date has passed or is invalid.
-/// - `volatility_adj.base_volatility` is non-positive.
+/// - `volatility.base_volatility` is non-positive
+///   ([`ProbabilityCalculationErrorKind::VolatilityAdjustmentError`]).
 /// - `trend.confidence` is not between 0 and 1.
 /// - the price ratio, its logarithm, or the volatility scaling leaves the
 ///   representable range ([`ProbabilityError::PositiveError`]).
@@ -82,7 +101,7 @@ pub struct PriceTrend {
 pub fn calculate_single_point_probability(
     current_price: &Positive,
     target_price: &Positive,
-    volatility_adj: Option<VolatilityAdjustment>,
+    volatility: VolatilityAdjustment,
     trend: Option<PriceTrend>,
     expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
@@ -114,21 +133,16 @@ pub fn calculate_single_point_probability(
     // Get base parameters
     let risk_free = risk_free_rate.unwrap_or(Decimal::ZERO);
 
-    // Calculate adjusted volatility if provided
-    let volatility = match volatility_adj {
-        Some(adj) => {
-            if adj.base_volatility <= Positive::ZERO {
-                return Err(ProbabilityError::CalculationError(
-                    ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
-                        reason: "Base volatility must be positive".to_string(),
-                    },
-                ));
-            }
-            adj.base_volatility
-                .checked_mul_f64(1.0 + adj.std_dev_adjustment)?
-        }
-        None => Positive::new_decimal(dec!(0.2)).unwrap_or(Positive::ZERO), // Default volatility if not provided
-    };
+    if volatility.base_volatility <= Positive::ZERO {
+        return Err(ProbabilityError::CalculationError(
+            ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                reason: "Base volatility must be positive".to_string(),
+            },
+        ));
+    }
+    let volatility = volatility
+        .base_volatility
+        .checked_mul_f64(1.0 + volatility.std_dev_adjustment)?;
 
     // Adjust drift rate based on trend if provided
     let drift_rate = match trend {
@@ -198,7 +212,7 @@ pub fn calculate_single_point_probability(
 /// * `current_price` - Current price of the underlying asset
 /// * `lower_bound` - Lower boundary of the target price range
 /// * `upper_bound` - Upper boundary of the target price range
-/// * `volatility_adj` - Optional volatility adjustment parameters
+/// * `volatility` - Volatility to price at (required; see [`VolatilityAdjustment`])
 /// * `trend` - Optional price trend parameters
 /// * `expiration_date` - Expiration date of the analysis
 /// * `risk_free_rate` - Optional risk-free rate
@@ -230,7 +244,7 @@ pub fn calculate_price_probability(
     current_price: &Positive,
     lower_bound: &Positive,
     upper_bound: &Positive,
-    volatility_adj: Option<VolatilityAdjustment>,
+    volatility: VolatilityAdjustment,
     trend: Option<PriceTrend>,
     expiration_date: &ExpirationDate,
     risk_free_rate: Option<Decimal>,
@@ -248,7 +262,7 @@ pub fn calculate_price_probability(
     let (prob_below_lower, _) = calculate_single_point_probability(
         current_price,
         lower_bound,
-        volatility_adj.clone(),
+        volatility,
         trend.clone(),
         expiration_date,
         risk_free_rate,
@@ -258,7 +272,7 @@ pub fn calculate_price_probability(
     let (prob_below_upper, prob_above_upper) = calculate_single_point_probability(
         current_price,
         upper_bound,
-        volatility_adj,
+        volatility,
         trend,
         expiration_date,
         risk_free_rate,
@@ -326,7 +340,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &current_price,
             &target_price,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -347,7 +361,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &current_price,
             &target_price,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::DateTime(expiration_date),
             None,
@@ -363,7 +377,7 @@ mod tests_single_point_probability {
     fn test_with_volatility_adjustment() {
         let current_price = Positive::HUNDRED;
         let target_price = pos_or_panic!(105.0);
-        let vol_adj = Some(default_volatility_adj());
+        let vol_adj = default_volatility_adj();
 
         let result = calculate_single_point_probability(
             &current_price,
@@ -389,7 +403,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &current_price,
             &target_price,
-            None,
+            flat_volatility_0_2(),
             trend,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -409,7 +423,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &current_price,
             &target_price,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             Some(dec!(0.05)),
@@ -425,7 +439,7 @@ mod tests_single_point_probability {
     fn test_all_parameters() {
         let current_price = Positive::HUNDRED;
         let target_price = pos_or_panic!(105.0);
-        let vol_adj = Some(default_volatility_adj());
+        let vol_adj = default_volatility_adj();
         let trend = Some(default_trend());
 
         let result = calculate_single_point_probability(
@@ -450,12 +464,12 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &price,
             &price,
-            Some({
+            {
                 VolatilityAdjustment {
                     base_volatility: pos_or_panic!(0.8),
                     std_dev_adjustment: Positive::ZERO,
                 }
-            }),
+            },
             Some({
                 PriceTrend {
                     drift_rate: 0.0,
@@ -478,7 +492,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(105.0),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(Positive::ZERO),
             None,
@@ -503,7 +517,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(105.0),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::DateTime(past_date),
             None,
@@ -514,10 +528,10 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_invalid_volatility() {
-        let vol_adj = Some(VolatilityAdjustment {
+        let vol_adj = VolatilityAdjustment {
             base_volatility: Positive::ZERO,
             std_dev_adjustment: pos_or_panic!(0.1),
-        });
+        };
 
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
@@ -550,7 +564,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(105.0),
-            None,
+            flat_volatility_0_2(),
             trend,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -574,7 +588,7 @@ mod tests_single_point_probability {
         let result_high = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(1000000.0),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -588,7 +602,7 @@ mod tests_single_point_probability {
         let result_low = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(0.1),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -603,10 +617,10 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_extreme_volatility() {
-        let vol_adj = Some(VolatilityAdjustment {
+        let vol_adj = VolatilityAdjustment {
             base_volatility: Positive::ONE,
             std_dev_adjustment: pos_or_panic!(5.0),
-        });
+        };
 
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
@@ -633,7 +647,7 @@ mod tests_single_point_probability {
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
             &pos_or_panic!(105.0),
-            None,
+            flat_volatility_0_2(),
             trend,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -658,7 +672,7 @@ mod tests_calculate_price_probability {
             &Positive::HUNDRED,
             &pos_or_panic!(95.0),
             &pos_or_panic!(105.0),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -682,7 +696,7 @@ mod tests_calculate_price_probability {
             &Positive::HUNDRED,
             &pos_or_panic!(105.0), // Lower bound higher than upper bound
             &pos_or_panic!(95.0),
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
@@ -701,10 +715,10 @@ mod tests_calculate_price_probability {
 
     #[test]
     fn test_price_probability_with_volatility() {
-        let vol_adj = Some(VolatilityAdjustment {
+        let vol_adj = VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.5),
             std_dev_adjustment: Positive::ZERO,
-        });
+        };
 
         let result = calculate_price_probability(
             &Positive::HUNDRED,
@@ -731,6 +745,7 @@ mod tests_probability_inversion {
     use super::*;
     use crate::ExpirationDate;
     use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
 
     /// The `(below, in, above)` triple is a partition of the outcome space, so
     /// it sums to one or the call fails. Before #570 the middle term was
@@ -749,11 +764,11 @@ mod tests_probability_inversion {
             &Positive::MAX,
             &lower,
             &Positive::MAX,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: Positive::new(1e-28)
                     .expect("1e-28 is a representable positive volatility"),
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             &ExpirationDate::Days(pos_or_panic!(365.0)),
             None,
@@ -777,11 +792,11 @@ mod tests_probability_inversion {
             &Positive::MAX,
             &lower,
             &Positive::MAX,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: Positive::new(1e-20)
                     .expect("1e-20 is a representable positive volatility"),
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             &ExpirationDate::Days(Positive::ONE),
             None,
@@ -803,7 +818,7 @@ mod tests_probability_inversion {
             &Positive::HUNDRED,
             &Positive::HUNDRED,
             &Positive::HUNDRED,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),
@@ -828,10 +843,10 @@ mod tests_probability_inversion {
             &Positive::HUNDRED,
             &pos_or_panic!(95.0),
             &pos_or_panic!(105.0),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: pos_or_panic!(0.2),
                 std_dev_adjustment: pos_or_panic!(0.1),
-            }),
+            },
             None,
             &ExpirationDate::Days(pos_or_panic!(30.0)),
             Some(dec!(0.05)),

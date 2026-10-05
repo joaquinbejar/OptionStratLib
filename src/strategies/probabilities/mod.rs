@@ -170,7 +170,7 @@
 //! ```rust
 //! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use tracing::info;
-//! use optionstratlib::strategies::probabilities::calculate_price_probability;
+//! use optionstratlib::strategies::probabilities::{calculate_price_probability, VolatilityAdjustment};
 //! use optionstratlib::ExpirationDate;
 //! use positive::Positive;
 //! use positive::pos_or_panic;
@@ -179,7 +179,10 @@
 //!     &Positive::HUNDRED,   // current price
 //!     &pos_or_panic!(95.0),   // lower bound
 //!     &pos_or_panic!(105.0),   // upper bound
-//!     None,   // volatility adjustment
+//!     VolatilityAdjustment {   // volatility: required, the kernel has no default
+//!         base_volatility: pos_or_panic!(0.2),
+//!         std_dev_adjustment: Positive::ZERO,
+//!     },
 //!     None,   // trend
 //!     &ExpirationDate::Days(pos_or_panic!(30.0)),
 //!     None                 // risk-free rate

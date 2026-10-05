@@ -741,10 +741,10 @@ impl ProbabilityAnalysis for CoveredCall {
 
         profit_range.calculate_probability(
             &self.spot_leg.cost_basis,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -772,10 +772,10 @@ impl ProbabilityAnalysis for CoveredCall {
 
         loss_range.calculate_probability(
             &self.spot_leg.cost_basis,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),

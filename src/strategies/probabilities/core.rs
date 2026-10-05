@@ -43,6 +43,65 @@ use tracing::warn;
 /// - Analyze extreme outcome probabilities (max profit and max loss scenarios)
 ///
 pub trait ProbabilityAnalysis: Strategies + Profit {
+    /// Implied volatility the strategy is priced at when a caller passes no
+    /// [`VolatilityAdjustment`].
+    ///
+    /// The probability model is log-normal with a single volatility, so a
+    /// strategy whose legs carry different implied volatilities (skew) needs
+    /// one number for it. This is the implied volatility of the leg whose
+    /// strike is closest to the underlying price, the at-the-money leg; when
+    /// two legs are equally close, the lower strike wins, so the answer does
+    /// not depend on the order the legs were added in.
+    ///
+    /// Every method in this trait that takes `volatility_adj: None` uses this
+    /// value with no widening (`std_dev_adjustment = 0`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::CalculationError`] with
+    /// [`ProbabilityCalculationErrorKind::VolatilityAdjustmentError`] when the
+    /// strategy has no option position to read a volatility from, and
+    /// propagates the strategy's own error when its positions cannot be
+    /// enumerated.
+    fn reference_volatility(&self) -> Result<Positive, ProbabilityError> {
+        let spot = self.get_underlying_price().to_dec();
+        let positions = self.get_positions().map_err(StrategyError::from)?;
+        let mut closest: Option<(Decimal, Positive, Positive)> = None;
+        for position in positions {
+            let strike = position.option.strike_price;
+            let distance = strike
+                .to_dec()
+                .checked_sub(spot)
+                .ok_or_else(|| {
+                    ProbabilityError::CalculationError(
+                        ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                            reason: format!(
+                                "distance from strike {strike} to spot {spot} overflows"
+                            ),
+                        },
+                    )
+                })?
+                .abs();
+            let better = match closest {
+                None => true,
+                Some((best_distance, best_strike, _)) => {
+                    distance < best_distance || (distance == best_distance && strike < best_strike)
+                }
+            };
+            if better {
+                closest = Some((distance, strike, position.option.implied_volatility));
+            }
+        }
+        closest.map(|(_, _, volatility)| volatility).ok_or_else(|| {
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::VolatilityAdjustmentError {
+                    reason: "strategy has no option position to take a reference volatility from"
+                        .to_string(),
+                },
+            )
+        })
+    }
+
     /// Calculate probability analysis for a strategy
     ///
     /// Performs a comprehensive probability analysis for an option strategy, taking into
@@ -50,7 +109,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// # Parameters
     ///
-    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `volatility_adj`: Volatility to price at; `None` uses
+    ///   [`ProbabilityAnalysis::reference_volatility`] with no widening.
     /// - `trend`: Optional price trend parameters indicating market direction bias
     ///
     /// # Returns
@@ -97,9 +157,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         }
 
         // If we have adjustments, calculate with them
-        let probability_of_profit =
-            self.probability_of_profit(volatility_adj.clone(), trend.clone())?;
-        let expected_value = self.expected_value(volatility_adj.clone(), trend.clone())?;
+        let probability_of_profit = self.probability_of_profit(volatility_adj, trend.clone())?;
+        let expected_value = self.expected_value(volatility_adj, trend.clone())?;
         let (prob_max_profit, prob_max_loss) =
             self.calculate_extreme_probabilities(volatility_adj, trend)?;
         let risk_reward_ratio =
@@ -119,8 +178,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// based on an underlying price, volatility adjustments, and price trends.
     ///
     /// # Parameters
-    /// - `volatility_adj`: An optional `VolatilityAdjustment` parameter, which contains
-    ///   the base volatility and the number of standard deviations to adjust.
+    /// - `volatility_adj`: Volatility to price at; `None` uses
+    ///   [`ProbabilityAnalysis::reference_volatility`] with no widening.
     /// - `trend`: An optional `PriceTrend` parameter, which indicates the
     ///   annual drift rate and the confidence level for the trend.
     ///
@@ -175,6 +234,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             };
         }
 
+        let volatility = resolve_volatility(self, volatility_adj)?;
         let step = self.get_underlying_price() / 100.0;
         let range = self.get_best_range_to_show(step)?;
         let expiration = *self.get_expiration().values().next().ok_or_else(|| {
@@ -188,7 +248,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             let prob = calculate_single_point_probability(
                 self.get_underlying_price(),
                 price,
-                volatility_adj.clone(),
+                volatility,
                 trend.clone(),
                 expiration,
                 None,
@@ -258,7 +318,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// # Parameters
     ///
-    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `volatility_adj`: Volatility to price at; `None` uses
+    ///   [`ProbabilityAnalysis::reference_volatility`] with no widening.
     /// - `trend`: Optional price trend parameters
     ///
     /// # Returns
@@ -276,6 +337,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
     ) -> Result<Positive, ProbabilityError> {
+        let volatility = resolve_volatility(self, volatility_adj)?;
         let mut sum_of_probabilities = Positive::ZERO;
         let ranges = self.get_profit_ranges()?;
         let option = self.one_option();
@@ -285,7 +347,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         for mut range in ranges {
             range.calculate_probability(
                 &underlying_price,
-                volatility_adj.clone(),
+                volatility,
                 trend.clone(),
                 &expiration,
                 Some(risk_free_rate),
@@ -302,7 +364,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// # Parameters
     ///
-    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `volatility_adj`: Volatility to price at; `None` uses
+    ///   [`ProbabilityAnalysis::reference_volatility`] with no widening.
     /// - `trend`: Optional price trend parameters
     ///
     /// # Returns
@@ -320,6 +383,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
     ) -> Result<Positive, ProbabilityError> {
+        let volatility = resolve_volatility(self, volatility_adj)?;
         let mut sum_of_probabilities = Positive::ZERO;
         let ranges = self.get_loss_ranges()?;
         let option = self.one_option();
@@ -329,7 +393,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         for mut range in ranges {
             range.calculate_probability(
                 &underlying_price,
-                volatility_adj.clone(),
+                volatility,
                 trend.clone(),
                 &expiration,
                 Some(risk_free_rate),
@@ -346,7 +410,8 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///
     /// # Parameters
     ///
-    /// - `volatility_adj`: Optional volatility adjustment parameters
+    /// - `volatility_adj`: Volatility to price at; `None` uses
+    ///   [`ProbabilityAnalysis::reference_volatility`] with no widening.
     /// - `trend`: Optional price trend parameters
     ///
     /// # Returns
@@ -365,6 +430,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
     ) -> Result<(Positive, Positive), ProbabilityError> {
+        let volatility = resolve_volatility(self, volatility_adj)?;
         let profit_ranges = self.get_profit_ranges()?;
         let loss_ranges = self.get_loss_ranges()?;
 
@@ -390,7 +456,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             let mut range_clone = range.clone();
             range_clone.calculate_probability(
                 underlying_price,
-                volatility_adj.clone(),
+                volatility,
                 trend.clone(),
                 expiration,
                 Some(*risk_free_rate),
@@ -403,7 +469,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             let mut range_clone = range.clone();
             range_clone.calculate_probability(
                 underlying_price,
-                volatility_adj,
+                volatility,
                 trend,
                 expiration,
                 Some(*risk_free_rate),
@@ -449,6 +515,22 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// [`ProbabilityError::CalculationError`] when the loss evaluation
     /// fails at a sampled price.
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError>;
+}
+
+/// The volatility a [`ProbabilityAnalysis`] method prices at: the caller's
+/// adjustment when given, otherwise the strategy's
+/// [`ProbabilityAnalysis::reference_volatility`] with no widening.
+fn resolve_volatility<S: ProbabilityAnalysis + ?Sized>(
+    strategy: &S,
+    volatility_adj: Option<VolatilityAdjustment>,
+) -> Result<VolatilityAdjustment, ProbabilityError> {
+    match volatility_adj {
+        Some(adjustment) => Ok(adjustment),
+        None => Ok(VolatilityAdjustment {
+            base_volatility: strategy.reference_volatility()?,
+            std_dev_adjustment: Positive::ZERO,
+        }),
+    }
 }
 
 #[cfg(test)]
@@ -807,11 +889,8 @@ mod tests_marginal_probability_inversion {
         })
     }
 
-    /// The volatility has to be passed to `expected_value`, not just stored on
-    /// the strategy: `calculate_single_point_probability` substitutes a
-    /// hardcoded `0.2` when `volatility_adj` is `None` and never reads the
-    /// strategy's own implied volatility, so `None` here would exercise the
-    /// ordinary path under an extreme-sounding name.
+    /// The volatility is passed explicitly so each test states the value it
+    /// probes, independent of which leg `reference_volatility` would pick.
     ///
     /// At the smallest volatility the model can hold, the guard is never
     /// reached: the z-score leaves the finite range and the kernel reports a
@@ -899,5 +978,132 @@ mod tests_marginal_probability_inversion {
             result.is_ok(),
             "an ordinary spread must not report an inversion, got {result:?}"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_reference_volatility {
+    use super::*;
+    use crate::ExpirationDate;
+    use crate::strategies::BullCallSpread;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// A bull call spread with each leg at its own implied volatility.
+    fn spread(
+        spot: Positive,
+        long_strike: Positive,
+        short_strike: Positive,
+        long_iv: Positive,
+        short_iv: Positive,
+    ) -> BullCallSpread {
+        let mut strategy = match BullCallSpread::new(
+            "REFVOL".to_string(),
+            spot,
+            long_strike,
+            short_strike,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            long_iv,
+            dec!(0.05),
+            Positive::ZERO,
+            Positive::ONE,
+            pos_or_panic!(27.26),
+            pos_or_panic!(5.33),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.55),
+            pos_or_panic!(0.54),
+        ) {
+            Ok(strategy) => strategy,
+            Err(error) => panic!("the probe spread must construct: {error}"),
+        };
+        strategy.short_call.option.implied_volatility = short_iv;
+        strategy
+    }
+
+    fn flat(volatility: Positive) -> Option<VolatilityAdjustment> {
+        Some(VolatilityAdjustment {
+            base_volatility: volatility,
+            std_dev_adjustment: Positive::ZERO,
+        })
+    }
+
+    /// The issue's own test: with no adjustment the strategy prices at its own
+    /// implied volatility, not at a value the kernel picked. Before #619 the
+    /// first assertion failed, because `None` meant a flat 0.2.
+    #[test]
+    fn test_probability_of_profit_none_uses_strategy_volatility() {
+        let iv = pos_or_panic!(0.8);
+        let strategy = spread(
+            pos_or_panic!(2505.8),
+            pos_or_panic!(2460.0),
+            pos_or_panic!(2515.0),
+            iv,
+            iv,
+        );
+
+        let by_default = strategy.probability_of_profit(None, None);
+        let at_own_iv = strategy.probability_of_profit(flat(iv), None);
+        let at_0_2 = strategy.probability_of_profit(flat(pos_or_panic!(0.2)), None);
+
+        match (by_default, at_own_iv, at_0_2) {
+            (Ok(by_default), Ok(at_own_iv), Ok(at_0_2)) => {
+                assert_eq!(by_default, at_own_iv);
+                assert_ne!(by_default, at_0_2, "None must not price at 0.2 any more");
+            }
+            other => panic!("all three must succeed, got {other:?}"),
+        }
+    }
+
+    /// With skew, the at-the-money leg's volatility is the reference: spot
+    /// 2505.8 sits 9.2 below the 2515 strike and 45.8 above the 2460 one.
+    #[test]
+    fn test_reference_volatility_picks_leg_closest_to_spot() {
+        let strategy = spread(
+            pos_or_panic!(2505.8),
+            pos_or_panic!(2460.0),
+            pos_or_panic!(2515.0),
+            pos_or_panic!(0.30),
+            pos_or_panic!(0.24),
+        );
+        match strategy.reference_volatility() {
+            Ok(volatility) => assert_eq!(volatility, pos_or_panic!(0.24)),
+            Err(error) => panic!("reference volatility: {error}"),
+        }
+    }
+
+    /// Two legs equally far from spot: the lower strike wins, so the answer
+    /// does not depend on the order the legs were built in.
+    #[test]
+    fn test_reference_volatility_tie_takes_lower_strike() {
+        let strategy = spread(
+            pos_or_panic!(105.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(110.0),
+            pos_or_panic!(0.31),
+            pos_or_panic!(0.27),
+        );
+        match strategy.reference_volatility() {
+            Ok(volatility) => assert_eq!(volatility, pos_or_panic!(0.31)),
+            Err(error) => panic!("reference volatility: {error}"),
+        }
+    }
+
+    /// An explicit adjustment always wins over the strategy's own volatility.
+    #[test]
+    fn test_explicit_adjustment_overrides_reference_volatility() {
+        let strategy = spread(
+            pos_or_panic!(2505.8),
+            pos_or_panic!(2460.0),
+            pos_or_panic!(2515.0),
+            pos_or_panic!(0.8),
+            pos_or_panic!(0.8),
+        );
+        let explicit = strategy.probability_of_profit(flat(pos_or_panic!(0.2)), None);
+        let by_default = strategy.probability_of_profit(None, None);
+        match (explicit, by_default) {
+            (Ok(explicit), Ok(by_default)) => assert_ne!(explicit, by_default),
+            other => panic!("both must succeed, got {other:?}"),
+        }
     }
 }

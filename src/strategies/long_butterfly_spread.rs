@@ -1090,10 +1090,10 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
         profit_range.calculate_probability(
             self.get_underlying_price(),
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -1128,10 +1128,10 @@ impl ProbabilityAnalysis for LongButterflySpread {
             self.long_call_high.option.implied_volatility,
         ])?;
 
-        let volatility_adjustment = Some(VolatilityAdjustment {
+        let volatility_adjustment = VolatilityAdjustment {
             base_volatility: mean_volatility,
             std_dev_adjustment: std_dev,
-        });
+        };
 
         // Lower loss range: from 0 to lower break-even point
         // This represents losses when price is below the lower break-even
@@ -1143,7 +1143,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
 
         lower_loss_range.calculate_probability(
             self.get_underlying_price(),
-            volatility_adjustment.clone(),
+            volatility_adjustment,
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -3218,6 +3218,7 @@ mod tests_butterfly_optimizable {
 #[cfg(test)]
 mod tests_butterfly_probability {
     use super::*;
+    use crate::analytics::probability::flat_volatility_0_2;
 
     use crate::model::ExpirationDate;
 
@@ -3421,7 +3422,7 @@ mod tests_butterfly_probability {
             current_price,
             &lower_bound,
             &upper_bound,
-            None,
+            flat_volatility_0_2(),
             None,
             &ExpirationDate::Days(pos_or_panic!(63.0)),
             Some(dec!(0.0)),

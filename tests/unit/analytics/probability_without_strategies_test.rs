@@ -24,7 +24,7 @@ fn test_single_point_probabilities_sum_to_one() {
     let result = calculate_single_point_probability(
         &Positive::HUNDRED,
         &pos_or_panic!(105.0),
-        Some(adjustment()),
+        adjustment(),
         None,
         &ExpirationDate::Days(pos_or_panic!(30.0)),
         Some(dec!(0.05)),
@@ -50,7 +50,7 @@ fn test_range_probability_is_bounded_by_its_tails() {
         &Positive::HUNDRED,
         &pos_or_panic!(95.0),
         &pos_or_panic!(105.0),
-        Some(adjustment()),
+        adjustment(),
         Some(PriceTrend {
             drift_rate: 0.0,
             confidence: 0.5,
@@ -79,7 +79,7 @@ fn test_range_probability_is_bounded_by_its_tails() {
     let below_lower = calculate_single_point_probability(
         &Positive::HUNDRED,
         &pos_or_panic!(95.0),
-        Some(adjustment()),
+        adjustment(),
         Some(trend()),
         &expiry,
         Some(dec!(0.05)),
@@ -88,7 +88,7 @@ fn test_range_probability_is_bounded_by_its_tails() {
     let below_upper = calculate_single_point_probability(
         &Positive::HUNDRED,
         &pos_or_panic!(105.0),
-        Some(adjustment()),
+        adjustment(),
         Some(trend()),
         &expiry,
         Some(dec!(0.05)),
@@ -113,7 +113,7 @@ fn test_inverted_range_is_reported_not_floored() {
         &Positive::HUNDRED,
         &pos_or_panic!(105.0),
         &pos_or_panic!(95.0),
-        Some(adjustment()),
+        adjustment(),
         None,
         &ExpirationDate::Days(pos_or_panic!(30.0)),
         None,
