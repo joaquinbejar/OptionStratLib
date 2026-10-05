@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`model` no longer depends on any layer above it** (#498). Three moves
+  remove the last production edges from the core domain into upper layers:
+  - The Greek methods of `LegAble` (`delta`, `gamma`, `theta`, `vega`, `rho`)
+    move to the new pricing-owned `greeks::LegGreeks` trait, implemented for
+    `Leg`, `SpotPosition`, `FuturePosition` and `PerpetualPosition`. `LegAble`
+    keeps what a leg *is*: side, quantity, fees and cost basis. Results are
+    unchanged; callers import `LegGreeks`.
+  - `Trade::pnl()` is removed; it was `self.into()`. Use `PnL::from(&trade)`,
+    the `From` impl the P&L layer already owned.
+  - `model::ProfitLossRange`, a re-export kept only so the old path resolved
+    after the type moved to analytics (#594), is removed. Use
+    `optionstratlib::analytics::ProfitLossRange`.
+
+  Together with #499 this leaves `model` with no production edge to pricing,
+  Greeks, P&L, analytics or any error those layers own: `make check-graph`
+  tolerates two deferred edges, both in `strategies` (#505). It is the
+  prerequisite for extracting `model` as `optionstratlib-core` (M2).
+
 - **`Options` no longer carries pricing methods of its own** (#499). The seven
   inherent wrappers `calculate_price_black_scholes`, `calculate_price_binomial`,
   `calculate_price_binomial_tree`, `calculate_price_montecarlo`,

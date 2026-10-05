@@ -35,7 +35,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError};
+use crate::error::PositionError;
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
@@ -289,14 +289,6 @@ impl LegAble for SpotPosition {
     fn fees(&self) -> Result<Positive, PositionError> {
         Ok(self.open_fee.checked_add(&self.close_fee)?)
     }
-
-    fn delta(&self) -> Result<Decimal, GreeksError> {
-        let delta_per_unit = match self.side {
-            Side::Long => Decimal::ONE,
-            Side::Short => -Decimal::ONE,
-        };
-        Ok(delta_per_unit * self.quantity.to_dec())
-    }
 }
 
 impl std::fmt::Display for SpotPosition {
@@ -471,18 +463,6 @@ mod tests {
     }
 
     #[test]
-    fn test_delta_long() {
-        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.delta().unwrap(), Decimal::from(100));
-    }
-
-    #[test]
-    fn test_delta_short() {
-        let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.delta().unwrap(), Decimal::from(-100));
-    }
-
-    #[test]
     fn test_total_cost_long() {
         let spot = SpotPosition::new(
             "AAPL".to_string(),
@@ -571,23 +551,5 @@ mod tests {
         assert!(!long.is_short());
         assert!(!short.is_long());
         assert!(short.is_short());
-    }
-
-    #[test]
-    fn test_gamma_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.gamma().unwrap(), Decimal::ZERO);
-    }
-
-    #[test]
-    fn test_theta_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.theta().unwrap(), Decimal::ZERO);
-    }
-
-    #[test]
-    fn test_vega_is_zero() {
-        let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.vega().unwrap(), Decimal::ZERO);
     }
 }

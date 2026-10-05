@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError};
+use crate::error::PositionError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::leg::traits::{Fundable, LegAble, Marginable};
 use crate::model::types::Side;
@@ -434,18 +434,6 @@ impl LegAble for PerpetualPosition {
     fn fees(&self) -> Result<Positive, PositionError> {
         Ok(self.fees)
     }
-
-    fn delta(&self) -> Result<Decimal, GreeksError> {
-        let delta_per_unit = match self.side {
-            Side::Long => Decimal::ONE,
-            Side::Short => -Decimal::ONE,
-        };
-        Ok(delta_per_unit * self.quantity.to_dec())
-    }
-
-    fn theta(&self) -> Result<Decimal, GreeksError> {
-        Ok(-self.funding_payment(self.entry_price))
-    }
 }
 
 impl Marginable for PerpetualPosition {
@@ -694,32 +682,6 @@ mod tests {
 
         let roe = perp.roe_percentage(pos_or_panic!(55000.0));
         assert_eq!(roe.ok(), Some(dec!(100)));
-    }
-
-    #[test]
-    fn test_delta_long() {
-        let perp = PerpetualPosition::long(
-            "BTC-USDT-PERP".to_string(),
-            Positive::TWO,
-            pos_or_panic!(50000.0),
-            pos_or_panic!(10.0),
-            pos_or_panic!(10000.0),
-        );
-
-        assert_eq!(perp.delta().unwrap(), dec!(2));
-    }
-
-    #[test]
-    fn test_delta_short() {
-        let perp = PerpetualPosition::short(
-            "BTC-USDT-PERP".to_string(),
-            Positive::TWO,
-            pos_or_panic!(50000.0),
-            pos_or_panic!(10.0),
-            pos_or_panic!(10000.0),
-        );
-
-        assert_eq!(perp.delta().unwrap(), dec!(-2));
     }
 
     #[test]

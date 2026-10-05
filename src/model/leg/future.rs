@@ -40,7 +40,7 @@
 //! );
 //! ```
 
-use crate::error::{GreeksError, PositionError};
+use crate::error::PositionError;
 use crate::model::ExpirationDate;
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
@@ -350,26 +350,6 @@ impl LegAble for FuturePosition {
     fn fees(&self) -> Result<Positive, PositionError> {
         Ok(self.fees)
     }
-
-    fn delta(&self) -> Result<Decimal, GreeksError> {
-        let delta_per_contract = match self.side {
-            Side::Long => self.contract_size.to_dec(),
-            Side::Short => -self.contract_size.to_dec(),
-        };
-        Ok(delta_per_contract * self.quantity.to_dec())
-    }
-
-    fn rho(&self) -> Result<Decimal, GreeksError> {
-        let time_to_exp = self.time_to_expiration_years();
-        let notional = self.notional_value_at_entry().to_dec();
-
-        let rho_value = match self.side {
-            Side::Long => notional * time_to_exp,
-            Side::Short => -notional * time_to_exp,
-        };
-
-        Ok(rho_value / Decimal::ONE_HUNDRED)
-    }
 }
 
 impl Marginable for FuturePosition {
@@ -598,34 +578,6 @@ mod tests {
 
         let pnl_loss = future.unrealized_pnl(pos_or_panic!(4510.0));
         assert_eq!(pnl_loss.ok(), Some(Decimal::from(-500)));
-    }
-
-    #[test]
-    fn test_delta_long() {
-        let future = FuturePosition::long(
-            "ES".to_string(),
-            Positive::TWO,
-            pos_or_panic!(4500.0),
-            ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(50.0),
-            pos_or_panic!(15000.0),
-        );
-
-        assert_eq!(future.delta().unwrap(), Decimal::from(100));
-    }
-
-    #[test]
-    fn test_delta_short() {
-        let future = FuturePosition::short(
-            "ES".to_string(),
-            Positive::TWO,
-            pos_or_panic!(4500.0),
-            ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(50.0),
-            pos_or_panic!(15000.0),
-        );
-
-        assert_eq!(future.delta().unwrap(), Decimal::from(-100));
     }
 
     #[test]

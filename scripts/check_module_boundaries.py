@@ -163,27 +163,11 @@ MINIMAL_MARKET_MODULES = ("chains", "series")
 # same module pair is a fresh violation, not tolerated debt. Every listed
 # line is annotated `// deferred edge` in the source.
 DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
-    # `impl LegAble for Leg` computes Greeks in its `Option` arms.
-    ("model", "greeks"): (frozenset({"model/leg/leg_enum.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
-    # `Trade::pnl() -> PnL` is public inherent API returning an analytics type.
-    ("model", "pnl"): (frozenset({"model/trade.rs"}), "0.22.0 batch (#498)"),
     # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`
     # `impl BasicAble for Simulator/RandomWalk` lives in strategies.
     ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
     # `Strategable: ... + Graph` supertrait bound.
     ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
-    # --- Surfaced by the error-type resolver (#590). Each entry names the
-    # issue that owns its resolution; none is new debt, all were invisible
-    # because the reference is spelled `crate::error::Name`.
-    # The Greek methods of `LegAble` report `GreeksError`; they move to the
-    # pricing-owned extension trait with the methods themselves.
-    ("model", "error/greeks"): (
-        frozenset({
-            "model/leg/traits.rs", "model/leg/leg_enum.rs", "model/leg/spot.rs",
-            "model/leg/future.rs", "model/leg/perpetual.rs",
-        }),
-        "0.22.0 batch (#498, ADR-0001 D6)",
-    ),
 }
 
 MARKER = "// facade-compat:"
@@ -923,8 +907,12 @@ def self_test() -> int:
         "a utils target resolves to the owning file": (
             [("model/x.rs", "use crate::utils::rng::deterministic_rng;\n")], 0,
         ),
-        "deferred pair in its file": ([("model/trade.rs", "use crate::pnl::PnL;\n")], 0),
-        "deferred pair in another file": ([("model/other.rs", "use crate::pnl::PnL;\n")], 1),
+        "deferred pair in its file": (
+            [("strategies/base.rs", "use crate::visualization::Graph;\n")], 0,
+        ),
+        "deferred pair in another file": (
+            [("strategies/other.rs", "use crate::visualization::Graph;\n")], 1,
+        ),
         # --- error-type resolution (#590)
         "bare error import": ([err, ("model/x.rs", "use crate::error::StrategyError;\n")], 1),
         "error import with alias": ([err, ("model/x.rs", "use crate::error::StrategyError as SE;\nfn f() -> SE { todo!() }\n")], 1),

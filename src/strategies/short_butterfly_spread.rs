@@ -8,6 +8,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
+use crate::analytics::ProfitLossRange;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::{
@@ -21,7 +22,6 @@ use crate::{
     },
     greeks::Greeks,
     model::{
-        ProfitLossRange,
         decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{OptionBasicType, OptionStyle, OptionType, Side},

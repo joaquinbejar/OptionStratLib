@@ -5,6 +5,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use super::base::{BreakEvenable, Positionable, StrategyType};
+use crate::analytics::ProfitLossRange;
 use crate::analytics::probability::VolatilityAdjustment;
 use crate::chains::OptionChain;
 use crate::error::{
@@ -15,7 +16,6 @@ use crate::error::{
 use crate::greeks::Greeks;
 use crate::model::decimal::d_div;
 use crate::model::{
-    ProfitLossRange,
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };

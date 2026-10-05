@@ -13,7 +13,7 @@
 //! retrieving position information, and computing Greeks across different
 //! instrument types.
 
-use crate::error::{GreeksError, PositionError};
+use crate::error::PositionError;
 use crate::model::types::Side;
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -98,103 +98,6 @@ pub trait LegAble {
     /// within the `Positive` range. See [`LegAble::total_cost`] for why this
     /// gained an error channel.
     fn fees(&self) -> Result<Positive, PositionError>;
-
-    /// Returns the delta of this position.
-    ///
-    /// - Spot positions: ±1.0 per unit (Long = +1, Short = -1)
-    /// - Futures/Perpetuals: ±1.0 × contract_size × leverage
-    /// - Options: Calculated from Black-Scholes or other models
-    ///
-    /// # Returns
-    ///
-    /// The position delta as a Decimal, or an error if calculation fails.
-    ///
-    /// # Errors
-    ///
-    /// Propagates any [`GreeksError`] returned by the underlying pricing
-    /// kernel, typically [`GreeksError::Pricing`] for option legs whose
-    /// Black–Scholes evaluation fails, or [`GreeksError::ExpirationDate`]
-    /// when the expiration cannot be resolved.
-    fn delta(&self) -> Result<Decimal, GreeksError>;
-
-    /// Returns the gamma of this position.
-    ///
-    /// For linear instruments (spot, futures, perpetuals), gamma is always 0.
-    /// Only options have non-zero gamma.
-    ///
-    /// # Returns
-    ///
-    /// The position gamma as a Decimal, or an error if calculation fails.
-    ///
-    /// # Errors
-    ///
-    /// The default implementation is infallible (returns `0`). Option-leg
-    /// implementors propagate [`GreeksError::Pricing`] on Black–Scholes
-    /// failure or [`GreeksError::ExpirationDate`] when the expiration is
-    /// invalid.
-    fn gamma(&self) -> Result<Decimal, GreeksError> {
-        Ok(Decimal::ZERO)
-    }
-
-    /// Returns the theta of this position.
-    ///
-    /// - Spot: 0 (no time decay)
-    /// - Futures: ~0 (basis converges over time)
-    /// - Perpetuals: Funding rate impact
-    /// - Options: Calculated time decay
-    ///
-    /// # Returns
-    ///
-    /// The position theta as a Decimal, or an error if calculation fails.
-    ///
-    /// # Errors
-    ///
-    /// The default implementation is infallible (returns `0`). Option-leg
-    /// implementors propagate [`GreeksError::Pricing`] when the closed-form
-    /// time-decay evaluation fails or [`GreeksError::ExpirationDate`] when
-    /// the expiration cannot be resolved.
-    fn theta(&self) -> Result<Decimal, GreeksError> {
-        Ok(Decimal::ZERO)
-    }
-
-    /// Returns the vega of this position.
-    ///
-    /// For linear instruments (spot, futures, perpetuals), vega is always 0.
-    /// Only options have non-zero vega.
-    ///
-    /// # Returns
-    ///
-    /// The position vega as a Decimal, or an error if calculation fails.
-    ///
-    /// # Errors
-    ///
-    /// The default implementation is infallible (returns `0`). Option-leg
-    /// implementors propagate [`GreeksError::Pricing`] when the Black–Scholes
-    /// vega evaluation fails or [`GreeksError::ExpirationDate`] when the
-    /// expiration cannot be resolved.
-    fn vega(&self) -> Result<Decimal, GreeksError> {
-        Ok(Decimal::ZERO)
-    }
-
-    /// Returns the rho of this position.
-    ///
-    /// - Spot: 0
-    /// - Futures/Forwards: Interest rate sensitivity
-    /// - Options: Calculated interest rate sensitivity
-    ///
-    /// # Returns
-    ///
-    /// The position rho as a Decimal, or an error if calculation fails.
-    ///
-    /// # Errors
-    ///
-    /// The default implementation is infallible (returns `0`). Option-leg
-    /// implementors propagate [`GreeksError::Pricing`] when the rho
-    /// evaluation fails or [`GreeksError::ExpirationDate`] when the
-    /// expiration cannot be resolved.
-    fn rho(&self) -> Result<Decimal, GreeksError> {
-        Ok(Decimal::ZERO)
-    }
 
     /// Checks if this is a long position.
     #[must_use]
@@ -345,14 +248,6 @@ mod tests {
         fn fees(&self) -> Result<Positive, PositionError> {
             Ok(self.fees)
         }
-
-        fn delta(&self) -> Result<Decimal, GreeksError> {
-            let delta_per_unit = match self.side {
-                Side::Long => Decimal::ONE,
-                Side::Short => -Decimal::ONE,
-            };
-            Ok(delta_per_unit * self.quantity.to_dec())
-        }
     }
 
     #[test]
@@ -391,28 +286,6 @@ mod tests {
         // Price goes down - profit for short
         let pnl = leg.pnl_at_price(positive::pos_or_panic!(45000.0));
         assert_eq!(pnl.ok(), Some(Decimal::from(5000)));
-    }
-
-    #[test]
-    fn test_mock_leg_delta() {
-        let long_leg = MockLeg {
-            symbol: "BTC".to_string(),
-            quantity: positive::Positive::TWO,
-            side: Side::Long,
-            cost_basis: positive::pos_or_panic!(50000.0),
-            fees: positive::pos_or_panic!(10.0),
-        };
-
-        let short_leg = MockLeg {
-            symbol: "BTC".to_string(),
-            quantity: positive::Positive::TWO,
-            side: Side::Short,
-            cost_basis: positive::pos_or_panic!(50000.0),
-            fees: positive::pos_or_panic!(10.0),
-        };
-
-        assert_eq!(long_leg.delta().unwrap(), Decimal::from(2));
-        assert_eq!(short_leg.delta().unwrap(), Decimal::from(-2));
     }
 
     #[test]
