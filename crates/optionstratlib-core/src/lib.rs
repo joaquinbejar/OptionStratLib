@@ -46,6 +46,35 @@
 //! prefix. Enabling `schema` adds `ToSchema` impls to these types; it does not
 //! change which type a path names.
 //!
+//! ## Imports: no prelude
+//!
+//! This crate has no `prelude` module, by decision (#518). The module roots
+//! already are the curated entry points: `model` re-exports the domain types
+//! and the foundational ones (`Options`, `Position`, `Trade`, `TradeStatus`,
+//! `ExpirationDate`, `Side`, `OptionStyle`, `OptionType`, `Positive`),
+//! `model::leg` the leg types, and `utils` `TimeFrame` and `Len`.
+//!
+//! Measured when the crate was extracted, counting explicit
+//! `optionstratlib::{model,utils,constants}::…` imports: 168 of the 178
+//! example files import through the facade's `prelude::*`, and the examples
+//! name 8 distinct core items explicitly (in 25 files). Tests and benches (139
+//! files) name 31 distinct core items in 40 files, 18 of them through deep
+//! paths such as `model::decimal::DecimalStats` or `utils::time::…`. Nothing
+//! outside the workspace imports `optionstratlib_core` directly. The use is
+//! spread thinly across many items, so no small glob would cover it, and the
+//! few types every consumer needs are already one path away at the module
+//! roots. A crate glob would only duplicate those roots and make every future
+//! addition a prelude commitment. The facade prelude is M7-03's to redesign.
+//!
+//! ```rust
+//! use optionstratlib_core::model::leg::{Leg, LegAble, SpotPosition};
+//! use optionstratlib_core::model::{
+//!     ExpirationDate, OptionStyle, OptionType, Options, Position, Positive, Side, Trade,
+//! };
+//! use optionstratlib_core::utils::{Len, TimeFrame};
+//! use optionstratlib_core::pos_or_panic;
+//! ```
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the core types

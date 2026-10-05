@@ -240,6 +240,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`optionstratlib-core` and `optionstratlib-math` have no prelude, by
+  decision** (#518). Each crate's docs record the measurement behind it: 168
+  of 178 example files import through the facade prelude; explicit imports
+  name 8 distinct core items in the examples, and 31 core and 20 math items
+  in tests and benches, with no small common core. The docs also show the
+  canonical imports, which compile fixtures in both crates
+  (`tests/common_imports.rs`) now pin. The module roots are the
+  curated entry points; the facade prelude is M7-03's.
+
 - **`optionstratlib-core` re-exports every foundational type** (#515).
   `optionstratlib_core::model` now also re-exports `Positive` and
   `PositiveError`, and the crate root re-exports the `pos_or_panic!`,

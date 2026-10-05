@@ -27,6 +27,31 @@
 //! `BasicSurfaces`) belong to the analytics layer, and plotting to
 //! visualization; the `optionstratlib` facade provides both.
 //!
+//! ## Imports: no prelude
+//!
+//! This crate has no `prelude` module, by decision (#518). Each module root
+//! re-exports what a caller needs: `curves` (`Curve`, `Point2D`, `Curvable`,
+//! `StatisticalCurve`), `surfaces` (`Surface`, `Point3D`, `Surfacable`),
+//! `geometrics` (construction, interpolation and the shared traits) and
+//! `error`.
+//!
+//! Measured when the crate was extracted, counting explicit
+//! `optionstratlib::{curves,surfaces,geometrics}::…` imports: the examples
+//! name no math item explicitly (they use the facade's `prelude::*`), and
+//! tests and benches name 20 distinct math items in 4 files, most of them in
+//! one property test that imports 15 `geometrics` items. That use is narrow
+//! and specialised; a crate glob would serve none of it better than the
+//! module roots already do.
+//!
+//! ```rust
+//! use optionstratlib_math::curves::{Curvable, Curve, Point2D, StatisticalCurve};
+//! use optionstratlib_math::error::{CurveError, SurfaceError};
+//! use optionstratlib_math::geometrics::{
+//!     ConstructionMethod, ConstructionParams, GeometricObject, Interpolate, InterpolationType,
+//! };
+//! use optionstratlib_math::surfaces::{Point3D, Surfacable, Surface};
+//! ```
+//!
 //! ## Behaviour that lives outside this crate
 //!
 //! Some capabilities take a math type as input but belong to a higher layer,
