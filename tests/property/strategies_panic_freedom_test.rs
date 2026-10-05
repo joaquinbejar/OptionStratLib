@@ -416,20 +416,21 @@ proptest! {
         std_dev_adjustment in extreme_positive(),
         rate in extreme_decimal(),
         expiration in extreme_expiration(),
-        adjust in any::<bool>(),
         drift in prop_oneof![Just(0.0f64), Just(1e30f64), Just(-1e30f64)],
         confidence in prop_oneof![Just(0.0f64), Just(0.8f64), Just(2.0f64)],
     ) {
-        let volatility_adj = adjust.then_some(VolatilityAdjustment {
+        // The kernels take the volatility explicitly; the extreme generators
+        // drive it instead of a `None` that used to hide a flat 0.2.
+        let volatility = VolatilityAdjustment {
             base_volatility,
             std_dev_adjustment,
-        });
+        };
         let trend = Some(PriceTrend { drift_rate: drift, confidence });
         let _ = calculate_single_point_probability(
-            &current, &target, volatility_adj.clone(), trend.clone(), &expiration, Some(rate),
+            &current, &target, volatility, trend.clone(), &expiration, Some(rate),
         );
         let _ = calculate_price_probability(
-            &current, &target, &upper, volatility_adj, trend, &expiration, Some(rate),
+            &current, &target, &upper, volatility, trend, &expiration, Some(rate),
         );
     }
 

@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The probability kernels no longer price at a hidden 0.2 volatility**
+  (#619). `calculate_single_point_probability` substituted a flat 0.2 when
+  `volatility_adj` was `None`, and every strategy method forwarded `None`, so a
+  strategy built at any other implied volatility was evaluated as if it were
+  0.2. Every example's `probability_of_profit(None, None)` was affected.
+
+  The kernels now take the volatility explicitly:
+  `calculate_single_point_probability`, `calculate_price_probability` and
+  `ProfitLossRange::calculate_probability` (with its
+  `ProfitRangeProbability` trait method) take a `VolatilityAdjustment` instead
+  of an `Option`. The analytics layer has no strategy to read a volatility
+  from, so it no longer guesses one. `VolatilityAdjustment` is now `Copy`.
+
+  On `ProbabilityAnalysis`, `volatility_adj: None` now means the strategy's
+  own volatility, exposed as the new `reference_volatility()`: the implied
+  volatility of the leg whose strike is closest to the underlying, with the
+  lower strike winning a tie so the answer does not depend on leg order. An
+  explicit adjustment still wins. **Results change for every `None` caller**,
+  to the volatility the strategy was actually built with.
+
+  One test asserted the opposite of the model and passed only because of the
+  hidden default: `test_high_volatility_scenario` set a call butterfly's legs
+  to 0.5 implied volatility and expected a higher expected value, but `None`
+  priced it at 0.2. Measured with the volatility reaching the model, that
+  short-volatility structure's expected value falls from 28.3 at its own 0.18
+  to 0 at 0.5; the test now asserts that it falls.
+
 - **utoipa 6 dependency line.** `utoipa` 5.5 -> 6.0, together with the
   crates whose types appear in this crate's public API and `ToSchema`
   derives: `positive` 0.6 -> 0.7, `expiration_date` 0.3 -> 0.4,

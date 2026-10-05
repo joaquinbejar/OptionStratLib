@@ -612,10 +612,10 @@ impl ProbabilityAnalysis for ProtectivePut {
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
         profit_range.calculate_probability(
             &self.spot_leg.cost_basis,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
@@ -641,10 +641,10 @@ impl ProbabilityAnalysis for ProtectivePut {
         )?;
         loss_range.calculate_probability(
             &self.spot_leg.cost_basis,
-            Some(VolatilityAdjustment {
+            VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,
-            }),
+            },
             None,
             expiration_date,
             Some(risk_free_rate),
