@@ -16,13 +16,14 @@
 //! 1. [Introduction](#introduction)
 //! 2. [Features](#features)
 //! 3. [Core Modules](#core-modules)
-//! 4. [Module Boundaries](#module-boundaries)
-//! 5. [Trading Strategies](#trading-strategies)
-//! 6. [Setup Instructions](#setup-instructions)
-//! 7. [Library Usage](#library-usage)
-//! 8. [Usage Examples](#usage-examples)
-//! 9. [Testing](#testing)
-//! 10. [Contribution and Contact](#contribution-and-contact)
+//! 4. [Workspace Crates](#workspace-crates)
+//! 5. [Module Boundaries](#module-boundaries)
+//! 6. [Trading Strategies](#trading-strategies)
+//! 7. [Setup Instructions](#setup-instructions)
+//! 8. [Library Usage](#library-usage)
+//! 9. [Usage Examples](#usage-examples)
+//! 10. [Testing](#testing)
+//! 11. [Contribution and Contact](#contribution-and-contact)
 //!
 //! ## Introduction
 //!
@@ -225,15 +226,15 @@
 //!
 //! The library is organized into the following key modules:
 //!
-//! ### **Model** (`model/`)
+//! ### **Model** (`model/`, defined by `optionstratlib-core`)
 //! Core data structures and types for options trading:
-//! - `option.rs`: Complete option structures with pricing and Greeks
-//! - `position.rs`: Position management and P&L tracking
-//! - `expiration.rs`: Flexible expiration date handling (Days/DateTime)
-//! - `positive.rs`: Type-safe positive number implementation
-//! - `types.rs`: Common enums (OptionType, Side, OptionStyle)
-//! - `trade.rs`: Trade execution and management
-//! - `format.rs`: Data formatting utilities
+//! - `option.rs`: the option contract (`Options`): terms, validation, payoff
+//! - `position.rs`: positions with premium, fees and cost basis
+//! - `expiration.rs`: flexible expiration date handling (Days/DateTime)
+//! - `positive_ext.rs`: OptionStratLib extensions of `positive::Positive`
+//! - `types.rs`: common enums (OptionType, Side, OptionStyle)
+//! - `trade.rs`: trade records and their status
+//! - `format.rs`: data formatting utilities
 //! - **`leg/`**: Multi-instrument leg support for strategies
 //!   - `traits.rs`: Common leg traits (`LegAble`, `Marginable`, `Fundable`, `Expirable`)
 //!   - `spot.rs`: `SpotPosition` for underlying asset positions
@@ -367,6 +368,29 @@
 //! - Type-safe error propagation
 //! - Detailed error reporting
 //!
+//!
+//! ## Workspace Crates
+//!
+//! The library is being split into focused crates. Each one can be used on
+//! its own, and this crate (the `optionstratlib` facade) re-exports them, so
+//! the paths below are the same types whichever crate you import them from.
+//!
+//! | Crate | Facade paths | Contents |
+//! | --- | --- | --- |
+//! | `optionstratlib-core` | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
+//! | `optionstratlib-math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
+//!
+//! Each facade path is an explicit module or item re-export (`pub use
+//! optionstratlib_core::model;`, `pub use
+//! optionstratlib_core::error::DecimalError`), never a glob over a
+//! component's root, so
+//! `optionstratlib::model::Options` *is* `optionstratlib_core::model::Options`.
+//! Depend on a component directly when you need only that layer; its own
+//! docs list its entry points. The rest of the library (pricing, market,
+//! analytics, strategies, simulation, backtesting, visualization) still lives
+//! in this crate and moves out milestone by milestone. Until then the `math`
+//! and `schema` capabilities that ADR-0002 routes through facade features are
+//! always on, which is what the facade default enables anyway.
 //!
 //! ## Module Boundaries
 //!
