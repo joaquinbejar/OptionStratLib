@@ -1,4 +1,4 @@
-use optionstratlib::error::{CurveError, MetricsError, SurfaceError};
+use optionstratlib_math::error::{CurveError, MetricsError, SurfaceError};
 
 #[test]
 fn test_metrics_error_display() {

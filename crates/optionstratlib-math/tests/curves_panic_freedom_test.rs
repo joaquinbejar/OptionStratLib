@@ -17,14 +17,14 @@
 //! `(x, y)`. The assertion is deliberately weak: whatever comes back, it must
 //! come back.
 
-use optionstratlib::curves::{Curve, Point2D, StatisticalCurve};
-use optionstratlib::geometrics::{
+use optionstratlib_math::curves::{Curve, Point2D, StatisticalCurve};
+use optionstratlib_math::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, ConstructionMethod, ConstructionParams,
     GeometricObject, GeometricTransformations, Interpolate, InterpolationType,
     MergeAxisInterpolate, MergeOperation, MetricsExtractor, RangeMetrics, ShapeMetrics,
     TrendMetrics,
 };
-use optionstratlib::surfaces::{Point3D, Surface};
+use optionstratlib_math::surfaces::{Point3D, Surface};
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -258,7 +258,7 @@ proptest! {
             f: Box::new(|t: Decimal| Ok(Point2D::new(t, t))),
             params: ConstructionParams::D2 { t_start: start, t_end: end, steps },
         });
-        let _ = Curve::construct(ConstructionMethod::<Point2D, Decimal, optionstratlib::error::CurveError>::FromData {
+        let _ = Curve::construct(ConstructionMethod::<Point2D, Decimal, optionstratlib_math::error::CurveError>::FromData {
             points: BTreeSet::new(),
         });
     }
@@ -387,7 +387,7 @@ proptest! {
                 x_start, x_end, y_start, y_end, x_steps, y_steps,
             },
         });
-        let _ = Surface::construct(ConstructionMethod::<Point3D, Point2D, optionstratlib::error::SurfaceError>::FromData {
+        let _ = Surface::construct(ConstructionMethod::<Point3D, Point2D, optionstratlib_math::error::SurfaceError>::FromData {
             points: BTreeSet::new(),
         });
     }

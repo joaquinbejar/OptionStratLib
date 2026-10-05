@@ -76,6 +76,34 @@ check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
 	@python3 scripts/check_module_boundaries.py
 
+# Verifies every extracted component crate on its own, without the facade in
+# the build (#519): tests with default, no and all features, Clippy, docs
+# with broken links and missing docs denied, and the packaged archive. The
+# crates are packaged together because a component's path dependencies are
+# not on crates.io yet; `cargo package` resolves them from the same run.
+COMPONENT_CRATES := optionstratlib-core optionstratlib-math
+
+.PHONY: check-components
+check-components:
+	@set -e; for crate in $(COMPONENT_CRATES); do \
+		echo "=== $$crate"; \
+		LOGLEVEL=WARN cargo test -p $$crate; \
+		LOGLEVEL=WARN cargo test -p $$crate --no-default-features; \
+		LOGLEVEL=WARN cargo test -p $$crate --all-features; \
+		cargo clippy -p $$crate --all-targets --all-features -- -D warnings; \
+		RUSTDOCFLAGS="-D warnings" cargo doc -p $$crate --all-features --no-deps; \
+		lib=crates/$$crate/src/lib.rs; \
+		grep -q '^#!\[deny(missing_docs, rustdoc::broken_intra_doc_links)\]' $$lib \
+			|| { echo "$$lib must deny missing_docs and broken intra-doc links"; exit 1; }; \
+		files=$$(cargo package -p $$crate --list --allow-dirty); \
+		for required in Cargo.toml README.md LICENSE src/lib.rs; do \
+			echo "$$files" | grep -qx "$$required" \
+				|| { echo "$$crate package is missing $$required"; exit 1; }; \
+		done; \
+	done
+	cargo package $(addprefix -p ,$(COMPONENT_CRATES)) --allow-dirty
+	@echo "OK: $(COMPONENT_CRATES) verified standalone"
+
 # Pins the dependency graph of the market surface without `synthetic` and with
 # it (roadmap M1-15), one fixture each, as a `parent -> child` edge list
 # resolved with `cargo tree --target all` so it is host-independent. The

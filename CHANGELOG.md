@@ -240,6 +240,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`make check-components` and a `Components` CI job verify each extracted
+  crate on its own** (#519): `optionstratlib-core` and `optionstratlib-math`
+  are tested with default, no and all features, linted with Clippy, built as
+  docs with broken links and missing docs denied, and packaged, with the
+  archive checked for `Cargo.toml`, `README.md`, `LICENSE` and `src/lib.rs`.
+  The facade is not in those builds. The property suites that only use core
+  or math (`model_panic_freedom`, `curves_panic_freedom`, `point_contract`)
+  move into those crates with their cases and tolerances unchanged; the
+  `PnLCalculator` half of the model suite stays in the facade. Two facade
+  unit-test files move too, one of which (`decimal_ops_test`) had never been
+  declared in a `mod.rs` and now runs for the first time.
+
 - **`optionstratlib-core` and `optionstratlib-math` have no prelude, by
   decision** (#518). Each crate's docs record the measurement behind it: 168
   of 178 example files import through the facade prelude; explicit imports

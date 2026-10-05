@@ -36,3 +36,4 @@ utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
 approx = { workspace = true }
+proptest = { workspace = true }
