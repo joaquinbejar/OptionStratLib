@@ -38,7 +38,7 @@ use thiserror::Error;
 /// # Example Usage
 ///
 /// ```rust
-/// use optionstratlib::error::DecimalError;
+/// use optionstratlib_core::error::DecimalError;
 ///
 /// fn validate_decimal(value: f64) -> Result<(), DecimalError> {
 ///     if value.is_nan() {
@@ -173,7 +173,7 @@ pub enum DecimalError {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::error::{DecimalError, DecimalResult};
+/// use optionstratlib_core::error::{DecimalError, DecimalResult};
 ///
 /// fn divide(a: f64, b: f64) -> DecimalResult<f64> {
 ///     if b == 0.0 {
@@ -209,7 +209,7 @@ pub type DecimalResult<T> = Result<T, DecimalError>;
 /// # Example
 ///
 /// ```rust
-/// use optionstratlib::error::DecimalError;
+/// use optionstratlib_core::error::DecimalError;
 /// // Creating an invalid value error
 /// let err = DecimalError::invalid_value(12.34, "Value exceeds maximum allowed");
 ///

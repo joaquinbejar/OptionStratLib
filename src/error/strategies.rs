@@ -69,7 +69,7 @@
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **strategies**. Owns `StrategyError`, `BreakEvenErrorKind`, `ProfitLossErrorKind`.
-use crate::error::common::OperationErrorKind;
+use crate::error::OperationErrorKind;
 use crate::error::position::StrategyErrorKind;
 use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
 use crate::error::{GreeksError, OptionsError, PositionError, TradeError};

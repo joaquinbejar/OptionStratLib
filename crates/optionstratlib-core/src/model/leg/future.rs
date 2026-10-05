@@ -20,9 +20,9 @@
 //! ## Example
 //!
 //! ```rust
-//! use optionstratlib::model::leg::FuturePosition;
-//! use optionstratlib::model::types::Side;
-//! use optionstratlib::model::ExpirationDate;
+//! use optionstratlib_core::model::leg::FuturePosition;
+//! use optionstratlib_core::model::types::Side;
+//! use optionstratlib_core::model::ExpirationDate;
 //! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //!
@@ -51,7 +51,6 @@ use positive::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents a futures contract position.
 ///
@@ -71,7 +70,8 @@ use utoipa::ToSchema;
 /// * `maintenance_margin` - Maintenance margin level
 /// * `date` - Position open timestamp
 /// * `fees` - Commission and exchange fees
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct FuturePosition {
     /// Contract symbol (e.g., "ES", "CL", "GC").
     pub symbol: String,

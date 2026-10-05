@@ -2787,3 +2787,24 @@ mod tests_strategy_type_display_debug {
         assert_eq!(format!("{strategy:?}"), expected_output);
     }
 }
+
+#[cfg(test)]
+mod tests_positionable_defaults {
+    use super::*;
+    use crate::error::position::StrategyErrorKind;
+
+    struct DummyStrategy;
+    impl Positionable for DummyStrategy {}
+
+    #[test]
+    fn test_unsupported_operation() {
+        let strategy = DummyStrategy;
+        let result = strategy.get_positions();
+        assert!(matches!(
+            result,
+            Err(PositionError::StrategyError(
+                StrategyErrorKind::UnsupportedOperation { .. }
+            ))
+        ));
+    }
+}

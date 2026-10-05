@@ -119,7 +119,7 @@ impl BasicAxisTypes {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::model::BasicAxisTypes;
+    /// use optionstratlib_core::model::BasicAxisTypes;
     /// for axis_type in BasicAxisTypes::iter() {
     ///     info!("Processing axis type: {:?}", axis_type);
     ///     // Perform operations with each axis type

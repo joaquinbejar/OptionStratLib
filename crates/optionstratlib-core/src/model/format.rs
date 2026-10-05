@@ -388,7 +388,7 @@ mod tests_expiration_date {
 #[cfg(test)]
 mod tests_position_type_display_debug {
     use super::*;
-    use crate::{OptionStyle, OptionType, Side};
+    use crate::model::types::{OptionStyle, OptionType, Side};
 
     use chrono::{DateTime, NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;

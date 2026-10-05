@@ -53,7 +53,7 @@ pub struct BinomialPricingParams<'a> {
     /// as a [`NonZeroUsize`] so zero is structurally invalid at the
     /// type level. Higher values increase accuracy but also
     /// computational cost. See
-    /// [`crate::constants::DEFAULT_BINOMIAL_STEPS`] for a sensible
+    /// [`crate::pricing::constants::DEFAULT_BINOMIAL_STEPS`] for a sensible
     /// default.
     pub no_steps: NonZeroUsize,
 

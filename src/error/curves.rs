@@ -6,7 +6,7 @@
 
 //! Target crate (ADR-0001 D6, roadmap M1-14): **math**. Owns `CurveError`; the `MetricsError`, `Greeks` and `Graph` variants are analytics, pricing and visualization references removed in the batch behind the 0.22.0 bump.
 
-use crate::error::common::OperationErrorKind;
+use crate::error::OperationErrorKind;
 use crate::error::{InterpolationError, OptionsError, PositionError};
 use thiserror::Error;
 

@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The core domain model is its own crate, `optionstratlib-core`** (#514).
+  `model`, `utils`, `constants` and the core errors (`DecimalError`,
+  `OptionsError`, `PositionError`, `TradeError`, `OperationErrorKind`) move
+  out of the facade into `crates/optionstratlib-core`, which depends on no
+  other OptionStratLib crate. `Options`, `Position`, `Leg` and `Trade` keep a
+  single definition, there. The facade re-exports the modules and the
+  `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros,
+  so `optionstratlib::model::Options`, `optionstratlib::error::DecimalError`
+  and the other existing paths still resolve; serialized forms are
+  unchanged. What does change:
+  - Fully qualified type names (`std::any::type_name`, rustdoc) now read
+    `optionstratlib_core::model::...`.
+  - The checked `Decimal` helpers the upper layers call (`d_add`, `d_sub`,
+    `d_mul`, `d_div`, `d_sum`, `d_sum_iter`, `d_product_iter`, `d_exp`,
+    `d_ln`, `d_powd`, `d_sqrt`, `p_sqrt`, `finite_decimal`,
+    `DIV_DEFAULT_SCALE`), `model::utils::sub_floor_zero` and the constants
+    that were crate-private (`MIN_VOLATILITY`, `MAX_VOLATILITY`,
+    `STRIKE_PRICE_LOWER_BOUND_MULTIPLIER`, `STRIKE_PRICE_UPPER_BOUND_MULTIPLIER`,
+    `TOLERANCE`, `TRADING_DAYS`, `TRADING_HOURS`, `SECONDS_PER_HOUR`, `MINUTES_PER_HOUR`,
+    `MILLISECONDS_PER_SECOND`, `MICROSECONDS_PER_SECOND`, `WEEKS_PER_YEAR`,
+    `MONTHS_PER_YEAR`, `QUARTERS_PER_YEAR`) are now public, because the
+    facade is a separate crate. `sub_floor_zero` is `#[doc(hidden)]`: it
+    floors at zero and is not meant for callers outside OptionStratLib.
+  - The pricing solver defaults move out of `constants` into the new public
+    `pricing::constants` module, which ADR-0001 D2 assigns them to:
+    `DEFAULT_BINOMIAL_STEPS`, `DEFAULT_MC_PATHS`, `DEFAULT_MC_STEPS` and
+    `MAX_NEWTON_ITER` are now `optionstratlib::pricing::constants::*`.
+  - `optionstratlib-core` derives `utoipa::ToSchema` only under its `schema`
+    feature (ADR-0002). The facade enables it, so facade users keep every
+    `ToSchema` impl; a direct core dependency gets none unless it asks.
+  - Every published crate takes its version, edition, authors, license and
+    repository from `[workspace.package]` (lockstep 0.22.0, ADR-0001 D1).
+
 - **`model` no longer depends on any layer above it** (#498). Three moves
   remove the last production edges from the core domain into upper layers:
   - The Greek methods of `LegAble` (`delta`, `gamma`, `theta`, `vega`, `rho`)

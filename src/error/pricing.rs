@@ -226,6 +226,13 @@ mod tests_pricing_non_finite {
     use super::*;
 
     #[test]
+    fn test_pricing_error_converts_into_options_error() {
+        let pricing = PricingError::invalid_engine("bad engine");
+        let error: OptionsError = pricing.into();
+        assert!(matches!(error, OptionsError::PricingError { .. }));
+    }
+
+    #[test]
     fn non_finite_constructor_nan() {
         let err = PricingError::non_finite("pricing::bs::d1", f64::NAN);
         match err {

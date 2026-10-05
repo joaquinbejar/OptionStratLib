@@ -36,7 +36,7 @@ const TOLERANCE_F64: f64 = 1e-8;
 /// # Example
 ///
 /// ```
-/// use optionstratlib::utils::numeric::approx_equal;
+/// use optionstratlib_core::utils::numeric::approx_equal;
 ///
 /// let x = 1.0;
 /// let y = 1.00000001;

@@ -65,8 +65,8 @@ macro_rules! assert_decimal_eq {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::error::DecimalError;
-/// use optionstratlib::model::decimal::DecimalStats;
+/// use optionstratlib_core::error::DecimalError;
+/// use optionstratlib_core::model::decimal::DecimalStats;
 ///
 /// struct DecimalSeries(Vec<Decimal>);
 ///
@@ -186,7 +186,7 @@ impl DecimalStats for Vec<Decimal> {
 /// use rust_decimal::Decimal;
 /// use rust_decimal_macros::dec;
 /// use tracing::info;
-/// use optionstratlib::model::decimal::decimal_to_f64;
+/// use optionstratlib_core::model::decimal::decimal_to_f64;
 ///
 /// let decimal = dec!(3.14159);
 /// match decimal_to_f64(decimal) {
@@ -229,7 +229,7 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 /// ```rust
 /// use rust_decimal::Decimal;
 /// use tracing::info;
-/// use optionstratlib::model::decimal::f64_to_decimal;
+/// use optionstratlib_core::model::decimal::f64_to_decimal;
 ///
 /// let float = std::f64::consts::PI;
 /// match f64_to_decimal(float) {
@@ -249,7 +249,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 ///
 /// Returns `None` when `value` is not finite (`NaN`, `+∞`, `-∞`) or
 /// when `Decimal::from_f64` rejects the conversion (the latter is
-/// vanishingly rare for representable `f64`). Crate-private helper
+/// vanishingly rare for representable `f64`). Checked helper
 /// that standardises the `is_finite()` check paired with
 /// `Decimal::from_f64` at every `f64` → `Decimal` boundary inside
 /// pricing, Greeks, volatility, and simulation kernels.
@@ -267,7 +267,7 @@ pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
 /// §Arithmetic).
 #[must_use]
 #[inline]
-pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
+pub fn finite_decimal(value: f64) -> Option<Decimal> {
     if value.is_finite() {
         Decimal::from_f64(value)
     } else {
@@ -290,7 +290,7 @@ pub(crate) fn finite_decimal(value: f64) -> Option<Decimal> {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::model::decimal::decimal_normal_sample;
+/// use optionstratlib_core::model::decimal::decimal_normal_sample;
 /// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
@@ -315,11 +315,11 @@ pub fn decimal_normal_sample() -> Decimal {
 /// triggering a later rescale overflow. Divisions that need a different
 /// scale (for example a P&L that rounds to cents) should apply a subsequent
 /// explicit `.round_dp_with_strategy(dp, RoundingStrategy::MidpointNearestEven)`.
-pub(crate) const DIV_DEFAULT_SCALE: u32 = 28;
+pub const DIV_DEFAULT_SCALE: u32 = 28;
 
 /// Checked `Decimal` addition with operand-preserving overflow reporting.
 ///
-/// Crate-private helper used by every monetary-flow kernel in place of the
+/// Checked helper used by every monetary-flow kernel in place of the
 /// raw `+` operator. Wraps [`Decimal::checked_add`] and converts `None`
 /// into a [`DecimalError::Overflow`] tagged with the static `op` string
 /// passed in by the call-site.
@@ -329,14 +329,14 @@ pub(crate) const DIV_DEFAULT_SCALE: u32 = 28;
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
 #[inline]
-pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_add(rhs)
         .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
 }
 
 /// Checked sum over a slice of `Decimal` values.
 ///
-/// Crate-private helper used by multi-leg strategy P&L aggregations
+/// Checked helper used by multi-leg strategy P&L aggregations
 /// (spreads, condors, butterflies) where each leg already returns a
 /// `Result<Decimal, _>` and the sum has to preserve the checked
 /// semantics of the individual legs. Returns `Decimal::ZERO` on an
@@ -352,7 +352,7 @@ pub(crate) fn d_add(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// supplied `op` string so the caller can be identified without a
 /// stack trace.
 #[inline]
-pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, DecimalError> {
     d_sum_iter(values.iter().copied(), op)
 }
 
@@ -370,7 +370,7 @@ pub(crate) fn d_sum(values: &[Decimal], op: &'static str) -> Result<Decimal, Dec
 /// supplied `op` string so the caller can be identified without a
 /// stack trace.
 #[inline]
-pub(crate) fn d_sum_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
+pub fn d_sum_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
 where
     I: IntoIterator<Item = Decimal>,
 {
@@ -385,7 +385,7 @@ where
 
 /// Checked `Decimal` subtraction with operand-preserving overflow reporting.
 ///
-/// Crate-private helper used by every monetary-flow kernel in place of the
+/// Checked helper used by every monetary-flow kernel in place of the
 /// raw `-` operator. Wraps [`Decimal::checked_sub`] and converts `None`
 /// into a [`DecimalError::Overflow`] tagged with the static `op` string
 /// passed in by the call-site.
@@ -395,14 +395,14 @@ where
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
 #[inline]
-pub(crate) fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_sub(rhs)
         .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
 }
 
 /// Checked `Decimal` multiplication with operand-preserving overflow reporting.
 ///
-/// Crate-private helper used by every monetary-flow kernel in place of the
+/// Checked helper used by every monetary-flow kernel in place of the
 /// raw `*` operator. Wraps [`Decimal::checked_mul`] and converts `None`
 /// into a [`DecimalError::Overflow`] tagged with the static `op` string
 /// passed in by the call-site.
@@ -412,7 +412,7 @@ pub(crate) fn d_sub(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// Returns [`DecimalError::Overflow`] when the result is outside the
 /// representable `Decimal` range.
 #[inline]
-pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     lhs.checked_mul(rhs)
         .ok_or_else(|| DecimalError::overflow(op, lhs, rhs))
 }
@@ -443,7 +443,7 @@ pub(crate) fn d_mul(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// exceeds the representable `Decimal` range, tagged with the supplied `op`
 /// string so the call-site can be identified without a stack trace.
 #[inline]
-pub(crate) fn d_product_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
+pub fn d_product_iter<I>(iter: I, op: &'static str) -> Result<Decimal, DecimalError>
 where
     I: IntoIterator<Item = Decimal>,
 {
@@ -458,7 +458,7 @@ where
 
 /// Checked `Decimal` division with banker's rounding at scale 28.
 ///
-/// Crate-private helper used by every monetary-flow kernel in place of the
+/// Checked helper used by every monetary-flow kernel in place of the
 /// raw `/` operator. Performs [`Decimal::checked_div`] then re-rounds the
 /// quotient with [`RoundingStrategy::MidpointNearestEven`] to the default
 /// [`DIV_DEFAULT_SCALE`]. This policy is applied uniformly across the
@@ -470,7 +470,7 @@ where
 ///   representable `Decimal` range.
 /// - Returns [`DecimalError::ArithmeticError`] when `rhs` is zero.
 #[inline]
-pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     if rhs.is_zero() {
         return Err(DecimalError::arithmetic_error(op, "division by zero"));
     }
@@ -482,7 +482,7 @@ pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 
 /// Checked `e^x` with underflow flushed to zero.
 ///
-/// Crate-private helper used by every kernel in place of
+/// Checked helper used by every kernel in place of
 /// [`MathematicalOps::exp`], which panics with `Exp overflowed` /
 /// `Exp underflowed` instead of reporting the failure.
 ///
@@ -498,7 +498,7 @@ pub(crate) fn d_div(lhs: Decimal, rhs: Decimal, op: &'static str) -> Result<Deci
 /// Returns [`DecimalError::Overflow`] when `x` is positive and `e^x` is
 /// outside the representable `Decimal` range.
 #[inline]
-pub(crate) fn d_exp(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_exp(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     if let Some(value) = x.checked_exp() {
         return Ok(value);
     }
@@ -511,7 +511,7 @@ pub(crate) fn d_exp(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErro
 
 /// Checked natural logarithm.
 ///
-/// Crate-private helper used in place of [`MathematicalOps::ln`], which
+/// Checked helper used in place of [`MathematicalOps::ln`], which
 /// panics on zero and on negative inputs. Note that a ratio such as `S / K`
 /// can round down to exactly zero for extreme operands, so the zero case is
 /// reachable from ordinary-looking code.
@@ -522,7 +522,7 @@ pub(crate) fn d_exp(x: Decimal, op: &'static str) -> Result<Decimal, DecimalErro
 /// or when the series evaluation fails to converge to a representable
 /// value.
 #[inline]
-pub(crate) fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     if x <= Decimal::ZERO {
         return Err(DecimalError::arithmetic_error(
             op,
@@ -535,7 +535,7 @@ pub(crate) fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError
 
 /// Checked `base^exponent`.
 ///
-/// Crate-private helper used in place of [`MathematicalOps::powd`], which
+/// Checked helper used in place of [`MathematicalOps::powd`], which
 /// panics with `Pow overflowed` both when the result is too large and when
 /// it underflows below the representable scale.
 ///
@@ -544,11 +544,7 @@ pub(crate) fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError
 /// Returns [`DecimalError::Overflow`] when the power is outside the
 /// representable `Decimal` range.
 #[inline]
-pub(crate) fn d_powd(
-    base: Decimal,
-    exponent: Decimal,
-    op: &'static str,
-) -> Result<Decimal, DecimalError> {
+pub fn d_powd(base: Decimal, exponent: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     base.checked_powd(exponent)
         .ok_or_else(|| DecimalError::overflow(op, base, exponent))
 }
@@ -560,7 +556,7 @@ const SQRT_MAX_ITERATIONS: u32 = 1000;
 
 /// Checked square root.
 ///
-/// Crate-private replacement for [`MathematicalOps::sqrt`]. The upstream
+/// Checked replacement for [`MathematicalOps::sqrt`]. The upstream
 /// implementation (`rust_decimal` 1.43, `maths.rs`) runs the same Newton
 /// iteration but aborts the process with `geo mean circuit breaker` when the
 /// iteration oscillates between two values that differ in the 28th decimal
@@ -576,7 +572,7 @@ const SQRT_MAX_ITERATIONS: u32 = 1000;
 ///
 /// Returns [`DecimalError::ArithmeticError`] when `x` is negative or when an
 /// intermediate quotient or sum leaves the representable `Decimal` range.
-pub(crate) fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+pub fn d_sqrt(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
     sqrt_with_iterations(x, op).map(|(value, _)| value)
 }
 
@@ -649,7 +645,7 @@ fn sqrt_with_iterations(x: Decimal, op: &'static str) -> Result<(Decimal, u32), 
 /// or the root cannot be represented as a `Positive`; the error type matches
 /// `Positive::checked_sqrt` so call sites keep their conversions.
 #[inline]
-pub(crate) fn p_sqrt(x: &Positive, op: &'static str) -> Result<Positive, PositiveError> {
+pub fn p_sqrt(x: &Positive, op: &'static str) -> Result<Positive, PositiveError> {
     let root =
         d_sqrt(x.to_dec(), op).map_err(|e| PositiveError::arithmetic_error(op, &e.to_string()))?;
     Positive::new_decimal(root)
@@ -666,7 +662,7 @@ pub(crate) fn p_sqrt(x: &Positive, op: &'static str) -> Result<Positive, Positiv
 /// # Example
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::d2fu;
+/// use optionstratlib_core::d2fu;
 /// let decimal_value = dec!(10.5);
 /// let float_value = d2fu!(decimal_value);
 /// ```
@@ -709,7 +705,7 @@ macro_rules! d2f {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::nz;
+/// use optionstratlib_core::nz;
 /// use std::num::NonZeroUsize;
 ///
 /// let steps = nz!(100);
@@ -738,7 +734,7 @@ macro_rules! nz {
 ///
 /// # Example
 /// ```rust
-/// use optionstratlib::f2du;
+/// use optionstratlib_core::f2du;
 /// let float_value = 10.5;
 /// let decimal_value = f2du!(float_value);
 /// ```

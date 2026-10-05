@@ -22,7 +22,7 @@ use thiserror::Error;
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::error::OperationErrorKind;
+/// use optionstratlib_core::error::OperationErrorKind;
 ///
 /// // Creating a NotSupported error
 /// let error = OperationErrorKind::NotSupported {

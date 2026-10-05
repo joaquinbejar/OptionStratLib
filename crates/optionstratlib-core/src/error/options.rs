@@ -16,7 +16,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use optionstratlib::error::OptionsError;
+//! use optionstratlib_core::error::OptionsError;
 //!
 //! // Create a validation error
 //! let error = OptionsError::validation_error("strike_price", "must be positive");
@@ -37,16 +37,17 @@
 //!
 //! ## Error Conversion
 //!
-//! The module converts from typed domain errors:
+//! The module converts from typed core errors:
 //! - `DecimalError` via `#[from]`
-//! - `GreeksError` via `#[from]`
 //! - `ExpirationDateError` via `#[from]`
-//! - `PricingError` via a manual `From` impl
+//!
+//! Higher layers own the conversions from their own errors; the pricing
+//! layer, for instance, implements `From<PricingError> for OptionsError`.
 //!
 //! ## Examples
 //!
 //! ```rust
-//! use optionstratlib::error::{OptionsError, OptionsResult};
+//! use optionstratlib_core::error::{OptionsError, OptionsResult};
 //!
 //! fn validate_strike_price(price: f64) -> OptionsResult<f64> {
 //!     if price <= 0.0 {
@@ -59,7 +60,7 @@
 //! }
 //! ```
 //!
-//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `OptionsError`; the `Greeks(GreeksError)` variant is a pricing reference removed in the batch behind the 0.22.0 bump.
+//! Target crate (ADR-0001 D6, roadmap M1-14): **core**. Owns `OptionsError`.
 
 use crate::error::DecimalError;
 use expiration_date::error::ExpirationDateError;
@@ -205,7 +206,7 @@ pub enum OptionsError {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::error::{OptionsResult, OptionsError};
+/// use optionstratlib_core::error::{OptionsResult, OptionsError};
 ///
 /// fn calculate_call_price(strike: f64, spot: f64) -> OptionsResult<f64> {
 ///     if strike <= 0.0 {
@@ -252,7 +253,7 @@ pub type OptionsResult<T> = Result<T, OptionsError>;
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::error::OptionsError;
+/// use optionstratlib_core::error::OptionsError;
 /// let error = OptionsError::validation_error("strike_price", "must be positive");
 ///
 /// // Create a pricing error
@@ -534,7 +535,6 @@ mod tests {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-    use crate::error::PricingError;
 
     #[test]
     fn test_error_chaining_via_display() {
@@ -542,13 +542,6 @@ mod tests_extended {
         let rendered = error1.to_string();
         assert!(rendered.contains("invalid value"));
         assert!(rendered.contains("strike"));
-    }
-
-    #[test]
-    fn test_pricing_error_conversion() {
-        let pricing = PricingError::invalid_engine("bad engine");
-        let error: OptionsError = pricing.into();
-        assert!(matches!(error, OptionsError::PricingError { .. }));
     }
 
     #[test]

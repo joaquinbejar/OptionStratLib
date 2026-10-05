@@ -6,8 +6,10 @@
 
 //! # Model Module
 //!
-//! This module provides core data structures and implementations for financial options modeling.
-//! It includes fundamental components for option pricing, position management, and type definitions.
+//! The core data structures of financial options modeling: option contracts,
+//! positions, legs, trades, payoffs at expiry and checked `Decimal` helpers.
+//! Pricing models, Greeks, probabilities and risk metrics are built on these
+//! types by the layers above; none of them lives here.
 //!
 //! ## Core Components
 //!
@@ -24,9 +26,8 @@
 //! Comprehensive implementation of financial options including:
 //!
 //! * Multiple option types (European, American, Asian, etc.)
-//! * Greeks calculation (Delta, Gamma, Theta, etc.)
-//! * Option pricing using various models
-//! * Position management and profit/loss calculations
+//! * Contract validation, time to expiry and payoff at expiry
+//! * Intrinsic value and moneyness
 //!
 //! ### Position Management
 //!
@@ -56,22 +57,13 @@
 //! * Consistent formatting across all types
 //! * Custom format implementations for complex types
 //!
-//! ### Profit/Loss Analysis
-//!
-//! Tools for analyzing potential outcomes:
-//!
-//! * Profit range calculations
-//! * Break-even point determination
-//! * Probability calculations for price ranges
-//! * Risk/reward analysis
-//!
 //! ## Example Usage
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
-//! use optionstratlib::{ExpirationDate, Options};
-//! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
+//! use optionstratlib_core::model::{ExpirationDate, Options};
+//! use optionstratlib_core::model::types::{ OptionStyle, OptionType, Side};
 //! use positive::pos_or_panic;
 //! use positive::Positive;
 //!
@@ -100,10 +92,10 @@ pub mod decimal;
 /// Formatting utilities for displaying financial data and calculations.
 mod format;
 
-/// Components for options contract modeling and analysis, including Greeks and pricing models.
+/// The option contract (`Options`): terms, validation, time to expiry and payoff.
 pub mod option;
 
-/// Definitions and utilities for managing trading positions, including risk metrics and exposure tracking.
+/// Trading positions (`Position`): an option with its premium, fees, quantity and open date.
 pub mod position;
 
 /// Payoff contracts at expiry: [`payoff::Payoff`], [`payoff::PayoffInfo`] and the

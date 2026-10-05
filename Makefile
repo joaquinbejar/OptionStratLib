@@ -21,6 +21,8 @@ release:
 .PHONY: test
 test:
 	LOGLEVEL=WARN cargo test
+	LOGLEVEL=WARN cargo test -p optionstratlib-core
+	LOGLEVEL=WARN cargo test -p optionstratlib-core --all-features
 	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
@@ -42,7 +44,7 @@ fmt:
 # Check formatting
 .PHONY: fmt-check
 fmt-check:
-	cargo +stable fmt --check
+	cargo +stable fmt --all --check
 
 # Run Clippy for linting
 .PHONY: lint
@@ -136,7 +138,7 @@ check-api-report:
 # `// scan-banned: allow -- <reason>` marker on the same line.
 .PHONY: scan-banned
 scan-banned:
-	@found=$$(for f in $$(find src -name '*.rs'); do \
+	@found=$$(for f in $$(find src crates/*/src -name '*.rs'); do \
 		awk -v file="$$f" ' \
 			BEGIN { skip = 0; depth = 0; pending = 0; awaiting = 0 } \
 			function braces(line,   tmp, o, c) { \
@@ -182,7 +184,7 @@ scan-banned:
 		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
-	malformed=$$(grep -rn 'scan-banned: allow' src \
+	malformed=$$(grep -rn 'scan-banned: allow' src crates/*/src \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	if [ -n "$$malformed" ]; then \
 		echo "Exemption markers without a reason (use 'scan-banned: allow -- <reason>'):"; \
@@ -246,10 +248,18 @@ print-public-api-pins:
 # losing one of those (e.g. a dropped `Send`/`Debug`) is already caught by
 # the `semver` CI job's auto_trait_impl_removed / derive_trait_impl_removed
 # lints, so nothing is lost by omitting them here.
+# Workspace component crates with their own snapshot, `public-api/<crate>.txt`.
+# The facade re-exports their modules, and `cargo public-api` does not inline
+# another crate's items, so each component is tracked on its own.
+PUBLIC_API_CRATES := optionstratlib-core
+
 .PHONY: public-api-update
 public-api-update: check-cargo-public-api
 	@mkdir -p public-api
 	cargo +$(PUBLIC_API_NIGHTLY) public-api -sss --all-features > public-api/optionstratlib.txt
+	@for crate in $(PUBLIC_API_CRATES); do \
+		cargo +$(PUBLIC_API_NIGHTLY) public-api -p $$crate -sss --all-features > public-api/$$crate.txt || exit 1; \
+	done
 
 # Fails when the crate's public API has drifted from public-api/optionstratlib.txt
 # without the snapshot being updated to match, i.e. an *unacknowledged* API
@@ -270,7 +280,16 @@ public-api-check: check-cargo-public-api
 		echo "resulting diff, and commit it together with this change."; \
 		exit 1; \
 	fi
-	@echo "OK: public API matches public-api/optionstratlib.txt"
+	@for crate in $(PUBLIC_API_CRATES); do \
+		cargo +$(PUBLIC_API_NIGHTLY) public-api -p $$crate -sss --all-features > target/public-api/$$crate.txt || exit 1; \
+		if ! diff -u public-api/$$crate.txt target/public-api/$$crate.txt; then \
+			echo; \
+			echo "Public API of $$crate drifted from public-api/$$crate.txt (see diff above)."; \
+			echo "If this change is intentional, run 'make public-api-update' and commit the diff."; \
+			exit 1; \
+		fi; \
+	done
+	@echo "OK: public API matches public-api/optionstratlib.txt and the component snapshots ($(PUBLIC_API_CRATES))"
 
 # Run the project
 .PHONY: run
@@ -296,7 +315,7 @@ pre-push: fix fmt lint-fix test readme doc
 # `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo doc --all-features --no-deps
+	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core
 
 .PHONY: doc-open
 doc-open:
@@ -348,9 +367,18 @@ create-doc:
 readme: check-cargo-readme create-doc
 	cargo readme > README.md
 
+# 3.4.0 is the first release that resolves `version.workspace = true` and the
+# other `[workspace.package]` fields the root manifest inherits; 3.3.x fails
+# with "invalid type: map, expected a string".
+CARGO_README_VERSION := 3.4.0
+
 .PHONY: check-cargo-readme
 check-cargo-readme:
-	@command -v cargo-readme > /dev/null || (echo "Installing cargo-readme..."; cargo install cargo-readme)
+	@installed=$$(cargo-readme --version 2>/dev/null | awk '{print $$NF}'); \
+	if [ "$$installed" != "$(CARGO_README_VERSION)" ]; then \
+		echo "Installing cargo-readme $(CARGO_README_VERSION) (found: $${installed:-none})..."; \
+		cargo install cargo-readme --locked --version $(CARGO_README_VERSION); \
+	fi
 
 .PHONY: check-spanish
 check-spanish:

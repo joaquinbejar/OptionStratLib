@@ -19,8 +19,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use optionstratlib::model::leg::SpotPosition;
-//! use optionstratlib::model::types::Side;
+//! use optionstratlib_core::model::leg::SpotPosition;
+//! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //!
@@ -43,7 +43,6 @@ use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents a spot/underlying asset position.
 ///
@@ -60,7 +59,8 @@ use utoipa::ToSchema;
 /// * `date` - The timestamp when the position was opened
 /// * `open_fee` - Transaction fee paid to open the position
 /// * `close_fee` - Transaction fee to be paid when closing the position
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct SpotPosition {
     /// The ticker symbol or identifier of the underlying asset.
     pub symbol: String,

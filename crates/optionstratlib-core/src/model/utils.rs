@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::model::Position;
 use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::{ExpirationDate, Options};
+use crate::model::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use positive::{Positive, PositiveError};
 use rust_decimal::Decimal;
@@ -25,13 +25,17 @@ fn pos_lit(value: Decimal) -> Positive {
 /// Subtracts `rhs` from `lhs`, flooring the result at zero.
 ///
 /// `Positive::sub_or_zero` is deprecated in positive 0.6 because saturating
-/// arithmetic hides underflow. Every call site in this crate genuinely wants
-/// the floor — a quoted price or a strike offset never goes negative — so the
+/// arithmetic hides underflow. Every OptionStratLib call site genuinely wants
+/// the floor (a quoted price or a strike offset never goes negative), so the
 /// decision is made once, here, on top of the checked `sub_or_none`: `None`
 /// (the difference would be negative) becomes zero, and no saturating
-/// arithmetic is used on the `Decimal` itself.
+/// arithmetic is used on the `Decimal` itself. Use it only where a negative
+/// difference has no meaning; anywhere else it hides an underflow, and the
+/// checked `Positive::sub_or_none` is the right call.
+#[doc(hidden)]
+#[must_use]
 #[inline]
-pub(crate) fn sub_floor_zero(lhs: Positive, rhs: &Decimal) -> Positive {
+pub fn sub_floor_zero(lhs: Positive, rhs: &Decimal) -> Positive {
     lhs.sub_or_none(rhs).unwrap_or(Positive::ZERO)
 }
 
@@ -76,9 +80,9 @@ pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
 /// # Examples
 ///
 /// ```rust
-/// use optionstratlib::{OptionStyle, Side};
+/// use optionstratlib_core::model::{OptionStyle, Side};
 /// use positive::pos_or_panic;
-/// use optionstratlib::model::utils::create_sample_option;
+/// use optionstratlib_core::model::utils::create_sample_option;
 /// let option = create_sample_option(
 ///     OptionStyle::Call,
 ///     Side::Long,
@@ -144,8 +148,8 @@ pub fn create_sample_option(
 /// # Example
 ///
 /// ```rust
-/// use optionstratlib::model::utils::create_sample_position;
-/// use optionstratlib::{OptionStyle, Side};
+/// use optionstratlib_core::model::utils::create_sample_position;
+/// use optionstratlib_core::model::{OptionStyle, Side};
 /// use positive::{pos_or_panic, Positive};
 /// let sample_call = create_sample_position(
 ///     OptionStyle::Call,
@@ -312,8 +316,8 @@ pub fn create_sample_option_with_days(
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::model::utils::create_sample_option_simplest;
-/// use optionstratlib::{OptionStyle, Side};
+/// use optionstratlib_core::model::utils::create_sample_option_simplest;
+/// use optionstratlib_core::model::{OptionStyle, Side};
 /// let long_call = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 /// let short_put = create_sample_option_simplest(OptionStyle::Put, Side::Short);
 /// ```
@@ -358,8 +362,8 @@ pub fn create_sample_option_simplest(option_style: OptionStyle, side: Side) -> O
 ///
 /// # Examples
 /// ```
-/// use optionstratlib::model::utils::create_sample_option_simplest_strike;
-/// use optionstratlib::{ OptionStyle, Side};
+/// use optionstratlib_core::model::utils::create_sample_option_simplest_strike;
+/// use optionstratlib_core::model::{OptionStyle, Side};
 /// use positive::pos_or_panic;
 /// let long_call = create_sample_option_simplest_strike(
 ///     Side::Long,
@@ -415,9 +419,9 @@ pub fn create_sample_option_simplest_strike(
 /// # Example
 ///
 /// ```rust
-/// # fn main() -> Result<(), optionstratlib::error::Error> {
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use positive::Positive;
-/// use optionstratlib::model::utils::mean_and_std;
+/// use optionstratlib_core::model::utils::mean_and_std;
 ///
 /// let data = vec![
 ///     Positive::new(2.0)?, Positive::new(4.0)?, Positive::new(4.0)?, Positive::new(4.0)?,

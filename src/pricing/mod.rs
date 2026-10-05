@@ -256,11 +256,9 @@ pub mod black_76;
 /// guarantees a bit-exact equivalence to the BSM kernel.
 pub mod garman_kohlhagen;
 
-/// Constants used throughout the financial models.
-///
-/// Contains mathematical and financial constants required by various pricing models,
-/// such as day count conventions, numerical approximation parameters, and defaults.
-pub(crate) mod constants;
+/// Solver and lattice defaults of the pricing models: binomial steps,
+/// Monte-Carlo paths and steps, and the Newton iteration cap.
+pub mod constants;
 
 /// Monte Carlo simulation methods for financial modeling.
 ///

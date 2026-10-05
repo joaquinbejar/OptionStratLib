@@ -10,14 +10,13 @@ use crate::model::decimal::{d_add, d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::trade::TradeStatusAble;
 use crate::model::types::{Action, OptionStyle, Side};
+use crate::model::{ExpirationDate, Options};
 use crate::model::{Trade, TradeAble, TradeStatus};
-use crate::{ExpirationDate, Options};
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
-use utoipa::ToSchema;
 
 /// The `Position` struct represents a financial position in an options market.
 ///
@@ -29,13 +28,13 @@ use utoipa::ToSchema;
 /// # Examples
 ///
 /// ```rust
-/// # fn main() -> Result<(), optionstratlib::error::Error> {
-/// use optionstratlib::{Options, Side, OptionStyle};
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use optionstratlib_core::model::{Options, Side, OptionStyle};
 /// use positive::pos_or_panic;
 /// use chrono::Utc;
 /// use tracing::info;
-/// use optionstratlib::model::Position;
-/// use optionstratlib::model::utils::create_sample_option_simplest;
+/// use optionstratlib_core::model::Position;
+/// use optionstratlib_core::model::utils::create_sample_option_simplest;
 ///
 /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 /// let position = Position::new(
@@ -53,7 +52,8 @@ use utoipa::ToSchema;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Position {
     /// The detailed options contract information, including the type, strike price,
     /// expiration, underlying asset details, and other option-specific parameters.
@@ -112,11 +112,11 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::{Options, Side, OptionStyle};
+    /// use optionstratlib_core::model::{Options, Side, OptionStyle};
     /// use positive::pos_or_panic;
     /// use chrono::Utc;
-    /// use optionstratlib::model::Position;
-    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use optionstratlib_core::model::Position;
+    /// use optionstratlib_core::model::utils::create_sample_option_simplest;
     ///
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
     /// let position = Position::new(
@@ -200,11 +200,11 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() -> Result<(), optionstratlib::error::Error> {
-    /// use optionstratlib::{ Side, OptionStyle};
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// use optionstratlib_core::model::{Side, OptionStyle};
     /// use positive::pos_or_panic;
-    /// use optionstratlib::model::Position;
-    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use optionstratlib_core::model::Position;
+    /// use optionstratlib_core::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
     /// use tracing::info;
     ///
@@ -303,13 +303,13 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// # fn main() -> Result<(), optionstratlib::error::Error> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Assuming position is a properly initialized Position
     /// use chrono::Utc;
-    /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{OptionStyle, Side};
+    /// use optionstratlib_core::model::utils::create_sample_option_simplest;
+    /// use optionstratlib_core::model::{OptionStyle, Side};
     /// use positive::pos_or_panic;
-    /// use optionstratlib::model::Position;
+    /// use optionstratlib_core::model::Position;
     ///
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
     /// let position = Position::new(
@@ -380,12 +380,12 @@ impl Position {
     /// # Example
     ///
     /// ```rust
-    /// # fn main() -> Result<(), optionstratlib::error::Error> {
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// use chrono::Utc;
     /// use tracing::info;
-    /// use optionstratlib::model::Position;
-    /// use optionstratlib::model::utils::create_sample_option_simplest;
-    /// use optionstratlib::{ OptionStyle, Side};
+    /// use optionstratlib_core::model::Position;
+    /// use optionstratlib_core::model::utils::create_sample_option_simplest;
+    /// use optionstratlib_core::model::{OptionStyle, Side};
     /// use positive::pos_or_panic;
     /// let current_price = pos_or_panic!(6.50);
     /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
@@ -729,10 +729,10 @@ impl Position {
     /// # Examples
     ///
     /// ```rust
-    /// use optionstratlib::model::{Position, Options};
-    /// use optionstratlib::{Side, OptionStyle};
+    /// use optionstratlib_core::model::{Position, Options};
+    /// use optionstratlib_core::model::{Side, OptionStyle};
     /// use positive::pos_or_panic;
-    /// use optionstratlib::model::utils::create_sample_option_simplest;
+    /// use optionstratlib_core::model::utils::create_sample_option_simplest;
     /// use chrono::Utc;
     ///
     /// // Create a valid position

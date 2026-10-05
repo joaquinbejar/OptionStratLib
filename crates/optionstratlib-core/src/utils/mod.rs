@@ -46,7 +46,7 @@
 //!
 //! ```rust
 //! use positive::pos_or_panic;
-//! use optionstratlib::utils::time::TimeFrame;
+//! use optionstratlib_core::utils::time::TimeFrame;
 //!
 //! let daily = TimeFrame::Day;
 //! let trading_days_per_year = daily.periods_per_year(); // Returns 252.0
@@ -61,7 +61,7 @@
 //! ## Numeric comparison
 //!
 //! ```rust
-//! use optionstratlib::utils::numeric::approx_equal;
+//! use optionstratlib_core::utils::numeric::approx_equal;
 //!
 //! assert!(approx_equal(1.0, 1.000_000_01));
 //! assert!(!approx_equal(1.0, 1.1));
@@ -73,7 +73,7 @@
 //! upstream precision shift cannot flip an assertion by luck:
 //!
 //! ```rust
-//! use optionstratlib::utils::deterministic_rng;
+//! use optionstratlib_core::utils::deterministic_rng;
 //! use rand::RngExt;
 //!
 //! let mut rng = deterministic_rng(42);
