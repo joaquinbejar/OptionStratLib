@@ -76,6 +76,38 @@ check: test fmt-check lint scan-banned check-graph check-api-report
 # doc/DEPENDENCY-MATRIX.md). Known reverse edges whose removal is a breaking
 # change wait in the script's DEFERRED list with the issue that removes
 # them; the self-test proves the scanner catches what it must.
+# Consumer fixtures (ADR-0004 section 3): real crates under
+# fixtures/consumers/<scenario>/, excluded from the workspace and built with
+# their own manifest and a target dir of their own, so nothing the workspace
+# enables can widen their graph. `check-fixtures` asserts every fixture's
+# expect.toml (present / absent packages) and prints its package count.
+FIXTURE_PRICING_ONLY := fixtures/consumers/pricing-only/Cargo.toml
+FIXTURE_TARGET_DIR := target/fixtures
+
+.PHONY: check-fixtures
+check-fixtures:
+	@python3 scripts/check_fixtures.py --self-test > /dev/null || (python3 scripts/check_fixtures.py --self-test; exit 1)
+	@python3 scripts/check_fixtures.py
+
+# The core-plus-pricing consumer (#527).
+.PHONY: check-consumer-core-pricing
+check-consumer-core-pricing:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo check --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo clippy --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets -- -D warnings
+
+.PHONY: check-consumer-core-pricing-minimal
+check-consumer-core-pricing-minimal:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo check --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets --no-default-features
+
+.PHONY: test-consumer-core-pricing
+test-consumer-core-pricing:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo test --manifest-path $(FIXTURE_PRICING_ONLY)
+
+.PHONY: tree-consumer-core-pricing
+tree-consumer-core-pricing:
+	cargo tree --manifest-path $(FIXTURE_PRICING_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py pricing-only
+
 .PHONY: check-graph
 check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)

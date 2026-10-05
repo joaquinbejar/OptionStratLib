@@ -1,0 +1,19 @@
+# Consumer fixture: a crate that prices options with only core and pricing
+# (ADR-0002 section 5 `osl-fixture-pricing-only`, ADR-0004 section 3, #527).
+# Excluded from the root workspace so feature unification with the other
+# members cannot widen its graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-pricing-only"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: options priced with optionstratlib-core and optionstratlib-pricing only."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"
