@@ -28,8 +28,13 @@
 //!
 //! ## Features
 //!
-//! - `async` (off by default): `tokio`-backed `*_async` readers and writers
-//!   that run the blocking file I/O on `spawn_blocking`.
+//! - `io` (off by default): the filesystem entry points, which are
+//!   `OptionChain::{save_to_csv, load_from_csv, save_to_json, load_from_json}`
+//!   and the OHLCV ZIP reader in `chains::csv` with its `OhlcvError`. It adds
+//!   `csv` and `zip`. Without it the crate is an in-memory chain and series
+//!   library; serde (de)serialization works either way.
+//! - `async` (off by default, implies `io`): `tokio`-backed `*_async`
+//!   wrappers that run that blocking file I/O on `spawn_blocking`.
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the market
 //!   types and enables `schema` in core, math and pricing.
 

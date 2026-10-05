@@ -990,32 +990,40 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
     }),
-    # ADR-0002 `osl-fixture-market-minimal` row. `csv` and `zip` are still
-    # mandatory until #525 gates them behind `io`.
+    # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2).
     "optionstratlib-market": frozenset({
-        "tokio", "reqwest", "futures", "plotly", "plotly_static", "plotters",
-        "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     }),
 }
 
-# Packages a component's optional features are allowed to bring in: removed
-# from its forbidden set for the all-features tree only.
-FEATURE_ALLOWED_PACKAGES: dict[str, frozenset[str]] = {
-    # `async` = `tokio`-backed `*_async` readers and writers.
-    "optionstratlib-market": frozenset({"tokio"}),
+# Named feature sets checked on their own, besides default and all
+# features: label -> (`--features` value, packages that set may add). The
+# all-features tree may add the union of its crate's sets (ADR-0003 section
+# 2, #525).
+FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
+    "optionstratlib-market": {
+        "io": ("io", frozenset({"csv", "zip"})),
+        "async": ("async", frozenset({"csv", "zip", "tokio"})),
+    },
 }
 
 
-def resolved_tree(root: Path, crate: str, all_features: bool) -> set[str]:
-    """Package names in `crate`'s normal dependency tree."""
+def resolved_tree(root: Path, crate: str, features: str) -> set[str]:
+    """Package names in `crate`'s normal dependency tree for one feature set.
+
+    `features` is `"default"`, `"all features"` or a `--features` value.
+    """
     import subprocess
 
     command = [
         "cargo", "tree", "-p", crate, "-e", "normal", "--prefix", "none", "--format", "{p}",
         "--manifest-path", str(root / "Cargo.toml"),
     ]
-    if all_features:
+    if features == "all features":
         command.append("--all-features")
+    elif features != "default":
+        command += ["--no-default-features", "--features", features]
     out = subprocess.run(command, check=True, capture_output=True, text=True)
     return {line.split()[0] for line in out.stdout.splitlines() if line.strip()}
 
@@ -1025,8 +1033,12 @@ def forbidden_package_violations(trees: dict[tuple[str, str], set[str]]) -> list
     found = []
     for (crate, features), packages in sorted(trees.items()):
         forbidden = FORBIDDEN_PACKAGES.get(crate, frozenset())
+        sets = FEATURE_SETS.get(crate, {})
         if features == "all features":
-            forbidden = forbidden - FEATURE_ALLOWED_PACKAGES.get(crate, frozenset())
+            for _, allowed in sets.values():
+                forbidden = forbidden - allowed
+        elif features in sets:
+            forbidden = forbidden - sets[features][1]
         for name in sorted(packages & forbidden):
             found.append(f"{crate} ({features}) resolves {name}")
     return found
@@ -1603,6 +1615,10 @@ def self_test() -> int:
         "unlisted crate is not checked": ({("examples_chain", "default"): {"plotly"}}, 0),
         "market tokio only with features": ({("optionstratlib-market", "all features"): {"tokio"}}, 0),
         "market tokio by default": ({("optionstratlib-market", "default"): {"tokio"}}, 1),
+        "market csv by default": ({("optionstratlib-market", "default"): {"csv"}}, 1),
+        "market csv under io": ({("optionstratlib-market", "io"): {"csv", "zip"}}, 0),
+        "market tokio under io only": ({("optionstratlib-market", "io"): {"tokio"}}, 1),
+        "market tokio under async": ({("optionstratlib-market", "async"): {"tokio", "csv"}}, 0),
     }
     for name, (trees_case, expected) in forbidden_cases.items():
         got = len(forbidden_package_violations(trees_case))
@@ -1763,10 +1779,10 @@ def main() -> int:
             else [f"{crate}: listed in INTRA_CRATE_RULES but not a workspace member"],
         ))
     trees = {
-        (crate, label): resolved_tree(SRC.parent, crate, all_features)
+        (crate, label): resolved_tree(SRC.parent, crate, label)
         for crate in sorted(FORBIDDEN_PACKAGES)
         if any(p["name"] == crate for p in packages)
-        for label, all_features in (("default", False), ("all features", True))
+        for label in ("default", "all features", *FEATURE_SETS.get(crate, {}))
     }
     crate_rules.append((
         "component crates resolve a forbidden package (ADR-0002 fixture table, #517):",
@@ -1788,7 +1804,7 @@ def main() -> int:
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
     print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
     print(f"OK: internal module edges acyclic in {', '.join(sorted(INTRA_CRATE_RULES))}")
-    print(f"OK: no forbidden package in {', '.join(sorted({c for c, _ in trees})) or 'any component'} (default and all features)")
+    print(f"OK: no forbidden package in {', '.join(sorted({c for c, _ in trees})) or 'any component'} (default, all features and each named feature set)")
     return 0
 
 

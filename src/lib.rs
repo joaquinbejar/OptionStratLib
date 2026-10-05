@@ -909,7 +909,10 @@
 //!
 //! - `plotly`: Enables interactive visualization using plotly.rs
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
-//! - `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data (tokio + reqwest + futures)
+//! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
+//!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
+//!   `default-features = false` drops it, and `csv` and `zip` with it
+//! - `async`: asynchronous versions of that I/O (implies `io`; tokio + reqwest + futures)
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
 //!   (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
 //!   simulation failures arrive as `ChainError::Generator`; disable it with

@@ -14,8 +14,10 @@ include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
 
 [features]
 default = []
-# `tokio`-backed `*_async` readers and writers (ADR-0003).
-async = ["dep:tokio"]
+# Filesystem I/O: CSV, JSON and ZIP readers and writers (ADR-0003).
+io = ["dep:csv", "dep:zip"]
+# `tokio`-backed `*_async` wrappers over the `io` functions (ADR-0003).
+async = ["io", "dep:tokio"]
 # `ToSchema` derives on the market types (ADR-0002).
 schema = [
     "dep:utoipa",
@@ -29,7 +31,7 @@ optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true }
 optionstratlib-pricing = { workspace = true }
 chrono = { workspace = true }
-csv = { workspace = true }
+csv = { workspace = true, optional = true }
 num-traits = { workspace = true }
 pretty-simple-display = { workspace = true }
 prettytable-rs = { workspace = true }
@@ -41,7 +43,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
-zip = { workspace = true }
+zip = { workspace = true, optional = true }
 
 [dev-dependencies]
 approx = { workspace = true }

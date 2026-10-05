@@ -139,6 +139,7 @@ impl From<std::io::Error> for OhlcvError {
     }
 }
 
+#[cfg(feature = "io")]
 impl From<zip::result::ZipError> for OhlcvError {
     fn from(error: zip::result::ZipError) -> Self {
         Self::ZipError {

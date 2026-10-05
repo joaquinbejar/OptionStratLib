@@ -94,6 +94,7 @@ mod legs;
 pub mod utils;
 
 /// OHLCV candles read from a zipped CSV; market data I/O (ADR-0001 D2).
+#[cfg(feature = "io")]
 pub mod csv;
 
 /// * `options` - Private module with core option pricing models and option-specific functionality

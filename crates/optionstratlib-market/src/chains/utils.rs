@@ -905,6 +905,7 @@ pub fn adjust_volatility(
     Some(capped)
 }
 
+#[cfg(feature = "io")]
 pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
     let trimmed = s.trim();
     let input: Result<T, <T as std::str::FromStr>::Err> = match trimmed.parse::<T>() {
@@ -1281,7 +1282,7 @@ mod tests_rounder {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "io"))]
 mod tests_parse {
     use super::*;
 
@@ -1317,7 +1318,7 @@ mod tests_parse {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "io"))]
 mod tests_parse_bis {
     use super::*;
     use optionstratlib_core::spos;

@@ -20,7 +20,8 @@ simulation engine. The `optionstratlib` facade provides both.
 
 | Feature  | Default | Effect                                                               |
 |----------|---------|----------------------------------------------------------------------|
-| `async`  | no      | `tokio`-backed `*_async` readers and writers on `spawn_blocking`      |
+| `io`     | no      | CSV/JSON chain files and the OHLCV ZIP reader; adds `csv` and `zip`   |
+| `async`  | no      | `tokio`-backed `*_async` wrappers on `spawn_blocking`; implies `io`   |
 | `schema` | no      | Derives `utoipa::ToSchema` on market types and enables `schema` below |
 
 ## License

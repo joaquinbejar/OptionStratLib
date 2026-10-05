@@ -30,14 +30,19 @@ include = [
 # only market-to-simulation dependency (chain and series generators built on
 # random walks) and becomes the optional `Market -> Simulation` edge once the
 # crates are split (roadmap M1-15, ADR-0003).
-default = ["synthetic"]
+default = ["synthetic", "io"]
 synthetic = []
+# Filesystem I/O for market data: CSV, JSON and ZIP readers and writers of
+# chains and OHLCV candles (ADR-0003). On by default, so the default surface
+# is unchanged; `default-features = false` drops `csv` and `zip`.
+io = ["optionstratlib-market/io"]
 plotly = ["dep:plotly"]
 static_export = [
     "plotly",
     "async",
 ]
 async = [
+    "io",
     "dep:tokio",
     "dep:async-trait",
     "dep:reqwest",
@@ -59,16 +64,14 @@ rand_distr = { workspace = true }
 tracing = { workspace = true }
 num-traits = { workspace = true }
 serde_json = { workspace = true }
-csv = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 rayon = { workspace = true }
 itertools = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
-zip = { workspace = true }
 lazy_static = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
-prettytable-rs = { workspace = true }
+prettytable-rs = { workspace = true, features = ["win_crlf"] }
 pretty-simple-display = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras"] }
 indicatif = { workspace = true }
@@ -165,7 +168,9 @@ lazy_static = "1.5"
 uuid = { version = "1.27", features = ["v4", "serde"] }
 approx = "0.5"
 rand_distr = "0.6"
-prettytable-rs = "0.10"
+# Defaults off: nothing here uses its CSV support, and it would pull `csv`
+# into every consumer. Packages that want `win_crlf` ask for it.
+prettytable-rs = { version = "0.10", default-features = false }
 pretty-simple-display = "0.1"
 utoipa = { version = "6.0", features = ["chrono", "decimal"] }
 indicatif = "0.18"

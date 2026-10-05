@@ -1524,9 +1524,12 @@ impl ColorSurface for OptionChain {
 #[cfg(test)]
 mod tests_price_metrics_traits {
     #![allow(clippy::indexing_slicing)]
+    #[cfg(feature = "io")]
     use super::*;
+    #[cfg(feature = "io")]
     use crate::assert_decimal_eq;
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_put_call_ratio_premium_weighted_trait() {
         let result = OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json");
@@ -1544,6 +1547,7 @@ mod tests_price_metrics_traits {
         assert_decimal_eq!(pcr_vec[4].y, dec!(0.06593), epsilon);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_strike_concentration_premium_weighted_trait() {
         let result = OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json");

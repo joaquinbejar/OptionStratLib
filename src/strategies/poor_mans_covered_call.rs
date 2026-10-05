@@ -1374,14 +1374,20 @@ mod tests_pmcc_pnl {
 
 #[cfg(test)]
 mod tests_pmcc_best_area {
+    #[cfg(feature = "io")]
     use super::*;
 
+    #[cfg(feature = "io")]
     use positive::constants::DAYS_IN_A_YEAR;
 
+    #[cfg(feature = "io")]
     use num_traits::ToPrimitive;
+    #[cfg(feature = "io")]
     use positive::pos_or_panic;
+    #[cfg(feature = "io")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "io")]
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), crate::error::Error> {
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
@@ -1411,6 +1417,7 @@ mod tests_pmcc_best_area {
         Ok((strategy, option_chain))
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_area_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
@@ -1425,6 +1432,7 @@ mod tests_pmcc_best_area {
         assert!(strategy.long_call.option.strike_price < strategy.short_call.option.strike_price);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_area_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
@@ -1437,6 +1445,7 @@ mod tests_pmcc_best_area {
         assert!(strategy.get_max_profit().unwrap_or(Positive::ZERO) > Positive::ZERO);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_area_lower() {
         let (mut strategy, option_chain) = set_up().unwrap();
@@ -1452,14 +1461,20 @@ mod tests_pmcc_best_area {
 
 #[cfg(test)]
 mod tests_pmcc_best_ratio {
+    #[cfg(feature = "io")]
     use super::*;
 
+    #[cfg(feature = "io")]
     use positive::constants::DAYS_IN_A_YEAR;
 
+    #[cfg(feature = "io")]
     use num_traits::ToPrimitive;
+    #[cfg(feature = "io")]
     use positive::pos_or_panic;
+    #[cfg(feature = "io")]
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "io")]
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), crate::error::Error> {
         let option_chain =
             OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")
@@ -1489,6 +1504,7 @@ mod tests_pmcc_best_ratio {
         Ok((strategy, option_chain))
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_ratio_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
@@ -1501,6 +1517,7 @@ mod tests_pmcc_best_ratio {
         assert!(strategy.get_fees().unwrap().to_f64() > 0.0);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_ratio_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
@@ -1513,6 +1530,7 @@ mod tests_pmcc_best_ratio {
         assert!(strategy.validate());
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_best_ratio_with_range() {
         let (mut strategy, option_chain) = set_up().unwrap();

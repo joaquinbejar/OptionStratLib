@@ -1343,9 +1343,11 @@ mod tests_gamma_calculations_projections {
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::utils::time::get_x_days_formatted;
 
     // Helper function to create a test chain with predefined gamma values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
@@ -1353,6 +1355,7 @@ mod tests_gamma_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_gamma_curve() {
         let mut chain = create_test_chain_with_gamma();
@@ -1399,17 +1402,21 @@ mod tests_delta_calculations_projections {
 
     use super::OptionChainProjections;
     use crate::chains::chain::OptionChain;
+    #[cfg(feature = "io")]
     use crate::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "io")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_delta_curve() {
         let mut chain = create_test_chain_with_delta();
@@ -1449,6 +1456,7 @@ mod tests_delta_calculations_projections {
         }
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_delta_curve_shape() {
         let mut chain = create_test_chain_with_delta();
@@ -1480,17 +1488,21 @@ mod tests_vega_calculations_projections {
 
     use super::OptionChainProjections;
     use crate::chains::chain::OptionChain;
+    #[cfg(feature = "io")]
     use crate::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "io")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vega_curve() {
         let mut chain = create_test_chain_with_vega();
@@ -1530,6 +1542,7 @@ mod tests_vega_calculations_projections {
         }
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vega_curve_shape() {
         let mut chain = create_test_chain_with_vega();
@@ -1561,17 +1574,21 @@ mod tests_theta_calculations_projections {
 
     use super::OptionChainProjections;
     use crate::chains::chain::OptionChain;
+    #[cfg(feature = "io")]
     use crate::curves::Point2D;
 
     use optionstratlib_core::model::Positive;
 
+    #[cfg(feature = "io")]
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_theta_curve() {
         let mut chain = create_test_chain_with_theta();
@@ -1611,6 +1628,7 @@ mod tests_theta_calculations_projections {
         }
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_theta_curve_shape() {
         let mut chain = create_test_chain_with_theta();
@@ -1647,6 +1665,7 @@ mod tests_vanna_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for vanna calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
@@ -1656,6 +1675,7 @@ mod tests_vanna_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vanna_curve() {
         let mut chain = create_test_chain_with_vanna();
@@ -1707,6 +1727,7 @@ mod tests_veta_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for veta calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
@@ -1716,6 +1737,7 @@ mod tests_veta_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_veta_curve() {
         let mut chain = create_test_chain_with_veta();
@@ -1767,6 +1789,7 @@ mod tests_charm_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
@@ -1776,6 +1799,7 @@ mod tests_charm_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_charm_curve() {
         let mut chain = create_test_chain_with_charm();
@@ -1827,6 +1851,7 @@ mod tests_color_calculations_projections {
     use optionstratlib_core::model::Positive;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain =
             OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
@@ -1836,6 +1861,7 @@ mod tests_color_calculations_projections {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_color_curve() {
         let mut chain = create_test_chain_with_color();

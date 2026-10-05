@@ -1456,6 +1456,7 @@ impl OptionData {
     /// is greater than 1.0, the function assumes it's represented as a percentage and divides it
     /// by 100.0 to convert it to a decimal value. This ensures that implied volatility is stored
     /// in the correct format, preventing potential misinterpretations and calculation errors.
+    #[cfg(feature = "io")]
     pub(super) fn check_and_convert_implied_volatility(&mut self) {
         if self.implied_volatility > Positive::ONE {
             self.implied_volatility = self.implied_volatility / Positive::HUNDRED;
@@ -2376,7 +2377,7 @@ mod tests_get_position {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "io"))]
 mod tests_check_convert_implied_volatility {
     use super::*;
     use optionstratlib_core::pos_or_panic;
