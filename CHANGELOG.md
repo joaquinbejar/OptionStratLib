@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Curves, surfaces and geometry are their own crate, `optionstratlib-math`**
+  (#516). `curves`, `surfaces`, `geometrics` and their errors (`CurveError`,
+  `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) move
+  to `crates/optionstratlib-math`, which depends only on
+  `optionstratlib-core` and general numeric crates (`rayon`, `statrs`,
+  `itertools`, `num-traits`, `rand`). The facade re-exports the three modules
+  and the errors, so `optionstratlib::curves::Curve` and the other existing
+  paths still resolve; algorithms, tolerances and serialized forms are
+  unchanged. What does change:
+  - The compatibility re-exports in the math modules are removed:
+    `curves::BasicCurves` and `surfaces::BasicSurfaces` (use
+    `optionstratlib::analytics::{BasicCurves, BasicSurfaces}`), and
+    `geometrics::{PlotBuilder, Plottable}` (use
+    `optionstratlib::visualization::{PlotBuilder, Plottable}`). The prelude
+    exports the same names from their owners.
+  - The empty `curves::visualization` module, kept only so a 0.21 path
+    resolved, is removed.
+  - `optionstratlib-math` derives `utoipa::ToSchema` only under its `schema`
+    feature; the facade enables it.
+  - `optionstratlib_core::model` also re-exports `positive::is_positive`, which
+    the math crate reaches through core (ADR-0001 D8).
+
 - **The core domain model is its own crate, `optionstratlib-core`** (#514).
   `model`, `utils`, `constants` and the core errors (`DecimalError`,
   `OptionsError`, `PositionError`, `TradeError`, `OperationErrorKind`) move

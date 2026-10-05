@@ -86,11 +86,13 @@ pub use crate::visualization::utils::make_surface;
 pub use crate::chains::{OptionData, StrategyLegs, chain::OptionChain, utils::OptionChainParams};
 
 // Curves and surfaces
-pub use crate::curves::{BasicCurves, Curvable, Curve, Point2D, StatisticalCurve};
-pub use crate::surfaces::{BasicSurfaces, Point3D, Surfacable, Surface};
+pub use crate::analytics::{BasicCurves, BasicSurfaces};
+pub use crate::curves::{Curvable, Curve, Point2D, StatisticalCurve};
+pub use crate::surfaces::{Point3D, Surfacable, Surface};
 
 // Geometrics (commonly used in curve examples)
-pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject, Plottable};
+pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
+pub use crate::visualization::Plottable;
 
 // Volatility models
 pub use crate::volatility::*;

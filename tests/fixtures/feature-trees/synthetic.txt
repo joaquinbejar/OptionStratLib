@@ -139,6 +139,7 @@ optionstratlib -> lazy_static
 optionstratlib -> num-traits
 optionstratlib -> option_type
 optionstratlib -> optionstratlib-core
+optionstratlib -> optionstratlib-math
 optionstratlib -> positive
 optionstratlib -> pretty-simple-display
 optionstratlib -> prettytable-rs
@@ -172,6 +173,20 @@ optionstratlib-core -> thiserror
 optionstratlib-core -> tracing
 optionstratlib-core -> utoipa
 optionstratlib-core -> uuid
+optionstratlib-math -> itertools
+optionstratlib-math -> num-traits
+optionstratlib-math -> optionstratlib-core
+optionstratlib-math -> pretty-simple-display
+optionstratlib-math -> rand
+optionstratlib-math -> rayon
+optionstratlib-math -> rust_decimal
+optionstratlib-math -> rust_decimal_macros
+optionstratlib-math -> serde
+optionstratlib-math -> serde_json
+optionstratlib-math -> statrs
+optionstratlib-math -> thiserror
+optionstratlib-math -> tracing
+optionstratlib-math -> utoipa
 pbkdf2 -> digest
 pbkdf2 -> hmac
 positive -> approx
@@ -415,6 +430,7 @@ once_cell [alloc,default,race,std]
 option_type [default,utoipa]
 optionstratlib [synthetic]
 optionstratlib-core [default,schema]
+optionstratlib-math [default,schema]
 pbkdf2 [default,hmac]
 pin-project-lite []
 pkg-config []

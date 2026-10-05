@@ -1,0 +1,38 @@
+[package]
+name = "optionstratlib-math"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Generic curves, surfaces, interpolation and geometry of OptionStratLib, on Decimal coordinates."
+readme = "README.md"
+keywords = ["finance", "curves", "interpolation", "decimal"]
+categories = ["finance", "mathematics"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on every math type (ADR-0002).
+schema = ["dep:utoipa", "optionstratlib-core/schema"]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+itertools = { workspace = true }
+num-traits = { workspace = true }
+pretty-simple-display = { workspace = true }
+rand = { workspace = true }
+rayon = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+# `DebugPretty` / `DisplaySimple` expand to `serde_json` calls.
+serde_json = { workspace = true }
+statrs = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+
+[dev-dependencies]
+approx = { workspace = true }

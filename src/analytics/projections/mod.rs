@@ -3,8 +3,8 @@
 //! [`crate::surfaces::Surface`]), plus their `OptionChain` implementations.
 //!
 //! These traits price `Options` and read Greeks, so they are analytics, not
-//! geometry (ADR-0001 D4). `curves::BasicCurves` and `surfaces::BasicSurfaces`
-//! remain as compatibility re-exports.
+//! geometry (ADR-0001 D4). `Curve` and `Surface` live in
+//! `optionstratlib-math`, which knows nothing about options.
 
 /// `impl BasicCurves for OptionChain`, `impl BasicSurfaces for OptionChain`
 /// and the inherent projection wrappers on `OptionChain`.

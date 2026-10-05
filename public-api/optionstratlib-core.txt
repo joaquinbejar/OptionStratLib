@@ -228,6 +228,7 @@ pub use optionstratlib_core::model::Positive
 pub use optionstratlib_core::model::PositiveError
 pub use optionstratlib_core::model::RainbowType
 pub use optionstratlib_core::model::Side
+pub use optionstratlib_core::model::is_positive
 pub mod optionstratlib_core::model::decimal
 pub const optionstratlib_core::model::decimal::DIV_DEFAULT_SCALE: u32
 pub const optionstratlib_core::model::decimal::ONE_DAY: rust_decimal::decimal::Decimal

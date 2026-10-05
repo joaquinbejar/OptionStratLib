@@ -1334,12 +1334,12 @@ pub mod chains;
 /// solver defaults live in [`pricing::constants`].
 pub use optionstratlib_core::constants;
 
-/// * `curves` - Tools for yield curves, term structures, and other financial curves.
+/// * `curves` - Generic two-dimensional curves on `Decimal` coordinates.
 ///
-/// Implementations of various interest rate curves, forward curves, and term structures
-/// used in options pricing and risk management. Includes interpolation methods and
-/// curve fitting algorithms.
-pub mod curves;
+/// `Curve`, `Point2D` and the curve traits: construction, interpolation,
+/// arithmetic and statistics. Defined by `optionstratlib-math`; option
+/// projections onto a curve are `analytics::BasicCurves`.
+pub use optionstratlib_math::curves;
 
 /// * `error` - Error types and handling functionality for the library.
 ///
@@ -1352,7 +1352,7 @@ pub mod error;
 ///
 /// Provides specialized geometric functions and algorithms for options pricing and modeling,
 /// including path-dependent calculations and spatial transformations for volatility surfaces.
-pub mod geometrics;
+pub use optionstratlib_math::geometrics;
 
 /// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
 ///
@@ -1425,12 +1425,12 @@ pub mod simulation;
 /// strategy composition and customization.
 pub mod strategies;
 
-/// * `surfaces` - Volatility surface and other 3D financial data modeling.
+/// * `surfaces` - Generic three-dimensional surfaces on `Decimal` coordinates.
 ///
-/// Tools for constructing, manipulating, and analyzing volatility surfaces and
-/// other three-dimensional financial data structures. Includes interpolation methods,
-/// fitting algorithms, and visualization utilities.
-pub mod surfaces;
+/// `Surface`, `Point3D` and the surface traits: construction, interpolation,
+/// arithmetic and metric extraction. Defined by `optionstratlib-math`; option
+/// projections onto a surface are `analytics::BasicSurfaces`.
+pub use optionstratlib_math::surfaces;
 
 /// * `utils` - General utility functions for data manipulation and calculations.
 ///
