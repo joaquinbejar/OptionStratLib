@@ -3231,8 +3231,7 @@ mod tests_butterfly_probability {
     /// helper is not visible outside it.
     fn flat_volatility_0_2() -> VolatilityAdjustment {
         VolatilityAdjustment {
-            base_volatility: Positive::new_decimal(rust_decimal::Decimal::new(2, 1))
-                .unwrap_or(Positive::ONE),
+            base_volatility: pos_or_panic!(0.2),
             std_dev_adjustment: Positive::ZERO,
         }
     }

@@ -1459,9 +1459,8 @@ pub use optionstratlib_analytics::metrics;
 
 /// * `pnl` - Profit and loss analysis tools for options positions.
 ///
-/// Utilities for calculating, projecting, and visualizing profit and loss (P&L) profiles
-/// for individual options and complex strategies. Includes time-based P&L evolution and
-/// scenario analysis.
+/// [`pnl::PnL`], the [`pnl::PnLCalculator`] trait, transactions, delta
+/// adjustments and P&L metrics documents for options and positions.
 ///
 /// Defined by `optionstratlib-analytics` and re-exported here (feature
 /// `analytics`).
@@ -1480,9 +1479,8 @@ pub use optionstratlib_pricing::pricing;
 
 /// * `risk` - Risk assessment and management tools for options portfolios.
 ///
-/// Tools for analyzing and quantifying risk in options positions and portfolios,
-/// including Value at Risk (VaR), stress testing, scenario analysis, and
-/// portfolio optimization algorithms.
+/// SPAN margin ([`risk::SPANMargin`]), the VaR, CVaR and Sharpe figures of a
+/// simulated position (`RiskMetricsSimulation`) and risk categories.
 ///
 /// Defined by `optionstratlib-analytics` and re-exported here (feature
 /// `analytics`).

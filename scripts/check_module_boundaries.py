@@ -1659,14 +1659,22 @@ def self_test() -> int:
     # An analytics-owned error moved into its crate keeps the analytics layer:
     # a strategies file converting into it is a downward edge, a market-layer
     # facade file naming it is an upward one (#529).
-    for name, (rel, expected) in {
-        "strategies converts into an analytics error": ("src/error/strategies.rs", 0),
-        "a market-layer file names an analytics error": ("src/chains/x.rs", 1),
+    for name, (rel, source, expected) in {
+        "strategies converts into an analytics error": (
+            "src/error/strategies.rs",
+            "impl From<StrategyError> for crate::error::ProbabilityError {}\n",
+            0,
+        ),
+        "a market-layer file names an analytics error": (
+            "src/chains/x.rs",
+            "use crate::error::ProbabilityError;\n",
+            1,
+        ),
     }.items():
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "src"
             files = {
-                rel: "impl From<StrategyError> for crate::error::ProbabilityError {}\n",
+                rel: source,
                 "src/error/mod.rs": "pub use optionstratlib_analytics::error::ProbabilityError;\n",
                 "crates/optionstratlib-analytics/src/error/probability.rs": "pub enum ProbabilityError { A }\n",
             }
