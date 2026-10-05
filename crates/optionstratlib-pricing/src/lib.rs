@@ -25,9 +25,27 @@
 //! - [`error`]: [`error::PricingError`], [`error::GreeksError`] and
 //!   [`error::VolatilityError`].
 //!
-//! Prices, premia and Greeks cross the public boundary as
-//! `rust_decimal::Decimal` or `Positive`; `f64` stays inside the numerical
-//! kernels.
+//! ## Numerical boundary
+//!
+//! Prices, premia, strikes, rates and Greeks cross the public boundary as
+//! `rust_decimal::Decimal` or `Positive`. `f64` stays inside the numerical
+//! kernels (the normal distribution, lattice and finite-difference steps).
+//! The only public `f64`s are error diagnostics, which `make
+//! check-float-boundary` enforces (#522). Most kernels bring floats back
+//! through `optionstratlib_core::model::decimal::finite_decimal`, so a
+//! non-finite intermediate becomes a typed `NonFinite` error; several exotic
+//! pricers still substitute zero for a failed step instead, which #639
+//! tracks. The kernels perform no filesystem, network or stdout I/O and
+//! install no logging subscriber.
+//!
+//! For fixed inputs, closed-form and lattice pricers are deterministic; an
+//! `ExpirationDate::DateTime` expiry is measured from the current clock, so
+//! use `ExpirationDate::Days` for reproducible results. Monte Carlo pricing
+//! (`pricing::monte_carlo_option_pricing`), the telegraph pricer
+//! (`pricing::telegraph`, `OptionPricing::calculate_price_telegraph`),
+//! `pricing::TelegraphProcess`, `pricing::simulate_returns` and
+//! `volatility::simulate_heston_volatility` sample the thread-local RNG and
+//! are not reproducible yet (#638).
 //!
 //! ## Imports
 //!
