@@ -17,6 +17,7 @@ use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::error::{BacktestError, SimulationError};
 use crate::model::decimal::{d_add, d_div, d_sub};
 use crate::pnl::{PnL, PnLCalculator};
+use crate::pricing::OptionPricing;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::simulator::Simulator;
 use crate::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};

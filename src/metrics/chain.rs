@@ -26,6 +26,7 @@ use crate::metrics::{
 };
 use crate::model::decimal::d_sqrt;
 use crate::model::{ExpirationDate, OptionStyle, Options, Side};
+use crate::pricing::OptionPricing;
 use crate::surfaces::{Point3D, Surface};
 use positive::Positive;
 use rust_decimal::Decimal;

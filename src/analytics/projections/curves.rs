@@ -12,6 +12,7 @@ use crate::curves::Curve;
 use crate::error::ProjectionError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
+use crate::pricing::OptionPricing;
 use crate::{OptionStyle, Options, Side};
 use rust_decimal::Decimal;
 use std::sync::Arc;

@@ -19,6 +19,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::StrangleStrategy;
+use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
 use crate::{

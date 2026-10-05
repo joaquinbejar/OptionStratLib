@@ -34,6 +34,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::chains::OptionData;
+use crate::pricing::OptionPricing;
 use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
     ExpirationDate, Options,

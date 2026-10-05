@@ -11,6 +11,7 @@ use crate::error::chains::OptionDataErrorKind;
 use crate::greeks::{Greeks, GreeksSnapshot, delta, gamma};
 use crate::model::Position;
 use crate::model::utils::sub_floor_zero;
+use crate::pricing::OptionPricing;
 use crate::{ExpirationDate, OptionStyle, Options, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;

@@ -163,8 +163,6 @@ MINIMAL_MARKET_MODULES = ("chains", "series")
 # same module pair is a fresh violation, not tolerated debt. Every listed
 # line is annotated `// deferred edge` in the source.
 DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
-    # Inherent pricing wrappers on `Options` forward to `pricing::OptionPricing`.
-    ("model", "pricing"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499, API-BASELINE 3.3)"),
     # `impl LegAble for Leg` computes Greeks in its `Option` arms.
     ("model", "greeks"): (frozenset({"model/leg/leg_enum.rs"}), "0.22.0 batch (#498, ADR-0001 D6)"),
     # `Trade::pnl() -> PnL` is public inherent API returning an analytics type.
@@ -186,8 +184,6 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
         }),
         "0.22.0 batch (#498, ADR-0001 D6)",
     ),
-    # `Options::calculate_implied_volatility` wrapper signature.
-    ("model", "error/volatility"): (frozenset({"model/option.rs"}), "0.22.0 batch (#499)"),
 }
 
 MARKER = "// facade-compat:"

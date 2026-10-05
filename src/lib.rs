@@ -930,6 +930,7 @@
 //! use positive::{pos_or_panic,Positive};
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::Greeks;
+//! use optionstratlib::pricing::OptionPricing;
 //!
 //! fn main() -> Result<(), optionstratlib::error::Error> {
 //!     // Create a European call option

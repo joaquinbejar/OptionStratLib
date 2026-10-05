@@ -21,6 +21,7 @@ use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
 
+use crate::pricing::OptionPricing;
 #[cfg(test)]
 use positive::pos_or_panic;
 

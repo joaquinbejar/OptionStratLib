@@ -12,6 +12,7 @@
 use crate::error::ProjectionError;
 use crate::greeks::Greeks;
 use crate::model::BasicAxisTypes;
+use crate::pricing::OptionPricing;
 use crate::surfaces::Surface;
 use crate::{OptionStyle, Options, Side};
 use positive::Positive;

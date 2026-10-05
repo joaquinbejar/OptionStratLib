@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`Options` no longer carries pricing methods of its own** (#499). The seven
+  inherent wrappers `calculate_price_black_scholes`, `calculate_price_binomial`,
+  `calculate_price_binomial_tree`, `calculate_price_montecarlo`,
+  `calculate_price_telegraph`, `time_value` and `calculate_implied_volatility`
+  only forwarded to `pricing::OptionPricing`, and they made the core domain type
+  depend on the pricing layer and on `VolatilityError`. They are removed; the
+  same calls work with the trait in scope (`use
+  optionstratlib::pricing::OptionPricing;`, or the prelude, which already
+  re-exports it). Behavior and results are unchanged. This removes the
+  `model -> pricing` and `model -> error/volatility` edges, two of the five
+  that keep `model` from being extracted as `optionstratlib-core` (M2).
+
 - **The probability kernels no longer price at a hidden 0.2 volatility**
   (#619). `calculate_single_point_probability` substituted a flat 0.2 when
   `volatility_adj` was `None`, and every strategy method forwarded `None`, so a
