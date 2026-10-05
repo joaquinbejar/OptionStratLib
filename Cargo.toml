@@ -143,13 +143,13 @@ approx = "0.5"
 rand_distr = "0.6"
 prettytable-rs = "0.10"
 pretty-simple-display = "0.1"
-utoipa = { version = "5.5", features = ["axum_extras", "chrono", "decimal"] }
+utoipa = { version = "6.0", features = ["axum_extras", "chrono", "decimal"] }
 indicatif = "0.18"
 thiserror = "2.0"
-positive = { version = "0.6", features = ["utoipa"] }
-expiration_date = { version = "0.3", features = ["utoipa"] }
-financial_types = { version = "0.2", features = ["utoipa"] }
-option_type = { version = "0.3", features = ["utoipa"] }
+positive = { version = "0.7", features = ["utoipa"] }
+expiration_date = { version = "0.4", features = ["utoipa"] }
+financial_types = { version = "0.3", features = ["utoipa"] }
+option_type = { version = "0.4", features = ["utoipa"] }
 tokio = { version = "1.53", features = ["full"] }
 async-trait = "0.1"
 reqwest = { version = "0.13", features = ["json"] }
