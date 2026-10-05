@@ -49,9 +49,11 @@ ROOT = Path(__file__).resolve().parent.parent
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 FIXTURES = ROOT / "tests" / "fixtures" / "feature-trees"
 
-# name -> the cargo feature flags that select the surface.
+# name -> the cargo feature flags that select the surface. `market` is a facade
+# capability (ADR-0002), so the minimal market surface names it explicitly:
+# `--no-default-features` alone builds no market at all.
 SURFACES = {
-    "minimal": ["--no-default-features"],
+    "minimal": ["--no-default-features", "--features", "market"],
     "synthetic": ["--no-default-features", "--features", "synthetic"],
 }
 

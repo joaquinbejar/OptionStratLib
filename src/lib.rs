@@ -375,10 +375,12 @@
 //! its own, and this crate (the `optionstratlib` facade) re-exports them, so
 //! the paths below are the same types whichever crate you import them from.
 //!
-//! | Crate | Facade paths | Contents |
-//! | --- | --- | --- |
-//! | `optionstratlib-core` | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
-//! | `optionstratlib-math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
+//! | Crate | Facade feature | Facade paths | Contents |
+//! | --- | --- | --- | --- |
+//! | `optionstratlib-core` | always | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
+//! | `optionstratlib-math` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
+//! | `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `VolatilityError` and the `error::greeks` and `error::pricing` modules) | pricing models, Greeks, implied and historical volatility |
+//! | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 //!
 //! Each facade path is an explicit module or item re-export (`pub use
 //! optionstratlib_core::model;`, `pub use
@@ -386,11 +388,20 @@
 //! component's root, so
 //! `optionstratlib::model::Options` *is* `optionstratlib_core::model::Options`.
 //! Depend on a component directly when you need only that layer; its own
-//! docs list its entry points. The rest of the library (pricing, market,
-//! analytics, strategies, simulation, backtesting, visualization) still lives
-//! in this crate and moves out milestone by milestone. Until then the `math`
-//! and `schema` capabilities that ADR-0002 routes through facade features are
-//! always on, which is what the facade default enables anyway.
+//! docs list its entry points, or enable only its facade feature:
+//!
+//! ```toml
+//! [dependencies]
+//! # pricing, greeks and volatility, without market data, I/O or charts
+//! optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+//! ```
+//!
+//! The rest of the library (analytics, pnl, risk, metrics, strategies,
+//! backtesting, visualization, and `simulation` behind its own feature)
+//! still lives in this crate and moves out milestone by milestone. Until then
+//! those modules, the unified [`error::Error`] and their `prelude` items need
+//! both `market` and `simulation`, and the `schema` derives stay always on;
+//! the facade default enables all of it.
 //!
 //! ## Module Boundaries
 //!
@@ -432,8 +443,9 @@
 //!   types live in the same directory. `src/utils` is partitioned the same
 //!   way, per file.
 //! - **The one optional edge is `market -> simulation`, gated by
-//!   `synthetic`.** Building with `default-features = false` leaves a market
-//!   surface that names no simulation type, including through `ChainError`.
+//!   `synthetic`.** Building with `default-features = false, features =
+//!   ["market"]` leaves a market surface that names no simulation type,
+//!   including through `ChainError`.
 //!
 //! ### Enforcement
 //!
@@ -907,16 +919,24 @@
 //! optionstratlib = { version = "0.22.0", features = ["plotly"] }
 //! ```
 //!
-//! - `plotly`: Enables interactive visualization using plotly.rs
+//! - `math`, `pricing`, `market` (default): the component crates of the same
+//!   name and their facade paths (see [Workspace Crates](#workspace-crates)).
+//!   Each implies the one below it, and `pricing` alone resolves no market,
+//!   I/O, async or visualization package
+//! - `simulation` (default): random walks and simulators; implies `pricing`
+//!   but not `market`
+//! - `plotly`: Enables interactive visualization using plotly.rs (implies
+//!   `market` and `simulation`, which `visualization` renders)
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
 //!   `default-features = false` drops it, and `csv` and `zip` with it
-//! - `async`: asynchronous versions of that I/O (implies `io`; tokio + reqwest + futures)
+//! - `async`: asynchronous versions of that I/O (implies `market` and `io`; tokio + reqwest + futures)
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
 //!   (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
-//!   simulation failures arrive as `ChainError::Generator`; disable it with
-//!   `default-features = false` for a market surface that names no simulation type at all.
+//!   simulation failures arrive as `ChainError::Generator`; implies `market` and
+//!   `simulation`. Leave it out (`default-features = false, features = ["market"]`)
+//!   for a market surface that names no simulation type at all.
 //!   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
 //!   dependency graphs
 //!
@@ -1335,8 +1355,8 @@ pub use optionstratlib_core::model;
 /// and dates alone, and extracts risk-neutral densities and volatility skews
 /// from an option chain (`RNDAnalysis`). The strategy layer builds its
 /// probability analysis on top of these kernels; nothing here depends on a
-/// concrete strategy, and the historical `chains` paths for the moved items
-/// are preserved by re-export.
+/// concrete strategy.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod analytics;
 
 /// * `backtesting` - Tools for historical performance evaluation of options strategies.
@@ -1344,6 +1364,7 @@ pub mod analytics;
 /// Provides framework and utilities to simulate and analyze how option strategies
 /// would have performed using historical market data. Supports various performance
 /// metrics, drawdown analysis, and strategy comparison.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod backtesting;
 
 /// * `chains` - Functionality for working with options chains and series data.
@@ -1351,6 +1372,9 @@ pub mod backtesting;
 /// Tools for parsing, manipulating, and analyzing options chain data. Includes
 /// methods to filter chains by expiration, strike price, and other criteria,
 /// as well as utilities for chain visualization and analysis.
+///
+/// Defined by `optionstratlib-market` and re-exported here (feature `market`).
+#[cfg(feature = "market")]
 pub use optionstratlib_market::chains;
 
 /// * `constants` - Library-wide mathematical and financial constants.
@@ -1366,6 +1390,7 @@ pub use optionstratlib_core::constants;
 /// `Curve`, `Point2D` and the curve traits: construction, interpolation,
 /// arithmetic and statistics. Defined by `optionstratlib-math`; option
 /// projections onto a curve are `analytics::BasicCurves`.
+#[cfg(feature = "math")]
 pub use optionstratlib_math::curves;
 
 /// * `error` - Error types and handling functionality for the library.
@@ -1379,6 +1404,9 @@ pub mod error;
 ///
 /// Provides specialized geometric functions and algorithms for options pricing and modeling,
 /// including path-dependent calculations and spatial transformations for volatility surfaces.
+///
+/// Defined by `optionstratlib-math` and re-exported here (feature `math`).
+#[cfg(feature = "math")]
 pub use optionstratlib_math::geometrics;
 
 /// * `greeks` - Calculation and management of option sensitivity metrics (Delta, Gamma, etc.).
@@ -1386,6 +1414,9 @@ pub use optionstratlib_math::geometrics;
 /// Comprehensive implementation of options Greeks (sensitivity measures) including
 /// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm and Color. Includes analytical
 /// formulas, numerical approximations, and visualization tools for risk analysis.
+///
+/// Defined by `optionstratlib-pricing` and re-exported here (feature `pricing`).
+#[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::greeks;
 
 /// * `metrics` - Performance and risk metrics analysis for options.
@@ -1415,6 +1446,7 @@ pub use optionstratlib_pricing::greeks;
 /// ### Dollar Gamma
 /// Gamma exposure in monetary terms: `Dollar Gamma = Gamma × Spot² × 0.01`
 /// Shows how much delta changes for a 1% move in the underlying.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod metrics;
 
 /// * `pnl` - Profit and loss analysis tools for options positions.
@@ -1422,6 +1454,7 @@ pub mod metrics;
 /// Utilities for calculating, projecting, and visualizing profit and loss (P&L) profiles
 /// for individual options and complex strategies. Includes time-based P&L evolution and
 /// scenario analysis.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod pnl;
 
 /// * `pricing` - Option pricing models including Black-Scholes and numerical methods.
@@ -1429,6 +1462,9 @@ pub mod pnl;
 /// Implementations of various option pricing models including Black-Scholes-Merton,
 /// binomial trees, Monte Carlo simulation, and finite difference methods. Supports
 /// European, American, and exotic options.
+///
+/// Defined by `optionstratlib-pricing` and re-exported here (feature `pricing`).
+#[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::pricing;
 
 /// * `risk` - Risk assessment and management tools for options portfolios.
@@ -1436,6 +1472,7 @@ pub use optionstratlib_pricing::pricing;
 /// Tools for analyzing and quantifying risk in options positions and portfolios,
 /// including Value at Risk (VaR), stress testing, scenario analysis, and
 /// portfolio optimization algorithms.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod risk;
 
 /// * `simulation` - Simulation techniques for scenario analysis.
@@ -1443,6 +1480,7 @@ pub mod risk;
 /// Framework for Monte Carlo and other simulation methods to model potential
 /// market scenarios and their impact on options strategies. Includes path generation
 /// algorithms and statistical analysis of simulation results.
+#[cfg(feature = "simulation")]
 pub mod simulation;
 
 /// * `strategies` - Pre-defined option strategy templates and building blocks.
@@ -1450,13 +1488,16 @@ pub mod simulation;
 /// Library of common option strategies (spreads, straddles, condors, etc.) with
 /// implementation helpers, parameter optimization, and analysis tools. Supports
 /// strategy composition and customization.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod strategies;
 
 /// * `surfaces` - Generic three-dimensional surfaces on `Decimal` coordinates.
 ///
 /// `Surface`, `Point3D` and the surface traits: construction, interpolation,
-/// arithmetic and metric extraction. Defined by `optionstratlib-math`; option
+/// arithmetic and metric extraction. Defined by `optionstratlib-math`
+/// (feature `math`); option
 /// projections onto a surface are `analytics::BasicSurfaces`.
+#[cfg(feature = "math")]
 pub use optionstratlib_math::surfaces;
 
 /// * `utils` - General utility functions for data manipulation and calculations.
@@ -1464,6 +1505,8 @@ pub use optionstratlib_math::surfaces;
 /// Collection of helper functions and utilities used across the library for
 /// data manipulation, mathematical operations, date handling, and other
 /// common tasks in financial calculations.
+///
+/// Defined by `optionstratlib-core` and re-exported here.
 pub use optionstratlib_core::utils;
 
 /// * `visualization` - Tools for plotting and visual representation of options data.
@@ -1471,6 +1514,7 @@ pub use optionstratlib_core::utils;
 /// Graphics and visualization utilities for creating charts, graphs, and interactive
 /// plots of options data, strategies, and analytics. Supports various plot types
 /// optimized for different aspects of options analysis.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod visualization;
 
 /// * `volatility` - Volatility modeling, forecasting, and analysis utilities.
@@ -1478,6 +1522,9 @@ pub mod visualization;
 /// Comprehensive tools for volatility analysis including historical volatility calculation,
 /// implied volatility determination, volatility forecasting models (GARCH, EWMA), and
 /// volatility skew/smile analysis.
+///
+/// Defined by `optionstratlib-pricing` and re-exported here (feature `pricing`).
+#[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::volatility;
 
 /// * `series` - Functionality for working with collections of option chains across expirations.
@@ -1485,6 +1532,9 @@ pub use optionstratlib_pricing::volatility;
 /// Provides tools to manage, filter, and analyze multiple option chains grouped by expiration dates.
 /// Includes utilities for constructing series data, navigating expirations, and performing
 /// cross-expiration analysis and visualization.
+///
+/// Defined by `optionstratlib-market` and re-exported here (feature `market`).
+#[cfg(feature = "market")]
 pub use optionstratlib_market::series;
 
 /// * `synthetic` - Simulation-backed option chain and series generators.

@@ -53,10 +53,20 @@ fmt-check:
 	cargo +stable fmt --all --check
 
 # Run Clippy for linting
+# Each facade capability on its own (ADR-0002 Decision 2): `pricing` without
+# market, `market` without I/O or simulation, and `market,simulation`, the
+# smallest set the facade test suites and benches compile against (it leaves
+# out `io` and `synthetic`, so their gates are linted too).
+FACADE_FEATURE_SETS := math pricing market simulation market,simulation
+
 .PHONY: lint
 lint:
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
 	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
+	@for features in $(FACADE_FEATURE_SETS); do \
+		echo "clippy optionstratlib --no-default-features --features $$features"; \
+		cargo clippy -p optionstratlib --all-targets --no-default-features --features $$features -- -D warnings || exit 1; \
+	done
 
 .PHONY: lint-fix
 lint-fix: 

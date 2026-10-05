@@ -26,22 +26,40 @@ include = [
 
 
 [features]
-# `synthetic` is on by default so the 0.21 surface is unchanged; it is the
-# only market-to-simulation dependency (chain and series generators built on
-# random walks) and becomes the optional `Market -> Simulation` edge once the
-# crates are split (roadmap M1-15, ADR-0003).
-default = ["synthetic", "io"]
-synthetic = []
+# Facade capabilities (ADR-0002 Decision 2). Each one adds the component
+# crate it names and the facade paths over it; none replaces a type. The
+# default enables every capability that exists today, so the default surface
+# is the whole library.
+default = ["pricing", "market", "simulation", "synthetic", "io"]
+# `curves`, `surfaces`, `geometrics` and the math errors.
+math = ["dep:optionstratlib-math"]
+# `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
+# I/O, async or visualization package.
+pricing = ["dep:optionstratlib-pricing", "math"]
+# `chains`, `series` and the market errors, without I/O (`io`) or the
+# simulation-backed generators (`synthetic`).
+market = ["dep:optionstratlib-market", "pricing"]
+# `simulation`. Still facade source until M5 extracts it; it implies only
+# `pricing`, so `market` alone compiles none of it.
+simulation = ["pricing"]
+# `synthetic` is the only market-to-simulation dependency (chain and series
+# generators built on random walks) and becomes the optional
+# `Market -> Simulation` edge once the crates are split (roadmap M1-15,
+# ADR-0003).
+synthetic = ["market", "simulation"]
 # Filesystem I/O for market data: CSV, JSON and ZIP readers and writers of
-# chains and OHLCV candles (ADR-0003). On by default, so the default surface
-# is unchanged; `default-features = false` drops `csv` and `zip`.
-io = ["optionstratlib-market/io"]
-plotly = ["dep:plotly"]
+# chains and OHLCV candles (ADR-0003). On by default; without it the build
+# resolves no `csv` or `zip`.
+io = ["market", "optionstratlib-market/io"]
+# Charts over the whole library: `visualization` renders strategies, chains
+# and simulations, so it needs every capability below it.
+plotly = ["dep:plotly", "market", "simulation"]
 static_export = [
     "plotly",
     "async",
 ]
 async = [
+    "market",
     "io",
     "dep:tokio",
     "dep:async-trait",
@@ -52,9 +70,9 @@ async = [
 
 [dependencies]
 optionstratlib-core = { workspace = true, features = ["schema"] }
-optionstratlib-math = { workspace = true, features = ["schema"] }
-optionstratlib-pricing = { workspace = true, features = ["schema"] }
-optionstratlib-market = { workspace = true, features = ["schema"] }
+optionstratlib-math = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-pricing = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-market = { workspace = true, optional = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 approx = { workspace = true }
 plotly = { workspace = true, default-features = false, optional = true, features = ["static_export_default"] }
@@ -96,15 +114,18 @@ proptest = { workspace = true }
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
+required-features = ["market", "simulation"]
 
 [[test]]
 name = "property_tests"
 path = "tests/property/mod.rs"
+required-features = ["market", "simulation"]
 
 [[bench]]
 name = "benches"
 path = "benches/mod.rs"
 harness = false
+required-features = ["market", "simulation"]
 
 [lib]
 name = "optionstratlib"
