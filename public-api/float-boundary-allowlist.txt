@@ -26,7 +26,7 @@ pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result
 pub fn optionstratlib_math::surfaces::Point3D::from_f64_tuple(f64, f64, f64) -> core::result::Result<Self, optionstratlib_math::error::SurfaceError> # checked construction from f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::to_f64_tuple(&self) -> core::result::Result<(f64, f64, f64), optionstratlib_math::error::SurfaceError> # checked export to f64 coordinates
 pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>> # monetary strikes as f64, pre-existing; Positive conversion tracked in #642
-pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f64 # dimensionless annual drift of the lognormal kernel, pre-existing; a non-finite result fails through f2du! in calculate_single_point_probability
+pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f64 # dimensionless annual drift of the lognormal kernel, pre-existing; a non-finite result fails through f2du! in calculate_single_point_probability; validated type tracked in #656
 pub optionstratlib_analytics::analytics::PriceTrend::drift_rate: f64 # same field at the analytics root re-export
-pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64 # dimensionless weight of the drift, pre-existing; rejected outside [0, 1] (NaN included) by the kernels
+pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64 # dimensionless weight of the drift, pre-existing; rejected outside [0, 1] (NaN included) by the kernels; validated type tracked in #656
 pub optionstratlib_analytics::analytics::PriceTrend::confidence: f64 # same field at the analytics root re-export
