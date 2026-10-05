@@ -264,6 +264,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`make check-float-boundary` guards the public `f64` surface of the
+  component crates** (#522). It reads the `public-api/optionstratlib-*.txt`
+  snapshots and fails on any `f64` outside the error types' own items
+  (diagnostics carrying the offending input or a non-finite intermediate)
+  and the reviewed `public-api/float-boundary-allowlist.txt`,
+  which lists the pre-existing exceptions with a reason each. `make
+  public-api-check` runs it. The audit of the extracted pricing crate found
+  no public `f64` outside its error diagnostics. Filed as follow-ups: core's
+  `f64` payoff kernel (#637), the pricing entry points that sample the
+  thread RNG (#638), and the exotic pricers that turn a failed numeric step
+  into zero (#639).
+  `make scan-banned` also rejects `println!`, `eprintln!`, `print!`,
+  `eprint!`, `dbg!` and `tracing_subscriber` in production code.
+
 - **The facade documents and pins its core and math exports** (#520). A
   "Workspace Crates" section in the crate docs (and the README) lists which
   facade paths each component crate backs: `model`, `utils`, `constants`,

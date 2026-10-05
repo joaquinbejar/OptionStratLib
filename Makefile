@@ -137,6 +137,10 @@ check-api-report:
 #   * `panic!` / `unreachable!` / `todo!` / `unimplemented!` — the same,
 #     spelled out. The pattern requires a non-word, non-`_` character before
 #     the macro name so `pos_or_panic!` is not swept up with `panic!`.
+#   * `println!` / `eprintln!` / `print!` / `eprint!` / `dbg!` and
+#     `tracing_subscriber` — library code logs through `tracing` and never
+#     writes to stdout or installs a global subscriber (rules/global_rules.md,
+#     "Logging & Observability"; #522).
 #   * `.exp()` / `.ln()` / `.powd(` — `rust_decimal`'s `MathematicalOps`
 #     aborts on all three (`Exp overflowed`, `Unable to calculate ln for
 #     zero`, `Pow overflowed`); `d_exp` / `d_ln` / `d_powd` in
@@ -213,7 +217,7 @@ scan-banned:
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented)!' \
+		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	malformed=$$(grep -rn 'scan-banned: allow' src crates/*/src \
@@ -228,7 +232,7 @@ scan-banned:
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented, no unchecked exp/ln/powd/sqrt in production code"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,
@@ -293,6 +297,13 @@ public-api-update: check-cargo-public-api
 		cargo +$(PUBLIC_API_NIGHTLY) public-api -p $$crate -sss --all-features > public-api/$$crate.txt || exit 1; \
 	done
 
+# Fails on any public `f64` in a component crate's API snapshot outside error
+# diagnostics and the reviewed public-api/float-boundary-allowlist.txt (#522).
+.PHONY: check-float-boundary
+check-float-boundary:
+	@python3 scripts/check_float_boundary.py --self-test > /dev/null || (python3 scripts/check_float_boundary.py --self-test; exit 1)
+	@python3 scripts/check_float_boundary.py
+
 # Fails when the crate's public API has drifted from public-api/optionstratlib.txt
 # without the snapshot being updated to match, i.e. an *unacknowledged* API
 # change slipped in. This catches classes of breakage cargo-semver-checks
@@ -302,7 +313,7 @@ public-api-update: check-cargo-public-api
 # known gap by the maintainer). Run `make public-api-update` and commit the
 # resulting diff to acknowledge a deliberate change.
 .PHONY: public-api-check
-public-api-check: check-cargo-public-api
+public-api-check: check-cargo-public-api check-float-boundary
 	@mkdir -p target/public-api
 	@cargo +$(PUBLIC_API_NIGHTLY) public-api -sss --all-features > target/public-api/optionstratlib.txt
 	@if ! diff -u public-api/optionstratlib.txt target/public-api/optionstratlib.txt; then \
