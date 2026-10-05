@@ -52,6 +52,7 @@
 //!
 //! // Both legs can be handled uniformly via LegAble trait
 //! use optionstratlib::model::leg::LegAble;
+//! use optionstratlib::greeks::LegGreeks;
 //! tracing::info!("Spot delta: {}", spot_leg.delta()?);
 //! # Ok(())
 //! # }
@@ -84,6 +85,7 @@
 //!
 //! // Net delta should be approximately zero
 //! use optionstratlib::model::leg::LegAble;
+//! use optionstratlib::greeks::LegGreeks;
 //! let net_delta = spot_leg.delta()? + perp_leg.delta()?;
 //! assert_eq!(net_delta, rust_decimal::Decimal::ZERO);
 //! # Ok(())

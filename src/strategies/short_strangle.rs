@@ -20,6 +20,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::StrangleStrategy;
+use crate::analytics::ProfitLossRange;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
@@ -35,7 +36,7 @@ use crate::{
     },
     greeks::Greeks,
     model::{
-        ProfitLossRange, Trade, TradeStatusAble,
+        Trade, TradeStatusAble,
         decimal::{d_add, d_div, d_sum},
         position::Position,
         types::{Action, OptionBasicType, OptionStyle, OptionType, Side},

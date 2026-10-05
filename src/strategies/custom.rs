@@ -12,6 +12,7 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
+use crate::analytics::ProfitLossRange;
 use crate::chains::model_impls::UpdateFromOptionData;
 use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_div, d_mul};
@@ -26,7 +27,7 @@ use crate::{
     },
     greeks::Greeks,
     model::{
-        ProfitLossRange, Trade,
+        Trade,
         decimal::d_add,
         position::Position,
         types::{Action, OptionBasicType, OptionStyle, Side},

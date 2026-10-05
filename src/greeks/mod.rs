@@ -186,6 +186,8 @@ use positive::pos_or_panic;
 mod black_76;
 mod equations;
 mod garman_kohlhagen;
+/// Greeks for the leg types, owned by pricing rather than by `model`.
+mod legs;
 mod model_impls;
 pub mod numerical;
 mod utils;
@@ -198,6 +200,7 @@ pub use equations::{
 pub use garman_kohlhagen::{
     GarmanKohlhagenGreeks, delta_gk, gamma_gk, rho_domestic_gk, rho_foreign_gk, theta_gk, vega_gk,
 };
+pub use legs::LegGreeks;
 pub(crate) use utils::calculate_d_values;
 pub use utils::{DELTA_THRESHOLD, calculate_delta_neutral_sizes};
 pub use utils::{big_n, calculate_d_values_black_76, d1, d2, n};

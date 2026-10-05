@@ -4,14 +4,14 @@
    Date: 19/9/25
 ******************************************************************************/
 
-//! Probability capability for the core [`crate::model::ProfitLossRange`].
+//! [`ProfitLossRange`], a price range with its expiry probability, and the
+//! capability that fills that probability in.
 //!
-//! [`ProfitRangeProbability`] is the analytics-owned extension trait that
-//! fills the `probability` field of a `ProfitLossRange` from the lognormal
-//! single-point kernels in [`crate::analytics::probability`]. The core type keeps only the range
-//! data; the inherent `ProfitLossRange::calculate_probability` forwards here
-//! and is the 0.21 compatibility surface. Importing this trait is the
-//! canonical 0.22 form.
+//! [`ProfitRangeProbability`] fills the `probability` field from the
+//! lognormal single-point kernels in [`crate::analytics::probability`]; the
+//! inherent `ProfitLossRange::calculate_probability` forwards to it. Both are
+//! analytics-owned, and the type is reached as
+//! `optionstratlib::analytics::ProfitLossRange`.
 
 use crate::analytics::probability::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
@@ -128,7 +128,7 @@ impl ProfitLossRange {
     ///
     /// ```rust
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::ProfitLossRange;
+    /// use optionstratlib::analytics::ProfitLossRange;
     /// use positive::{pos_or_panic, spos, Positive};
     /// use optionstratlib::ExpirationDate;
     /// use optionstratlib::strategies::probabilities::VolatilityAdjustment;
@@ -241,7 +241,7 @@ pub trait ProfitRangeProbability {
     ///
     /// ```rust
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::model::ProfitLossRange;
+    /// use optionstratlib::analytics::ProfitLossRange;
     /// use positive::{pos_or_panic, spos, Positive};
     /// use optionstratlib::ExpirationDate;
     /// use optionstratlib::strategies::probabilities::{ProfitRangeProbability, VolatilityAdjustment};

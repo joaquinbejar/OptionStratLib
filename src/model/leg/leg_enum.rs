@@ -33,7 +33,7 @@
 //! assert!(spot_leg.is_spot());
 //! ```
 
-use crate::error::{GreeksError, PositionError};
+use crate::error::PositionError;
 use crate::model::leg::future::FuturePosition;
 use crate::model::leg::perpetual::PerpetualPosition;
 use crate::model::leg::spot::SpotPosition;
@@ -298,62 +298,6 @@ impl LegAble for Leg {
             Self::Perpetual(pos) => pos.fees(),
         }
     }
-
-    fn delta(&self) -> Result<Decimal, GreeksError> {
-        match self {
-            Self::Option(pos) => {
-                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
-                pos.delta()
-            }
-            Self::Spot(pos) => pos.delta(),
-            Self::Future(pos) => pos.delta(),
-            Self::Perpetual(pos) => pos.delta(),
-        }
-    }
-
-    fn gamma(&self) -> Result<Decimal, GreeksError> {
-        match self {
-            Self::Option(pos) => {
-                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
-                pos.gamma()
-            }
-            Self::Spot(_) | Self::Future(_) | Self::Perpetual(_) => Ok(Decimal::ZERO),
-        }
-    }
-
-    fn theta(&self) -> Result<Decimal, GreeksError> {
-        match self {
-            Self::Option(pos) => {
-                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
-                pos.theta()
-            }
-            Self::Spot(pos) => pos.theta(),
-            Self::Future(pos) => pos.theta(),
-            Self::Perpetual(pos) => pos.theta(),
-        }
-    }
-
-    fn vega(&self) -> Result<Decimal, GreeksError> {
-        match self {
-            Self::Option(pos) => {
-                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
-                pos.vega()
-            }
-            Self::Spot(_) | Self::Future(_) | Self::Perpetual(_) => Ok(Decimal::ZERO),
-        }
-    }
-
-    fn rho(&self) -> Result<Decimal, GreeksError> {
-        match self {
-            Self::Option(pos) => {
-                use crate::greeks::Greeks; // deferred edge: LegAble Greek methods, 0.22.0 batch (ADR-0001 D6, #498)
-                pos.rho()
-            }
-            Self::Spot(pos) => pos.rho(),
-            Self::Future(pos) => pos.rho(),
-            Self::Perpetual(pos) => pos.rho(),
-        }
-    }
 }
 
 impl std::fmt::Display for Leg {
@@ -581,34 +525,6 @@ mod tests {
             SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         let leg = Leg::spot(short_spot);
         assert_eq!(leg.get_side(), Side::Short);
-    }
-
-    #[test]
-    fn test_leg_delta_spot() {
-        let long_spot =
-            SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        let leg = Leg::spot(long_spot);
-        assert_eq!(leg.delta().unwrap(), Decimal::from(100));
-
-        let short_spot =
-            SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        let leg = Leg::spot(short_spot);
-        assert_eq!(leg.delta().unwrap(), Decimal::from(-100));
-    }
-
-    #[test]
-    fn test_leg_gamma_linear() {
-        let spot = create_test_spot_position();
-        let leg = Leg::spot(spot);
-        assert_eq!(leg.gamma().unwrap(), Decimal::ZERO);
-
-        let future = create_test_future_position();
-        let leg = Leg::future(future);
-        assert_eq!(leg.gamma().unwrap(), Decimal::ZERO);
-
-        let perp = create_test_perpetual_position();
-        let leg = Leg::perpetual(perp);
-        assert_eq!(leg.gamma().unwrap(), Decimal::ZERO);
     }
 
     #[test]

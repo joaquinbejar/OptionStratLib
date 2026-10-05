@@ -1,6 +1,5 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
-use crate::pnl::PnL; // deferred edge: Trade::pnl wrapper, 0.22.0 batch (#498)
 use crate::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -339,19 +338,6 @@ impl Trade {
     #[must_use]
     pub fn is_open(&self) -> bool {
         self.status == TradeStatus::Open
-    }
-
-    /// Computes and returns the Profit and Loss (PnL) for the current object.
-    ///
-    /// # Returns
-    /// * `PnL` - A value representing the calculated Profit and Loss based on the current object's state.
-    ///
-    /// # Implementation Details
-    /// This function leverages the `Into` trait to convert the current object (`self`) into a `PnL` instance.
-    ///
-    #[must_use]
-    pub fn pnl(&self) -> PnL {
-        self.into()
     }
 
     /// Determines whether the trade is closed.

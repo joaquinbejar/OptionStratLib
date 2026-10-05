@@ -128,7 +128,6 @@ mod expiration;
 pub mod leg;
 mod trade;
 
-pub use crate::analytics::profit_range::ProfitLossRange; // facade-compat: analytics
 pub use axis::BasicAxisTypes;
 pub use balance::*;
 pub use expiration::ExpirationDate;

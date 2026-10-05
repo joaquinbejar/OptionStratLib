@@ -52,13 +52,14 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::Options;
+use crate::analytics::ProfitLossRange;
 use crate::analytics::probability::VolatilityAdjustment;
 use crate::error::position::PositionValidationErrorKind;
 use crate::error::probability::ProbabilityError;
 use crate::error::{GreeksError, PositionError, PricingError, StrategyError};
 use crate::greeks::Greeks;
+use crate::greeks::LegGreeks;
 use crate::model::ExpirationDate;
-use crate::model::ProfitLossRange;
 use crate::model::decimal::{d_add, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::leg::{Leg, SpotPosition};
@@ -282,7 +283,7 @@ impl CoveredCall {
     /// # Errors
     ///
     /// Propagates any [`GreeksError`] returned by
-    /// [`LegAble::delta`] on the spot leg or the short-call leg.
+    /// [`LegGreeks::delta`] on the spot leg or the short-call leg.
     pub fn net_delta(&self) -> Result<Decimal, GreeksError> {
         let spot_delta = self.spot_leg.delta()?;
         let option_delta = self.short_call.delta()?;
