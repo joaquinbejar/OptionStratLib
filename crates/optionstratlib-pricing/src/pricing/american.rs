@@ -44,7 +44,7 @@
 //!   of American Option Values". Journal of Finance, 42(2), 301-320.
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub,
@@ -163,6 +163,9 @@ pub fn barone_adesi_whaley(
 
     if sigma <= Decimal::ZERO {
         // Zero volatility: deterministic pricing
+        // Not `kernels::discount_factor`: both exponents are formed before
+        // either `exp`, so the shared two-step kernel would reorder the
+        // checked steps.
         let neg_rt = d_mul(-r, t, "pricing::american::zero_vol::rt")?;
         let neg_qt = d_mul(-q, t, "pricing::american::zero_vol::qt")?;
         let discount_r = d_exp(neg_rt, "pricing::american::zero_vol::discount_r")?;
@@ -205,8 +208,10 @@ pub fn barone_adesi_whaley(
     )?;
     let k_factor = d_sub(
         dec!(1),
-        d_exp(
-            d_mul(-r, t, "pricing::american::neg_rt")?,
+        discount_factor(
+            r,
+            t,
+            "pricing::american::neg_rt",
             "pricing::american::discount",
         )?,
         "pricing::american::k_factor",
@@ -267,8 +272,10 @@ pub fn barone_adesi_whaley(
                     d_sub(
                         dec!(1),
                         d_mul(
-                            d_exp(
-                                d_mul(-q, t, "pricing::american::call::neg_qt")?,
+                            discount_factor(
+                                q,
+                                t,
+                                "pricing::american::call::neg_qt",
                                 "pricing::american::call::dividend_discount",
                             )?,
                             n_d1,
@@ -318,8 +325,10 @@ pub fn barone_adesi_whaley(
                     d_sub(
                         dec!(1),
                         d_mul(
-                            d_exp(
-                                d_mul(-q, t, "pricing::american::put::neg_qt")?,
+                            discount_factor(
+                                q,
+                                t,
+                                "pricing::american::put::neg_qt",
                                 "pricing::american::put::dividend_discount",
                             )?,
                             n_minus_d1,
@@ -369,12 +378,16 @@ fn black_scholes_european(
         "pricing::american::european::d2",
     )?;
 
-    let discount = d_exp(
-        d_mul(-r, t, "pricing::american::european::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t,
+        "pricing::american::european::neg_rt",
         "pricing::american::european::discount",
     )?;
-    let forward_factor = d_exp(
-        d_mul(-q, t, "pricing::american::european::neg_qt")?,
+    let forward_factor = discount_factor(
+        q,
+        t,
+        "pricing::american::european::neg_qt",
         "pricing::american::european::forward_factor",
     )?;
 
@@ -401,6 +414,8 @@ fn black_scholes_european(
 }
 
 /// Calculates d1 parameter for Black-Scholes formula.
+// Not `kernels::d1`: BAW evaluates it on raw `Decimal`s at trial prices with
+// `sigma * sigma` and `PricingError` validation, a different step sequence.
 fn d1(
     s: Decimal,
     k: Decimal,
@@ -465,8 +480,10 @@ fn find_critical_price_call(
 ) -> Result<Decimal, PricingError> {
     // Initial guess: use strike as starting point
     let mut s_star = d_mul(strike, dec!(1.1), "pricing::american::call::s_star_seed")?;
-    let exp_qt = d_exp(
-        d_mul(-q, t, "pricing::american::call::neg_qt_seed")?,
+    let exp_qt = discount_factor(
+        q,
+        t,
+        "pricing::american::call::neg_qt_seed",
         "pricing::american::call::dividend_discount_seed",
     )?;
     let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));
@@ -556,8 +573,10 @@ fn find_critical_price_put(
 ) -> Result<Decimal, PricingError> {
     // Initial guess: use strike as starting point
     let mut s_star = d_mul(strike, dec!(0.9), "pricing::american::put::s_star_seed")?;
-    let exp_qt = d_exp(
-        d_mul(-q, t, "pricing::american::put::neg_qt_seed")?,
+    let exp_qt = discount_factor(
+        q,
+        t,
+        "pricing::american::put::neg_qt_seed",
         "pricing::american::put::dividend_discount_seed",
     )?;
     let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));

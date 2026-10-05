@@ -32,10 +32,11 @@
 
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
-use crate::greeks::utils::{big_n, calculate_d_values_black_76, n};
+use crate::greeks::utils::n;
+use crate::kernels::{big_n, calculate_d_values_black_76, discount_factor as discount_kernel};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::p_sqrt;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 #[cfg(test)]
@@ -75,8 +76,12 @@ fn side_sign(option: &Options) -> Decimal {
 /// discount factor below the representable scale flushes to zero, which is
 /// its limit.
 fn discount_factor(option: &Options, t: Decimal) -> Result<Decimal, GreeksError> {
-    let exponent = d_mul(-option.risk_free_rate, t, "greeks::b76::discount::exponent")?;
-    Ok(d_exp(exponent, "greeks::b76::discount")?)
+    Ok(discount_kernel(
+        option.risk_free_rate,
+        t,
+        "greeks::b76::discount::exponent",
+        "greeks::b76::discount",
+    )?)
 }
 
 /// Computes the delta of an option under the Black-76 model.

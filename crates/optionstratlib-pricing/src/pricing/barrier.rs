@@ -5,12 +5,10 @@
 ******************************************************************************/
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub,
-};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{BarrierType, OptionStyle, OptionType};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -178,12 +176,16 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
     )?;
 
     // Shared discount factors: every closure below uses both.
-    let discount_q = d_exp(
-        d_mul(-q, t, "pricing::barrier::neg_qt")?,
+    let discount_q = discount_factor(
+        q,
+        t,
+        "pricing::barrier::neg_qt",
         "pricing::barrier::discount_q",
     )?;
-    let discount_r = d_exp(
-        d_mul(-r, t, "pricing::barrier::neg_rt")?,
+    let discount_r = discount_factor(
+        r,
+        t,
+        "pricing::barrier::neg_rt",
         "pricing::barrier::discount_r",
     )?;
 

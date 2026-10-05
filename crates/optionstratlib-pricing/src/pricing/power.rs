@@ -20,7 +20,7 @@
 //! - Structured products with non-linear payoffs
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::big_n;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_mul, d_sub};

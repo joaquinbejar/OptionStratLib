@@ -1005,6 +1005,47 @@ def forbidden_package_violations(trees: dict[tuple[str, str], set[str]]) -> list
     return found
 
 
+# Allowed internal module edges inside an extracted crate, per top-level
+# module (the file stem directly under `src/`). A module may always reference
+# itself. Production code only: `#[cfg(test)]` items are skipped, as in the
+# facade scan. In `optionstratlib-pricing`, `kernels` holds the formulas the
+# pricing models and the Greeks share, so neither imports the other's
+# helpers; the numerical Greeks re-price through `pricing`, never the
+# reverse (#523). Like the facade scan, this reads `crate::` paths only: a
+# relative `super::super::greeks::d1` import is not seen, so internal
+# imports in these crates use `crate::` paths.
+INTRA_CRATE_RULES: dict[str, dict[str, frozenset[str]]] = {
+    "optionstratlib-pricing": {
+        "error": frozenset({"error"}),
+        "kernels": frozenset({"error"}),
+        "pricing": frozenset({"kernels", "error"}),
+        "greeks": frozenset({"kernels", "pricing", "error"}),
+        "volatility": frozenset({"kernels", "pricing", "greeks", "error"}),
+    },
+}
+
+
+def intra_crate_violations(crate: str, src: Path, rules: dict[str, frozenset[str]]) -> list[str]:
+    """Internal edges of one crate that its INTRA_CRATE_RULES entry forbids."""
+    found = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        top = rel.split("/")[0].removesuffix(".rs")
+        if top == "lib":
+            continue
+        allowed = rules.get(top)
+        if allowed is None:
+            found.append(f"{crate}: module {top!r} ({rel}) has no INTRA_CRATE_RULES entry")
+            continue
+        text = "\n".join(production_lines(strip_comments(path.read_text(), exempt_marked=False)))
+        for target in sorted(set(module_targets(text))):
+            module = target.split("/")[0]
+            if module not in rules or module == top or module in allowed:
+                continue
+            found.append(f"{crate}: {rel} ({top}) -> {module}")
+    return found
+
+
 def foundational_violations(metadata: dict) -> list[str]:
     """Misaligned requirements or duplicate resolved versions of a foundational crate."""
     found: list[str] = []
@@ -1534,6 +1575,29 @@ def self_test() -> int:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: forbidden packages, {name} (expected {expected}, got {got})")
 
+    pricing_rules = INTRA_CRATE_RULES["optionstratlib-pricing"]
+    intra_cases = {
+        "pricing uses kernels": ({"pricing/a.rs": "use crate::kernels::big_n;\n"}, 0),
+        "pricing uses greeks": ({"pricing/a.rs": "use crate::greeks::big_n;\n"}, 1),
+        "grouped pricing -> greeks": ({"pricing/a.rs": "use crate::{error::PricingError, greeks::d1};\n"}, 1),
+        "greeks re-prices through pricing": ({"greeks/numerical.rs": "use crate::pricing::price_option_with;\n"}, 0),
+        "kernels uses pricing": ({"kernels.rs": "use crate::pricing::black_scholes;\n"}, 1),
+        "test-only edge": ({"pricing/a.rs": "#[cfg(test)]\nmod t {\n    use crate::greeks::delta;\n}\n"}, 0),
+        "unknown module": ({"extra.rs": "fn f() {}\n"}, 1),
+    }
+    for name, (files, expected) in intra_cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            for rel, content in files.items():
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            got = len(intra_crate_violations("optionstratlib-pricing", root, pricing_rules))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: internal edges, {name} (expected {expected}, got {got})")
+
     redefinition_cases = {
         "facade model file once core is a crate": (["model/x.rs"], [pkg("optionstratlib-core")], 1),
         "facade core error file once core is a crate": (["error/decimal.rs"], [pkg("optionstratlib-core")], 1),
@@ -1629,6 +1693,14 @@ def main() -> int:
         ("facade files in a layer that a workspace crate owns (one canonical definition):",
          facade_redefinitions(SRC, packages)),
     ]
+    for crate, rules in sorted(INTRA_CRATE_RULES.items()):
+        package = next((p for p in packages if p["name"] == crate), None)
+        crate_rules.append((
+            f"forbidden internal module edges in {crate} (#523):",
+            intra_crate_violations(crate, Path(package["manifest_path"]).parent / "src", rules)
+            if package is not None
+            else [f"{crate}: listed in INTRA_CRATE_RULES but not a workspace member"],
+        ))
     trees = {
         (crate, label): resolved_tree(SRC.parent, crate, all_features)
         for crate in sorted(FORBIDDEN_PACKAGES)
@@ -1654,6 +1726,7 @@ def main() -> int:
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
     print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
+    print(f"OK: internal module edges acyclic in {', '.join(sorted(INTRA_CRATE_RULES))}")
     print(f"OK: no forbidden package in {', '.join(sorted({c for c, _ in trees})) or 'any component'} (default and all features)")
     return 0
 

@@ -20,9 +20,9 @@
 //! - Interest rate markets (yield curve spreads)
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -203,16 +203,20 @@ fn kirk_approximation(
 
     let s1_pv = d_mul(
         s1,
-        d_exp(
-            d_mul(-q1, t, "pricing::spread::kirk::neg_q1t")?,
+        discount_factor(
+            q1,
+            t,
+            "pricing::spread::kirk::neg_q1t",
             "pricing::spread::kirk::dividend_discount",
         )?,
         "pricing::spread::kirk::s1_pv",
     )?;
     let adjusted_strike_pv = d_mul(
         adjusted_strike,
-        d_exp(
-            d_mul(-r, t, "pricing::spread::kirk::neg_rt")?,
+        discount_factor(
+            r,
+            t,
+            "pricing::spread::kirk::neg_rt",
             "pricing::spread::kirk::discount",
         )?,
         "pricing::spread::kirk::adjusted_strike_pv",
@@ -362,16 +366,20 @@ fn margrabe_formula(
 
     let s1_pv = d_mul(
         s1,
-        d_exp(
-            d_mul(-q1, t, "pricing::spread::margrabe::neg_q1t")?,
+        discount_factor(
+            q1,
+            t,
+            "pricing::spread::margrabe::neg_q1t",
             "pricing::spread::margrabe::discount1",
         )?,
         "pricing::spread::margrabe::s1_pv",
     )?;
     let s2_pv = d_mul(
         s2,
-        d_exp(
-            d_mul(-q2, t, "pricing::spread::margrabe::neg_q2t")?,
+        discount_factor(
+            q2,
+            t,
+            "pricing::spread::margrabe::neg_q2t",
             "pricing::spread::margrabe::discount2",
         )?,
         "pricing::spread::margrabe::s2_pv",

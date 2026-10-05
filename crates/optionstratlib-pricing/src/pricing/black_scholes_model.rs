@@ -4,7 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::error::PricingError;
-use crate::greeks::{big_n, calculate_d_values};
+use crate::kernels::{big_n, calculate_d_values, d_values_and_time};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -72,7 +72,7 @@ use tracing::{instrument, trace};
     side = ?option.side,
 ))]
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
-    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
+    let (d1, d2, expiry_time) = d_values_and_time(option, calculate_d_values)?;
     match option.option_type {
         OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
         OptionType::American => Err(PricingError::unsupported_option_type(
@@ -159,25 +159,6 @@ fn calculate_long_position(
     }
 }
 
-/// Calculates the d1 and d2 values along with the time to expiry for an option.
-///
-/// # Parameters:
-/// - `option`: A reference to an instance of `Options` that contains the option details.
-/// - `time_to_expiry`: An optional `f64` value representing the already known time to expiry.
-///   If not provided, it will be calculated based on the current date and the option's expiration date.
-///
-/// # Returns:
-/// A tuple containing:
-/// - `d1`: The first value computed based on the option's details and time to expiry.
-/// - `d2`: The second value computed based on the option's details and time to expiry.
-/// - `time_to_expiry`: The calculated or given time to expiry in years.
-///
-fn calculate_d1_d2_and_time(option: &Options) -> Result<(Decimal, Decimal, Decimal), PricingError> {
-    let calculated_time_to_expiry: Decimal = option.time_to_expiration()?.to_dec();
-    let (d1, d2) = calculate_d_values(option)?;
-    Ok((d1, d2, calculated_time_to_expiry))
-}
-
 /// Calculates the price of a call option using the Black-Scholes formula.
 ///
 /// # Parameters
@@ -212,6 +193,8 @@ fn calculate_call_option_price(
     // `Decimal::exp` panics on overflow and on underflow; the checked
     // helper flushes an underflowing discount factor to zero, which is its
     // limit, and reports a genuine overflow as an error.
+    // Not `kernels::discount_factor`: both exponents are formed before either
+    // `exp`, so the shared two-step kernel would reorder the checked steps.
     let discount_q = d_exp(qt, "pricing::black_scholes::call::exp_qt")?;
     let discount_r = d_exp(rt, "pricing::black_scholes::call::exp_rt")?;
     let s_discounted = d_mul(
@@ -289,6 +272,8 @@ fn calculate_put_option_price(
         "pricing::black_scholes::put::qt",
     )?;
     let rt = d_mul(-option.risk_free_rate, t, "pricing::black_scholes::put::rt")?;
+    // Not `kernels::discount_factor`: both exponents are formed before either
+    // `exp`, so the shared two-step kernel would reorder the checked steps.
     let discount_q = d_exp(qt, "pricing::black_scholes::put::exp_qt")?;
     let discount_r = d_exp(rt, "pricing::black_scholes::put::exp_rt")?;
     let s_discounted = d_mul(

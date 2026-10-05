@@ -10,7 +10,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d2};
+use crate::kernels::{big_n, d2, discount_factor};
 use crate::pricing::binomial_model::BinomialPricingParams;
 use crate::pricing::constants::{CLAMP_MAX, CLAMP_MIN};
 use optionstratlib_core::error::decimal::DecimalError;
@@ -266,12 +266,10 @@ pub(crate) fn calculate_discount_factor(
     int_rate: Decimal,
     dt: Decimal,
 ) -> Result<Decimal, DecimalError> {
-    d_exp(
-        d_mul(
-            -int_rate,
-            dt,
-            "pricing::binomial::discount_factor::exponent",
-        )?,
+    discount_factor(
+        int_rate,
+        dt,
+        "pricing::binomial::discount_factor::exponent",
         "pricing::binomial::discount_factor",
     )
 }
@@ -479,13 +477,10 @@ pub(crate) fn calculate_discounted_payoff(
     // that an overflow on `-rate * expiry` is tagged rather than
     // saturating silently before `.exp()` compresses it back into a
     // bounded range.
-    let discount_exponent = d_mul(
-        -params.int_rate,
+    let discount = discount_factor(
+        params.int_rate,
         params.expiry.to_dec(),
         "pricing::binomial::discounted_payoff::discount_exponent",
-    )?;
-    let discount = d_exp(
-        discount_exponent,
         "pricing::binomial::discounted_payoff::discount",
     )?;
     let discounted_payoff = d_mul(

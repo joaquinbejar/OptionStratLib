@@ -28,7 +28,7 @@
 //! assuming S=1 at the start of each period effectively.
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
@@ -160,8 +160,10 @@ fn price_period(
     // S_0 * e^(-q * t_start) is the present value of the expected S_{t_prev}
     let s_prev_pv = d_mul(
         s0,
-        d_exp(
-            d_mul(-q, t_start_dec, "pricing::cliquet::period::neg_q_t_start")?,
+        discount_factor(
+            q,
+            t_start_dec,
+            "pricing::cliquet::period::neg_q_t_start",
             "pricing::cliquet::period::dividend_discount",
         )?,
         "pricing::cliquet::period::s_prev_pv",
@@ -203,8 +205,10 @@ fn price_period(
 
     let floor_part = d_mul(
         floor,
-        d_exp(
-            d_mul(-r, dt_dec, "pricing::cliquet::period::neg_r_dt")?,
+        discount_factor(
+            r,
+            dt_dec,
+            "pricing::cliquet::period::neg_r_dt",
             "pricing::cliquet::period::discount",
         )?,
         "pricing::cliquet::period::floor_part",
@@ -233,12 +237,16 @@ fn call_price_on_unit(
     t: Decimal,
     k: Decimal,
 ) -> Result<Decimal, PricingError> {
-    let dividend_discount = d_exp(
-        d_mul(-q, t, "pricing::cliquet::unit_call::neg_qt")?,
+    let dividend_discount = discount_factor(
+        q,
+        t,
+        "pricing::cliquet::unit_call::neg_qt",
         "pricing::cliquet::unit_call::dividend_discount",
     )?;
-    let discount = d_exp(
-        d_mul(-r, t, "pricing::cliquet::unit_call::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t,
+        "pricing::cliquet::unit_call::neg_rt",
         "pricing::cliquet::unit_call::discount",
     )?;
 
