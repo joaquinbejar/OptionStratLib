@@ -129,3 +129,9 @@ pub use option::Options;
 pub use position::Position;
 pub use trade::{Trade, TradeAble, TradeStatus, TradeStatusAble, save_trades};
 pub use types::{OptionStyle, OptionType, RainbowType, Side};
+
+/// `Positive`, the non-negative decimal newtype, and its error. Defined by the
+/// standalone `positive` crate and re-exported unchanged: a value obtained
+/// through this path *is* a `positive::Positive` (see the crate-level
+/// "Foundational types" table).
+pub use positive::{Positive, PositiveError};

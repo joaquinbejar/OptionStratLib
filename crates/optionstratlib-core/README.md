@@ -14,6 +14,12 @@ market data, strategy or presentation code.
 Monetary values are `rust_decimal::Decimal` or `positive::Positive`, and
 arithmetic on them is checked.
 
+`Positive`, `ExpirationDate`, `Side`, `OptionStyle`, `OptionType` and the
+other foundational types come from the standalone `positive`,
+`expiration_date`, `financial_types` and `option_type` crates. Core
+re-exports them unchanged (the crate docs list every path), so a value from
+any of those paths is the original type and needs no conversion.
+
 ## Features
 
 | Feature  | Default | Effect                                                              |

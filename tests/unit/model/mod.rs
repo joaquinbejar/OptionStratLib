@@ -5,3 +5,4 @@
 ******************************************************************************/
 
 mod capability_traits_test;
+mod foundational_identity_test;

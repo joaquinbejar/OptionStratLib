@@ -24,6 +24,28 @@
 //! Monetary values are [`rust_decimal::Decimal`] or [`positive::Positive`],
 //! and arithmetic on them is checked.
 //!
+//! ## Foundational types
+//!
+//! Four standalone crates define the newtypes and enums every OptionStratLib
+//! crate shares. Core depends on them and re-exports their types unchanged,
+//! never wrapping or copying one, so a value reached through any path below
+//! is the same type as the original and needs no conversion. Each crate
+//! resolves to a single version across the workspace (`make check-graph`).
+//!
+//! | Type | Defining crate | Re-exported at |
+//! | --- | --- | --- |
+//! | `Positive`, `PositiveError` | `positive` | `optionstratlib_core::model`, `optionstratlib::model`; `Positive` also in `optionstratlib::prelude` |
+//! | `pos_or_panic!`, `spos!`, `assert_pos_relative_eq!` | `positive` | `optionstratlib_core`, `optionstratlib::prelude` |
+//! | `ExpirationDate`, `ExpirationDateError` | `expiration_date` | `optionstratlib_core::model`, `optionstratlib::model`; `ExpirationDate` also at the `optionstratlib` root and in its prelude |
+//! | `Side`, `OptionStyle`, `Action`, `UnderlyingAssetType` | `financial_types` | `optionstratlib_core::model::types`; `Side` and `OptionStyle` also in `optionstratlib_core::model` and at the `optionstratlib` root; `Side`, `OptionStyle` and `Action` in its prelude |
+//! | `OptionType`, `OptionBasicType`, `AsianAveragingType`, `BarrierType`, `BinaryType`, `LookbackType`, `RainbowType` | `option_type` | `optionstratlib_core::model::types`; `OptionType` and `RainbowType` also in `optionstratlib_core::model` and at the `optionstratlib` root; `OptionType` in its prelude |
+//! | `StrictlyPositive`, `PositiveResult`, the `positive::constants`; `ParseEnumError`; the day-count conventions (`DayCount`, `Actual360`, `Actual365Fixed`, `Thirty360US`) | `positive`; `financial_types`; `expiration_date` | not re-exported: name them through the defining crate |
+//!
+//! The facade's `optionstratlib::model` *is* `optionstratlib_core::model`, so
+//! every core path above is also reachable with the `optionstratlib::model`
+//! prefix. Enabling `schema` adds `ToSchema` impls to these types; it does not
+//! change which type a path names.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the core types
@@ -42,6 +64,8 @@ pub mod utils;
 
 /// Library-wide numeric constants, market conventions and time units.
 pub mod constants;
+
+pub use positive::{assert_pos_relative_eq, pos_or_panic, spos};
 
 /// Version of the `optionstratlib-core` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

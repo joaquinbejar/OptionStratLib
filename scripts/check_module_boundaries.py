@@ -40,7 +40,14 @@ checks apply, both read from `cargo metadata`:
   layer that a workspace crate now owns, so a moved module cannot grow a
   second copy in the facade.
 
-Both read `cargo metadata --no-deps`, so `make check-graph` needs a Rust
+* the foundational crates (`positive`, `expiration_date`, `financial_types`,
+  `option_type`): every workspace package that names one asks for the same
+  version requirement, the resolved graph holds a single version of each,
+  and no component other than core (and, until its modules are extracted,
+  the facade) depends on one directly, so every crate agrees on what
+  `Positive` or `Side` is (ADR-0001 D8, #515).
+
+All three read `cargo metadata`, so `make check-graph` needs a Rust
 toolchain on the PATH; a failing `cargo metadata` fails the check.
 
 Exit status is 1 on any other cross-layer edge, 0 otherwise. Run
@@ -905,21 +912,66 @@ def marked_lines(src: Path = SRC) -> dict[str, int]:
     return counts
 
 
-def workspace_packages(root: Path) -> list[dict]:
-    """Workspace members with their declared dependencies, from `cargo metadata`."""
+def cargo_metadata(root: Path) -> dict:
+    """The resolved `cargo metadata` of the workspace (members and every dependency)."""
     import json
     import subprocess
 
     out = subprocess.run(
         [
-            "cargo", "metadata", "--format-version", "1", "--no-deps",
+            "cargo", "metadata", "--format-version", "1",
             "--manifest-path", str(root / "Cargo.toml"),
         ],
         check=True,
         capture_output=True,
         text=True,
     )
-    return json.loads(out.stdout)["packages"]
+    return json.loads(out.stdout)
+
+
+def workspace_packages(metadata: dict) -> list[dict]:
+    """Workspace members with their declared dependencies."""
+    members = set(metadata["workspace_members"])
+    return [p for p in metadata["packages"] if p["id"] in members]
+
+
+# The standalone crates that define the shared newtypes and enums (ADR-0001
+# D8). Every workspace package that names one must ask for the same version
+# requirement, and the resolved graph must hold a single version of each, or
+# two OptionStratLib crates could disagree on what `Positive` is (#515).
+FOUNDATIONAL = ("positive", "expiration_date", "financial_types", "option_type")
+
+# Components allowed a normal dependency on a foundational crate. ADR-0001 D8
+# names core alone; every other component imports through
+# `optionstratlib_core`. The facade keeps its direct dependencies while its
+# own modules still write `use positive::...`: ADR-0001 D8 rewrites those
+# imports as each module is extracted, and the entry goes with the last one.
+FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
+
+
+def foundational_violations(metadata: dict) -> list[str]:
+    """Misaligned requirements or duplicate resolved versions of a foundational crate."""
+    found: list[str] = []
+    for crate in FOUNDATIONAL:
+        requirements: dict[str, list[str]] = {}
+        for package in workspace_packages(metadata):
+            for dep in package.get("dependencies", []):
+                if dep["name"] == crate:
+                    requirements.setdefault(dep["req"], []).append(package["name"])
+        if len(requirements) > 1:
+            listed = "; ".join(f"{req} in {', '.join(sorted(set(names)))}" for req, names in sorted(requirements.items()))
+            found.append(f"{crate}: workspace packages ask for different versions ({listed})")
+        versions = sorted({p["version"] for p in metadata["packages"] if p["name"] == crate})
+        if len(versions) > 1:
+            found.append(f"{crate}: resolved more than once ({', '.join(versions)})")
+    for package in workspace_packages(metadata):
+        name = package["name"]
+        if not is_component(name) or name in FOUNDATIONAL_DEPENDENTS:
+            continue
+        for dep in package.get("dependencies", []):
+            if dep["name"] in FOUNDATIONAL and (dep.get("kind") or "normal") == "normal":
+                found.append(f"{name} -> {dep['name']}: import it through optionstratlib_core instead")
+    return found
 
 
 def is_component(name: str) -> bool:
@@ -1361,6 +1413,54 @@ def self_test() -> int:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: crate graph, {name} (expected {expected}, got {got})")
 
+    def meta(members: list[dict], resolved: list[tuple[str, str]]) -> dict:
+        for index, member in enumerate(members):
+            member["id"] = f"member-{index}"
+        return {
+            "workspace_members": [m["id"] for m in members],
+            "packages": members + [{"id": f"dep-{n}-{v}", "name": n, "version": v} for n, v in resolved],
+        }
+
+    def declares(name: str, *deps: tuple[str, str]) -> dict:
+        return {"name": name, "dependencies": [{"name": d, "req": r} for d, r in deps]}
+
+    foundational_cases = {
+        "one requirement, one version": (
+            meta([declares("optionstratlib-core", ("positive", "^0.7")), declares("optionstratlib", ("positive", "^0.7"))],
+                 [("positive", "0.7.1")]),
+            0,
+        ),
+        "two requirements": (
+            meta([declares("optionstratlib-core", ("positive", "^0.7")), declares("examples_chain", ("positive", "^0.6"))],
+                 [("positive", "0.7.1")]),
+            1,
+        ),
+        "two resolved versions": (
+            meta([declares("optionstratlib-core", ("positive", "^0.7"))], [("positive", "0.7.1"), ("positive", "0.6.3")]),
+            1,
+        ),
+        "math depends on positive directly": (
+            meta([declares("optionstratlib-core", ("positive", "^0.7")), declares("optionstratlib-math", ("positive", "^0.7"))],
+                 [("positive", "0.7.1")]),
+            1,
+        ),
+        "example consumer may depend on positive": (
+            meta([declares("optionstratlib-core", ("positive", "^0.7")), declares("examples_chain", ("positive", "^0.7"))],
+                 [("positive", "0.7.1")]),
+            0,
+        ),
+        "unrelated duplicate is not ours to check": (
+            meta([declares("optionstratlib-core", ("rand", "^0.10"))], [("rand", "0.10.3"), ("rand", "0.9.2")]),
+            0,
+        ),
+    }
+    for name, (metadata, expected) in foundational_cases.items():
+        got = len(foundational_violations(metadata))
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: foundational crates, {name} (expected {expected}, got {got})")
+
     redefinition_cases = {
         "facade model file once core is a crate": (["model/x.rs"], [pkg("optionstratlib-core")], 1),
         "facade core error file once core is a crate": (["error/decimal.rs"], [pkg("optionstratlib-core")], 1),
@@ -1446,24 +1546,31 @@ def main() -> int:
         for item in ungated:
             print(f"  {item}")
         return 1
-    packages = workspace_packages(SRC.parent)
-    reverse = crate_graph_violations(packages)
-    if reverse:
-        print("forbidden workspace crate dependencies (ADR-0001 D1/D9):")
-        for item in reverse:
-            print(f"  {item}")
-        return 1
-    duplicated = facade_redefinitions(SRC, packages)
-    if duplicated:
-        print("facade files in a layer that a workspace crate owns (one canonical definition):")
-        for item in duplicated:
-            print(f"  {item}")
+    metadata = cargo_metadata(SRC.parent)
+    packages = workspace_packages(metadata)
+    # Report every crate-level rule in one run, then fail once.
+    crate_rules = [
+        ("foundational type crates must resolve once, at one requirement, and only core may "
+         "depend on them (ADR-0001 D8, #515):", foundational_violations(metadata)),
+        ("forbidden workspace crate dependencies (ADR-0001 D1/D9):", crate_graph_violations(packages)),
+        ("facade files in a layer that a workspace crate owns (one canonical definition):",
+         facade_redefinitions(SRC, packages)),
+    ]
+    failed = False
+    for heading, items in crate_rules:
+        if items:
+            failed = True
+            print(heading)
+            for item in items:
+                print(f"  {item}")
+    if failed:
         return 1
     crates = sorted(p["name"] for p in packages if CRATE_LAYER.get(p["name"]) not in (None, "facade"))
     deferred_count = sum(1 for key in DEFERRED if key in present)
     marks = ", ".join(f"{layer}={n}" for layer, n in sorted(marked_lines().items())) or "none"
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
+    print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
     return 0
 
 

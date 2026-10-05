@@ -1,4 +1,7 @@
 pub mod optionstratlib_core
+pub use optionstratlib_core::assert_pos_relative_eq
+pub use optionstratlib_core::pos_or_panic
+pub use optionstratlib_core::spos
 pub mod optionstratlib_core::constants
 pub const optionstratlib_core::constants::EPSILON: rust_decimal::decimal::Decimal
 pub const optionstratlib_core::constants::MAX_VOLATILITY: positive::positive::Positive
@@ -221,6 +224,8 @@ pub use optionstratlib_core::model::ExpirationDate
 pub use optionstratlib_core::model::ExpirationDateError
 pub use optionstratlib_core::model::OptionStyle
 pub use optionstratlib_core::model::OptionType
+pub use optionstratlib_core::model::Positive
+pub use optionstratlib_core::model::PositiveError
 pub use optionstratlib_core::model::RainbowType
 pub use optionstratlib_core::model::Side
 pub mod optionstratlib_core::model::decimal

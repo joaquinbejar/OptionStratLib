@@ -204,6 +204,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`optionstratlib-core` re-exports every foundational type** (#515).
+  `optionstratlib_core::model` now also re-exports `Positive` and
+  `PositiveError`, and the crate root re-exports the `pos_or_panic!`,
+  `spos!` and `assert_pos_relative_eq!` macros, next to the
+  `expiration_date`, `financial_types` and `option_type` re-exports it already
+  had. They are the standalone crates' own types, not wrappers: the core
+  crate docs carry a table of each type's defining crate and every path that
+  reaches it, and compile-time fixtures pass values between the defining
+  crate, core and facade paths with no conversion. `make check-graph` fails
+  when two workspace packages ask for different versions of a foundational
+  crate, when the resolved graph holds two versions of one, or when a
+  component other than core (and, for now, the facade) depends on one
+  directly.
+
 - **A `## Module Boundaries` section in the crate docs** (#507) with the layer
   DAG, the per-file partition of `src/error` and `src/utils`, the single
   feature-gated edge, and the two commands that enforce them. `AGENTS.md` and
