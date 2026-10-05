@@ -34,7 +34,7 @@
 //!
 //! | Type | Defining crate | Re-exported at |
 //! | --- | --- | --- |
-//! | `Positive`, `PositiveError` | `positive` | `optionstratlib_core::model`, `optionstratlib::model`; `Positive` also in `optionstratlib::prelude` |
+//! | `Positive`, `PositiveError`, `is_positive` | `positive` | `optionstratlib_core::model`, `optionstratlib::model`; `Positive` also in `optionstratlib::prelude` |
 //! | `pos_or_panic!`, `spos!`, `assert_pos_relative_eq!` | `positive` | `optionstratlib_core`, `optionstratlib::prelude` |
 //! | `ExpirationDate`, `ExpirationDateError` | `expiration_date` | `optionstratlib_core::model`, `optionstratlib::model`; `ExpirationDate` also at the `optionstratlib` root and in its prelude |
 //! | `Side`, `OptionStyle`, `Action`, `UnderlyingAssetType` | `financial_types` | `optionstratlib_core::model::types`; `Side` and `OptionStyle` also in `optionstratlib_core::model` and at the `optionstratlib` root; `Side`, `OptionStyle` and `Action` in its prelude |

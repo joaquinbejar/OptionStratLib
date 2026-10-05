@@ -46,6 +46,7 @@ async = [
 
 [dependencies]
 optionstratlib-core = { workspace = true, features = ["schema"] }
+optionstratlib-math = { workspace = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 approx = { workspace = true }
 plotly = { workspace = true, default-features = false, optional = true, features = ["static_export_default"] }
@@ -107,6 +108,7 @@ crate-type = ["rlib"]
 [workspace]
 members = [
     "crates/optionstratlib-core",
+    "crates/optionstratlib-math",
     "examples/support",
     "examples/examples_chain",
     "examples/examples_curves",
@@ -136,6 +138,7 @@ homepage = "https://github.com/joaquinbejar/OptionStratLib"
 # (ADR-0001 D1, caret requirement on the lockstep version).
 optionstratlib = { path = ".", version = "0.22.0" }
 optionstratlib-core = { path = "crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-math = { path = "crates/optionstratlib-math", version = "0.22.0" }
 tracing = "0.1"
 rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"

@@ -149,9 +149,8 @@ impl Plottable for Curve {
 ///   and configuration builder.
 ///
 /// # Modules
-/// Code related to this implementation exists within the
-/// `crate::curves::visualization::plotters` module, and it works in conjunction with the
-/// `Curve` struct, `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
+/// This implementation works in conjunction with the `Curve` struct,
+/// `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
 /// required to create, configure, and render curve plots.
 impl Plottable for Vec<Curve> {
     type Error = CurveError;

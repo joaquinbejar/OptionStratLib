@@ -23,6 +23,8 @@ test:
 	LOGLEVEL=WARN cargo test
 	LOGLEVEL=WARN cargo test -p optionstratlib-core
 	LOGLEVEL=WARN cargo test -p optionstratlib-core --all-features
+	LOGLEVEL=WARN cargo test -p optionstratlib-math
+	LOGLEVEL=WARN cargo test -p optionstratlib-math --all-features
 	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
@@ -251,7 +253,7 @@ print-public-api-pins:
 # Workspace component crates with their own snapshot, `public-api/<crate>.txt`.
 # The facade re-exports their modules, and `cargo public-api` does not inline
 # another crate's items, so each component is tracked on its own.
-PUBLIC_API_CRATES := optionstratlib-core
+PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math
 
 .PHONY: public-api-update
 public-api-update: check-cargo-public-api
@@ -315,7 +317,7 @@ pre-push: fix fmt lint-fix test readme doc
 # `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core
+	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math
 
 .PHONY: doc-open
 doc-open:

@@ -1,0 +1,884 @@
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 26/8/24
+******************************************************************************/
+use crate::error::curves::CurveError;
+use crate::geometrics::HasX;
+use num_traits::FromPrimitive;
+use optionstratlib_core::model::is_positive;
+use rust_decimal::Decimal;
+use rust_decimal::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::fmt::Display;
+use std::hash::{Hash, Hasher};
+
+/// Represents a point in two-dimensional space with `x` and `y` coordinates.
+///
+/// # Overview
+/// The `Point2D` struct is used to define a point in a 2D Cartesian coordinate system.
+/// Both coordinates are stored as `Decimal` values to provide high precision,
+/// making it suitable for applications requiring accurate numerical calculations.
+///
+/// # Usage
+/// This structure serves as a fundamental data type in various geometric operations:
+/// - Defining positions in curve plotting and interpolation
+/// - Representing intersections between curves
+/// - Serving as input/output for mathematical transformations
+/// - Supporting coordinate-based algorithms in the library
+///
+/// # Examples
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib_math::curves::Point2D;
+///
+/// // Create a point at coordinates (3.5, -2.25)
+/// let point = Point2D {
+///     x: dec!(3.5),
+///     y: dec!(-2.25)
+/// };
+/// ```
+///
+/// # Derivable Traits
+/// - `Debug`: Enables formatted debugging output
+/// - `Clone` and `Copy`: Allow efficient duplication of point values
+/// - `Serialize` and `Deserialize`: Support for serialization frameworks
+///
+/// This struct is primarily used in conjunction with the `Curve` and `Curvable` types
+/// to represent mathematical curves and perform geometric operations.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
+pub struct Point2D {
+    /// The x-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
+    /// value to ensure accuracy in mathematical operations.
+    pub x: Decimal,
+
+    /// The y-coordinate in the Cartesian plane, represented as a high-precision `Decimal`
+    /// value to ensure accuracy in mathematical operations.
+    pub y: Decimal,
+}
+
+impl Display for Point2D {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x: {}, y: {})", self.x, self.y)
+    }
+}
+
+/// Two points are equal when both coordinates are equal.
+///
+/// `PartialEq`, `Ord` and `Hash` all read the full `(x, y)` pair, so
+/// `a == b` holds exactly when `a.cmp(&b)` is [`Ordering::Equal`], and equal
+/// points hash alike. `Ord` requires that agreement.
+///
+/// Comparing on `x` alone would also break `Point2D` in its second role: it
+/// is the *index* type of a surface (`AxisOperations<Point3D, Point2D>`),
+/// where it names a coordinate in the xy-plane and `z` is the dependent
+/// value. An x-only `Eq`/`Hash` collapses every column of a surface grid
+/// onto one cell whenever those indices pass through a `HashSet`.
+///
+/// The "one ordinate per abscissa" rule is a property of a *curve*, not of a
+/// point, and it is a container-level invariant that nothing enforces:
+/// [`crate::curves::Curve::new`] stores a repeated abscissa unchanged, and
+/// `points` is a `pub` field, so no constructor could. The rule and what
+/// each consumer does when it is broken are documented on
+/// [`crate::curves::Curve::new`]. A genuinely multi-valued projection is not
+/// a curve at all: [`crate::surfaces::Surface::project_onto`] returns a
+/// `Vec<Point2D>`.
+impl PartialEq for Point2D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+impl Eq for Point2D {}
+
+impl Hash for Point2D {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Delegate to `Decimal`'s own `Hash`, which normalizes first. Hashing
+        // the raw mantissa and scale would give `dec!(1.0)` and `dec!(1.00)`
+        // different hashes even though they compare equal.
+        self.x.hash(state);
+        self.y.hash(state);
+    }
+}
+
+impl PartialOrd for Point2D {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Orders on `(x, y)`, lexicographically: the same pair [`PartialEq`] reads,
+/// so `cmp` returns [`Ordering::Equal`] exactly when the points are equal.
+impl Ord for Point2D {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.x.cmp(&other.x) {
+            Ordering::Equal => self.y.cmp(&other.y),
+            x_ordering => x_ordering,
+        }
+    }
+}
+
+impl Point2D {
+    /// Creates a new instance of `Point2D` using the specified `x` and `y` coordinates.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate of the point, which implements `Into<Decimal>`.
+    /// - `y`: The y-coordinate of the point, which implements `Into<Decimal>`.
+    ///
+    /// # Returns
+    /// A `Point2D` instance with the provided `x` and `y` coordinates, converted into `Decimal`.
+    ///
+    /// # Usage
+    /// This function is used when creating a `Point2D` object from any type that can be converted
+    /// into `Decimal`, allowing flexibility in input types (e.g., `f64`, `i32`, etc.).
+    pub fn new<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Self {
+        Self {
+            x: x.into(),
+            y: y.into(),
+        }
+    }
+
+    /// Converts the `Point2D` instance into a tuple `(T, U)`.
+    ///
+    /// # Parameters
+    /// - `T`: The type for the x-coordinate, which must implement `From<Decimal>` and have a 'static lifetime.
+    /// - `U`: The type for the y-coordinate, which must implement `From<Decimal>` and have a 'static lifetime.
+    ///
+    /// # Returns
+    /// - `Ok`: A tuple `(T, U)` containing the converted `x` and `y` values.
+    /// - `Err`: A `CurvesError` if conversion constraints are violated:
+    ///   - `x` must be positive if `T` is the `Positive` type.
+    ///   - `y` must be positive if `U` is the `Positive` type.
+    ///
+    /// # Errors
+    /// This function returns an error if the positivity constraints are violated or if
+    /// conversions fail due to invalid type requirements.
+    pub fn to_tuple<T: TryFrom<Decimal> + 'static, U: TryFrom<Decimal> + 'static>(
+        &self,
+    ) -> Result<(T, U), CurveError> {
+        if is_positive::<T>() && self.x <= Decimal::ZERO {
+            return Err(CurveError::Point2DError {
+                reason: "x must be positive for type T",
+            });
+        }
+
+        if is_positive::<U>() && self.y <= Decimal::ZERO {
+            return Err(CurveError::Point2DError {
+                reason: "y must be positive for type U",
+            });
+        }
+
+        let x = T::try_from(self.x).map_err(|_| CurveError::Point2DError {
+            reason: "failed to convert x",
+        })?;
+        let y = U::try_from(self.y).map_err(|_| CurveError::Point2DError {
+            reason: "failed to convert y",
+        })?;
+
+        Ok((x, y))
+    }
+
+    /// Creates a new `Point2D` instance from a tuple containing `x` and `y` values.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate, which implements `Into<Decimal>`.
+    /// - `y`: The y-coordinate, which implements `Into<Decimal>`.
+    ///
+    /// # Returns
+    /// - `Ok`: A new `Point2D` instance with the given `x` and `y` coordinates.
+    /// - `Err`: A `CurvesError` if coordinate creation fails.
+    ///
+    /// # Usage
+    /// This function allows constructing a `Point2D` directly from a tuple representation.
+    ///
+    /// # Errors
+    ///
+    /// Currently infallible for the blanket `Into<Decimal>` bounds;
+    /// the `Result` signature is retained so future implementations
+    /// that can reject non-finite or out-of-range conversions (e.g.
+    /// via `TryFrom<f64>`) can surface
+    /// [`CurveError::ConstructionError`] without a breaking change.
+    pub fn from_tuple<T: Into<Decimal>, U: Into<Decimal>>(x: T, y: U) -> Result<Self, CurveError> {
+        Ok(Self::new(x, y))
+    }
+
+    /// Converts the `Point2D` instance into a tuple of `(f64, f64)`.
+    ///
+    /// # Returns
+    /// - `Ok`: A tuple `(f64, f64)` containing the `x` and `y` values.
+    /// - `Err`: A `CurvesError` if either `x` or `y` cannot be converted from
+    ///   `Decimal` to `f64` (e.g., out-of-range value).
+    ///
+    /// # Errors
+    /// Returns a `CurvesError::Point2DError` with a reason explaining the failure.
+    pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurveError> {
+        let x = self.x.to_f64();
+        let y = self.y.to_f64();
+
+        match (x, y) {
+            (Some(x), Some(y)) => Ok((x, y)),
+            _ => Err(CurveError::Point2DError {
+                reason: "Error converting Decimal to f64",
+            }),
+        }
+    }
+
+    /// Creates a new `Point2D` instance from a tuple of `(f64, f64)` values.
+    ///
+    /// # Parameters
+    /// - `x`: The x-coordinate of the point as a `f64`.
+    /// - `y`: The y-coordinate of the point as a `f64`.
+    ///
+    /// # Returns
+    /// - `Ok`: A new `Point2D` instance if both `x` and `y` values can be successfully
+    ///   converted from `f64` to `Decimal`.
+    /// - `Err`: A `CurvesError` if the conversion fails (e.g., invalid precision).
+    ///
+    /// # Errors
+    /// Returns a `CurvesError::Point2DError` with a reason if either `x` or `y` could not be
+    /// converted from `f64`.
+    pub fn from_f64_tuple(x: f64, y: f64) -> Result<Self, CurveError> {
+        let x = Decimal::from_f64(x);
+        let y = Decimal::from_f64(y);
+        match (x, y) {
+            (Some(x), Some(y)) => Ok(Self::new(x, y)),
+            _ => Err(CurveError::Point2DError {
+                reason: "Error converting f64 to Decimal",
+            }),
+        }
+    }
+}
+
+impl From<&Point2D> for Point2D {
+    fn from(point: &Point2D) -> Self {
+        *point
+    }
+}
+
+impl HasX for Point2D {
+    fn get_x(&self) -> Decimal {
+        self.x
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use optionstratlib_core::model::is_positive;
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_is_positive_x_must_be_positive() {
+        let point = Point2D {
+            x: Decimal::ZERO,
+            y: dec!(1.0),
+        };
+
+        let result = if is_positive::<Decimal>() && point.x <= Decimal::ZERO {
+            Err(CurveError::Point2DError {
+                reason: "x must be positive for type T",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_is_positive_y_must_be_positive() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: Decimal::ZERO,
+        };
+
+        let result = if is_positive::<Decimal>() && point.y <= Decimal::ZERO {
+            Err(CurveError::Point2DError {
+                reason: "y must be positive for type U",
+            })
+        } else {
+            Ok(())
+        };
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_to_f64_tuple_success() {
+        let point = Point2D {
+            x: dec!(1.0),
+            y: dec!(2.0),
+        };
+        let result = point.to_f64_tuple();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_f64_tuple_success() {
+        let result = Point2D::from_f64_tuple(1.0, 2.0);
+        assert!(result.is_ok());
+        let point = result.unwrap();
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+    }
+
+    #[test]
+    fn test_from_f64_tuple_error() {
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 2.0);
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    /// Equality reads both coordinates.
+    ///
+    /// This test used to assert `p1 == p3` and `p1 == p4` — that points
+    /// sharing an abscissa were equal whatever their ordinate. That is the
+    /// contract this type no longer has: `test_comparison_operators` below
+    /// asserts `p1 < p3` on the very same two values, and `Ord` requires
+    /// `a == b` exactly when `a.cmp(&b)` is `Equal`. Only one of the two
+    /// could survive, and the ordering is the one the rest of the crate
+    /// relies on (`BTreeSet<Point2D>`, and `Point2D` as a surface index).
+    #[test]
+    fn test_equal() {
+        let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p2 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
+        let p4 = Point2D::from_f64_tuple(1.0, 4.0).unwrap();
+        let p5 = Point2D::from_f64_tuple(2.0, 2.0).unwrap();
+
+        // Both coordinates equal.
+        assert_eq!(p1, p2);
+        // Same abscissa, different ordinate: distinct points.
+        assert_ne!(p1, p3);
+        assert_ne!(p1, p4);
+        // Different abscissa.
+        assert_ne!(p1, p5);
+    }
+
+    /// `Eq` and `Ord` agree, which is what `Ord` requires of an implementor.
+    #[test]
+    fn test_eq_agrees_with_ord() {
+        let p1 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p2 = Point2D::from_f64_tuple(1.0, 2.0).unwrap();
+        let p3 = Point2D::from_f64_tuple(1.0, 3.0).unwrap();
+
+        assert_eq!(p1.cmp(&p2), Ordering::Equal);
+        assert_eq!(p1 == p2, p1.cmp(&p2) == Ordering::Equal);
+        assert_eq!(p1 == p3, p1.cmp(&p3) == Ordering::Equal);
+    }
+
+    /// `Hash` agrees with `Eq`, including across `Decimal` scales: `1.0` and
+    /// `1.00` compare equal, so they must hash alike. The previous
+    /// implementation hashed the raw mantissa and scale and failed this.
+    #[test]
+    fn test_hash_agrees_with_eq() {
+        use std::collections::HashSet;
+
+        let p1 = Point2D::new(dec!(1.0), dec!(2.0));
+        let scaled = Point2D::new(dec!(1.00), dec!(2.000));
+        let other_y = Point2D::new(dec!(1.0), dec!(3.0));
+
+        assert_eq!(p1, scaled);
+        assert_ne!(p1, other_y);
+
+        let set: HashSet<Point2D> = [p1, scaled, other_y].into_iter().collect();
+        // `p1` and `scaled` are one entry; `other_y` is a second.
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&p1));
+        assert!(set.contains(&other_y));
+    }
+}
+
+#[cfg(test)]
+mod tests_point2d_serde {
+    use super::*;
+    use rust_decimal_macros::dec;
+    use serde_json::Value;
+
+    #[test]
+    fn test_basic_serialization() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+    }
+
+    #[test]
+    fn test_zero_values() {
+        let point = Point2D {
+            x: dec!(0.0),
+            y: dec!(0.0),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_negative_values() {
+        let point = Point2D {
+            x: dec!(-1.5),
+            y: dec!(-2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_high_precision_values() {
+        let point = Point2D {
+            x: dec!(1.12345678901234567890),
+            y: dec!(2.12345678901234567890),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point.x, deserialized.x);
+        assert_eq!(point.y, deserialized.y);
+    }
+
+    #[test]
+    fn test_json_structure() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let json_value: Value = serde_json::from_str(&serialized).unwrap();
+
+        // Verify JSON structure
+        assert!(json_value.is_object());
+        assert_eq!(json_value.as_object().unwrap().len(), 2);
+        assert!(json_value.get("x").is_some());
+        assert!(json_value.get("y").is_some());
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let point = Point2D {
+            x: dec!(1.5),
+            y: dec!(2.5),
+        };
+
+        let serialized = serde_json::to_string_pretty(&point).unwrap();
+
+        // Verify pretty print format
+        assert!(serialized.contains('\n'));
+        assert!(serialized.contains("  "));
+
+        // Verify we can still deserialize pretty-printed JSON
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_deserialize_from_integers() {
+        let json_str = r#"{"x": 1, "y": 2}"#;
+        let point: Point2D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.0));
+        assert_eq!(point.y, dec!(2.0));
+    }
+
+    #[test]
+    fn test_deserialize_from_strings() {
+        let json_str = r#"{"x": "1.5", "y": "2.5"}"#;
+        let point: Point2D = serde_json::from_str(json_str).unwrap();
+
+        assert_eq!(point.x, dec!(1.5));
+        assert_eq!(point.y, dec!(2.5));
+    }
+
+    #[test]
+    fn test_invalid_json() {
+        // Missing field
+        let json_str = r#"{"x": 1.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+
+        // Invalid number format
+        let json_str = r#"{"x": "invalid", "y": 2.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+
+        // Wrong data type
+        let json_str = r#"{"x": true, "y": 2.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_max_values() {
+        let point = Point2D {
+            x: Decimal::MAX,
+            y: Decimal::MAX,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_min_values() {
+        let point = Point2D {
+            x: Decimal::MIN,
+            y: Decimal::MIN,
+        };
+
+        let serialized = serde_json::to_string(&point).unwrap();
+        let deserialized: Point2D = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_json_to_vec() {
+        let points = vec![
+            Point2D {
+                x: dec!(1.0),
+                y: dec!(2.0),
+            },
+            Point2D {
+                x: dec!(3.0),
+                y: dec!(4.0),
+            },
+        ];
+
+        let serialized = serde_json::to_string(&points).unwrap();
+        let deserialized: Vec<Point2D> = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(points, deserialized);
+    }
+
+    #[test]
+    fn test_duplicate_fields() {
+        let json_str = r#"{"x": 1.5, "y": 2.5, "x": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extra_fields() {
+        let json_str = r#"{"x": 1.5, "y": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_unknown_fields() {
+        let json_str = r#"{"x": 1.5, "r": 2.5, "z": 3.5}"#;
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_array() {
+        let json_str = "[1.5, 2.5]";
+        let result = serde_json::from_str::<Point2D>(json_str);
+        assert!(result.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_edge_cases {
+    use super::*;
+    use optionstratlib_core::model::Positive;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_to_tuple_positive_constraint_x() {
+        // Create a point with negative x
+        let point = Point2D::new(dec!(-1.0), dec!(2.0));
+
+        // Try to convert to a tuple where T must be positive
+        let result: Result<(Positive, Decimal), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "x must be positive for type T");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_to_tuple_positive_constraint_y() {
+        // Create a point with negative y
+        let point = Point2D::new(dec!(1.0), dec!(-2.0));
+
+        // Try to convert to a tuple where U must be positive
+        let result: Result<(Decimal, Positive), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "y must be positive for type U");
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
+    fn test_to_tuple_positive_constraint_both_pass() {
+        // Create a point with positive x and y
+        let point = Point2D::new(dec!(1.0), dec!(2.0));
+
+        // Try to convert to a tuple where both T and U must be positive
+        let result: Result<(Positive, Positive), _> = point.to_tuple();
+
+        // Should succeed
+        assert!(result.is_ok());
+        let (x, y) = result.unwrap();
+        assert_eq!(x.value(), dec!(1.0));
+        assert_eq!(y.value(), dec!(2.0));
+    }
+
+    #[test]
+    fn test_debug_output() {
+        let point = Point2D::new(dec!(3.5), dec!(-2.25));
+        let debug_str = format!("{point:?}");
+
+        // Debug output should contain both x and y values
+        assert!(debug_str.contains("3.5"));
+        assert!(debug_str.contains("-2.25"));
+    }
+
+    /// Ordering is lexicographic on `(x, y)`.
+    ///
+    /// The `p1 < p3` block below is unchanged, but it used to contradict
+    /// `test_equal`, which asserted `p1 == p3` on the same two values: a
+    /// point could be both equal to and less than another. `PartialEq` now
+    /// reads `y` as well, so the two tests agree.
+    #[test]
+    fn test_comparison_operators() {
+        let p1 = Point2D::new(dec!(1.0), dec!(2.0));
+        let p2 = Point2D::new(dec!(2.0), dec!(1.0));
+        let p3 = Point2D::new(dec!(1.0), dec!(3.0));
+
+        // Test comparison operators
+        assert!(p1 < p2);
+        assert!(p1 <= p2);
+        assert!(p2 > p1);
+        assert!(p2 >= p1);
+
+        // Same x, different y: ordered by y, and not equal.
+        assert!(p1 < p3);
+        assert!(p1 <= p3);
+        assert!(p3 > p1);
+        assert!(p3 >= p1);
+        assert_ne!(p1, p3);
+    }
+
+    /// Sorting keeps both coordinates: by `x` first, then by `y`.
+    ///
+    /// This test is unchanged and is the reason an x-only `Ord` was not an
+    /// option: the two points at `x = 1` must sort by their ordinate, not
+    /// land in whatever order the input happened to have.
+    #[test]
+    fn test_ordering_consistency() {
+        let points = vec![
+            Point2D::new(dec!(3.0), dec!(1.0)),
+            Point2D::new(dec!(1.0), dec!(3.0)),
+            Point2D::new(dec!(2.0), dec!(2.0)),
+            Point2D::new(dec!(1.0), dec!(1.0)),
+        ];
+
+        let mut sorted = points.clone();
+        sorted.sort();
+
+        // Expect points to be sorted by x-coordinate first, then by y
+        assert_eq!(sorted[0].x, dec!(1.0));
+        assert_eq!(sorted[0].y, dec!(1.0));
+
+        assert_eq!(sorted[1].x, dec!(1.0));
+        assert_eq!(sorted[1].y, dec!(3.0));
+
+        assert_eq!(sorted[2].x, dec!(2.0));
+        assert_eq!(sorted[2].y, dec!(2.0));
+
+        assert_eq!(sorted[3].x, dec!(3.0));
+        assert_eq!(sorted[3].y, dec!(1.0));
+    }
+}
+
+#[cfg(test)]
+mod tests_performance {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    #[ignore]
+    fn test_creation_performance() {
+        let start = Instant::now();
+
+        for i in 0..10000 {
+            let x = Decimal::from(i);
+            let y = Decimal::from(i * 2);
+            let _ = Point2D::new(x, y);
+        }
+
+        let duration = start.elapsed();
+        // Ensure creation is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(100));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_to_tuple_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))
+            .collect();
+
+        let start = Instant::now();
+
+        for point in &points {
+            let _: Result<(Decimal, Decimal), _> = point.to_tuple();
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(100));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_comparison_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i % 100), Decimal::from(i / 100)))
+            .collect();
+
+        let start = Instant::now();
+
+        // Sort points (exercises comparison operators)
+        let mut sorted = points.clone();
+        sorted.sort();
+
+        let duration = start.elapsed();
+        // Ensure sorting is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_from_f64_tuple_performance() {
+        let start = Instant::now();
+
+        for i in 0..10000 {
+            let _ = Point2D::from_f64_tuple(i as f64, (i * 2) as f64);
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_to_f64_tuple_performance() {
+        let points: Vec<Point2D> = (0..10000)
+            .map(|i| Point2D::new(Decimal::from(i), Decimal::from(i * 2)))
+            .collect();
+
+        let start = Instant::now();
+
+        for point in &points {
+            let _ = point.to_f64_tuple();
+        }
+
+        let duration = start.elapsed();
+        // Ensure conversion is reasonably fast (adjust threshold as needed)
+        assert!(duration < Duration::from_millis(200));
+    }
+}
+
+#[cfg(test)]
+mod tests_point2d_specific_cases {
+    use super::*;
+    use optionstratlib_core::model::Positive;
+
+    use crate::error::CurveError;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_to_tuple_positive_constraints() {
+        // Create a point with non-positive x (x = 0)
+        let point = Point2D::new(dec!(0.0), dec!(1.0));
+
+        // Test conversion where T must be positive
+        let result: Result<(Positive, Decimal), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "x must be positive for type T");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+
+        // Create a point with non-positive y (y = 0)
+        let point = Point2D::new(dec!(1.0), dec!(0.0));
+
+        // Test conversion where U must be positive
+        let result: Result<(Decimal, Positive), _> = point.to_tuple();
+
+        // Should fail with appropriate error
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "y must be positive for type U");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+    }
+
+    #[test]
+    fn test_from_f64_tuple_error_handling() {
+        // Test with invalid f64 values (infinity)
+        let result = Point2D::from_f64_tuple(f64::INFINITY, 1.0);
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+
+        // Test with NaN
+        let result = Point2D::from_f64_tuple(1.0, f64::NAN);
+        assert!(result.is_err());
+        match result {
+            Err(CurveError::Point2DError { reason }) => {
+                assert_eq!(reason, "Error converting f64 to Decimal");
+            }
+            _ => panic!("Expected Point2DError"),
+        }
+    }
+}

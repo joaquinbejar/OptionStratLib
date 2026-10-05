@@ -1,0 +1,406 @@
+/******************************************************************************
+    Author: Joaquín Béjar García
+    Email: jb@taunais.com
+    Date: 24/12/25
+******************************************************************************/
+
+//! Owned by `optionstratlib-math` (ADR-0001 D6, roadmap M1-14): `CurveError`.
+
+use crate::error::InterpolationError;
+use optionstratlib_core::error::OperationErrorKind;
+use optionstratlib_core::error::{OptionsError, PositionError};
+use thiserror::Error;
+
+/// Represents different types of errors that can occur in the `curves` module.
+///
+/// This enum categorizes errors that may be encountered when working with curve-related
+/// operations such as interpolation, construction, analysis, and other mathematical
+/// operations on curves and points.
+///
+/// # Variants
+///
+/// ## `Point2DError`
+/// Represents errors related to 2D point operations.
+///
+/// * `reason` - A static string explaining the specific point-related issue.
+///
+/// This variant is used for fundamental issues with points like invalid coordinates,
+/// missing values, or formatting problems.
+///
+/// ## `OperationError`
+/// Encapsulates general operational errors.
+///
+/// * `OperationErrorKind` - The specific kind of operation failure (see `OperationErrorKind` enum).
+///
+/// Used when an operation fails due to unsupported features or invalid parameters.
+///
+/// ## `StdError`
+/// Wraps standard errors with additional context.
+///
+/// * `reason` - A dynamic string providing detailed error information.
+///
+/// Suitable for general error cases where specialized variants don't apply.
+///
+/// ## `InterpolationError`
+/// Indicates issues during the curve interpolation process.
+///
+/// * `String` - A human-readable explanation of the interpolation failure.
+///
+/// Used when problems occur during data point interpolation or curve generation.
+///
+/// ## `ConstructionError`
+/// Represents errors during the construction of curves or related structures.
+///
+/// * `String` - A description of the construction issue.
+///
+/// Applicable when curve initialization fails due to invalid inputs, unsupported
+/// configurations, or missing required parameters.
+///
+/// ## `AnalysisError`
+/// Captures errors related to curve analysis operations.
+///
+/// * `String` - A detailed explanation of the analysis failure.
+///
+/// Used for failures in analytical methods like curve fitting, differentiation,
+/// or other mathematical operations on curves.
+///
+/// ## `MetricsError`
+/// Represents errors when calculating or processing curve metrics.
+///
+/// * `String` - An explanation of the metrics-related issue.
+///
+/// Used when metric calculations fail due to invalid inputs or computational issues.
+///
+/// # Usage
+///
+/// This error type is designed to be used throughout the `curves` module wherever
+/// operations might fail. It provides structured error information to help diagnose
+/// and handle various failure scenarios.
+///
+/// # Implementation Notes
+///
+/// The error variants are designed to provide useful context for debugging and error handling.
+/// Each variant includes specific information relevant to its error category.
+///
+/// # Examples
+///
+/// ```rust
+/// // Example of creating a construction error
+/// use optionstratlib_math::error::CurveError;
+/// let error = CurveError::ConstructionError("Insufficient points to construct curve".to_string());
+///
+/// // Example of creating a point error
+/// let point_error = CurveError::Point2DError { reason: "Point coordinates out of bounds" };
+/// ```
+#[derive(Error, Debug)]
+pub enum CurveError {
+    /// Error related to 2D point operations
+    #[error("Error: {reason}")]
+    Point2DError {
+        /// Static description of the point-related issue
+        reason: &'static str,
+    },
+
+    /// General operational error
+    #[error("Operation error: {0}")]
+    OperationError(
+        /// The specific kind of operation failure
+        OperationErrorKind,
+    ),
+
+    /// A caller-supplied parametric generator failed.
+    ///
+    /// `ConstructionMethod::Parametric` takes a closure written by the
+    /// caller, so its failure belongs to whichever layer wrote it, and the
+    /// math layer cannot name that type without depending on the layer
+    /// above. The cause therefore travels boxed: it stays reachable through
+    /// `std::error::Error::source` and downcastable to the original type,
+    /// instead of being flattened into a message at the construction
+    /// boundary (roadmap M1-10).
+    #[error("parametric generator failed: {0}")]
+    Generator(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    /// A rendering operation failed. Preserves the backend discriminator so
+    /// callers can distinguish plotters output paths from other backends
+    /// without resorting to a `String` catch-all.
+    #[error("rendering failed ({backend}): {reason}")]
+    RenderError {
+        /// Identifier of the rendering backend that failed (e.g. `"plotters"`).
+        backend: &'static str,
+        /// Detailed, human-readable reason for the failure.
+        reason: String,
+    },
+
+    /// Error during curve interpolation
+    #[error("Interpolation error: {0}")]
+    InterpolationError(
+        /// Description of the interpolation issue
+        String,
+    ),
+
+    /// Error during curve or structure construction
+    #[error("Construction error: {0}")]
+    ConstructionError(
+        /// Details about the construction failure
+        String,
+    ),
+
+    /// Error during curve analysis operations
+    #[error("Analysis error: {0}")]
+    AnalysisError(
+        /// Explanation of the analysis issue
+        String,
+    ),
+
+    /// Error when calculating or processing curve metrics
+    #[error("Metrics error: {0}")]
+    MetricsError(
+        /// Description of the metrics-related issue
+        String,
+    ),
+
+    /// Error from position operations
+    #[error(transparent)]
+    Position(#[from] PositionError),
+
+    /// Error from options operations
+    #[error(transparent)]
+    Options(#[from] OptionsError),
+
+    /// Error from interpolation operations  
+    #[error("Interpolation error: {0}")]
+    InterpolationOp(String),
+}
+
+/// Provides helper methods for constructing specific variants of the `CurvesError` type.
+///
+/// These methods encapsulate common patterns of error creation, making it easier
+/// to consistently generate errors with the necessary context.
+///
+///
+/// ## Integration
+/// - These methods simplify the process of creating meaningful error objects, improving readability
+///   and maintainability of the code using the `CurvesError` type.
+/// - The constructed errors leverage the [`OperationErrorKind`]
+///   to ensure structured and detailed error categorization.
+impl CurveError {
+    /// ### `operation_not_supported`
+    /// Constructs a `CurvesError::OperationError` with an [`OperationErrorKind::NotSupported`] variant.
+    /// - **Parameters:**
+    ///   - `operation` (`&str`): The name of the operation that is not supported.
+    ///   - `reason` (`&str`): A description of why the operation is not supported.
+    /// - **Returns:**
+    ///   - A `CurvesError` containing a `NotSupported` operation error.
+    /// - **Use Cases:**
+    ///   - Invoked when a requested operation is not compatible with the current context.
+    ///   - For example, attempting an unsupported computation method on a specific curve type.
+    ///
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn operation_not_supported(operation: &str, reason: &str) -> Self {
+        CurveError::OperationError(OperationErrorKind::NotSupported {
+            operation: operation.to_string(),
+            reason: reason.to_string(),
+        })
+    }
+
+    /// ### `invalid_parameters`
+    /// Constructs a `CurvesError::OperationError` with an [`OperationErrorKind::InvalidParameters`] variant.
+    /// - **Parameters:**
+    ///   - `operation` (`&str`): The name of the operation that encountered invalid parameters.
+    ///   - `reason` (`&str`): A description of why the parameters are invalid.
+    /// - **Returns:**
+    ///   - A `CurvesError` containing an `InvalidParameters` operation error.
+    /// - **Use Cases:**
+    ///   - Used when an operation fails due to issues with the provided input.
+    ///   - For example, providing malformed or missing parameters for interpolation or curve construction.
+    ///
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn invalid_parameters(operation: &str, reason: &str) -> Self {
+        CurveError::OperationError(OperationErrorKind::InvalidParameters {
+            operation: operation.to_string(),
+            reason: reason.to_string(),
+        })
+    }
+}
+
+/// Type alias representing the result of operations related to curve calculations.
+///
+/// This type alias provides a standardized result type for functions that perform operations
+/// with mathematical curves, including interpolation, construction, analysis, and other
+/// curve-related operations.
+///
+/// # Type Parameters
+///
+/// * `T` - The success value type returned when operations complete successfully.
+///
+/// # Return Value
+///
+/// Returns either:
+/// * `Ok(T)` - The operation completed successfully with a value of type `T`.
+/// * `Err(CurveError)` - The operation failed, with a [`CurveError`] describing the specific failure.
+///
+/// # Usage
+///
+/// This result type is used throughout the curves module to provide consistent error handling
+/// for curve operations. It allows functions to return detailed error information using the
+/// [`CurveError`] enum when operations fail, while returning the expected value when successful.
+///
+pub type CurvesResult<T> = Result<T, CurveError>;
+
+impl CurveError {
+    /// Wraps a caller-supplied parametric generator failure, keeping the
+    /// original error reachable as the variant's `source`.
+    #[cold]
+    #[must_use]
+    pub fn generator<E>(error: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        CurveError::Generator(Box::new(error))
+    }
+}
+
+impl From<InterpolationError> for CurveError {
+    fn from(err: InterpolationError) -> Self {
+        CurveError::InterpolationOp(err.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::error::Error;
+
+    #[test]
+    fn test_curves_error_display() {
+        let error = CurveError::Point2DError {
+            reason: "Invalid coordinates",
+        };
+        assert_eq!(error.to_string(), "Error: Invalid coordinates");
+
+        let error = CurveError::RenderError {
+            backend: "plotters",
+            reason: "rendering failed".to_string(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "rendering failed (plotters): rendering failed"
+        );
+
+        let error = CurveError::operation_not_supported("calculate", "Strategy");
+        assert_eq!(
+            error.to_string(),
+            "Operation error: Operation 'calculate' is not supported for strategy 'Strategy'"
+        );
+    }
+
+    #[test]
+    fn test_operation_not_supported() {
+        let error = CurveError::operation_not_supported("test_op", "TestStrat");
+        match error {
+            CurveError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                reason: strategy_type,
+            }) => {
+                assert_eq!(operation, "test_op");
+                assert_eq!(strategy_type, "TestStrat");
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_invalid_parameters() {
+        let error = CurveError::invalid_parameters("test_op", "invalid input");
+        match error {
+            CurveError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                reason,
+            }) => {
+                assert_eq!(operation, "test_op");
+                assert_eq!(reason, "invalid input");
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_error_trait_implementation() {
+        let error = CurveError::Point2DError {
+            reason: "test error",
+        };
+        let error_ref: &dyn Error = &error;
+        assert_eq!(error_ref.to_string(), "Error: test error");
+    }
+
+    #[test]
+    fn test_render_error_constructor() {
+        let error = CurveError::RenderError {
+            backend: "plotters",
+            reason: "Draw error".to_string(),
+        };
+        match error {
+            CurveError::RenderError { backend, reason } => {
+                assert_eq!(backend, "plotters");
+                assert_eq!(reason, "Draw error");
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_from_position_error() {
+        let position_error = PositionError::unsupported_operation("TestStruct", "test_op");
+        let curves_error = CurveError::from(position_error);
+
+        match curves_error {
+            CurveError::Position(_) => {
+                // Conversion successful
+            }
+            _ => panic!("Wrong error variant"),
+        }
+    }
+
+    #[test]
+    fn test_debug_implementation() {
+        let error = CurveError::Point2DError {
+            reason: "test debug",
+        };
+        assert!(format!("{error:?}").contains("test debug"));
+
+        let error = CurveError::RenderError {
+            backend: "plotters",
+            reason: "test debug".to_string(),
+        };
+        assert!(format!("{error:?}").contains("test debug"));
+    }
+}
+
+#[cfg(test)]
+mod tests_extended {
+    use super::*;
+
+    #[test]
+    fn test_curves_error_construction_error() {
+        let error =
+            CurveError::ConstructionError("Invalid curve construction parameters".to_string());
+        assert_eq!(
+            format!("{error}"),
+            "Construction error: Invalid curve construction parameters"
+        );
+    }
+
+    #[test]
+    fn test_curves_error_analysis_error() {
+        let error =
+            CurveError::AnalysisError("Analysis failed due to insufficient data".to_string());
+        assert_eq!(
+            format!("{error}"),
+            "Analysis error: Analysis failed due to insufficient data"
+        );
+    }
+}

@@ -6,7 +6,6 @@
 //! `BasicCurves`: projection of an option set onto a [`crate::curves::Curve`] along one
 //! Greek, price or volatility axis. Analytics-owned because it prices
 //! `Options` and reads Greeks; `Curve` itself stays a math container.
-//! `curves::BasicCurves` is kept as a compatibility re-export.
 
 use crate::curves::Curve;
 use crate::error::ProjectionError;

@@ -99,7 +99,7 @@
 //! | Target crate | Files |
 //! | --- | --- |
 //! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs`, now in `optionstratlib-core` |
-//! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs` |
+//! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs` |
 //! | simulation | `simulation.rs` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`) |
@@ -123,14 +123,6 @@
 /// * Strategy validation
 ///
 pub mod chains;
-
-/// ### Curve Errors (`CurveError`)
-/// Handles:
-/// * Yield curve construction
-/// * Forward rate calculations
-/// * Market data fitting issues
-/// * Term structure consistency
-pub mod curves;
 
 /// ### Greeks Errors (`GreeksError`)
 /// Handles:
@@ -156,35 +148,11 @@ pub mod probability;
 /// * Operation validation
 pub mod strategies;
 
-/// ### Interpolation Errors (`InterpolationError`)
-/// Manages:
-/// * Data point validation
-/// * Interpolation method errors
-/// * Boundary conditions
-/// * Mathematical approximation issues
-mod interpolation;
-
-/// ### Metrics Errors (`MetricsError`)
-/// Handles:
-/// * Performance calculation failures
-/// * Risk metric validation
-/// * Statistical measurement errors
-/// * Benchmark comparison issues
 /// Backtest-owned failures (a strategy driven through a simulation).
 mod backtesting;
 
-mod metrics;
-
 /// Analytics-owned projection failures (curves and surfaces from option data).
 mod projections;
-
-/// ### Surface Errors (`SurfaceError`)
-/// Covers:
-/// * Surface construction failures
-/// * Volatility skew/smile errors
-/// * Surface calibration issues
-/// * Dimensional and data completeness errors
-mod surfaces;
 
 mod graph;
 mod transaction;
@@ -233,20 +201,22 @@ pub use optionstratlib_core::error::{
     TradeError, decimal, position, trade,
 };
 
+/// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and
+/// the metrics extracted from them.
+pub use optionstratlib_math::error::{
+    CurveError, CurvesResult, InterpolationError, MetricsError, SurfaceError, curves,
+};
+
 pub use backtesting::BacktestError;
 pub use chains::ChainError;
 pub use csv::OhlcvError;
-pub use curves::CurveError;
 pub use graph::GraphError;
 pub use greeks::GreeksError;
-pub use interpolation::InterpolationError;
-pub use metrics::MetricsError;
 pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
 pub use projections::ProjectionError;
 pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
-pub use surfaces::SurfaceError;
 pub use transaction::TransactionError;
 pub use unified::Error;
 pub use volatility::VolatilityError;
