@@ -347,6 +347,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **First consumer fixture: core plus pricing** (#527).
+  `fixtures/consumers/pricing-only` is a real crate, excluded from the
+  workspace, that depends on `optionstratlib-core` and
+  `optionstratlib-pricing` only (path plus version). Its test builds a
+  contract, prices it in closed form (Hull's 4.76/0.81), reads its Greeks
+  and payoff, and recovers its implied volatility, all with the canonical
+  types. `expect.toml` lists what its graph must and must not resolve:
+  no facade, market, analytics, strategies, simulation, backtest,
+  visualization, CSV, ZIP or Tokio. `make check-fixtures` asserts every
+  fixture and prints its package count. `make
+  {check,test,tree}-consumer-core-pricing` and
+  `check-consumer-core-pricing-minimal` run this one, and the Components CI
+  job runs them from a fresh target directory. Measured: 67 packages and a
+  5.7 s clean check, against 131 packages and 13.7 s for the 0.21.3 facade
+  default (BASELINE.md, different machine).
+
 - **Standalone pricing regression suites** (#526) in `optionstratlib-pricing`,
   run without market, simulation, strategies or the facade:
   - `pricing_identities`: parity for Black-Scholes, Black-76 and

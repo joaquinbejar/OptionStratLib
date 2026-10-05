@@ -49,3 +49,13 @@ jobs:
 
       - name: Verify component crates standalone
         run: make check-components
+
+      # Consumer fixtures build from a fresh target dir of their own, so the
+      # cached workspace target cannot hide a missing dependency (#527).
+      - name: Consumer fixtures
+        run: |
+          rm -rf target/fixtures
+          make check-fixtures
+          make check-consumer-core-pricing
+          make check-consumer-core-pricing-minimal
+          make test-consumer-core-pricing

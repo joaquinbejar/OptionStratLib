@@ -1,0 +1,12 @@
+# ADR-0002 section 5, `osl-fixture-pricing-only`: packages the resolved
+# normal graph must contain, and packages it must not. Checked by
+# `make check-fixtures` (scripts/check_fixtures.py).
+present = ["optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing", "rayon", "statrs"]
+# `utoipa` is missing only because `expiration_date` 0.4.0 forces
+# `positive/utoipa` on every build (#628); it joins this list once fixed.
+absent = [
+    "optionstratlib", "optionstratlib-simulation", "optionstratlib-market",
+    "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
+    "optionstratlib-visualization", "csv", "zip", "tokio", "reqwest", "plotly",
+    "plotly_static", "tracing-subscriber", "indicatif", "prettytable-rs",
+]
