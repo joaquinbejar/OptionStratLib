@@ -200,9 +200,6 @@ pub optionstratlib_math::error::curves::CurveError::Options(optionstratlib_core:
 pub optionstratlib_math::error::curves::CurveError::Point2DError
 pub optionstratlib_math::error::curves::CurveError::Point2DError::reason: &'static str
 pub optionstratlib_math::error::curves::CurveError::Position(optionstratlib_core::error::position::PositionError)
-pub optionstratlib_math::error::curves::CurveError::RenderError
-pub optionstratlib_math::error::curves::CurveError::RenderError::backend: &'static str
-pub optionstratlib_math::error::curves::CurveError::RenderError::reason: alloc::string::String
 impl optionstratlib_math::error::curves::CurveError
 pub fn optionstratlib_math::error::curves::CurveError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
 impl optionstratlib_math::error::curves::CurveError
@@ -227,9 +224,6 @@ pub optionstratlib_math::error::CurveError::Options(optionstratlib_core::error::
 pub optionstratlib_math::error::CurveError::Point2DError
 pub optionstratlib_math::error::CurveError::Point2DError::reason: &'static str
 pub optionstratlib_math::error::CurveError::Position(optionstratlib_core::error::position::PositionError)
-pub optionstratlib_math::error::CurveError::RenderError
-pub optionstratlib_math::error::CurveError::RenderError::backend: &'static str
-pub optionstratlib_math::error::CurveError::RenderError::reason: alloc::string::String
 impl optionstratlib_math::error::curves::CurveError
 pub fn optionstratlib_math::error::curves::CurveError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
 impl optionstratlib_math::error::curves::CurveError
@@ -278,9 +272,6 @@ pub optionstratlib_math::error::SurfaceError::Options(optionstratlib_core::error
 pub optionstratlib_math::error::SurfaceError::Point3DError
 pub optionstratlib_math::error::SurfaceError::Point3DError::reason: &'static str
 pub optionstratlib_math::error::SurfaceError::Position(optionstratlib_core::error::position::PositionError)
-pub optionstratlib_math::error::SurfaceError::RenderError
-pub optionstratlib_math::error::SurfaceError::RenderError::backend: &'static str
-pub optionstratlib_math::error::SurfaceError::RenderError::reason: alloc::string::String
 impl optionstratlib_math::error::SurfaceError
 pub fn optionstratlib_math::error::SurfaceError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
 impl optionstratlib_math::error::SurfaceError

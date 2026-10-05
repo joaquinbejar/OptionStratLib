@@ -385,8 +385,6 @@ mod tests {
 
 #[cfg(test)]
 mod tests_extended {
-    use super::*;
-
     struct MockChart {
         pub x_desc: String,
         pub y_desc: String,
@@ -424,25 +422,6 @@ mod tests_extended {
     }
 
     #[test]
-    fn test_map_err_to_render_error() {
-        let result: Result<(), CurveError> =
-            Err(std::io::Error::other("Test error")).map_err(|e| CurveError::RenderError {
-                backend: "plotters",
-                reason: e.to_string(),
-            });
-
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            CurveError::RenderError { backend, reason } => {
-                assert_eq!(backend, "plotters");
-                assert_eq!(reason, "Test error");
-            }
-            _ => panic!("Unexpected error type"),
-        }
-    }
-
-    #[test]
     fn test_configure_chart_mesh() {
         let mut chart = MockChart::new(); // Simular un gráfico
         chart
@@ -453,20 +432,5 @@ mod tests_extended {
             .y_desc("Y-axis");
         assert_eq!(chart.x_desc, "X-axis");
         assert_eq!(chart.y_desc, "Y-axis");
-    }
-
-    #[test]
-    fn test_draw_series_error() {
-        let error = CurveError::RenderError {
-            backend: "plotters",
-            reason: "Draw error".to_string(),
-        };
-        match error {
-            CurveError::RenderError { backend, reason } => {
-                assert_eq!(backend, "plotters");
-                assert_eq!(reason, "Draw error");
-            }
-            _ => panic!("Unexpected error type"),
-        }
     }
 }

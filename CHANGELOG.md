@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Math errors no longer carry a rendering variant** (#517).
+  `CurveError::RenderError` and `SurfaceError::RenderError` are removed:
+  nothing in the library constructed them, and rendering failures are the
+  visualization layer's `GraphError` (`GraphError::Render`). Code that
+  matched on them can drop the arm. The math crate docs now name the owner of
+  every capability that takes a math type but lives in a higher layer
+  (`BasicCurves`/`BasicSurfaces` in analytics, `Graph`/`Plottable` in
+  visualization), and `make check-graph` fails when `optionstratlib-core` or
+  `optionstratlib-math` resolves a forbidden package (`plotly`, `tokio`,
+  `reqwest`, `csv`, `zip`, `tracing-subscriber`, …), with default features or
+  with all of them. Core's list is ADR-0002's core-only fixture row; math has
+  no row there, so its list is the pricing-only row plus the "no
+  visualization, no I/O" rule.
+
 - **Curves, surfaces and geometry are their own crate, `optionstratlib-math`**
   (#516). `curves`, `surfaces`, `geometrics` and their errors (`CurveError`,
   `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) move

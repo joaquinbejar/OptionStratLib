@@ -58,17 +58,6 @@ pub enum SurfaceError {
     #[error("parametric generator failed: {0}")]
     Generator(#[source] Box<dyn std::error::Error + Send + Sync>),
 
-    /// A rendering operation failed. Preserves the backend discriminator so
-    /// callers can distinguish plotters output paths from other backends
-    /// without resorting to a `String` catch-all.
-    #[error("rendering failed ({backend}): {reason}")]
-    RenderError {
-        /// Identifier of the rendering backend that failed (e.g. `"plotters"`).
-        backend: &'static str,
-        /// Detailed, human-readable reason for the failure.
-        reason: String,
-    },
-
     /// Error that occurred during the construction of a surface.
     ///
     /// This is typically used when input data is valid but inconsistent or insufficient
@@ -257,18 +246,6 @@ mod tests {
         assert!(error.to_string().contains("Operation error"));
         assert!(error.to_string().contains("test_operation"));
         assert!(error.to_string().contains("Operation cannot be performed"));
-    }
-
-    #[test]
-    fn test_display_render_error() {
-        let error = SurfaceError::RenderError {
-            backend: "plotters",
-            reason: "rendering failed".to_string(),
-        };
-        assert_eq!(
-            error.to_string(),
-            "rendering failed (plotters): rendering failed"
-        );
     }
 
     #[test]

@@ -326,7 +326,7 @@ pub trait Graph {
     /// Currently infallible (the underlying `plotly` `show` call does
     /// not return a `Result`); the `Result` signature is retained to
     /// allow future plot kernels that can surface
-    /// `GraphError::RenderError` or `GraphError::IoError` without
+    /// `GraphError::Render` or `GraphError::Io` without
     /// a breaking change.
     #[cfg(feature = "plotly")]
     fn show(&self) -> Result<(), GraphError> {
@@ -375,7 +375,7 @@ pub trait Graph {
     ///
     /// Propagates any [`GraphError`] returned by
     /// `PlotlyChart::write_html`, typically
-    /// `GraphError::IoError` when the target file cannot be
+    /// `GraphError::Io` when the target file cannot be
     /// created or written.
     #[cfg(feature = "plotly")]
     fn to_interactive_html(&self, path: &std::path::Path) -> Result<(), GraphError> {

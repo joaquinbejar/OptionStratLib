@@ -87,13 +87,6 @@ fn test_surface_error_debug() {
     let debug_str = format!("{op_error:?}");
     assert!(debug_str.contains("OperationError"));
 
-    let render_error = SurfaceError::RenderError {
-        backend: "plotters",
-        reason: "std debug test".to_string(),
-    };
-    let debug_str = format!("{render_error:?}");
-    assert!(debug_str.contains("RenderError"));
-
     let construction_error = SurfaceError::ConstructionError("construction debug test".to_string());
     let debug_str = format!("{construction_error:?}");
     assert!(debug_str.contains("ConstructionError"));
@@ -110,21 +103,6 @@ fn test_error_trait_implementation() {
 
     // Verify it can be used as a dyn Error
     let _: Box<dyn Error> = Box::new(error);
-}
-
-#[test]
-fn test_surface_error_render_error_variant() {
-    let error = SurfaceError::RenderError {
-        backend: "plotters",
-        reason: "file not found".to_string(),
-    };
-    match error {
-        SurfaceError::RenderError { backend, reason } => {
-            assert_eq!(backend, "plotters");
-            assert!(reason.contains("file not found"));
-        }
-        _ => panic!("Expected RenderError variant, got something else"),
-    }
 }
 
 #[test]

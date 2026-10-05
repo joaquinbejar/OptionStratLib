@@ -169,18 +169,3 @@ fn test_curve_error_point2d_error() {
     // Verify the Debug implementation
     assert!(format!("{error:?}").contains("invalid coordinates"));
 }
-
-#[test]
-fn test_curve_error_render_error() {
-    let error = CurveError::RenderError {
-        backend: "plotters",
-        reason: "io error test".to_string(),
-    };
-    match error {
-        CurveError::RenderError { backend, reason } => {
-            assert_eq!(backend, "plotters");
-            assert!(reason.contains("io error test"));
-        }
-        _ => panic!("Expected RenderError variant, got something else"),
-    }
-}
