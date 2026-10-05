@@ -4,6 +4,11 @@
    Date: 11/8/24
 ******************************************************************************/
 use positive::Positive;
+
+/// Days in a year, as `positive` defines it (365). Re-exported so that
+/// components reach it through core rather than by depending on `positive`
+/// directly (ADR-0001 D8).
+pub use positive::constants::DAYS_IN_A_YEAR;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::sync::LazyLock;

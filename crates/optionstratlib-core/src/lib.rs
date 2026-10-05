@@ -39,7 +39,8 @@
 //! | `ExpirationDate`, `ExpirationDateError` | `expiration_date` | `optionstratlib_core::model`, `optionstratlib::model`; `ExpirationDate` also at the `optionstratlib` root and in its prelude |
 //! | `Side`, `OptionStyle`, `Action`, `UnderlyingAssetType` | `financial_types` | `optionstratlib_core::model::types`; `Side` and `OptionStyle` also in `optionstratlib_core::model` and at the `optionstratlib` root; `Side`, `OptionStyle` and `Action` in its prelude |
 //! | `OptionType`, `OptionBasicType`, `AsianAveragingType`, `BarrierType`, `BinaryType`, `LookbackType`, `RainbowType` | `option_type` | `optionstratlib_core::model::types`; `OptionType` and `RainbowType` also in `optionstratlib_core::model` and at the `optionstratlib` root; `OptionType` in its prelude |
-//! | `StrictlyPositive`, `PositiveResult`, the `positive::constants`; `ParseEnumError`; the day-count conventions (`DayCount`, `Actual360`, `Actual365Fixed`, `Thirty360US`) | `positive`; `financial_types`; `expiration_date` | not re-exported: name them through the defining crate |
+//! | `DAYS_IN_A_YEAR` | `positive` | `optionstratlib_core::constants`, `optionstratlib::constants` |
+//! | `StrictlyPositive`, `PositiveResult`, the other `positive::constants`; `ParseEnumError`; the day-count conventions (`DayCount`, `Actual360`, `Actual365Fixed`, `Thirty360US`) | `positive`; `financial_types`; `expiration_date` | not re-exported: name them through the defining crate |
 //!
 //! The facade's `optionstratlib::model` *is* `optionstratlib_core::model`, so
 //! every core path above is also reachable with the `optionstratlib::model`

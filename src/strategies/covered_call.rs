@@ -67,7 +67,7 @@ use crate::model::position::Position;
 use crate::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
 use crate::model::utils::sub_floor_zero;
 use crate::pnl::PnLCalculator;
-use crate::pricing::payoff::Profit;
+use crate::pricing::Profit;
 use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;

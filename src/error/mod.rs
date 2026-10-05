@@ -100,7 +100,7 @@
 //! | --- | --- |
 //! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs`, now in `optionstratlib-core` |
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
-//! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs` |
+//! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, now in `optionstratlib-pricing` |
 //! | simulation | `simulation.rs` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`) |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs` |
@@ -123,14 +123,6 @@
 /// * Strategy validation
 ///
 pub mod chains;
-
-/// ### Greeks Errors (`GreeksError`)
-/// Handles:
-/// * Greeks calculations
-/// * Mathematical validation
-/// * Input parameter validation
-/// * Numerical computations
-pub mod greeks;
 
 /// ### Probability Errors (`ProbabilityError`)
 /// Manages:
@@ -165,22 +157,6 @@ mod transaction;
 /// * Step calculation issues
 pub mod simulation;
 
-/// ### Pricing Errors (`PricingError`)
-/// Handles:
-/// * Pricing method failures (Black-Scholes, Binomial, etc.)
-/// * Monte Carlo simulation errors
-/// * Invalid pricing engine configurations
-/// * Generic pricing-related errors
-pub mod pricing;
-
-/// ### Volatility Errors (`VolatilityError`)
-/// Handles:
-/// * Implied volatility calculation failures
-/// * Historical volatility estimation issues
-/// * Volatility model parameter validation
-/// * Market data consistency checks
-mod volatility;
-
 /// ### CSV/OHLCV Errors (`OhlcvError`)
 /// Handles:
 /// * CSV parsing errors
@@ -207,16 +183,19 @@ pub use optionstratlib_math::error::{
     CurveError, CurvesResult, InterpolationError, MetricsError, SurfaceError, curves,
 };
 
+/// Pricing errors (`optionstratlib-pricing`): pricing models, Greeks and
+/// volatility solvers.
+pub use optionstratlib_pricing::error::{
+    GreeksError, PricingError, PricingResult, VolatilityError, greeks, pricing,
+};
+
 pub use backtesting::BacktestError;
 pub use chains::ChainError;
 pub use csv::OhlcvError;
 pub use graph::GraphError;
-pub use greeks::GreeksError;
-pub use pricing::{PricingError, PricingResult};
 pub use probability::ProbabilityError;
 pub use projections::ProjectionError;
 pub use simulation::{SimulationError, SimulationResult};
 pub use strategies::StrategyError;
 pub use transaction::TransactionError;
 pub use unified::Error;
-pub use volatility::VolatilityError;

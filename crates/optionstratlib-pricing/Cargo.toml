@@ -1,0 +1,41 @@
+[package]
+name = "optionstratlib-pricing"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Option pricing models, Greeks and implied volatility of OptionStratLib, on Decimal and Positive boundaries."
+readme = "README.md"
+keywords = ["finance", "options", "pricing", "greeks"]
+categories = ["finance", "mathematics"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on the pricing types (ADR-0002).
+schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-math/schema"]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-math = { workspace = true }
+num-traits = { workspace = true }
+pretty-simple-display = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+rayon = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+# `DebugPretty` / `DisplaySimple` expand to `serde_json` calls.
+serde_json = { workspace = true }
+statrs = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+
+[dev-dependencies]
+chrono = { workspace = true }
+approx = { workspace = true }
+proptest = { workspace = true }

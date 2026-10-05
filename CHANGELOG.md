@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Pricing, Greeks and volatility are their own crate,
+  `optionstratlib-pricing`** (#521). `pricing`, `greeks`, `volatility` and
+  their errors (`PricingError`, `PricingResult`, `GreeksError`,
+  `VolatilityError`) move to `crates/optionstratlib-pricing`, which depends
+  only on `optionstratlib-core`, `optionstratlib-math` and general numeric
+  crates (`statrs`, `rayon`, `rand`, `rand_distr`, `num-traits`).
+  The facade re-exports the three modules and the errors, so
+  `optionstratlib::pricing::black_scholes` and the other existing paths
+  still resolve; formulas, tolerances and results are unchanged. What does
+  change:
+  - `pricing::{Payoff, PayoffInfo}`, kept only so a 0.21 path resolved, are
+    removed; the payoff contracts are core's
+    (`optionstratlib::model::payoff::{Payoff, PayoffInfo}`), and the prelude
+    exports them from there. `pricing::Profit` stays.
+  - `optionstratlib-pricing` derives `utoipa::ToSchema` only under its
+    `schema` feature; the facade enables it.
+  - `optionstratlib_core::constants` re-exports `DAYS_IN_A_YEAR`, which
+    pricing reaches through core (ADR-0001 D8).
+  - The property and regression suites that use only pricing
+    (`greeks_bounds`, `pricing_panic_freedom`, `put_call_parity` with its
+    regression file, `identities`, `garch_regression`) move into the crate,
+    unchanged; `make check-components`, the public-API snapshots and the
+    forbidden-package check now cover pricing.
+
 - **Math errors no longer carry a rendering variant** (#517).
   `CurveError::RenderError` and `SurfaceError::RenderError` are removed:
   nothing in the library constructed them, and rendering failures are the

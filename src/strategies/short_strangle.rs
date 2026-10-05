@@ -43,7 +43,7 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pricing::payoff::Profit,
+    pricing::Profit,
     strategies::{
         BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,

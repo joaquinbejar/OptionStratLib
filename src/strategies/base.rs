@@ -18,7 +18,7 @@ use crate::{
         types::{Action, OptionBasicType, OptionStyle, OptionType, Side},
     },
     pnl::PnLCalculator,
-    pricing::payoff::Profit,
+    pricing::Profit,
     strategies::{
         StrategyConstructor,
         delta_neutral::DeltaNeutrality,

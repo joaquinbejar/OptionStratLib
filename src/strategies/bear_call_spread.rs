@@ -45,7 +45,7 @@ use crate::{
         utils::mean_and_std,
     },
     pnl::{PnLCalculator, utils::PnL},
-    pricing::payoff::Profit,
+    pricing::Profit,
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
@@ -1665,7 +1665,7 @@ mod tests_bear_call_spread_profit {
 
     use crate::model::ExpirationDate;
 
-    use crate::pricing::payoff::Profit;
+    use crate::pricing::Profit;
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use positive::pos_or_panic;

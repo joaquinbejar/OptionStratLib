@@ -68,7 +68,7 @@ pub use crate::strategies::{
 pub use crate::greeks::*;
 
 // Pricing and profit calculations
-pub use crate::pricing::payoff::*;
+pub use crate::model::payoff::{Payoff, PayoffInfo};
 pub use crate::pricing::*;
 
 // PnL calculations

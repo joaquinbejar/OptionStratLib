@@ -291,3 +291,67 @@ mod tests_volatility_skew_traits {
         }
     }
 }
+
+/// A type can carry the pricing-owned `VolatilitySmile` and the
+/// analytics-owned `VolatilitySkewCurve` at once. Moved here from
+/// `volatility::traits` when pricing became its own crate (#521): the
+/// pricing crate cannot name an analytics trait.
+#[cfg(test)]
+mod tests_smile_and_skew_together {
+    use super::VolatilitySkewCurve;
+    use crate::curves::{Curve, Point2D};
+    use crate::error::CurveError;
+    use crate::volatility::VolatilitySmile;
+    use rust_decimal_macros::dec;
+    use std::collections::BTreeSet;
+
+    fn create_sample_curve() -> Curve {
+        let mut points = BTreeSet::new();
+        points.insert(Point2D::new(dec!(90.0), dec!(0.25)));
+        points.insert(Point2D::new(dec!(95.0), dec!(0.22)));
+        points.insert(Point2D::new(dec!(100.0), dec!(0.20)));
+        points.insert(Point2D::new(dec!(105.0), dec!(0.22)));
+        points.insert(Point2D::new(dec!(110.0), dec!(0.25)));
+
+        Curve {
+            points,
+            x_range: (dec!(90.0), dec!(110.0)),
+        }
+    }
+
+    #[test]
+    fn test_combined_smile_and_skew_traits() {
+        struct CombinedVolatility;
+
+        impl VolatilitySmile for CombinedVolatility {
+            fn smile(&self) -> Curve {
+                create_sample_curve()
+            }
+        }
+
+        impl VolatilitySkewCurve for CombinedVolatility {
+            fn volatility_skew(&self) -> Result<Curve, CurveError> {
+                let mut points = BTreeSet::new();
+                points.insert(Point2D::new(dec!(-10.0), dec!(0.25)));
+                points.insert(Point2D::new(dec!(0.0), dec!(0.20)));
+                points.insert(Point2D::new(dec!(10.0), dec!(0.25)));
+
+                let curve = Curve {
+                    points,
+                    x_range: (dec!(-10.0), dec!(10.0)),
+                };
+                Ok(curve)
+            }
+        }
+
+        let vol = CombinedVolatility;
+
+        // Test smile
+        let smile_curve = vol.smile();
+        assert_eq!(smile_curve.points.len(), 5);
+
+        // Test skew
+        let skew_curve = vol.volatility_skew().unwrap();
+        assert_eq!(skew_curve.points.len(), 3);
+    }
+}
