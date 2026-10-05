@@ -139,6 +139,7 @@ optionstratlib -> lazy_static
 optionstratlib -> num-traits
 optionstratlib -> option_type
 optionstratlib -> optionstratlib-core
+optionstratlib -> optionstratlib-market
 optionstratlib -> optionstratlib-math
 optionstratlib -> optionstratlib-pricing
 optionstratlib -> positive
@@ -174,6 +175,22 @@ optionstratlib-core -> thiserror
 optionstratlib-core -> tracing
 optionstratlib-core -> utoipa
 optionstratlib-core -> uuid
+optionstratlib-market -> chrono
+optionstratlib-market -> csv
+optionstratlib-market -> num-traits
+optionstratlib-market -> optionstratlib-core
+optionstratlib-market -> optionstratlib-math
+optionstratlib-market -> optionstratlib-pricing
+optionstratlib-market -> pretty-simple-display
+optionstratlib-market -> prettytable-rs
+optionstratlib-market -> rust_decimal
+optionstratlib-market -> rust_decimal_macros
+optionstratlib-market -> serde
+optionstratlib-market -> serde_json
+optionstratlib-market -> thiserror
+optionstratlib-market -> tracing
+optionstratlib-market -> utoipa
+optionstratlib-market -> zip
 optionstratlib-math -> itertools
 optionstratlib-math -> num-traits
 optionstratlib-math -> optionstratlib-core
@@ -446,6 +463,7 @@ once_cell [alloc,default,race,std]
 option_type [default,utoipa]
 optionstratlib []
 optionstratlib-core [default,schema]
+optionstratlib-market [default,schema]
 optionstratlib-math [default,schema]
 optionstratlib-pricing [default,schema]
 pbkdf2 [default,hmac]

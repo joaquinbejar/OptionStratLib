@@ -9,17 +9,17 @@
 //! Everything that turns chain data (`OptionData`, `OptionChain`) into, or
 //! refreshes, a core value lives here: the `TryFrom<&OptionData>` conversion
 //! for `Options`, the `OptionChain` to `Positive` (underlying price)
-//! conversions, and the crate-internal [`UpdateFromOptionData`] refresh used
-//! by strategy re-pricing. The impls sit in the market layer (local source
+//! conversions, and the [`UpdateFromOptionData`] refresh that strategy
+//! re-pricing uses. The impls sit in the market layer (local source
 //! type, core-owned target) so the core model never references chain types.
 
 use crate::chains::chain::OptionChain;
 use crate::chains::optiondata::OptionData;
-use crate::error::{OptionsError, PositionError};
-use crate::model::types::{OptionStyle, OptionType, Side};
-use crate::model::{Options, Position};
 use chrono::Utc;
-use positive::Positive;
+use optionstratlib_core::error::{OptionsError, PositionError};
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::model::{Options, Position};
 use rust_decimal::Decimal;
 use tracing::trace;
 
@@ -28,7 +28,7 @@ use tracing::trace;
 /// `Options` takes the strike and the implied volatility; `Position` also
 /// re-stamps its open date and takes the bid or ask that matches its side
 /// and style as the new premium.
-pub(crate) trait UpdateFromOptionData {
+pub trait UpdateFromOptionData {
     /// Overwrites the market-dependent fields of `self` with the values in
     /// `option_data`.
     ///
@@ -192,7 +192,7 @@ impl From<OptionChain> for Positive {
 #[cfg(test)]
 mod tests_update_from_option_data {
     use super::*;
-    use positive::{pos_or_panic, spos};
+    use optionstratlib_core::{pos_or_panic, spos};
 
     use rust_decimal_macros::dec;
 

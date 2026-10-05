@@ -102,7 +102,7 @@
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, now in `optionstratlib-pricing` |
 //! | simulation | `simulation.rs` |
-//! | market | `chains.rs`, `csv.rs` (behind `io`) |
+//! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs` |
 //! | strategies | `strategies.rs` |
 //! | visualization | `graph.rs` |
@@ -114,15 +114,6 @@
 //! `SimulationError::{Strategy, Chain, GraphError}`) are removed in the
 //! batch that follows the 0.22.0 version bump; removing a variant is a
 //! breaking change the published-baseline semver gate rejects before then.
-
-/// ### Chain Errors (`ChainError`)
-/// Handles:
-/// * Option data validation
-/// * Chain construction
-/// * File operations (CSV/JSON)
-/// * Strategy validation
-///
-pub mod chains;
 
 /// ### Probability Errors (`ProbabilityError`)
 /// Manages:
@@ -157,14 +148,6 @@ mod transaction;
 /// * Step calculation issues
 pub mod simulation;
 
-/// ### CSV/OHLCV Errors (`OhlcvError`)
-/// Handles:
-/// * CSV parsing errors
-/// * ZIP file handling errors
-/// * OHLCV data validation
-/// * Date and decimal parsing issues
-mod csv;
-
 /// ### Unified Error Type
 /// Top-level error type that encompasses all errors in the library.
 /// Provides a single error type for unified error handling across modules.
@@ -189,9 +172,11 @@ pub use optionstratlib_pricing::error::{
     GreeksError, PricingError, PricingResult, VolatilityError, greeks, pricing,
 };
 
+/// Market errors (`optionstratlib-market`): option chains, series and
+/// OHLCV readers.
+pub use optionstratlib_market::error::{ChainError, OhlcvError, chains};
+
 pub use backtesting::BacktestError;
-pub use chains::ChainError;
-pub use csv::OhlcvError;
 pub use graph::GraphError;
 pub use probability::ProbabilityError;
 pub use projections::ProjectionError;

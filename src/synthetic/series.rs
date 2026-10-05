@@ -51,7 +51,7 @@ fn create_series_from_step(
         let volatility = volatility.min(Positive::ONE).max(min_walk_iv);
         series_params.set_implied_volatility(volatility);
     }
-    series_params.series = aged_series;
+    series_params.set_series(aged_series);
     let new_chain = OptionSeries::build_series(&series_params)?;
     Ok(new_chain)
 }
@@ -73,7 +73,7 @@ fn create_series_from_step(
 /// progression in the x-axis and the calculated output (y-axis) using the mathematical rules
 /// of the given walk type.
 ///
-/// # Contract (shared with [`crate::chains::generator_optionchain`] and
+/// # Contract (shared with [`crate::synthetic::generator_optionchain`] and
 /// [`crate::simulation::generator_positive`])
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
@@ -116,13 +116,14 @@ fn create_series_from_step(
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Simulation`] (via the `From<SimulationError>` conversion) if the
+/// Returns [`ChainError::Generator`] (via the `From<SimulationError>` conversion, its
+/// source downcasts to `SimulationError`) if the
 /// random-walk generator returns an error — including
 /// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
 /// prices than `walk_params.size` — and propagates errors from the
 /// volatility-estimation or chain-construction primitives. The returned vector is
 /// guaranteed to start with `walk_params.init_step`
-/// (matching the contract of [`crate::chains::generator_optionchain`]).
+/// (matching the contract of [`crate::synthetic::generator_optionchain`]).
 pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
 ) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
@@ -171,7 +172,7 @@ pub fn generator_optionseries(
             .ok_or_else(overflow)?
             .max(Decimal::ZERO);
         let aged_series: Vec<Positive> = build_params
-            .series
+            .series()
             .iter()
             .filter(|days| days.to_dec() > elapsed_days)
             .map(|days| {
@@ -369,13 +370,16 @@ mod tests_generator_optionseries {
         // Verify: insufficient historical data is a typed error, not a
         // silent init-only walk (unified contract, #406).
         match result {
-            Err(ChainError::Simulation(e)) => {
+            Err(ChainError::Generator(e)) => {
+                let e = e
+                    .downcast_ref::<SimulationError>()
+                    .expect("the generator's SimulationError must survive boxing");
                 assert!(
-                    matches!(*e, SimulationError::InsufficientHistoricalData { .. }),
+                    matches!(e, SimulationError::InsufficientHistoricalData { .. }),
                     "expected InsufficientHistoricalData, got: {e}"
                 );
             }
-            Err(other) => panic!("expected ChainError::Simulation, got: {other}"),
+            Err(other) => panic!("expected ChainError::Generator, got: {other}"),
             Ok(_) => panic!("empty historical prices must not produce a silent walk"),
         }
     }
@@ -410,13 +414,16 @@ mod tests_generator_optionseries {
         // Verify: insufficient historical data is a typed error, not a
         // silent init-only walk (unified contract, #406).
         match result {
-            Err(ChainError::Simulation(e)) => {
+            Err(ChainError::Generator(e)) => {
+                let e = e
+                    .downcast_ref::<SimulationError>()
+                    .expect("the generator's SimulationError must survive boxing");
                 assert!(
-                    matches!(*e, SimulationError::InsufficientHistoricalData { .. }),
+                    matches!(e, SimulationError::InsufficientHistoricalData { .. }),
                     "expected InsufficientHistoricalData, got: {e}"
                 );
             }
-            Err(other) => panic!("expected ChainError::Simulation, got: {other}"),
+            Err(other) => panic!("expected ChainError::Generator, got: {other}"),
             Ok(_) => panic!("insufficient historical prices must not produce a silent walk"),
         }
     }
@@ -568,7 +575,7 @@ mod tests_generator_optionseries {
         };
         let new_price = pos_or_panic!(105.0);
         let volatility = spos!(0.22);
-        let aged_series = build_params.series.clone();
+        let aged_series = build_params.series().to_vec();
 
         // Execute
         let result = create_series_from_step(&build_params, &new_price, volatility, aged_series);
@@ -583,7 +590,7 @@ mod tests_generator_optionseries {
 
         // Verify the implied volatility was updated if we can access it
         if let Ok(params) = new_series.to_build_params() {
-            let iv = params.chain_params.get_implied_volatility();
+            let iv = params.chain_params().get_implied_volatility();
             assert_pos_relative_eq!(iv, volatility.unwrap(), pos_or_panic!(0.01));
         }
     }

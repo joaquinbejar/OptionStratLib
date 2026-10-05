@@ -21,7 +21,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use optionstratlib::error::chains::ChainError;
+//! use optionstratlib_market::error::chains::ChainError;
 //!
 //! fn validate_strike_price(strike: f64) -> Result<(), ChainError> {
 //!     if strike <= 0.0 {
@@ -52,16 +52,17 @@
 //! * `From<csv::Error>` and `From<serde_json::Error>` to `FileErrorKind::ParseError`
 //! * `From<DecimalError>`, `From<GreeksError>`, `From<OptionsError>` to the
 //!   appropriate `OptionDataErrorKind` variant
-//! * `From<CurveError>`, `From<VolatilityError>`, `From<SimulationError>` (under `synthetic`),
-//!   `From<ExpirationDateError>` with typed wrapping (see variants below)
+//! * `From<CurveError>`, `From<VolatilityError>` and `From<ExpirationDateError>`
+//!   with typed wrapping (see variants below)
 //!
 //! All error types implement `std::error::Error` and `std::fmt::Display` for proper
 //! error handling and formatting.
 //!
-//! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`; the `Simulation(SimulationError)` variant is gated by `synthetic` (ADR-0003 section 4, M1-15), so the minimal market surface names no simulation type.
+//! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`. A chain generator's own failure travels in `Generator` as a boxed, typed source, so market names no simulation type (ADR-0003, M1-15, #524).
 
-use crate::error::{DecimalError, GreeksError, OptionsError};
-use positive::Positive;
+use optionstratlib_core::error::{DecimalError, OptionsError};
+use optionstratlib_core::model::Positive;
+use optionstratlib_pricing::error::GreeksError;
 use std::io;
 use thiserror::Error;
 
@@ -98,7 +99,7 @@ use thiserror::Error;
 /// * `StrikeNotFound` - A requested strike was not present in the current chain.
 /// * `Curve` - A curve-layer error surfaced during chain construction or analytics.
 /// * `Volatility` - A volatility-layer error surfaced during chain construction or analytics.
-/// * `Simulation` - A simulation-layer error surfaced during chain construction.
+/// * `Generator` - A chain or series generator failed; carries its own typed error.
 /// * `ExpirationDate` - Expiration-date conversion error.
 /// * `PositiveError` - Positive value errors
 ///
@@ -178,28 +179,26 @@ pub enum ChainError {
 
     /// A curve-layer error surfaced during chain construction or analytics.
     #[error(transparent)]
-    Curve(Box<crate::error::CurveError>),
+    Curve(Box<optionstratlib_math::error::CurveError>),
 
     /// A volatility-layer error surfaced during chain construction or analytics.
     #[error(transparent)]
-    Volatility(Box<crate::error::VolatilityError>),
+    Volatility(Box<optionstratlib_pricing::error::VolatilityError>),
 
-    /// A simulation-layer error surfaced during chain construction.
-    ///
-    /// Gated by `synthetic` (ADR-0003, roadmap M1-15): the simulation-backed
-    /// generators are the only producers, so a minimal market consumer never
-    /// names a simulation type through this enum.
-    #[cfg(feature = "synthetic")]
-    #[error(transparent)]
-    Simulation(Box<crate::error::SimulationError>),
+    /// A chain or series generator failed. The source is the generator's own
+    /// error, boxed so that market names none of the layers that build
+    /// chains (the simulation-backed generators, for one); downcast it to
+    /// recover the concrete type.
+    #[error("chain generator failed: {0}")]
+    Generator(#[source] Box<dyn std::error::Error + Send + Sync>),
 
     /// Expiration-date conversion error.
     #[error(transparent)]
-    ExpirationDate(#[from] expiration_date::error::ExpirationDateError),
+    ExpirationDate(#[from] optionstratlib_core::model::ExpirationDateError),
 
     /// Positive value errors
     #[error(transparent)]
-    PositiveError(#[from] positive::PositiveError),
+    PositiveError(#[from] optionstratlib_core::model::PositiveError),
 }
 
 /// Represents specific error types related to option data validation and calculations.
@@ -227,7 +226,7 @@ pub enum ChainError {
 /// # Example
 ///
 /// ```rust
-/// use optionstratlib::error::chains::OptionDataErrorKind;
+/// use optionstratlib_market::error::chains::OptionDataErrorKind;
 ///
 /// fn validate_strike_price(strike: f64) -> Result<(), OptionDataErrorKind> {
 ///     if strike <= 0.0 {
@@ -510,6 +509,17 @@ impl From<DecimalError> for ChainError {
 /// that may occur during option chain operations. These methods simplify error creation by
 /// handling the construction of nested error types and providing a consistent interface.
 impl ChainError {
+    /// Wraps a chain generator's own error as [`ChainError::Generator`],
+    /// keeping its concrete type for `downcast_ref`.
+    #[cold]
+    #[inline(never)]
+    pub fn generator<E>(error: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        ChainError::Generator(Box::new(error))
+    }
+
     /// Creates a new error for invalid strike prices.
     ///
     /// This method constructs an `OptionDataError` with the `InvalidStrike` variant when
@@ -690,24 +700,16 @@ impl From<std::num::ParseIntError> for ChainError {
     }
 }
 
-impl From<crate::error::CurveError> for ChainError {
+impl From<optionstratlib_math::error::CurveError> for ChainError {
     #[inline]
-    fn from(err: crate::error::CurveError) -> Self {
+    fn from(err: optionstratlib_math::error::CurveError) -> Self {
         ChainError::Curve(Box::new(err))
     }
 }
 
-#[cfg(feature = "synthetic")]
-impl From<crate::error::SimulationError> for ChainError {
+impl From<optionstratlib_pricing::error::VolatilityError> for ChainError {
     #[inline]
-    fn from(err: crate::error::SimulationError) -> Self {
-        ChainError::Simulation(Box::new(err))
-    }
-}
-
-impl From<crate::error::VolatilityError> for ChainError {
-    #[inline]
-    fn from(err: crate::error::VolatilityError) -> Self {
+    fn from(err: optionstratlib_pricing::error::VolatilityError) -> Self {
         ChainError::Volatility(Box::new(err))
     }
 }
@@ -984,5 +986,31 @@ mod tests_extended {
             format!("{error}"),
             "Option data error: Invalid prices (bid: Some(1.0), ask: Some(2.0)): Spread too wide"
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_generator_variant {
+    use super::*;
+    use std::error::Error as _;
+
+    #[derive(Debug, thiserror::Error)]
+    #[error("walk failed at step {0}")]
+    struct WalkFailure(u32);
+
+    #[test]
+    fn test_generator_keeps_the_typed_source() {
+        let error = ChainError::generator(WalkFailure(7));
+        assert_eq!(
+            error.to_string(),
+            "chain generator failed: walk failed at step 7"
+        );
+        match error.source() {
+            Some(source) => match source.downcast_ref::<WalkFailure>() {
+                Some(WalkFailure(step)) => assert_eq!(*step, 7),
+                None => panic!("source must downcast to the generator's own error"),
+            },
+            None => panic!("Generator must expose its source"),
+        }
     }
 }

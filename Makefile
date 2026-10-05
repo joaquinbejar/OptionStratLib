@@ -27,6 +27,8 @@ test:
 	LOGLEVEL=WARN cargo test -p optionstratlib-math --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-pricing
 	LOGLEVEL=WARN cargo test -p optionstratlib-pricing --all-features
+	LOGLEVEL=WARN cargo test -p optionstratlib-market
+	LOGLEVEL=WARN cargo test -p optionstratlib-market --all-features
 	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
@@ -83,7 +85,7 @@ check-graph:
 # with broken links and missing docs denied, and the packaged archive. The
 # crates are packaged together because a component's path dependencies are
 # not on crates.io yet; `cargo package` resolves them from the same run.
-COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing
+COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market
 
 .PHONY: check-components
 check-components:
@@ -287,7 +289,7 @@ print-public-api-pins:
 # Workspace component crates with their own snapshot, `public-api/<crate>.txt`.
 # The facade re-exports their modules, and `cargo public-api` does not inline
 # another crate's items, so each component is tracked on its own.
-PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing
+PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market
 
 .PHONY: public-api-update
 public-api-update: check-cargo-public-api
@@ -358,7 +360,7 @@ pre-push: fix fmt lint-fix test readme doc
 # `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing
+	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing -p optionstratlib-market
 
 .PHONY: doc-open
 doc-open:

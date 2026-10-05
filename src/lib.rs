@@ -911,8 +911,8 @@
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 //! - `async`: Enables asynchronous I/O operations for OptionChain and OHLCV data (tokio + reqwest + futures)
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
-//!   (`chains::generator_optionchain`, `series::generator_optionseries`) and the
-//!   `ChainError::Simulation` variant that carries their failures; disable it with
+//!   (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
+//!   simulation failures arrive as `ChainError::Generator`; disable it with
 //!   `default-features = false` for a market surface that names no simulation type at all.
 //!   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
 //!   dependency graphs
@@ -1348,7 +1348,7 @@ pub mod backtesting;
 /// Tools for parsing, manipulating, and analyzing options chain data. Includes
 /// methods to filter chains by expiration, strike price, and other criteria,
 /// as well as utilities for chain visualization and analysis.
-pub mod chains;
+pub use optionstratlib_market::chains;
 
 /// * `constants` - Library-wide mathematical and financial constants.
 ///
@@ -1482,7 +1482,14 @@ pub use optionstratlib_pricing::volatility;
 /// Provides tools to manage, filter, and analyze multiple option chains grouped by expiration dates.
 /// Includes utilities for constructing series data, navigating expirations, and performing
 /// cross-expiration analysis and visualization.
-pub mod series;
+pub use optionstratlib_market::series;
+
+/// * `synthetic` - Simulation-backed option chain and series generators.
+///
+/// Gated by the `synthetic` feature (on by default): the only edge from
+/// market data to the simulation engine (ADR-0003).
+#[cfg(feature = "synthetic")]
+pub mod synthetic;
 
 /// * `prelude` - Convenient re-exports of commonly used types and traits.
 ///

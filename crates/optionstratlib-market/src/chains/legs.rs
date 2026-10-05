@@ -6,7 +6,6 @@
 use crate::chains::OptionData;
 use serde::Serialize;
 use std::fmt::{Display, Formatter, Result};
-use utoipa::ToSchema;
 
 /// Represents the various configurations of option strategy legs with different complexities.
 ///
@@ -34,7 +33,8 @@ use utoipa::ToSchema;
 /// This enum is typically used when implementing option strategy analysis, pricing models,
 /// or visualizations where the number and configuration of legs determine the calculation
 /// approach.
-#[derive(Debug, Clone, ToSchema, Serialize)]
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub enum StrategyLegs<'a> {
     /// Two-legged option strategy configuration
     ///
@@ -138,7 +138,7 @@ impl Display for StrategyLegs<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use positive::{Positive, pos_or_panic};
+    use optionstratlib_core::{model::Positive, pos_or_panic};
 
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;

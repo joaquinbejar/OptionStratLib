@@ -3,13 +3,12 @@
    Email: jb@taunais.com
    Date: 12/12/24
 ******************************************************************************/
-use crate::Options;
 use crate::error::ChainError;
-use crate::greeks::Greeks;
+use optionstratlib_core::model::Options;
+use optionstratlib_pricing::greeks::Greeks;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents a collection of option positions at the same strike price.
 ///
@@ -39,7 +38,8 @@ use utoipa::ToSchema;
 /// This struct is typically used in option strategy analysis, risk assessment,
 /// and for calculating combined payoff profiles of multiple option positions
 /// at the same strike price.
-#[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionsInStrike {
     /// A long (bought) call option position at this strike price
     pub long_call: Options,
@@ -142,7 +142,8 @@ impl OptionsInStrike {
 ///
 /// Delta values are essential for understanding directional exposure and for implementing
 /// delta-neutral strategies in options trading.
-#[derive(DebugPretty, DisplaySimple, Clone, ToSchema, Serialize, Deserialize)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct DeltasInStrike {
     /// Delta value for a long call option position
     pub long_call: Decimal,
@@ -160,9 +161,9 @@ pub struct DeltasInStrike {
 #[cfg(test)]
 mod tests_options_in_strike {
     use super::*;
-    use crate::ExpirationDate;
-    use crate::model::types::{OptionStyle, OptionType, Side};
-    use positive::{Positive, pos_or_panic};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::{model::Positive, pos_or_panic};
     use rust_decimal_macros::dec;
 
     // Helper function to create a sample option for testing

@@ -1,13 +1,13 @@
 //! Market-layer strike selection compiles and runs without touching the
 //! strategies module (multi-crate roadmap M1-04, #501).
 //!
-//! This file deliberately imports only `optionstratlib::chains` and the core
+//! This file deliberately imports only `optionstratlib_market::chains` and the core
 //! model: once `optionstratlib-market` is extracted, it becomes the
 //! market-only consumer fixture for chain selection.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::chains::{FindOptimalSide, OptionData};
-use positive::{Positive, pos_or_panic, spos};
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+use optionstratlib_market::chains::{FindOptimalSide, OptionData};
 use rust_decimal_macros::dec;
 
 fn option_at(strike: Positive) -> OptionData {

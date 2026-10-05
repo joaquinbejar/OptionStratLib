@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Option chains and series are their own crate, `optionstratlib-market`**
+  (#524). `chains`, `series`, `ChainError` and `OhlcvError` move to
+  `crates/optionstratlib-market`, which depends on core, math and pricing and
+  on no analytics, strategy, simulation, backtesting or plotting crate. The
+  facade re-exports both modules and the errors; the facade `async` feature
+  forwards to the market crate's `async` (the `tokio`-backed `*_async`
+  readers and writers). Serialized forms and results are unchanged. What does
+  change:
+  - The chain and series generators driven by a random walk need the
+    simulation engine, so until M5 extracts it they live in the facade's new
+    `synthetic` module (behind the `synthetic` feature):
+    `optionstratlib::synthetic::{generator_optionchain,
+    generator_optionseries}`. The prelude exports them as before.
+  - `ChainError::Simulation(SimulationError)` becomes
+    `ChainError::Generator(Box<dyn Error + Send + Sync>)`: a generator's own
+    error, typed, downcastable to `SimulationError`. Market names no
+    simulation type. `ChainError::generator(err)` builds it, and the
+    `From<SimulationError>` impl lives in the facade's `synthetic` module,
+    the one place above both layers (M5 moves both into market, #537).
+  - The 14 inherent projection methods analytics added to `OptionChain`
+    (`gamma_curve`, `delta_curve`, `vega_curve`, `theta_curve`,
+    `vanna_curve`, `veta_curve`, `charm_curve`, `color_curve`,
+    `veta_time_surface`, `theta_time_surface`, `charm_time_surface`,
+    `color_time_surface`, `vanna_surface`, `vomma_surface`) become the
+    analytics trait `OptionChainProjections`; import it to call them. It is
+    not in the prelude: there `theta_curve`, `charm_curve` and `color_curve`
+    resolve to the `ThetaCurve`, `CharmCurve` and `ColorCurve` metrics, which
+    a new test pins to the same points as the projections.
+  - The compatibility re-export `chains::{RNDAnalysis, RNDParameters,
+    RNDResult}` is removed; use `optionstratlib::analytics::rnd`.
+  - `OptionChain` and `OptionSeries` document their 0.22 serialization
+    contract, with new round-trip and invalid-key tests. An `OptionSeries`
+    round trip can move each expiry key one day earlier today (#643).
+  - New market API the facade needs: `OptionChain::set_expiration_date` (a
+    `#[doc(hidden)]` test seam), `OptionChainBuildParams::set_expiration_date`,
+    `OptionSeriesBuildParams::{chain_params, series, set_series}`, and the
+    now public `OptionData::{get_option, valid_call, valid_put}`,
+    `OptionChain::filter_option_data` and `chains::UpdateFromOptionData`.
+  - `optionstratlib-market` derives `utoipa::ToSchema` only under its
+    `schema` feature; the facade enables it.
+  - The market-only suites (`panic_freedom`, `quote_invariants` and four
+    `tests/unit/chain` files) and the chain tests move into the crate; the
+    projection tests move to analytics. `check-components`, the public-API
+    snapshots and the forbidden-package check cover market (`tokio` only
+    under `async`; `csv` and `zip` are gated by #525).
+
 - **Pricing, Greeks and volatility are their own crate,
   `optionstratlib-pricing`** (#521). `pricing`, `greeks`, `volatility` and
   their errors (`PricingError`, `PricingResult`, `GreeksError`,

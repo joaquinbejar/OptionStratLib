@@ -9,24 +9,24 @@ use crate::chains::utils::{
     adjust_volatility, default_empty_string, rounder, strike_step,
 };
 use crate::chains::{OptionData, OptionsInStrike};
-use crate::curves::{Curve, Point2D};
-use crate::error::VolatilityError;
 use crate::error::chains::{ChainError, OptionDataErrorKind};
-use crate::geometrics::LinearInterpolation;
-use crate::greeks::Greeks;
-use crate::model::decimal::d_add;
-use crate::model::{
+use chrono::Utc;
+use num_traits::{FromPrimitive, ToPrimitive};
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::d_add;
+use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
     reject_unrepresentable_expiration,
 };
-use crate::utils::Len;
-use crate::utils::rng::get_random_element;
-use crate::volatility::{AtmIvProvider, VolatilitySmile};
-use chrono::Utc;
-use num_traits::{FromPrimitive, ToPrimitive};
-use positive::Positive;
 #[cfg(test)]
-use positive::pos_or_panic;
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::rng::get_random_element;
+use optionstratlib_math::curves::{Curve, Point2D};
+use optionstratlib_math::geometrics::LinearInterpolation;
+use optionstratlib_pricing::error::VolatilityError;
+use optionstratlib_pricing::greeks::Greeks;
+use optionstratlib_pricing::volatility::{AtmIvProvider, VolatilitySmile};
 use pretty_simple_display::DebugSimple;
 use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -38,7 +38,6 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt;
 use tracing::{debug, error, warn};
-use utoipa::ToSchema;
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// A constant representing the skew value for the smile curve in financial modeling.
@@ -88,7 +87,18 @@ pub const SKEW_SLOPE: Decimal = dec!(-0.2);
 ///
 /// This struct is typically used as the primary container for options market data analysis,
 /// serving as input to pricing models, strategy backtesting, and risk management tools.
-#[derive(DebugSimple, Clone, ToSchema)]
+///
+/// # Serialization
+///
+/// The 0.22 contract (JSON shown; any serde format works) is an object with
+/// `symbol`, `underlying_price`, `expiration_date` (the string as stored,
+/// for example `YYYY-MM-DD`), `options` (the [`OptionData`] rows, ordered by
+/// strike, each with its own contract in [`OptionData`]'s docs), and the
+/// optional `risk_free_rate` and `dividend_yield`, which are omitted when
+/// `None`. Deserialization rejects a missing required field or a duplicate
+/// one. `save_to_json` and `load_from_json` use exactly this form.
+#[derive(DebugSimple, Clone)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
     pub symbol: String,
@@ -96,13 +106,9 @@ pub struct OptionChain {
     /// The current market price of the underlying asset.
     pub underlying_price: Positive,
 
-    /// The expiration date of the options in the chain.
-    ///
-    /// `pub(crate)` so the `analytics::rnd` tests for
-    /// `impl RNDAnalysis for OptionChain` can install a past or malformed
-    /// date without triggering the Greek recalculation that
-    /// [`Self::update_expiration_date`] performs; production code reads it
-    /// through [`Self::get_expiration_date`].
+    /// The expiration date of the options in the chain. Read it through
+    /// [`Self::get_expiration_date`]; [`Self::update_expiration_date`]
+    /// changes it and refreshes the Greeks.
     pub(crate) expiration_date: String,
 
     /// A sorted collection of option contracts at different strike prices.
@@ -280,8 +286,8 @@ impl OptionChain {
     ///
     /// ```rust
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::{pos_or_panic, spos};
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::{pos_or_panic, spos};
     ///
     /// let chain = OptionChain::new(
     ///     "AAPL",
@@ -327,12 +333,12 @@ impl OptionChain {
     /// # Examples
     ///
     /// ```
-    /// # fn run() -> Result<(), optionstratlib::error::Error> {
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// use rust_decimal_macros::dec;
-    /// use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    /// use positive::{pos_or_panic, spos, Positive};
-    /// use optionstratlib::ExpirationDate;
-    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    /// use optionstratlib_core::{pos_or_panic, spos, model::Positive};
+    /// use optionstratlib_core::model::ExpirationDate;
+    /// use optionstratlib_market::chains::chain::OptionChain;
     /// let price_params = OptionDataPriceParams::new(
     ///     Some(Box::new(Positive::HUNDRED)),               // underlying price
     ///     Some(ExpirationDate::Days(pos_or_panic!(30.0))),    // expiration date
@@ -844,8 +850,8 @@ impl OptionChain {
     /// # Returns
     ///
     /// A vector of references to `OptionData` objects that match the filter criteria.
-    #[allow(dead_code)]
-    pub(crate) fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
+    #[must_use]
+    pub fn filter_option_data(&self, side: FindOptimalSide) -> Vec<&OptionData> {
         self.options
             .iter()
             .filter(|option| match side {
@@ -1027,8 +1033,8 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::{error, info};
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::pos_or_panic;
     ///
     /// let chain = OptionChain::new("SPY", pos_or_panic!(450.75), "2023-12-15".to_string(), None, None);
     /// // Add options to the chain...
@@ -1868,8 +1874,8 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::{pos_or_panic, Positive};
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::{pos_or_panic, model::Positive};
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
@@ -1897,9 +1903,9 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::Positive;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::model::Positive;
+    /// use optionstratlib_core::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2) in option_chain.get_double_inclusive_iter() {
     ///     info!("{:?}, {:?}", option1, option2);
@@ -1926,9 +1932,9 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::Positive;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::model::Positive;
+    /// use optionstratlib_core::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -1963,9 +1969,9 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::Positive;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::model::Positive;
+    /// use optionstratlib_core::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3) in option_chain.get_triple_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}", option1, option2, option3);
@@ -2001,9 +2007,9 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::Positive;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::model::Positive;
+    /// use optionstratlib_core::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
@@ -2044,9 +2050,9 @@ impl OptionChain {
     ///
     /// ```rust
     /// use tracing::info;
-    /// use optionstratlib::chains::chain::OptionChain;
-    /// use positive::Positive;
-    /// use positive::pos_or_panic;
+    /// use optionstratlib_market::chains::chain::OptionChain;
+    /// use optionstratlib_core::model::Positive;
+    /// use optionstratlib_core::pos_or_panic;
     /// let mut option_chain = OptionChain::new("TEST", Positive::HUNDRED, "2030-01-01".to_string(), None, None);
     /// for (option1, option2, option3, option4) in option_chain.get_quad_inclusive_iter() {
     ///     info!("{:?}, {:?}, {:?}, {:?}", option1, option2, option3, option4);
@@ -2446,7 +2452,7 @@ impl OptionChain {
     /// # Example
     ///
     /// ```
-    /// use optionstratlib::chains::chain::OptionChain;
+    /// use optionstratlib_market::chains::chain::OptionChain;
     /// let mut chain = OptionChain::new("AAPL", Default::default(), "".to_string(), None, None);
     /// chain.update_expiration_date("2023-12-15".to_string());
     /// ```
@@ -2488,6 +2494,17 @@ impl OptionChain {
     #[must_use]
     pub fn get_expiration_date(&self) -> String {
         self.expiration_date.clone()
+    }
+
+    /// Test seam: replaces the expiration date string without validating it
+    /// and without the Greek refresh [`Self::update_expiration_date`] does,
+    /// so tests in other crates can install a past or malformed date. An
+    /// unparseable value surfaces as an error from the methods that need a
+    /// date. Use `update_expiration_date` in production code.
+    #[doc(hidden)]
+    #[inline]
+    pub fn set_expiration_date(&mut self, expiration_date: String) {
+        self.expiration_date = expiration_date;
     }
 
     /// Returns the expiration date of the option chain as an `ExpirationDate` object.
@@ -3162,11 +3179,11 @@ mod tests_chain_base {
         tempfile::tempdir().expect("a temporary directory is available")
     }
 
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
-    use positive::spos;
+    use optionstratlib_core::spos;
     use tracing::info;
 
     #[test]
@@ -3621,7 +3638,7 @@ mod tests_option_data {
     #![allow(clippy::indexing_slicing)]
     use super::*;
     use num_traits::ToPrimitive;
-    use positive::{assert_pos_relative_eq, spos};
+    use optionstratlib_core::{assert_pos_relative_eq, spos};
     use rust_decimal_macros::dec;
     use tracing::info;
 
@@ -3831,10 +3848,10 @@ mod tests_option_data {
 mod tests_get_random_positions {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::error::chains::ChainBuildErrorKind;
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
@@ -4147,7 +4164,7 @@ mod tests_get_random_positions {
 mod tests_option_data_get_prices {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -4231,7 +4248,7 @@ mod tests_option_data_get_prices {
 mod tests_option_data_display {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -4471,7 +4488,7 @@ mod tests_option_data_get_option {
     use super::*;
 
     use num_traits::ToPrimitive;
-    use positive::spos;
+    use optionstratlib_core::spos;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -4529,10 +4546,10 @@ mod tests_option_data_get_options_in_strike {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
-    use crate::greeks::Greeks;
     use num_traits::ToPrimitive;
-    use positive::spos;
+    use optionstratlib_core::assert_decimal_eq;
+    use optionstratlib_core::spos;
+    use optionstratlib_pricing::greeks::Greeks;
     use rust_decimal_macros::dec;
 
     fn create_test_option_data() -> OptionData {
@@ -4662,7 +4679,7 @@ mod tests_option_data_get_options_in_strike {
 mod tests_filter_options_in_strike {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -4814,7 +4831,7 @@ mod tests_filter_options_in_strike {
 mod tests_chain_iterators {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -5011,7 +5028,7 @@ mod tests_chain_iterators {
 mod tests_chain_iterators_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -5668,9 +5685,9 @@ mod tests_is_valid_optimal_side {
 mod tests_option_data_delta {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
@@ -5789,7 +5806,7 @@ mod tests_option_data_delta {
 mod tests_serialization {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -5900,7 +5917,7 @@ mod tests_serialization {
 mod tests_option_data_serde {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
     use serde_json;
@@ -6146,7 +6163,7 @@ mod tests_option_data_serde {
 mod tests_option_chain_serde {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -6346,16 +6363,19 @@ mod tests_option_chain_serde {
 mod tests_gamma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
-    use crate::assert_decimal_eq;
-    use crate::utils::time::get_x_days_formatted;
+    use optionstratlib_core::assert_decimal_eq;
+    use optionstratlib_core::utils::time::get_x_days_formatted;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
     fn create_test_chain_with_gamma() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         option_chain.expiration_date = get_x_days_formatted(30);
         option_chain
     }
@@ -6410,45 +6430,6 @@ mod tests_gamma_calculations {
         let result = chain.gamma_exposure().unwrap();
         assert_decimal_eq!(result, dec!(0.0), dec!(0.001));
     }
-
-    #[test]
-    fn test_gamma_curve() {
-        let mut chain = create_test_chain_with_gamma();
-        chain.update_greeks();
-        let result = chain.gamma_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_gamma_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.gamma_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
 }
 
 #[cfg(test)]
@@ -6456,12 +6437,16 @@ mod tests_delta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
     fn create_test_chain_with_delta() -> OptionChain {
-        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+        OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap()
     }
 
     #[test]
@@ -6516,69 +6501,6 @@ mod tests_delta_calculations {
         let updated_delta = chain.delta_exposure().unwrap();
         assert_decimal_eq!(updated_delta, dec!(17.0), dec!(0.000001));
     }
-
-    #[test]
-    fn test_delta_curve() {
-        let mut chain = create_test_chain_with_delta();
-        chain.update_greeks();
-        let result = chain.delta_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_delta_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.delta_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
-
-    #[test]
-    fn test_delta_curve_shape() {
-        let mut chain = create_test_chain_with_delta();
-        chain.update_greeks();
-        let curve = chain.delta_curve().unwrap();
-
-        // Get sorted points by strike
-        let points: Vec<&Point2D> = curve.points.iter().collect();
-
-        // Verify the delta curve shape:
-        // 1. Delta should be roughly between 0 and 1 for calls
-        // 2. Should decrease as strike increases
-        for point in &points {
-            // Check delta bounds for call options
-            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
-            assert!(point.y <= dec!(1.1));
-        }
-
-        // Check monotonic decrease
-        for i in 1..points.len() {
-            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
-        }
-    }
 }
 
 #[cfg(test)]
@@ -6586,12 +6508,16 @@ mod tests_vega_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
     fn create_test_chain_with_vega() -> OptionChain {
-        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+        OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap()
     }
 
     #[test]
@@ -6646,69 +6572,6 @@ mod tests_vega_calculations {
         let updated_vega = chain.vega_exposure().unwrap();
         assert_decimal_eq!(updated_vega, dec!(0.0), dec!(0.000001));
     }
-
-    #[test]
-    fn test_vega_curve() {
-        let mut chain = create_test_chain_with_vega();
-        chain.update_greeks();
-        let result = chain.vega_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_vega_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.vega_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
-
-    #[test]
-    fn test_vega_curve_shape() {
-        let mut chain = create_test_chain_with_vega();
-        chain.update_greeks();
-        let curve = chain.vega_curve().unwrap();
-
-        // Get sorted points by strike
-        let points: Vec<&Point2D> = curve.points.iter().collect();
-
-        // Verify the vega curve shape:
-        // 1. Delta should be roughly between 0 and 1 for calls
-        // 2. Should decrease as strike increases
-        for point in &points {
-            // Check vega bounds for call options
-            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
-            assert!(point.y <= dec!(1.1));
-        }
-
-        // Check monotonic decrease
-        for i in 1..points.len() {
-            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
-        }
-    }
 }
 
 #[cfg(test)]
@@ -6716,12 +6579,16 @@ mod tests_theta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
     fn create_test_chain_with_theta() -> OptionChain {
-        OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap()
+        OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap()
     }
 
     #[test]
@@ -6776,69 +6643,6 @@ mod tests_theta_calculations {
         let updated_theta = chain.theta_exposure().unwrap();
         assert_decimal_eq!(updated_theta, dec!(0.0), dec!(0.000001));
     }
-
-    #[test]
-    fn test_theta_curve() {
-        let mut chain = create_test_chain_with_theta();
-        chain.update_greeks();
-        let result = chain.theta_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_theta_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.theta_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
-
-    #[test]
-    fn test_theta_curve_shape() {
-        let mut chain = create_test_chain_with_theta();
-        chain.update_greeks();
-        let curve = chain.theta_curve().unwrap();
-
-        // Get sorted points by strike
-        let points: Vec<&Point2D> = curve.points.iter().collect();
-
-        // Verify the theta curve shape:
-        // 1. Delta should be roughly between 0 and 1 for calls
-        // 2. Should decrease as strike increases
-        for point in &points {
-            // Check theta bounds for call options
-            assert!(point.y >= dec!(-0.1)); // Allow some margin for numerical precision
-            assert!(point.y <= dec!(1.1));
-        }
-
-        // Check monotonic decrease
-        for i in 1..points.len() {
-            assert!(points[i].y <= points[i - 1].y + dec!(0.1)); // Allow small non-monotonicity due to market data
-        }
-    }
 }
 
 #[cfg(test)]
@@ -6846,13 +6650,16 @@ mod tests_vanna_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vanna calculations
     fn create_test_chain_with_vanna() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
         // with a relative number of days in order to have a correct vanna calculation
         option_chain.update_expiration_date("30.0".to_string());
@@ -6890,45 +6697,6 @@ mod tests_vanna_calculations {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), dec!(0.0));
     }
-
-    #[test]
-    fn test_vanna_curve() {
-        let mut chain = create_test_chain_with_vanna();
-        chain.update_greeks();
-        let result = chain.vanna_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_vanna_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.vanna_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
 }
 
 #[cfg(test)]
@@ -6936,13 +6704,16 @@ mod tests_vomma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vomma calculation
     fn create_test_chain_with_vomma() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
         // with a relative number of days in order to have a correct vomma calculation
         option_chain.update_expiration_date("30.0".to_string());
@@ -6983,13 +6754,16 @@ mod tests_veta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for veta calculations
     fn create_test_chain_with_veta() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
         // with a relative number of days in order to have a correct veta calculation
         option_chain.update_expiration_date("30.0".to_string());
@@ -7023,45 +6797,6 @@ mod tests_veta_calculations {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), dec!(0.0));
     }
-
-    #[test]
-    fn test_veta_curve() {
-        let mut chain = create_test_chain_with_veta();
-        chain.update_greeks();
-        let result = chain.veta_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_veta_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.veta_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
 }
 
 #[cfg(test)]
@@ -7069,13 +6804,16 @@ mod tests_charm_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
     fn create_test_chain_with_charm() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
         // with a relative number of days in order to have a correct charm calculation
         option_chain.update_expiration_date("30.0".to_string());
@@ -7109,45 +6847,6 @@ mod tests_charm_calculations {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), dec!(0.0));
     }
-
-    #[test]
-    fn test_charm_curve() {
-        let mut chain = create_test_chain_with_charm();
-        chain.update_greeks();
-        let result = chain.charm_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_charm_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.charm_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
 }
 
 #[cfg(test)]
@@ -7155,13 +6854,16 @@ mod tests_color_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::assert_decimal_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
     fn create_test_chain_with_color() -> OptionChain {
-        let mut option_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut option_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
         // with a relative number of days in order to have a correct color calculation
         option_chain.update_expiration_date("30.0".to_string());
@@ -7195,55 +6897,16 @@ mod tests_color_calculations {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), dec!(0.0));
     }
-
-    #[test]
-    fn test_color_curve() {
-        let mut chain = create_test_chain_with_color();
-        chain.update_greeks();
-        let result = chain.color_curve();
-
-        assert!(result.is_ok());
-        let curve = result.unwrap();
-
-        // Test that curve contains points
-        assert!(!curve.points.is_empty());
-
-        // For each strike in the chain, there should be a corresponding point
-        assert_eq!(curve.points.len(), chain.options.len());
-
-        // Test x range of curve matches strike range
-        let first_strike = chain.options.iter().next().unwrap().strike_price;
-        let last_strike = chain.options.iter().last().unwrap().strike_price;
-        assert_eq!(curve.x_range.0, first_strike.to_dec());
-        assert_eq!(curve.x_range.1, last_strike.to_dec());
-    }
-
-    #[test]
-    fn test_color_curve_empty_chain() {
-        let chain = OptionChain::new(
-            "TEST",
-            Positive::HUNDRED,
-            "2024-12-31".to_string(),
-            None,
-            None,
-        );
-
-        let result = chain.color_curve();
-        // Should return error or empty curve depending on implementation
-        if let Ok(curve) = result {
-            assert!(curve.points.is_empty())
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests_atm_strike {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
@@ -7448,10 +7111,10 @@ mod tests_atm_strike {
 mod tests_atm_strike_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
@@ -7640,7 +7303,7 @@ mod tests_atm_strike_bis {
 mod tests_option_chain_utils {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -7795,11 +7458,11 @@ mod tests_option_chain_utils {
 mod tests_option_chain_utils_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
 
@@ -7992,10 +7655,10 @@ mod tests_option_chain_utils_bis {
 mod tests_to_build_params_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-    use crate::model::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use rust_decimal_macros::dec;
     use tracing::info;
@@ -8153,13 +7816,15 @@ mod tests_to_build_params_bis {
     /// constants).
     #[test]
     fn test_round_trip_preserves_smile_width() {
-        use crate::utils::time::get_x_days_formatted;
+        use optionstratlib_core::utils::time::get_x_days_formatted;
 
-        let mut chain =
-            match OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json") {
-                Ok(chain) => chain,
-                Err(e) => panic!("fixture load failed: {e}"),
-            };
+        let mut chain = match OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        )) {
+            Ok(chain) => chain,
+            Err(e) => panic!("fixture load failed: {e}"),
+        };
         chain.update_expiration_date(get_x_days_formatted(30));
 
         let iv_span = |c: &OptionChain| -> Positive {
@@ -8245,7 +7910,7 @@ mod tests_to_build_params_bis {
 mod chain_coverage_tests {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -8479,44 +8144,10 @@ mod chain_coverage_tests {
         let color_exposure = chain.color_exposure();
         assert!(color_exposure.is_ok());
     }
-
-    #[test]
-    fn test_all_curves() {
-        let mut chain = create_test_chain();
-
-        // Update Greeks to ensure they are populated
-        chain.update_greeks();
-
-        // Test various curve calculations
-        let gamma_curve = chain.gamma_curve();
-        assert!(gamma_curve.is_ok());
-
-        let delta_curve = chain.delta_curve();
-        assert!(delta_curve.is_ok());
-
-        let vega_curve = chain.vega_curve();
-        assert!(vega_curve.is_ok());
-
-        let theta_curve = chain.theta_curve();
-        assert!(theta_curve.is_ok());
-
-        let vanna_curve = chain.vanna_curve();
-        assert!(vanna_curve.is_ok());
-
-        let veta_curve = chain.veta_curve();
-        assert!(veta_curve.is_ok());
-
-        let charm_curve = chain.charm_curve();
-        assert!(charm_curve.is_ok());
-
-        let color_curve = chain.color_curve();
-        assert!(color_curve.is_ok());
-    }
 }
 
 #[cfg(test)]
 mod chain_coverage_tests_bis {
-
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
@@ -8540,7 +8171,7 @@ mod chain_coverage_tests_bis {
     fn scratch_dir() -> tempfile::TempDir {
         tempfile::tempdir().expect("a temporary directory is available")
     }
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -8795,46 +8426,13 @@ mod chain_coverage_tests_bis {
         let color_exposure = chain.color_exposure();
         assert!(color_exposure.is_ok());
     }
-
-    #[test]
-    fn test_all_curves() {
-        let mut chain = create_test_chain();
-
-        // Update Greeks to ensure they are populated
-        chain.update_greeks();
-
-        // Test various curve calculations
-        let gamma_curve = chain.gamma_curve();
-        assert!(gamma_curve.is_ok());
-
-        let delta_curve = chain.delta_curve();
-        assert!(delta_curve.is_ok());
-
-        let vega_curve = chain.vega_curve();
-        assert!(vega_curve.is_ok());
-
-        let theta_curve = chain.theta_curve();
-        assert!(theta_curve.is_ok());
-
-        let vanna_curve = chain.vanna_curve();
-        assert!(vanna_curve.is_ok());
-
-        let veta_curve = chain.veta_curve();
-        assert!(veta_curve.is_ok());
-
-        let charm_curve = chain.charm_curve();
-        assert!(charm_curve.is_ok());
-
-        let color_curve = chain.color_curve();
-        assert!(color_curve.is_ok());
-    }
 }
 
 #[cfg(test)]
 mod tests_get_position_with_delta {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use crate::error::chains::OptionDataErrorKind;
 
@@ -9236,7 +8834,7 @@ mod tests_get_position_with_delta {
 mod tests_get_strikes_and_optiondata {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -9545,7 +9143,7 @@ mod tests_option_chain_comparison {
 
     #![allow(clippy::indexing_slicing)]
     use crate::chains::chain::OptionChain;
-    use positive::Positive;
+    use optionstratlib_core::model::Positive;
     use rust_decimal_macros::dec;
     use std::cmp::Ordering;
 
@@ -10207,7 +9805,7 @@ mod tests_title_operations {
 mod tests_expiration_operations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10303,7 +9901,7 @@ mod tests_expiration_operations {
 mod tests_from_vec_option_data {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10440,7 +10038,7 @@ mod tests_len_trait {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
-    use crate::utils::Len;
+    use optionstratlib_core::utils::Len;
 
     #[test]
     fn test_len_empty_chain() {
@@ -10536,7 +10134,7 @@ mod tests_default_trait {
 mod tests_option_chain_params_trait {
     #![allow(clippy::indexing_slicing)]
     use super::*;
-    use positive::spos;
+    use optionstratlib_core::spos;
 
     use rust_decimal_macros::dec;
 
@@ -10591,8 +10189,8 @@ mod tests_option_chain_params_trait {
 #[cfg(test)]
 mod tests_atm_iv_provider {
     use super::*;
-    use crate::volatility::AtmIvProvider;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_pricing::volatility::AtmIvProvider;
     use rust_decimal_macros::dec;
 
     #[test]

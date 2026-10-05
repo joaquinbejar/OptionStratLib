@@ -11,6 +11,7 @@
 //! - Charm Curve and Surface
 //! - Color Curve and Surface
 
+use optionstratlib::analytics::OptionChainProjections;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::metrics::{CharmSurface, ColorSurface, ThetaSurface};
