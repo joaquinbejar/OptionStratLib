@@ -4,7 +4,9 @@
 //! volatility from the price. Every value crosses between the two crates as
 //! the same canonical type; nothing is converted or wrapped.
 
-use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+use optionstratlib_core::model::{
+    ExpirationDate, OptionStyle, OptionType, Options, Positive, Side,
+};
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::{OptionPricing, black_scholes};
@@ -37,8 +39,14 @@ fn close(value: Decimal, expected: Decimal, tolerance: Decimal) -> bool {
 fn test_closed_form_price_matches_hull() {
     let call = black_scholes(&hull_call(OptionStyle::Call));
     let put = black_scholes(&hull_call(OptionStyle::Put));
-    assert!(matches!(call, Ok(price) if close(price, dec!(4.76), dec!(0.005))), "{call:?}");
-    assert!(matches!(put, Ok(price) if close(price, dec!(0.81), dec!(0.005))), "{put:?}");
+    assert!(
+        matches!(call, Ok(price) if close(price, dec!(4.76), dec!(0.005))),
+        "{call:?}"
+    );
+    assert!(
+        matches!(put, Ok(price) if close(price, dec!(0.81), dec!(0.005))),
+        "{put:?}"
+    );
 }
 
 #[test]
@@ -59,7 +67,9 @@ fn test_greeks_of_a_core_option() {
 fn test_payoff_at_expiry_from_core() {
     let call = hull_call(OptionStyle::Call);
     assert!(matches!(call.payoff(), Ok(value) if value == dec!(2)));
-    assert!(matches!(call.payoff_at_price(&pos_or_panic!(35.0)), Ok(value) if value == Decimal::ZERO));
+    assert!(
+        matches!(call.payoff_at_price(&pos_or_panic!(35.0)), Ok(value) if value == Decimal::ZERO)
+    );
 }
 
 #[test]

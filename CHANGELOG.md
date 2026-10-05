@@ -27,7 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   facade test suites and benches declare `required-features = ["market",
   "simulation"]`, `make lint` runs Clippy for each capability on its own, CI
   builds the pricing-only and market-only facades, and the minimal market
-  feature-tree fixture is now resolved with `--features market`. A stale
+  feature-tree fixture is now resolved with `--features market`. Two
+  consumer fixtures, `fixtures/consumers/facade-pricing` and
+  `facade-market`, use the facade with one capability each through the
+  `prelude` and the canonical paths, prove those paths are the component
+  items, and pin their graphs (`make check-fixtures`,
+  `make check-consumer-facade`, `make test-consumer-facade`, all in CI). A stale
   note claiming the analytics items kept historical `chains` paths is gone.
 
 - **Market file I/O sits behind an `io` feature** (#525, ADR-0003).

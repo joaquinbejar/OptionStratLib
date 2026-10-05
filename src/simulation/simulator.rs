@@ -82,7 +82,7 @@ where
     ///
     /// Returns the error type produced by the supplied generator. For
     /// chain-backed generators (e.g. [`crate::simulation::generator_positive`])
-    /// this is [`crate::error::ChainError`].
+    /// this is [`crate::error::SimulationError`].
     pub fn new<F, E>(
         title: String,
         size: usize,

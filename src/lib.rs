@@ -399,7 +399,7 @@
 //! The rest of the library (analytics, pnl, risk, metrics, strategies,
 //! backtesting, visualization, and `simulation` behind its own feature)
 //! still lives in this crate and moves out milestone by milestone. Until then
-//! those modules, the unified [`error::Error`] and their `prelude` items need
+//! those modules, the unified `error::Error` and their `prelude` items need
 //! both `market` and `simulation`, and the `schema` derives stay always on;
 //! the facade default enables all of it.
 //!
@@ -931,7 +931,7 @@
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
 //!   `default-features = false` drops it, and `csv` and `zip` with it
-//! - `async`: asynchronous versions of that I/O (implies `market` and `io`; tokio + reqwest + futures)
+//! - `async`: asynchronous versions of that I/O (implies `market` and `io`; adds tokio)
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
 //!   (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
 //!   simulation failures arrive as `ChainError::Generator`; implies `market` and
@@ -1382,7 +1382,7 @@ pub use optionstratlib_market::chains;
 /// Defines fundamental constants used throughout the library including mathematical
 /// constants (π, epsilon values), market standards (trading days per year)
 /// and time-unit conversions. Defined by `optionstratlib-core`; the pricing
-/// solver defaults live in [`pricing::constants`].
+/// solver defaults live in `pricing::constants` (feature `pricing`).
 pub use optionstratlib_core::constants;
 
 /// * `curves` - Generic two-dimensional curves on `Decimal` coordinates.
