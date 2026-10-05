@@ -23,5 +23,3 @@ mod lib_test;
 mod pricing;
 
 mod model;
-
-mod volatility;

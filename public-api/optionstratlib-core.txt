@@ -3,6 +3,7 @@ pub use optionstratlib_core::assert_pos_relative_eq
 pub use optionstratlib_core::pos_or_panic
 pub use optionstratlib_core::spos
 pub mod optionstratlib_core::constants
+pub use optionstratlib_core::constants::DAYS_IN_A_YEAR
 pub const optionstratlib_core::constants::EPSILON: rust_decimal::decimal::Decimal
 pub const optionstratlib_core::constants::MAX_VOLATILITY: positive::positive::Positive
 pub const optionstratlib_core::constants::MILLISECONDS_PER_SECOND: positive::positive::Positive

@@ -140,6 +140,7 @@ optionstratlib -> num-traits
 optionstratlib -> option_type
 optionstratlib -> optionstratlib-core
 optionstratlib -> optionstratlib-math
+optionstratlib -> optionstratlib-pricing
 optionstratlib -> positive
 optionstratlib -> pretty-simple-display
 optionstratlib -> prettytable-rs
@@ -187,6 +188,21 @@ optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
 optionstratlib-math -> utoipa
+optionstratlib-pricing -> num-traits
+optionstratlib-pricing -> optionstratlib-core
+optionstratlib-pricing -> optionstratlib-math
+optionstratlib-pricing -> pretty-simple-display
+optionstratlib-pricing -> rand
+optionstratlib-pricing -> rand_distr
+optionstratlib-pricing -> rayon
+optionstratlib-pricing -> rust_decimal
+optionstratlib-pricing -> rust_decimal_macros
+optionstratlib-pricing -> serde
+optionstratlib-pricing -> serde_json
+optionstratlib-pricing -> statrs
+optionstratlib-pricing -> thiserror
+optionstratlib-pricing -> tracing
+optionstratlib-pricing -> utoipa
 pbkdf2 -> digest
 pbkdf2 -> hmac
 positive -> approx
@@ -431,6 +447,7 @@ option_type [default,utoipa]
 optionstratlib [synthetic]
 optionstratlib-core [default,schema]
 optionstratlib-math [default,schema]
+optionstratlib-pricing [default,schema]
 pbkdf2 [default,hmac]
 pin-project-lite []
 pkg-config []

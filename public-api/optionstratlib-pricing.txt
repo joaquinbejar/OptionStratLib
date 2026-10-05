@@ -1,0 +1,618 @@
+pub mod optionstratlib_pricing
+pub mod optionstratlib_pricing::error
+pub mod optionstratlib_pricing::error::greeks
+pub enum optionstratlib_pricing::error::greeks::CalculationErrorKind
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::CharmError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::CharmError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::ColorError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::ColorError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::DeltaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::DeltaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::GammaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::GammaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::RhoError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::RhoError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::ThetaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::ThetaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VannaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VannaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VegaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VegaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VetaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VetaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VommaError
+pub optionstratlib_pricing::error::greeks::CalculationErrorKind::VommaError::reason: alloc::string::String
+pub enum optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::EmptyOptions
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::EqualDeltas
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::InsufficientContracts
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::NegativePositionSize
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::NotAchievable
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::OptionDeltaZero
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::SameSignDeltas
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::SizeMismatch
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::SizeMismatch::calculated: positive::positive::Positive
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::SizeMismatch::expected: positive::positive::Positive
+pub optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind::ZeroDelta
+impl core::convert::From<optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind) -> Self
+pub enum optionstratlib_pricing::error::greeks::GreeksError
+pub optionstratlib_pricing::error::greeks::GreeksError::CalculationError(optionstratlib_pricing::error::greeks::CalculationErrorKind)
+pub optionstratlib_pricing::error::greeks::GreeksError::DeltaNeutrality(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind)
+pub optionstratlib_pricing::error::greeks::GreeksError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_pricing::error::greeks::GreeksError::InputError(optionstratlib_pricing::error::greeks::InputErrorKind)
+pub optionstratlib_pricing::error::greeks::GreeksError::MathError(optionstratlib_pricing::error::greeks::MathErrorKind)
+pub optionstratlib_pricing::error::greeks::GreeksError::NonFinite
+pub optionstratlib_pricing::error::greeks::GreeksError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::greeks::GreeksError::NonFinite::value: f64
+pub optionstratlib_pricing::error::greeks::GreeksError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_pricing::error::greeks::GreeksError::Pricing(alloc::boxed::Box<optionstratlib_pricing::error::pricing::PricingError>)
+impl optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::delta_error(&str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::invalid_time(positive::positive::Positive, &str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::invalid_volatility(f64, &str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::non_finite(&'static str, f64) -> Self
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::VolatilityError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::VolatilityError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub enum optionstratlib_pricing::error::greeks::InputErrorKind
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidPrice
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidPrice::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidPrice::value: f64
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidRate
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidRate::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidRate::value: f64
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidStrike
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidStrike::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidStrike::value: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidTime
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidTime::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidTime::value: positive::positive::Positive
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidVolatility
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidVolatility::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::InputErrorKind::InvalidVolatility::value: f64
+pub enum optionstratlib_pricing::error::greeks::MathErrorKind
+pub optionstratlib_pricing::error::greeks::MathErrorKind::ConvergenceFailure
+pub optionstratlib_pricing::error::greeks::MathErrorKind::ConvergenceFailure::iterations: usize
+pub optionstratlib_pricing::error::greeks::MathErrorKind::ConvergenceFailure::tolerance: f64
+pub optionstratlib_pricing::error::greeks::MathErrorKind::DivisionByZero
+pub optionstratlib_pricing::error::greeks::MathErrorKind::InvalidDomain
+pub optionstratlib_pricing::error::greeks::MathErrorKind::InvalidDomain::reason: alloc::string::String
+pub optionstratlib_pricing::error::greeks::MathErrorKind::InvalidDomain::value: f64
+pub optionstratlib_pricing::error::greeks::MathErrorKind::Overflow
+pub type optionstratlib_pricing::error::greeks::GreeksResult<T> = core::result::Result<T, optionstratlib_pricing::error::greeks::GreeksError>
+pub mod optionstratlib_pricing::error::pricing
+pub enum optionstratlib_pricing::error::pricing::PricingError
+pub optionstratlib_pricing::error::pricing::PricingError::BinomialNodeMissing
+pub optionstratlib_pricing::error::pricing::PricingError::BinomialNodeMissing::node: &'static str
+pub optionstratlib_pricing::error::pricing::PricingError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::pricing::PricingError::DeltaAdjustmentNotApplicable
+pub optionstratlib_pricing::error::pricing::PricingError::DeltaAdjustmentNotApplicable::strategy: &'static str
+pub optionstratlib_pricing::error::pricing::PricingError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_pricing::error::pricing::PricingError::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
+pub optionstratlib_pricing::error::pricing::PricingError::InvalidEngine
+pub optionstratlib_pricing::error::pricing::PricingError::InvalidEngine::reason: alloc::string::String
+pub optionstratlib_pricing::error::pricing::PricingError::MethodError
+pub optionstratlib_pricing::error::pricing::PricingError::MethodError::method: alloc::string::String
+pub optionstratlib_pricing::error::pricing::PricingError::MethodError::reason: alloc::string::String
+pub optionstratlib_pricing::error::pricing::PricingError::NonFinite
+pub optionstratlib_pricing::error::pricing::PricingError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::pricing::PricingError::NonFinite::value: f64
+pub optionstratlib_pricing::error::pricing::PricingError::Options(optionstratlib_core::error::options::OptionsError)
+pub optionstratlib_pricing::error::pricing::PricingError::Position(optionstratlib_core::error::position::PositionError)
+pub optionstratlib_pricing::error::pricing::PricingError::Positive(positive::error::PositiveError)
+pub optionstratlib_pricing::error::pricing::PricingError::SimulationError
+pub optionstratlib_pricing::error::pricing::PricingError::SimulationError::reason: alloc::string::String
+pub optionstratlib_pricing::error::pricing::PricingError::SqrtFailure
+pub optionstratlib_pricing::error::pricing::PricingError::SqrtFailure::value: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::pricing::PricingError::UnsupportedOptionType
+pub optionstratlib_pricing::error::pricing::PricingError::UnsupportedOptionType::method: alloc::string::String
+pub optionstratlib_pricing::error::pricing::PricingError::UnsupportedOptionType::option_type: alloc::string::String
+impl optionstratlib_pricing::error::pricing::PricingError
+pub fn optionstratlib_pricing::error::pricing::PricingError::invalid_engine(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::method_error(&str, &str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::non_finite(&'static str, f64) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::other(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::simulation_error(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::unsupported_option_type(&str, &str) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_core::error::options::OptionsError
+pub fn optionstratlib_core::error::options::OptionsError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub type optionstratlib_pricing::error::pricing::PricingResult<T> = core::result::Result<T, optionstratlib_pricing::error::pricing::PricingError>
+pub enum optionstratlib_pricing::error::GreeksError
+pub optionstratlib_pricing::error::GreeksError::CalculationError(optionstratlib_pricing::error::greeks::CalculationErrorKind)
+pub optionstratlib_pricing::error::GreeksError::DeltaNeutrality(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind)
+pub optionstratlib_pricing::error::GreeksError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_pricing::error::GreeksError::InputError(optionstratlib_pricing::error::greeks::InputErrorKind)
+pub optionstratlib_pricing::error::GreeksError::MathError(optionstratlib_pricing::error::greeks::MathErrorKind)
+pub optionstratlib_pricing::error::GreeksError::NonFinite
+pub optionstratlib_pricing::error::GreeksError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::GreeksError::NonFinite::value: f64
+pub optionstratlib_pricing::error::GreeksError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_pricing::error::GreeksError::Pricing(alloc::boxed::Box<optionstratlib_pricing::error::pricing::PricingError>)
+impl optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::delta_error(&str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::invalid_time(positive::positive::Positive, &str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::invalid_volatility(f64, &str) -> Self
+pub fn optionstratlib_pricing::error::greeks::GreeksError::non_finite(&'static str, f64) -> Self
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::VolatilityError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::VolatilityError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::greeks::DeltaNeutralityErrorKind) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub enum optionstratlib_pricing::error::PricingError
+pub optionstratlib_pricing::error::PricingError::BinomialNodeMissing
+pub optionstratlib_pricing::error::PricingError::BinomialNodeMissing::node: &'static str
+pub optionstratlib_pricing::error::PricingError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::PricingError::DeltaAdjustmentNotApplicable
+pub optionstratlib_pricing::error::PricingError::DeltaAdjustmentNotApplicable::strategy: &'static str
+pub optionstratlib_pricing::error::PricingError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_pricing::error::PricingError::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
+pub optionstratlib_pricing::error::PricingError::InvalidEngine
+pub optionstratlib_pricing::error::PricingError::InvalidEngine::reason: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::MethodError
+pub optionstratlib_pricing::error::PricingError::MethodError::method: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::MethodError::reason: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::NonFinite
+pub optionstratlib_pricing::error::PricingError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::PricingError::NonFinite::value: f64
+pub optionstratlib_pricing::error::PricingError::Options(optionstratlib_core::error::options::OptionsError)
+pub optionstratlib_pricing::error::PricingError::Position(optionstratlib_core::error::position::PositionError)
+pub optionstratlib_pricing::error::PricingError::Positive(positive::error::PositiveError)
+pub optionstratlib_pricing::error::PricingError::SimulationError
+pub optionstratlib_pricing::error::PricingError::SimulationError::reason: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::SqrtFailure
+pub optionstratlib_pricing::error::PricingError::SqrtFailure::value: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::error::PricingError::UnsupportedOptionType
+pub optionstratlib_pricing::error::PricingError::UnsupportedOptionType::method: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::UnsupportedOptionType::option_type: alloc::string::String
+impl optionstratlib_pricing::error::pricing::PricingError
+pub fn optionstratlib_pricing::error::pricing::PricingError::invalid_engine(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::method_error(&str, &str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::non_finite(&'static str, f64) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::other(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::simulation_error(&str) -> Self
+pub fn optionstratlib_pricing::error::pricing::PricingError::unsupported_option_type(&str, &str) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_core::error::options::OptionsError
+pub fn optionstratlib_core::error::options::OptionsError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub enum optionstratlib_pricing::error::VolatilityError
+pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable
+pub optionstratlib_pricing::error::VolatilityError::AtmIvUnavailable::source: alloc::boxed::Box<optionstratlib_pricing::error::VolatilityError>
+pub optionstratlib_pricing::error::VolatilityError::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_pricing::error::VolatilityError::InvalidPrice
+pub optionstratlib_pricing::error::VolatilityError::InvalidPrice::price: positive::positive::Positive
+pub optionstratlib_pricing::error::VolatilityError::InvalidPrice::reason: alloc::string::String
+pub optionstratlib_pricing::error::VolatilityError::InvalidTime
+pub optionstratlib_pricing::error::VolatilityError::InvalidTime::reason: alloc::string::String
+pub optionstratlib_pricing::error::VolatilityError::InvalidTime::time: positive::positive::Positive
+pub optionstratlib_pricing::error::VolatilityError::IvNotFound
+pub optionstratlib_pricing::error::VolatilityError::NoConvergence
+pub optionstratlib_pricing::error::VolatilityError::NoConvergence::iterations: u32
+pub optionstratlib_pricing::error::VolatilityError::NoConvergence::last_volatility: positive::positive::Positive
+pub optionstratlib_pricing::error::VolatilityError::NoValidVolatility
+pub optionstratlib_pricing::error::VolatilityError::NonFinite
+pub optionstratlib_pricing::error::VolatilityError::NonFinite::context: &'static str
+pub optionstratlib_pricing::error::VolatilityError::NonFinite::value: f64
+pub optionstratlib_pricing::error::VolatilityError::NumericalFailure
+pub optionstratlib_pricing::error::VolatilityError::NumericalFailure::reason: alloc::string::String
+pub optionstratlib_pricing::error::VolatilityError::OptionError
+pub optionstratlib_pricing::error::VolatilityError::OptionError::reason: alloc::string::String
+pub optionstratlib_pricing::error::VolatilityError::Options(optionstratlib_core::error::options::OptionsError)
+pub optionstratlib_pricing::error::VolatilityError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_pricing::error::VolatilityError::VegaError
+pub optionstratlib_pricing::error::VolatilityError::VegaError::reason: alloc::string::String
+pub optionstratlib_pricing::error::VolatilityError::ZeroVega
+impl optionstratlib_pricing::error::VolatilityError
+pub fn optionstratlib_pricing::error::VolatilityError::non_finite(&'static str, f64) -> Self
+impl core::convert::From<optionstratlib_pricing::error::VolatilityError> for optionstratlib_pricing::error::greeks::GreeksError
+pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::VolatilityError) -> Self
+pub type optionstratlib_pricing::error::PricingResult<T> = core::result::Result<T, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::greeks
+pub mod optionstratlib_pricing::greeks::numerical
+pub fn optionstratlib_pricing::greeks::numerical::numerical_delta(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::numerical::numerical_gamma(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::numerical::numerical_rho(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::numerical::numerical_theta(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::numerical::numerical_vega(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub struct optionstratlib_pricing::greeks::Greek
+pub optionstratlib_pricing::greeks::Greek::alpha: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::charm: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::color: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::delta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::gamma: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::rho: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::rho_d: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::theta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::vanna: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::vega: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::veta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::Greek::vomma: rust_decimal::decimal::Decimal
+impl core::convert::From<optionstratlib_pricing::greeks::Greek> for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::from(optionstratlib_pricing::greeks::Greek) -> Self
+impl core::fmt::Debug for optionstratlib_pricing::greeks::Greek
+pub fn optionstratlib_pricing::greeks::Greek::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_pricing::greeks::Greek
+pub fn optionstratlib_pricing::greeks::Greek::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_pricing::greeks::Greek
+pub fn optionstratlib_pricing::greeks::Greek::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_pricing::greeks::Greek::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_pricing::greeks::Greek
+pub fn optionstratlib_pricing::greeks::Greek::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_pricing::greeks::GreeksSnapshot
+pub optionstratlib_pricing::greeks::GreeksSnapshot::alpha: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_pricing::greeks::GreeksSnapshot::charm: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::color: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::delta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::gamma: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::rho: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_pricing::greeks::GreeksSnapshot::rho_d: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_pricing::greeks::GreeksSnapshot::theta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::vanna: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::vega: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::veta: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::greeks::GreeksSnapshot::vomma: rust_decimal::decimal::Decimal
+impl core::convert::From<optionstratlib_pricing::greeks::Greek> for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::from(optionstratlib_pricing::greeks::Greek) -> Self
+impl core::fmt::Debug for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_pricing::greeks::GreeksSnapshot
+pub fn optionstratlib_pricing::greeks::GreeksSnapshot::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub const optionstratlib_pricing::greeks::DELTA_THRESHOLD: rust_decimal::decimal::Decimal
+pub trait optionstratlib_pricing::greeks::Black76Greeks
+pub fn optionstratlib_pricing::greeks::Black76Greeks::delta_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Black76Greeks::gamma_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Black76Greeks::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Black76Greeks::rho_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Black76Greeks::theta_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Black76Greeks::vega_b76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub trait optionstratlib_pricing::greeks::GarmanKohlhagenGreeks
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::delta_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::gamma_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::rho_domestic_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::rho_foreign_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::theta_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::GarmanKohlhagenGreeks::vega_gk(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub trait optionstratlib_pricing::greeks::Greeks
+pub fn optionstratlib_pricing::greeks::Greeks::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::color(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::get_options(&self) -> core::result::Result<alloc::vec::Vec<&optionstratlib_core::model::option::Options>, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::greeks(&self) -> core::result::Result<optionstratlib_pricing::greeks::Greek, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::rho_d(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::vanna(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::veta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::Greeks::vomma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::Greeks for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::color(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::get_options(&self) -> core::result::Result<alloc::vec::Vec<&optionstratlib_core::model::option::Options>, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::greeks(&self) -> core::result::Result<optionstratlib_pricing::greeks::Greek, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::rho_d(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::vanna(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::veta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::option::Options::vomma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::Greeks for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::alpha(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::charm(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::color(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::get_options(&self) -> core::result::Result<alloc::vec::Vec<&optionstratlib_core::model::option::Options>, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::greeks(&self) -> core::result::Result<optionstratlib_pricing::greeks::Greek, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::rho_d(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::vanna(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::veta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::position::Position::vomma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub trait optionstratlib_pricing::greeks::LegGreeks
+pub fn optionstratlib_pricing::greeks::LegGreeks::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::LegGreeks::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::LegGreeks::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::LegGreeks::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::LegGreeks::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::LegGreeks for optionstratlib_core::model::leg::future::FuturePosition
+pub fn optionstratlib_core::model::leg::future::FuturePosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::future::FuturePosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::future::FuturePosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::future::FuturePosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::future::FuturePosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::LegGreeks for optionstratlib_core::model::leg::leg_enum::Leg
+pub fn optionstratlib_core::model::leg::leg_enum::Leg::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::leg_enum::Leg::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::leg_enum::Leg::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::leg_enum::Leg::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::leg_enum::Leg::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::LegGreeks for optionstratlib_core::model::leg::perpetual::PerpetualPosition
+pub fn optionstratlib_core::model::leg::perpetual::PerpetualPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::perpetual::PerpetualPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::perpetual::PerpetualPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::perpetual::PerpetualPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::perpetual::PerpetualPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+impl optionstratlib_pricing::greeks::LegGreeks for optionstratlib_core::model::leg::spot::SpotPosition
+pub fn optionstratlib_core::model::leg::spot::SpotPosition::delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::spot::SpotPosition::gamma(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::spot::SpotPosition::rho(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::spot::SpotPosition::theta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_core::model::leg::spot::SpotPosition::vega(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::alpha(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::big_n(rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_pricing::greeks::calculate_d_values_black_76(&optionstratlib_core::model::option::Options) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::calculate_delta_neutral_sizes(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, positive::positive::Positive) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::charm(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::color(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::d1(positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::d2(positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::delta(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::delta_b76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::delta_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::gamma(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::gamma_b76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::gamma_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::n(rust_decimal::decimal::Decimal) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::rho(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::rho_b76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::rho_d(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::rho_domestic_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::rho_foreign_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::theta(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::theta_b76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::theta_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::vanna(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::vega(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::vega_b76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::vega_gk(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::veta(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub fn optionstratlib_pricing::greeks::vomma(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
+pub mod optionstratlib_pricing::pricing
+pub mod optionstratlib_pricing::pricing::american
+pub fn optionstratlib_pricing::pricing::american::barone_adesi_whaley(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, &financial_types::OptionStyle) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::asian
+pub fn optionstratlib_pricing::pricing::asian::asian_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::barrier
+pub fn optionstratlib_pricing::pricing::barrier::barrier_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::binary
+pub fn optionstratlib_pricing::pricing::binary::binary_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::binomial_model
+pub struct optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'a>
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::asset: positive::positive::Positive
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::expiry: positive::positive::Positive
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::int_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::no_steps: core::num::nonzero::NonZeroUsize
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::option_style: &'a financial_types::OptionStyle
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::option_type: &'a option_type::option_type::OptionType
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::side: &'a financial_types::Side
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::strike: positive::positive::Positive
+pub optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams::volatility: positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::binomial_model::generate_binomial_tree(&optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<(alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>), optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::binomial_model::price_binomial(optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::black_76
+pub trait optionstratlib_pricing::pricing::black_76::Black76
+pub fn optionstratlib_pricing::pricing::black_76::Black76::calculate_price_black_76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_76::Black76::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_76::black_76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::black_scholes_model
+pub trait optionstratlib_pricing::pricing::black_scholes_model::BlackScholes
+pub fn optionstratlib_pricing::pricing::black_scholes_model::BlackScholes::calculate_price_black_scholes(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_scholes_model::BlackScholes::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_scholes_model::black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::chooser
+pub fn optionstratlib_pricing::pricing::chooser::chooser_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::cliquet
+pub fn optionstratlib_pricing::pricing::cliquet::cliquet_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::compound
+pub fn optionstratlib_pricing::pricing::compound::compound_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::constants
+pub const optionstratlib_pricing::pricing::constants::DEFAULT_BINOMIAL_STEPS: core::num::nonzero::NonZeroUsize
+pub const optionstratlib_pricing::pricing::constants::DEFAULT_MC_PATHS: core::num::nonzero::NonZeroUsize
+pub const optionstratlib_pricing::pricing::constants::DEFAULT_MC_STEPS: core::num::nonzero::NonZeroUsize
+pub const optionstratlib_pricing::pricing::constants::MAX_NEWTON_ITER: core::num::nonzero::NonZeroUsize
+pub mod optionstratlib_pricing::pricing::exchange
+pub fn optionstratlib_pricing::pricing::exchange::exchange_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::garman_kohlhagen
+pub trait optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen
+pub fn optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen::calculate_price_garman_kohlhagen(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::garman_kohlhagen::GarmanKohlhagen::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::garman_kohlhagen::garman_kohlhagen(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::lookback
+pub fn optionstratlib_pricing::pricing::lookback::lookback_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::monte_carlo
+pub fn optionstratlib_pricing::pricing::monte_carlo::monte_carlo_option_pricing(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo(&optionstratlib_core::model::option::Options, &[positive::positive::Positive]) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::option_pricing
+pub trait optionstratlib_pricing::pricing::option_pricing::OptionPricing
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_binomial(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+impl optionstratlib_pricing::pricing::option_pricing::OptionPricing for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_core::model::option::Options::calculate_price_binomial(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
+pub fn optionstratlib_core::model::option::Options::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub type optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree = optionstratlib_core::error::options::OptionsResult<(rust_decimal::decimal::Decimal, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>)>
+pub mod optionstratlib_pricing::pricing::power
+pub fn optionstratlib_pricing::pricing::power::power_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::quanto
+pub fn optionstratlib_pricing::pricing::quanto::quanto_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::rainbow
+pub fn optionstratlib_pricing::pricing::rainbow::rainbow_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::spread
+pub fn optionstratlib_pricing::pricing::spread::spread_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::telegraph
+pub struct optionstratlib_pricing::pricing::telegraph::TelegraphProcess
+impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state(&mut self, rust_decimal::decimal::Decimal) -> i8
+pub fn optionstratlib_pricing::pricing::telegraph::telegraph(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub mod optionstratlib_pricing::pricing::unified
+#[non_exhaustive] pub enum optionstratlib_pricing::pricing::unified::GenericPricingEngine<M: optionstratlib_pricing::pricing::unified::MonteCarloPricer>
+pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::ClosedFormBS
+pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::ClosedFormBlack76
+pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::ClosedFormGK
+pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::MonteCarlo
+pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::MonteCarlo::simulator: M
+pub struct optionstratlib_pricing::pricing::unified::NoMonteCarlo
+impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
+pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+pub trait optionstratlib_pricing::pricing::unified::MonteCarloPricer: core::marker::Send + core::marker::Sync
+pub fn optionstratlib_pricing::pricing::unified::MonteCarloPricer::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
+pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+impl<M> optionstratlib_pricing::pricing::unified::MonteCarloPricer for &M where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer + ?core::marker::Sized
+pub fn &M::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+pub trait optionstratlib_pricing::pricing::unified::Priceable
+pub fn optionstratlib_pricing::pricing::unified::Priceable::price<M>(&self, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+impl optionstratlib_pricing::pricing::unified::Priceable for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::price<M>(&self, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+pub fn optionstratlib_pricing::pricing::unified::price_option_with<M>(&optionstratlib_core::model::option::Options, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+pub type optionstratlib_pricing::pricing::unified::ClosedFormEngine = optionstratlib_pricing::pricing::unified::GenericPricingEngine<optionstratlib_pricing::pricing::unified::NoMonteCarlo>
+#[non_exhaustive] pub enum optionstratlib_pricing::pricing::GenericPricingEngine<M: optionstratlib_pricing::pricing::unified::MonteCarloPricer>
+pub optionstratlib_pricing::pricing::GenericPricingEngine::ClosedFormBS
+pub optionstratlib_pricing::pricing::GenericPricingEngine::ClosedFormBlack76
+pub optionstratlib_pricing::pricing::GenericPricingEngine::ClosedFormGK
+pub optionstratlib_pricing::pricing::GenericPricingEngine::MonteCarlo
+pub optionstratlib_pricing::pricing::GenericPricingEngine::MonteCarlo::simulator: M
+pub struct optionstratlib_pricing::pricing::BinomialPricingParams<'a>
+pub optionstratlib_pricing::pricing::BinomialPricingParams::asset: positive::positive::Positive
+pub optionstratlib_pricing::pricing::BinomialPricingParams::expiry: positive::positive::Positive
+pub optionstratlib_pricing::pricing::BinomialPricingParams::int_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_pricing::pricing::BinomialPricingParams::no_steps: core::num::nonzero::NonZeroUsize
+pub optionstratlib_pricing::pricing::BinomialPricingParams::option_style: &'a financial_types::OptionStyle
+pub optionstratlib_pricing::pricing::BinomialPricingParams::option_type: &'a option_type::option_type::OptionType
+pub optionstratlib_pricing::pricing::BinomialPricingParams::side: &'a financial_types::Side
+pub optionstratlib_pricing::pricing::BinomialPricingParams::strike: positive::positive::Positive
+pub optionstratlib_pricing::pricing::BinomialPricingParams::volatility: positive::positive::Positive
+pub struct optionstratlib_pricing::pricing::NoMonteCarlo
+impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
+pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+pub struct optionstratlib_pricing::pricing::TelegraphProcess
+impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state(&mut self, rust_decimal::decimal::Decimal) -> i8
+pub trait optionstratlib_pricing::pricing::Black76
+pub fn optionstratlib_pricing::pricing::Black76::calculate_price_black_76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::Black76::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub trait optionstratlib_pricing::pricing::BlackScholes
+pub fn optionstratlib_pricing::pricing::BlackScholes::calculate_price_black_scholes(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::BlackScholes::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub trait optionstratlib_pricing::pricing::GarmanKohlhagen
+pub fn optionstratlib_pricing::pricing::GarmanKohlhagen::calculate_price_garman_kohlhagen(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::GarmanKohlhagen::get_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_pricing::error::pricing::PricingError>
+pub trait optionstratlib_pricing::pricing::MonteCarloPricer: core::marker::Send + core::marker::Sync
+pub fn optionstratlib_pricing::pricing::MonteCarloPricer::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
+pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+impl<M> optionstratlib_pricing::pricing::unified::MonteCarloPricer for &M where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer + ?core::marker::Sized
+pub fn &M::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive>
+pub trait optionstratlib_pricing::pricing::OptionPricing
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_binomial(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::OptionPricing::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+impl optionstratlib_pricing::pricing::option_pricing::OptionPricing for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_core::model::option::Options::calculate_price_binomial(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
+pub fn optionstratlib_core::model::option::Options::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub trait optionstratlib_pricing::pricing::Priceable
+pub fn optionstratlib_pricing::pricing::Priceable::price<M>(&self, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+impl optionstratlib_pricing::pricing::unified::Priceable for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::price<M>(&self, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+pub trait optionstratlib_pricing::pricing::Profit
+pub fn optionstratlib_pricing::pricing::Profit::calculate_profit_at(&self, &positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::Profit::get_point_at_price(&self, &positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_pricing::pricing::Profit for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::calculate_profit_at(&self, &positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::get_point_at_price(&self, &positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_pricing::pricing::Profit for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::calculate_profit_at(&self, &positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::get_point_at_price(&self, &positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::asian_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::barone_adesi_whaley(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, &financial_types::OptionStyle) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::barrier_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::binary_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_76(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::chooser_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::cliquet_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::compound_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::exchange_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::garman_kohlhagen(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::generate_binomial_tree(&optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<(alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>), optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::lookback_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::monte_carlo_option_pricing(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::power_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::price_binomial(optionstratlib_pricing::pricing::binomial_model::BinomialPricingParams<'_>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::price_option_with<M>(&optionstratlib_core::model::option::Options, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::pricing::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
+pub fn optionstratlib_pricing::pricing::probability_keep_under_strike(optionstratlib_core::model::option::Options, core::option::Option<positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_pricing::pricing::quanto_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::rainbow_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::simulate_returns(rust_decimal::decimal::Decimal, positive::positive::Positive, usize, rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_pricing::pricing::spread_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub type optionstratlib_pricing::pricing::ClosedFormEngine = optionstratlib_pricing::pricing::unified::GenericPricingEngine<optionstratlib_pricing::pricing::unified::NoMonteCarlo>
+pub mod optionstratlib_pricing::volatility
+pub trait optionstratlib_pricing::volatility::AtmIvProvider
+pub fn optionstratlib_pricing::volatility::AtmIvProvider::atm_iv(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+impl optionstratlib_pricing::volatility::AtmIvProvider for positive::positive::Positive
+pub fn positive::positive::Positive::atm_iv(&self) -> core::result::Result<&positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub trait optionstratlib_pricing::volatility::VolatilitySmile
+pub fn optionstratlib_pricing::volatility::VolatilitySmile::smile(&self) -> optionstratlib_math::curves::curve::Curve
+pub fn optionstratlib_pricing::volatility::adjust_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::annualized_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::calculate_iv(positive::positive::Positive, positive::positive::Positive, financial_types::OptionStyle, positive::positive::Positive, positive::positive::Positive, alloc::string::String) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::constant_volatility(&[rust_decimal::decimal::Decimal]) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::de_annualized_volatility(positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::ewma_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::garch_volatility(&[rust_decimal::decimal::Decimal], rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::historical_volatility(&[rust_decimal::decimal::Decimal], usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::implied_volatility(positive::positive::Positive, &mut optionstratlib_core::model::option::Options, i64) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::simulate_heston_volatility(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize) -> core::result::Result<alloc::vec::Vec<positive::positive::Positive>, optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::uncertain_volatility_bounds(&optionstratlib_core::model::option::Options, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib_pricing::error::VolatilityError>
+pub fn optionstratlib_pricing::volatility::volatility_for_dt(positive::positive::Positive, positive::positive::Positive, optionstratlib_core::utils::time::TimeFrame, optionstratlib_core::utils::time::TimeFrame) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
+pub const optionstratlib_pricing::VERSION: &str

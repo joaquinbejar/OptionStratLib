@@ -190,7 +190,7 @@ enforced crate-wide and documented in `CHANGELOG.md`:
   provides a canonical seeded `StdRng` for Monte-Carlo / simulation
   tests, so precision shifts in upstream arithmetic cannot flip
   assertions by luck.
-- **Pricing-identity regression tests.** `tests/unit/pricing/identities_test.rs`
+- **Pricing-identity regression tests.** `crates/optionstratlib-pricing/tests/identities_test.rs`
   locks put-call parity on a grid, CRR binomial convergence to
   Black-Scholes, and the Greek sanity identities
   (`Γ_c = Γ_p`, `Vega_c = Vega_p`, `Δ_c − Δ_p ≈ e^{-qT}`).
@@ -1208,8 +1208,8 @@ cargo test -- --nocapture
 - **Greeks Tests**: Mathematical precision validation
 - **Visualization Tests**: Chart generation and export testing
 - **Property-Based Tests**: Mathematical invariant testing with `proptest`
-  (`tests/property/put_call_parity_test.rs`, `greeks_bounds_test.rs`)
-- **Identity Regression Tests**: `tests/unit/pricing/identities_test.rs`
+  (`crates/optionstratlib-pricing/tests/put_call_parity_test.rs`, `greeks_bounds_test.rs`)
+- **Identity Regression Tests**: `crates/optionstratlib-pricing/tests/identities_test.rs`
   locks put-call parity, CRR → Black-Scholes convergence, and
   Greek sanity (`Γ_c = Γ_p`, `Vega_c = Vega_p`,
   `Δ_c − Δ_p ≈ e^{-qT}`).

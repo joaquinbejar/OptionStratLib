@@ -21,7 +21,7 @@ use crate::model::{
 };
 use crate::pnl::{PnL, PnLCalculator};
 use crate::pricing::OptionPricing;
-use crate::pricing::payoff::Profit;
+use crate::pricing::Profit;
 use crate::strategies::base::Optimizable;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;

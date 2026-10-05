@@ -185,7 +185,7 @@
 //!   provides a canonical seeded `StdRng` for Monte-Carlo / simulation
 //!   tests, so precision shifts in upstream arithmetic cannot flip
 //!   assertions by luck.
-//! - **Pricing-identity regression tests.** `tests/unit/pricing/identities_test.rs`
+//! - **Pricing-identity regression tests.** `crates/optionstratlib-pricing/tests/identities_test.rs`
 //!   locks put-call parity on a grid, CRR binomial convergence to
 //!   Black-Scholes, and the Greek sanity identities
 //!   (`Γ_c = Γ_p`, `Vega_c = Vega_p`, `Δ_c − Δ_p ≈ e^{-qT}`).
@@ -1203,8 +1203,8 @@
 //! - **Greeks Tests**: Mathematical precision validation
 //! - **Visualization Tests**: Chart generation and export testing
 //! - **Property-Based Tests**: Mathematical invariant testing with `proptest`
-//!   (`tests/property/put_call_parity_test.rs`, `greeks_bounds_test.rs`)
-//! - **Identity Regression Tests**: `tests/unit/pricing/identities_test.rs`
+//!   (`crates/optionstratlib-pricing/tests/put_call_parity_test.rs`, `greeks_bounds_test.rs`)
+//! - **Identity Regression Tests**: `crates/optionstratlib-pricing/tests/identities_test.rs`
 //!   locks put-call parity, CRR → Black-Scholes convergence, and
 //!   Greek sanity (`Γ_c = Γ_p`, `Vega_c = Vega_p`,
 //!   `Δ_c − Δ_p ≈ e^{-qT}`).
@@ -1383,7 +1383,7 @@ pub use optionstratlib_math::geometrics;
 /// Comprehensive implementation of options Greeks (sensitivity measures) including
 /// Delta, Gamma, Theta, Vega, Rho, Vanna, Vomma, Veta, Charm and Color. Includes analytical
 /// formulas, numerical approximations, and visualization tools for risk analysis.
-pub mod greeks;
+pub use optionstratlib_pricing::greeks;
 
 /// * `metrics` - Performance and risk metrics analysis for options.
 ///
@@ -1426,7 +1426,7 @@ pub mod pnl;
 /// Implementations of various option pricing models including Black-Scholes-Merton,
 /// binomial trees, Monte Carlo simulation, and finite difference methods. Supports
 /// European, American, and exotic options.
-pub mod pricing;
+pub use optionstratlib_pricing::pricing;
 
 /// * `risk` - Risk assessment and management tools for options portfolios.
 ///
@@ -1475,7 +1475,7 @@ pub mod visualization;
 /// Comprehensive tools for volatility analysis including historical volatility calculation,
 /// implied volatility determination, volatility forecasting models (GARCH, EWMA), and
 /// volatility skew/smile analysis.
-pub mod volatility;
+pub use optionstratlib_pricing::volatility;
 
 /// * `series` - Functionality for working with collections of option chains across expirations.
 ///

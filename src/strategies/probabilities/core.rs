@@ -17,7 +17,7 @@ use crate::analytics::probability::{
 };
 use crate::error::probability::{ProbabilityCalculationErrorKind, ProbabilityError};
 use crate::error::strategies::StrategyError;
-use crate::pricing::payoff::Profit;
+use crate::pricing::Profit;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
 use num_traits::ToPrimitive;

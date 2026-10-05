@@ -973,6 +973,12 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
     }),
+    # The "must be absent" column of ADR-0002's `osl-fixture-pricing-only`
+    # row, plus the presentation crates math also excludes.
+    "optionstratlib-pricing": frozenset({
+        "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
+        "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
+    }),
 }
 
 
