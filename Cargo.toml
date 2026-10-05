@@ -85,7 +85,7 @@ criterion = { version = "0.8", default-features = false, features = ["html_repor
 mockall = "0.15"
 tempfile = "3.27"
 static_assertions = "1.1"
-proptest = "1.11"
+proptest = { workspace = true }
 
 [[test]]
 name = "tests"
@@ -171,3 +171,4 @@ tokio = { version = "1.53", features = ["full"] }
 async-trait = "0.1"
 reqwest = { version = "0.13", features = ["json"] }
 futures = "0.3"
+proptest = "1.11"

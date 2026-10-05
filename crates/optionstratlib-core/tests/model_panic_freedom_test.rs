@@ -1,16 +1,30 @@
-//! Property-based test for panic freedom of the P&L layer on a `Position`.
+//! Property-based tests for panic freedom in the model layer.
 //!
-//! `Position`'s own arithmetic, the expiration resolver and `mean_and_std`
-//! are core and are driven by
-//! `crates/optionstratlib-core/tests/model_panic_freedom_test.rs`. What stays
-//! here is the P&L trait over the same extreme inputs: premia and fees that
-//! overflow their accumulation, quantities that overflow the product, and
-//! horizons the calendar cannot hold. Whatever comes back, it must come back.
+//! The library is embedded in long-running services, where a panic kills the
+//! worker thread and takes the in-flight request with it. Every failure must
+//! therefore come back as a `Result`, including for inputs that are extreme
+//! but structurally valid.
+//!
+//! Three families are driven here. `Position`'s cost and premium arithmetic,
+//! which accumulates a premium and two fees and scales the total by the
+//! contract quantity — the product overflows `Positive` long before the
+//! factors do, and the break-even subtracts a per-contract cost from a strike
+//! that may be smaller than it. The resolution of a relative expiration, whose
+//! `DateTime + TimeDelta` addition overflows past a horizon of roughly
+//! 260 000 years. And `mean_and_std`, which sums a sample and divides by its
+//! length, so it meets both an overflow and an empty divisor. The assertion is
+//! deliberately weak: whatever comes back, it must come back.
+//!
+//! `PnLCalculator::calculate_pnl_at_expiration` over the same inputs belongs
+//! to the P&L layer and stays in the facade's property suite.
 
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::model::{ExpirationDate, Options, Position};
-use optionstratlib::pnl::PnLCalculator;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::model::utils::mean_and_std;
+use optionstratlib_core::model::{
+    ExpirationDate, Options, Position, TradeAble, reject_unrepresentable_expiration,
+    resolve_expiration_date,
+};
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -83,11 +97,11 @@ fn extreme_kind() -> impl Strategy<Value = (Side, OptionStyle)> {
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
 
-    /// `PnLCalculator::calculate_pnl_at_expiration` for a `Position`, over
-    /// the same extreme inputs the core suite drives through the position's
-    /// own arithmetic (`crates/optionstratlib-core/tests/model_panic_freedom_test.rs`).
+    /// Every monetary figure a `Position` exposes, over premia and fees that
+    /// overflow their own accumulation and quantities that overflow the
+    /// product with it.
     #[test]
-    fn test_position_pnl_calculator_never_panics(
+    fn test_position_costs_never_panic(
         strike in extreme_positive(),
         underlying in extreme_positive(),
         premium in extreme_positive(),
@@ -123,6 +137,35 @@ proptest! {
             None,
         );
 
-        let _ = position.calculate_pnl_at_expiration(&probe);
+        let _ = position.total_cost();
+        let _ = position.fees();
+        let _ = position.net_cost();
+        let _ = position.premium_received();
+        let _ = position.net_premium_received();
+        let _ = position.break_even();
+        let _ = position.validate();
+        let _ = position.trade();
+        let _ = position.pnl_at_expiration(&Some(&probe));
+        let _ = position.pnl_at_expiration(&None);
+        let _ = position.unrealized_pnl(probe);
+    }
+
+    /// The relative-expiration resolver over horizons the calendar cannot
+    /// hold. Both entry points must report rather than abort, and they must
+    /// agree: a day count the guard accepts is one the resolver can resolve.
+    #[test]
+    fn test_expiration_resolution_never_panics(expiration in extreme_expiration()) {
+        let resolved = resolve_expiration_date(&expiration);
+        let accepted = reject_unrepresentable_expiration(&expiration);
+        if accepted.is_ok() {
+            prop_assert!(resolved.is_ok());
+        }
+    }
+
+    /// The sample mean and standard deviation over values that overflow their
+    /// own sum, and over the empty sample that has no mean at all.
+    #[test]
+    fn test_mean_and_std_never_panics(sample in prop::collection::vec(extreme_positive(), 0..6)) {
+        let _ = mean_and_std(sample);
     }
 }

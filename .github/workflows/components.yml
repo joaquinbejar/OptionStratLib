@@ -1,0 +1,51 @@
+name: Components
+
+# Standalone verification of each extracted workspace crate (#519): the
+# crate's own tests with default, no and all features, Clippy, docs with
+# broken links and missing docs denied, and its packaged archive. The facade
+# is not part of these builds, so a test that only compiles because the
+# facade is present fails here.
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  components:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-components-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-components-
+
+      - name: Install make
+        run: sudo apt-get install -y make
+
+      - name: Verify component crates standalone
+        run: make check-components

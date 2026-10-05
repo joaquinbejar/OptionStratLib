@@ -18,8 +18,8 @@
 //! the raw mantissa and scale rather than normalizing, and there are enough
 //! repeats in the strategy that pairs actually collide.
 
-use optionstratlib::curves::Point2D;
-use optionstratlib::surfaces::Point3D;
+use optionstratlib_math::curves::Point2D;
+use optionstratlib_math::surfaces::Point3D;
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
