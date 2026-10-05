@@ -312,7 +312,7 @@ publish: readme
 coverage:
 	export LOGLEVEL=WARN
 	export RUST_lOG=WARN
-	cargo install cargo-tarpaulin
+	cargo install cargo-tarpaulin --locked --version '>=0.37.5'
 	mkdir -p coverage
 	# `--timeout` budgets one whole test binary's run under the LLVM engine,
 	# not one test; tarpaulin enforces it from 0.37.4 on, so it carries a real
@@ -323,7 +323,7 @@ coverage:
 coverage-html:
 	export LOGLEVEL=WARN
 	export RUST_lOG=WARN
-	cargo install cargo-tarpaulin
+	cargo install cargo-tarpaulin --locked --version '>=0.37.5'
 	mkdir -p coverage
 	cargo tarpaulin --color Always --engine llvm --tests --all-targets --all-features --workspace --timeout 1200 --out Html --output-dir coverage
 
