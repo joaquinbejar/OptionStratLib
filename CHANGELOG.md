@@ -240,6 +240,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The facade documents and pins its core and math exports** (#520). A
+  "Workspace Crates" section in the crate docs (and the README) lists which
+  facade paths each component crate backs: `model`, `utils`, `constants`,
+  the core errors, the root types and the decimal macros from
+  `optionstratlib-core`; `curves`, `surfaces`, `geometrics` and the math
+  errors from `optionstratlib-math`. Every one is an explicit module or item
+  re-export, never a glob over a component. The prelude now takes `Positive`
+  and the `positive` macros through `optionstratlib_core` (ADR-0001 D8); the
+  types are unchanged. `tests/unit/model/component_paths_test.rs` passes
+  values between facade, prelude and component paths with no conversion.
+
 - **`make check-components` and a `Components` CI job verify each extracted
   crate on its own** (#519): `optionstratlib-core` and `optionstratlib-math`
   are tested with default, no and all features, linted with Clippy, built as
