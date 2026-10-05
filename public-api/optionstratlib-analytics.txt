@@ -1,0 +1,982 @@
+pub mod optionstratlib_analytics
+pub mod optionstratlib_analytics::analytics
+pub mod optionstratlib_analytics::analytics::probability
+pub struct optionstratlib_analytics::analytics::probability::PriceTrend
+pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64
+pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f64
+pub struct optionstratlib_analytics::analytics::probability::VolatilityAdjustment
+pub optionstratlib_analytics::analytics::probability::VolatilityAdjustment::base_volatility: positive::positive::Positive
+pub optionstratlib_analytics::analytics::probability::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
+pub fn optionstratlib_analytics::analytics::probability::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
+pub fn optionstratlib_analytics::analytics::probability::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
+pub mod optionstratlib_analytics::analytics::profit_range
+pub struct optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub optionstratlib_analytics::analytics::profit_range::ProfitLossRange::lower_bound: core::option::Option<positive::positive::Positive>
+pub optionstratlib_analytics::analytics::profit_range::ProfitLossRange::probability: positive::positive::Positive
+pub optionstratlib_analytics::analytics::profit_range::ProfitLossRange::upper_bound: core::option::Option<positive::positive::Positive>
+impl optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::contains(&self, positive::positive::Positive) -> bool
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::new(core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_analytics::error::probability::ProbabilityError>
+impl optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+impl utoipa::ToSchema for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub trait optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+impl optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+pub mod optionstratlib_analytics::analytics::projections
+pub trait optionstratlib_analytics::analytics::projections::BasicCurves
+pub fn optionstratlib_analytics::analytics::projections::BasicCurves::curve(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::BasicCurves::get_curve_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::BasicCurves for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::curve(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub trait optionstratlib_analytics::analytics::projections::BasicSurfaces
+pub fn optionstratlib_analytics::analytics::projections::BasicSurfaces::get_surface_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::BasicSurfaces::get_surface_time_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::BasicSurfaces::surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::BasicSurfaces::time_surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::BasicSurfaces for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::time_surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub trait optionstratlib_analytics::analytics::projections::OptionChainProjections
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::delta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::vanna_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::vega_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::veta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::projections::OptionChainProjections::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::OptionChainProjections for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vega_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::veta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub mod optionstratlib_analytics::analytics::rnd
+pub struct optionstratlib_analytics::analytics::rnd::RNDParameters
+pub optionstratlib_analytics::analytics::rnd::RNDParameters::derivative_tolerance: positive::positive::Positive
+pub optionstratlib_analytics::analytics::rnd::RNDParameters::interpolation_points: usize
+pub optionstratlib_analytics::analytics::rnd::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
+impl core::default::Default for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::default() -> Self
+impl core::fmt::Debug for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::analytics::rnd::RNDResult
+pub optionstratlib_analytics::analytics::rnd::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
+pub optionstratlib_analytics::analytics::rnd::RNDResult::statistics: optionstratlib_analytics::analytics::rnd::RNDStatistics
+impl optionstratlib_analytics::analytics::rnd::RNDResult
+pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub struct optionstratlib_analytics::analytics::rnd::RNDStatistics
+pub optionstratlib_analytics::analytics::rnd::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::rnd::RNDStatistics::mean: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::rnd::RNDStatistics::skewness: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::rnd::RNDStatistics::variance: positive::positive::Positive
+pub optionstratlib_analytics::analytics::rnd::RNDStatistics::volatility: positive::positive::Positive
+impl optionstratlib_analytics::analytics::rnd::RNDStatistics
+pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub trait optionstratlib_analytics::analytics::rnd::RNDAnalysis
+pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+impl optionstratlib_analytics::analytics::rnd::RNDAnalysis for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub struct optionstratlib_analytics::analytics::PriceTrend
+pub optionstratlib_analytics::analytics::PriceTrend::confidence: f64
+pub optionstratlib_analytics::analytics::PriceTrend::drift_rate: f64
+pub struct optionstratlib_analytics::analytics::ProfitLossRange
+pub optionstratlib_analytics::analytics::ProfitLossRange::lower_bound: core::option::Option<positive::positive::Positive>
+pub optionstratlib_analytics::analytics::ProfitLossRange::probability: positive::positive::Positive
+pub optionstratlib_analytics::analytics::ProfitLossRange::upper_bound: core::option::Option<positive::positive::Positive>
+impl optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::contains(&self, positive::positive::Positive) -> bool
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::new(core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_analytics::error::probability::ProbabilityError>
+impl optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+impl utoipa::ToSchema for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::analytics::RNDParameters
+pub optionstratlib_analytics::analytics::RNDParameters::derivative_tolerance: positive::positive::Positive
+pub optionstratlib_analytics::analytics::RNDParameters::interpolation_points: usize
+pub optionstratlib_analytics::analytics::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
+impl core::default::Default for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::default() -> Self
+impl core::fmt::Debug for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::analytics::rnd::RNDParameters
+pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::analytics::RNDResult
+pub optionstratlib_analytics::analytics::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
+pub optionstratlib_analytics::analytics::RNDResult::statistics: optionstratlib_analytics::analytics::rnd::RNDStatistics
+impl optionstratlib_analytics::analytics::rnd::RNDResult
+pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub struct optionstratlib_analytics::analytics::RNDStatistics
+pub optionstratlib_analytics::analytics::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::RNDStatistics::mean: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::RNDStatistics::skewness: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::analytics::RNDStatistics::variance: positive::positive::Positive
+pub optionstratlib_analytics::analytics::RNDStatistics::volatility: positive::positive::Positive
+impl optionstratlib_analytics::analytics::rnd::RNDStatistics
+pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub struct optionstratlib_analytics::analytics::VolatilityAdjustment
+pub optionstratlib_analytics::analytics::VolatilityAdjustment::base_volatility: positive::positive::Positive
+pub optionstratlib_analytics::analytics::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
+pub trait optionstratlib_analytics::analytics::BasicCurves
+pub fn optionstratlib_analytics::analytics::BasicCurves::curve(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::BasicCurves::get_curve_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::BasicCurves for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::curve(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, &financial_types::Side) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_curve_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub trait optionstratlib_analytics::analytics::BasicSurfaces
+pub fn optionstratlib_analytics::analytics::BasicSurfaces::get_surface_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::BasicSurfaces::get_surface_time_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::BasicSurfaces::get_surface_volatility_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::BasicSurfaces::surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::BasicSurfaces::time_surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::BasicSurfaces for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_strike_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_time_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::get_surface_volatility_versus(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &alloc::sync::Arc<optionstratlib_core::model::option::Options>, positive::positive::Positive) -> core::result::Result<(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal), optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, core::option::Option<alloc::vec::Vec<positive::positive::Positive>>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::time_surface(&self, &optionstratlib_core::model::axis::BasicAxisTypes, &financial_types::OptionStyle, alloc::vec::Vec<positive::positive::Positive>, &financial_types::Side) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub trait optionstratlib_analytics::analytics::OptionChainProjections
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::delta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::vanna_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::vega_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::veta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_analytics::analytics::OptionChainProjections::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+impl optionstratlib_analytics::analytics::OptionChainProjections for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::color_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vega_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::veta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::veta_time_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub fn optionstratlib_market::chains::chain::OptionChain::vomma_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_analytics::error::ProjectionError>
+pub trait optionstratlib_analytics::analytics::ProfitRangeProbability
+pub fn optionstratlib_analytics::analytics::ProfitRangeProbability::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+impl optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
+pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
+pub trait optionstratlib_analytics::analytics::RNDAnalysis
+pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+impl optionstratlib_analytics::analytics::rnd::RNDAnalysis for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
+pub fn optionstratlib_analytics::analytics::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
+pub mod optionstratlib_analytics::error
+pub mod optionstratlib_analytics::error::probability
+pub enum optionstratlib_analytics::error::probability::ExpirationErrorKind
+pub optionstratlib_analytics::error::probability::ExpirationErrorKind::InvalidExpiration
+pub optionstratlib_analytics::error::probability::ExpirationErrorKind::InvalidExpiration::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ExpirationErrorKind::InvalidRiskFreeRate
+pub optionstratlib_analytics::error::probability::ExpirationErrorKind::InvalidRiskFreeRate::rate: core::option::Option<f64>
+pub optionstratlib_analytics::error::probability::ExpirationErrorKind::InvalidRiskFreeRate::reason: alloc::string::String
+pub enum optionstratlib_analytics::error::probability::PriceErrorKind
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidPriceRange
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidPriceRange::range: alloc::string::String
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidPriceRange::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidUnderlyingPrice
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidUnderlyingPrice::price: f64
+pub optionstratlib_analytics::error::probability::PriceErrorKind::InvalidUnderlyingPrice::reason: alloc::string::String
+pub enum optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::ExpectedValueError
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::ExpectedValueError::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::InvalidProbability
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::InvalidProbability::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::InvalidProbability::value: f64
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::TrendError
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::TrendError::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::VolatilityAdjustmentError
+pub optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind::VolatilityAdjustmentError::reason: alloc::string::String
+pub enum optionstratlib_analytics::error::probability::ProbabilityError
+pub optionstratlib_analytics::error::probability::ProbabilityError::CalculationError(optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind)
+pub optionstratlib_analytics::error::probability::ProbabilityError::ExpirationError(optionstratlib_analytics::error::probability::ExpirationErrorKind)
+pub optionstratlib_analytics::error::probability::ProbabilityError::MissingMetric
+pub optionstratlib_analytics::error::probability::ProbabilityError::MissingMetric::metric: &'static str
+pub optionstratlib_analytics::error::probability::ProbabilityError::NoPositions(alloc::string::String)
+pub optionstratlib_analytics::error::probability::ProbabilityError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_analytics::error::probability::ProbabilityError::PriceError(optionstratlib_analytics::error::probability::PriceErrorKind)
+pub optionstratlib_analytics::error::probability::ProbabilityError::RangeError(optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind)
+impl optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_expiration(&str) -> Self
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_probability(f64, &str) -> Self
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_profit_range(&str, &str) -> Self
+impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(expiration_date::error::ExpirationDateError) -> Self
+impl core::convert::From<optionstratlib_core::error::common::OperationErrorKind> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_core::error::common::OperationErrorKind) -> Self
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub enum optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidBreakEvenPoints
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidBreakEvenPoints::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidLossRange
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidLossRange::range: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidLossRange::reason: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidProfitRange
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidProfitRange::range: alloc::string::String
+pub optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind::InvalidProfitRange::reason: alloc::string::String
+pub type optionstratlib_analytics::error::probability::ProbabilityResult<T> = core::result::Result<T, optionstratlib_analytics::error::probability::ProbabilityError>
+pub enum optionstratlib_analytics::error::ProbabilityError
+pub optionstratlib_analytics::error::ProbabilityError::CalculationError(optionstratlib_analytics::error::probability::ProbabilityCalculationErrorKind)
+pub optionstratlib_analytics::error::ProbabilityError::ExpirationError(optionstratlib_analytics::error::probability::ExpirationErrorKind)
+pub optionstratlib_analytics::error::ProbabilityError::MissingMetric
+pub optionstratlib_analytics::error::ProbabilityError::MissingMetric::metric: &'static str
+pub optionstratlib_analytics::error::ProbabilityError::NoPositions(alloc::string::String)
+pub optionstratlib_analytics::error::ProbabilityError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_analytics::error::ProbabilityError::PriceError(optionstratlib_analytics::error::probability::PriceErrorKind)
+pub optionstratlib_analytics::error::ProbabilityError::RangeError(optionstratlib_analytics::error::probability::ProfitLossRangeErrorKind)
+impl optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_expiration(&str) -> Self
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_probability(f64, &str) -> Self
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::invalid_profit_range(&str, &str) -> Self
+impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(expiration_date::error::ExpirationDateError) -> Self
+impl core::convert::From<optionstratlib_core::error::common::OperationErrorKind> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_core::error::common::OperationErrorKind) -> Self
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_analytics::error::probability::ProbabilityError
+pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+pub enum optionstratlib_analytics::error::ProjectionError
+pub optionstratlib_analytics::error::ProjectionError::Chain(alloc::boxed::Box<optionstratlib_market::error::chains::ChainError>)
+pub optionstratlib_analytics::error::ProjectionError::Curve(alloc::boxed::Box<optionstratlib_math::error::curves::CurveError>)
+pub optionstratlib_analytics::error::ProjectionError::Greek
+pub optionstratlib_analytics::error::ProjectionError::Greek::greek: &'static str
+pub optionstratlib_analytics::error::ProjectionError::Greek::source: alloc::boxed::Box<optionstratlib_pricing::error::greeks::GreeksError>
+pub optionstratlib_analytics::error::ProjectionError::MissingOptionData
+pub optionstratlib_analytics::error::ProjectionError::NoPoints
+pub optionstratlib_analytics::error::ProjectionError::NoPoints::kind: &'static str
+pub optionstratlib_analytics::error::ProjectionError::Options(alloc::boxed::Box<optionstratlib_core::error::options::OptionsError>)
+pub optionstratlib_analytics::error::ProjectionError::Surface(alloc::boxed::Box<optionstratlib_math::error::surfaces::SurfaceError>)
+pub optionstratlib_analytics::error::ProjectionError::UnsupportedAxis
+pub optionstratlib_analytics::error::ProjectionError::UnsupportedAxis::axis: alloc::string::String
+impl optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::greek(&'static str, optionstratlib_pricing::error::greeks::GreeksError) -> Self
+impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_core::error::options::OptionsError) -> Self
+impl core::convert::From<optionstratlib_market::error::chains::ChainError> for optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_market::error::chains::ChainError) -> Self
+impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_math::error::curves::CurveError) -> Self
+impl core::convert::From<optionstratlib_math::error::surfaces::SurfaceError> for optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_math::error::surfaces::SurfaceError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_analytics::error::ProjectionError
+pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
+pub enum optionstratlib_analytics::error::TransactionError
+pub optionstratlib_analytics::error::TransactionError::NotImplemented
+pub optionstratlib_analytics::error::TransactionError::NotImplemented::method: &'static str
+pub optionstratlib_analytics::error::TransactionError::NotImplemented::type_name: &'static str
+pub optionstratlib_analytics::error::TransactionError::Other
+pub optionstratlib_analytics::error::TransactionError::Other::reason: alloc::string::String
+pub optionstratlib_analytics::error::TransactionError::UnsupportedOptionType
+pub optionstratlib_analytics::error::TransactionError::UnsupportedOptionType::option_type: option_type::option_type::OptionType
+impl optionstratlib_analytics::error::TransactionError
+pub fn optionstratlib_analytics::error::TransactionError::not_implemented(&'static str, &'static str) -> Self
+pub fn optionstratlib_analytics::error::TransactionError::other(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn optionstratlib_analytics::error::TransactionError::unsupported_option_type(option_type::option_type::OptionType) -> Self
+pub type optionstratlib_analytics::error::ProbabilityResult<T> = core::result::Result<T, optionstratlib_analytics::error::probability::ProbabilityError>
+pub mod optionstratlib_analytics::metrics
+pub mod optionstratlib_analytics::metrics::composite
+pub mod optionstratlib_analytics::metrics::composite::delta_gamma_profile
+pub trait optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve
+pub fn optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface
+pub fn optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::composite::smile_dynamics
+pub trait optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsCurve
+pub fn optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsCurve::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsSurface
+pub fn optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsSurface::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::composite::vanna_volga
+pub trait optionstratlib_analytics::metrics::composite::vanna_volga::VannaVolgaSurface
+pub fn optionstratlib_analytics::metrics::composite::vanna_volga::VannaVolgaSurface::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::vanna_volga::VannaVolgaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::composite::DeltaGammaProfileCurve
+pub fn optionstratlib_analytics::metrics::composite::DeltaGammaProfileCurve::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::composite::DeltaGammaProfileSurface
+pub fn optionstratlib_analytics::metrics::composite::DeltaGammaProfileSurface::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::composite::SmileDynamicsCurve
+pub fn optionstratlib_analytics::metrics::composite::SmileDynamicsCurve::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::composite::SmileDynamicsSurface
+pub fn optionstratlib_analytics::metrics::composite::SmileDynamicsSurface::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::composite::VannaVolgaSurface
+pub fn optionstratlib_analytics::metrics::composite::VannaVolgaSurface::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::vanna_volga::VannaVolgaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::liquidity
+pub mod optionstratlib_analytics::metrics::liquidity::bid_ask_spread
+pub trait optionstratlib_analytics::metrics::liquidity::bid_ask_spread::BidAskSpreadCurve
+pub fn optionstratlib_analytics::metrics::liquidity::bid_ask_spread::BidAskSpreadCurve::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::bid_ask_spread::BidAskSpreadCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::liquidity::open_interest
+pub trait optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve
+pub fn optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::liquidity::volume_profile
+pub trait optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileCurve
+pub fn optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileCurve::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileSurface
+pub fn optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileSurface::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::liquidity::BidAskSpreadCurve
+pub fn optionstratlib_analytics::metrics::liquidity::BidAskSpreadCurve::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::bid_ask_spread::BidAskSpreadCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::liquidity::OpenInterestCurve
+pub fn optionstratlib_analytics::metrics::liquidity::OpenInterestCurve::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::liquidity::VolumeProfileCurve
+pub fn optionstratlib_analytics::metrics::liquidity::VolumeProfileCurve::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::liquidity::VolumeProfileSurface
+pub fn optionstratlib_analytics::metrics::liquidity::VolumeProfileSurface::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::price
+pub mod optionstratlib_analytics::metrics::price::put_call_ratio
+pub trait optionstratlib_analytics::metrics::price::put_call_ratio::PutCallRatioCurve
+pub fn optionstratlib_analytics::metrics::price::put_call_ratio::PutCallRatioCurve::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::put_call_ratio::PutCallRatioCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::price::strike_concentration
+pub trait optionstratlib_analytics::metrics::price::strike_concentration::StrikeConcentrationCurve
+pub fn optionstratlib_analytics::metrics::price::strike_concentration::StrikeConcentrationCurve::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::strike_concentration::StrikeConcentrationCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::price::volatility_skew
+pub trait optionstratlib_analytics::metrics::price::volatility_skew::VolatilitySkewCurve
+pub fn optionstratlib_analytics::metrics::price::volatility_skew::VolatilitySkewCurve::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::volatility_skew::VolatilitySkewCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::price::PutCallRatioCurve
+pub fn optionstratlib_analytics::metrics::price::PutCallRatioCurve::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::put_call_ratio::PutCallRatioCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::price::StrikeConcentrationCurve
+pub fn optionstratlib_analytics::metrics::price::StrikeConcentrationCurve::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::strike_concentration::StrikeConcentrationCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::price::VolatilitySkewCurve
+pub fn optionstratlib_analytics::metrics::price::VolatilitySkewCurve::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::volatility_skew::VolatilitySkewCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::risk
+pub mod optionstratlib_analytics::metrics::risk::dollar_gamma
+pub trait optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve
+pub fn optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::risk::implied_volatility
+pub trait optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve
+pub fn optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface
+pub fn optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::risk::risk_reversal
+pub trait optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve
+pub fn optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::risk::DollarGammaCurve
+pub fn optionstratlib_analytics::metrics::risk::DollarGammaCurve::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::risk::ImpliedVolatilityCurve
+pub fn optionstratlib_analytics::metrics::risk::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::risk::ImpliedVolatilitySurface
+pub fn optionstratlib_analytics::metrics::risk::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::risk::RiskReversalCurve
+pub fn optionstratlib_analytics::metrics::risk::RiskReversalCurve::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub mod optionstratlib_analytics::metrics::stress
+pub mod optionstratlib_analytics::metrics::stress::price_shock
+pub trait optionstratlib_analytics::metrics::stress::price_shock::PriceShockCurve
+pub fn optionstratlib_analytics::metrics::stress::price_shock::PriceShockCurve::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::price_shock::PriceShockSurface
+pub fn optionstratlib_analytics::metrics::stress::price_shock::PriceShockSurface::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::stress::time_decay
+pub trait optionstratlib_analytics::metrics::stress::time_decay::TimeDecayCurve
+pub fn optionstratlib_analytics::metrics::stress::time_decay::TimeDecayCurve::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecayCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::time_decay::TimeDecaySurface
+pub fn optionstratlib_analytics::metrics::stress::time_decay::TimeDecaySurface::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecaySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::stress::volatility_sensitivity
+pub trait optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivityCurve
+pub fn optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivityCurve::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivitySurface
+pub fn optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivitySurface::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::stress::PriceShockCurve
+pub fn optionstratlib_analytics::metrics::stress::PriceShockCurve::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::PriceShockSurface
+pub fn optionstratlib_analytics::metrics::stress::PriceShockSurface::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::stress::TimeDecayCurve
+pub fn optionstratlib_analytics::metrics::stress::TimeDecayCurve::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecayCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::TimeDecaySurface
+pub fn optionstratlib_analytics::metrics::stress::TimeDecaySurface::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecaySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::stress::VolatilitySensitivityCurve
+pub fn optionstratlib_analytics::metrics::stress::VolatilitySensitivityCurve::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::stress::VolatilitySensitivitySurface
+pub fn optionstratlib_analytics::metrics::stress::VolatilitySensitivitySurface::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::temporal
+pub mod optionstratlib_analytics::metrics::temporal::charm
+pub trait optionstratlib_analytics::metrics::temporal::charm::CharmCurve
+pub fn optionstratlib_analytics::metrics::temporal::charm::CharmCurve::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::charm::CharmSurface
+pub fn optionstratlib_analytics::metrics::temporal::charm::CharmSurface::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::temporal::color
+pub trait optionstratlib_analytics::metrics::temporal::color::ColorCurve
+pub fn optionstratlib_analytics::metrics::temporal::color::ColorCurve::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::color::ColorSurface
+pub fn optionstratlib_analytics::metrics::temporal::color::ColorSurface::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::metrics::temporal::theta
+pub trait optionstratlib_analytics::metrics::temporal::theta::ThetaCurve
+pub fn optionstratlib_analytics::metrics::temporal::theta::ThetaCurve::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::theta::ThetaSurface
+pub fn optionstratlib_analytics::metrics::temporal::theta::ThetaSurface::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::temporal::CharmCurve
+pub fn optionstratlib_analytics::metrics::temporal::CharmCurve::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::CharmSurface
+pub fn optionstratlib_analytics::metrics::temporal::CharmSurface::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::temporal::ColorCurve
+pub fn optionstratlib_analytics::metrics::temporal::ColorCurve::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::ColorSurface
+pub fn optionstratlib_analytics::metrics::temporal::ColorSurface::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::temporal::ThetaCurve
+pub fn optionstratlib_analytics::metrics::temporal::ThetaCurve::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::temporal::ThetaSurface
+pub fn optionstratlib_analytics::metrics::temporal::ThetaSurface::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::BidAskSpreadCurve
+pub fn optionstratlib_analytics::metrics::BidAskSpreadCurve::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::bid_ask_spread::BidAskSpreadCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::bid_ask_spread_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::CharmCurve
+pub fn optionstratlib_analytics::metrics::CharmCurve::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::CharmSurface
+pub fn optionstratlib_analytics::metrics::CharmSurface::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::charm::CharmSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::charm_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::ColorCurve
+pub fn optionstratlib_analytics::metrics::ColorCurve::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::ColorSurface
+pub fn optionstratlib_analytics::metrics::ColorSurface::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::color::ColorSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::color_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::DeltaGammaProfileCurve
+pub fn optionstratlib_analytics::metrics::DeltaGammaProfileCurve::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::DeltaGammaProfileSurface
+pub fn optionstratlib_analytics::metrics::DeltaGammaProfileSurface::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::delta_gamma_profile::DeltaGammaProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::delta_gamma_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::DollarGammaCurve
+pub fn optionstratlib_analytics::metrics::DollarGammaCurve::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::dollar_gamma::DollarGammaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::dollar_gamma_curve(&self, &financial_types::OptionStyle) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::ImpliedVolatilityCurve
+pub fn optionstratlib_analytics::metrics::ImpliedVolatilityCurve::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::ImpliedVolatilitySurface
+pub fn optionstratlib_analytics::metrics::ImpliedVolatilitySurface::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::risk::implied_volatility::ImpliedVolatilitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::iv_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::OpenInterestCurve
+pub fn optionstratlib_analytics::metrics::OpenInterestCurve::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::open_interest::OpenInterestCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::open_interest_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::PriceShockCurve
+pub fn optionstratlib_analytics::metrics::PriceShockCurve::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_curve(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::PriceShockSurface
+pub fn optionstratlib_analytics::metrics::PriceShockSurface::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::price_shock::PriceShockSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::price_shock_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::PutCallRatioCurve
+pub fn optionstratlib_analytics::metrics::PutCallRatioCurve::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::put_call_ratio::PutCallRatioCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_weighted_pcr(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::RiskReversalCurve
+pub fn optionstratlib_analytics::metrics::RiskReversalCurve::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::risk::risk_reversal::RiskReversalCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::risk_reversal_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::SmileDynamicsCurve
+pub fn optionstratlib_analytics::metrics::SmileDynamicsCurve::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::SmileDynamicsSurface
+pub fn optionstratlib_analytics::metrics::SmileDynamicsSurface::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::smile_dynamics::SmileDynamicsSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::smile_dynamics_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::StrikeConcentrationCurve
+pub fn optionstratlib_analytics::metrics::StrikeConcentrationCurve::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::strike_concentration::StrikeConcentrationCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::premium_concentration(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::ThetaCurve
+pub fn optionstratlib_analytics::metrics::ThetaCurve::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::ThetaSurface
+pub fn optionstratlib_analytics::metrics::ThetaSurface::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::temporal::theta::ThetaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::theta_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::TimeDecayCurve
+pub fn optionstratlib_analytics::metrics::TimeDecayCurve::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecayCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::TimeDecaySurface
+pub fn optionstratlib_analytics::metrics::TimeDecaySurface::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::time_decay::TimeDecaySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::time_decay_surface(&self, (positive::positive::Positive, positive::positive::Positive), alloc::vec::Vec<positive::positive::Positive>, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::VannaVolgaSurface
+pub fn optionstratlib_analytics::metrics::VannaVolgaSurface::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::composite::vanna_volga::VannaVolgaSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::vanna_volga_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::VolatilitySensitivityCurve
+pub fn optionstratlib_analytics::metrics::VolatilitySensitivityCurve::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivityCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::VolatilitySensitivitySurface
+pub fn optionstratlib_analytics::metrics::VolatilitySensitivitySurface::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::stress::volatility_sensitivity::VolatilitySensitivitySurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_sensitivity_surface(&self, (positive::positive::Positive, positive::positive::Positive), (positive::positive::Positive, positive::positive::Positive), usize, usize) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub trait optionstratlib_analytics::metrics::VolatilitySkewCurve
+pub fn optionstratlib_analytics::metrics::VolatilitySkewCurve::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::price::volatility_skew::VolatilitySkewCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volatility_skew(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::VolumeProfileCurve
+pub fn optionstratlib_analytics::metrics::VolumeProfileCurve::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileCurve for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_curve(&self) -> core::result::Result<optionstratlib_math::curves::curve::Curve, optionstratlib_math::error::curves::CurveError>
+pub trait optionstratlib_analytics::metrics::VolumeProfileSurface
+pub fn optionstratlib_analytics::metrics::VolumeProfileSurface::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+impl optionstratlib_analytics::metrics::liquidity::volume_profile::VolumeProfileSurface for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::volume_profile_surface(&self, alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<optionstratlib_math::surfaces::surface::Surface, optionstratlib_math::error::surfaces::SurfaceError>
+pub mod optionstratlib_analytics::pnl
+pub mod optionstratlib_analytics::pnl::adjustment
+pub enum optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyOptions
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyOptions::option_style: financial_types::OptionStyle
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyOptions::quantity: positive::positive::Positive
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyOptions::side: financial_types::Side
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyOptions::strike: positive::positive::Positive
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::BuyUnderlying(positive::positive::Positive)
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::NoAdjustmentNeeded
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SameSize(optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize)
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellOptions
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellOptions::option_style: financial_types::OptionStyle
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellOptions::quantity: positive::positive::Positive
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellOptions::side: financial_types::Side
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellOptions::strike: positive::positive::Positive
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::SellUnderlying(positive::positive::Positive)
+impl core::fmt::Display for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::first: alloc::boxed::Box<optionstratlib_analytics::pnl::adjustment::DeltaAdjustment>
+pub optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::second: alloc::boxed::Box<optionstratlib_analytics::pnl::adjustment::DeltaAdjustment>
+impl core::fmt::Debug for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub mod optionstratlib_analytics::pnl::model
+pub struct optionstratlib_analytics::pnl::model::PnLRange
+pub optionstratlib_analytics::pnl::model::PnLRange::lower: i32
+pub optionstratlib_analytics::pnl::model::PnLRange::upper: i32
+impl optionstratlib_analytics::pnl::model::PnLRange
+pub fn optionstratlib_analytics::pnl::model::PnLRange::new(i32, i32) -> Self
+pub fn optionstratlib_analytics::pnl::model::PnLRange::new_decimal(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_core::error::decimal::DecimalError>
+impl serde_core::ser::Serialize for optionstratlib_analytics::pnl::model::PnLRange
+pub fn optionstratlib_analytics::pnl::model::PnLRange::serialize<S>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error> where S: serde_core::ser::Serializer
+pub mod optionstratlib_analytics::pnl::utils
+pub struct optionstratlib_analytics::pnl::utils::PnL
+pub optionstratlib_analytics::pnl::utils::PnL::date_time: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_analytics::pnl::utils::PnL::initial_costs: positive::positive::Positive
+pub optionstratlib_analytics::pnl::utils::PnL::initial_income: positive::positive::Positive
+pub optionstratlib_analytics::pnl::utils::PnL::realized: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_analytics::pnl::utils::PnL::unrealized: core::option::Option<rust_decimal::decimal::Decimal>
+impl optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
+pub fn optionstratlib_analytics::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_add(&self, &optionstratlib_analytics::pnl::utils::PnL) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl core::convert::From<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::from(&optionstratlib_core::model::trade::Trade) -> Self
+impl core::convert::From<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::from(optionstratlib_core::model::trade::Trade) -> Self
+impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::iter::traits::accum::Sum for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = Self>>(I) -> Self
+impl core::ops::arith::Add for &optionstratlib_analytics::pnl::utils::PnL
+pub type &optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
+pub fn &optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> optionstratlib_analytics::pnl::utils::PnL
+impl core::ops::arith::Add for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> Self
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::utils::PnL::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+impl<'a> core::iter::traits::accum::Sum<&'a optionstratlib_analytics::pnl::utils::PnL> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = &'a optionstratlib_analytics::pnl::utils::PnL>>(I) -> Self
+pub trait optionstratlib_analytics::pnl::utils::PnLCalculator
+pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_analytics::pnl::PnLCalculator for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_analytics::pnl::PnLCalculator for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub enum optionstratlib_analytics::pnl::DeltaAdjustment
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions::option_style: financial_types::OptionStyle
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions::quantity: positive::positive::Positive
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions::side: financial_types::Side
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions::strike: positive::positive::Positive
+pub optionstratlib_analytics::pnl::DeltaAdjustment::BuyUnderlying(positive::positive::Positive)
+pub optionstratlib_analytics::pnl::DeltaAdjustment::NoAdjustmentNeeded
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SameSize(optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize)
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellOptions
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellOptions::option_style: financial_types::OptionStyle
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellOptions::quantity: positive::positive::Positive
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellOptions::side: financial_types::Side
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellOptions::strike: positive::positive::Positive
+pub optionstratlib_analytics::pnl::DeltaAdjustment::SellUnderlying(positive::positive::Positive)
+impl core::fmt::Display for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustment
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustment::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::pnl::DeltaAdjustmentSameSize
+pub optionstratlib_analytics::pnl::DeltaAdjustmentSameSize::first: alloc::boxed::Box<optionstratlib_analytics::pnl::adjustment::DeltaAdjustment>
+pub optionstratlib_analytics::pnl::DeltaAdjustmentSameSize::second: alloc::boxed::Box<optionstratlib_analytics::pnl::adjustment::DeltaAdjustment>
+impl core::fmt::Debug for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize
+pub fn optionstratlib_analytics::pnl::adjustment::DeltaAdjustmentSameSize::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::pnl::PnL
+pub optionstratlib_analytics::pnl::PnL::date_time: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_analytics::pnl::PnL::initial_costs: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnL::initial_income: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnL::realized: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_analytics::pnl::PnL::unrealized: core::option::Option<rust_decimal::decimal::Decimal>
+impl optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
+pub fn optionstratlib_analytics::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_add(&self, &optionstratlib_analytics::pnl::utils::PnL) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl core::convert::From<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::from(&optionstratlib_core::model::trade::Trade) -> Self
+impl core::convert::From<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::from(optionstratlib_core::model::trade::Trade) -> Self
+impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::iter::traits::accum::Sum for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = Self>>(I) -> Self
+impl core::ops::arith::Add for &optionstratlib_analytics::pnl::utils::PnL
+pub type &optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
+pub fn &optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> optionstratlib_analytics::pnl::utils::PnL
+impl core::ops::arith::Add for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> Self
+impl utoipa::ToSchema for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::pnl::utils::PnL::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+impl<'a> core::iter::traits::accum::Sum<&'a optionstratlib_analytics::pnl::utils::PnL> for optionstratlib_analytics::pnl::utils::PnL
+pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = &'a optionstratlib_analytics::pnl::utils::PnL>>(I) -> Self
+pub struct optionstratlib_analytics::pnl::PnLMetrics
+pub optionstratlib_analytics::pnl::PnLMetrics::avg_loss: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::avg_win: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::end_time: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_analytics::pnl::PnLMetrics::expected_payoff: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::losing_steps: u32
+pub optionstratlib_analytics::pnl::PnLMetrics::loss_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::max_drawdown: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetrics::max_loss: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetrics::max_profit: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetrics::profit_factor: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::recovery_factor: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::sharpe_ratio: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::simulation_duration: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::sortino_ratio: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::start_time: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_analytics::pnl::PnLMetrics::total_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::total_steps: u32
+pub optionstratlib_analytics::pnl::PnLMetrics::win_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetrics::winning_steps: u32
+impl core::default::Default for optionstratlib_analytics::pnl::PnLMetrics
+pub fn optionstratlib_analytics::pnl::PnLMetrics::default() -> Self
+pub struct optionstratlib_analytics::pnl::PnLMetricsDocument
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::days: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::delta: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::delta_adjustment_at: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::fee: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::metrics: alloc::vec::Vec<optionstratlib_analytics::pnl::PnLMetricsStep>
+pub optionstratlib_analytics::pnl::PnLMetricsDocument::symbol: alloc::string::String
+pub struct optionstratlib_analytics::pnl::PnLMetricsStep
+pub optionstratlib_analytics::pnl::PnLMetricsStep::delta_adjustments: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::final_price: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::final_volumes: alloc::vec::Vec<positive::positive::Positive>
+pub optionstratlib_analytics::pnl::PnLMetricsStep::initial_price: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::initial_volumes: alloc::vec::Vec<positive::positive::Positive>
+pub optionstratlib_analytics::pnl::PnLMetricsStep::losing_steps: u32
+pub optionstratlib_analytics::pnl::PnLMetricsStep::max_unrealized_pnl: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::min_unrealized_pnl: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::pnl: optionstratlib_analytics::pnl::utils::PnL
+pub optionstratlib_analytics::pnl::PnLMetricsStep::step_duration: positive::positive::Positive
+pub optionstratlib_analytics::pnl::PnLMetricsStep::step_number: u32
+pub optionstratlib_analytics::pnl::PnLMetricsStep::strikes: alloc::vec::Vec<positive::positive::Positive>
+pub optionstratlib_analytics::pnl::PnLMetricsStep::win: bool
+pub optionstratlib_analytics::pnl::PnLMetricsStep::winning_steps: u32
+impl core::default::Default for optionstratlib_analytics::pnl::PnLMetricsStep
+pub fn optionstratlib_analytics::pnl::PnLMetricsStep::default() -> Self
+impl core::fmt::Display for optionstratlib_analytics::pnl::PnLMetricsStep
+pub fn optionstratlib_analytics::pnl::PnLMetricsStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct optionstratlib_analytics::pnl::Transaction
+impl optionstratlib_analytics::pnl::Transaction
+pub fn optionstratlib_analytics::pnl::Transaction::date_time(&self) -> core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub fn optionstratlib_analytics::pnl::Transaction::days_to_expiration(&self) -> core::option::Option<positive::positive::Positive>
+pub fn optionstratlib_analytics::pnl::Transaction::fees(&self) -> positive::positive::Positive
+pub fn optionstratlib_analytics::pnl::Transaction::implied_volatility(&self) -> core::option::Option<positive::positive::Positive>
+pub fn optionstratlib_analytics::pnl::Transaction::option_style(&self) -> financial_types::OptionStyle
+pub fn optionstratlib_analytics::pnl::Transaction::option_type(&self) -> option_type::option_type::OptionType
+pub fn optionstratlib_analytics::pnl::Transaction::premium(&self) -> positive::positive::Positive
+pub fn optionstratlib_analytics::pnl::Transaction::quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_analytics::pnl::Transaction::side(&self) -> financial_types::Side
+pub fn optionstratlib_analytics::pnl::Transaction::underlying_price(&self) -> core::option::Option<positive::positive::Positive>
+impl optionstratlib_analytics::pnl::Transaction
+pub fn optionstratlib_analytics::pnl::Transaction::new(optionstratlib_core::model::trade::TradeStatus, core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>, option_type::option_type::OptionType, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>) -> Self
+impl optionstratlib_analytics::pnl::Transaction
+pub fn optionstratlib_analytics::pnl::Transaction::pnl(&self) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_analytics::error::TransactionError>
+impl optionstratlib_analytics::pnl::Transaction
+pub fn optionstratlib_analytics::pnl::Transaction::update_days_to_expiration(&mut self, positive::positive::Positive)
+pub fn optionstratlib_analytics::pnl::Transaction::update_implied_volatility(&mut self, positive::positive::Positive)
+pub fn optionstratlib_analytics::pnl::Transaction::update_underlying_price(&mut self, positive::positive::Positive)
+pub trait optionstratlib_analytics::pnl::PnLCalculator
+pub fn optionstratlib_analytics::pnl::PnLCalculator::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::PnLCalculator::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::PnLCalculator::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::pnl::PnLCalculator::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_analytics::pnl::PnLCalculator for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::option::Options::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+impl optionstratlib_analytics::pnl::PnLCalculator for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::calculate_pnl_at_expiration(&self, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_core::model::position::Position::diff_position_pnl(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
+pub trait optionstratlib_analytics::pnl::TransactionAble
+pub fn optionstratlib_analytics::pnl::TransactionAble::add_transaction(&mut self, optionstratlib_analytics::pnl::Transaction) -> core::result::Result<(), optionstratlib_analytics::error::TransactionError>
+pub fn optionstratlib_analytics::pnl::TransactionAble::get_transactions(&self) -> core::result::Result<alloc::vec::Vec<optionstratlib_analytics::pnl::Transaction>, optionstratlib_analytics::error::TransactionError>
+impl optionstratlib_analytics::pnl::TransactionAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::add_transaction(&mut self, optionstratlib_analytics::pnl::Transaction) -> core::result::Result<(), optionstratlib_analytics::error::TransactionError>
+pub fn optionstratlib_core::model::position::Position::get_transactions(&self) -> core::result::Result<alloc::vec::Vec<optionstratlib_analytics::pnl::Transaction>, optionstratlib_analytics::error::TransactionError>
+pub fn optionstratlib_analytics::pnl::create_pnl_metrics_document(alloc::vec::Vec<optionstratlib_analytics::pnl::PnLMetricsStep>, positive::positive::Positive, alloc::string::String, positive::positive::Positive, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> optionstratlib_analytics::pnl::PnLMetricsDocument
+pub fn optionstratlib_analytics::pnl::load_pnl_metrics(&str) -> core::io::error::Result<alloc::vec::Vec<optionstratlib_analytics::pnl::PnLMetricsStep>>
+pub fn optionstratlib_analytics::pnl::save_pnl_metrics(&[optionstratlib_analytics::pnl::PnLMetricsStep], &str) -> core::io::error::Result<()>
+pub fn optionstratlib_analytics::pnl::save_pnl_metrics_with_document(&optionstratlib_analytics::pnl::PnLMetricsDocument, &str) -> core::io::error::Result<()>
+pub mod optionstratlib_analytics::risk
+pub enum optionstratlib_analytics::risk::RiskCategory
+pub optionstratlib_analytics::risk::RiskCategory::High
+pub optionstratlib_analytics::risk::RiskCategory::Low
+pub optionstratlib_analytics::risk::RiskCategory::Medium
+pub struct optionstratlib_analytics::risk::RiskMetricsSimulation
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::cvar_95: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::max_drawdown: positive::positive::Positive
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::severe_loss_probability: positive::positive::Positive
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::sharpe_ratio: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::var_95: rust_decimal::decimal::Decimal
+pub optionstratlib_analytics::risk::RiskMetricsSimulation::var_99: rust_decimal::decimal::Decimal
+impl core::default::Default for optionstratlib_analytics::risk::RiskMetricsSimulation
+pub fn optionstratlib_analytics::risk::RiskMetricsSimulation::default() -> Self
+impl utoipa::ToSchema for optionstratlib_analytics::risk::RiskMetricsSimulation
+pub fn optionstratlib_analytics::risk::RiskMetricsSimulation::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_analytics::risk::RiskMetricsSimulation::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::risk::RiskMetricsSimulation
+pub fn optionstratlib_analytics::risk::RiskMetricsSimulation::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_analytics::risk::SPANMargin
+impl optionstratlib_analytics::risk::SPANMargin
+pub fn optionstratlib_analytics::risk::SPANMargin::calculate_margin(&self, &optionstratlib_core::model::position::Position) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::pricing::PricingError>
+pub fn optionstratlib_analytics::risk::SPANMargin::new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+pub const optionstratlib_analytics::VERSION: &str

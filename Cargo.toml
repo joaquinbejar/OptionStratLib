@@ -30,7 +30,7 @@ include = [
 # crate it names and the facade paths over it; none replaces a type. The
 # default enables every capability that exists today, so the default surface
 # is the whole library.
-default = ["pricing", "market", "simulation", "synthetic", "io"]
+default = ["pricing", "market", "analytics", "simulation", "synthetic", "io"]
 # `curves`, `surfaces`, `geometrics` and the math errors.
 math = ["dep:optionstratlib-math"]
 # `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
@@ -39,8 +39,12 @@ pricing = ["dep:optionstratlib-pricing", "math"]
 # `chains`, `series` and the market errors, without I/O (`io`) or the
 # simulation-backed generators (`synthetic`).
 market = ["dep:optionstratlib-market", "pricing"]
+# `analytics`, `pnl`, `risk`, `metrics` and the analytics errors: P&L, margin,
+# probability kernels, chain metrics and projections, without strategies,
+# simulation or plotting.
+analytics = ["dep:optionstratlib-analytics", "market"]
 # `simulation`. Still facade source until M5 extracts it; it implies only
-# `pricing`, so `market` alone compiles none of it.
+# `pricing`, so `market` or `analytics` alone compiles none of it.
 simulation = ["pricing"]
 # `synthetic` is the only market-to-simulation dependency (chain and series
 # generators built on random walks) and becomes the optional
@@ -53,7 +57,7 @@ synthetic = ["market", "simulation"]
 io = ["market", "optionstratlib-market/io"]
 # Charts over the whole library: `visualization` renders strategies, chains
 # and simulations, so it needs every capability below it.
-plotly = ["dep:plotly", "market", "simulation"]
+plotly = ["dep:plotly", "analytics", "simulation"]
 static_export = [
     "plotly",
     "async",
@@ -73,6 +77,7 @@ optionstratlib-core = { workspace = true, features = ["schema"] }
 optionstratlib-math = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-pricing = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-market = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-analytics = { workspace = true, optional = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 approx = { workspace = true }
 plotly = { workspace = true, default-features = false, optional = true, features = ["static_export_default"] }
@@ -87,7 +92,6 @@ rayon = { workspace = true }
 itertools = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
-lazy_static = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 prettytable-rs = { workspace = true, features = ["win_crlf"] }
 pretty-simple-display = { workspace = true }
@@ -114,18 +118,18 @@ proptest = { workspace = true }
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
-required-features = ["market", "simulation"]
+required-features = ["analytics", "simulation"]
 
 [[test]]
 name = "property_tests"
 path = "tests/property/mod.rs"
-required-features = ["market", "simulation"]
+required-features = ["analytics", "simulation"]
 
 [[bench]]
 name = "benches"
 path = "benches/mod.rs"
 harness = false
-required-features = ["market", "simulation"]
+required-features = ["analytics", "simulation"]
 
 [lib]
 name = "optionstratlib"
@@ -144,6 +148,7 @@ members = [
     "crates/optionstratlib-math",
     "crates/optionstratlib-pricing",
     "crates/optionstratlib-market",
+    "crates/optionstratlib-analytics",
     "examples/support",
     "examples/examples_chain",
     "examples/examples_curves",
@@ -176,6 +181,7 @@ optionstratlib-core = { path = "crates/optionstratlib-core", version = "0.22.0" 
 optionstratlib-math = { path = "crates/optionstratlib-math", version = "0.22.0" }
 optionstratlib-pricing = { path = "crates/optionstratlib-pricing", version = "0.22.0" }
 optionstratlib-market = { path = "crates/optionstratlib-market", version = "0.22.0" }
+optionstratlib-analytics = { path = "crates/optionstratlib-analytics", version = "0.22.0" }
 tracing = "0.1"
 rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"

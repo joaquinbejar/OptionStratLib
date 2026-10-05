@@ -995,6 +995,13 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     }),
+    # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
+    # since analytics needs no market I/O and has no feature of its own that
+    # adds a package beyond `utoipa` (#529).
+    "optionstratlib-analytics": frozenset({
+        "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
 }
 
 # Named feature sets checked on their own, besides default and all
@@ -1619,6 +1626,9 @@ def self_test() -> int:
         "market csv under io": ({("optionstratlib-market", "io"): {"csv", "zip"}}, 0),
         "market tokio under io only": ({("optionstratlib-market", "io"): {"tokio"}}, 1),
         "market tokio under async": ({("optionstratlib-market", "async"): {"tokio", "csv"}}, 0),
+        "clean analytics tree": ({("optionstratlib-analytics", "default"): {"lazy_static", "serde_json"}}, 0),
+        "analytics pulls market io": ({("optionstratlib-analytics", "default"): {"csv", "zip"}}, 2),
+        "analytics tokio under all features": ({("optionstratlib-analytics", "all features"): {"tokio"}}, 1),
     }
     for name, (trees_case, expected) in forbidden_cases.items():
         got = len(forbidden_package_violations(trees_case))
@@ -1645,6 +1655,39 @@ def self_test() -> int:
         if not ok:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: a component crate's error type keeps its layer (expected 1, got {got})")
+
+    # An analytics-owned error moved into its crate keeps the analytics layer:
+    # a strategies file converting into it is a downward edge, a market-layer
+    # facade file naming it is an upward one (#529).
+    for name, (rel, source, expected) in {
+        "strategies converts into an analytics error": (
+            "src/error/strategies.rs",
+            "impl From<StrategyError> for crate::error::ProbabilityError {}\n",
+            0,
+        ),
+        "a market-layer file names an analytics error": (
+            "src/chains/x.rs",
+            "use crate::error::ProbabilityError;\n",
+            1,
+        ),
+    }.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            files = {
+                rel: source,
+                "src/error/mod.rs": "pub use optionstratlib_analytics::error::ProbabilityError;\n",
+                "crates/optionstratlib-analytics/src/error/probability.rs": "pub enum ProbabilityError { A }\n",
+            }
+            for path, content in files.items():
+                target = Path(tmp) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            edges, _ = scan(root)
+            got = len(violations_of(edges))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected}, got {got})")
 
     pricing_rules = INTRA_CRATE_RULES["optionstratlib-pricing"]
     intra_cases = {

@@ -381,6 +381,7 @@
 //! | `optionstratlib-math` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
 //! | `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `VolatilityError` and the `error::greeks` and `error::pricing` modules) | pricing models, Greeks, implied and historical volatility |
 //! | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
+//! | `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
 //!
 //! Each facade path is an explicit module or item re-export (`pub use
 //! optionstratlib_core::model;`, `pub use
@@ -396,12 +397,12 @@
 //! optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
 //! ```
 //!
-//! The rest of the library (analytics, pnl, risk, metrics, strategies,
-//! backtesting, visualization, and `simulation` behind its own feature)
-//! still lives in this crate and moves out milestone by milestone. Until then
-//! those modules, the unified `error::Error` and their `prelude` items need
-//! both `market` and `simulation`, and the `schema` derives stay always on;
-//! the facade default enables all of it.
+//! The rest of the library (strategies, backtesting, visualization, and
+//! `simulation` behind its own feature) still lives in this crate and moves
+//! out milestone by milestone. Until then those modules, the unified
+//! `error::Error` and their `prelude` items need both `analytics` and
+//! `simulation`, and the `schema` derives stay always on; the facade default
+//! enables all of it.
 //!
 //! ## Module Boundaries
 //!
@@ -919,14 +920,15 @@
 //! optionstratlib = { version = "0.22.0", features = ["plotly"] }
 //! ```
 //!
-//! - `math`, `pricing`, `market` (default): the component crates of the same
-//!   name and their facade paths (see [Workspace Crates](#workspace-crates)).
-//!   Each implies the one below it, and `pricing` alone resolves no market,
-//!   I/O, async or visualization package
+//! - `math`, `pricing`, `market`, `analytics` (default): the component crates
+//!   of the same name and their facade paths (see
+//!   [Workspace Crates](#workspace-crates)). Each implies the one below it,
+//!   `pricing` alone resolves no market, I/O, async or visualization package,
+//!   and `analytics` alone resolves no strategy, simulation or plotting code
 //! - `simulation` (default): random walks and simulators; implies `pricing`
 //!   but not `market`
 //! - `plotly`: Enables interactive visualization using plotly.rs (implies
-//!   `market` and `simulation`, which `visualization` renders)
+//!   `analytics` and `simulation`, which `visualization` renders)
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
@@ -1356,15 +1358,18 @@ pub use optionstratlib_core::model;
 /// from an option chain (`RNDAnalysis`). The strategy layer builds its
 /// probability analysis on top of these kernels; nothing here depends on a
 /// concrete strategy.
-#[cfg(all(feature = "market", feature = "simulation"))]
-pub mod analytics;
+///
+/// Defined by `optionstratlib-analytics` and re-exported here (feature
+/// `analytics`).
+#[cfg(feature = "analytics")]
+pub use optionstratlib_analytics::analytics;
 
 /// * `backtesting` - Tools for historical performance evaluation of options strategies.
 ///
 /// Provides framework and utilities to simulate and analyze how option strategies
 /// would have performed using historical market data. Supports various performance
 /// metrics, drawdown analysis, and strategy comparison.
-#[cfg(all(feature = "market", feature = "simulation"))]
+#[cfg(all(feature = "analytics", feature = "simulation"))]
 pub mod backtesting;
 
 /// * `chains` - Functionality for working with options chains and series data.
@@ -1446,16 +1451,21 @@ pub use optionstratlib_pricing::greeks;
 /// ### Dollar Gamma
 /// Gamma exposure in monetary terms: `Dollar Gamma = Gamma × Spot² × 0.01`
 /// Shows how much delta changes for a 1% move in the underlying.
-#[cfg(all(feature = "market", feature = "simulation"))]
-pub mod metrics;
+///
+/// Defined by `optionstratlib-analytics` and re-exported here (feature
+/// `analytics`).
+#[cfg(feature = "analytics")]
+pub use optionstratlib_analytics::metrics;
 
 /// * `pnl` - Profit and loss analysis tools for options positions.
 ///
-/// Utilities for calculating, projecting, and visualizing profit and loss (P&L) profiles
-/// for individual options and complex strategies. Includes time-based P&L evolution and
-/// scenario analysis.
-#[cfg(all(feature = "market", feature = "simulation"))]
-pub mod pnl;
+/// [`pnl::PnL`], the [`pnl::PnLCalculator`] trait, transactions, delta
+/// adjustments and P&L metrics documents for options and positions.
+///
+/// Defined by `optionstratlib-analytics` and re-exported here (feature
+/// `analytics`).
+#[cfg(feature = "analytics")]
+pub use optionstratlib_analytics::pnl;
 
 /// * `pricing` - Option pricing models including Black-Scholes and numerical methods.
 ///
@@ -1469,11 +1479,13 @@ pub use optionstratlib_pricing::pricing;
 
 /// * `risk` - Risk assessment and management tools for options portfolios.
 ///
-/// Tools for analyzing and quantifying risk in options positions and portfolios,
-/// including Value at Risk (VaR), stress testing, scenario analysis, and
-/// portfolio optimization algorithms.
-#[cfg(all(feature = "market", feature = "simulation"))]
-pub mod risk;
+/// SPAN margin ([`risk::SPANMargin`]), the VaR, CVaR and Sharpe figures of a
+/// simulated position (`RiskMetricsSimulation`) and risk categories.
+///
+/// Defined by `optionstratlib-analytics` and re-exported here (feature
+/// `analytics`).
+#[cfg(feature = "analytics")]
+pub use optionstratlib_analytics::risk;
 
 /// * `simulation` - Simulation techniques for scenario analysis.
 ///
@@ -1488,7 +1500,7 @@ pub mod simulation;
 /// Library of common option strategies (spreads, straddles, condors, etc.) with
 /// implementation helpers, parameter optimization, and analysis tools. Supports
 /// strategy composition and customization.
-#[cfg(all(feature = "market", feature = "simulation"))]
+#[cfg(all(feature = "analytics", feature = "simulation"))]
 pub mod strategies;
 
 /// * `surfaces` - Generic three-dimensional surfaces on `Decimal` coordinates.
@@ -1514,7 +1526,7 @@ pub use optionstratlib_core::utils;
 /// Graphics and visualization utilities for creating charts, graphs, and interactive
 /// plots of options data, strategies, and analytics. Supports various plot types
 /// optimized for different aspects of options analysis.
-#[cfg(all(feature = "market", feature = "simulation"))]
+#[cfg(all(feature = "analytics", feature = "simulation"))]
 pub mod visualization;
 
 /// * `volatility` - Volatility modeling, forecasting, and analysis utilities.

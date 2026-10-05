@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **P&L, risk, metrics and strategy-neutral analytics are their own crate,
+  `optionstratlib-analytics`** (#529). `analytics`, `pnl`, `risk`, `metrics`
+  and their errors (`ProbabilityError` with the `error::probability` module,
+  `ProjectionError`, `TransactionError`) move to
+  `crates/optionstratlib-analytics`, which depends on core, math, pricing and
+  market and on no strategy, simulation, backtesting or plotting crate.
+  Results and serialized forms are unchanged. What does change:
+  - The facade reaches them through a new `analytics` feature (implies
+    `market`, in `default`; `plotly` implies it). `analytics` alone builds
+    the four modules, their errors and their `prelude` items (`PnL`,
+    `PnLCalculator`, `BasicCurves`, `BasicSurfaces`, the metric traits,
+    `ProbabilityError`, `TransactionError`) without strategies or
+    simulation. The code still in the facade (strategies, backtesting,
+    visualization, the unified `error::Error`) now needs `analytics` and
+    `simulation`, and the facade test suites and benches declare
+    `required-features = ["analytics", "simulation"]`.
+  - `ProbabilityAnalysis`, `StrategyProbabilityAnalysis` and
+    `From<StrategyError> for ProbabilityError` stay with the strategies; the
+    eleven `ProbabilityError` tests that convert a `StrategyError` move next
+    to that impl. The test-only `flat_volatility_0_2` helper is no longer
+    visible to the facade, whose one user spells the same value out.
+  - `optionstratlib-analytics` derives `utoipa::ToSchema` only under its
+    `schema` feature; the facade enables it. The facade drops its
+    `lazy_static` dependency, whose only user was `pnl`.
+  - The analytics-only suites (probability and adjustment fixtures, P&L
+    traits, `TransactionError`, and the eight chain metric and projection
+    suites) move into the crate, with fixture paths anchored at the
+    workspace root; the JSON-fixture unit tests that `io` gated in the facade
+    always run there (market's `io` is a dev-dependency). `check-graph`
+    forbids the minimal-market package set in analytics, and
+    `check-components`, `make test`, `make doc`, the public-API snapshots and
+    the float gate cover it (`PriceTrend::{drift_rate, confidence}`
+    allowlisted as pre-existing dimensionless kernel inputs).
+
 - **The facade routes `math`, `pricing`, `market` and `simulation` through
   features** (#528, ADR-0002 Decision 2). `optionstratlib-math`,
   `optionstratlib-pricing` and `optionstratlib-market` become optional

@@ -764,3 +764,152 @@ mod tests_extended {
         );
     }
 }
+
+// The `StrategyError -> ProbabilityError` conversion lives in this file, so
+// its tests do too; they moved here from the probability error file when it
+// became `optionstratlib-analytics` (#529).
+#[cfg(test)]
+mod tests_probability_conversion {
+    use super::*;
+    use crate::error::strategies;
+
+    #[test]
+    fn test_strategy_error_conversion() {
+        let strategy_error = StrategyError::ProfitLossError(ProfitLossErrorKind::MaxProfitError {
+            reason: "Invalid max profit".to_string(),
+        });
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_strategy_break_even_error_conversion() {
+        let strategy_error = StrategyError::BreakEvenError(BreakEvenErrorKind::NoBreakEvenPoints);
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_strategy_operation_error_conversion() {
+        let strategy_error = StrategyError::OperationError(OperationErrorKind::NotSupported {
+            operation: "test".to_string(),
+            reason: "TestStrategy".to_string(),
+        });
+        let prob_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            prob_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_profit_loss_error_max_loss_error() {
+        let error = ProfitLossErrorKind::MaxLossError {
+            reason: "Maximum loss exceeded".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Maximum loss calculation error: Maximum loss exceeded"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_price_range() {
+        let error = StrategyError::PriceError(strategies::PriceErrorKind::InvalidPriceRange {
+            start: 0.0,
+            end: 100.0,
+            reason: "Out of bounds".to_string(),
+        });
+        assert!(matches!(error, StrategyError::PriceError(_)));
+    }
+
+    #[test]
+    fn test_break_even_error_calculation_error() {
+        let error = StrategyError::BreakEvenError(BreakEvenErrorKind::CalculationError {
+            reason: "Failed to calculate break-even point".to_string(),
+        });
+        let converted_error: ProbabilityError = error.into();
+        assert_eq!(
+            format!("{converted_error}"),
+            "Probability calculation error: Expected value calculation error: Failed to calculate break-even point"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_converts_to_expected_value_error() {
+        // The strategies error still reaches analytics, which is the
+        // downward direction; what is gone is the simulation payload.
+        let strategy_error = StrategyError::NotImplemented;
+        let converted_error: ProbabilityError = strategy_error.into();
+        assert!(matches!(
+            converted_error,
+            ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::ExpectedValueError { .. }
+            )
+        ));
+    }
+
+    #[test]
+    fn test_profit_loss_error_max_loss_error_bis() {
+        let error = ProfitLossErrorKind::MaxLossError {
+            reason: "Exceeded allowed loss".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Maximum loss calculation error: Exceeded allowed loss"
+        );
+    }
+
+    #[test]
+    fn test_profit_loss_error_profit_range_error() {
+        let error = ProfitLossErrorKind::ProfitRangeError {
+            reason: "Profit range mismatch".to_string(),
+        };
+        assert_eq!(
+            format!("{error}"),
+            "Profit range calculation error: Profit range mismatch"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_underlying_price() {
+        let error = StrategyError::PriceError(
+            crate::error::strategies::PriceErrorKind::InvalidUnderlyingPrice {
+                reason: "Underlying price is negative".to_string(),
+            },
+        );
+        let converted_error: ProbabilityError = ProbabilityError::from(error);
+        assert_eq!(
+            format!("{converted_error}"),
+            "Probability calculation error: Expected value calculation error: Underlying price is negative"
+        );
+    }
+
+    #[test]
+    fn test_strategy_error_price_error_invalid_price_range_bis() {
+        let error = StrategyError::PriceError(
+            crate::error::strategies::PriceErrorKind::InvalidPriceRange {
+                start: 0.0,
+                end: 50.0,
+                reason: "Start price is greater than end price".to_string(),
+            },
+        );
+        let converted_error: ProbabilityError = ProbabilityError::from(error);
+        assert_eq!(
+            format!("{converted_error}"),
+            "Probability calculation error: Expected value calculation error: Start price is greater than end price"
+        );
+    }
+}

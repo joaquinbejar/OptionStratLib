@@ -1,0 +1,2522 @@
+//! # Risk Neutral Density (RND) Analysis Module
+//!
+//! This module implements functionality to calculate and analyze the Risk-Neutral Density (RND)
+//! from option chains. The RND represents the market's implied probability distribution of
+//! future asset prices and is a powerful tool for understanding market expectations.
+//!
+//! ## Theory and Background
+//!
+//! The Risk-Neutral Density (RND) is a probability distribution that represents the market's
+//! view of possible future prices of an underlying asset, derived from option prices. It is
+//! "risk-neutral" because it incorporates both the market's expectations and risk preferences
+//! into a single distribution.
+//!
+//! Key aspects of RND:
+//! - Extracted from option prices using the Breeden-Litzenberger formula
+//! - Provides insights into market sentiment and expected volatility
+//! - Used for pricing exotic derivatives and risk assessment
+//!
+//! ## Statistical Moments and Their Interpretation
+//!
+//! The module calculates four key statistical moments:
+//!
+//! 1. **Mean**: The expected future price of the underlying asset
+//! 2. **Variance**: Measure of price dispersion, related to expected volatility
+//! 3. **Skewness**: Indicates asymmetry in price expectations
+//!    - Positive skew: Market expects upside potential
+//!    - Negative skew: Market expects downside risks
+//! 4. **Kurtosis**: Measures the likelihood of extreme events
+//!    - High kurtosis: Market expects "fat tails" (more extreme moves)
+//!    - Low kurtosis: Market expects more moderate price movements
+//!
+//! ## Usage Example
+//!
+//! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! use rust_decimal::Decimal;
+//! use rust_decimal_macros::dec;
+//! use tracing::info;
+//! use optionstratlib_analytics::analytics::{RNDParameters, RNDAnalysis};
+//! use optionstratlib_market::chains::chain::OptionChain;
+//! use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+//! use optionstratlib_core::model::ExpirationDate;
+//! use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+//!
+//! // Create parameters for RND calculation
+//! let params = RNDParameters {
+//!     risk_free_rate: dec!(0.05),
+//!     interpolation_points: 100,
+//!     derivative_tolerance: pos_or_panic!(0.001),
+//! };
+//! let option_chain_params = OptionChainBuildParams::new(
+//!             "SP500".to_string(),
+//!             None,
+//!             10,
+//!             spos!(1.0),
+//!             dec!(-0.2),
+//!             dec!(0.00001),
+//!             pos_or_panic!(0.02),
+//!             2,
+//!             OptionDataPriceParams::new(
+//!                 Some(Box::new(Positive::HUNDRED)),
+//!                 Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+//!                 Some(Decimal::ZERO),
+//!                 spos!(0.05),
+//!                 Some("SP500".to_string()),
+//!             ),
+//!             pos_or_panic!(0.1),
+//!         );
+//!
+//! let option_chain = OptionChain::build_chain(&option_chain_params)?;
+//! // Calculate RND from option chain
+//! let rnd_result = option_chain.calculate_rnd(&params)?;
+//!
+//! // Access statistical moments
+//! info!("Expected price: {}", rnd_result.statistics.mean);
+//! info!("Implied volatility: {}", rnd_result.statistics.variance.sqrt());
+//! info!("Market bias: {}", rnd_result.statistics.skewness);
+//! info!("Tail risk: {}", rnd_result.statistics.kurtosis);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Market Insights from RND
+//!
+//! The RND provides several valuable insights:
+//!
+//! 1. **Price Expectations**
+//!    - Mean indicates the market's expected future price
+//!    - Variance shows uncertainty around this expectation
+//!
+//! 2. **Market Sentiment**
+//!    - Skewness reveals directional bias
+//!    - Kurtosis indicates expected market stability
+//!
+//! 3. **Risk Assessment**
+//!    - Shape of distribution helps quantify various risks
+//!    - Particularly useful for stress testing and VaR calculations
+//!
+//! 4. **Volatility Structure**
+//!    - Implied volatility skew analysis
+//!    - Term structure of market expectations
+//!
+//! ## Mathematical Foundation
+//!
+//! The RND is calculated using the Breeden-Litzenberger formula:
+//!
+//! ```text
+//! q(K) = e^(rT) * (∂²C/∂K²)
+//! ```
+//!
+//! Where:
+//! - q(K) is the RND value at strike K
+//! - r is the risk-free rate
+//! - T is time to expiration
+//! - C is the call option price
+//! - ∂²C/∂K² is the second derivative with respect to strike
+//!
+//! ## Implementation Details
+//!
+//! The module implements:
+//! - Numerical approximation of derivatives
+//! - Statistical moment calculations
+//! - Error handling for numerical stability
+//! - Volatility skew analysis
+//!
+//! The implementation focuses on numerical stability and accurate moment calculations,
+//! particularly for extreme market conditions.
+
+use chrono::{NaiveDate, Utc};
+use num_traits::FromPrimitive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::p_sqrt;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
+use optionstratlib_core::model::utils::sub_floor_zero;
+use optionstratlib_market::chains::OptionChain;
+use optionstratlib_market::error::ChainError;
+use pretty_simple_display::{DebugPretty, DisplaySimple};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+#[cfg(test)]
+use tracing::debug;
+
+/// Parameters for Risk-Neutral Density calculation
+///
+/// This structure holds all necessary parameters for calculating the Risk-Neutral Density (RND)
+/// from option chain data.
+///
+/// # Parameters
+/// * `risk_free_rate` - Risk-free interest rate used in the calculation
+/// * `interpolation_points` - Number of points to use in interpolation between strikes
+/// * `derivative_tolerance` - Numerical tolerance for derivative calculations
+///
+/// # Example
+/// ```
+/// use rust_decimal_macros::dec;
+/// use optionstratlib_analytics::analytics::RNDParameters;
+/// use optionstratlib_core::pos_or_panic;
+/// let params = RNDParameters {
+///     risk_free_rate: dec!(0.05),
+///     interpolation_points: 100,
+///     derivative_tolerance: pos_or_panic!(0.001),
+/// };
+/// ```
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
+pub struct RNDParameters {
+    /// Risk-free rate for calculations
+    pub risk_free_rate: Decimal,
+    /// Number of points to use in interpolation
+    pub interpolation_points: usize,
+    /// Tolerance for numerical derivatives
+    pub derivative_tolerance: Positive,
+}
+
+impl Default for RNDParameters {
+    fn default() -> Self {
+        Self {
+            risk_free_rate: Decimal::ZERO,
+            interpolation_points: 100,
+            derivative_tolerance: Positive::ZERO,
+        }
+    }
+}
+
+/// Results of Risk-Neutral Density calculation
+///
+/// Contains both the calculated density values and their statistical properties.
+///
+/// # Fields
+/// * `densities` - Mapping of strike prices to their corresponding probability densities
+/// * `statistics` - Statistical moments and properties of the distribution
+///
+/// # Notes
+/// The densities represent the market's implied probability distribution of future prices.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RNDResult {
+    /// Mapping of strike prices to their corresponding densities
+    pub densities: BTreeMap<Positive, Decimal>,
+    /// Statistical moments of the distribution
+    pub statistics: RNDStatistics,
+}
+
+/// Statistical properties of the Risk-Neutral Density
+///
+/// Contains the four main statistical moments that characterize the distribution.
+///
+/// # Fields
+/// * `mean` - First moment, represents expected future price
+/// * `variance` - Second central moment, measures price dispersion
+/// * `skewness` - Third standardized moment, measures asymmetry
+/// * `kurtosis` - Fourth standardized moment, measures tail thickness
+///
+/// # Interpretation
+/// * Positive skewness indicates market expects upside potential
+/// * Negative skewness indicates market expects downside risks
+/// * High kurtosis indicates higher probability of extreme events
+/// * Low kurtosis indicates more concentrated price expectations
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RNDStatistics {
+    /// Mean of the distribution
+    pub mean: Decimal,
+    /// Variance of the distribution
+    pub variance: Positive,
+    /// Skewness of the distribution
+    pub skewness: Decimal,
+    /// Kurtosis of the distribution
+    pub kurtosis: Decimal,
+    /// Volatility of the distribution
+    pub volatility: Positive,
+}
+
+impl RNDStatistics {
+    /// Creates new RNDStatistics by calculating all moments from density values
+    ///
+    /// # Arguments
+    /// * `densities` - Map of strike prices to their corresponding densities
+    ///
+    /// # Returns
+    /// New RNDStatistics instance with calculated moments
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a moment leaves the
+    /// representable `Decimal` range — a strike-weighted sum past
+    /// `Decimal::MAX`, or a total density of zero where the moment divides by
+    /// it — and [`ChainError::PositiveError`] when the variance has no
+    /// representable square root.
+    ///
+    /// A density map whose moments are not representable describes no
+    /// distribution, so there is no limit to return in their place.
+    pub fn new(densities: &BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+        let mean = Self::calculate_mean(densities)?;
+        let variance = Self::calculate_variance(densities, mean)?;
+        let skewness = Self::calculate_skewness(densities, mean, variance)?;
+        let kurtosis = Self::calculate_kurtosis(densities, mean, variance)?;
+
+        Ok(Self {
+            mean,
+            variance,
+            skewness,
+            kurtosis,
+            volatility: p_sqrt(&variance, "analytics::rnd::new")?,
+        })
+    }
+
+    /// Calculates the mean (first moment) of the distribution
+    ///
+    /// # Arguments
+    /// * `densities` - Map of strike prices to their corresponding densities
+    ///
+    /// # Returns
+    /// Mean value as Decimal
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when the strike-weighted sum or
+    /// the total density leaves the representable `Decimal` range.
+    fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Result<Decimal, ChainError> {
+        let mut mean = Decimal::ZERO;
+        let mut total_density = Decimal::ZERO;
+
+        for (strike, density) in densities {
+            mean = d_add(
+                mean,
+                d_mul(strike.to_dec(), *density, "chains::rnd::mean")?,
+                "chains::rnd::mean",
+            )?;
+            total_density = d_add(total_density, *density, "chains::rnd::mean")?;
+        }
+
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
+        }
+        d_div(mean, total_density, "chains::rnd::mean").map_err(Into::into)
+    }
+
+    /// Calculates the variance (second central moment) of the distribution
+    ///
+    /// # Arguments
+    /// * `densities` - Map of strike prices to their corresponding densities
+    /// * `mean` - Previously calculated mean of the distribution
+    ///
+    /// # Returns
+    /// Variance as a Positive value
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a squared deviation, its
+    /// density weighting or the running sum leaves the representable
+    /// `Decimal` range.
+    fn calculate_variance(
+        densities: &BTreeMap<Positive, Decimal>,
+        mean: Decimal,
+    ) -> Result<Positive, ChainError> {
+        let mut variance = Decimal::ZERO;
+        let mut total_density = Decimal::ZERO;
+
+        for (strike, density) in densities {
+            let strike_dec = strike.to_dec();
+            let diff = d_sub(strike_dec, mean, "chains::rnd::variance")?;
+            let weighted = d_mul(
+                d_mul(diff, diff, "chains::rnd::variance")?,
+                *density,
+                "chains::rnd::variance",
+            )?;
+            variance = d_add(variance, weighted, "chains::rnd::variance")?;
+            total_density = d_add(total_density, *density, "chains::rnd::variance")?;
+        }
+
+        if total_density.is_zero() {
+            return Ok(Positive::ZERO);
+        }
+        let normalized = d_div(variance, total_density, "chains::rnd::variance")?;
+        // A negative normalized variance breaks the `Positive` invariant; the
+        // default of zero is the value this function has always returned for
+        // it.
+        Ok(Positive::new_decimal(normalized).unwrap_or_default())
+    }
+
+    /// Calculates the skewness (third standardized moment) of the distribution
+    ///
+    /// # Arguments
+    /// * `densities` - Map of strike prices to their corresponding densities
+    /// * `mean` - Previously calculated mean
+    /// * `variance` - Previously calculated variance
+    ///
+    /// # Returns
+    /// Skewness as Decimal
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation or
+    /// its cube leaves the representable `Decimal` range, and
+    /// [`ChainError::PositiveError`] when the variance has no representable
+    /// square root.
+    fn calculate_skewness(
+        densities: &BTreeMap<Positive, Decimal>,
+        mean: Decimal,
+        variance: Positive,
+    ) -> Result<Decimal, ChainError> {
+        if variance == Positive::ZERO {
+            return Ok(Decimal::ZERO);
+        }
+
+        let std_dev = p_sqrt(&variance, "analytics::rnd::calculate_skewness")?;
+        let mut skewness = Decimal::ZERO;
+        let mut total_density = Decimal::ZERO;
+
+        for (strike, density) in densities {
+            let strike_dec = strike.to_dec();
+            let normalized_diff = d_div(
+                d_sub(strike_dec, mean, "chains::rnd::skewness")?,
+                std_dev.to_dec(),
+                "chains::rnd::skewness",
+            )?;
+            let cubed = d_mul(
+                d_mul(
+                    d_mul(normalized_diff, normalized_diff, "chains::rnd::skewness")?,
+                    normalized_diff,
+                    "chains::rnd::skewness",
+                )?,
+                *density,
+                "chains::rnd::skewness",
+            )?;
+            skewness = d_add(skewness, cubed, "chains::rnd::skewness")?;
+            total_density = d_add(total_density, *density, "chains::rnd::skewness")?;
+        }
+
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
+        }
+        d_div(skewness, total_density, "chains::rnd::skewness").map_err(Into::into)
+    }
+
+    /// Calculates the kurtosis (fourth standardized moment) of the distribution
+    ///
+    /// Uses the excess kurtosis formula: (m4/σ⁴) - 3, where m4 is the fourth moment
+    /// and σ is the standard deviation.
+    ///
+    /// # Arguments
+    /// * `densities` - Map of strike prices to their corresponding densities
+    /// * `mean` - Previously calculated mean
+    /// * `variance` - Previously calculated variance
+    ///
+    /// # Returns
+    /// Excess kurtosis as Decimal
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::OptionDataError`] when a standardized deviation, its
+    /// fourth power, the density weighting or the running sum leaves the
+    /// representable `Decimal` range, and [`ChainError::PositiveError`] when
+    /// the variance has no representable square root.
+    fn calculate_kurtosis(
+        densities: &BTreeMap<Positive, Decimal>,
+        mean: Decimal,
+        variance: Positive,
+    ) -> Result<Decimal, ChainError> {
+        if variance == Positive::ZERO {
+            return Ok(Decimal::ZERO);
+        }
+
+        // Each deviation is standardized before it is raised, exactly as the
+        // skewness path does. Accumulating the raw fourth moment and dividing
+        // by `sigma^4` at the end cannot work here: `sigma^4` underflows to
+        // exactly zero once sigma drops below about 1e-7, which two strikes a
+        // hair apart already reach, and the distribution is not degenerate
+        // there. Two equal masses at 100 and 100.0000000000001 standardize to
+        // ±1 and carry the -2 excess kurtosis of a two-point distribution,
+        // which is what this now returns instead of zero.
+        let std_dev = p_sqrt(&variance, "analytics::rnd::calculate_kurtosis")?;
+        let mut fourth_moment = Decimal::ZERO;
+        let mut total_density = Decimal::ZERO;
+
+        for (strike, density) in densities {
+            let normalized_diff = d_div(
+                d_sub(strike.to_dec(), mean, "chains::rnd::kurtosis")?,
+                std_dev.to_dec(),
+                "chains::rnd::kurtosis",
+            )?;
+            let squared = d_mul(normalized_diff, normalized_diff, "chains::rnd::kurtosis")?;
+            let fourth = d_mul(squared, squared, "chains::rnd::kurtosis")?;
+            fourth_moment = d_add(
+                fourth_moment,
+                d_mul(fourth, *density, "chains::rnd::kurtosis")?,
+                "chains::rnd::kurtosis",
+            )?;
+            total_density = d_add(total_density, *density, "chains::rnd::kurtosis")?;
+        }
+
+        if total_density.is_zero() {
+            return Ok(Decimal::ZERO);
+        }
+
+        d_sub(
+            d_div(fourth_moment, total_density, "chains::rnd::kurtosis")?,
+            dec!(3.0),
+            "chains::rnd::kurtosis",
+        )
+        .map_err(Into::into)
+    }
+}
+
+impl RNDResult {
+    /// Create a new RNDResult with calculated statistics
+    ///
+    /// # Errors
+    ///
+    /// Propagates the errors of RNDStatistics::new: a density map whose
+    /// moments leave the representable `Decimal` range describes no
+    /// distribution, and there is no limit to return in their place.
+    pub fn new(densities: BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+        let statistics = RNDStatistics::new(&densities)?;
+        Ok(Self {
+            densities,
+            statistics,
+        })
+    }
+}
+
+/// Trait defining Risk-Neutral Density analysis capabilities
+///
+/// This trait provides methods for calculating RND and analyzing volatility skew
+/// from option chain data.
+pub trait RNDAnalysis {
+    /// Calculates the Risk-Neutral Density from the option chain
+    ///
+    /// Uses the Breeden-Litzenberger formula to extract implied probabilities
+    /// from option prices.
+    ///
+    /// # Arguments
+    /// * `params` - Parameters controlling the RND calculation
+    ///
+    /// # Returns
+    /// Result containing either RNDResult or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::EmptyDensities`] when no valid density values
+    /// can be extracted from the chain, or [`ChainError::OptionDataError`]
+    /// when individual strikes produce numerical failures during the
+    /// finite-difference second-derivative approximation.
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError>;
+
+    /// Calculates the implied volatility skew
+    ///
+    /// Analyzes how implied volatility varies across different strike prices,
+    /// providing insight into market's price expectations.
+    ///
+    /// # Returns
+    /// Result containing vector of (strike_price, volatility) pairs or an error
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChainError::EmptySkewData`] when no strike in the chain
+    /// produced a valid implied-volatility sample, or
+    /// [`ChainError::OptionDataError`] if individual option records carry
+    /// invalid volatility values.
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError>;
+}
+
+impl RNDAnalysis for OptionChain {
+    /// Implementation of RND calculation for option chains
+    ///
+    /// # Numerical Method
+    /// 1. Calculates second derivative of option prices
+    /// 2. Applies Breeden-Litzenberger formula
+    /// 3. Normalizes resulting densities
+    ///
+    /// # Error Conditions
+    /// * Empty option chain
+    /// * Zero derivative tolerance
+    /// * Failed density calculations
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError> {
+        let mut densities = BTreeMap::new();
+        let mut h = params.derivative_tolerance.to_dec();
+
+        // Step 1: Validate parameters
+        if h == Positive::ZERO {
+            return Err(ChainError::invalid_parameters(
+                "derivative_tolerance",
+                "must be greater than zero",
+            ));
+        }
+
+        // Step 2: Get all available strikes
+        let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
+        if strikes.is_empty() {
+            return Err(ChainError::EmptyDensities);
+        }
+
+        // Calculate minimum strike interval
+        let min_interval = strikes
+            .windows(2)
+            .filter_map(|w| match w {
+                [prev, curr] => Some(*curr - *prev),
+                _ => None,
+            })
+            .min()
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "strike_interval",
+                    "cannot determine minimum strike interval",
+                )
+            })?;
+
+        if h < min_interval.to_dec() {
+            h = min_interval.to_dec();
+        }
+
+        // Step 3: Calculate time to expiry
+        let expiration_date = self.get_expiration_date();
+        let expiry_date = NaiveDate::parse_from_str(&expiration_date, "%Y-%m-%d")?
+            .and_hms_opt(23, 59, 59)
+            .ok_or_else(|| {
+                ChainError::invalid_parameters(
+                    "expiration_date",
+                    "invalid expiration date/time components",
+                )
+            })?;
+
+        let now = Utc::now().naive_utc();
+        let time_to_expiry =
+            Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap_or_default();
+
+        // Step 4: Calculate discount factor. `Decimal::exp` aborts on overflow
+        // and on underflow; the checked helper flushes an underflowing
+        // discount to zero, which is its limit, and reports a real overflow.
+        let discount = d_exp(
+            d_mul(
+                -params.risk_free_rate,
+                time_to_expiry,
+                "chains::rnd::discount::exponent",
+            )?,
+            "chains::rnd::discount",
+        )?;
+
+        // Debug information
+        #[cfg(test)]
+        {
+            debug!("Time to expiry: {} years", time_to_expiry);
+            debug!("Discount factor: {}", discount);
+            debug!("Step size h: {}", h);
+        }
+        // Step 5: Calculate RND for each strike
+        for opt in self.options.iter() {
+            let k = opt.strike_price;
+
+            // `k + h` aborts when the bumped strike leaves the `Positive`
+            // range. A strike that cannot be bumped has no upper wing and so
+            // no finite difference; skip it exactly as a missing quote is
+            // skipped by the `if let` below.
+            let Ok(k_up) = k.checked_add_dec(h) else {
+                continue;
+            };
+
+            // Debug prices
+            #[cfg(test)]
+            {
+                debug!("Processing strike {}", k);
+                debug!("Call price at k: {:?}", self.get_call_price(k));
+                debug!("Call price at k+h: {:?}", self.get_call_price(k_up));
+                debug!(
+                    "Call price at k-h: {:?}",
+                    self.get_call_price(sub_floor_zero(k, &h))
+                );
+            }
+            if let (Some(call_price), Some(call_up), Some(call_down)) = (
+                self.get_call_price(k),
+                self.get_call_price(k_up),
+                self.get_call_price(sub_floor_zero(k, &h)),
+            ) {
+                // Calculate second derivative. `h * h` underflows to exactly
+                // zero below scale 28, which a `derivative_tolerance` under
+                // 1e-14 reaches, so the division is checked rather than raw.
+                let sum = d_add(call_up, call_down, "chains::rnd::wing_sum")?;
+                let twice_mid = d_mul(Decimal::TWO, call_price, "chains::rnd::twice_mid")?;
+                let numerator = d_sub(sum, twice_mid, "chains::rnd::curvature")?;
+                let step_squared = d_mul(h, h, "chains::rnd::step_squared")?;
+                let second_derivative =
+                    d_div(numerator, step_squared, "chains::rnd::second_derivative")?;
+
+                #[cfg(test)]
+                {
+                    debug!("Second derivative: {}", second_derivative);
+                }
+
+                // Calculate density using Breeden-Litzenberger formula
+                let density = d_mul(second_derivative, discount, "chains::rnd::density")?;
+
+                #[cfg(test)]
+                {
+                    debug!("Density: {}", density);
+                }
+
+                // Store valid density
+                if !density.is_sign_negative() && !density.is_zero() {
+                    densities.insert(k, density);
+                }
+            }
+        }
+
+        // Step 6: Validate and normalize densities
+        if densities.is_empty() {
+            return Err(ChainError::EmptyDensities);
+        }
+
+        let total = d_sum_iter(densities.values().copied(), "chains::rnd::total_density")?;
+        if !total.is_zero() {
+            for density in densities.values_mut() {
+                *density = d_div(*density, total, "chains::rnd::normalise")?;
+            }
+        }
+
+        #[cfg(test)]
+        {
+            debug!("Total number of densities: {}", densities.len());
+            debug!("Sum of densities: {}", total);
+        }
+
+        RNDResult::new(densities)
+    }
+
+    /// Implementation of volatility skew calculation
+    ///
+    /// Extracts and analyzes the relationship between strike prices
+    /// and implied volatilities.
+    ///
+    /// # Error Conditions
+    /// * Missing ATM volatility
+    /// * Insufficient valid data points
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError> {
+        let mut skew = Vec::new();
+        let atm_strike = self.underlying_price;
+        let atm_vol = self.get_atm_implied_volatility()?;
+
+        for opt in self.options.iter() {
+            // `Positive / Positive` aborts on a zero underlying and on a
+            // quotient that leaves the range, and the subtraction aborts on a
+            // volatility at the edge of it.
+            let relative_strike = opt.strike_price.checked_div(&atm_strike).map_err(|_| {
+                ChainError::invalid_parameters(
+                    "underlying_price",
+                    "relative strike is not representable against this underlying",
+                )
+            })?;
+            let vol_diff = d_sub(
+                opt.implied_volatility.to_dec(),
+                atm_vol.to_dec(),
+                "chains::skew::volatility_difference",
+            )?;
+            skew.push((relative_strike, vol_diff));
+        }
+
+        if skew.is_empty() {
+            return Err(ChainError::EmptySkewData);
+        }
+
+        Ok(skew)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+
+    use optionstratlib_market::chains::chain::OptionChain;
+
+    use rust_decimal_macros::dec;
+
+    // Helper functions for test data creation
+    fn create_test_option_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        // Add a range of options around the money
+        for strike in [80.0, 90.0, 95.0, 100.0, 105.0, 110.0, 120.0].iter() {
+            chain.add_option(
+                pos_or_panic!(*strike),
+                spos!(15.0),
+                spos!(15.5),
+                spos!(5.0),
+                spos!(5.5),
+                pos_or_panic!(0.2),
+                Some(dec!(-0.3)),
+                Some(dec!(-0.3)),
+                Some(dec!(0.3)),
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+        }
+
+        chain
+    }
+
+    fn create_empty_chain() -> OptionChain {
+        OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        )
+    }
+
+    mod rnd_parameters_tests {
+        use super::*;
+
+        #[test]
+        fn test_default_parameters() {
+            let params = RNDParameters::default();
+            assert_eq!(params.risk_free_rate, Decimal::ZERO);
+            assert_eq!(params.interpolation_points, 100);
+            assert_eq!(params.derivative_tolerance, Positive::ZERO);
+        }
+
+        #[test]
+        fn test_custom_parameters() {
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 200,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+            assert_eq!(params.risk_free_rate, dec!(0.05));
+            assert_eq!(params.interpolation_points, 200);
+            assert_eq!(params.derivative_tolerance, pos_or_panic!(0.001));
+        }
+    }
+
+    mod rnd_statistics_tests {
+        use super::*;
+
+        use optionstratlib_core::assert_decimal_eq;
+
+        fn create_test_densities() -> BTreeMap<Positive, Decimal> {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(110.0), dec!(0.3));
+            densities
+        }
+
+        #[test]
+        fn test_calculate_mean_normal_case() {
+            let densities = create_test_densities();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.mean, dec!(101));
+        }
+
+        #[test]
+        fn test_calculate_mean_empty_densities() {
+            let densities = BTreeMap::new();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.mean, Decimal::ZERO);
+        }
+
+        #[test]
+        fn test_calculate_variance_normal_case() {
+            let densities = create_test_densities();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert!(stats.variance > Positive::ZERO);
+        }
+
+        #[test]
+        fn test_calculate_variance_empty_densities() {
+            let densities = BTreeMap::new();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.variance, Positive::ZERO);
+        }
+
+        #[test]
+        fn test_calculate_skewness_normal_case() {
+            let densities = create_test_densities();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            // Skewness should be near zero for symmetric distribution
+            assert_decimal_eq!(stats.skewness.abs(), dec!(0.139941), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_skewness_empty_densities() {
+            let densities = BTreeMap::new();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.skewness, Decimal::ZERO);
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_normal_case() {
+            let densities = create_test_densities();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            // Excess kurtosis should be near zero for normal-like distribution
+            assert_decimal_eq!(stats.kurtosis.abs(), dec!(0.96043315), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_narrow_distribution_is_not_a_point_mass() {
+            // Two equal masses 1e-7 apart. Sigma is 5e-8, so `sigma^4`
+            // underflows to exactly zero and the old formula reported this as
+            // the flat zero of a point mass. The distribution is a genuine
+            // two-point one, whose excess kurtosis is -2.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_survives_the_narrowest_representable_spread() {
+            // The same two-point shape 1e-13 apart, where sigma is around
+            // 5e-14 and `Decimal::sqrt` itself runs out of precision. The
+            // answer is no longer exact, but it is the -2 of a two-point
+            // distribution rather than the zero of a point mass, which is
+            // what the underflow used to turn it into.
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(100.0000000000001), dec!(0.5));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-2.0), dec!(0.1));
+        }
+
+        #[test]
+        fn test_calculate_kurtosis_empty_densities() {
+            let densities = BTreeMap::new();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.kurtosis, Decimal::ZERO);
+        }
+
+        #[test]
+        fn test_calculate_volatility_normal_case() {
+            let densities = create_test_densities();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            // Excess kurtosis should be near zero for normal-like distribution
+            assert_decimal_eq!(stats.volatility.to_dec(), dec!(7.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_calculate_volatility_empty_densities() {
+            let densities = BTreeMap::new();
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_eq!(stats.volatility.to_dec(), Decimal::ZERO);
+        }
+    }
+
+    mod rnd_calculation_tests {
+        use super::*;
+
+        #[test]
+        fn test_calculate_rnd_normal_case() {
+            let chain = create_test_option_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+
+        #[test]
+        fn test_calculate_rnd_empty_chain() {
+            let chain = create_empty_chain();
+            let params = RNDParameters::default();
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_calculate_rnd_zero_tolerance() {
+            let chain = create_test_option_chain();
+            let params = RNDParameters {
+                derivative_tolerance: Positive::ZERO,
+                ..Default::default()
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_calculate_rnd_high_risk_free_rate() {
+            let chain = create_test_option_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.5), // 50% interest rate
+                derivative_tolerance: pos_or_panic!(0.001),
+                ..Default::default()
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            // Additional assertions about high interest rate effects could be added
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+    }
+
+    mod skew_calculation_tests {
+        use super::*;
+
+        #[test]
+        fn test_calculate_skew_normal_case() {
+            let chain = create_test_option_chain();
+            let result = chain.calculate_skew();
+
+            assert!(result.is_ok());
+            let skew = result.unwrap();
+            assert!(!skew.is_empty());
+
+            // Test for monotonicity
+            for window in skew.windows(2) {
+                assert!(window[0].0 < window[1].0); // Strikes should be increasing
+            }
+        }
+
+        #[test]
+        fn test_calculate_skew_empty_chain() {
+            let chain = create_empty_chain();
+            let result = chain.calculate_skew();
+
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("cannot find ATM option for empty option chain: TEST")
+            );
+        }
+
+        #[test]
+        fn test_calculate_skew_missing_implied_volatility() {
+            let mut chain = create_test_option_chain();
+            // Add an option without implied volatility
+            chain.add_option(
+                pos_or_panic!(115.0),
+                spos!(5.0),
+                spos!(5.5),
+                spos!(15.0),
+                spos!(15.5),
+                pos_or_panic!(0.2), // No implied volatility
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let result = chain.calculate_skew();
+            assert!(result.is_ok()); // Should still work with partial data
+        }
+    }
+
+    mod helper_method_tests {
+        use super::*;
+
+        #[test]
+        fn test_get_call_price() {
+            let chain = create_test_option_chain();
+
+            // Test existing strike
+            let price = chain.get_call_price(Positive::HUNDRED);
+            assert!(price.is_some());
+
+            // Test non-existing strike
+            let price = chain.get_call_price(pos_or_panic!(99.0));
+            assert!(price.is_none());
+        }
+
+        #[test]
+        fn test_get_atm_implied_volatility() {
+            let chain = create_test_option_chain();
+
+            // Test normal case
+            let vol = chain.get_atm_implied_volatility();
+            assert!(vol.is_ok());
+
+            // Test empty chain
+            let empty_chain = create_empty_chain();
+            let vol = empty_chain.get_atm_implied_volatility();
+            assert!(vol.is_err());
+        }
+    }
+
+    mod integration_tests {
+        use super::*;
+
+        #[test]
+        fn test_full_rnd_workflow() {
+            let chain = create_test_option_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+
+            // Calculate RND
+            let rnd_result = chain.calculate_rnd(&params);
+
+            assert!(rnd_result.is_err());
+
+            assert!(
+                rnd_result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+
+        #[test]
+        fn test_extreme_market_conditions() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
+
+            // Add options with extreme values
+            chain.add_option(
+                pos_or_panic!(50.0), // Deep ITM
+                spos!(50.0),
+                spos!(51.0),
+                spos!(0.1),
+                spos!(0.2),
+                pos_or_panic!(0.8), // High volatility
+                Some(dec!(-0.99)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                spos!(10.0),
+                Some(5),
+                None,
+            );
+
+            chain.add_option(
+                pos_or_panic!(150.0), // Deep OTM
+                spos!(0.1),
+                spos!(0.2),
+                spos!(50.0),
+                spos!(51.0),
+                pos_or_panic!(0.8), // High volatility
+                Some(dec!(0.99)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                spos!(10.0),
+                Some(5),
+                None,
+            );
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.10), // High interest rate
+                interpolation_points: 200,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+
+            let rnd_result = chain.calculate_rnd(&params);
+            assert!(rnd_result.is_err());
+            assert!(
+                rnd_result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    mod rnd_statistics_extended_tests {
+        use super::*;
+        use optionstratlib_core::pos_or_panic;
+
+        use optionstratlib_core::assert_decimal_eq;
+
+        #[test]
+        fn test_asymmetric_distribution() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(90.0), dec!(0.1));
+            densities.insert(Positive::HUNDRED, dec!(0.7));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.skewness.abs(), dec!(0.076839), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_extreme_values_distribution() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(50.0), dec!(0.01));
+            densities.insert(Positive::HUNDRED, dec!(0.97));
+            densities.insert(pos_or_panic!(150.0), dec!(0.02));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert!(stats.variance > Positive::ZERO);
+            assert!(stats.kurtosis.abs() > dec!(5.0));
+        }
+
+        #[test]
+        fn test_uniform_distribution() {
+            let mut densities = BTreeMap::new();
+
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(pos_or_panic!(95.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.2));
+            densities.insert(pos_or_panic!(105.0), dec!(0.2));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.skewness.abs(), dec!(0.0), dec!(0.00001));
+            assert_decimal_eq!(stats.kurtosis, dec!(-1.2999999), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_bimodal_distribution() {
+            let mut densities = BTreeMap::new();
+
+            densities.insert(pos_or_panic!(80.0), dec!(0.3));
+            densities.insert(pos_or_panic!(90.0), dec!(0.1));
+            densities.insert(Positive::HUNDRED, dec!(0.1));
+            densities.insert(pos_or_panic!(110.0), dec!(0.1));
+            densities.insert(pos_or_panic!(120.0), dec!(0.4));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.kurtosis, dec!(-1.69028), dec!(0.00001));
+        }
+    }
+
+    mod rnd_calculation_extended_tests {
+        use super::*;
+        use optionstratlib_core::{pos_or_panic, spos};
+
+        use optionstratlib_market::chains::chain::OptionChain;
+
+        fn create_test_option_chain() -> OptionChain {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
+
+            // Add a range of options around the money
+            for strike in [80.0, 90.0, 95.0, 100.0, 105.0, 110.0, 120.0].iter() {
+                chain.add_option(
+                    pos_or_panic!(*strike),
+                    spos!(15.0),
+                    spos!(15.5),
+                    spos!(5.0),
+                    spos!(5.5),
+                    pos_or_panic!(0.2),
+                    Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+            chain
+        }
+
+        fn create_wide_spread_chain() -> OptionChain {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
+
+            // Amplio rango de strikes
+            for strike in [60.0, 80.0, 100.0, 120.0, 140.0].iter() {
+                chain.add_option(
+                    pos_or_panic!(*strike),
+                    spos!(15.0),
+                    spos!(15.5),
+                    spos!(5.0),
+                    spos!(5.5),
+                    pos_or_panic!(0.2),
+                    Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+            chain
+        }
+
+        fn create_high_vol_chain() -> OptionChain {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
+
+            // Alta volatilidad
+            for strike in [90.0, 95.0, 100.0, 105.0, 110.0].iter() {
+                chain.add_option(
+                    pos_or_panic!(*strike),
+                    spos!(15.0),
+                    spos!(15.5),
+                    spos!(5.0),
+                    spos!(5.5),
+                    pos_or_panic!(0.5), // Alta volatilidad
+                    Some(dec!(-0.3)),
+                    Some(dec!(0.3)),
+                    Some(dec!(0.3)),
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+            chain
+        }
+
+        #[test]
+        fn test_calculate_rnd_wide_spread() {
+            let chain = create_wide_spread_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+
+        #[test]
+        fn test_calculate_rnd_high_volatility() {
+            let chain = create_high_vol_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.001),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("failed to calculate any valid risk-neutral density value")
+            );
+        }
+
+        #[test]
+        fn test_calculate_rnd_different_tolerances() {
+            let chain = create_test_option_chain();
+
+            let tolerances = [
+                pos_or_panic!(0.0001),
+                pos_or_panic!(0.001),
+                pos_or_panic!(0.01),
+                pos_or_panic!(0.1),
+            ];
+
+            for tolerance in tolerances.iter() {
+                let params = RNDParameters {
+                    risk_free_rate: dec!(0.05),
+                    interpolation_points: 100,
+                    derivative_tolerance: *tolerance,
+                };
+
+                let result = chain.calculate_rnd(&params);
+                assert!(result.is_err());
+                assert!(
+                    result
+                        .unwrap_err()
+                        .to_string()
+                        .contains("failed to calculate any valid risk-neutral density value")
+                );
+            }
+        }
+    }
+
+    mod numerical_stability_tests {
+        use super::*;
+        use optionstratlib_core::{pos_or_panic, spos};
+
+        use optionstratlib_market::chains::chain::OptionChain;
+
+        #[test]
+        fn test_numerical_stability_small_values() {
+            let mut chain =
+                OptionChain::new("TEST", Positive::ONE, "2024-12-31".to_string(), None, None);
+
+            chain.add_option(
+                pos_or_panic!(0.9),
+                spos!(0.001),
+                spos!(0.002),
+                spos!(0.001),
+                spos!(0.002),
+                pos_or_panic!(0.1),
+                Some(dec!(-0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.0001),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_numerical_stability_large_values() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                pos_or_panic!(10000.0),
+                "2024-12-31".to_string(),
+                None,
+                None,
+            );
+
+            chain.add_option(
+                pos_or_panic!(9900.0),
+                spos!(1000.0),
+                spos!(1001.0),
+                spos!(1000.0),
+                spos!(1001.0),
+                pos_or_panic!(0.1),
+                Some(dec!(-0.3)),
+                Some(dec!(0.3)),
+                Some(dec!(0.3)),
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.0001),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod statistical_validation_tests {
+    use super::*;
+
+    use optionstratlib_core::assert_decimal_eq;
+    // The reference moments these tests recompute by hand still raise a
+    // `Decimal` directly; the implementation standardizes first instead.
+    use rust_decimal::MathematicalOps;
+    use rust_decimal_macros::dec;
+
+    mod moments_tests {
+        use super::*;
+
+        use num_traits::{FromPrimitive, ToPrimitive};
+        use optionstratlib_core::pos_or_panic;
+        use tracing::info;
+
+        #[test]
+        fn test_simple_mean() {
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(0.5));
+            densities.insert(pos_or_panic!(200.0), dec!(0.5));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.mean, dec!(150.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_normal_distribution_step_by_step() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
+
+            // Step 1: Calculate mean
+            let mut mean = Decimal::ZERO;
+            let mut total = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                mean += x.to_dec() * *p;
+                total += *p;
+            }
+            mean /= total;
+            info!("Step-by-step mean: {}", mean);
+
+            // Step 2: Calculate variance
+            let mut variance = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                variance += diff * diff * (*p);
+            }
+            variance /= total;
+            info!("Step-by-step variance: {}", variance);
+
+            // Step 3: Calculate kurtosis
+            let std_dev = Decimal::from_f64(variance.to_f64().unwrap().sqrt()).unwrap();
+            let std_dev_4 = std_dev.powi(4);
+            let mut kurtosis = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                kurtosis += (diff.powi(4) * (*p)) / std_dev_4;
+            }
+            kurtosis = (kurtosis / total) - dec!(3.0);
+            info!("Step-by-step kurtosis: {}", kurtosis);
+
+            // Verify with structure
+            let stats = RNDStatistics::new(&densities).unwrap();
+            info!("Structure values:");
+            info!("Mean: {}", stats.mean);
+            info!("Variance: {}", stats.variance);
+            info!("Kurtosis: {}", stats.kurtosis);
+
+            assert_decimal_eq!(stats.kurtosis, kurtosis, dec!(0.00001));
+        }
+
+        #[test]
+        fn test_kurtosis_calculation_comparison() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
+
+            // Manual calculation
+            info!("Manual Calculation:");
+            let mut mean = Decimal::ZERO;
+            let mut total = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                mean += x.to_dec() * *p;
+                total += *p;
+            }
+            mean /= total;
+            info!("Mean: {}", mean);
+
+            let mut variance_dec = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                variance_dec += diff * diff * (*p);
+            }
+            variance_dec /= total;
+            info!("Variance as Decimal: {}", variance_dec);
+
+            let std_dev_manual = Decimal::from_f64(variance_dec.to_f64().unwrap().sqrt()).unwrap();
+            info!("Std Dev (manual): {}", std_dev_manual);
+            let std_dev_4_manual = std_dev_manual.powi(4);
+            info!("Std Dev^4 (manual): {}", std_dev_4_manual);
+
+            let mut fourth_moment = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                let term = diff.powi(4);
+                fourth_moment += term * (*p);
+            }
+            fourth_moment /= total;
+            info!("Fourth Moment: {}", fourth_moment);
+
+            let kurtosis_manual = (fourth_moment / std_dev_4_manual) - dec!(3.0);
+            info!("Kurtosis (manual): {}", kurtosis_manual);
+
+            // Structure calculation
+            info!("\nStructure Calculation:");
+            let stats = RNDStatistics::new(&densities).unwrap();
+            info!("Mean: {}", stats.mean);
+            info!("Variance: {}", stats.variance);
+            info!("Kurtosis: {}", stats.kurtosis);
+
+            // Compare values
+            assert_decimal_eq!(stats.mean, mean, dec!(0.00001));
+            assert_decimal_eq!(stats.variance.to_dec(), variance_dec, dec!(0.00001));
+            assert_decimal_eq!(stats.kurtosis, kurtosis_manual, dec!(0.00001));
+        }
+
+        #[test]
+        fn test_normal_distribution_detailed() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(80.0), dec!(0.1));
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+            densities.insert(pos_or_panic!(120.0), dec!(0.1));
+
+            // Step 1: Calculate mean
+            let mut mean = Decimal::ZERO;
+            let mut total = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                mean += x.to_dec() * *p;
+                total += *p;
+            }
+            mean /= total;
+            info!("Step 1 - Mean: {}", mean);
+
+            // Step 2: Calculate variance
+            let mut variance = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                variance += diff * diff * (*p);
+            }
+            variance /= total;
+            info!("Step 2 - Variance: {}", variance);
+
+            // Step 3: Calculate fourth moment
+            let std_dev = Decimal::from_f64(variance.to_f64().unwrap().sqrt()).unwrap();
+            let std_dev_4 = std_dev * std_dev * std_dev * std_dev;
+            info!("Step 3a - Std Dev: {}", std_dev);
+            info!("Step 3b - Std Dev^4: {}", std_dev_4);
+
+            let mut fourth_moment = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                let term = diff * diff * diff * diff;
+                info!("x: {}, diff^4: {}", x, term);
+                fourth_moment += term * (*p);
+            }
+            fourth_moment /= total;
+            info!("Step 3c - Fourth Moment: {}", fourth_moment);
+
+            // Step 4: Calculate kurtosis
+            let kurtosis = (fourth_moment / std_dev_4) - dec!(3.0);
+            info!("Step 4 - Final Kurtosis: {}", kurtosis);
+
+            // Verify with structure
+            let stats = RNDStatistics::new(&densities).unwrap();
+            info!("\nStructure values:");
+            info!("Mean: {}", stats.mean);
+            info!("Variance: {}", stats.variance);
+            info!("Kurtosis: {}", stats.kurtosis);
+
+            assert_decimal_eq!(mean, stats.mean, dec!(0.00001));
+            assert_decimal_eq!(variance, stats.variance.to_dec(), dec!(0.00001));
+            assert_decimal_eq!(kurtosis, stats.kurtosis, dec!(0.00001));
+        }
+
+        #[test]
+        fn test_simple_variance() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(90.0), dec!(0.5));
+            densities.insert(pos_or_panic!(110.0), dec!(0.5));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert_decimal_eq!(stats.mean, dec!(100.0), dec!(0.00001));
+
+            // Variance = 100 ((90-100)²*0.5 + (110-100)²*0.5)
+            assert_decimal_eq!(stats.variance.to_dec(), dec!(100.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_discrete_uniform() {
+            let mut densities = BTreeMap::new();
+            for i in 1..=5 {
+                densities.insert(pos_or_panic!(i as f64), dec!(0.2));
+            }
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert_decimal_eq!(stats.mean, dec!(3.0), dec!(0.00001));
+            assert_decimal_eq!(stats.variance.to_dec(), dec!(2.0), dec!(0.00001));
+            assert_decimal_eq!(stats.skewness, dec!(0.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_normalization() {
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::HUNDRED, dec!(2.0));
+            densities.insert(pos_or_panic!(200.0), dec!(3.0));
+            let stats = RNDStatistics::new(&densities).unwrap();
+            assert_decimal_eq!(stats.mean, dec!(160.0), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_small_values() {
+            let mut densities = BTreeMap::new();
+            densities.insert(Positive::ONE, dec!(0.001));
+            densities.insert(Positive::TWO, dec!(0.002));
+            densities.insert(pos_or_panic!(3.0), dec!(0.001));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert_decimal_eq!(stats.mean, dec!(2.0), dec!(0.00001));
+            assert!(stats.variance > Positive::ZERO);
+        }
+
+        #[test]
+        fn test_extreme_values() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(1000000.0), dec!(0.3));
+            densities.insert(pos_or_panic!(2000000.0), dec!(0.4));
+            densities.insert(pos_or_panic!(3000000.0), dec!(0.3));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert_decimal_eq!(stats.mean, dec!(2000000.0), dec!(0.00001));
+            assert!(stats.variance > Positive::ZERO);
+        }
+
+        #[test]
+        fn test_gap_distribution() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(10.0), dec!(0.45));
+            densities.insert(pos_or_panic!(90.0), dec!(0.55));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert_decimal_eq!(stats.mean, dec!(54.0), dec!(0.00001));
+
+            assert!(stats.kurtosis < dec!(0.0));
+        }
+
+        #[test]
+        fn test_gap_distribution_detailed() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(10.0), dec!(0.45));
+            densities.insert(pos_or_panic!(90.0), dec!(0.55));
+
+            // Step 1: Calculate mean manually
+            let mut mean = Decimal::ZERO;
+            let mut total = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                mean += x.to_dec() * *p;
+                total += *p;
+            }
+            mean /= total;
+            info!("Step 1 - Mean: {}", mean);
+            // Should be: (10 * 0.45 + 90 * 0.55) = 54.0
+
+            // Step 2: Calculate variance manually
+            let mut variance = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                variance += diff * diff * (*p);
+            }
+            variance /= total;
+            info!("Step 2 - Variance: {}", variance);
+
+            // Step 3: Calculate fourth moment
+            let std_dev = Decimal::from_f64(variance.to_f64().unwrap().sqrt()).unwrap();
+            let std_dev_4 = std_dev.powi(4);
+            info!("Step 3a - Std Dev: {}", std_dev);
+            info!("Step 3b - Std Dev^4: {}", std_dev_4);
+
+            let mut fourth_moment = Decimal::ZERO;
+            for (x, p) in densities.iter() {
+                let diff = x.to_dec() - mean;
+                let term = diff.powi(4);
+                info!("x: {}, diff: {}, diff^4: {}, p: {}", x, diff, term, p);
+                fourth_moment += term * (*p);
+            }
+            fourth_moment /= total;
+            info!("Step 3c - Fourth Moment: {}", fourth_moment);
+
+            // Step 4: Calculate kurtosis
+            let kurtosis = (fourth_moment / std_dev_4) - dec!(3.0);
+            info!("Step 4 - Final Kurtosis: {}", kurtosis);
+
+            // Compare with structure calculation
+            let stats = RNDStatistics::new(&densities).unwrap();
+            info!("\nStructure values:");
+            info!("Mean: {}", stats.mean);
+            info!("Variance: {}", stats.variance);
+            info!("Kurtosis: {}", stats.kurtosis);
+
+            assert_decimal_eq!(mean, stats.mean, dec!(0.00001));
+            assert_decimal_eq!(variance, stats.variance.to_dec(), dec!(0.00001));
+            assert_decimal_eq!(kurtosis, stats.kurtosis, dec!(0.00001));
+            assert_decimal_eq!(kurtosis, dec!(-1.9595959595), dec!(0.00001));
+        }
+
+        #[test]
+        fn test_moment_properties() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(95.0), dec!(0.3));
+            densities.insert(Positive::HUNDRED, dec!(0.4));
+            densities.insert(pos_or_panic!(105.0), dec!(0.3));
+
+            let stats = RNDStatistics::new(&densities).unwrap();
+
+            assert!(stats.variance > Positive::ZERO);
+            assert_decimal_eq!(stats.skewness.abs(), dec!(0.0), dec!(0.00001));
+            assert!(stats.kurtosis > dec!(-3.0));
+        }
+    }
+
+    mod validation_utils {
+        use super::*;
+        use optionstratlib_core::pos_or_panic;
+
+        fn calculate_raw_moment(densities: &BTreeMap<Positive, Decimal>, order: i32) -> Decimal {
+            let mut moment = Decimal::ZERO;
+            let mut total_density = Decimal::ZERO;
+
+            for (strike, density) in densities {
+                moment += strike.to_dec().powi(order as i64) * density;
+                total_density += density;
+            }
+
+            if !total_density.is_zero() {
+                moment / total_density
+            } else {
+                Decimal::ZERO
+            }
+        }
+
+        #[test]
+        fn test_raw_moments() {
+            let mut densities = BTreeMap::new();
+            densities.insert(pos_or_panic!(90.0), dec!(0.2));
+            densities.insert(Positive::HUNDRED, dec!(0.6));
+            densities.insert(pos_or_panic!(110.0), dec!(0.2));
+
+            // Primer momento (media)
+            let mean = calculate_raw_moment(&densities, 1);
+            assert_decimal_eq!(mean, dec!(100.0), dec!(0.00001));
+
+            // Segundo momento
+            let second_moment = calculate_raw_moment(&densities, 2);
+            assert!(second_moment > mean.powi(2)); // Varianza positiva
+        }
+    }
+}
+
+#[cfg(test)]
+mod chain_test {
+    use crate::analytics::rnd::{RNDAnalysis, RNDParameters};
+    use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
+    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+    use optionstratlib_market::chains::chain::OptionChain;
+    use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+    use tracing::debug;
+
+    fn create_test_option_chain() -> OptionChain {
+        let option_chain_params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
+                Some("SP500".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+
+        OptionChain::build_chain(&option_chain_params).unwrap()
+    }
+    #[test]
+    fn test_chain_creation() {
+        let option_chain_params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.0),
+                Some("SP500".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+
+        let chain = OptionChain::build_chain(&option_chain_params).unwrap();
+
+        let params = RNDParameters {
+            risk_free_rate: dec!(0.05),
+            interpolation_points: 100,
+            derivative_tolerance: pos_or_panic!(0.01),
+        };
+        // Calculate RND from option chain
+        let rnd_result = chain.calculate_rnd(&params).unwrap();
+        assert!(!rnd_result.densities.is_empty());
+
+        // Updated expected values to match correct chain_size=10 behavior
+        // (previously the chain was incorrectly generating more strikes than requested)
+        assert_decimal_eq!(rnd_result.statistics.mean, dec!(99.96667), dec!(0.001));
+        assert_decimal_eq!(rnd_result.statistics.skewness, dec!(0.04974), dec!(0.001));
+        assert_decimal_eq!(rnd_result.statistics.kurtosis, dec!(-0.8346), dec!(0.001));
+        assert_decimal_eq!(
+            rnd_result.statistics.variance.to_dec(),
+            dec!(20.4989),
+            dec!(0.001)
+        );
+    }
+
+    #[test]
+    fn test_rnd_calculation_debug() {
+        let option_chain_params = OptionChainBuildParams::new(
+            "SP500".to_string(),
+            None,
+            10,
+            spos!(1.0),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(Decimal::ZERO),
+                spos!(0.05),
+                Some("SP500".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+
+        let chain = OptionChain::build_chain(&option_chain_params).unwrap();
+        let params = RNDParameters {
+            risk_free_rate: dec!(0.05),
+            interpolation_points: 100,
+            derivative_tolerance: Positive::ONE, // Using larger step size for testing
+        };
+
+        debug!("Initial option chain:");
+        for opt in &chain.options {
+            debug!("Strike: {}, Call Ask: {:?}", opt.strike_price, opt.call_ask);
+        }
+
+        let result = chain.calculate_rnd(&params);
+        match result {
+            Ok(rnd) => {
+                debug!("\nCalculated densities:");
+                for (k, d) in rnd.densities {
+                    debug!("Strike: {}, Density: {}", k, d);
+                }
+            }
+            Err(e) => debug!("Error: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_rnd_calculation_tolerance_comparison() {
+        let chain = create_test_option_chain();
+
+        // Test with h = 1.0
+        let params_1 = RNDParameters {
+            risk_free_rate: dec!(0.05),
+            interpolation_points: 100,
+            derivative_tolerance: Positive::ONE,
+        };
+
+        // Test with h = 0.1
+        let params_2 = RNDParameters {
+            risk_free_rate: dec!(0.05),
+            interpolation_points: 100,
+            derivative_tolerance: pos_or_panic!(0.1),
+        };
+
+        debug!("Testing with h = 1.0:");
+        for opt in &chain.options {
+            let k = opt.strike_price;
+            debug!(
+                "Strike {}: Found neighbors: k-h={}, k+h={}",
+                k,
+                chain.get_call_price(k - Positive::ONE).is_some(),
+                chain.get_call_price(k + Positive::ONE).is_some()
+            );
+            assert!(
+                chain.get_call_price(k - Positive::ONE).is_some()
+                    || chain.get_call_price(k + Positive::ONE).is_some()
+            );
+        }
+        assert!(chain.calculate_rnd(&params_1).is_ok());
+
+        debug!("\nTesting with h = 0.1:");
+        for opt in &chain.options {
+            let k = opt.strike_price;
+            debug!(
+                "Strike {}: Found neighbors: k-h={}, k+h={}",
+                k,
+                chain.get_call_price(k - pos_or_panic!(0.1)).is_some(),
+                chain.get_call_price(k + pos_or_panic!(0.1)).is_some()
+            );
+            assert!(
+                chain.get_call_price(k - Positive::ONE).is_some()
+                    || chain.get_call_price(k + Positive::ONE).is_some()
+            );
+        }
+        assert!(chain.calculate_rnd(&params_2).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod rnd_coverage_tests {
+    use super::*;
+
+    use crate::analytics::rnd::RNDAnalysis;
+    use crate::analytics::rnd::RNDResult;
+    use optionstratlib_market::chains::OptionChain;
+
+    use optionstratlib_core::{pos_or_panic, spos};
+    use std::collections::BTreeMap;
+
+    // Test for line 322 in rnd.rs
+    #[test]
+    fn test_rnd_result_new() {
+        // Create a simple densities map
+        let mut densities = BTreeMap::new();
+        densities.insert(pos_or_panic!(90.0), dec!(0.2));
+        densities.insert(Positive::HUNDRED, dec!(0.6));
+        densities.insert(pos_or_panic!(110.0), dec!(0.2));
+
+        // Create a new RNDResult
+        let result = RNDResult::new(densities).unwrap();
+
+        // Check that statistics were calculated
+        assert_eq!(result.statistics.mean, dec!(100.0));
+        assert!(result.statistics.variance > Positive::ZERO);
+        assert!(result.statistics.volatility > Positive::ZERO);
+    }
+
+    // Test for line 369 in rnd.rs
+    #[test]
+    fn test_calculate_skew_with_custom_chain() {
+        // Create a custom chain with specific volatility pattern
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-06-30".to_string(),
+            Some(dec!(0.05)),
+            spos!(0.0),
+        );
+
+        // Add options with volatility smile pattern
+        let strikes = [80.0, 90.0, 100.0, 110.0, 120.0];
+        let vols = [0.25, 0.20, 0.17, 0.20, 0.25]; // Smile pattern
+
+        for (i, strike) in strikes.iter().enumerate() {
+            chain.add_option(
+                pos_or_panic!(*strike),
+                spos!(10.0),
+                spos!(10.5),
+                spos!(10.0),
+                spos!(10.5),
+                pos_or_panic!(vols[i]),
+                None,
+                None,
+                None,
+                spos!(1000.0),
+                None,
+                None,
+            );
+        }
+
+        // Calculate skew
+        let result = chain.calculate_skew();
+        assert!(result.is_ok());
+
+        let skew = result.unwrap();
+
+        // Confirm we got the right number of data points
+        assert_eq!(skew.len(), 5);
+
+        // With a symmetric smile, the skew around ATM should be symmetric
+        let atm_index = skew.iter().position(|(k, _)| *k == Positive::ONE).unwrap();
+        let lower = skew[atm_index - 1].1;
+        let higher = skew[atm_index + 1].1;
+
+        // The absolute skew values should be similar in a smile
+        assert!((lower.abs() - higher.abs()).abs() < dec!(0.05));
+    }
+}
+
+#[cfg(test)]
+mod rnd_analysis_tests {
+    #![allow(clippy::indexing_slicing)]
+    use super::*;
+    use optionstratlib_core::{pos_or_panic, spos};
+
+    use rust_decimal_macros::dec;
+
+    // Helper function to create a standard option chain for testing
+    fn create_standard_chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2025-02-01".to_string(),
+            None,
+            None,
+        );
+
+        // Add a range of options with known prices and volatilities
+        let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+        let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+        let implied_vols = [0.17, 0.17, 0.17, 0.17, 0.17];
+
+        for ((&strike, &call_ask), &impl_vol) in strikes
+            .iter()
+            .zip(call_asks.iter())
+            .zip(implied_vols.iter())
+        {
+            chain.add_option(
+                pos_or_panic!(strike),
+                spos!(call_ask - 0.02), // bid slightly lower than ask
+                spos!(call_ask),
+                None,
+                None,
+                pos_or_panic!(impl_vol),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+        }
+
+        chain
+    }
+
+    mod calculate_rnd_tests {
+        use super::*;
+
+        #[test]
+        fn test_basic_rnd_calculation() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+
+            let rnd = result.unwrap();
+
+            // Verify densities exist
+            assert!(!rnd.densities.is_empty());
+
+            // Verify total probability is approximately 1
+            let total: Decimal = rnd.densities.values().sum();
+            assert!((total - dec!(1.0)).abs() < dec!(0.0001));
+
+            // Verify all densities are non-negative
+            assert!(rnd.densities.values().all(|&d| !d.is_sign_negative()));
+        }
+
+        #[test]
+        fn test_tolerance_adjustment() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.1), // Smaller than strike interval
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_default() {
+            let chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+            let params = RNDParameters::default();
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_zero_tolerance() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                derivative_tolerance: Positive::ZERO,
+                ..Default::default()
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("derivative_tolerance")
+            );
+        }
+
+        #[test]
+        fn test_expired_option() {
+            let mut chain = create_standard_chain();
+            chain.set_expiration_date("2023-01-01".to_string()); // Past date
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok()); // Should still work with past date
+        }
+    }
+
+    mod calculate_skew_tests {
+        use super::*;
+
+        #[test]
+        fn test_basic_skew_calculation() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew();
+
+            assert!(result.is_ok());
+            let skew = result.unwrap();
+
+            // Verify we have skew data
+            assert!(!skew.is_empty());
+
+            // Verify relative strikes are ordered
+            for window in skew.windows(2) {
+                assert!(window[0].0 < window[1].0);
+            }
+        }
+
+        #[test]
+        fn test_flat_volatility_surface() {
+            let chain = create_standard_chain(); // All vols are 0.17
+            let result = chain.calculate_skew().unwrap();
+
+            // All vol differences should be close to zero
+            for (_, vol_diff) in result {
+                assert!(vol_diff.abs() < dec!(0.0001));
+            }
+        }
+
+        #[test]
+        fn test_empty_chain_skew() {
+            let chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            let result = chain.calculate_skew();
+            assert!(result.is_err());
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("cannot find ATM option for empty option chain: TEST")
+            );
+        }
+
+        #[test]
+        fn test_missing_implied_volatility() {
+            let mut chain = create_standard_chain();
+
+            // Add an option without implied volatility
+            chain.add_option(
+                pos_or_panic!(115.0),
+                spos!(0.1),
+                spos!(0.2),
+                None,
+                None,
+                pos_or_panic!(0.5),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let result = chain.calculate_skew();
+            assert!(result.is_ok()); // Should work with partial data
+        }
+
+        #[test]
+        fn test_relative_strike_calculation() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew().unwrap();
+
+            // For ATM strike (100.0), relative strike should be 1.0
+            let atm_strike = result.iter().find(|(rel_strike, _)| {
+                sub_floor_zero(*rel_strike, &Decimal::ONE) < pos_or_panic!(0.0001)
+            });
+            assert!(atm_strike.is_some());
+        }
+    }
+
+    mod calculate_rnd_tests_bis {
+        use super::*;
+
+        #[test]
+        fn test_invalid_date_format() {
+            let mut chain = create_standard_chain();
+            chain.set_expiration_date("invalid_date".to_string());
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_err());
+        }
+
+        #[test]
+        fn test_negative_risk_free_rate() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(-0.05),
+                interpolation_points: 100,
+                derivative_tolerance: Positive::ONE,
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+
+        #[test]
+        fn test_verify_rnd_properties() {
+            let chain = create_standard_chain();
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(5.0),
+            };
+
+            let result = chain.calculate_rnd(&params).unwrap();
+            let densities = &result.densities;
+
+            // Verify mode is near the money
+            let mode = densities
+                .iter()
+                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+                .unwrap();
+            assert_eq!(*mode.0, Positive::HUNDRED);
+
+            // Verify densities decrease away from the money
+            let atm_density = densities.get(&Positive::HUNDRED).unwrap();
+            for (strike, density) in densities.iter() {
+                if strike < &pos_or_panic!(90.0) || strike > &pos_or_panic!(110.0) {
+                    assert!(density < atm_density);
+                }
+            }
+        }
+
+        #[test]
+        fn test_strike_interval_detection() {
+            let mut chain = create_standard_chain();
+
+            // Add option with different strike interval
+            chain.add_option(
+                pos_or_panic!(102.5),
+                spos!(1.0),
+                spos!(1.1),
+                None,
+                None,
+                pos_or_panic!(0.17),
+                None,
+                None,
+                None,
+                spos!(100.0),
+                Some(50),
+                None,
+            );
+
+            let params = RNDParameters {
+                risk_free_rate: dec!(0.05),
+                interpolation_points: 100,
+                derivative_tolerance: pos_or_panic!(0.1),
+            };
+
+            let result = chain.calculate_rnd(&params);
+            assert!(result.is_ok());
+        }
+    }
+
+    mod calculate_skew_tests_bis {
+        use super::*;
+
+        #[test]
+        fn test_skew_with_smile() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            // Create new options with a volatility smile
+            let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+            let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+            let smile_vols = [0.20, 0.18, 0.17, 0.18, 0.20];
+
+            for ((&strike, &call_ask), &vol) in
+                strikes.iter().zip(call_asks.iter()).zip(smile_vols.iter())
+            {
+                chain.add_option(
+                    pos_or_panic!(strike),
+                    spos!(call_ask - 0.02),
+                    spos!(call_ask),
+                    None,
+                    None,
+                    pos_or_panic!(vol),
+                    None,
+                    None,
+                    None,
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+
+            let result = chain.calculate_skew().unwrap();
+
+            // First half of skew should be decreasing
+            for window in result.windows(2).take(result.len() / 2) {
+                assert!(window[0].1 > window[1].1);
+            }
+
+            // Second half of skew should be increasing
+            for window in result.windows(2).skip(result.len() / 2) {
+                assert!(window[0].1 < window[1].1);
+            }
+        }
+
+        #[test]
+        fn test_skew_monotonic() {
+            let mut chain = OptionChain::new(
+                "TEST",
+                Positive::HUNDRED,
+                "2025-02-01".to_string(),
+                None,
+                None,
+            );
+
+            // Create new options with monotonic skew
+            let strikes = [90.0, 95.0, 100.0, 105.0, 110.0];
+            let call_asks = [10.04, 5.37, 1.95, 0.43, 0.06];
+            let skew_vols = [0.22, 0.20, 0.17, 0.15, 0.14];
+
+            for ((&strike, &call_ask), &vol) in
+                strikes.iter().zip(call_asks.iter()).zip(skew_vols.iter())
+            {
+                chain.add_option(
+                    pos_or_panic!(strike),
+                    spos!(call_ask - 0.02),
+                    spos!(call_ask),
+                    None,
+                    None,
+                    pos_or_panic!(vol),
+                    None,
+                    None,
+                    None,
+                    spos!(100.0),
+                    Some(50),
+                    None,
+                );
+            }
+
+            let result = chain.calculate_skew().unwrap();
+
+            // Verify monotonic decrease
+            for window in result.windows(2) {
+                assert!(window[0].1 > window[1].1);
+            }
+        }
+
+        #[test]
+        fn test_strike_range_coverage() {
+            let chain = create_standard_chain();
+            let result = chain.calculate_skew().unwrap();
+
+            // Get min and max relative strikes
+            let min_rel_strike = result.iter().map(|(k, _)| k).min().unwrap();
+            let max_rel_strike = result.iter().map(|(k, _)| k).max().unwrap();
+
+            // Verify range coverage
+            assert!(*min_rel_strike < Positive::ONE); // Have strikes below ATM
+            assert!(*max_rel_strike > Positive::ONE); // Have strikes above ATM
+        }
+    }
+}
