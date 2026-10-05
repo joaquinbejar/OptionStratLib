@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — breaking
+
+- **utoipa 6 dependency line.** `utoipa` 5.5 -> 6.0, together with the
+  crates whose types appear in this crate's public API and `ToSchema`
+  derives: `positive` 0.6 -> 0.7, `expiration_date` 0.3 -> 0.4,
+  `financial_types` 0.2 -> 0.3 and `option_type` 0.3 -> 0.4. The workspace
+  resolves a single utoipa 6.0.0. Consumers must move to the same versions
+  in the same step; the minimum supported Rust version follows utoipa 6
+  (1.88).
+
 ### Fixed
 
 - **`calculate_price_probability` and `expected_value` no longer floor an
