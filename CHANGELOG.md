@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Market file I/O sits behind an `io` feature** (#525, ADR-0003).
+  `optionstratlib-market` gains `io` (`csv`, `zip`) and `async` now implies
+  it. Behind `io`:
+  - `OptionChain::{save_to_csv, load_from_csv, save_to_json, load_from_json}`;
+  - the OHLCV reader (`chains::csv`, `OhlcvCandle`, `read_ohlcv_from_zip`);
+  - `OhlcvError` and `From<csv::Error> for ChainError`.
+
+  The `*_async` wrappers stay behind `async`. Without `io` the market crate
+  resolves no `csv`, `zip` or `tokio`; serde (de)serialization works either
+  way. `OhlcvError` itself is always available (only its `From<ZipError>`
+  needs `io`), so no public error enum changes shape with a feature
+  (ADR-0002 section 4). The facade gains a default-on `io` feature, so its
+  default surface is unchanged, and its `async` implies `io`. With
+  `default-features = false` the facade's graph shrinks from 165 to 123
+  packages, and market alone from 119 to 76. Its unused direct `csv` and `zip`
+  dependencies go, and `prettytable-rs` is taken without its CSV feature,
+  which nothing used. `make check-graph` pins the market tree for no
+  features, `io`, `async` and all features, and `make check-components`
+  builds, lints and tests market under `io` and `async` alone. Tests that
+  need file I/O run only with `io`; the facade's tests now build and pass
+  with no default features, and `make lint` also runs Clippy that way.
+
 - **Option chains and series are their own crate, `optionstratlib-market`**
   (#524). `chains`, `series`, `ChainError` and `OhlcvError` move to
   `crates/optionstratlib-market`, which depends on core, math and pricing and

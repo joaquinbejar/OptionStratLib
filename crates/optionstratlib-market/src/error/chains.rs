@@ -49,7 +49,7 @@
 //! The module implements the following conversion traits, all typed:
 //!
 //! * `From<io::Error>` via `#[from]` (to `FileErrorKind::IOError`)
-//! * `From<csv::Error>` and `From<serde_json::Error>` to `FileErrorKind::ParseError`
+//! * `From<csv::Error>` (under `io`) and `From<serde_json::Error>` to `FileErrorKind::ParseError`
 //! * `From<DecimalError>`, `From<GreeksError>`, `From<OptionsError>` to the
 //!   appropriate `OptionDataErrorKind` variant
 //! * `From<CurveError>`, `From<VolatilityError>` and `From<ExpirationDateError>`
@@ -668,6 +668,7 @@ impl From<GreeksError> for ChainError {
     }
 }
 
+#[cfg(feature = "io")]
 impl From<csv::Error> for ChainError {
     fn from(err: csv::Error) -> Self {
         ChainError::FileError(FileErrorKind::ParseError {

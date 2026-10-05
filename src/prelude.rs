@@ -101,13 +101,15 @@ pub use crate::volatility::*;
 pub use crate::metrics::*;
 
 // Error types (most commonly encountered)
+pub use crate::error::OhlcvError;
 pub use crate::error::{
     ChainError, CurveError, DecimalError, Error, GraphError, GreeksError, InterpolationError,
-    MetricsError, OhlcvError, OperationErrorKind, OptionsError, PositionError, PricingError,
-    ProbabilityError, StrategyError, SurfaceError, TransactionError, VolatilityError,
+    MetricsError, OperationErrorKind, OptionsError, PositionError, PricingError, ProbabilityError,
+    StrategyError, SurfaceError, TransactionError, VolatilityError,
 };
 
 // Utility functions and traits
+#[cfg(feature = "io")]
 pub use crate::chains::csv::{OhlcvCandle, read_ohlcv_from_zip};
 pub use crate::model::utils::ToRound;
 pub use crate::utils::{

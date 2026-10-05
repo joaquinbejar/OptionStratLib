@@ -56,6 +56,7 @@ fmt-check:
 .PHONY: lint
 lint:
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
+	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
 
 .PHONY: lint-fix
 lint-fix: 
@@ -86,6 +87,9 @@ check-graph:
 # crates are packaged together because a component's path dependencies are
 # not on crates.io yet; `cargo package` resolves them from the same run.
 COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market
+# Named feature sets each component must also build, lint and test alone
+# (`crate:feature`), besides no, default and all features (ADR-0003, #525).
+COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async
 
 .PHONY: check-components
 check-components:
@@ -96,6 +100,7 @@ check-components:
 		LOGLEVEL=WARN cargo test -p $$crate --all-features; \
 		cargo clippy -p $$crate --all-targets --all-features -- -D warnings; \
 		RUSTDOCFLAGS="-D warnings" cargo doc -p $$crate --all-features --no-deps; \
+		RUSTDOCFLAGS="-D warnings" cargo doc -p $$crate --no-default-features --no-deps; \
 		lib=crates/$$crate/src/lib.rs; \
 		grep -q '^#!\[deny(missing_docs, rustdoc::broken_intra_doc_links)\]' $$lib \
 			|| { echo "$$lib must deny missing_docs and broken intra-doc links"; exit 1; }; \
@@ -104,6 +109,12 @@ check-components:
 			echo "$$files" | grep -qx "$$required" \
 				|| { echo "$$crate package is missing $$required"; exit 1; }; \
 		done; \
+	done
+	@set -e; for spec in $(COMPONENT_FEATURE_SETS); do \
+		crate=$${spec%%:*}; features=$${spec#*:}; \
+		echo "=== $$crate --features $$features"; \
+		LOGLEVEL=WARN cargo test -p $$crate --no-default-features --features $$features; \
+		cargo clippy -p $$crate --all-targets --no-default-features --features $$features -- -D warnings; \
 	done
 	cargo package $(addprefix -p ,$(COMPONENT_CRATES)) --allow-dirty
 	@echo "OK: $(COMPONENT_CRATES) verified standalone"

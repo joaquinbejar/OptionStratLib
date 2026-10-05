@@ -86,10 +86,12 @@ where
 }
 
 /// Test walker whose every walk method returns an empty path, for pinning
-/// the empty-output contract of the generators.
+/// the empty-output contract of the generators (only built with `synthetic`).
+#[cfg(feature = "synthetic")]
 #[derive(Clone)]
 pub(crate) struct EmptyWalker;
 
+#[cfg(feature = "synthetic")]
 impl<X, Y> WalkTypeAble<X, Y> for EmptyWalker
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,

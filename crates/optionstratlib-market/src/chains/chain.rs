@@ -38,6 +38,7 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt;
 use tracing::{debug, error, warn};
+#[cfg(feature = "io")]
 use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// A constant representing the skew value for the smile curve in financial modeling.
@@ -1275,6 +1276,7 @@ impl OptionChain {
     /// when the file cannot be created or written, or
     /// `FileErrorKind::ParseError` when `csv` serialization fails.
     #[inline(never)]
+    #[cfg(feature = "io")]
     pub fn save_to_csv(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.csv", file_path, self.get_title());
         let mut wtr = WriterBuilder::new().from_path(full_path)?;
@@ -1356,6 +1358,7 @@ impl OptionChain {
     /// when the file cannot be created or written, or
     /// `FileErrorKind::ParseError` when `serde_json` serialization fails.
     #[inline(never)]
+    #[cfg(feature = "io")]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
         let file = File::create(full_path)?;
@@ -1410,6 +1413,7 @@ impl OptionChain {
     /// Invalid option data (bad strike, volatility or price) surfaces as
     /// [`ChainError::OptionDataError`].
     #[inline(never)]
+    #[cfg(feature = "io")]
     pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
         let mut rdr = csv::Reader::from_path(file_path)?;
         let mut options = BTreeSet::new();
@@ -1513,6 +1517,7 @@ impl OptionChain {
     /// when the file cannot be opened, or `FileErrorKind::ParseError`
     /// when `serde_json` deserialization fails.
     #[inline(never)]
+    #[cfg(feature = "io")]
     pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
         let file = File::open(file_path)?;
         let mut option_chain: OptionChain = serde_json::from_reader(file)?;
@@ -1551,6 +1556,7 @@ impl OptionChain {
             .map_err(|e| ChainError::invalid_parameters("async_task", &e.to_string()))?
     }
 
+    #[cfg(feature = "io")]
     fn check_and_convert_implied_volatility(&mut self) {
         let updated_options: BTreeSet<OptionData> = self
             .options
@@ -3158,6 +3164,7 @@ mod tests_chain_base {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     /// A directory of this test run's own, outside the working tree.
     ///
     /// Writing chain artifacts into `.` or `tests/` puts every file-writing
@@ -3500,6 +3507,7 @@ mod tests_chain_base {
         assert_eq!(chain.underlying_price, 5781.0);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_save_to_csv() {
         let mut chain = OptionChain::new(
@@ -3530,6 +3538,7 @@ mod tests_chain_base {
         assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.csv")).exists());
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_save_to_json() {
         let mut chain = OptionChain::new(
@@ -3560,6 +3569,7 @@ mod tests_chain_base {
         assert!(std::path::Path::new(&format!("{dir}/SP500-18-oct-2024-5781.88.json")).exists());
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_load_from_csv() {
         let mut chain = OptionChain::new(
@@ -3596,6 +3606,7 @@ mod tests_chain_base {
         assert_eq!(chain.underlying_price, 5781.89);
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_load_from_json() {
         let mut chain = OptionChain::new(
@@ -6363,13 +6374,17 @@ mod tests_option_chain_serde {
 mod tests_gamma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
+    #[cfg(feature = "io")]
     use optionstratlib_core::spos;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
+    #[cfg(feature = "io")]
     use optionstratlib_core::utils::time::get_x_days_formatted;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined gamma values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6380,6 +6395,7 @@ mod tests_gamma_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_gamma_exposure_basic() {
         let mut chain = create_test_chain_with_gamma();
@@ -6406,6 +6422,7 @@ mod tests_gamma_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_gamma_exposure_missing_gamma() {
         let mut chain = create_test_chain_with_gamma();
@@ -6437,10 +6454,12 @@ mod tests_delta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined delta values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6449,6 +6468,7 @@ mod tests_delta_calculations {
         .unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_delta_exposure_basic() {
         let mut chain = create_test_chain_with_delta();
@@ -6477,6 +6497,7 @@ mod tests_delta_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_delta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_delta();
@@ -6488,6 +6509,7 @@ mod tests_delta_calculations {
         assert_eq!(result.unwrap(), dec!(17.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_delta_exposure_updates() {
         let mut chain = create_test_chain_with_delta();
@@ -6508,10 +6530,12 @@ mod tests_vega_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined vega values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6520,6 +6544,7 @@ mod tests_vega_calculations {
         .unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vega_exposure_basic() {
         let mut chain = create_test_chain_with_vega();
@@ -6548,6 +6573,7 @@ mod tests_vega_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vega_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_vega();
@@ -6559,6 +6585,7 @@ mod tests_vega_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vega_exposure_updates() {
         let mut chain = create_test_chain_with_vega();
@@ -6579,10 +6606,12 @@ mod tests_theta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain with predefined theta values
+    #[cfg(feature = "io")]
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6591,6 +6620,7 @@ mod tests_theta_calculations {
         .unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_theta_exposure_basic() {
         let mut chain = create_test_chain_with_theta();
@@ -6619,6 +6649,7 @@ mod tests_theta_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_theta_exposure_uninitialized_greeks() {
         let mut chain = create_test_chain_with_theta();
@@ -6630,6 +6661,7 @@ mod tests_theta_calculations {
         assert_eq!(result.unwrap(), dec!(0.0));
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_theta_exposure_updates() {
         let mut chain = create_test_chain_with_theta();
@@ -6650,10 +6682,12 @@ mod tests_vanna_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vanna calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6666,6 +6700,7 @@ mod tests_vanna_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vanna_exposure_basic() {
         let mut chain = create_test_chain_with_vanna();
@@ -6704,10 +6739,12 @@ mod tests_vomma_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for vomma calculation
+    #[cfg(feature = "io")]
     fn create_test_chain_with_vomma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6720,6 +6757,7 @@ mod tests_vomma_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_vomma_exposure_basic() {
         let mut chain = create_test_chain_with_vomma();
@@ -6754,10 +6792,12 @@ mod tests_veta_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for veta calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6770,6 +6810,7 @@ mod tests_veta_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_veta_exposure_basic() {
         let mut chain = create_test_chain_with_veta();
@@ -6804,10 +6845,12 @@ mod tests_charm_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6820,6 +6863,7 @@ mod tests_charm_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_charm_exposure_basic() {
         let mut chain = create_test_chain_with_charm();
@@ -6854,10 +6898,12 @@ mod tests_color_calculations {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     use optionstratlib_core::assert_decimal_eq;
     use rust_decimal_macros::dec;
 
     // Helper function to create a test chain for charm calculations
+    #[cfg(feature = "io")]
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -6870,6 +6916,7 @@ mod tests_color_calculations {
         option_chain
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_color_exposure_basic() {
         let mut chain = create_test_chain_with_color();
@@ -7810,6 +7857,7 @@ mod tests_to_build_params_bis {
         );
     }
 
+    #[cfg(feature = "io")]
     /// Regression for #409: round-tripping a chain with a real market smile
     /// must preserve a meaningful fraction of the smile width (previously it
     /// collapsed ~140x because `to_build_params` reset the skew to
@@ -8151,6 +8199,7 @@ mod chain_coverage_tests_bis {
     #![allow(clippy::indexing_slicing)]
     use super::*;
 
+    #[cfg(feature = "io")]
     /// A directory of this test run's own, outside the working tree.
     ///
     /// Writing chain artifacts into `.` or `tests/` puts every file-writing
@@ -8199,6 +8248,7 @@ mod chain_coverage_tests_bis {
         OptionChain::build_chain(&params).unwrap()
     }
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_deserializer_field_handling() {
         let chain = create_test_chain();
