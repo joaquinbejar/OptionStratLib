@@ -1,0 +1,1102 @@
+pub mod optionstratlib_core
+pub mod optionstratlib_core::constants
+pub const optionstratlib_core::constants::EPSILON: rust_decimal::decimal::Decimal
+pub const optionstratlib_core::constants::MAX_VOLATILITY: positive::positive::Positive
+pub const optionstratlib_core::constants::MILLISECONDS_PER_SECOND: positive::positive::Positive
+pub const optionstratlib_core::constants::MINUTES_PER_HOUR: positive::positive::Positive
+pub const optionstratlib_core::constants::PI: rust_decimal::decimal::Decimal
+pub const optionstratlib_core::constants::QUARTERS_PER_YEAR: positive::positive::Positive
+pub const optionstratlib_core::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f64
+pub const optionstratlib_core::constants::STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64
+pub const optionstratlib_core::constants::TOLERANCE: rust_decimal::decimal::Decimal
+pub const optionstratlib_core::constants::ZERO: f64
+pub static optionstratlib_core::constants::MICROSECONDS_PER_SECOND: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::MIN_VOLATILITY: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::MONTHS_PER_YEAR: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::SECONDS_PER_HOUR: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::TRADING_DAYS: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::TRADING_HOURS: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub static optionstratlib_core::constants::WEEKS_PER_YEAR: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
+pub mod optionstratlib_core::error
+pub mod optionstratlib_core::error::decimal
+pub enum optionstratlib_core::error::decimal::DecimalError
+pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError
+pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError::operation: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError::reason: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::ConversionError
+pub optionstratlib_core::error::decimal::DecimalError::ConversionError::from_type: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::ConversionError::reason: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::ConversionError::to_type: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision
+pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision::precision: i32
+pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision::reason: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::InvalidValue
+pub optionstratlib_core::error::decimal::DecimalError::InvalidValue::reason: alloc::string::String
+pub optionstratlib_core::error::decimal::DecimalError::InvalidValue::value: f64
+pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds
+pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::max: f64
+pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::min: f64
+pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::value: f64
+pub optionstratlib_core::error::decimal::DecimalError::Overflow
+pub optionstratlib_core::error::decimal::DecimalError::Overflow::lhs: rust_decimal::decimal::Decimal
+pub optionstratlib_core::error::decimal::DecimalError::Overflow::operation: &'static str
+pub optionstratlib_core::error::decimal::DecimalError::Overflow::rhs: rust_decimal::decimal::Decimal
+impl optionstratlib_core::error::decimal::DecimalError
+pub fn optionstratlib_core::error::decimal::DecimalError::arithmetic_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::conversion_error(&str, &str, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::invalid_precision(i32, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::invalid_value(f64, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::out_of_bounds(f64, f64, f64) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::overflow(&'static str, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_core::error::decimal::DecimalError
+pub fn optionstratlib_core::error::decimal::DecimalError::from(expiration_date::error::ExpirationDateError) -> Self
+pub type optionstratlib_core::error::decimal::DecimalResult<T> = core::result::Result<T, optionstratlib_core::error::decimal::DecimalError>
+pub mod optionstratlib_core::error::position
+pub enum optionstratlib_core::error::position::PositionError
+pub optionstratlib_core::error::position::PositionError::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::position::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
+pub optionstratlib_core::error::position::PositionError::Options(optionstratlib_core::error::OptionsError)
+pub optionstratlib_core::error::position::PositionError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_core::error::position::PositionError::StrategyError(optionstratlib_core::error::position::StrategyErrorKind)
+pub optionstratlib_core::error::position::PositionError::UpdateError(optionstratlib_core::error::position::PositionUpdateErrorKind)
+pub optionstratlib_core::error::position::PositionError::ValidationError(optionstratlib_core::error::position::PositionValidationErrorKind)
+impl optionstratlib_core::error::position::PositionError
+pub fn optionstratlib_core::error::position::PositionError::invalid_position(&str) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_size(f64, &str) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_style(financial_types::OptionStyle, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_type(financial_types::Side, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_update(alloc::string::String, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::strategy_full(&str, usize) -> Self
+pub fn optionstratlib_core::error::position::PositionError::unsupported_operation(&str, &str) -> Self
+pub enum optionstratlib_core::error::position::PositionLimitErrorKind
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxExposureReached
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxExposureReached::current_exposure: f64
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxExposureReached::max_exposure: f64
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxPositionsReached
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxPositionsReached::current: usize
+pub optionstratlib_core::error::position::PositionLimitErrorKind::MaxPositionsReached::maximum: usize
+pub enum optionstratlib_core::error::position::PositionUpdateErrorKind
+pub optionstratlib_core::error::position::PositionUpdateErrorKind::PositionFieldUpdateFailure
+pub optionstratlib_core::error::position::PositionUpdateErrorKind::PositionFieldUpdateFailure::field: alloc::string::String
+pub optionstratlib_core::error::position::PositionUpdateErrorKind::PositionFieldUpdateFailure::reason: alloc::string::String
+pub enum optionstratlib_core::error::position::PositionValidationErrorKind
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleSide
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleSide::position_side: financial_types::Side
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleSide::reason: alloc::string::String
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleStyle
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleStyle::reason: alloc::string::String
+pub optionstratlib_core::error::position::PositionValidationErrorKind::IncompatibleStyle::style: financial_types::OptionStyle
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidPosition
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidPosition::reason: alloc::string::String
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidPrice
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidPrice::price: f64
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidPrice::reason: alloc::string::String
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidSize
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidSize::reason: alloc::string::String
+pub optionstratlib_core::error::position::PositionValidationErrorKind::InvalidSize::size: f64
+pub enum optionstratlib_core::error::position::StrategyErrorKind
+pub optionstratlib_core::error::position::StrategyErrorKind::InvalidConfiguration(alloc::string::String)
+pub optionstratlib_core::error::position::StrategyErrorKind::StrategyFull
+pub optionstratlib_core::error::position::StrategyErrorKind::StrategyFull::max_positions: usize
+pub optionstratlib_core::error::position::StrategyErrorKind::StrategyFull::strategy_type: alloc::string::String
+pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation
+pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::operation: alloc::string::String
+pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::strategy_type: alloc::string::String
+pub mod optionstratlib_core::error::trade
+pub enum optionstratlib_core::error::trade::TradeError
+pub optionstratlib_core::error::trade::TradeError::InvalidTrade
+pub optionstratlib_core::error::trade::TradeError::InvalidTrade::reason: alloc::string::String
+pub optionstratlib_core::error::trade::TradeError::InvalidTradeStatus
+pub optionstratlib_core::error::trade::TradeError::InvalidTradeStatus::reason: alloc::string::String
+impl optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::invalid_trade(&str) -> Self
+pub fn optionstratlib_core::error::trade::TradeError::invalid_trade_status(&str) -> Self
+impl core::convert::From<&str> for optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::from(alloc::string::String) -> Self
+pub enum optionstratlib_core::error::DecimalError
+pub optionstratlib_core::error::DecimalError::ArithmeticError
+pub optionstratlib_core::error::DecimalError::ArithmeticError::operation: alloc::string::String
+pub optionstratlib_core::error::DecimalError::ArithmeticError::reason: alloc::string::String
+pub optionstratlib_core::error::DecimalError::ConversionError
+pub optionstratlib_core::error::DecimalError::ConversionError::from_type: alloc::string::String
+pub optionstratlib_core::error::DecimalError::ConversionError::reason: alloc::string::String
+pub optionstratlib_core::error::DecimalError::ConversionError::to_type: alloc::string::String
+pub optionstratlib_core::error::DecimalError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_core::error::DecimalError::InvalidPrecision
+pub optionstratlib_core::error::DecimalError::InvalidPrecision::precision: i32
+pub optionstratlib_core::error::DecimalError::InvalidPrecision::reason: alloc::string::String
+pub optionstratlib_core::error::DecimalError::InvalidValue
+pub optionstratlib_core::error::DecimalError::InvalidValue::reason: alloc::string::String
+pub optionstratlib_core::error::DecimalError::InvalidValue::value: f64
+pub optionstratlib_core::error::DecimalError::OutOfBounds
+pub optionstratlib_core::error::DecimalError::OutOfBounds::max: f64
+pub optionstratlib_core::error::DecimalError::OutOfBounds::min: f64
+pub optionstratlib_core::error::DecimalError::OutOfBounds::value: f64
+pub optionstratlib_core::error::DecimalError::Overflow
+pub optionstratlib_core::error::DecimalError::Overflow::lhs: rust_decimal::decimal::Decimal
+pub optionstratlib_core::error::DecimalError::Overflow::operation: &'static str
+pub optionstratlib_core::error::DecimalError::Overflow::rhs: rust_decimal::decimal::Decimal
+impl optionstratlib_core::error::decimal::DecimalError
+pub fn optionstratlib_core::error::decimal::DecimalError::arithmetic_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::conversion_error(&str, &str, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::invalid_precision(i32, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::invalid_value(f64, &str) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::out_of_bounds(f64, f64, f64) -> Self
+pub fn optionstratlib_core::error::decimal::DecimalError::overflow(&'static str, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_core::error::decimal::DecimalError
+pub fn optionstratlib_core::error::decimal::DecimalError::from(expiration_date::error::ExpirationDateError) -> Self
+pub enum optionstratlib_core::error::OperationErrorKind
+pub optionstratlib_core::error::OperationErrorKind::InvalidParameters
+pub optionstratlib_core::error::OperationErrorKind::InvalidParameters::operation: alloc::string::String
+pub optionstratlib_core::error::OperationErrorKind::InvalidParameters::reason: alloc::string::String
+pub optionstratlib_core::error::OperationErrorKind::NotSupported
+pub optionstratlib_core::error::OperationErrorKind::NotSupported::operation: alloc::string::String
+pub optionstratlib_core::error::OperationErrorKind::NotSupported::reason: alloc::string::String
+pub enum optionstratlib_core::error::OptionsError
+pub optionstratlib_core::error::OptionsError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::OptionsError::ExpirationDate(expiration_date::error::ExpirationDateError)
+pub optionstratlib_core::error::OptionsError::GreeksCalculationError
+pub optionstratlib_core::error::OptionsError::GreeksCalculationError::greek: alloc::string::String
+pub optionstratlib_core::error::OptionsError::GreeksCalculationError::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::ImpliedVolatilityInvariant
+pub optionstratlib_core::error::OptionsError::ImpliedVolatilityInvariant::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::InvalidStepCount
+pub optionstratlib_core::error::OptionsError::InvalidStepCount::operation: &'static str
+pub optionstratlib_core::error::OptionsError::PayoffError
+pub optionstratlib_core::error::OptionsError::PayoffError::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::PricingError
+pub optionstratlib_core::error::OptionsError::PricingError::method: alloc::string::String
+pub optionstratlib_core::error::OptionsError::PricingError::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::TimeError
+pub optionstratlib_core::error::OptionsError::TimeError::operation: alloc::string::String
+pub optionstratlib_core::error::OptionsError::TimeError::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::UpdateError
+pub optionstratlib_core::error::OptionsError::UpdateError::field: alloc::string::String
+pub optionstratlib_core::error::OptionsError::UpdateError::reason: alloc::string::String
+pub optionstratlib_core::error::OptionsError::ValidationError
+pub optionstratlib_core::error::OptionsError::ValidationError::field: alloc::string::String
+pub optionstratlib_core::error::OptionsError::ValidationError::reason: alloc::string::String
+impl optionstratlib_core::error::OptionsError
+pub fn optionstratlib_core::error::OptionsError::greeks_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::OptionsError::payoff_error(&str) -> Self
+pub fn optionstratlib_core::error::OptionsError::pricing_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::OptionsError::time_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::OptionsError::update_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::OptionsError::validation_error(&str, &str) -> Self
+pub enum optionstratlib_core::error::PositionError
+pub optionstratlib_core::error::PositionError::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
+pub optionstratlib_core::error::PositionError::Options(optionstratlib_core::error::OptionsError)
+pub optionstratlib_core::error::PositionError::PositiveError(positive::error::PositiveError)
+pub optionstratlib_core::error::PositionError::StrategyError(optionstratlib_core::error::position::StrategyErrorKind)
+pub optionstratlib_core::error::PositionError::UpdateError(optionstratlib_core::error::position::PositionUpdateErrorKind)
+pub optionstratlib_core::error::PositionError::ValidationError(optionstratlib_core::error::position::PositionValidationErrorKind)
+impl optionstratlib_core::error::position::PositionError
+pub fn optionstratlib_core::error::position::PositionError::invalid_position(&str) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_size(f64, &str) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_style(financial_types::OptionStyle, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_type(financial_types::Side, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::invalid_position_update(alloc::string::String, alloc::string::String) -> Self
+pub fn optionstratlib_core::error::position::PositionError::strategy_full(&str, usize) -> Self
+pub fn optionstratlib_core::error::position::PositionError::unsupported_operation(&str, &str) -> Self
+pub enum optionstratlib_core::error::TradeError
+pub optionstratlib_core::error::TradeError::InvalidTrade
+pub optionstratlib_core::error::TradeError::InvalidTrade::reason: alloc::string::String
+pub optionstratlib_core::error::TradeError::InvalidTradeStatus
+pub optionstratlib_core::error::TradeError::InvalidTradeStatus::reason: alloc::string::String
+impl optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::invalid_trade(&str) -> Self
+pub fn optionstratlib_core::error::trade::TradeError::invalid_trade_status(&str) -> Self
+impl core::convert::From<&str> for optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_core::error::trade::TradeError::from(alloc::string::String) -> Self
+pub type optionstratlib_core::error::DecimalResult<T> = core::result::Result<T, optionstratlib_core::error::decimal::DecimalError>
+pub type optionstratlib_core::error::OptionsResult<T> = core::result::Result<T, optionstratlib_core::error::OptionsError>
+pub mod optionstratlib_core::model
+pub use optionstratlib_core::model::ExpirationDate
+pub use optionstratlib_core::model::ExpirationDateError
+pub use optionstratlib_core::model::OptionStyle
+pub use optionstratlib_core::model::OptionType
+pub use optionstratlib_core::model::RainbowType
+pub use optionstratlib_core::model::Side
+pub mod optionstratlib_core::model::decimal
+pub const optionstratlib_core::model::decimal::DIV_DEFAULT_SCALE: u32
+pub const optionstratlib_core::model::decimal::ONE_DAY: rust_decimal::decimal::Decimal
+pub trait optionstratlib_core::model::decimal::DecimalStats
+pub fn optionstratlib_core::model::decimal::DecimalStats::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::DecimalStats::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+impl optionstratlib_core::model::decimal::DecimalStats for alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_add(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_div(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_exp(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_ln(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_mul(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_powd(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_product_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::decimal::d_sqrt(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sub(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sum(&[rust_decimal::decimal::Decimal], &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sum_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::decimal::decimal_normal_sample() -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::finite_decimal(f64) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::decimal::p_sqrt(&positive::positive::Positive, &'static str) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
+pub mod optionstratlib_core::model::leg
+pub mod optionstratlib_core::model::leg::traits
+pub trait optionstratlib_core::model::leg::traits::Expirable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::traits::Expirable::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Expirable::expiration_timestamp(&self) -> i64
+pub fn optionstratlib_core::model::leg::traits::Expirable::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::traits::Expirable::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub trait optionstratlib_core::model::leg::traits::Fundable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::traits::Fundable::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::traits::Fundable::funding_interval_hours(&self) -> u32
+pub fn optionstratlib_core::model::leg::traits::Fundable::funding_payment(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::traits::Fundable::funding_rate(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::Fundable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_interval_hours(&self) -> u32
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_payment(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
+pub trait optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::traits::LegAble::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::traits::LegAble::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::LegAble::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::traits::LegAble::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::traits::LegAble::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::traits::LegAble::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::traits::LegAble::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::LegAble::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::traits::LegAble::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::FuturePosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::FuturePosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::Leg::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::Leg::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::SpotPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::SpotPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub trait optionstratlib_core::model::leg::traits::Marginable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::traits::Marginable::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Marginable::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::traits::Marginable::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Marginable::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Marginable::maintenance_margin(&self) -> positive::positive::Positive
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
+pub enum optionstratlib_core::model::leg::Leg
+pub optionstratlib_core::model::leg::Leg::Future(optionstratlib_core::model::leg::FuturePosition)
+pub optionstratlib_core::model::leg::Leg::Option(alloc::boxed::Box<optionstratlib_core::model::position::Position>)
+pub optionstratlib_core::model::leg::Leg::Perpetual(optionstratlib_core::model::leg::PerpetualPosition)
+pub optionstratlib_core::model::leg::Leg::Spot(optionstratlib_core::model::leg::SpotPosition)
+impl optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::as_future(&self) -> core::option::Option<&optionstratlib_core::model::leg::FuturePosition>
+pub fn optionstratlib_core::model::leg::Leg::as_future_mut(&mut self) -> core::option::Option<&mut optionstratlib_core::model::leg::FuturePosition>
+pub fn optionstratlib_core::model::leg::Leg::as_option(&self) -> core::option::Option<&optionstratlib_core::model::position::Position>
+pub fn optionstratlib_core::model::leg::Leg::as_option_mut(&mut self) -> core::option::Option<&mut optionstratlib_core::model::position::Position>
+pub fn optionstratlib_core::model::leg::Leg::as_perpetual(&self) -> core::option::Option<&optionstratlib_core::model::leg::PerpetualPosition>
+pub fn optionstratlib_core::model::leg::Leg::as_perpetual_mut(&mut self) -> core::option::Option<&mut optionstratlib_core::model::leg::PerpetualPosition>
+pub fn optionstratlib_core::model::leg::Leg::as_spot(&self) -> core::option::Option<&optionstratlib_core::model::leg::SpotPosition>
+pub fn optionstratlib_core::model::leg::Leg::as_spot_mut(&mut self) -> core::option::Option<&mut optionstratlib_core::model::leg::SpotPosition>
+pub fn optionstratlib_core::model::leg::Leg::future(optionstratlib_core::model::leg::FuturePosition) -> Self
+pub fn optionstratlib_core::model::leg::Leg::has_expiration(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_derivative(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_future(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_linear(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_margined(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_option(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_perpetual(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_spot(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::leg_type_name(&self) -> &'static str
+pub fn optionstratlib_core::model::leg::Leg::option(optionstratlib_core::model::position::Position) -> Self
+pub fn optionstratlib_core::model::leg::Leg::perpetual(optionstratlib_core::model::leg::PerpetualPosition) -> Self
+pub fn optionstratlib_core::model::leg::Leg::spot(optionstratlib_core::model::leg::SpotPosition) -> Self
+impl core::convert::From<optionstratlib_core::model::leg::FuturePosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::FuturePosition) -> Self
+impl core::convert::From<optionstratlib_core::model::leg::PerpetualPosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::PerpetualPosition) -> Self
+impl core::convert::From<optionstratlib_core::model::leg::SpotPosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::SpotPosition) -> Self
+impl core::convert::From<optionstratlib_core::model::position::Position> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::position::Position) -> Self
+impl core::fmt::Display for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::Leg::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::Leg::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl utoipa::ToSchema for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::leg::Leg::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+#[repr(u8)] pub enum optionstratlib_core::model::leg::MarginType
+pub optionstratlib_core::model::leg::MarginType::Cross
+pub optionstratlib_core::model::leg::MarginType::Isolated
+impl core::fmt::Display for optionstratlib_core::model::leg::MarginType
+pub fn optionstratlib_core::model::leg::MarginType::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::leg::MarginType
+pub fn optionstratlib_core::model::leg::MarginType::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::leg::MarginType::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::MarginType
+pub fn optionstratlib_core::model::leg::MarginType::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::leg::FuturePosition
+pub optionstratlib_core::model::leg::FuturePosition::contract_size: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::leg::FuturePosition::entry_price: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::expiration_date: expiration_date::ExpirationDate
+pub optionstratlib_core::model::leg::FuturePosition::fees: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::initial_margin_req: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::maintenance_margin_req: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::quantity: positive::positive::Positive
+pub optionstratlib_core::model::leg::FuturePosition::side: financial_types::Side
+pub optionstratlib_core::model::leg::FuturePosition::symbol: alloc::string::String
+impl optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::basis(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::FuturePosition::implied_leverage(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::FuturePosition::long(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::FuturePosition::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, financial_types::Side, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::FuturePosition::notional_value_at_entry(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::notional_value_at_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::short(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::FuturePosition::tick_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::total_margin_required(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+impl core::convert::From<optionstratlib_core::model::leg::FuturePosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::FuturePosition) -> Self
+impl core::default::Default for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::default() -> Self
+impl core::fmt::Display for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::FuturePosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::FuturePosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
+impl utoipa::ToSchema for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::leg::FuturePosition::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::leg::PerpetualPosition
+pub optionstratlib_core::model::leg::PerpetualPosition::date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::leg::PerpetualPosition::entry_price: positive::positive::Positive
+pub optionstratlib_core::model::leg::PerpetualPosition::fees: positive::positive::Positive
+pub optionstratlib_core::model::leg::PerpetualPosition::funding_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::leg::PerpetualPosition::leverage: positive::positive::Positive
+pub optionstratlib_core::model::leg::PerpetualPosition::margin: positive::positive::Positive
+pub optionstratlib_core::model::leg::PerpetualPosition::margin_type: optionstratlib_core::model::leg::MarginType
+pub optionstratlib_core::model::leg::PerpetualPosition::quantity: positive::positive::Positive
+pub optionstratlib_core::model::leg::PerpetualPosition::side: financial_types::Side
+pub optionstratlib_core::model::leg::PerpetualPosition::symbol: alloc::string::String
+impl optionstratlib_core::model::leg::PerpetualPosition
+pub const optionstratlib_core::model::leg::PerpetualPosition::DEFAULT_FUNDING_INTERVAL_HOURS: u32
+pub const optionstratlib_core::model::leg::PerpetualPosition::DEFAULT_MAINTENANCE_MARGIN_RATIO: rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::effective_leverage(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::long(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::PerpetualPosition::margin_ratio(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, financial_types::Side, positive::positive::Positive, positive::positive::Positive, optionstratlib_core::model::leg::MarginType, rust_decimal::decimal::Decimal, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::PerpetualPosition::notional_value_at_entry(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::notional_value_at_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::roe_percentage(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::short(alloc::string::String, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::PerpetualPosition::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::update_funding_rate(&mut self, rust_decimal::decimal::Decimal)
+impl core::convert::From<optionstratlib_core::model::leg::PerpetualPosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::PerpetualPosition) -> Self
+impl core::default::Default for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::default() -> Self
+impl core::fmt::Display for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::leg::traits::Fundable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_interval_hours(&self) -> u32
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_payment(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
+impl utoipa::ToSchema for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::leg::SpotPosition
+pub optionstratlib_core::model::leg::SpotPosition::close_fee: positive::positive::Positive
+pub optionstratlib_core::model::leg::SpotPosition::cost_basis: positive::positive::Positive
+pub optionstratlib_core::model::leg::SpotPosition::date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::leg::SpotPosition::open_fee: positive::positive::Positive
+pub optionstratlib_core::model::leg::SpotPosition::quantity: positive::positive::Positive
+pub optionstratlib_core::model::leg::SpotPosition::side: financial_types::Side
+pub optionstratlib_core::model::leg::SpotPosition::symbol: alloc::string::String
+impl optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::break_even_price(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::initial_value(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::long(alloc::string::String, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::SpotPosition::market_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, financial_types::Side, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive) -> Self
+pub fn optionstratlib_core::model::leg::SpotPosition::percentage_return(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::SpotPosition::short(alloc::string::String, positive::positive::Positive, positive::positive::Positive) -> Self
+impl core::convert::From<optionstratlib_core::model::leg::SpotPosition> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::leg::SpotPosition) -> Self
+impl core::default::Default for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::default() -> Self
+impl core::fmt::Display for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::SpotPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::SpotPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl utoipa::ToSchema for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::leg::SpotPosition::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub trait optionstratlib_core::model::leg::Expirable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::Expirable::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Expirable::expiration_timestamp(&self) -> i64
+pub fn optionstratlib_core::model::leg::Expirable::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::Expirable::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub trait optionstratlib_core::model::leg::Fundable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::Fundable::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::Fundable::funding_interval_hours(&self) -> u32
+pub fn optionstratlib_core::model::leg::Fundable::funding_payment(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::Fundable::funding_rate(&self) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::leg::traits::Fundable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_interval_hours(&self) -> u32
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_payment(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::PerpetualPosition::funding_rate(&self) -> rust_decimal::decimal::Decimal
+pub trait optionstratlib_core::model::leg::LegAble
+pub fn optionstratlib_core::model::leg::LegAble::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::LegAble::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::LegAble::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::LegAble::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::LegAble::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::LegAble::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::LegAble::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::LegAble::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::LegAble::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::FuturePosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::FuturePosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::Leg::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::Leg::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::Leg::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Leg::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Leg::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::PerpetualPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::PerpetualPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::SpotPosition
+pub fn optionstratlib_core::model::leg::SpotPosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::get_quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::get_side(&self) -> financial_types::Side
+pub fn optionstratlib_core::model::leg::SpotPosition::get_symbol(&self) -> &str
+pub fn optionstratlib_core::model::leg::SpotPosition::is_long(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::is_short(&self) -> bool
+pub fn optionstratlib_core::model::leg::SpotPosition::notional_value(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::SpotPosition::pnl_at_price(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::SpotPosition::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub trait optionstratlib_core::model::leg::Marginable: optionstratlib_core::model::leg::traits::LegAble
+pub fn optionstratlib_core::model::leg::Marginable::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Marginable::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::Marginable::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Marginable::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Marginable::maintenance_margin(&self) -> positive::positive::Positive
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::FuturePosition
+pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
+impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::PerpetualPosition
+pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
+pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
+pub mod optionstratlib_core::model::option
+pub struct optionstratlib_core::model::option::ExoticParams
+pub optionstratlib_core::model::option::ExoticParams::cliquet_global_cap: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::cliquet_global_floor: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::cliquet_local_cap: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::cliquet_local_floor: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::exchange_correlation: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::exchange_second_asset_dividend: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::exchange_second_asset_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::quanto_foreign_rate: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::quanto_fx_correlation: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::quanto_fx_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::rainbow_correlation: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::rainbow_second_asset_dividend: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::rainbow_second_asset_price: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::rainbow_second_asset_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::spot_max: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::spot_min: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::spot_prices: core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
+pub optionstratlib_core::model::option::ExoticParams::spread_correlation: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::option::ExoticParams::spread_second_asset_dividend: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::spread_second_asset_volatility: core::option::Option<positive::positive::Positive>
+impl core::fmt::Display for optionstratlib_core::model::option::ExoticParams
+pub fn optionstratlib_core::model::option::ExoticParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::option::ExoticParams
+pub fn optionstratlib_core::model::option::ExoticParams::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::option::ExoticParams::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::option::ExoticParams
+pub fn optionstratlib_core::model::option::ExoticParams::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::option::Options
+pub optionstratlib_core::model::option::Options::dividend_yield: positive::positive::Positive
+pub optionstratlib_core::model::option::Options::exotic_params: core::option::Option<optionstratlib_core::model::option::ExoticParams>
+pub optionstratlib_core::model::option::Options::expiration_date: expiration_date::ExpirationDate
+pub optionstratlib_core::model::option::Options::implied_volatility: positive::positive::Positive
+pub optionstratlib_core::model::option::Options::option_style: financial_types::OptionStyle
+pub optionstratlib_core::model::option::Options::option_type: option_type::option_type::OptionType
+pub optionstratlib_core::model::option::Options::quantity: positive::positive::Positive
+pub optionstratlib_core::model::option::Options::risk_free_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::option::Options::side: financial_types::Side
+pub optionstratlib_core::model::option::Options::strike_price: positive::positive::Positive
+pub optionstratlib_core::model::option::Options::underlying_price: positive::positive::Positive
+pub optionstratlib_core::model::option::Options::underlying_symbol: alloc::string::String
+impl optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::intrinsic_value(&self, positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::is_in_the_money(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::is_long(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::is_short(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::new(option_type::option_type::OptionType, financial_types::Side, alloc::string::String, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<optionstratlib_core::model::option::ExoticParams>) -> Self
+pub fn optionstratlib_core::model::option::Options::payoff(&self) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::payoff_at_price(&self, &positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::time_to_expiration(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
+impl core::default::Default for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::default() -> Self
+impl core::fmt::Debug for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::option::Options::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub mod optionstratlib_core::model::payoff
+pub struct optionstratlib_core::model::payoff::PayoffInfo
+pub optionstratlib_core::model::payoff::PayoffInfo::side: financial_types::Side
+pub optionstratlib_core::model::payoff::PayoffInfo::spot: positive::positive::Positive
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_max: core::option::Option<f64>
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_min: core::option::Option<f64>
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<f64>>
+pub optionstratlib_core::model::payoff::PayoffInfo::strike: positive::positive::Positive
+pub optionstratlib_core::model::payoff::PayoffInfo::style: financial_types::OptionStyle
+impl optionstratlib_core::model::payoff::PayoffInfo
+pub fn optionstratlib_core::model::payoff::PayoffInfo::spot_prices_len(&self) -> core::option::Option<usize>
+impl core::default::Default for optionstratlib_core::model::payoff::PayoffInfo
+pub fn optionstratlib_core::model::payoff::PayoffInfo::default() -> Self
+pub trait optionstratlib_core::model::payoff::Payoff
+pub fn optionstratlib_core::model::payoff::Payoff::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64
+impl optionstratlib_core::model::payoff::Payoff for option_type::option_type::OptionType
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64
+pub mod optionstratlib_core::model::position
+pub struct optionstratlib_core::model::position::Position
+pub optionstratlib_core::model::position::Position::close_fee: positive::positive::Positive
+pub optionstratlib_core::model::position::Position::date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::position::Position::epic: core::option::Option<alloc::string::String>
+pub optionstratlib_core::model::position::Position::extra_fields: core::option::Option<serde_json::value::Value>
+pub optionstratlib_core::model::position::Position::open_fee: positive::positive::Positive
+pub optionstratlib_core::model::position::Position::option: optionstratlib_core::model::option::Options
+pub optionstratlib_core::model::position::Position::premium: positive::positive::Positive
+impl optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::break_even(&self) -> core::option::Option<positive::positive::Positive>
+pub fn optionstratlib_core::model::position::Position::days_held(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::is_long(&self) -> bool
+pub fn optionstratlib_core::model::position::Position::is_short(&self) -> bool
+pub fn optionstratlib_core::model::position::Position::net_cost(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::net_premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::new(optionstratlib_core::model::option::Options, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, core::option::Option<serde_json::value::Value>) -> Self
+pub fn optionstratlib_core::model::position::Position::pnl_at_expiration(&self, &core::option::Option<&positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::validate(&self) -> bool
+impl core::convert::From<optionstratlib_core::model::position::Position> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::position::Position) -> Self
+impl core::default::Default for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::default() -> Self
+impl core::fmt::Debug for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl utoipa::ToSchema for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::position::Position::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub mod optionstratlib_core::model::types
+pub use optionstratlib_core::model::types::Action
+pub use optionstratlib_core::model::types::AsianAveragingType
+pub use optionstratlib_core::model::types::BarrierType
+pub use optionstratlib_core::model::types::BinaryType
+pub use optionstratlib_core::model::types::LookbackType
+pub use optionstratlib_core::model::types::OptionBasicType
+pub use optionstratlib_core::model::types::OptionStyle
+pub use optionstratlib_core::model::types::OptionType
+pub use optionstratlib_core::model::types::RainbowType
+pub use optionstratlib_core::model::types::Side
+pub use optionstratlib_core::model::types::UnderlyingAssetType
+pub mod optionstratlib_core::model::utils
+pub trait optionstratlib_core::model::utils::ToRound
+pub fn optionstratlib_core::model::utils::ToRound::round(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::utils::ToRound::round_to(&self, u32) -> rust_decimal::decimal::Decimal
+impl optionstratlib_core::model::utils::ToRound for positive::positive::Positive
+pub fn positive::positive::Positive::round(&self) -> rust_decimal::decimal::Decimal
+pub fn positive::positive::Positive::round_to(&self, u32) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::utils::create_sample_option(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::utils::create_sample_option_simplest(financial_types::OptionStyle, financial_types::Side) -> optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::utils::create_sample_option_simplest_strike(financial_types::Side, financial_types::OptionStyle, positive::positive::Positive) -> optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::utils::create_sample_option_with_date(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, chrono::naive::datetime::NaiveDateTime) -> optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::utils::create_sample_option_with_days(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::utils::create_sample_position(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::utils::generate_price_points(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::utils::mean_and_std(alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), positive::error::PositiveError>
+pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> alloc::vec::Vec<f64>
+#[repr(u8)] pub enum optionstratlib_core::model::BasicAxisTypes
+pub optionstratlib_core::model::BasicAxisTypes::Charm
+pub optionstratlib_core::model::BasicAxisTypes::Color
+pub optionstratlib_core::model::BasicAxisTypes::Delta
+pub optionstratlib_core::model::BasicAxisTypes::Expiration
+pub optionstratlib_core::model::BasicAxisTypes::Gamma
+pub optionstratlib_core::model::BasicAxisTypes::Price
+pub optionstratlib_core::model::BasicAxisTypes::Strike
+pub optionstratlib_core::model::BasicAxisTypes::Theta
+pub optionstratlib_core::model::BasicAxisTypes::UnderlyingPrice
+pub optionstratlib_core::model::BasicAxisTypes::Vanna
+pub optionstratlib_core::model::BasicAxisTypes::Vega
+pub optionstratlib_core::model::BasicAxisTypes::Veta
+pub optionstratlib_core::model::BasicAxisTypes::Volatility
+pub optionstratlib_core::model::BasicAxisTypes::Vomma
+impl optionstratlib_core::model::BasicAxisTypes
+pub fn optionstratlib_core::model::BasicAxisTypes::iter() -> optionstratlib_core::model::axis::BasicAxisTypesIter
+pub enum optionstratlib_core::model::TradeStatus
+pub optionstratlib_core::model::TradeStatus::Assigned
+pub optionstratlib_core::model::TradeStatus::Closed
+pub optionstratlib_core::model::TradeStatus::Exercised
+pub optionstratlib_core::model::TradeStatus::Expired
+pub optionstratlib_core::model::TradeStatus::Open
+pub optionstratlib_core::model::TradeStatus::Other(alloc::string::String)
+impl utoipa::ToSchema for optionstratlib_core::model::TradeStatus
+pub fn optionstratlib_core::model::TradeStatus::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::TradeStatus::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::TradeStatus
+pub fn optionstratlib_core::model::TradeStatus::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::Balance
+pub optionstratlib_core::model::Balance::average_premium: positive::positive::Positive
+pub optionstratlib_core::model::Balance::current_premium: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::Balance::exchange: alloc::string::String
+pub optionstratlib_core::model::Balance::margin_info: core::option::Option<optionstratlib_core::model::MarginInfo>
+pub optionstratlib_core::model::Balance::quantity: positive::positive::Positive
+pub optionstratlib_core::model::Balance::symbol: alloc::string::String
+pub optionstratlib_core::model::Balance::underlying_asset_type: financial_types::UnderlyingAssetType
+impl optionstratlib_core::model::Balance
+pub fn optionstratlib_core::model::Balance::get_cost_basis(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Balance::get_percentage_return(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::Balance::get_total_value(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Balance::get_unrealized_pnl(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::Balance::is_profitable(&self) -> bool
+pub fn optionstratlib_core::model::Balance::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, core::option::Option<positive::positive::Positive>, alloc::string::String, financial_types::UnderlyingAssetType, core::option::Option<optionstratlib_core::model::MarginInfo>) -> Self
+pub fn optionstratlib_core::model::Balance::update_current_premium(&mut self, positive::positive::Positive)
+impl core::fmt::Debug for optionstratlib_core::model::Balance
+pub fn optionstratlib_core::model::Balance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::Balance
+pub fn optionstratlib_core::model::Balance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::Balance
+pub fn optionstratlib_core::model::Balance::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::Balance::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::Balance
+pub fn optionstratlib_core::model::Balance::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::MarginInfo
+pub optionstratlib_core::model::MarginInfo::available_margin: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::MarginInfo::initial_margin: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::MarginInfo::maintenance_margin: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::MarginInfo::margin_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_core::model::MarginInfo::used_margin: rust_decimal::decimal::Decimal
+impl core::fmt::Debug for optionstratlib_core::model::MarginInfo
+pub fn optionstratlib_core::model::MarginInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::MarginInfo
+pub fn optionstratlib_core::model::MarginInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::MarginInfo
+pub fn optionstratlib_core::model::MarginInfo::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::MarginInfo::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::MarginInfo
+pub fn optionstratlib_core::model::MarginInfo::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::Options
+pub optionstratlib_core::model::Options::dividend_yield: positive::positive::Positive
+pub optionstratlib_core::model::Options::exotic_params: core::option::Option<optionstratlib_core::model::option::ExoticParams>
+pub optionstratlib_core::model::Options::expiration_date: expiration_date::ExpirationDate
+pub optionstratlib_core::model::Options::implied_volatility: positive::positive::Positive
+pub optionstratlib_core::model::Options::option_style: financial_types::OptionStyle
+pub optionstratlib_core::model::Options::option_type: option_type::option_type::OptionType
+pub optionstratlib_core::model::Options::quantity: positive::positive::Positive
+pub optionstratlib_core::model::Options::risk_free_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::Options::side: financial_types::Side
+pub optionstratlib_core::model::Options::strike_price: positive::positive::Positive
+pub optionstratlib_core::model::Options::underlying_price: positive::positive::Positive
+pub optionstratlib_core::model::Options::underlying_symbol: alloc::string::String
+impl optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::intrinsic_value(&self, positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::is_in_the_money(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::is_long(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::is_short(&self) -> bool
+pub fn optionstratlib_core::model::option::Options::new(option_type::option_type::OptionType, financial_types::Side, alloc::string::String, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<optionstratlib_core::model::option::ExoticParams>) -> Self
+pub fn optionstratlib_core::model::option::Options::payoff(&self) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::payoff_at_price(&self, &positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::time_to_expiration(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
+impl core::default::Default for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::default() -> Self
+impl core::fmt::Debug for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::option::Options::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::option::Options
+pub fn optionstratlib_core::model::option::Options::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::Portfolio
+pub optionstratlib_core::model::Portfolio::balances: alloc::vec::Vec<optionstratlib_core::model::Balance>
+pub optionstratlib_core::model::Portfolio::name: alloc::string::String
+impl optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::add_balance(&mut self, optionstratlib_core::model::Balance)
+pub fn optionstratlib_core::model::Portfolio::balance_count(&self) -> usize
+pub fn optionstratlib_core::model::Portfolio::get_balance(&self, &str, &str) -> core::option::Option<&optionstratlib_core::model::Balance>
+pub fn optionstratlib_core::model::Portfolio::get_balance_mut(&mut self, &str, &str) -> core::option::Option<&mut optionstratlib_core::model::Balance>
+pub fn optionstratlib_core::model::Portfolio::get_balances_by_exchange(&self, &str) -> alloc::vec::Vec<&optionstratlib_core::model::Balance>
+pub fn optionstratlib_core::model::Portfolio::get_total_unrealized_pnl(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::Portfolio::get_total_value(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Portfolio::has_profitable_positions(&self) -> bool
+pub fn optionstratlib_core::model::Portfolio::is_empty(&self) -> bool
+pub fn optionstratlib_core::model::Portfolio::new(alloc::string::String) -> Self
+pub fn optionstratlib_core::model::Portfolio::remove_balance(&mut self, &str, &str) -> bool
+impl core::default::Default for optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::default() -> Self
+impl core::fmt::Debug for optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::Portfolio::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::Portfolio
+pub fn optionstratlib_core::model::Portfolio::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::Position
+pub optionstratlib_core::model::Position::close_fee: positive::positive::Positive
+pub optionstratlib_core::model::Position::date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::Position::epic: core::option::Option<alloc::string::String>
+pub optionstratlib_core::model::Position::extra_fields: core::option::Option<serde_json::value::Value>
+pub optionstratlib_core::model::Position::open_fee: positive::positive::Positive
+pub optionstratlib_core::model::Position::option: optionstratlib_core::model::option::Options
+pub optionstratlib_core::model::Position::premium: positive::positive::Positive
+impl optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::break_even(&self) -> core::option::Option<positive::positive::Positive>
+pub fn optionstratlib_core::model::position::Position::days_held(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::is_long(&self) -> bool
+pub fn optionstratlib_core::model::position::Position::is_short(&self) -> bool
+pub fn optionstratlib_core::model::position::Position::net_cost(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::net_premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::new(optionstratlib_core::model::option::Options, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, core::option::Option<serde_json::value::Value>) -> Self
+pub fn optionstratlib_core::model::position::Position::pnl_at_expiration(&self, &core::option::Option<&positive::positive::Positive>) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::premium_received(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::total_cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::unrealized_pnl(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::position::Position::validate(&self) -> bool
+impl core::convert::From<optionstratlib_core::model::position::Position> for optionstratlib_core::model::leg::Leg
+pub fn optionstratlib_core::model::leg::Leg::from(optionstratlib_core::model::position::Position) -> Self
+impl core::default::Default for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::default() -> Self
+impl core::fmt::Debug for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl utoipa::ToSchema for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::model::position::Position::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::Trade
+pub optionstratlib_core::model::Trade::action: financial_types::Action
+pub optionstratlib_core::model::Trade::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_core::model::Trade::fee: positive::positive::Positive
+pub optionstratlib_core::model::Trade::id: uuid::Uuid
+pub optionstratlib_core::model::Trade::notes: core::option::Option<alloc::string::String>
+pub optionstratlib_core::model::Trade::option_style: financial_types::OptionStyle
+pub optionstratlib_core::model::Trade::premium: positive::positive::Positive
+pub optionstratlib_core::model::Trade::quantity: positive::positive::Positive
+pub optionstratlib_core::model::Trade::side: financial_types::Side
+pub optionstratlib_core::model::Trade::status: optionstratlib_core::model::TradeStatus
+pub optionstratlib_core::model::Trade::strike: positive::positive::Positive
+pub optionstratlib_core::model::Trade::symbol: core::option::Option<alloc::string::String>
+pub optionstratlib_core::model::Trade::timestamp: i64
+pub optionstratlib_core::model::Trade::underlying_price: positive::positive::Positive
+impl optionstratlib_core::model::Trade
+pub fn optionstratlib_core::model::Trade::cost(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Trade::datetime(&self) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn optionstratlib_core::model::Trade::income(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Trade::is_closed(&self) -> bool
+pub fn optionstratlib_core::model::Trade::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::Trade::is_open(&self) -> bool
+pub fn optionstratlib_core::model::Trade::net(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> Self
+pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>)
+impl core::fmt::Display for optionstratlib_core::model::Trade
+pub fn optionstratlib_core::model::Trade::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade
+pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub trait optionstratlib_core::model::TradeAble
+pub fn optionstratlib_core::model::TradeAble::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeAble::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeAble::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade
+pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub trait optionstratlib_core::model::TradeStatusAble
+pub fn optionstratlib_core::model::TradeStatusAble::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::reject_unrepresentable_expiration(&expiration_date::ExpirationDate) -> core::result::Result<(), expiration_date::error::ExpirationDateError>
+pub fn optionstratlib_core::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
+pub fn optionstratlib_core::model::save_trades(&[optionstratlib_core::model::Trade], &str) -> core::io::error::Result<()>
+pub mod optionstratlib_core::utils
+pub mod optionstratlib_core::utils::numeric
+pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool
+pub fn optionstratlib_core::utils::numeric::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
+pub mod optionstratlib_core::utils::rng
+pub const optionstratlib_core::utils::rng::DETERMINISTIC_RNG_DEFAULT_SEED: u64
+pub fn optionstratlib_core::utils::rng::deterministic_rng(u64) -> rand::rngs::std::StdRng
+pub fn optionstratlib_core::utils::rng::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
+pub fn optionstratlib_core::utils::rng::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub mod optionstratlib_core::utils::time
+pub enum optionstratlib_core::utils::time::TimeFrame
+pub optionstratlib_core::utils::time::TimeFrame::Custom(positive::positive::Positive)
+pub optionstratlib_core::utils::time::TimeFrame::Day
+pub optionstratlib_core::utils::time::TimeFrame::Hour
+pub optionstratlib_core::utils::time::TimeFrame::Microsecond
+pub optionstratlib_core::utils::time::TimeFrame::Millisecond
+pub optionstratlib_core::utils::time::TimeFrame::Minute
+pub optionstratlib_core::utils::time::TimeFrame::Month
+pub optionstratlib_core::utils::time::TimeFrame::Quarter
+pub optionstratlib_core::utils::time::TimeFrame::Second
+pub optionstratlib_core::utils::time::TimeFrame::Week
+pub optionstratlib_core::utils::time::TimeFrame::Year
+impl optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::periods_per_year(&self) -> positive::positive::Positive
+impl core::fmt::Display for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::utils::time::TimeFrame::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub fn optionstratlib_core::utils::time::convert_time_frame(positive::positive::Positive, &optionstratlib_core::utils::time::TimeFrame, &optionstratlib_core::utils::time::TimeFrame) -> positive::positive::Positive
+pub fn optionstratlib_core::utils::time::get_today_formatted() -> alloc::string::String
+pub fn optionstratlib_core::utils::time::get_today_or_tomorrow_formatted() -> alloc::string::String
+pub fn optionstratlib_core::utils::time::get_tomorrow_formatted() -> alloc::string::String
+pub fn optionstratlib_core::utils::time::get_x_days_formatted(i64) -> alloc::string::String
+pub fn optionstratlib_core::utils::time::get_x_days_formatted_pos(positive::positive::Positive) -> alloc::string::String
+pub fn optionstratlib_core::utils::time::units_per_year(&optionstratlib_core::utils::time::TimeFrame) -> positive::positive::Positive
+pub enum optionstratlib_core::utils::TimeFrame
+pub optionstratlib_core::utils::TimeFrame::Custom(positive::positive::Positive)
+pub optionstratlib_core::utils::TimeFrame::Day
+pub optionstratlib_core::utils::TimeFrame::Hour
+pub optionstratlib_core::utils::TimeFrame::Microsecond
+pub optionstratlib_core::utils::TimeFrame::Millisecond
+pub optionstratlib_core::utils::TimeFrame::Minute
+pub optionstratlib_core::utils::TimeFrame::Month
+pub optionstratlib_core::utils::TimeFrame::Quarter
+pub optionstratlib_core::utils::TimeFrame::Second
+pub optionstratlib_core::utils::TimeFrame::Week
+pub optionstratlib_core::utils::TimeFrame::Year
+impl optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::periods_per_year(&self) -> positive::positive::Positive
+impl core::fmt::Display for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_core::utils::time::TimeFrame::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_core::utils::time::TimeFrame
+pub fn optionstratlib_core::utils::time::TimeFrame::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub const optionstratlib_core::utils::DETERMINISTIC_RNG_DEFAULT_SEED: u64
+pub trait optionstratlib_core::utils::Len
+pub fn optionstratlib_core::utils::Len::is_empty(&self) -> bool
+pub fn optionstratlib_core::utils::Len::len(&self) -> usize
+pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool
+pub fn optionstratlib_core::utils::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::deterministic_rng(u64) -> rand::rngs::std::StdRng
+pub fn optionstratlib_core::utils::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
+pub fn optionstratlib_core::utils::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub macro optionstratlib_core::assert_decimal_eq!
+pub macro optionstratlib_core::d2f!
+pub macro optionstratlib_core::d2fu!
+pub macro optionstratlib_core::f2d!
+pub macro optionstratlib_core::f2du!
+pub macro optionstratlib_core::nz!
+pub const optionstratlib_core::VERSION: &str

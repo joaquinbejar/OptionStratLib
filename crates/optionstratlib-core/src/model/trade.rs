@@ -1,6 +1,6 @@
 use crate::error::TradeError;
 use crate::model::types::Action;
-use crate::{OptionStyle, Side};
+use crate::model::types::{OptionStyle, Side};
 use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::{fmt, io};
-use utoipa::ToSchema;
 
 /// # Transaction Status
 ///
@@ -26,7 +25,8 @@ use utoipa::ToSchema;
 /// * `Expired` - The transaction reached its expiration date without being exercised
 /// * `Exercised` - The option was exercised, converting it to a position in the underlying asset
 /// * `Assigned` - For short options, indicates the counterparty exercised the option
-#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, ToSchema)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub enum TradeStatus {
     /// * `open` - The transaction is open and active
     #[default]

@@ -42,11 +42,11 @@
 //! # Ok::<(), optionstratlib::error::OptionsError>(())
 //! ```
 
-use crate::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
 use crate::error::{OptionsError, OptionsResult, PricingError, VolatilityError};
 use crate::model::Options;
 use crate::model::decimal::d_sub;
 use crate::model::types::Side;
+use crate::pricing::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
     BinomialPricingParams, black_scholes, generate_binomial_tree, price_binomial, telegraph,
@@ -91,7 +91,7 @@ pub trait OptionPricing {
     /// * `no_steps` - The number of steps to use in the binomial tree calculation,
     ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type level
     ///   (no runtime check required). Higher values increase accuracy but also
-    ///   computational cost. See [`crate::constants::DEFAULT_BINOMIAL_STEPS`]
+    ///   computational cost. See [`crate::pricing::constants::DEFAULT_BINOMIAL_STEPS`]
     ///   for a sensible default.
     ///
     /// # Returns
@@ -461,5 +461,640 @@ mod tests_option_pricing_trait {
         let via_trait = OptionPricing::calculate_implied_volatility(&option, market_price);
         let via_inherent = Options::calculate_implied_volatility(&option, market_price);
         assert_eq!(via_trait.ok(), via_inherent.ok());
+    }
+}
+
+#[cfg(test)]
+mod tests_options_pricing {
+    use super::*;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::utils::create_sample_option_simplest;
+    use crate::model::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal::Decimal;
+
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_calculate_price_binomial() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let price = option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_calculate_price_binomial_tree() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let (price, asset_tree, option_tree) =
+            option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
+        assert!(price > Decimal::ZERO);
+        assert_eq!(asset_tree.len(), 6);
+        assert_eq!(option_tree.len(), 6);
+    }
+
+    #[test]
+    fn test_calculate_price_binomial_tree_short() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+        let (price, asset_tree, option_tree) =
+            option.calculate_price_binomial_tree(crate::nz!(5)).unwrap();
+        assert!(price > Decimal::ZERO);
+        assert_eq!(asset_tree.len(), 6);
+        assert_eq!(option_tree.len(), 6);
+    }
+
+    #[test]
+    fn test_calculate_price_black_scholes() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let price = option.calculate_price_black_scholes().unwrap();
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_calculate_time_value() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "AAPL".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            pos_or_panic!(105.0),
+            dec!(0.05),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+
+        let time_value = option.time_value().unwrap();
+        assert!(time_value > Decimal::ZERO);
+        assert!(time_value < option.calculate_price_black_scholes().unwrap());
+    }
+}
+
+#[cfg(test)]
+mod tests_time_value {
+    use super::*;
+    use crate::model::types::{OptionStyle, Side};
+    use crate::model::utils::create_sample_option_simplest_strike;
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal::Decimal;
+
+    use crate::assert_decimal_eq;
+    use rust_decimal_macros::dec;
+    use tracing::debug;
+
+    #[test]
+    fn test_calculate_time_value_long_call() {
+        let option = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
+        let time_value = option.time_value().unwrap();
+        assert!(time_value > Decimal::ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_time_value_short_call() {
+        let option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Call,
+            pos_or_panic!(105.0),
+        );
+        let time_value = option.time_value().unwrap();
+        assert!(time_value > Decimal::ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().unwrap().abs());
+    }
+
+    #[test]
+    fn test_calculate_time_value_long_put() {
+        let option =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(95.0));
+        let time_value = option.time_value().unwrap();
+        assert!(time_value > Decimal::ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_time_value_short_put() {
+        let option = create_sample_option_simplest_strike(
+            Side::Short,
+            OptionStyle::Put,
+            pos_or_panic!(95.0),
+        );
+        let time_value = option.time_value().unwrap();
+        assert!(time_value > Decimal::ZERO);
+        assert!(time_value <= option.calculate_price_black_scholes().unwrap().abs());
+    }
+
+    #[test]
+    fn test_calculate_time_value_at_the_money() {
+        let call =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Call, Positive::HUNDRED);
+        let put =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, Positive::HUNDRED);
+
+        let call_time_value = call.time_value().unwrap();
+        let put_time_value = put.time_value().unwrap();
+
+        assert!(call_time_value > Decimal::ZERO);
+        assert!(put_time_value > Decimal::ZERO);
+        assert_eq!(
+            call_time_value,
+            call.calculate_price_black_scholes().unwrap()
+        );
+        assert_eq!(put_time_value, put.calculate_price_black_scholes().unwrap());
+    }
+
+    #[test]
+    fn test_calculate_time_value_deep_in_the_money() {
+        let call = create_sample_option_simplest_strike(
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(150.0),
+        );
+        let put =
+            create_sample_option_simplest_strike(Side::Long, OptionStyle::Put, pos_or_panic!(50.0));
+
+        let call_time_value = call.time_value().unwrap();
+        let put_time_value = put.time_value().unwrap();
+
+        let call_price = call.calculate_price_black_scholes().unwrap();
+        let put_price = put.calculate_price_black_scholes().unwrap();
+
+        assert_decimal_eq!(call_time_value, call_price, dec!(0.01));
+        assert_decimal_eq!(put_time_value, put_price, dec!(0.01));
+        debug!("Call time value: {}", call_time_value);
+        debug!("Call BS price: {}", call_price);
+        debug!("Put time value: {}", put_time_value);
+        debug!("Put BS price: {}", put_price);
+        assert!(call_time_value <= call_price);
+        assert!(put_time_value <= put_price);
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_price_binomial {
+    use super::*;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::utils::{
+        create_sample_option, create_sample_option_simplest, create_sample_option_with_date,
+    };
+    use crate::model::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal::Decimal;
+
+    use chrono::Utc;
+    use rust_decimal_macros::dec;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_european_call_option_basic() {
+        // Test a basic European call option with standard parameters
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be positive for a long call at-the-money
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_american_put_option() {
+        // Test American put option which should have early exercise value
+        let option = Options::new(
+            OptionType::American,
+            Side::Long,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),  // volatility
+            Positive::ONE,       // quantity
+            pos_or_panic!(95.0), // underlying price (slightly ITM for put)
+            dec!(0.05),          // risk-free rate
+            OptionStyle::Put,
+            Positive::ZERO, // dividend yield
+            None,
+        );
+
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be positive and reflect early exercise premium
+        assert!(price > Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_zero_volatility() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.implied_volatility = Positive::ZERO;
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        // With zero volatility, price should equal discounted intrinsic value
+    }
+
+    #[test]
+    fn test_zero_time_to_expiry() {
+        // Test option at expiration
+        let now = Utc::now().naive_utc();
+        let option = create_sample_option_with_date(
+            OptionStyle::Call,
+            Side::Long,
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+            now,
+        );
+
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // At expiry, price should equal intrinsic value
+        assert_eq!(price, Decimal::from(5));
+    }
+
+    // The former `test_invalid_steps` test used to pass `0` to
+    // `calculate_price_binomial` and assert that the runtime guard
+    // returned `InvalidStepCount`. After #337 the signature is
+    // `NonZeroUsize`, so the invariant is enforced at the type level
+    // and the test is now obsolete (cannot construct the invalid
+    // input).
+
+    #[test]
+    fn test_deep_itm_call() {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            pos_or_panic!(150.0), // Underlying price much higher than strike
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        );
+
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be close to intrinsic value for deep ITM
+        assert!(price > Decimal::from(45)); // At least intrinsic - some time value
+    }
+
+    #[test]
+    fn test_deep_otm_put() {
+        let option = create_sample_option(
+            OptionStyle::Put,
+            Side::Long,
+            pos_or_panic!(150.0), // Underlying price much higher than strike
+            Positive::ONE,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        );
+
+        let result = option.calculate_price_binomial(crate::nz!(100));
+        assert!(result.is_ok());
+        let price = result.unwrap();
+        // Price should be very small for deep OTM
+        assert!(price < Decimal::from(1));
+    }
+
+    #[test]
+    fn test_convergence() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+
+        // Test that increasing steps leads to convergence
+        let price_100 = option.calculate_price_binomial(crate::nz!(100)).unwrap();
+        let price_1000 = option.calculate_price_binomial(crate::nz!(1000)).unwrap();
+
+        // Prices should be close to each other
+        let diff = (price_1000 - price_100).abs();
+        assert!(diff < Decimal::from_str("0.1").unwrap());
+    }
+
+    #[test]
+    fn test_short_position() {
+        let long_call_option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let mut short_call_option = long_call_option.clone();
+        short_call_option.side = Side::Short;
+        let mut short_put_option = short_call_option.clone();
+        short_put_option.option_style = OptionStyle::Put;
+        let mut long_put_option = short_put_option.clone();
+        long_put_option.side = Side::Long;
+
+        let long_call_price = long_call_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let short_call_price = short_call_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let long_put_price = long_put_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+        let short_put_price = short_put_option
+            .calculate_price_binomial(crate::nz!(100))
+            .unwrap();
+
+        // Short position should be negative of long position
+        assert_eq!(long_call_price, -short_call_price);
+        assert_eq!(long_put_price, -short_put_price);
+    }
+}
+
+#[cfg(test)]
+mod tests_options_black_scholes {
+    use super::*;
+    use crate::assert_decimal_eq;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::{ExpirationDate, Options};
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_new_option_call() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos_or_panic!(5790.0),
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1117),
+            Positive::ONE,
+            pos_or_panic!(5781.88),
+            dec!(0.05),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos_or_panic!(60.306_765_882_668_3),
+            dec!(1e-8)
+        );
+    }
+
+    #[test]
+    fn test_new_option_call_bis() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(61.2)),
+            pos_or_panic!(0.12594),
+            Positive::ONE,
+            pos_or_panic!(6032.18),
+            dec!(0.0),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos_or_panic!(115.56),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    fn test_new_option_put() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "SP500".to_string(),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(61.2)),
+            pos_or_panic!(0.1258),
+            Positive::ONE,
+            pos_or_panic!(6032.18),
+            dec!(0.0),
+            OptionStyle::Put,
+            Positive::ZERO,
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            pos_or_panic!(133.25),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    fn test_new_option_call_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "SP500".to_string(),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.12594),
+            Positive::ONE,
+            pos_or_panic!(6032.18),
+            dec!(0.0),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            dec!(-114.34),
+            dec!(1e-2)
+        );
+    }
+
+    #[test]
+    fn test_new_option_put_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "SP500".to_string(),
+            pos_or_panic!(6050.0),
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.12594),
+            Positive::ONE,
+            pos_or_panic!(6032.18),
+            dec!(0.0),
+            OptionStyle::Put,
+            Positive::ZERO,
+            None,
+        );
+        assert_decimal_eq!(
+            option.calculate_price_black_scholes().unwrap(),
+            dec!(-132.16),
+            dec!(1e-2)
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_calculate_implied_volatility {
+    use super::*;
+    use crate::error::VolatilityError;
+    use crate::model::types::{OptionStyle, OptionType, Side};
+    use crate::model::{ExpirationDate, Options};
+    use crate::pricing::constants::IV_TOLERANCE;
+    use positive::assert_pos_relative_eq;
+    use positive::{Positive, pos_or_panic};
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_implied_volatility_call() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos_or_panic!(5790.0), // strike
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1),     // initial iv
+            Positive::ONE,          // qty
+            pos_or_panic!(5781.88), // underlying
+            dec!(0.05),             // rate
+            OptionStyle::Call,
+            Positive::ZERO, // div
+            None,
+        );
+
+        let market_price = dec!(60.30);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.111618041),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_implied_volatility_put() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            Positive::ONE,          // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
+            OptionStyle::Put,
+            Positive::ZERO, // div
+            None,
+        );
+
+        let market_price = dec!(132.16);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.125961),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_implied_volatility_call_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            Positive::ONE,          // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
+            OptionStyle::Call,
+            Positive::ZERO, // div
+            None,
+        );
+
+        let market_price = dec!(-114.16);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.1258087),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_implied_volatility_put_short() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Short,
+            "TEST".to_string(),
+            pos_or_panic!(6050.0), // strike
+            ExpirationDate::Days(pos_or_panic!(60.0)),
+            pos_or_panic!(0.1),     // initial iv
+            Positive::ONE,          // qty
+            pos_or_panic!(6032.18), // underlying
+            dec!(0.0),              // rate
+            OptionStyle::Put,
+            Positive::ZERO, // div
+            None,
+        );
+
+        let market_price = dec!(-132.27);
+        let iv = option.calculate_implied_volatility(market_price).unwrap();
+        assert_pos_relative_eq!(
+            iv,
+            pos_or_panic!(0.12611389),
+            Positive::new_decimal(IV_TOLERANCE).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_invalid_market_price() {
+        let option = Options::default();
+        let result = option.calculate_implied_volatility(Decimal::ZERO);
+        assert!(matches!(result, Err(VolatilityError::Options(_))));
+    }
+
+    #[test]
+    fn test_expired_option() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(Positive::ZERO),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        );
+
+        let result = option.calculate_implied_volatility(dec!(2.5));
+        assert!(matches!(result, Err(VolatilityError::Options(_))));
+    }
+
+    #[test]
+    fn test_convergence_edge_cases() {
+        let option = Options::new(
+            OptionType::European,
+            Side::Long,
+            "TEST".to_string(),
+            pos_or_panic!(5790.0), // strike
+            ExpirationDate::Days(pos_or_panic!(18.0)),
+            pos_or_panic!(0.1),     // initial iv
+            Positive::ONE,          // qty
+            pos_or_panic!(5781.88), // underlying
+            dec!(0.05),             // rate
+            OptionStyle::Call,
+            Positive::ZERO, // div
+            None,
+        );
+
+        // Test with small initial vol
+        let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111328125), pos_or_panic!(0.01));
+
+        // Test with large initial vol
+        let iv = option.calculate_implied_volatility(dec!(60.30)).unwrap();
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111328125), pos_or_panic!(0.01));
     }
 }

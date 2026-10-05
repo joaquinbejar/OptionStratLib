@@ -10,14 +10,14 @@ use positive::Positive;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents the balance of a specific option position in an exchange.
 ///
 /// This struct encapsulates all the information needed to track an option position,
 /// including quantity, premium information, and profit/loss calculations.
 /// This balance is specifically designed for options trading.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Balance {
     /// Symbol or Epic of the option contract
     pub symbol: String,
@@ -178,9 +178,8 @@ impl Balance {
 }
 
 /// Represents margin information for accounts that support leverage
-#[derive(
-    DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema, Default,
-)]
+#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct MarginInfo {
     /// Available margin for new positions
     pub available_margin: Decimal,
@@ -198,7 +197,8 @@ pub struct MarginInfo {
 ///
 /// This struct provides functionality to manage and analyze a collection
 /// of option positions across different exchanges.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Portfolio {
     /// Collection of option balances
     pub balances: Vec<Balance>,

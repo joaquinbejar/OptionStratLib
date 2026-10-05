@@ -20,9 +20,9 @@
 //! ## Example
 //!
 //! ```rust
-//! use optionstratlib::model::leg::{Leg, SpotPosition};
-//! use optionstratlib::model::Position;
-//! use optionstratlib::model::types::Side;
+//! use optionstratlib_core::model::leg::{Leg, SpotPosition};
+//! use optionstratlib_core::model::Position;
+//! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
 //!
 //! // Create a spot leg
@@ -43,7 +43,6 @@ use crate::model::types::Side;
 use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Represents different types of legs in a trading strategy.
 ///
@@ -57,7 +56,8 @@ use utoipa::ToSchema;
 /// * `Spot` - Direct ownership of underlying asset
 /// * `Future` - Exchange-traded futures contract
 /// * `Perpetual` - Crypto perpetual swap contract
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum Leg {
     /// Standard option position (Call/Put).
@@ -338,8 +338,8 @@ impl From<PerpetualPosition> for Leg {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::OptionStyle;
     use crate::model::ExpirationDate;
+    use crate::model::types::OptionStyle;
     use crate::model::utils::create_sample_option_simplest;
 
     use chrono::Utc;

@@ -35,7 +35,7 @@ pub const DETERMINISTIC_RNG_DEFAULT_SEED: u64 = 0x0B_AD_C0_FF_EE_15_DE_AD;
 /// stream.
 ///
 /// ```rust
-/// use optionstratlib::utils::deterministic_rng;
+/// use optionstratlib_core::utils::deterministic_rng;
 /// use rand::RngExt;
 /// let mut rng = deterministic_rng(42);
 /// let _ = rng.random::<u64>();
@@ -108,9 +108,7 @@ pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
 #[cfg(test)]
 mod tests_get_random_element {
     use super::*;
-    use crate::chains::OptionData;
 
-    use positive::{Positive, pos_or_panic};
     use std::collections::BTreeSet;
 
     #[test]
@@ -135,40 +133,6 @@ mod tests_get_random_element {
         let random_element = get_random_element(&set);
         assert!(random_element.is_some());
         assert!((0..5).contains(random_element.unwrap()));
-    }
-
-    #[test]
-    fn test_get_random_element_with_option_data() {
-        let mut set = BTreeSet::new();
-        for i in 0..5 {
-            let option_data = OptionData::new(
-                pos_or_panic!(100.0 + i as f64), // strike_price
-                None,                            // call_bid
-                None,                            // call_ask
-                None,                            // put_bid
-                None,                            // put_ask
-                pos_or_panic!(0.2),              // implied_volatility
-                None,                            // delta
-                None,                            // volume
-                None,                            // open_interest
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            );
-            set.insert(option_data);
-        }
-
-        let random_option = get_random_element(&set);
-        assert!(random_option.is_some());
-
-        let strike = random_option.unwrap().strike_price;
-        assert!(strike >= Positive::HUNDRED && strike <= pos_or_panic!(104.0));
     }
 
     #[test]

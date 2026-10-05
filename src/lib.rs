@@ -1297,11 +1297,10 @@ extern crate core;
 /// * `model` - Core data structures and models for options and derivatives.
 ///
 /// Defines the fundamental data types and structures used throughout the library,
-/// including option contract representations, position tracking, and market data models.
+/// including option contract representations, positions, legs and trades.
 /// Serves as the foundation for all other modules.
-/// NOTE: This module must be declared first to ensure macros (pos!, spos!) are available
-/// to other modules.
-pub mod model;
+/// Defined by `optionstratlib-core` and re-exported here.
+pub use optionstratlib_core::model;
 
 /// * `analytics` - Strategy-neutral analytics: price-probability kernels and models.
 ///
@@ -1330,9 +1329,10 @@ pub mod chains;
 /// * `constants` - Library-wide mathematical and financial constants.
 ///
 /// Defines fundamental constants used throughout the library including mathematical
-/// constants (π, epsilon values), market standards (trading days per year),
-/// calculation parameters, and visualization color schemes.
-pub mod constants;
+/// constants (π, epsilon values), market standards (trading days per year)
+/// and time-unit conversions. Defined by `optionstratlib-core`; the pricing
+/// solver defaults live in [`pricing::constants`].
+pub use optionstratlib_core::constants;
 
 /// * `curves` - Tools for yield curves, term structures, and other financial curves.
 ///
@@ -1437,7 +1437,7 @@ pub mod surfaces;
 /// Collection of helper functions and utilities used across the library for
 /// data manipulation, mathematical operations, date handling, and other
 /// common tasks in financial calculations.
-pub mod utils;
+pub use optionstratlib_core::utils;
 
 /// * `visualization` - Tools for plotting and visual representation of options data.
 ///
@@ -1466,6 +1466,8 @@ pub mod series;
 /// types, traits, and functions from the OptionStratLib library. This reduces the
 /// amount of boilerplate imports needed when working with the library.
 pub mod prelude;
+
+pub use optionstratlib_core::{assert_decimal_eq, d2f, d2fu, f2d, f2du, nz};
 
 pub use model::ExpirationDate;
 pub use model::Options;

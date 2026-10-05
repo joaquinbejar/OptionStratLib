@@ -4081,3 +4081,45 @@ mod tests_apply_spread_widen_and_floor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests_random_element {
+    use super::*;
+    use crate::utils::rng::get_random_element;
+    use positive::{Positive, pos_or_panic};
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn test_get_random_element_with_option_data() {
+        let mut set = BTreeSet::new();
+        for i in 0..5 {
+            let option_data = OptionData::new(
+                pos_or_panic!(100.0 + i as f64), // strike_price
+                None,                            // call_bid
+                None,                            // call_ask
+                None,                            // put_bid
+                None,                            // put_ask
+                pos_or_panic!(0.2),              // implied_volatility
+                None,                            // delta
+                None,                            // volume
+                None,                            // open_interest
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+            set.insert(option_data);
+        }
+
+        let random_option = get_random_element(&set);
+        assert!(random_option.is_some());
+
+        let strike = random_option.unwrap().strike_price;
+        assert!(strike >= Positive::HUNDRED && strike <= pos_or_panic!(104.0));
+    }
+}

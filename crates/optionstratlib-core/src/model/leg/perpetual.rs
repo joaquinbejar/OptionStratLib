@@ -20,8 +20,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use optionstratlib::model::leg::{PerpetualPosition, MarginType};
-//! use optionstratlib::model::types::Side;
+//! use optionstratlib_core::model::leg::{PerpetualPosition, MarginType};
+//! use optionstratlib_core::model::types::Side;
 //! use positive::{pos_or_panic,Positive};
 //! use chrono::Utc;
 //! use rust_decimal_macros::dec;
@@ -48,10 +48,10 @@ use chrono::{DateTime, Utc};
 use positive::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 /// Margin type for perpetual positions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 #[serde(rename_all = "snake_case")]
 #[repr(u8)]
 pub enum MarginType {
@@ -90,7 +90,8 @@ impl std::fmt::Display for MarginType {
 /// * `funding_rate` - Current funding rate (updated periodically)
 /// * `date` - Position open timestamp
 /// * `fees` - Trading fees (maker/taker)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct PerpetualPosition {
     /// Trading pair symbol (e.g., "BTC-USDT-PERP").
     pub symbol: String,

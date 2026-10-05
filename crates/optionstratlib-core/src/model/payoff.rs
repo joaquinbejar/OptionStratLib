@@ -3,8 +3,7 @@
 //! The payoff of a contract at expiry is a pure function of its terms (spot,
 //! strike, style, side and option type). It needs no pricing model, rate,
 //! volatility or time to expiry, so it is a domain invariant owned by the
-//! core model rather than by the pricing layer. The pricing module re-exports
-//! these items under their historical `optionstratlib::pricing` paths.
+//! core model rather than by the pricing layer.
 
 use crate::constants::ZERO;
 use crate::model::decimal::finite_decimal;
@@ -28,8 +27,8 @@ use tracing::{trace, warn};
 ///
 /// ```rust
 /// use num_traits::ToPrimitive;
-/// use optionstratlib::model::payoff::{Payoff, PayoffInfo};
-/// use optionstratlib::Side;
+/// use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
+/// use optionstratlib_core::model::Side;
 /// struct CallOption;
 ///
 /// impl Payoff for CallOption {
@@ -133,10 +132,10 @@ impl PayoffInfo {
     /// # Example
     ///
     /// ```
-    /// use optionstratlib::model::payoff::PayoffInfo;
+    /// use optionstratlib_core::model::payoff::PayoffInfo;
     /// use positive::Positive;
-    /// use optionstratlib::model::types::{OptionStyle, Side};
-    /// # fn run() -> Result<(), optionstratlib::error::Error> {
+    /// use optionstratlib_core::model::types::{OptionStyle, Side};
+    /// # fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// let payoff_info = PayoffInfo {
     ///     spot: Positive::new(100.0)?,
     ///     strike: Positive::new(105.0)?,

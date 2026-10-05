@@ -1,0 +1,47 @@
+[package]
+name = "optionstratlib-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Core domain model of OptionStratLib: options, positions, legs, trades, checked Decimal helpers and their errors."
+readme = "README.md"
+keywords = ["finance", "options", "trading", "decimal"]
+categories = ["finance", "data-structures"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on every core type, plus the same derives on the
+# foundational crates whose types appear in core fields (ADR-0002).
+schema = [
+    "dep:utoipa",
+    "positive/utoipa",
+    "expiration_date/utoipa",
+    "financial_types/utoipa",
+    "option_type/utoipa",
+]
+
+[dependencies]
+chrono = { workspace = true }
+expiration_date = { workspace = true }
+financial_types = { workspace = true }
+num-traits = { workspace = true }
+option_type = { workspace = true }
+positive = { workspace = true }
+pretty-simple-display = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

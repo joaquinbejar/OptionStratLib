@@ -10,7 +10,6 @@ use positive::Positive;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use utoipa::ToSchema;
 
 #[cfg(test)]
 use positive::pos_or_panic;
@@ -27,7 +26,7 @@ use positive::pos_or_panic;
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::utils::time::TimeFrame;
+/// use optionstratlib_core::utils::time::TimeFrame;
 /// use positive::pos_or_panic;
 ///
 /// // Using standard timeframes
@@ -41,7 +40,8 @@ use positive::pos_or_panic;
 /// let periods_per_year = daily.periods_per_year(); // Returns 252.0
 /// let custom_periods = custom_period.periods_per_year(); // Returns 360.0
 /// ```
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub enum TimeFrame {
     /// 1-microsecond data.
     Microsecond,
@@ -79,7 +79,7 @@ impl TimeFrame {
     /// # Examples
     ///
     /// ```
-    /// use optionstratlib::utils::time::TimeFrame;
+    /// use optionstratlib_core::utils::time::TimeFrame;
     /// use positive::pos_or_panic;
     ///
     /// let daily = TimeFrame::Day;
@@ -209,8 +209,8 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 ///
 /// ```
 ///
-/// use optionstratlib::utils::time::convert_time_frame;
-/// use optionstratlib::utils::TimeFrame;
+/// use optionstratlib_core::utils::time::convert_time_frame;
+/// use optionstratlib_core::utils::TimeFrame;
 /// use positive::{pos_or_panic, Positive, assert_pos_relative_eq};
 ///
 /// // Convert 60 seconds to minutes
@@ -256,7 +256,7 @@ pub fn convert_time_frame(
 ///
 /// ```
 /// use tracing::info;
-/// use optionstratlib::utils::time::get_tomorrow_formatted;
+/// use optionstratlib_core::utils::time::get_tomorrow_formatted;
 /// let tomorrow = get_tomorrow_formatted();
 /// info!("{}", tomorrow); // Output will vary depending on the current date.
 /// ```
@@ -325,7 +325,7 @@ pub fn get_x_days_formatted_pos(days: Positive) -> String {
 ///
 /// ```
 /// use chrono::Local;
-/// use optionstratlib::utils::time::get_today_formatted;
+/// use optionstratlib_core::utils::time::get_today_formatted;
 ///
 /// let today_formatted = get_today_formatted();
 /// let expected_format = Local::now().date_naive().format("%d-%b-%Y").to_string().to_lowercase();
@@ -354,7 +354,7 @@ pub fn get_today_formatted() -> String {
 /// ```
 /// use chrono::{Utc, NaiveTime, Timelike};
 /// use tracing::info;
-/// use optionstratlib::utils::time::get_today_or_tomorrow_formatted;
+/// use optionstratlib_core::utils::time::get_today_or_tomorrow_formatted;
 ///
 /// info!("{}", get_today_or_tomorrow_formatted());
 /// ```

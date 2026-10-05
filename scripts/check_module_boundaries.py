@@ -27,6 +27,22 @@ Three kinds of lines are exempt from the layer rule:
 The run also prints the number of `// facade-compat` lines per layer, so
 marker creep is visible in the CI log.
 
+Once a layer has its own workspace crate (roadmap M2 onwards), two more
+checks apply, both read from `cargo metadata`:
+
+* the crate graph: every `optionstratlib-*` package may depend only on the
+  packages of the layers below it (`CRATE_LAYER`, `ALLOWED`), in any
+  dependency kind, and never on the `optionstratlib` facade. Cargo then
+  rejects at compile time any core type, error payload or public signature
+  that names a higher layer, which is what the source scan can only
+  approximate;
+* the single definition: no file under the facade's `src/` may belong to a
+  layer that a workspace crate now owns, so a moved module cannot grow a
+  second copy in the facade.
+
+Both read `cargo metadata --no-deps`, so `make check-graph` needs a Rust
+toolchain on the PATH; a failing `cargo metadata` fails the check.
+
 Exit status is 1 on any other cross-layer edge, 0 otherwise. Run
 `make check-graph`; an optional first argument names the crate root to scan
 (default: the current directory).
@@ -168,6 +184,23 @@ DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
     ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
     # `Strategable: ... + Graph` supertrait bound.
     ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
+}
+
+# Workspace package -> layer (ADR-0001 D1). Every published package carries
+# the `optionstratlib` prefix; one missing from this table fails the check.
+# Packages without the prefix (`osl-example-*`, `osl-fixture-*`, the example
+# crates) are consumers, not components, and are not checked.
+CRATE_LAYER = {
+    "optionstratlib-core": "core",
+    "optionstratlib-math": "math",
+    "optionstratlib-pricing": "pricing",
+    "optionstratlib-simulation": "simulation",
+    "optionstratlib-market": "market",
+    "optionstratlib-analytics": "analytics",
+    "optionstratlib-strategies": "strategies",
+    "optionstratlib-backtest": "backtest",
+    "optionstratlib-visualization": "visualization",
+    "optionstratlib": "facade",
 }
 
 MARKER = "// facade-compat:"
@@ -872,6 +905,99 @@ def marked_lines(src: Path = SRC) -> dict[str, int]:
     return counts
 
 
+def workspace_packages(root: Path) -> list[dict]:
+    """Workspace members with their declared dependencies, from `cargo metadata`."""
+    import json
+    import subprocess
+
+    out = subprocess.run(
+        [
+            "cargo", "metadata", "--format-version", "1", "--no-deps",
+            "--manifest-path", str(root / "Cargo.toml"),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(out.stdout)["packages"]
+
+
+def is_component(name: str) -> bool:
+    return name == "optionstratlib" or name.startswith("optionstratlib-")
+
+
+def crate_graph_violations(packages: list[dict]) -> list[str]:
+    """Reverse or unknown dependencies between OptionStratLib workspace crates.
+
+    Every dependency kind counts: a dev-dependency on a higher layer would let
+    a lower crate's own tests reach upward. The one optional edge is
+    `market -> simulation`, accepted only as an optional dependency that the
+    `synthetic` feature enables (ADR-0003).
+    """
+    found: list[str] = []
+    for package in packages:
+        name = package["name"]
+        if not is_component(name):
+            continue
+        layer = CRATE_LAYER.get(name)
+        if layer is None:
+            found.append(f"{name}: workspace crate with no layer, add it to CRATE_LAYER")
+            continue
+        synthetic = package.get("features", {}).get("synthetic", [])
+        for dep in package.get("dependencies", []):
+            target = dep["name"]
+            if not is_component(target):
+                continue
+            target_layer = CRATE_LAYER.get(target)
+            kind = dep.get("kind") or "normal"
+            if target_layer is None:
+                found.append(f"{name} -> {target} ({kind}): unknown workspace crate")
+                continue
+            if target_layer == "facade" and layer != "facade":
+                found.append(f"{name} -> {target} ({kind}): a component never depends on the facade")
+                continue
+            if target_layer in ALLOWED[layer]:
+                continue
+            if (
+                (layer, target_layer) == ("market", "simulation")
+                and dep.get("optional")
+                and f"dep:{target}" in synthetic
+            ):
+                continue
+            found.append(f"{name} ({layer}) -> {target} ({target_layer}, {kind})")
+    return found
+
+
+def file_layer(rel: str) -> str | None:
+    """Target layer of a facade source file, as `scan` assigns it."""
+    parts = rel.split("/")
+    top = parts[0].removesuffix(".rs")
+    if top in ("lib", "prelude"):
+        return "facade"
+    stem = parts[1].removesuffix(".rs") if len(parts) > 1 else "mod"
+    if top == "error":
+        return ERROR_FILE_LAYER.get(stem)
+    if top == "utils":
+        return UTILS_FILE_LAYER.get(stem)
+    return LAYER_OF.get(top)
+
+
+def facade_redefinitions(src: Path, packages: list[dict]) -> list[str]:
+    """Facade files that belong to a layer a workspace crate already owns."""
+    owners = {
+        CRATE_LAYER[p["name"]]: p["name"]
+        for p in packages
+        if CRATE_LAYER.get(p["name"]) not in (None, "facade")
+    }
+    found = []
+    for path in sorted(src.rglob("*.rs")):
+        rel = path.relative_to(src).as_posix()
+        layer = file_layer(rel)
+        if layer in owners:
+            found.append(f"src/{rel} belongs to layer {layer}, which {owners[layer]} owns")
+    return found
+
+
 def self_test() -> int:
     """Prove the scanner sees what it must and ignores what it may."""
     import tempfile
@@ -1200,6 +1326,60 @@ def self_test() -> int:
             if not ok:
                 failures += 1
             print(f"self-test {'ok' if ok else 'FAIL'}: synthetic gate, {name} (expected {expected}, got {got})")
+    # --- workspace crate graph (M2-01, carrying #507 forward)
+    def pkg(name: str, *deps: tuple, features: dict | None = None) -> dict:
+        return {
+            "name": name,
+            "features": features or {},
+            "dependencies": [
+                {"name": d[0], "kind": d[1] if len(d) > 1 else None, "optional": d[2] if len(d) > 2 else False}
+                for d in deps
+            ],
+        }
+
+    crate_cases = {
+        "core depends on nothing of ours": ([pkg("optionstratlib-core", ("serde",))], 0),
+        "core depends on the facade": ([pkg("optionstratlib-core", ("optionstratlib",))], 1),
+        "core dev-depends on the facade": ([pkg("optionstratlib-core", ("optionstratlib", "dev"))], 1),
+        "core depends on math": ([pkg("optionstratlib-core", ("optionstratlib-math",))], 1),
+        "math depends on core": ([pkg("optionstratlib-math", ("optionstratlib-core",))], 0),
+        "facade depends on core": ([pkg("optionstratlib", ("optionstratlib-core",))], 0),
+        "unknown component": ([pkg("optionstratlib-extra")], 1),
+        "unknown dependency": ([pkg("optionstratlib-core", ("optionstratlib-extra",))], 1),
+        "example consumer is not checked": ([pkg("examples_chain", ("optionstratlib",))], 0),
+        "synthetic optional edge": (
+            [pkg("optionstratlib-market", ("optionstratlib-simulation", None, True),
+                 features={"synthetic": ["dep:optionstratlib-simulation"]})],
+            0,
+        ),
+        "mandatory market -> simulation": ([pkg("optionstratlib-market", ("optionstratlib-simulation",))], 1),
+    }
+    for name, (packages, expected) in crate_cases.items():
+        got = len(crate_graph_violations(packages))
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: crate graph, {name} (expected {expected}, got {got})")
+
+    redefinition_cases = {
+        "facade model file once core is a crate": (["model/x.rs"], [pkg("optionstratlib-core")], 1),
+        "facade core error file once core is a crate": (["error/decimal.rs"], [pkg("optionstratlib-core")], 1),
+        "facade model file before extraction": (["model/x.rs"], [], 0),
+        "facade pricing file while only core is a crate": (["pricing/x.rs"], [pkg("optionstratlib-core")], 0),
+    }
+    for name, (files, packages, expected) in redefinition_cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            for rel in files:
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("")
+            got = len(facade_redefinitions(root, packages))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: single definition, {name} (expected {expected}, got {got})")
+
     # Every tolerated edge must name the issue that removes it, so M1 cannot
     # close with an undocumented production edge (roadmap M1-10).
     unowned = [f"{s} -> {d}" for (s, d), (_, owner) in DEFERRED.items() if not re.search(r"#\d+", owner)]
@@ -1266,9 +1446,24 @@ def main() -> int:
         for item in ungated:
             print(f"  {item}")
         return 1
+    packages = workspace_packages(SRC.parent)
+    reverse = crate_graph_violations(packages)
+    if reverse:
+        print("forbidden workspace crate dependencies (ADR-0001 D1/D9):")
+        for item in reverse:
+            print(f"  {item}")
+        return 1
+    duplicated = facade_redefinitions(SRC, packages)
+    if duplicated:
+        print("facade files in a layer that a workspace crate owns (one canonical definition):")
+        for item in duplicated:
+            print(f"  {item}")
+        return 1
+    crates = sorted(p["name"] for p in packages if CRATE_LAYER.get(p["name"]) not in (None, "facade"))
     deferred_count = sum(1 for key in DEFERRED if key in present)
     marks = ", ".join(f"{layer}={n}" for layer, n in sorted(marked_lines().items())) or "none"
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
+    print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
     return 0
 
 

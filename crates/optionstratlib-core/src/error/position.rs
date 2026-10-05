@@ -43,7 +43,7 @@
 //! ## Usage Example
 //!
 //! ```rust
-//! use optionstratlib::error::position::PositionError;
+//! use optionstratlib_core::error::position::PositionError;
 //!
 //! fn validate_position_size(size: f64) -> Result<(), PositionError> {
 //!     if size <= 0.0 {
@@ -528,22 +528,6 @@ impl PositionError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::strategies::base::Positionable;
-
-    struct DummyStrategy;
-    impl Positionable for DummyStrategy {}
-
-    #[test]
-    fn test_unsupported_operation() {
-        let strategy = DummyStrategy;
-        let result = strategy.get_positions();
-        assert!(matches!(
-            result,
-            Err(PositionError::StrategyError(
-                StrategyErrorKind::UnsupportedOperation { .. }
-            ))
-        ));
-    }
 
     #[test]
     fn test_error_messages() {

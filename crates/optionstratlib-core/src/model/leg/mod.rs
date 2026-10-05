@@ -37,10 +37,10 @@
 //! ## Example: Covered Call Strategy
 //!
 //! ```rust
-//! # fn main() -> Result<(), optionstratlib::error::Error> {
-//! use optionstratlib::model::leg::{Leg, SpotPosition};
-//! use optionstratlib::model::Position;
-//! use optionstratlib::model::types::Side;
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use optionstratlib_core::model::leg::{Leg, SpotPosition};
+//! use optionstratlib_core::model::Position;
+//! use optionstratlib_core::model::types::Side;
 //! use positive::{Positive, pos_or_panic};
 //!
 //! // Long 100 shares of stock
@@ -50,10 +50,9 @@
 //! // The option leg would be created from a Position
 //! // let call_leg = Leg::option(short_call_position);
 //!
-//! // Both legs can be handled uniformly via LegAble trait
-//! use optionstratlib::model::leg::LegAble;
-//! use optionstratlib::greeks::LegGreeks;
-//! tracing::info!("Spot delta: {}", spot_leg.delta()?);
+//! // Both legs can be handled uniformly via the LegAble trait
+//! use optionstratlib_core::model::leg::LegAble;
+//! tracing::info!("Spot P&L at 160: {}", spot_leg.pnl_at_price(pos_or_panic!(160.0))?);
 //! # Ok(())
 //! # }
 //! ```
@@ -61,9 +60,9 @@
 //! ## Example: Cash & Carry Arbitrage (Crypto)
 //!
 //! ```rust
-//! # fn main() -> Result<(), optionstratlib::error::Error> {
-//! use optionstratlib::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
-//! use optionstratlib::model::types::Side;
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use optionstratlib_core::model::leg::{Leg, SpotPosition, PerpetualPosition, MarginType};
+//! use optionstratlib_core::model::types::Side;
 //! use positive::{Positive, pos_or_panic};
 //! use rust_decimal_macros::dec;
 //! use chrono::Utc;
@@ -83,11 +82,11 @@
 //! let spot_leg = Leg::Spot(spot);
 //! let perp_leg = Leg::Perpetual(perp);
 //!
-//! // Net delta should be approximately zero
-//! use optionstratlib::model::leg::LegAble;
-//! use optionstratlib::greeks::LegGreeks;
-//! let net_delta = spot_leg.delta()? + perp_leg.delta()?;
-//! assert_eq!(net_delta, rust_decimal::Decimal::ZERO);
+//! // A move in the underlying leaves the hedged pair flat
+//! use optionstratlib_core::model::leg::LegAble;
+//! let price = pos_or_panic!(51000.0);
+//! let net_pnl = spot_leg.pnl_at_price(price)? + perp_leg.pnl_at_price(price)?;
+//! assert_eq!(net_pnl, rust_decimal::Decimal::ZERO);
 //! # Ok(())
 //! # }
 //! ```
