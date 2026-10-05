@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failed a few tests in, on source that had not changed and that 0.37.3 had
   covered successfully minutes earlier. The flag now carries an explicit
   1200s per binary, in the workflow and in both `make coverage` targets.
+- **CI and both `make coverage` targets require `cargo-tarpaulin` >= 0.37.5.**
+  CI runs the latest stable Rust, and releases before 0.37.5 cannot read Rust
+  1.99 coverage data. The install now passes `--locked --version '>=0.37.5'`,
+  which also replaces an older binary restored from the `~/.cargo/bin` cache.
 
 ### Changed
 
