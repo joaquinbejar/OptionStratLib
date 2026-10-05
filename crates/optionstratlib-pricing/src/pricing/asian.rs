@@ -23,7 +23,7 @@
 //! - Turnbull & Wakeman (1991) for arithmetic average approximation
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d1, d2};
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
@@ -160,8 +160,10 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         // `b = 0`, where both collapse to `S`, and differ for every other
         // carry.
         let t_dec = t.to_dec();
-        let discount = d_exp(
-            d_mul(-r, t_dec, "pricing::asian::geometric::det::neg_rt")?,
+        let discount = discount_factor(
+            r,
+            t_dec,
+            "pricing::asian::geometric::det::neg_rt",
             "pricing::asian::geometric::det::discount",
         )?;
         let carry = d_sub(r, q, "pricing::asian::geometric::det::carry")?;
@@ -214,8 +216,10 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
 
     let t_dec = t.to_dec();
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::asian::geometric::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::asian::geometric::neg_rt",
         "pricing::asian::geometric::discount",
     )?;
     // e^((b_adj - r) T): the geometric-average carry replaces the spot drift.
@@ -284,8 +288,10 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
     }
 
     let t_dec = t.to_dec();
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::asian::arithmetic::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::asian::arithmetic::neg_rt",
         "pricing::asian::arithmetic::discount",
     )?;
 

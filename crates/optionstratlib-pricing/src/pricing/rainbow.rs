@@ -35,8 +35,9 @@
 //! - Higher correlation → higher worst-of option value
 
 use crate::error::PricingError;
+use crate::kernels::discount_factor;
 use optionstratlib_core::model::Options;
-use optionstratlib_core::model::decimal::{d_div, d_exp, d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, RainbowType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -237,8 +238,10 @@ fn discounted_mean(
     t: Decimal,
     num_simulations: usize,
 ) -> Result<Decimal, PricingError> {
-    let discount = d_exp(
-        d_mul(-r, t, "pricing::rainbow::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t,
+        "pricing::rainbow::neg_rt",
         "pricing::rainbow::discount",
     )?;
     let discounted = d_mul(discount, payoff_sum, "pricing::rainbow::discounted_sum")?;

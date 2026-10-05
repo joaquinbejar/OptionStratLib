@@ -24,9 +24,9 @@
 //! - Outperformance options
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -154,16 +154,20 @@ fn margrabe_formula(
 
     let s1_pv = d_mul(
         s1,
-        d_exp(
-            d_mul(-q1, t, "pricing::exchange::neg_q1t")?,
+        discount_factor(
+            q1,
+            t,
+            "pricing::exchange::neg_q1t",
             "pricing::exchange::discount1",
         )?,
         "pricing::exchange::s1_pv",
     )?;
     let s2_pv = d_mul(
         s2,
-        d_exp(
-            d_mul(-q2, t, "pricing::exchange::neg_q2t")?,
+        discount_factor(
+            q2,
+            t,
+            "pricing::exchange::neg_q2t",
             "pricing::exchange::discount2",
         )?,
         "pricing::exchange::s2_pv",

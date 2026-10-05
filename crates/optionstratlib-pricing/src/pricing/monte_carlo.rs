@@ -1,11 +1,10 @@
 use crate::error::PricingError;
+use crate::kernels::discount_factor;
 use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter, finite_decimal,
-};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter, finite_decimal};
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
@@ -201,12 +200,10 @@ pub fn price_option_monte_carlo(
         option.dividend_yield.to_dec(),
         "pricing::monte_carlo::effective_rate",
     )?;
-    let discount_factor = d_exp(
-        d_mul(
-            -effective_rate,
-            option.expiration_date.get_years()?.to_dec(),
-            "pricing::monte_carlo::discount_exponent",
-        )?,
+    let discount_factor = discount_factor(
+        effective_rate,
+        option.expiration_date.get_years()?.to_dec(),
+        "pricing::monte_carlo::discount_exponent",
         "pricing::monte_carlo::discount_factor",
     )?;
 

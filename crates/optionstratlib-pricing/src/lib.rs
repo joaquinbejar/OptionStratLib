@@ -73,5 +73,10 @@ pub mod volatility;
 /// Errors raised by the pricing layer.
 pub mod error;
 
+// Formulas shared by `pricing` and `greeks` (normal distribution, d1/d2,
+// discounting). Private: it is the neutral bottom of the crate's internal
+// graph and depends on neither module (#523).
+mod kernels;
+
 /// Version of the `optionstratlib-pricing` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

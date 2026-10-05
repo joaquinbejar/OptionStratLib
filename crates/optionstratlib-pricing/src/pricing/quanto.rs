@@ -25,7 +25,7 @@
 //! - Cross-border structured products
 
 use crate::error::PricingError;
-use crate::greeks::big_n;
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -165,8 +165,10 @@ fn quanto_price(
 
     let sqrt_t = d_sqrt(t, "pricing::quanto::sqrt_t")?;
     let denominator = d_mul(sigma_s, sqrt_t, "pricing::quanto::denominator")?;
-    let discount = d_exp(
-        d_mul(-r_d, t, "pricing::quanto::neg_rt")?,
+    let discount = discount_factor(
+        r_d,
+        t,
+        "pricing::quanto::neg_rt",
         "pricing::quanto::discount",
     )?;
 

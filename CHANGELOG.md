@@ -222,6 +222,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Shared pricing and Greek formulas live in one private module**
+  (#523). `optionstratlib-pricing` gains a crate-private `kernels` module
+  holding the formulas pricing models and Greeks share: `d1`, `d2`, `big_n`,
+  the Black-Scholes and Black-76 d-value helpers (the two copies of
+  `calculate_d1_d2_and_time` merged), and the `e^(-rT)` discount factor
+  that 50 sites computed identically. Pricing no longer imports from
+  `greeks`; the only edge between them is the numerical Greeks re-pricing
+  through `pricing`, and `make check-graph` now enforces that internal
+  direction. Public paths (`greeks::{d1, d2, big_n,
+  calculate_d_values_black_76}`) are unchanged re-exports, and every price,
+  Greek and error message is bit-identical (checked against a golden dump of
+  every pricer and Greek). Formulas that only look alike stay with their
+  model, each with a comment saying why. Eleven cross-check tests pin the
+  pricer and Greek paths to the same d-values and parities.
+
 - **Breaking: dependencies moved to the utoipa 6 line.** `utoipa` 5.5 -> 6.0,
   `positive` 0.6 -> 0.7, `expiration_date` 0.3 -> 0.4, `option_type`
   0.3 -> 0.4 and `financial_types` 0.2 -> 0.3. All five appear in the public

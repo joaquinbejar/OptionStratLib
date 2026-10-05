@@ -25,7 +25,7 @@
 //! (1991) closed-form solutions for continuous monitoring.
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d1, d2};
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sqrt, d_sub};
@@ -95,12 +95,16 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
 
     let t_dec = t.to_dec();
     let b = d_sub(r, q, "pricing::lookback::floating::carry")?; // cost of carry
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::lookback::floating::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::lookback::floating::neg_rt",
         "pricing::lookback::floating::discount",
     )?;
-    let dividend_discount = d_exp(
-        d_mul(-q, t_dec, "pricing::lookback::floating::neg_qt")?,
+    let dividend_discount = discount_factor(
+        q,
+        t_dec,
+        "pricing::lookback::floating::neg_qt",
         "pricing::lookback::floating::dividend_discount",
     )?;
 
@@ -430,12 +434,16 @@ fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
 
     let t_dec = t.to_dec();
     let b = d_sub(r, q, "pricing::lookback::fixed::carry")?;
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::lookback::fixed::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::lookback::fixed::neg_rt",
         "pricing::lookback::fixed::discount",
     )?;
-    let dividend_discount = d_exp(
-        d_mul(-q, t_dec, "pricing::lookback::fixed::neg_qt")?,
+    let dividend_discount = discount_factor(
+        q,
+        t_dec,
+        "pricing::lookback::fixed::neg_qt",
         "pricing::lookback::fixed::dividend_discount",
     )?;
 

@@ -29,7 +29,7 @@
 //! Gamma can be extremely large near expiration when near the strike.
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d1, d2};
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
@@ -103,8 +103,10 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
 
     let t_dec = t.to_dec();
     let b = d_sub(r, q, "pricing::binary::cash::carry")?;
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::binary::cash::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::binary::cash::neg_rt",
         "pricing::binary::cash::discount",
     )?;
 
@@ -175,8 +177,10 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
 
     let t_dec = t.to_dec();
     let b = d_sub(r, q, "pricing::binary::asset::carry")?;
-    let dividend_discount = d_exp(
-        d_mul(-q, t_dec, "pricing::binary::asset::neg_qt")?,
+    let dividend_discount = discount_factor(
+        q,
+        t_dec,
+        "pricing::binary::asset::neg_qt",
         "pricing::binary::asset::dividend_discount",
     )?;
 

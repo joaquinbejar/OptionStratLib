@@ -4,7 +4,8 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::error::greeks::{CalculationErrorKind, GreeksError};
-use crate::greeks::utils::{big_n, d1, n};
+use crate::greeks::utils::n;
+use crate::kernels::{big_n, d1, discount_factor};
 use optionstratlib_core::constants::{TRADING_DAYS, ZERO};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
@@ -538,6 +539,8 @@ pub trait Greeks {
 /// the option type is European, that the time to expiry is non-zero and that the
 /// implied volatility is non-zero. Each greek keeps its own degenerate branch
 /// for the cases this cannot represent.
+// Not in `crate::kernels`: a Greek-only memo whose `sqrt(T)` comes from
+// `p_sqrt` (not `d_sqrt` as in `kernels::d2`) under its own error labels.
 #[derive(Debug, Clone)]
 pub(crate) struct BlackScholesKernels {
     /// Time to expiry in years.
@@ -656,6 +659,8 @@ impl BlackScholesKernels {
     /// negative that the factor is below the representable scale flushes to
     /// zero, which is the discount factor's limit.
     fn exp_minus_qt(&self) -> Result<Decimal, GreeksError> {
+        // Not `kernels::discount_factor`: the exponent is formed as `-T * q`,
+        // operand order differs from `-q * T`, so it keeps its own two steps.
         cached(&self.exp_minus_qt, || {
             let exponent = d_mul(
                 -self.t.to_dec(),
@@ -669,12 +674,12 @@ impl BlackScholesKernels {
     /// `exp(-rT)`, the risk-free discount factor. See [`Self::exp_minus_qt`].
     fn exp_minus_rt(&self) -> Result<Decimal, GreeksError> {
         cached(&self.exp_minus_rt, || {
-            let exponent = d_mul(
-                -self.r,
+            Ok(discount_factor(
+                self.r,
                 self.t.to_dec(),
                 "greeks::kernels::exp_minus_rt::exponent",
-            )?;
-            Ok(d_exp(exponent, "greeks::kernels::exp_minus_rt")?)
+                "greeks::kernels::exp_minus_rt",
+            )?)
         })
     }
 }
@@ -5313,7 +5318,7 @@ pub mod tests_color_equations {
 #[cfg(test)]
 mod tests_shared_kernel_equivalence {
     use super::*;
-    use crate::greeks::utils::d2 as fresh_d2_fn;
+    use crate::greeks::d2 as fresh_d2_fn;
     use optionstratlib_core::model::types::OptionType;
     use optionstratlib_core::model::{ExpirationDate, Options};
     use optionstratlib_core::{model::Positive, pos_or_panic};

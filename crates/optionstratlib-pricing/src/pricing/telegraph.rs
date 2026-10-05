@@ -83,6 +83,7 @@
 //! for your specific model.
 
 use crate::error::PricingError;
+use crate::kernels::discount_factor;
 use crate::pricing::utils::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::error::decimal::DecimalError;
@@ -468,12 +469,12 @@ pub fn telegraph(
     // Build the discount exponent through a checked multiplication so
     // an overflow on `-risk_free_rate * time_to_expiration` is tagged
     // before `.exp()` compresses it back into a bounded range.
-    let discount_exponent = d_mul(
-        -option.risk_free_rate,
+    let discount = discount_factor(
+        option.risk_free_rate,
         option.time_to_expiration()?.to_dec(),
         "pricing::telegraph::discount_exponent",
+        "pricing::telegraph::discount",
     )?;
-    let discount = d_exp(discount_exponent, "pricing::telegraph::discount")?;
     let result = d_mul(payoff, discount, "pricing::telegraph::price")?;
     Ok(result)
 }

@@ -49,7 +49,7 @@
 //! T = 0.5, r = b = 0.08, σ = 0.25) prices at 6.1071.
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d1, d2};
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
@@ -119,8 +119,10 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     if sigma == Positive::ZERO {
         // Zero vol: deterministic choice
-        let discount_t = d_exp(
-            d_mul(-r, t_big.to_dec(), "pricing::chooser::zero_vol::neg_rt")?,
+        let discount_t = discount_factor(
+            r,
+            t_big.to_dec(),
+            "pricing::chooser::zero_vol::neg_rt",
             "pricing::chooser::zero_vol::discount",
         )?;
         let forward = d_mul(
@@ -251,12 +253,16 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
 
     // Discount factors. Every leg settles at T, the `y` legs included: the
     // choice date only fixes which branch survives, not when it pays.
-    let dividend_discount_t = d_exp(
-        d_mul(-q, t_big_dec, "pricing::chooser::neg_qt")?,
+    let dividend_discount_t = discount_factor(
+        q,
+        t_big_dec,
+        "pricing::chooser::neg_qt",
         "pricing::chooser::dividend_discount_t",
     )?;
-    let discount_t = d_exp(
-        d_mul(-r, t_big_dec, "pricing::chooser::neg_rt")?,
+    let discount_t = discount_factor(
+        r,
+        t_big_dec,
+        "pricing::chooser::neg_rt",
         "pricing::chooser::discount_t",
     )?;
 
@@ -326,12 +332,16 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
 
     let t_dec = t.to_dec();
-    let dividend_discount = d_exp(
-        d_mul(-q, t_dec, "pricing::chooser::expiry::neg_qt")?,
+    let dividend_discount = discount_factor(
+        q,
+        t_dec,
+        "pricing::chooser::expiry::neg_qt",
         "pricing::chooser::expiry::dividend_discount",
     )?;
-    let discount = d_exp(
-        d_mul(-r, t_dec, "pricing::chooser::expiry::neg_rt")?,
+    let discount = discount_factor(
+        r,
+        t_dec,
+        "pricing::chooser::expiry::neg_rt",
         "pricing::chooser::expiry::discount",
     )?;
 

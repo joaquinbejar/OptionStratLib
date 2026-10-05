@@ -4,9 +4,9 @@
    Date: 2026-04-26
 ******************************************************************************/
 use crate::error::PricingError;
-use crate::greeks::{big_n, calculate_d_values_black_76};
+use crate::kernels::{big_n, calculate_d_values_black_76, d_values_and_time, discount_factor};
 use optionstratlib_core::model::Options;
-use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 #[cfg(test)]
@@ -105,7 +105,7 @@ use tracing::{instrument, trace};
     side = ?option.side,
 ))]
 pub fn black_76(option: &Options) -> Result<Decimal, PricingError> {
-    let (d1, d2, expiry_time) = calculate_d1_d2_and_time(option)?;
+    let (d1, d2, expiry_time) = d_values_and_time(option, calculate_d_values_black_76)?;
     match option.option_type {
         OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
         OptionType::American => Err(PricingError::unsupported_option_type(
@@ -116,12 +116,6 @@ pub fn black_76(option: &Options) -> Result<Decimal, PricingError> {
         }
         _ => Err(PricingError::unsupported_option_type("exotic", "Black-76")),
     }
-}
-
-fn calculate_d1_d2_and_time(option: &Options) -> Result<(Decimal, Decimal, Decimal), PricingError> {
-    let calculated_time_to_expiry: Decimal = option.time_to_expiration()?.to_dec();
-    let (d1, d2) = calculate_d_values_black_76(option)?;
-    Ok((d1, d2, calculated_time_to_expiry))
 }
 
 fn calculate_european_option_price(
@@ -158,8 +152,12 @@ fn calculate_call_option_price(
     let big_n_d2 = big_n(d2)?;
 
     // e^(-rT) * [F * N(d1) - K * N(d2)]
-    let rt = d_mul(-option.risk_free_rate, t, "pricing::black_76::call::rt")?;
-    let discount_factor = d_exp(rt, "pricing::black_76::call::discount")?;
+    let discount = discount_factor(
+        option.risk_free_rate,
+        t,
+        "pricing::black_76::call::rt",
+        "pricing::black_76::call::discount",
+    )?;
 
     let f_leg = d_mul(
         option.underlying_price.to_dec(),
@@ -172,15 +170,11 @@ fn calculate_call_option_price(
         "pricing::black_76::call::k_leg",
     )?;
     let undiscounted = d_sub(f_leg, k_leg, "pricing::black_76::call::undiscounted")?;
-    let result = d_mul(
-        discount_factor,
-        undiscounted,
-        "pricing::black_76::call::price",
-    )?;
+    let result = d_mul(discount, undiscounted, "pricing::black_76::call::price")?;
 
     trace!(
         "Black-76 Call: F={}, K={}, e^(-rT)={}, N(d1)={}, N(d2)={}, price={}",
-        option.underlying_price, option.strike_price, discount_factor, big_n_d1, big_n_d2, result
+        option.underlying_price, option.strike_price, discount, big_n_d1, big_n_d2, result
     );
     Ok(result)
 }
@@ -195,8 +189,12 @@ fn calculate_put_option_price(
     let big_n_neg_d2 = big_n(-d2)?;
 
     // e^(-rT) * [K * N(-d2) - F * N(-d1)]
-    let rt = d_mul(-option.risk_free_rate, t, "pricing::black_76::put::rt")?;
-    let discount_factor = d_exp(rt, "pricing::black_76::put::discount")?;
+    let discount = discount_factor(
+        option.risk_free_rate,
+        t,
+        "pricing::black_76::put::rt",
+        "pricing::black_76::put::discount",
+    )?;
 
     let k_leg = d_mul(
         option.strike_price.to_dec(),
@@ -209,20 +207,11 @@ fn calculate_put_option_price(
         "pricing::black_76::put::f_leg",
     )?;
     let undiscounted = d_sub(k_leg, f_leg, "pricing::black_76::put::undiscounted")?;
-    let result = d_mul(
-        discount_factor,
-        undiscounted,
-        "pricing::black_76::put::price",
-    )?;
+    let result = d_mul(discount, undiscounted, "pricing::black_76::put::price")?;
 
     trace!(
         "Black-76 Put: F={}, K={}, e^(-rT)={}, N(-d1)={}, N(-d2)={}, price={}",
-        option.underlying_price,
-        option.strike_price,
-        discount_factor,
-        big_n_neg_d1,
-        big_n_neg_d2,
-        result
+        option.underlying_price, option.strike_price, discount, big_n_neg_d1, big_n_neg_d2, result
     );
     Ok(result)
 }

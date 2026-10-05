@@ -58,11 +58,12 @@
 
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
-use crate::greeks::utils::{big_n, d1, d2, n};
+use crate::greeks::utils::n;
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 #[cfg(test)]
@@ -151,6 +152,8 @@ fn delta_at_expiry(option: &Options) -> Decimal {
 
 /// Computes (`d1`, `d2`) for Garman–Kohlhagen using `b = r_d − r_f` as the
 /// drift term, mirroring the helper used by the GK pricing kernel.
+// Not `kernels::calculate_d_values`: it reads the years once, before the
+// carry, under the GK error label, so the error precedence differs.
 fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
     let years = option.expiration_date.get_years()?;
     let b = cost_of_carry(option)?;
@@ -209,8 +212,10 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = d_exp(
-        d_mul(-r_f, t, "greeks::gk::discount_foreign::exponent")?,
+    let exp_neg_rf_t = discount_factor(
+        r_f,
+        t,
+        "greeks::gk::discount_foreign::exponent",
         "greeks::gk::discount_foreign",
     )?;
 
@@ -259,8 +264,10 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = d_exp(
-        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+    let exp_neg_rf_t = discount_factor(
+        r_f,
+        t.to_dec(),
+        "greeks::gk::discount_foreign::exponent",
         "greeks::gk::discount_foreign",
     )?;
     let s = option.underlying_price.to_dec();
@@ -313,8 +320,10 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
     let r_f = option.dividend_yield.to_dec();
-    let exp_neg_rf_t = d_exp(
-        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+    let exp_neg_rf_t = discount_factor(
+        r_f,
+        t.to_dec(),
+        "greeks::gk::discount_foreign::exponent",
         "greeks::gk::discount_foreign",
     )?;
     let s = option.underlying_price.to_dec();
@@ -370,12 +379,16 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let k = option.strike_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
     let sqrt_t = p_sqrt(&t, "greeks::garman_kohlhagen::theta_gk")?.to_dec();
-    let exp_neg_rd_t = d_exp(
-        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+    let exp_neg_rd_t = discount_factor(
+        r_d,
+        t.to_dec(),
+        "greeks::gk::discount_domestic::exponent",
         "greeks::gk::discount_domestic",
     )?;
-    let exp_neg_rf_t = d_exp(
-        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+    let exp_neg_rf_t = discount_factor(
+        r_f,
+        t.to_dec(),
+        "greeks::gk::discount_foreign::exponent",
         "greeks::gk::discount_foreign",
     )?;
 
@@ -454,8 +467,10 @@ pub fn rho_domestic_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_d = option.risk_free_rate;
     let k = option.strike_price.to_dec();
-    let exp_neg_rd_t = d_exp(
-        d_mul(-r_d, t.to_dec(), "greeks::gk::discount_domestic::exponent")?,
+    let exp_neg_rd_t = discount_factor(
+        r_d,
+        t.to_dec(),
+        "greeks::gk::discount_domestic::exponent",
         "greeks::gk::discount_domestic",
     )?;
 
@@ -511,8 +526,10 @@ pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
 
     let r_f = option.dividend_yield.to_dec();
     let s = option.underlying_price.to_dec();
-    let exp_neg_rf_t = d_exp(
-        d_mul(-r_f, t.to_dec(), "greeks::gk::discount_foreign::exponent")?,
+    let exp_neg_rf_t = discount_factor(
+        r_f,
+        t.to_dec(),
+        "greeks::gk::discount_foreign::exponent",
         "greeks::gk::discount_foreign",
     )?;
 

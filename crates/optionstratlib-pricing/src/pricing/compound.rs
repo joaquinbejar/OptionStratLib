@@ -32,7 +32,7 @@
 //! max(0, underlying_option_value(T1) - K1) at time T1.
 
 use crate::error::PricingError;
-use crate::greeks::{big_n, d1, d2};
+use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
@@ -289,8 +289,10 @@ fn price_compound(
 
     if sigma == Positive::ZERO {
         // Degenerate case
-        let discount = d_exp(
-            d_mul(-r, t1.to_dec(), "pricing::compound::zero_vol::neg_rt")?,
+        let discount = discount_factor(
+            r,
+            t1.to_dec(),
+            "pricing::compound::zero_vol::neg_rt",
             "pricing::compound::zero_vol::discount",
         )?;
         let forward_value = d_mul(
@@ -390,16 +392,22 @@ fn price_compound(
     let d2_t2 = d2(s, k2, b, t2, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
 
-    let discount_t1 = d_exp(
-        d_mul(-r, t1_dec, "pricing::compound::neg_rt1")?,
+    let discount_t1 = discount_factor(
+        r,
+        t1_dec,
+        "pricing::compound::neg_rt1",
         "pricing::compound::discount_t1",
     )?;
-    let discount_t2 = d_exp(
-        d_mul(-r, t2_dec, "pricing::compound::neg_rt2")?,
+    let discount_t2 = discount_factor(
+        r,
+        t2_dec,
+        "pricing::compound::neg_rt2",
         "pricing::compound::discount_t2",
     )?;
-    let dividend_discount_t2 = d_exp(
-        d_mul(-q, t2_dec, "pricing::compound::neg_qt2")?,
+    let dividend_discount_t2 = discount_factor(
+        q,
+        t2_dec,
+        "pricing::compound::neg_qt2",
         "pricing::compound::dividend_discount_t2",
     )?;
 
