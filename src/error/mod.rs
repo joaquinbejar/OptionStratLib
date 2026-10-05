@@ -121,6 +121,7 @@
 /// * Range analysis
 /// * Probability distributions
 /// * Market scenarios
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod probability;
 
 /// ### Strategy Errors (`StrategyError`)
@@ -129,15 +130,20 @@ pub mod probability;
 /// * Break-even analysis
 /// * Profit/Loss calculations
 /// * Operation validation
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod strategies;
 
 /// Backtest-owned failures (a strategy driven through a simulation).
+#[cfg(all(feature = "market", feature = "simulation"))]
 mod backtesting;
 
 /// Analytics-owned projection failures (curves and surfaces from option data).
+#[cfg(all(feature = "market", feature = "simulation"))]
 mod projections;
 
+#[cfg(all(feature = "market", feature = "simulation"))]
 mod graph;
+#[cfg(all(feature = "market", feature = "simulation"))]
 mod transaction;
 
 /// ### Simulation Errors (`SimulationError`)
@@ -146,11 +152,13 @@ mod transaction;
 /// * Monte Carlo simulation errors
 /// * Stochastic process parameter validation
 /// * Step calculation issues
+#[cfg(feature = "simulation")]
 pub mod simulation;
 
 /// ### Unified Error Type
 /// Top-level error type that encompasses all errors in the library.
 /// Provides a single error type for unified error handling across modules.
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
@@ -162,25 +170,36 @@ pub use optionstratlib_core::error::{
 
 /// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and
 /// the metrics extracted from them.
+#[cfg(feature = "math")]
 pub use optionstratlib_math::error::{
     CurveError, CurvesResult, InterpolationError, MetricsError, SurfaceError, curves,
 };
 
 /// Pricing errors (`optionstratlib-pricing`): pricing models, Greeks and
 /// volatility solvers.
+#[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::error::{
     GreeksError, PricingError, PricingResult, VolatilityError, greeks, pricing,
 };
 
 /// Market errors (`optionstratlib-market`): option chains, series and
 /// OHLCV readers.
+#[cfg(feature = "market")]
 pub use optionstratlib_market::error::{ChainError, OhlcvError, chains};
 
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use backtesting::BacktestError;
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use graph::GraphError;
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use probability::ProbabilityError;
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use projections::ProjectionError;
+#[cfg(feature = "simulation")]
 pub use simulation::{SimulationError, SimulationResult};
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use strategies::StrategyError;
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use transaction::TransactionError;
+#[cfg(all(feature = "market", feature = "simulation"))]
 pub use unified::Error;

@@ -1,0 +1,22 @@
+# Consumer fixture: the `optionstratlib` facade with only its `pricing`
+# capability (ADR-0002 Decision 2, #528). Excluded from the root workspace so
+# feature unification with the other members cannot widen its graph; built
+# with `--manifest-path`.
+[package]
+name = "osl-fixture-facade-pricing"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: the optionstratlib facade built with the pricing feature alone."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib = { path = "../../..", version = "0.22.0", default-features = false, features = ["pricing"] }
+# The defining crates, named directly only to prove the facade paths are the
+# same items.
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

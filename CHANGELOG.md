@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The facade routes `math`, `pricing`, `market` and `simulation` through
+  features** (#528, ADR-0002 Decision 2). `optionstratlib-math`,
+  `optionstratlib-pricing` and `optionstratlib-market` become optional
+  dependencies of the facade, enabled by features of the same name
+  (`pricing` implies `math`, `market` implies `pricing`); `simulation`
+  implies `pricing` only. `synthetic`, `io` and `async` now imply `market`,
+  and `synthetic` and `plotly` also imply `simulation`. The default enables
+  all of them, so the default surface is unchanged. With
+  `default-features = false` the facade is the core layer alone: add
+  `features = ["pricing"]` for pricing, Greeks and volatility without market,
+  I/O, async or charts, or `["market"]` for chains and series without I/O or
+  simulation. Until analytics, pnl, risk, metrics, strategies, backtesting
+  and visualization leave the facade (M4 to M6) they, the unified
+  `error::Error` and their `prelude` items need both `market` and
+  `simulation`; every other `prelude` group follows its own capability. The
+  facade test suites and benches declare `required-features = ["market",
+  "simulation"]`, `make lint` runs Clippy for each capability on its own, CI
+  builds the pricing-only and market-only facades, and the minimal market
+  feature-tree fixture is now resolved with `--features market`. Two
+  consumer fixtures, `fixtures/consumers/facade-pricing` and
+  `facade-market`, use the facade with one capability each through the
+  `prelude` and the canonical paths, prove those paths are the component
+  items, and pin their graphs (`make check-fixtures`,
+  `make check-consumer-facade`, `make test-consumer-facade`, all in CI). A stale
+  note claiming the analytics items kept historical `chains` paths is gone.
+
 - **Market file I/O sits behind an `io` feature** (#525, ADR-0003).
   `optionstratlib-market` gains `io` (`csv`, `zip`) and `async` now implies
   it. Behind `io`:

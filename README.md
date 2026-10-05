@@ -380,10 +380,12 @@ The library is being split into focused crates. Each one can be used on
 its own, and this crate (the `optionstratlib` facade) re-exports them, so
 the paths below are the same types whichever crate you import them from.
 
-| Crate | Facade paths | Contents |
-| --- | --- | --- |
-| `optionstratlib-core` | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
-| `optionstratlib-math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
+| Crate | Facade feature | Facade paths | Contents |
+| --- | --- | --- | --- |
+| `optionstratlib-core` | always | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
+| `optionstratlib-math` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
+| `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `VolatilityError` and the `error::greeks` and `error::pricing` modules) | pricing models, Greeks, implied and historical volatility |
+| `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 
 Each facade path is an explicit module or item re-export (`pub use
 optionstratlib_core::model;`, `pub use
@@ -391,11 +393,20 @@ optionstratlib_core::error::DecimalError`), never a glob over a
 component's root, so
 `optionstratlib::model::Options` *is* `optionstratlib_core::model::Options`.
 Depend on a component directly when you need only that layer; its own
-docs list its entry points. The rest of the library (pricing, market,
-analytics, strategies, simulation, backtesting, visualization) still lives
-in this crate and moves out milestone by milestone. Until then the `math`
-and `schema` capabilities that ADR-0002 routes through facade features are
-always on, which is what the facade default enables anyway.
+docs list its entry points, or enable only its facade feature:
+
+```toml
+[dependencies]
+# pricing, greeks and volatility, without market data, I/O or charts
+optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+```
+
+The rest of the library (analytics, pnl, risk, metrics, strategies,
+backtesting, visualization, and `simulation` behind its own feature)
+still lives in this crate and moves out milestone by milestone. Until then
+those modules, the unified `error::Error` and their `prelude` items need
+both `market` and `simulation`, and the `schema` derives stay always on;
+the facade default enables all of it.
 
 ### Module Boundaries
 
@@ -437,8 +448,9 @@ Two rules make the graph checkable rather than aspirational:
   types live in the same directory. `src/utils` is partitioned the same
   way, per file.
 - **The one optional edge is `market -> simulation`, gated by
-  `synthetic`.** Building with `default-features = false` leaves a market
-  surface that names no simulation type, including through `ChainError`.
+  `synthetic`.** Building with `default-features = false, features =
+  ["market"]` leaves a market surface that names no simulation type,
+  including through `ChainError`.
 
 #### Enforcement
 
@@ -912,16 +924,24 @@ The library includes optional features for enhanced functionality:
 optionstratlib = { version = "0.22.0", features = ["plotly"] }
 ```
 
-- `plotly`: Enables interactive visualization using plotly.rs
+- `math`, `pricing`, `market` (default): the component crates of the same
+  name and their facade paths (see [Workspace Crates](#workspace-crates)).
+  Each implies the one below it, and `pricing` alone resolves no market,
+  I/O, async or visualization package
+- `simulation` (default): random walks and simulators; implies `pricing`
+  but not `market`
+- `plotly`: Enables interactive visualization using plotly.rs (implies
+  `market` and `simulation`, which `visualization` renders)
 - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
   `default-features = false` drops it, and `csv` and `zip` with it
-- `async`: asynchronous versions of that I/O (implies `io`; tokio + reqwest + futures)
+- `async`: asynchronous versions of that I/O (implies `market` and `io`; adds tokio)
 - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
   (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
-  simulation failures arrive as `ChainError::Generator`; disable it with
-  `default-features = false` for a market surface that names no simulation type at all.
+  simulation failures arrive as `ChainError::Generator`; implies `market` and
+  `simulation`. Leave it out (`default-features = false, features = ["market"]`)
+  for a market surface that names no simulation type at all.
   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
   dependency graphs
 

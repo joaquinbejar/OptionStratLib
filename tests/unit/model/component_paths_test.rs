@@ -1,4 +1,4 @@
-//! Facade paths and direct-component paths name the same types (#520).
+//! Facade paths and direct-component paths name the same types (#520, #528).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -118,4 +118,89 @@ fn test_core_modules_root_types_and_macros_through_facade() {
         (through_facade_macro, through_core_macro),
         (Ok(a), Ok(b)) if a == b && a == dec!(1.5)
     ));
+}
+
+/// Compiles only when both arguments have the same type. Every function item
+/// has its own type, so passing the facade path and the component path of a
+/// function proves the facade re-exports that function rather than wrapping it.
+fn same_item<T>(_: T, _: T) {}
+
+fn pricing_engine(
+    value: optionstratlib_pricing::pricing::GenericPricingEngine,
+) -> optionstratlib_pricing::pricing::GenericPricingEngine {
+    value
+}
+
+fn market_chain(
+    value: optionstratlib_market::chains::OptionChain,
+) -> optionstratlib_market::chains::OptionChain {
+    value
+}
+
+fn market_series(
+    value: optionstratlib_market::series::OptionSeries,
+) -> optionstratlib_market::series::OptionSeries {
+    value
+}
+
+#[test]
+fn test_pricing_items_through_facade_modules_and_prelude() {
+    same_item(
+        optionstratlib::pricing::black_scholes,
+        optionstratlib_pricing::pricing::black_scholes,
+    );
+    same_item(
+        optionstratlib::prelude::black_scholes,
+        optionstratlib_pricing::pricing::black_scholes,
+    );
+    same_item(
+        optionstratlib::greeks::delta,
+        optionstratlib_pricing::greeks::delta,
+    );
+    same_item(
+        optionstratlib::volatility::implied_volatility,
+        optionstratlib_pricing::volatility::implied_volatility,
+    );
+
+    let engine = pricing_engine(optionstratlib::pricing::GenericPricingEngine::ClosedFormBS);
+    assert!(matches!(
+        engine,
+        optionstratlib::pricing::GenericPricingEngine::ClosedFormBS
+    ));
+
+    let option = facade_option();
+    let through_facade = optionstratlib::pricing::black_scholes(&option);
+    let through_component = optionstratlib_pricing::pricing::black_scholes(&option);
+    assert!(matches!(
+        (through_facade, through_component),
+        (Ok(a), Ok(b)) if a == b && a > Decimal::ZERO
+    ));
+
+    let _: optionstratlib_pricing::error::PricingError =
+        optionstratlib::error::PricingError::other("probe");
+    let _: optionstratlib_pricing::error::GreeksError =
+        optionstratlib::prelude::GreeksError::delta_error("probe");
+}
+
+#[test]
+fn test_market_types_through_facade_modules_and_prelude() {
+    let chain = market_chain(optionstratlib::chains::OptionChain::new(
+        "XYZ",
+        pos_or_panic!(100.0),
+        "2030-01-17".to_string(),
+        None,
+        None,
+    ));
+    let from_prelude: optionstratlib::prelude::OptionChain = chain;
+    assert_eq!(from_prelude.symbol, "XYZ");
+
+    let series = market_series(optionstratlib::series::OptionSeries::new(
+        "XYZ".to_string(),
+        pos_or_panic!(100.0),
+    ));
+    let from_prelude: optionstratlib::prelude::OptionSeries = series;
+    assert_eq!(from_prelude.symbol, "XYZ");
+
+    let _: optionstratlib_market::error::ChainError =
+        optionstratlib::error::ChainError::invalid_strike(-1.0, "probe");
 }

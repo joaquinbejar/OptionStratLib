@@ -6,9 +6,10 @@ difference between the market surface without `synthetic` and with it. Each
 surface gets its own fixture holding the whole graph, so a change that adds,
 removes or re-parents a dependency shows up even when it lands on both
 surfaces at once; the difference between the two is derived from them and
-printed. While `optionstratlib` is a single crate that difference is empty,
-and that *is* the assertion for it: `synthetic` gates source, not crates, so
-the first crate the feature pulls in shows up as a fixture diff. When the
+printed. While the simulation engine is still facade source that difference
+is only the facade's own feature line, and that *is* the assertion for it:
+`synthetic` gates source, not crates, so the first crate the feature pulls in
+shows up as a fixture diff. When the
 workspace split lands (#525, #537) the same fixtures carry the real
 difference without the check having to change.
 
@@ -49,9 +50,11 @@ ROOT = Path(__file__).resolve().parent.parent
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 FIXTURES = ROOT / "tests" / "fixtures" / "feature-trees"
 
-# name -> the cargo feature flags that select the surface.
+# name -> the cargo feature flags that select the surface. `market` is a facade
+# capability (ADR-0002), so the minimal market surface names it explicitly:
+# `--no-default-features` alone builds no market at all.
 SURFACES = {
-    "minimal": ["--no-default-features"],
+    "minimal": ["--no-default-features", "--features", "market"],
     "synthetic": ["--no-default-features", "--features", "synthetic"],
 }
 

@@ -59,3 +59,5 @@ jobs:
           make check-consumer-core-pricing
           make check-consumer-core-pricing-minimal
           make test-consumer-core-pricing
+          make check-consumer-facade
+          make test-consumer-facade

@@ -1,0 +1,17 @@
+# The facade with `default-features = false, features = ["pricing"]`:
+# packages the resolved normal graph must contain, and packages it must not.
+# Checked by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "rayon", "statrs",
+]
+# The facade still depends unconditionally on `utoipa`, `indicatif` and
+# `prettytable-rs` while analytics, strategies, backtesting and visualization
+# live in it; M6-05 and M7-01 make those leave the pricing graph, and they
+# join this list then.
+absent = [
+    "optionstratlib-market", "optionstratlib-simulation", "optionstratlib-analytics",
+    "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",
+    "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
+    "fantoccini", "webdriver", "tracing-subscriber",
+]

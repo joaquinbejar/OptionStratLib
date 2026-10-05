@@ -96,5 +96,11 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Build the minimal market surface (no default features)
+      - name: Build the facade with no capability (no default features)
         run: cargo build --no-default-features
+
+      - name: Build the pricing-only facade
+        run: cargo build --no-default-features --features pricing
+
+      - name: Build the minimal market surface
+        run: cargo build --no-default-features --features market

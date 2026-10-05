@@ -51,12 +51,27 @@ fmt:
 .PHONY: fmt-check
 fmt-check:
 	cargo +stable fmt --all --check
+	@for manifest in fixtures/consumers/*/Cargo.toml; do \
+		cargo +stable fmt --manifest-path $$manifest --check || exit 1; \
+	done
 
 # Run Clippy for linting
+# Each facade capability on its own (ADR-0002 Decision 2): `pricing` without
+# market, `market` without I/O or simulation, and `market,simulation`, the
+# smallest set the facade test suites and benches compile against (it leaves
+# out `io` and `synthetic`, so their gates are linted too). Each set is also
+# documented with warnings denied, so no doc link names a gated item.
+FACADE_FEATURE_SETS := math pricing market simulation market,simulation
+
 .PHONY: lint
 lint:
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
 	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
+	@for features in $(FACADE_FEATURE_SETS); do \
+		echo "clippy optionstratlib --no-default-features --features $$features"; \
+		cargo clippy -p optionstratlib --all-targets --no-default-features --features $$features -- -D warnings || exit 1; \
+		RUSTDOCFLAGS="-D warnings" cargo doc -q -p optionstratlib --no-deps --no-default-features --features $$features || exit 1; \
+	done
 
 .PHONY: lint-fix
 lint-fix: 
@@ -108,6 +123,23 @@ tree-consumer-core-pricing:
 	cargo tree --manifest-path $(FIXTURE_PRICING_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py pricing-only
 
+# The facade built with one capability each (#528): `pricing` alone and
+# `market` alone, each consumed through the prelude and the canonical paths.
+FACADE_FIXTURES := facade-pricing facade-market
+
+.PHONY: check-consumer-facade
+check-consumer-facade:
+	@for fixture in $(FACADE_FIXTURES); do \
+		manifest=fixtures/consumers/$$fixture/Cargo.toml; \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo clippy --manifest-path $$manifest --all-targets -- -D warnings || exit 1; \
+	done
+
+.PHONY: test-consumer-facade
+test-consumer-facade:
+	@for fixture in $(FACADE_FIXTURES); do \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
+	done
+
 .PHONY: check-graph
 check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
@@ -154,8 +186,8 @@ check-components:
 # Pins the dependency graph of the market surface without `synthetic` and with
 # it (roadmap M1-15), one fixture each, as a `parent -> child` edge list
 # resolved with `cargo tree --target all` so it is host-independent. The
-# difference between the two is derived and printed; it is empty while this is
-# one crate, which is the point. Run `make feature-trees-update` to record an
+# difference between the two is derived and printed; while simulation is
+# facade source it is only the facade's own feature line, which is the point. Run `make feature-trees-update` to record an
 # intended change.
 .PHONY: check-feature-trees
 check-feature-trees:
