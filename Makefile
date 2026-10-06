@@ -93,7 +93,8 @@ check: test fmt-check lint scan-banned check-graph check-api-report
 # forbidden layer boundary of the multi-crate target graph (ADR-0001 D9,
 # doc/DEPENDENCY-MATRIX.md). Known reverse edges whose removal is a breaking
 # change wait in the script's DEFERRED list with the issue that removes
-# them; the self-test proves the scanner catches what it must.
+# them (none since #658); the self-test proves the scanner catches what it
+# must.
 # Consumer fixtures (ADR-0004 section 3): real crates under
 # fixtures/consumers/<scenario>/, excluded from the workspace and built with
 # their own manifest and a target dir of their own, so nothing the workspace

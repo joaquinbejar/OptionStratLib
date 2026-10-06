@@ -409,3 +409,48 @@ impl_graph_for_payoff_strategy!(
     crate::strategies::collar::Collar,
     crate::strategies::protective_put::ProtectivePut
 );
+
+#[cfg(test)]
+mod tests {
+    use crate::strategies::collar::Collar;
+    use crate::strategies::covered_call::CoveredCall;
+    use crate::strategies::custom::CustomStrategy;
+    use crate::strategies::protective_put::ProtectivePut;
+    use crate::strategies::{
+        BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
+        IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
+        PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle,
+        ShortStrangle, Strategable,
+    };
+    use crate::visualization::Graph;
+    use static_assertions::assert_impl_all;
+
+    // `Graph` is no longer a supertrait of `Strategable` (#658), so nothing
+    // in the strategies layer proves a strategy can be charted. Every
+    // concrete strategy must keep both.
+    #[test]
+    fn test_every_strategy_implements_graph() {
+        assert_impl_all!(BullCallSpread: Strategable, Graph);
+        assert_impl_all!(BearCallSpread: Strategable, Graph);
+        assert_impl_all!(BullPutSpread: Strategable, Graph);
+        assert_impl_all!(BearPutSpread: Strategable, Graph);
+        assert_impl_all!(LongButterflySpread: Strategable, Graph);
+        assert_impl_all!(ShortButterflySpread: Strategable, Graph);
+        assert_impl_all!(IronCondor: Strategable, Graph);
+        assert_impl_all!(IronButterfly: Strategable, Graph);
+        assert_impl_all!(LongStraddle: Strategable, Graph);
+        assert_impl_all!(ShortStraddle: Strategable, Graph);
+        assert_impl_all!(LongStrangle: Strategable, Graph);
+        assert_impl_all!(ShortStrangle: Strategable, Graph);
+        assert_impl_all!(LongCall: Strategable, Graph);
+        assert_impl_all!(LongPut: Strategable, Graph);
+        assert_impl_all!(ShortCall: Strategable, Graph);
+        assert_impl_all!(ShortPut: Strategable, Graph);
+        assert_impl_all!(PoorMansCoveredCall: Strategable, Graph);
+        assert_impl_all!(CallButterfly: Strategable, Graph);
+        assert_impl_all!(CustomStrategy: Strategable, Graph);
+        assert_impl_all!(CoveredCall: Strategable, Graph);
+        assert_impl_all!(Collar: Strategable, Graph);
+        assert_impl_all!(ProtectivePut: Strategable, Graph);
+    }
+}

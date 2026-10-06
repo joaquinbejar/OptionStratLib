@@ -466,7 +466,7 @@
 //! each naming the issue that removes it; the same module pair in any other
 //! file is a fresh violation, and an entry whose edge has disappeared is
 //! reported so the list gets pruned. `python3 scripts/check_module_boundaries.py
-//! --inventory` prints the current table.
+//! --inventory` prints the current table, empty since #658.
 //!
 //! ## Core Components
 //!
@@ -739,13 +739,6 @@
 //!         +suggest_delta_adjustments()
 //!     }
 //!
-//!     class Graph {
-//!         <<trait>>
-//!         +to_plot()
-//!         +write_html()
-//!         +write_png()
-//!     }
-//!
 //!     Strategable --|> BasicAble
 //!     Strategable --|> Positionable
 //!     Strategable --|> Strategies
@@ -753,7 +746,6 @@
 //!     Strategable --|> Profit
 //!     Strategable --|> Greeks
 //!     Strategable --|> DeltaNeutrality
-//!     Strategable --|> Graph
 //! ```
 //!
 //! ## Metrics Framework
@@ -887,7 +879,8 @@
 //! - **Greeks**: Greeks calculations for risk management
 //! - **DeltaNeutrality**: Delta-neutral analysis and adjustments
 //! - **ProbabilityAnalysis**: Outcome probability calculations
-//! - **Graph**: Visualization and plotting capabilities
+//! - **Graph**: Visualization and plotting capabilities; a visualization trait
+//!   every concrete strategy implements, not a supertrait of `Strategable`
 //!
 //! ## Setup Instructions
 //!

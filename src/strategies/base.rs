@@ -25,7 +25,6 @@ use crate::{
         probabilities::core::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
-    visualization::Graph,
 };
 use positive::Positive;
 use rust_decimal::Decimal;
@@ -51,13 +50,16 @@ pub struct StrategyBasics {
 
 /// This trait defines common functionalities for all trading strategies.
 /// It combines several other traits, requiring implementations for methods related to strategy
-/// information, construction, optimization, profit calculation, graphing, probability analysis,
-/// Greeks calculation, delta neutrality, and P&L calculation.
+/// information, construction, optimization, profit calculation, probability analysis, Greeks
+/// calculation, delta neutrality, and P&L calculation.
+///
+/// Charting is not part of this trait: `Graph` is a visualization trait, and every concrete
+/// strategy implements it in `visualization::strategies`. Generic code that charts a strategy
+/// states the bound explicitly, as `S: Strategable + Graph`.
 pub trait Strategable:
     Strategies
     + StrategyConstructor
     + Profit
-    + Graph
     + ProbabilityAnalysis
     + Greeks
     + DeltaNeutrality
