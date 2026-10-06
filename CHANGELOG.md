@@ -648,6 +648,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`price_option_monte_carlo` discounts at the risk-free rate** (#651).
+  The supplied-path Monte Carlo pricer discounted the mean payoff at
+  `e^(-(r - q)T)`. The dividend yield belongs to the drift `r - q` of the
+  risk-neutral terminal law the caller supplies, never to the discount
+  factor (Hull, *Options, Futures and Other Derivatives*, risk-neutral
+  valuation), so the price is now `e^(-rT) · mean(payoff)`. Prices change
+  for every input with a non-zero dividend yield, by the factor `e^(-qT)`:
+  with `r = 5 %, q = 2 %, T = 1` and payoffs averaging `7.5`, the price goes
+  from `7.2783` to `7.1342`. Prices with `q = 0` are unchanged. The pinned unit value in
+  `pricing::monte_carlo` moves from `4.85222766` to `4.75614712`
+  (`5 e^(-0.05)`), and `tests/convergence.rs` gains
+  `test_monte_carlo_supplied_paths_discount_at_risk_free_rate`.
+
 - **The Heston and telegraph walk kernels report `Decimal` overflow instead
   of panicking** (#686). Three expressions in
   `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the

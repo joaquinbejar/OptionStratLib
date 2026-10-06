@@ -39,11 +39,8 @@
 //! `greeks::numerical`), and the tail-truncation `c/n` of the midpoint
 //! quantile rule for the stratified sample. The bounds sit at roughly three
 //! times the largest error measured on these grids.
-//!
-//! # Known discrepancies (filed, tested in the fix)
-//!
-//! The supplied-path Monte Carlo pricer discounts at `r - q` instead of
-//! `r` (#651); that test lives in the issue.
+//! * The supplied-path estimator discounts at `r` whatever the dividend
+//!   yield (#651).
 
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
@@ -404,6 +401,29 @@ fn test_monte_carlo_supplied_paths_equal_discounted_mean_payoff() {
             "{style:?}: {price} vs {expected}"
         );
     }
+}
+
+/// Discounting does not depend on the dividend yield: the yield shapes the
+/// terminal law the caller supplies, the payoff is still discounted at `r`
+/// (#651). With `r = 5 %, q = 2 %, T = 1` and payoffs averaging `7.5` the
+/// price is `7.5 e^(-0.05) = 7.1342`, not `7.5 e^(-0.03) = 7.2783`.
+#[test]
+fn test_monte_carlo_supplied_paths_discount_at_risk_free_rate() {
+    let terminal = positives(&[90.0, 100.0, 110.0, 120.0]);
+    let opt = option(
+        OptionType::European,
+        OptionStyle::Call,
+        100.0,
+        100.0,
+        365.0,
+        0.2,
+        dec!(0.05),
+        0.02,
+    );
+    let price = ok(price_option_monte_carlo(&opt, &terminal), "mc").to_dec();
+    let expected = (dec!(-0.05)).exp() * dec!(7.5);
+    let diff = (price - expected).abs();
+    assert!(diff < dec!(0.000000000001), "{price} vs {expected}");
 }
 
 /// Acklam's rational approximation of the standard normal quantile,
