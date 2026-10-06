@@ -1,20 +1,20 @@
 //! Adapters between the generic simulation contracts and the
 //! strategy-bound result types.
 //!
-//! The simulation layer reports a run as [`crate::simulation::PathOutcome`]s and summarises
-//! them as [`crate::simulation::PathStatistics`]. Backtesting keeps the richer
-//! [`crate::backtesting::results::SimulationResult`] (carrying a [`crate::pnl::PnL`] and optional risk metrics) and
+//! The simulation layer reports a run as [`optionstratlib_simulation::simulation::PathOutcome`]s and summarises
+//! them as [`optionstratlib_simulation::simulation::PathStatistics`]. Backtesting keeps the richer
+//! [`crate::backtesting::results::SimulationResult`] (carrying a [`optionstratlib_analytics::pnl::PnL`] and optional risk metrics) and
 //! [`SimulationStatsResult`]; this module owns the conversion between the
 //! two shapes so that neither simulation nor strategies has to know about
 //! it. The aggregate figures of a [`SimulationStatsResult`] are always the
-//! ones [`crate::simulation::PathStatistics::from_outcomes`] computes.
+//! ones [`optionstratlib_simulation::simulation::PathStatistics::from_outcomes`] computes.
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
-use crate::error::SimulationError;
-use crate::pnl::PnL;
-use crate::simulation::{PathOutcome, PathStatistics};
 use chrono::Utc;
-use positive::Positive;
+use optionstratlib_analytics::pnl::PnL;
+use optionstratlib_core::model::Positive;
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_simulation::simulation::{PathOutcome, PathStatistics};
 use std::collections::HashMap;
 
 impl From<PathOutcome> for SimulationResult {
@@ -126,7 +126,7 @@ impl SimulationStatsResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::simulation::ExitPolicy;
+    use optionstratlib_simulation::simulation::ExitPolicy;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 

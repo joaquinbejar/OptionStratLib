@@ -1028,6 +1028,15 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
         "optionstratlib-simulation",
     }),
+    # ADR-0002 §3 backtest row: the plotting, I/O and async crates stay out,
+    # and so does `indicatif` (its progress bar became `tracing` events,
+    # #538). `prettytable-rs` is not listed: the report table of
+    # `SimulationStatsResult::print_summary` keeps it until M6-05, as market
+    # does.
+    "optionstratlib-backtest": frozenset({
+        "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
     # adds a package beyond `utoipa` (#529).
@@ -1728,6 +1737,25 @@ def self_test() -> int:
             1,
         ),
         "simulation depends on backtest": ([pkg("optionstratlib-simulation", ("optionstratlib-backtest",))], 1),
+        # #538: backtest composes strategies and simulation, skips math
+        # (ADR-0001 D9) and names no visualization crate.
+        "backtest depends on strategies and simulation": (
+            [pkg("optionstratlib-backtest", ("optionstratlib-strategies",), ("optionstratlib-simulation",))],
+            0,
+        ),
+        "backtest depends on math": ([pkg("optionstratlib-backtest", ("optionstratlib-math",))], 1),
+        "backtest dev-depends on the facade": (
+            [pkg("optionstratlib-backtest", ("optionstratlib", "dev"))],
+            1,
+        ),
+        "backtest depends on visualization": (
+            [pkg("optionstratlib-backtest", ("optionstratlib-visualization",))],
+            1,
+        ),
+        "strategies depends on backtest (reverse)": (
+            [pkg("optionstratlib-strategies", ("optionstratlib-backtest", "dev"))],
+            1,
+        ),
         "simulation optionally depends on visualization": (
             [pkg("optionstratlib-simulation", ("optionstratlib-visualization", None, True))],
             1,
@@ -1813,6 +1841,9 @@ def self_test() -> int:
         "strategies pulls market io": ({("optionstratlib-strategies", "default"): {"csv", "zip"}}, 2),
         "strategies pulls indicatif": ({("optionstratlib-strategies", "all features"): {"indicatif"}}, 1),
         "clean simulation tree": ({("optionstratlib-simulation", "default"): {"rayon", "rand", "statrs"}}, 0),
+        "clean backtest tree": ({("optionstratlib-backtest", "default"): {"uuid", "prettytable-rs"}}, 0),
+        "backtest pulls indicatif": ({("optionstratlib-backtest", "default"): {"indicatif"}}, 1),
+        "backtest pulls plotly": ({("optionstratlib-backtest", "all features"): {"plotly"}}, 1),
         "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),
         "simulation pulls market io": ({("optionstratlib-simulation", "all features"): {"csv", "zip"}}, 2),
     }

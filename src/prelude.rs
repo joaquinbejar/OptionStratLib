@@ -77,11 +77,11 @@ pub use crate::pricing::*;
 #[cfg(feature = "analytics")]
 pub use crate::pnl::{PnL, PnLCalculator};
 
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use crate::backtesting::*;
 
 // Visualization
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
 
 #[cfg(feature = "plotly")]
@@ -106,7 +106,7 @@ pub use crate::surfaces::{Point3D, Surfacable, Surface};
 // Geometrics (commonly used in curve examples)
 #[cfg(feature = "math")]
 pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use crate::visualization::Plottable;
 
 // Volatility models
@@ -127,7 +127,7 @@ pub use crate::error::StrategyError;
 #[cfg(feature = "math")]
 pub use crate::error::{CurveError, InterpolationError, MetricsError, SurfaceError};
 pub use crate::error::{DecimalError, OperationErrorKind, OptionsError, PositionError};
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use crate::error::{Error, GraphError};
 #[cfg(feature = "pricing")]
 pub use crate::error::{GreeksError, PricingError, VolatilityError};
@@ -154,7 +154,7 @@ pub use rust_decimal_macros::dec;
 pub use std::path::Path;
 
 // Simulation types and functions
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use crate::backtesting::{Simulate, SimulationStats};
 #[cfg(feature = "simulation")]
 pub use crate::simulation::{

@@ -10,23 +10,24 @@
 //! [`crate::backtesting::strategy_simulation::SingleLegSimulation`]: the side of the leg and the fee adjustment
 //! applied to every mark after the opening one.
 //!
-//! The progress bar drawn while the walks are evaluated stays with the
-//! loop; M6-05 removes it from the library.
+//! Progress over the walks is reported as `tracing` events, one `debug`
+//! event per evaluated path and an `info` event at the end, so the caller's
+//! subscriber decides whether and how to show it (ADR-0002 section 6, #538).
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
-use crate::error::{BacktestError, SimulationError};
-use crate::model::decimal::{d_add, d_div, d_sub};
-use crate::pnl::{PnL, PnLCalculator};
-use crate::pricing::OptionPricing;
-use crate::simulation::randomwalk::RandomWalk;
-use crate::simulation::simulator::Simulator;
-use crate::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};
-use crate::strategies::base::Positionable;
-use crate::strategies::{LongCall, LongPut, ShortCall, ShortPut, Strategies};
-use crate::utils::Len;
-use crate::{ExpirationDate, Options};
-use indicatif::{ProgressBar, ProgressStyle};
-use positive::Positive;
+use crate::error::BacktestError;
+use optionstratlib_analytics::pnl::{PnL, PnLCalculator};
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
+use optionstratlib_core::model::{ExpirationDate, Options};
+use optionstratlib_core::utils::Len;
+use optionstratlib_pricing::pricing::OptionPricing;
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
+use optionstratlib_simulation::simulation::simulator::Simulator;
+use optionstratlib_simulation::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};
+use optionstratlib_strategies::strategies::base::Positionable;
+use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut, Strategies};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
@@ -47,7 +48,8 @@ use std::ops::AddAssign;
 /// # Examples
 ///
 /// ```ignore
-/// use optionstratlib::simulation::{Simulate, ExitPolicy};
+/// use optionstratlib_backtest::backtesting::Simulate;
+/// use optionstratlib_simulation::simulation::ExitPolicy;
 /// use rust_decimal_macros::dec;
 ///
 /// let strategy = ShortPut::new(/* ... */);
@@ -394,15 +396,15 @@ where
 /// Simulates a single-leg strategy across every walk of `sim`.
 ///
 /// Prices the leg once for the opening premium, evaluates each walk with
-/// [`SingleLegPathEvaluator`] (drawing a progress bar meanwhile) and
+/// [`SingleLegPathEvaluator`] (emitting a `debug` event per path and an
+/// `info` event at the end) and
 /// aggregates the results with [`SimulationStatsResult::from_results`].
 ///
 /// # Errors
 ///
-/// Returns a [`SimulationError`] when the strategy has no single leg, the
-/// progress bar template is rejected, a Black-Scholes price or an
-/// expiration P&L fails, a step cannot be read as a price, or the
-/// aggregate statistics overflow.
+/// Returns a [`BacktestError`] when the strategy has no single leg, a
+/// Black-Scholes price or an expiration P&L fails, a step cannot be read as
+/// a price, or the aggregate statistics overflow.
 #[must_use = "the simulation statistics are the only product of this call"]
 #[tracing::instrument(level = "debug", skip(strategy, sim), fields(walks = sim.len()))]
 pub fn simulate_single_leg<S, X, Y>(
@@ -418,28 +420,19 @@ where
     let evaluator = SingleLegPathEvaluator::new(strategy)?;
     let mut simulation_results = Vec::with_capacity(sim.len());
 
-    // Create progress bar for simulations
-    let walk_count = u64::try_from(sim.len()).map_err(|_| {
-        SimulationError::invalid_parameters("simulator walk count does not fit a progress bar")
-    })?;
-    let progress_bar = ProgressBar::new(walk_count);
-    progress_bar.set_style(
-        ProgressStyle::default_bar()
-            .template(
-                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} simulations ({eta})",
-            )
-            .map_err(|e| {
-                SimulationError::walk_error(&format!("Failed to set progress bar template: {e}"))
-            })?
-            .progress_chars("#>-"),
-    );
-
-    for random_walk in sim {
+    // Progress is a `tracing` event per path instead of a terminal progress
+    // bar (ADR-0002 section 6): the caller's subscriber decides whether and
+    // how to show it.
+    let walk_count = sim.len();
+    for (index, random_walk) in sim.into_iter().enumerate() {
         simulation_results.push(evaluator.evaluate_path(random_walk, &exit)?);
-        progress_bar.inc(1);
+        tracing::debug!(
+            completed = index + 1,
+            total = walk_count,
+            "simulated path evaluated"
+        );
     }
-
-    progress_bar.finish_with_message("Simulations completed!");
+    tracing::info!(total = walk_count, "simulations completed");
 
     Ok(SimulationStatsResult::from_results(simulation_results)?)
 }
@@ -506,13 +499,13 @@ mod test_support {
     //! Each strategy is built the way its constructor builds it: the
     //! default strategy plus one position with the test leg.
     use super::*;
-    use crate::model::position::Position;
-    use crate::model::types::{OptionStyle, OptionType, Side};
-    use crate::simulation::steps::Step;
-    use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
-    use crate::utils::TimeFrame;
     use chrono::Utc;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::position::Position;
+    use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_simulation::simulation::steps::Step;
+    use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
 
     #[derive(Clone)]
     pub(super) struct TestWalker;
@@ -611,8 +604,8 @@ mod test_support {
 mod tests_single_leg_contract {
     use super::test_support::*;
     use super::*;
-    use crate::simulation::generator_positive;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_simulation::simulation::generator_positive;
     use rust_decimal::MathematicalOps;
 
     #[test]
@@ -651,8 +644,8 @@ mod tests_single_leg_contract {
     /// strategy; the contract reports it instead of picking one.
     #[test]
     fn test_simulated_option_rejects_a_strategy_without_a_single_leg() {
-        use crate::error::PricingError;
-        use crate::model::position::Position;
+        use optionstratlib_core::model::position::Position;
+        use optionstratlib_pricing::error::PricingError;
 
         struct Legs(Vec<Position>);
         impl PnLCalculator for Legs {
@@ -672,7 +665,9 @@ mod tests_single_leg_contract {
             }
         }
         impl Positionable for Legs {
-            fn get_positions(&self) -> Result<Vec<&Position>, crate::error::PositionError> {
+            fn get_positions(
+                &self,
+            ) -> Result<Vec<&Position>, optionstratlib_core::error::PositionError> {
                 Ok(self.0.iter().collect())
             }
         }
@@ -730,8 +725,8 @@ mod tests_single_leg_contract {
 mod tests_simulate_long_call {
     use super::test_support::*;
     use super::*;
-    use crate::simulation::generator_positive;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_simulation::simulation::generator_positive;
 
     #[test]
     fn test_simulate_profit_percent_exit() {
@@ -798,8 +793,8 @@ mod tests_simulate_long_call {
 mod tests_simulate_long_put {
     use super::test_support::*;
     use super::*;
-    use crate::simulation::generator_positive;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_simulation::simulation::generator_positive;
 
     #[test]
     fn test_simulate_profit_percent_exit() {
@@ -858,8 +853,8 @@ mod tests_simulate_long_put {
 mod tests_simulate_short_call {
     use super::test_support::*;
     use super::*;
-    use crate::simulation::generator_positive;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_simulation::simulation::generator_positive;
 
     #[test]
     fn test_simulate_profit_percent_exit() {
@@ -918,8 +913,8 @@ mod tests_simulate_short_call {
 mod tests_simulate_short_put {
     use super::test_support::*;
     use super::*;
-    use crate::simulation::generator_positive;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_simulation::simulation::generator_positive;
 
     #[test]
     fn test_simulate_profit_percent_exit() {

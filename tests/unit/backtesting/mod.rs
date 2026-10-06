@@ -1,1 +1,0 @@
-mod single_leg_simulation_golden_test;

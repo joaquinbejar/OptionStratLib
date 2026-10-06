@@ -108,6 +108,7 @@
 //! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs`, now in `optionstratlib-analytics` |
 //! | strategies | `strategies.rs`, now in `optionstratlib-strategies` |
+//! | backtest | `backtesting.rs`, now in `optionstratlib-backtest` |
 //! | visualization | `graph.rs` |
 //! | facade | `unified.rs`, this file's re-exports |
 //!
@@ -117,17 +118,13 @@
 //! batch that follows the 0.22.0 version bump; removing a variant is a
 //! breaking change the published-baseline semver gate rejects before then.
 
-/// Backtest-owned failures (a strategy driven through a simulation).
-#[cfg(all(feature = "strategies", feature = "simulation"))]
-mod backtesting;
-
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 mod graph;
 
 /// ### Unified Error Type
 /// Top-level error type that encompasses all errors in the library.
 /// Provides a single error type for unified error handling across modules.
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
@@ -173,9 +170,11 @@ pub use optionstratlib_analytics::error::{
 #[cfg(feature = "strategies")]
 pub use optionstratlib_strategies::error::{StrategyError, strategies};
 
-#[cfg(all(feature = "strategies", feature = "simulation"))]
-pub use backtesting::BacktestError;
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub use graph::GraphError;
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+/// Backtest errors (`optionstratlib-backtest`): a strategy driven through a
+/// simulation.
+#[cfg(feature = "backtest")]
+pub use optionstratlib_backtest::error::BacktestError;
+#[cfg(feature = "backtest")]
 pub use unified::Error;

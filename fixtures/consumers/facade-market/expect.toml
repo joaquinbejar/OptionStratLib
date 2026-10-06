@@ -6,12 +6,11 @@ present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "optionstratlib-market", "serde_json",
 ]
-# `utoipa`, `indicatif` and `prettytable-rs` are still unconditional facade
-# dependencies (see the facade-pricing fixture); they join this list with
-# M6-05 and M7-01.
+# `utoipa` (#628) and `prettytable-rs` (still a dependency of market until
+# M6-05) are missing from this list; they join it then.
 absent = [
     "optionstratlib-simulation", "optionstratlib-analytics", "optionstratlib-strategies",
     "optionstratlib-backtest", "optionstratlib-visualization", "csv", "zip", "tokio",
     "reqwest", "futures", "async-trait", "plotly", "plotly_static", "fantoccini",
-    "webdriver", "tracing-subscriber",
+    "webdriver", "tracing-subscriber", "indicatif",
 ]

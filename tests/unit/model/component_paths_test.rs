@@ -521,3 +521,21 @@ fn test_synthetic_generators_through_facade_modules_and_prelude() {
         optionstratlib::error::ChainError::Generator(_)
     ));
 }
+
+/// Backtest items are `optionstratlib-backtest`'s, reached through the
+/// facade's `backtesting` module, the prelude and `error` (#538).
+#[test]
+fn test_backtest_items_through_facade_modules_and_prelude() {
+    same_item(
+        optionstratlib::backtesting::results::SimulationStatsResult::from_results,
+        optionstratlib_backtest::backtesting::results::SimulationStatsResult::from_results,
+    );
+    let stats: optionstratlib_backtest::backtesting::SimulationStatsResult =
+        optionstratlib::prelude::SimulationStatsResult::default();
+    assert_eq!(stats.total_simulations, 0);
+    let error: optionstratlib_backtest::error::BacktestError =
+        optionstratlib::error::BacktestError::from(
+            optionstratlib::error::SimulationError::walk_error("probe"),
+        );
+    assert!(error.to_string().contains("probe"));
+}

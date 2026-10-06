@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use chrono::NaiveDateTime;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 

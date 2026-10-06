@@ -1,0 +1,45 @@
+[package]
+name = "optionstratlib-backtest"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Strategy backtests over simulated paths: per-path evaluation, run statistics and reports of OptionStratLib."
+readme = "README.md"
+keywords = ["finance", "options", "backtesting", "simulation", "strategy"]
+categories = ["finance", "mathematics", "simulation"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on the backtest types (ADR-0002).
+schema = [
+    "dep:utoipa",
+    "optionstratlib-core/schema",
+    "optionstratlib-pricing/schema",
+    "optionstratlib-simulation/schema",
+    "optionstratlib-analytics/schema",
+    "optionstratlib-strategies/schema",
+]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+optionstratlib-simulation = { workspace = true }
+optionstratlib-analytics = { workspace = true }
+optionstratlib-strategies = { workspace = true }
+chrono = { workspace = true }
+pretty-simple-display = { workspace = true }
+# The terminal table of `SimulationStatsResult::print_summary`; ADR-0002
+# section 6 removes it or moves it to an adapter in M6-05, as for market.
+prettytable-rs = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+uuid = { workspace = true }

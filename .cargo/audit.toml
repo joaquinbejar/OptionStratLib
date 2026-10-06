@@ -37,7 +37,9 @@
 #                above: `cargo tree --all-features --target all -i
 #                number_prefix` reports that the package is not in the graph
 #                at all. It is recorded as an optional dependency of
-#                `indicatif`, whose feature this crate does not enable.
+#                `indicatif`, whose feature this crate does not enable. Since
+#                #538 `indicatif` is used only by the `examples_simulation`
+#                binaries, not by any library crate.
 # Upgrade path : None to take — an unmaintained advisory has no fixed release.
 #                It would disappear on its own once `indicatif` drops the
 #                dependency.

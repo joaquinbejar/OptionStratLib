@@ -17,10 +17,6 @@ chrono -> num-traits
 chrono -> serde
 chrono -> wasm-bindgen
 chrono -> windows-link
-console -> encode_unicode
-console -> libc
-console -> unicode-width
-console -> windows-sys
 cpufeatures -> libc
 crossbeam-deque -> crossbeam-epoch
 crossbeam-deque -> crossbeam-utils
@@ -62,11 +58,6 @@ indexmap -> equivalent
 indexmap -> hashbrown
 indexmap -> serde
 indexmap -> serde_core
-indicatif -> console
-indicatif -> portable-atomic
-indicatif -> unicode-width
-indicatif -> unit-prefix
-indicatif -> web-time
 is-terminal -> hermit-abi
 is-terminal -> libc
 is-terminal -> windows-sys
@@ -100,7 +91,6 @@ optionstratlib -> approx
 optionstratlib -> chrono
 optionstratlib -> expiration_date
 optionstratlib -> financial_types
-optionstratlib -> indicatif
 optionstratlib -> num-traits
 optionstratlib -> option_type
 optionstratlib -> optionstratlib-core
@@ -110,7 +100,6 @@ optionstratlib -> optionstratlib-pricing
 optionstratlib -> optionstratlib-simulation
 optionstratlib -> positive
 optionstratlib -> pretty-simple-display
-optionstratlib -> prettytable-rs
 optionstratlib -> rand
 optionstratlib -> rand_distr
 optionstratlib -> rayon
@@ -122,7 +111,6 @@ optionstratlib -> statrs
 optionstratlib -> thiserror
 optionstratlib -> tracing
 optionstratlib -> utoipa
-optionstratlib -> uuid
 optionstratlib-core -> chrono
 optionstratlib-core -> expiration_date
 optionstratlib-core -> financial_types
@@ -296,8 +284,6 @@ wasm-bindgen-macro-support -> quote
 wasm-bindgen-macro-support -> syn
 wasm-bindgen-macro-support -> wasm-bindgen-shared
 wasm-bindgen-shared -> unicode-ident
-web-time -> js-sys
-web-time -> wasm-bindgen
 wide -> bytemuck
 wide -> safe_arch
 winapi -> winapi-i686-pc-windows-gnu
@@ -328,7 +314,6 @@ cc []
 cfg-if []
 chacha20 [rng]
 chrono [alloc,clock,default,iana-time-zone,js-sys,now,oldtime,serde,std,wasm-bindgen,wasmbind,winapi,windows-link]
-console [alloc,ansi-parsing,std,unicode-width]
 core-foundation-sys [default,link]
 cpufeatures []
 crossbeam-deque [default,std]
@@ -351,7 +336,6 @@ hermit-abi [default]
 iana-time-zone [fallback]
 iana-time-zone-haiku []
 indexmap [default,serde,std]
-indicatif [default,unicode-width,wasmbind]
 is-terminal []
 itertools [default,use_alloc,use_std]
 itoa []
@@ -377,10 +361,9 @@ optionstratlib-math [default,schema]
 optionstratlib-pricing [default,schema]
 optionstratlib-simulation [default,schema]
 pin-project-lite []
-portable-atomic [default,fallback]
 positive [default,utoipa]
 pretty-simple-display []
-prettytable-rs [win_crlf]
+prettytable-rs []
 proc-macro2 [default,proc-macro]
 quote [default,proc-macro]
 r-efi []
@@ -416,7 +399,6 @@ tracing-core [once_cell,std]
 typenum []
 unicode-ident []
 unicode-width [cjk,default]
-unit-prefix [default,std]
 utoipa [axum_extras,chrono,decimal,default,macros]
 utoipa-gen [axum_extras,chrono,decimal,regex]
 uuid [default,rng,serde,std,v4]
@@ -425,7 +407,6 @@ wasm-bindgen [default,std]
 wasm-bindgen-macro []
 wasm-bindgen-macro-support []
 wasm-bindgen-shared []
-web-time []
 wide [std]
 winapi [consoleapi,fileapi,handleapi,knownfolders,objbase,shlobj,winbase,wincon,winerror]
 winapi-i686-pc-windows-gnu []
@@ -436,5 +417,5 @@ windows-interface []
 windows-link []
 windows-result [std]
 windows-strings [std]
-windows-sys [Win32,Win32_Foundation,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,Win32_UI,Win32_UI_Input,Win32_UI_Input_KeyboardAndMouse,default]
+windows-sys [Win32,Win32_Foundation,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,default]
 zmij []

@@ -108,6 +108,9 @@ jobs:
       - name: Build the simulation facade without market data
         run: cargo build --no-default-features --features simulation
 
+      - name: Build the backtest facade without plotting
+        run: cargo build --no-default-features --features backtest
+
       - name: Build the analytics facade without simulation
         run: cargo build --no-default-features --features analytics
 
