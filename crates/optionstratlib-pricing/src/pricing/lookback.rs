@@ -25,10 +25,12 @@
 //! (1991) closed-form solutions for continuous monitoring.
 
 use crate::error::PricingError;
-use crate::kernels::{big_n, d1, d2, discount_factor};
+use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sqrt, d_sub};
+use optionstratlib_core::model::decimal::{
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub,
+};
 use optionstratlib_core::model::types::{LookbackType, OptionStyle, OptionType};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -395,226 +397,306 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
     Ok(apply_side(price.max(Decimal::ZERO), option))
 }
 
+/// Carry below which the fixed-strike lookback switches to the `b → 0`
+/// limit of the Conze-Viswanathan reflection term. The exact term divides
+/// by `2b`; its first-order expansion has a relative error of order `b`,
+/// so at `1e-8` the limit is exact to the precision of the normal CDF.
+const LOOKBACK_FLAT_CARRY: Decimal = dec!(0.00000001);
+
+/// `1 / √(2π)`, the standard normal density at zero.
+const INV_SQRT_TWO_PI: Decimal = dec!(0.3989422804014326779399461);
+
+/// Standard normal density `n(x) = e^(-x²/2) / √(2π)`. Beyond `|x| = 40`
+/// it is below `1e-300` and returned as zero, the limit, without squaring.
+fn normal_pdf(x: Decimal) -> Result<Decimal, PricingError> {
+    if x.abs() > dec!(40) {
+        return Ok(Decimal::ZERO);
+    }
+    let half_square = d_div(
+        d_mul(x, x, "pricing::lookback::pdf::square")?,
+        dec!(2),
+        "pricing::lookback::pdf::half_square",
+    )?;
+    Ok(d_mul(
+        INV_SQRT_TWO_PI,
+        d_exp(-half_square, "pricing::lookback::pdf::exp")?,
+        "pricing::lookback::pdf",
+    )?)
+}
+
 /// Prices a fixed strike lookback option.
 ///
 /// **Fixed Strike Call**: max(S_max - K, 0)
 /// **Fixed Strike Put**: max(K - S_min, 0)
 ///
 /// For new contracts, S_min = S_max = S.
-/// Uses Conze-Viswanathan (1991) approach.
+///
+/// # Formula
+///
+/// Conze and Viswanathan (1991), Haug, *The Complete Guide to Option
+/// Pricing Formulas*, §4.15.2, with carry `b = r - q` and the observed
+/// extremum `M` (`S_max` for the call, `S_min` for the put; `M = S` here).
+/// Both branches of Haug's case split are one formula on the effective
+/// strike `X = max(K, M)` (call) or `X = min(K, M)` (put):
+///
+/// ```text
+/// d1 = (ln(S/X) + (b + σ²/2)T) / (σ√T),  d2 = d1 - σ√T
+/// c = e^(-rT)(M - K)⁺ + S e^(-qT) N(d1) - X e^(-rT) N(d2)
+///     + S e^(-rT) σ²/(2b) [e^(bT) N(d1) - (S/X)^(-2b/σ²) N(d1 - 2b√T/σ)]
+/// p = e^(-rT)(K - M)⁺ + X e^(-rT) N(-d2) - S e^(-qT) N(-d1)
+///     + S e^(-rT) σ²/(2b) [(S/X)^(-2b/σ²) N(-d1 + 2b√T/σ) - e^(bT) N(-d1)]
+/// ```
+///
+/// At `b = 0` the reflection terms tend to
+/// `S e^(-rT) σ√T (d1 N(d1) + n(d1))` (call) and
+/// `S e^(-rT) σ√T (n(d1) - d1 N(-d1))` (put), used below
+/// `LOOKBACK_FLAT_CARRY`. At `σ = 0` the path is the forward `S e^(bτ)`, so
+/// `S_max = S max(1, e^(bT))` and `S_min = S min(1, e^(bT))`.
+///
+/// The former fixed-strike formula was a vanilla plus an ad hoc premium,
+/// `0.55` to `9.8` below Haug's table for the call (#647).
 fn fixed_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
-    let s = option.underlying_price;
-    let k = option.strike_price;
+    let s = option.underlying_price.to_dec();
+    let k = option.strike_price.to_dec();
     let r = option.risk_free_rate;
     let q = option.dividend_yield.to_dec();
-    let sigma = option.implied_volatility;
+    let sigma = option.implied_volatility.to_dec();
     let t = option
         .expiration_date
         .get_years()
-        .map_err(|e| PricingError::other(&e.to_string()))?;
+        .map_err(|e| PricingError::other(&e.to_string()))?
+        .to_dec();
+    // A new contract: the observed extremum is the spot.
+    let extremum = s;
+    let is_call = matches!(option.option_style, OptionStyle::Call);
 
-    if t == Positive::ZERO {
-        // At expiration, for new contract S_max = S_min = S
-        let intrinsic = match option.option_style {
-            OptionStyle::Call => d_sub(
-                s.to_dec(),
-                k.to_dec(),
-                "pricing::lookback::fixed::intrinsic::call",
-            )?
-            .max(Decimal::ZERO),
-            OptionStyle::Put => d_sub(
-                k.to_dec(),
-                s.to_dec(),
-                "pricing::lookback::fixed::intrinsic::put",
-            )?
-            .max(Decimal::ZERO),
-        };
-        return Ok(apply_side(intrinsic, option));
+    // `(M - K)⁺` for the call, `(K - M)⁺` for the put.
+    let locked_in = if is_call {
+        d_sub(extremum, k, "pricing::lookback::fixed::locked_in::call")?
+    } else {
+        d_sub(k, extremum, "pricing::lookback::fixed::locked_in::put")?
+    }
+    .max(Decimal::ZERO);
+
+    if t.is_zero() {
+        // At expiration the extremum is the spot: the payoff is intrinsic.
+        return Ok(apply_side(locked_in, option));
     }
 
-    let t_dec = t.to_dec();
     let b = d_sub(r, q, "pricing::lookback::fixed::carry")?;
     let discount = discount_factor(
         r,
-        t_dec,
+        t,
         "pricing::lookback::fixed::neg_rt",
         "pricing::lookback::fixed::discount",
     )?;
-    let dividend_discount = discount_factor(
-        q,
-        t_dec,
-        "pricing::lookback::fixed::neg_qt",
-        "pricing::lookback::fixed::dividend_discount",
-    )?;
 
-    if sigma == Positive::ZERO {
-        let forward = d_mul(
-            s.to_dec(),
+    if sigma.is_zero() {
+        // Deterministic path `S e^(bτ)`: its maximum (call) or minimum (put)
+        // over `[0, T]` is at one of the two ends.
+        let terminal = d_mul(
+            s,
             d_exp(
-                d_mul(b, t_dec, "pricing::lookback::fixed::zero_vol::carry_t")?,
+                d_mul(b, t, "pricing::lookback::fixed::zero_vol::carry_t")?,
                 "pricing::lookback::fixed::zero_vol::growth",
             )?,
-            "pricing::lookback::fixed::zero_vol::forward",
+            "pricing::lookback::fixed::zero_vol::terminal",
         )?;
-        let payoff = match option.option_style {
-            OptionStyle::Call => d_sub(
-                forward,
-                k.to_dec(),
+        let payoff = if is_call {
+            d_sub(
+                terminal.max(extremum),
+                k,
                 "pricing::lookback::fixed::zero_vol::call",
             )?
-            .max(Decimal::ZERO),
-            OptionStyle::Put => d_sub(
-                k.to_dec(),
-                forward,
+        } else {
+            d_sub(
+                k,
+                terminal.min(extremum),
                 "pricing::lookback::fixed::zero_vol::put",
             )?
-            .max(Decimal::ZERO),
-        };
-        let intrinsic = d_mul(
-            payoff,
-            discount,
-            "pricing::lookback::fixed::zero_vol::discounted",
-        )?;
-        return Ok(apply_side(intrinsic, option));
+        }
+        .max(Decimal::ZERO);
+        return Ok(apply_side(
+            d_mul(
+                payoff,
+                discount,
+                "pricing::lookback::fixed::zero_vol::discounted",
+            )?,
+            option,
+        ));
     }
 
-    let sigma_dec = sigma.to_dec();
-    let sigma_sq = d_mul(sigma_dec, sigma_dec, "pricing::lookback::fixed::sigma_sq")?;
-    let sqrt_t = d_sqrt(t_dec, "pricing::lookback::fixed::sqrt_t")?;
-    let sigma_sqrt_t = d_mul(sigma_dec, sqrt_t, "pricing::lookback::fixed::sigma_sqrt_t")?;
-    let s_dec = s.to_dec();
-    // Lookback premium shared by both styles: the `λ` cut-off and the
-    // `S σ√T (N(λ) − ½) / 2` scaling of the running extremum.
-    let lookback_premium = |lambda: Decimal| -> Result<Decimal, PricingError> {
-        let n_lambda = big_n(lambda).unwrap_or(dec!(0.5));
-        Ok(d_mul(
-            d_mul(
-                d_mul(
-                    s_dec,
-                    sigma_sqrt_t,
-                    "pricing::lookback::fixed::premium_scale",
-                )?,
-                d_sub(n_lambda, dec!(0.5), "pricing::lookback::fixed::premium_cdf")?,
-                "pricing::lookback::fixed::premium_weighted",
-            )?,
-            dec!(0.5),
-            "pricing::lookback::fixed::premium",
-        )?)
-    };
-    let lambda = if b.abs() < dec!(1e-10) {
-        d_add(
-            dec!(1),
-            d_div(
-                d_mul(sigma_sq, t_dec, "pricing::lookback::fixed::flat_variance")?,
-                dec!(2),
-                "pricing::lookback::fixed::flat_half_variance",
-            )?,
-            "pricing::lookback::fixed::lambda_flat",
-        )?
+    let x = if is_call {
+        k.max(extremum)
     } else {
-        d_div(
+        k.min(extremum)
+    };
+    let variance = d_mul(sigma, sigma, "pricing::lookback::fixed::variance")?;
+    let sqrt_t = d_sqrt(t, "pricing::lookback::fixed::sqrt_t")?;
+    let sigma_sqrt_t = d_mul(sigma, sqrt_t, "pricing::lookback::fixed::sigma_sqrt_t")?;
+    let log_moneyness = d_ln(
+        d_div(s, x, "pricing::lookback::fixed::moneyness")?,
+        "pricing::lookback::fixed::log_moneyness",
+    )?;
+    let d1 = d_div(
+        d_add(
+            log_moneyness,
             d_mul(
                 d_add(
                     b,
-                    d_div(sigma_sq, dec!(2), "pricing::lookback::fixed::half_variance")?,
+                    d_div(variance, dec!(2), "pricing::lookback::fixed::half_variance")?,
                     "pricing::lookback::fixed::drift_rate",
                 )?,
-                t_dec,
+                t,
                 "pricing::lookback::fixed::drift",
             )?,
-            sigma_sqrt_t,
-            "pricing::lookback::fixed::lambda",
+            "pricing::lookback::fixed::d1_numerator",
+        )?,
+        sigma_sqrt_t,
+        "pricing::lookback::fixed::d1",
+    )?;
+    let d2 = d_sub(d1, sigma_sqrt_t, "pricing::lookback::fixed::d2")?;
+
+    let spot_pv = d_mul(
+        s,
+        discount_factor(
+            q,
+            t,
+            "pricing::lookback::fixed::neg_qt",
+            "pricing::lookback::fixed::dividend_discount",
+        )?,
+        "pricing::lookback::fixed::spot_pv",
+    )?;
+    let strike_pv = d_mul(x, discount, "pricing::lookback::fixed::strike_pv")?;
+    let locked_in_pv = d_mul(
+        locked_in,
+        discount,
+        "pricing::lookback::fixed::locked_in_pv",
+    )?;
+    // `S e^(-rT)`, the scale of the reflection term.
+    let spot_discounted = d_mul(s, discount, "pricing::lookback::fixed::spot_discounted")?;
+
+    // The vanilla on the effective strike.
+    let vanilla = if is_call {
+        d_sub(
+            d_mul(
+                spot_pv,
+                big_n(d1)?,
+                "pricing::lookback::fixed::call::spot_leg",
+            )?,
+            d_mul(
+                strike_pv,
+                big_n(d2)?,
+                "pricing::lookback::fixed::call::strike_leg",
+            )?,
+            "pricing::lookback::fixed::call::vanilla",
+        )?
+    } else {
+        d_sub(
+            d_mul(
+                strike_pv,
+                big_n(-d2)?,
+                "pricing::lookback::fixed::put::strike_leg",
+            )?,
+            d_mul(
+                spot_pv,
+                big_n(-d1)?,
+                "pricing::lookback::fixed::put::spot_leg",
+            )?,
+            "pricing::lookback::fixed::put::vanilla",
         )?
     };
 
-    // For fixed strike lookback, we use a combination of standard BS
-    // plus lookback premium
-
-    // First, get standard BS price
-    let d1_val = d1(s, k, b, t, sigma)
-        .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
-    let d2_val = d2(s, k, b, t, sigma)
-        .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
-
-    let price = match option.option_style {
-        OptionStyle::Call => {
-            // Fixed strike lookback call: pays max(S_max - K, 0)
-            // For a new contract: similar to standard call + lookback premium
-
-            let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-            let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-
-            // Standard BS call
-            let s_leg = d_mul(
-                d_mul(
-                    s_dec,
-                    dividend_discount,
-                    "pricing::lookback::fixed::call::s_discounted",
-                )?,
-                n_d1,
-                "pricing::lookback::fixed::call::s_leg",
-            )?;
-            let k_leg = d_mul(
-                d_mul(
-                    k.to_dec(),
-                    discount,
-                    "pricing::lookback::fixed::call::k_discounted",
-                )?,
-                n_d2,
-                "pricing::lookback::fixed::call::k_leg",
-            )?;
-            let bs_call = d_sub(s_leg, k_leg, "pricing::lookback::fixed::call::bs")?;
-
-            // Lookback premium (value of being able to exercise at maximum)
-            // For new contract from S, use simplified formula
+    // The reflection term: the value of the running extremum.
+    let reflection = if b.abs() < LOOKBACK_FLAT_CARRY {
+        let density = normal_pdf(d1)?;
+        let bracket = if is_call {
             d_add(
-                bs_call,
-                lookback_premium(lambda)?,
-                "pricing::lookback::fixed::call::price",
+                d_mul(d1, big_n(d1)?, "pricing::lookback::fixed::flat::call_cdf")?,
+                density,
+                "pricing::lookback::fixed::flat::call_bracket",
             )?
-            .max(Decimal::ZERO)
-        }
-        OptionStyle::Put => {
-            // Fixed strike lookback put: pays max(K - S_min, 0)
-
-            let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
-            let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
-
-            // Standard BS put. Mirror of the call branch: build the
-            // discounted strike / discounted forward with `d_mul`,
-            // then fold in the CDF weight with a second `d_mul`.
-            let k_discounted = d_mul(
-                k.to_dec(),
-                discount,
-                "pricing::lookback::fixed::put::k_discounted",
-            )?;
-            let k_leg = d_mul(
-                k_discounted,
-                n_neg_d2,
-                "pricing::lookback::fixed::put::k_leg",
-            )?;
-            let s_discounted = d_mul(
-                s_dec,
-                dividend_discount,
-                "pricing::lookback::fixed::put::s_discounted",
-            )?;
-            let s_leg = d_mul(
-                s_discounted,
-                n_neg_d1,
-                "pricing::lookback::fixed::put::s_leg",
-            )?;
-            let bs_put = d_sub(k_leg, s_leg, "pricing::lookback::fixed::put::bs")?;
-
-            // Lookback premium (value of being able to exercise at minimum)
-            d_add(
-                bs_put,
-                lookback_premium(lambda)?,
-                "pricing::lookback::fixed::put::price",
+        } else {
+            d_sub(
+                density,
+                d_mul(d1, big_n(-d1)?, "pricing::lookback::fixed::flat::put_cdf")?,
+                "pricing::lookback::fixed::flat::put_bracket",
             )?
-            .max(Decimal::ZERO)
-        }
+        };
+        d_mul(
+            d_mul(
+                spot_discounted,
+                sigma_sqrt_t,
+                "pricing::lookback::fixed::flat::scale",
+            )?,
+            bracket,
+            "pricing::lookback::fixed::flat::reflection",
+        )?
+    } else {
+        let weight = d_div(
+            variance,
+            d_mul(dec!(2), b, "pricing::lookback::fixed::two_b")?,
+            "pricing::lookback::fixed::weight",
+        )?;
+        let reflect_power = d_powd(
+            d_div(s, x, "pricing::lookback::fixed::reflect_base")?,
+            d_div(
+                d_mul(dec!(-2), b, "pricing::lookback::fixed::neg_two_b")?,
+                variance,
+                "pricing::lookback::fixed::reflect_exponent",
+            )?,
+            "pricing::lookback::fixed::reflect_power",
+        )?;
+        let shift = d_div(
+            d_mul(
+                d_mul(dec!(2), b, "pricing::lookback::fixed::shift_two_b")?,
+                sqrt_t,
+                "pricing::lookback::fixed::shift_numerator",
+            )?,
+            sigma,
+            "pricing::lookback::fixed::shift",
+        )?;
+        let growth = d_exp(
+            d_mul(b, t, "pricing::lookback::fixed::carry_t")?,
+            "pricing::lookback::fixed::growth",
+        )?;
+        let bracket = if is_call {
+            d_sub(
+                d_mul(growth, big_n(d1)?, "pricing::lookback::fixed::call::grown")?,
+                d_mul(
+                    reflect_power,
+                    big_n(d_sub(d1, shift, "pricing::lookback::fixed::call::shifted")?)?,
+                    "pricing::lookback::fixed::call::reflected",
+                )?,
+                "pricing::lookback::fixed::call::bracket",
+            )?
+        } else {
+            d_sub(
+                d_mul(
+                    reflect_power,
+                    big_n(d_add(-d1, shift, "pricing::lookback::fixed::put::shifted")?)?,
+                    "pricing::lookback::fixed::put::reflected",
+                )?,
+                d_mul(growth, big_n(-d1)?, "pricing::lookback::fixed::put::grown")?,
+                "pricing::lookback::fixed::put::bracket",
+            )?
+        };
+        d_mul(
+            d_mul(
+                spot_discounted,
+                weight,
+                "pricing::lookback::fixed::reflection_scale",
+            )?,
+            bracket,
+            "pricing::lookback::fixed::reflection",
+        )?
     };
 
+    let price = d_add(
+        d_add(locked_in_pv, vanilla, "pricing::lookback::fixed::base")?,
+        reflection,
+        "pricing::lookback::fixed::price",
+    )?;
     Ok(apply_side(price, option))
 }
 

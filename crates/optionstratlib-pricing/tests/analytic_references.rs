@@ -37,7 +37,8 @@
 //! * Barrier: Haug §4.17.1 (Reiner-Rubinstein 1991) Table 4-13
 //!   (`S = 100, T = 0.5, r = 8 %, b = 4 %, rebate 3`), all eight contracts
 //!   at `σ = 25 %` and `30 %` (#646), and the same formulas at zero rebate.
-//! * Lookback: Haug §4.15.2 (Conze-Viswanathan 1991) fixed-strike table.
+//! * Lookback: Haug §4.15.2 (Conze-Viswanathan 1991) fixed-strike table,
+//!   calls and puts (#647).
 //! * Payoff: the textbook payoffs `max(S - K, 0)` and `max(K - S, 0)`
 //!   through core's `Payoff` via `Options::payoff` / `payoff_at_price`.
 //!
@@ -61,15 +62,11 @@
 //!
 //! Time to expiry enters through `ExpirationDate::Days`, converted at
 //! 365 days per year, so `T = 0.5` is `182.5` days.
-//!
-//! # Known discrepancies (filed, tested in the fix)
-//!
-//! Reference checks that the library fails today are not in this suite;
-//! each lives in its issue with the test code, and the fix adds it here:
-//! fixed-strike lookback (#647).
 
 use optionstratlib_core::model::option::ExoticParams;
-use optionstratlib_core::model::types::{BarrierType, BinaryType, OptionStyle, OptionType, Side};
+use optionstratlib_core::model::types::{
+    BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
+};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::{delta, gamma, rho, theta, vega};
@@ -842,6 +839,128 @@ fn test_barrier_haug_table_sigma_30_and_barrier_at_spot() {
             );
         }
     }
+}
+
+/// Haug §4.15.2 (Conze-Viswanathan 1991), fixed-strike lookback on a new
+/// contract (`S = S_max = S_min = 100`), `T = 0.5, r = b = 10 %`, on
+/// Haug's table grid `K ∈ {95, 100, 105}`, `σ ∈ {10, 20, 30} %`.
+fn fixed_lookback(style: OptionStyle, strike: f64, vol: f64) -> Decimal {
+    ok(
+        black_scholes(&option(
+            OptionType::Lookback {
+                lookback_type: LookbackType::FixedStrike,
+            },
+            style,
+            100.0,
+            strike,
+            182.5,
+            vol,
+            dec!(0.10),
+            0.0,
+            None,
+        )),
+        "lookback",
+    )
+}
+
+/// Fixed-strike lookback calls: `13.2687, 18.9263, 24.9858`; `8.5126,
+/// 14.1702, 20.2296`; `4.3908, 9.8905, 15.8512` (rows `K = 95, 100, 105`,
+/// columns `σ = 10, 20, 30 %`), the published formula evaluated
+/// independently in `f64` (`24.98576` at `K = 95, σ = 30 %`).
+///
+/// The library used to return `10.8209, 12.6609, 15.1705`; `6.8087,
+/// 9.4397, 12.3250`; `3.8380, 6.8563, 9.9210`, between `0.55` and `9.8`
+/// below the reference, the gap growing with volatility (#647).
+#[test]
+fn test_lookback_fixed_strike_call_matches_haug_table() {
+    let table = [
+        (95.0, [dec!(13.2687), dec!(18.9263), dec!(24.9858)]),
+        (100.0, [dec!(8.5126), dec!(14.1702), dec!(20.2296)]),
+        (105.0, [dec!(4.3908), dec!(9.8905), dec!(15.8512)]),
+    ];
+    for (strike, references) in table {
+        for (vol, reference) in [0.10, 0.20, 0.30].into_iter().zip(references) {
+            assert_close(
+                fixed_lookback(OptionStyle::Call, strike, vol),
+                reference,
+                TOL_4DP,
+                &format!("fixed lookback call k={strike} vol={vol}"),
+            );
+        }
+    }
+}
+
+/// Fixed-strike lookback puts on the same grid: `0.6899, 4.4448, 8.9213`;
+/// `3.3917, 8.3177, 13.1579`; `8.1478, 13.0739, 17.9140`, evaluated
+/// independently from the same formulas (#647).
+#[test]
+fn test_lookback_fixed_strike_put_matches_haug_table() {
+    let table = [
+        (95.0, [dec!(0.6899), dec!(4.4448), dec!(8.9213)]),
+        (100.0, [dec!(3.3917), dec!(8.3177), dec!(13.1579)]),
+        (105.0, [dec!(8.1478), dec!(13.0739), dec!(17.9140)]),
+    ];
+    for (strike, references) in table {
+        for (vol, reference) in [0.10, 0.20, 0.30].into_iter().zip(references) {
+            assert_close(
+                fixed_lookback(OptionStyle::Put, strike, vol),
+                reference,
+                TOL_4DP,
+                &format!("fixed lookback put k={strike} vol={vol}"),
+            );
+        }
+    }
+}
+
+/// At zero carry (`r = q = 5 %`) the reflection term's `σ²/(2b)` is
+/// replaced by its limit; `S = K = 100, T = 0.5, σ = 25 %` gives a call of
+/// `14.5364` and a put of `13.0124`, and a carry of `1e-6` agrees to `1e-4`
+/// (independent `f64` evaluation: `14.536358`, `13.012437` at `b = 0`;
+/// `14.536386`, `13.012415` at `b = 1e-6`) (#647).
+#[test]
+fn test_lookback_fixed_strike_zero_carry_limit() {
+    let price = |style: OptionStyle, dividend: f64| {
+        ok(
+            black_scholes(&option(
+                OptionType::Lookback {
+                    lookback_type: LookbackType::FixedStrike,
+                },
+                style,
+                100.0,
+                100.0,
+                182.5,
+                0.25,
+                dec!(0.05),
+                dividend,
+                None,
+            )),
+            "lookback",
+        )
+    };
+    assert_close(
+        price(OptionStyle::Call, 0.05),
+        dec!(14.5364),
+        TOL_4DP,
+        "call b=0",
+    );
+    assert_close(
+        price(OptionStyle::Put, 0.05),
+        dec!(13.0124),
+        TOL_4DP,
+        "put b=0",
+    );
+    assert_close(
+        price(OptionStyle::Call, 0.049999),
+        dec!(14.5364),
+        dec!(0.0001),
+        "call b=1e-6",
+    );
+    assert_close(
+        price(OptionStyle::Put, 0.049999),
+        dec!(13.0124),
+        dec!(0.0001),
+        "put b=1e-6",
+    );
 }
 
 // ---------------------------------------------------------------------------
