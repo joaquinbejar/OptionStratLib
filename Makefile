@@ -269,8 +269,12 @@ check-components:
 		LOGLEVEL=WARN cargo test -p $$crate --no-default-features --features $$features; \
 		cargo clippy -p $$crate --all-targets --no-default-features --features $$features -- -D warnings; \
 	done
-	@rm -rf $(PACKAGE_DIR) $(TARGET_DIR)/debug/.fingerprint/optionstratlib-* \
-		$(TARGET_DIR)/debug/deps/liboptionstratlib_* $(TARGET_DIR)/debug/deps/optionstratlib_*
+	@rm -rf $(PACKAGE_DIR)
+	@for dir in $(TARGET_DIR)/debug/.fingerprint $(TARGET_DIR)/debug/deps; do \
+		[ -d $$dir ] || continue; \
+		find $$dir -maxdepth 1 \( -name 'optionstratlib-*' -o -name 'optionstratlib_*' \
+			-o -name 'liboptionstratlib_*' \) -exec rm -rf {} +; \
+	done
 	cargo package $(addprefix -p ,$(COMPONENT_CRATES)) --allow-dirty
 	@echo "OK: $(COMPONENT_CRATES) verified standalone"
 
