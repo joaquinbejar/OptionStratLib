@@ -2,9 +2,10 @@ use positive::{Positive, pos_or_panic};
 use {
     optionstratlib::ExpirationDate,
     optionstratlib::chains::chain::OptionChain,
+    optionstratlib::chains::utils::FindOptimalSide,
+    optionstratlib::strategies::IronCondor,
     optionstratlib::strategies::base::Optimizable,
     optionstratlib::strategies::base::Positionable,
-    optionstratlib::strategies::{FindOptimalSide, IronCondor},
     optionstratlib::{OptionStyle, Side},
     rust_decimal_macros::dec,
     std::error::Error,

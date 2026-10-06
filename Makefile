@@ -31,6 +31,8 @@ test:
 	LOGLEVEL=WARN cargo test -p optionstratlib-market --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-analytics
 	LOGLEVEL=WARN cargo test -p optionstratlib-analytics --all-features
+	LOGLEVEL=WARN cargo test -p optionstratlib-strategies
+	LOGLEVEL=WARN cargo test -p optionstratlib-strategies --all-features
 	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
@@ -59,12 +61,12 @@ fmt-check:
 
 # Run Clippy for linting
 # Each facade capability on its own (ADR-0002 Decision 2): `pricing` without
-# market, `market` without I/O or simulation, `analytics` without simulation,
-# and `analytics,simulation`, the smallest set the facade test suites and
-# benches compile against (it leaves out `io` and `synthetic`, so their gates
-# are linted too). Each set is also documented with warnings denied, so no
-# doc link names a gated item.
-FACADE_FEATURE_SETS := math pricing market analytics simulation market,simulation analytics,simulation
+# market, `market` without I/O or simulation, `analytics` and `strategies`
+# without simulation, and `strategies,simulation`, the smallest set the facade
+# test suites and benches compile against (it leaves out `io` and
+# `synthetic`, so their gates are linted too). Each set is also documented
+# with warnings denied, so no doc link names a gated item.
+FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation
 
 .PHONY: lint
 lint:
@@ -154,7 +156,7 @@ check-graph:
 # with broken links and missing docs denied, and the packaged archive. The
 # crates are packaged together because a component's path dependencies are
 # not on crates.io yet; `cargo package` resolves them from the same run.
-COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics
+COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics optionstratlib-strategies
 # Named feature sets each component must also build, lint and test alone
 # (`crate:feature`), besides no, default and all features (ADR-0003, #525).
 COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async
@@ -368,7 +370,7 @@ print-public-api-pins:
 # Workspace component crates with their own snapshot, `public-api/<crate>.txt`.
 # The facade re-exports their modules, and `cargo public-api` does not inline
 # another crate's items, so each component is tracked on its own.
-PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics
+PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics optionstratlib-strategies
 
 .PHONY: public-api-update
 public-api-update: check-cargo-public-api
@@ -439,7 +441,7 @@ pre-push: fix fmt lint-fix test readme doc
 # `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing -p optionstratlib-market -p optionstratlib-analytics
+	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing -p optionstratlib-market -p optionstratlib-analytics -p optionstratlib-strategies
 
 .PHONY: doc-open
 doc-open:

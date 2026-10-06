@@ -9,6 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Strategies are their own crate, `optionstratlib-strategies`** (#531).
+  `strategies` and `StrategyError` (with the `error::strategies` module and
+  its `From` impls, `From<StrategyError> for ProbabilityError` included)
+  move to `crates/optionstratlib-strategies`, which depends on core, pricing,
+  market and analytics and on no math, simulation, backtesting or plotting
+  crate. Results and serialized forms are unchanged. What does change:
+  - The facade reaches them through a new `strategies` feature (implies
+    `analytics`, in `default`; `plotly` implies it). `strategies` alone
+    builds the module, `StrategyError`, the `test_strategy_traits!` macro
+    and the strategy `prelude` items without simulation. The code still in
+    the facade (backtesting, visualization, the unified `error::Error`) now
+    needs `strategies` and `simulation`, and the facade test suites and
+    benches declare `required-features = ["strategies", "simulation"]`.
+  - `strategies::FindOptimalSide` and `strategies::utils::FindOptimalSide`
+    are removed: the enum is market-owned and keeps one public path,
+    `chains::utils::FindOptimalSide` (`optionstratlib_market::chains::utils`
+    in the component crate). The `prelude` still exports it, now from that
+    path and under `market`. No other alias was left in the strategies
+    layer after #530 and #658.
+  - `optionstratlib-strategies` derives `utoipa::ToSchema` only under its
+    `schema` feature; the facade enables it. The facade drops its
+    `itertools` dependency, whose only user was the strategy combination
+    search.
+  - The strategy unit tests move with their files; the PMCC optimiser tests
+    that `io` gated in the facade always run there, reading the chain
+    fixture from the workspace root (market's `io` is a dev-dependency).
+    The integration suites under `tests/unit/strategies` and
+    `tests/property` stay in the facade until M4-06 (#534).
+    `check-graph` forbids the analytics package set in strategies, and
+    `check-components`, `make test`, `make doc`, the public-API snapshots
+    and the float gate cover it.
+
 - **`Strategable` no longer requires `Graph`, and `Simulator` / `RandomWalk`
   no longer implement `BasicAble`** (#658). These were the last two reverse
   edges of the strategies layer (`strategies -> visualization`,

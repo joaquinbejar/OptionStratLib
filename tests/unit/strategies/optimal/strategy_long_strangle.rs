@@ -4,8 +4,9 @@ use {
     num_traits::ToPrimitive,
     optionstratlib::ExpirationDate,
     optionstratlib::chains::chain::OptionChain,
+    optionstratlib::chains::utils::FindOptimalSide,
     optionstratlib::strategies::base::Optimizable,
-    optionstratlib::strategies::{FindOptimalSide, LongStrangle, Strategies},
+    optionstratlib::strategies::{LongStrangle, Strategies},
     rust_decimal_macros::dec,
     std::error::Error,
 };

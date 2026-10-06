@@ -101,7 +101,6 @@ optionstratlib -> chrono
 optionstratlib -> expiration_date
 optionstratlib -> financial_types
 optionstratlib -> indicatif
-optionstratlib -> itertools
 optionstratlib -> num-traits
 optionstratlib -> option_type
 optionstratlib -> optionstratlib-core

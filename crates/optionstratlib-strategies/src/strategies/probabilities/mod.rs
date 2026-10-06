@@ -1,0 +1,252 @@
+/******************************************************************************
+   Author: Joaquín Béjar García
+   Email: jb@taunais.com
+   Date: 30/11/24
+******************************************************************************/
+//! # Probability Analysis Module
+//!
+//! This module provides comprehensive probability and risk analysis tools for
+//! option strategies, including profit probability calculations, risk metrics,
+//! and price movement analysis.
+//!
+//! ## Core Components
+//!
+//! ### Strategy Probability Analysis
+//!
+//! ```rust
+//! use optionstratlib_core::model::Positive;
+//!
+//! pub struct StrategyProbabilityAnalysis {
+//!     pub probability_of_profit: Positive,
+//!     pub probability_of_max_profit: Positive,
+//!     pub probability_of_max_loss: Positive,
+//!     pub expected_value: Positive,
+//!     pub break_even_points: Vec<Positive>,
+//!     pub risk_reward_ratio: Positive,
+//! }
+//! ```
+//!
+//! ### Probability Analysis Trait
+//!
+//! ```rust
+//! use optionstratlib_core::model::Positive;
+//! use optionstratlib_pricing::pricing::Profit;
+//! use optionstratlib_strategies::strategies::Strategies;
+//! use optionstratlib_analytics::error::ProbabilityError;
+//!
+//! use optionstratlib_analytics::analytics::{PriceTrend, VolatilityAdjustment};
+//! use optionstratlib_strategies::strategies::probabilities::StrategyProbabilityAnalysis;
+//!
+//! pub trait ProbabilityAnalysis: Strategies + Profit {
+//!     fn analyze_probabilities(
+//!         &self,
+//!         volatility_adj: Option<VolatilityAdjustment>,
+//!         trend: Option<PriceTrend>
+//!     ) -> Result<StrategyProbabilityAnalysis, ProbabilityError>;
+//!     
+//!     fn expected_value(
+//!         &self,
+//!         volatility_adj: Option<VolatilityAdjustment>,
+//!         trend: Option<PriceTrend>
+//!     ) -> Result<Positive, ProbabilityError>;
+//! }
+//! ```
+//!
+//! ## Usage Examples
+//!
+//! ### Basic Strategy Analysis
+//!
+//! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! use rust_decimal_macros::dec;
+//! use tracing::info;
+//! use optionstratlib_core::model::types::{ OptionStyle, OptionType, Side};
+//! use optionstratlib_analytics::analytics::{PriceTrend, VolatilityAdjustment};
+//! use optionstratlib_strategies::strategies::probabilities::{ProbabilityAnalysis, StrategyProbabilityAnalysis};
+//! use optionstratlib_core::model::ExpirationDate;use optionstratlib_core::model::Positive;
+//! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread;
+//!
+//! let strategy = BearCallSpread::new(
+//!         "SP500".to_string(),
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
+//!         dec!(0.05),   // risk_free_rate
+//!         Positive::ZERO,   // dividend_yield
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
+//!     )?;
+//! let analysis = strategy.analyze_probabilities(None, None)?;
+//!
+//! info!("Analysis: {:?}", analysis);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Analysis with Volatility Adjustment
+//!
+//! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! use rust_decimal_macros::dec;
+//! use optionstratlib_core::model::ExpirationDate;
+//! use optionstratlib_analytics::analytics::VolatilityAdjustment;
+//! use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
+//! use optionstratlib_core::model::Positive;
+//! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread;
+//!
+//! let strategy = BearCallSpread::new(
+//!         "SP500".to_string(),
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
+//!         dec!(0.05),   // risk_free_rate
+//!         Positive::ZERO,   // dividend_yield
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
+//!     )?;
+//!
+//! let vol_adj = Some(VolatilityAdjustment {
+//!     base_volatility: pos_or_panic!(0.20),   // 20% base volatility
+//!     std_dev_adjustment: pos_or_panic!(0.10),   // 10% adjustment
+//! });
+//!
+//! let _analysis = strategy.analyze_probabilities(vol_adj, None)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Analysis with Price Trend
+//!
+//! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! use rust_decimal_macros::dec;
+//! use optionstratlib_core::model::ExpirationDate;
+//! use optionstratlib_core::model::Positive;
+//! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread;
+//! use optionstratlib_analytics::analytics::PriceTrend;
+//! use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
+//! let strategy = BearCallSpread::new(
+//!         "SP500".to_string(),
+//!         pos_or_panic!(5781.88),   // underlying_price
+//!         pos_or_panic!(5750.0),   // long_strike_itm
+//!         pos_or_panic!(5820.0),   // short_strike
+//!         ExpirationDate::Days(Positive::TWO),
+//!         pos_or_panic!(0.18),   // implied_volatility
+//!         dec!(0.05),   // risk_free_rate
+//!         Positive::ZERO,   // dividend_yield
+//!         Positive::TWO,   // long quantity
+//!         pos_or_panic!(85.04),   // premium_long
+//!         pos_or_panic!(29.85),   // premium_short
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.78),   // open_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_long
+//!         pos_or_panic!(0.73),   // close_fee_short
+//!     )?;
+//! let trend = Some(PriceTrend {
+//!     drift_rate: 0.05,   // 5% annual drift
+//!     confidence: 0.95,   // 95% confidence level
+//! });
+//!
+//! let _analysis = strategy.analyze_probabilities(None, trend)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Price Range Probability Analysis
+//!
+//! ```rust
+//! # fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! use tracing::info;
+//! use optionstratlib_analytics::analytics::{VolatilityAdjustment, calculate_price_probability};
+//! use optionstratlib_core::model::ExpirationDate;
+//! use optionstratlib_core::model::Positive;
+//! use optionstratlib_core::pos_or_panic;
+//!
+//! let (prob_below, prob_in_range, prob_above) = calculate_price_probability(
+//!     &Positive::HUNDRED,   // current price
+//!     &pos_or_panic!(95.0),   // lower bound
+//!     &pos_or_panic!(105.0),   // upper bound
+//!     VolatilityAdjustment {   // volatility: required, the kernel has no default
+//!         base_volatility: pos_or_panic!(0.2),
+//!         std_dev_adjustment: Positive::ZERO,
+//!     },
+//!     None,   // trend
+//!     &ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     None                 // risk-free rate
+//! )?;
+//! info!("Probabilities: {}, {}, {}", prob_below, prob_in_range, prob_above);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ## Mathematical Models
+//!
+//! ### Expected Value Calculation
+//!
+//! The expected value is calculated using:
+//! ```text
+//! E[V] = Σ P(Si) * V(Si)
+//! ```
+//! where:
+//! - Si: Price scenario i
+//! - P(Si): Probability of scenario i
+//! - V(Si): Value at scenario i
+//!
+//! ### Price Movement Probability
+//!
+//! Uses log-normal distribution with drift:
+//! ```text
+//! ln(ST/S0) ~ N(μT, σ²T)
+//! ```
+//! where:
+//! - ST: Price at time T
+//! - S0: Current price
+//! - μ: Drift rate
+//! - σ: Volatility
+//! - T: Time to expiration
+//!
+//! ## Performance Considerations
+//!
+//! - Probability calculations: O(n) where n is the number of price points
+//! - Expected value calculation: O(n) for n scenarios
+//! - Memory usage: O(1) for single point calculations
+//! - Cache results when analyzing multiple scenarios
+//!
+//! ## Implementation Notes
+//!
+//! - All probabilities are strictly positive (Positive)
+//! - Volatility adjustments affect both mean and standard deviation
+//! - Price trends are incorporated through drift adjustment
+//! - Break-even points are calculated numerically
+//! - Risk metrics use absolute values for consistency
+//!
+//! ## Error Handling
+//!
+//! The module returns Result types for all main functions, with errors for:
+//! - Invalid time parameters (negative or zero time to expiry)
+//! - Invalid volatility (zero or negative)
+//! - Invalid probability bounds (outside [\0,1\])
+//! - Invalid price ranges (upper < lower bound)
+
+mod analysis;
+pub(crate) mod core;
+
+pub use analysis::StrategyProbabilityAnalysis;
+pub use core::ProbabilityAnalysis;
