@@ -67,6 +67,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Migrate `WalkParams { size, init_step, walk_type, walker }` to
   `WalkParams { size, init_step, walk_type, walker, seed: None }`.
 
+- **`SimulationStats` reports `BacktestError` and reuses the backtest
+  adapter's projection** (#677). `SimulationStats::update` and
+  `SimulationStats::update_outcome` return `Result<(), BacktestError>`
+  instead of `Result<(), SimulationError>`: a running P&L total that leaves
+  the `Decimal` range is `BacktestError::Decimal` (labelled
+  `backtesting::stats::total_pnl`), and a run counter that cannot advance is
+  the new `BacktestError::CounterOverflow { counter }` (built with
+  `BacktestError::counter_overflow`) instead of
+  `SimulationError::InvalidParameters`, since the counters belong to the
+  backtest. `update` no longer copies the result into a `PathOutcome` field
+  by field; it takes `From<&SimulationResult> for PathOutcome` and replaces
+  only `pnl` with `result.pnl.realized`. That P&L is the documented
+  difference from `SimulationStatsResult`, which sums `PnL::total_pnl`. The
+  two are equal for every result the library builds: an early exit has no
+  unrealized leg, an expiry has a zero one. They differ only for a
+  caller-built result with a non-zero unrealized leg. Unit tests pin both
+  sides of that difference and the agreement on library-shaped results.
+  `print_summary` now prints the header `SIMULATION SUMMARY` instead of
+  `SHORT PUT SIMULATION SUMMARY`. The new `SimulationStats::statistics()`
+  returns `Result<PathStatistics, BacktestError>`, computed by
+  `PathStatistics::from_outcomes` over the accepted outcomes, so the
+  accumulator's aggregate comes from the same owner as
+  `SimulationStatsResult`'s (the tests pin the two equal). `print_summary`
+  still prints its own running figures. No figure changes: every `update`
+  that succeeded before gives the same counters, totals, extremes, average
+  holding period and printed summary.
+
 - **Backtesting is its own crate, `optionstratlib-backtest`** (#538).
   `backtesting` (`Simulate` and its single-leg implementations, the adapters
   from the simulation engine's `PathOutcome` / `PathStatistics` to
