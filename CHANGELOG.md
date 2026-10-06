@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     trait's `String` was used). The trait's other methods leave with them;
     on these types they only reached the defaults (empty collections, or
     the `one_option` panic), so nothing usable is lost.
+  The empty `strategies::graph` module, kept only so that path stayed valid
+  after the `Graph` impls moved to `visualization::strategies` (#505), is
+  removed; the impls and `impl_graph_for_payoff_strategy!` are unchanged.
 
 - **The strategies module no longer re-exports analytics, P&L or Greeks
   items** (#530). Each item keeps one public path, its owning layer's; the

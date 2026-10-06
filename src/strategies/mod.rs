@@ -227,9 +227,6 @@ pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
 
-/// Former home of the strategy chart construction; see the module docs.
-/// The `Graph` implementations now live in `visualization::strategies`.
-pub mod graph;
 /// Iron Butterfly strategy implementation
 pub mod iron_butterfly;
 /// Iron Condor strategy implementation

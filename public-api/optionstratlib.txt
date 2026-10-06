@@ -11076,7 +11076,6 @@ pub fn optionstratlib::strategies::short_strangle::ShortStrangle::optimized_adju
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::optimized_adjustment_plan_with_chain(&self, &optionstratlib_market::chains::chain::OptionChain, optionstratlib::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib::strategies::delta_neutral::portfolio::AdjustmentTarget) -> core::result::Result<optionstratlib::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::portfolio_greeks(&self) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib_pricing::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::trade_from_delta_adjustment(&mut self, financial_types::Action) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::trade::Trade>, optionstratlib::error::strategies::StrategyError>
-pub mod optionstratlib::strategies::graph
 pub mod optionstratlib::strategies::iron_butterfly
 pub struct optionstratlib::strategies::iron_butterfly::IronButterfly
 pub optionstratlib::strategies::iron_butterfly::IronButterfly::break_even_points: alloc::vec::Vec<positive::positive::Positive>
