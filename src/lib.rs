@@ -974,13 +974,15 @@
 //! ### Basic Option Creation and Pricing
 //!
 //! ```rust
+//! # #[cfg(feature = "pricing")]
+//! # mod example {
 //! use optionstratlib::{Options, OptionStyle, OptionType, Side, ExpirationDate};
 //! use positive::{pos_or_panic,Positive};
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::greeks::Greeks;
 //! use optionstratlib::pricing::OptionPricing;
 //!
-//! fn main() -> Result<(), optionstratlib::error::Error> {
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create a European call option
 //!     let option = Options::new(
 //!         OptionType::European,
@@ -1021,11 +1023,20 @@
 //!         delta, gamma, theta, vega, vanna, vomma, veta, charm, color);
 //!     Ok(())
 //! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(feature = "pricing")]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
 //! ```
 //!
 //! ### Working with Trading Strategies
 //!
 //! ```rust
+//! # #[cfg(all(feature = "strategies", feature = "simulation"))]
+//! # mod example {
 //! use positive::{Positive, pos_or_panic};
 //! use optionstratlib::ExpirationDate;
 //! use optionstratlib::strategies::Strategies;
@@ -1035,7 +1046,7 @@
 //! use rust_decimal_macros::dec;
 //! use std::error::Error;
 //!
-//! fn main() -> Result<(), optionstratlib::error::Error> {
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     use optionstratlib::pricing::Profit;
 //! let underlying_price = Positive::HUNDRED;
 //!
@@ -1078,14 +1089,23 @@
 //!
 //!     Ok(())
 //! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(all(feature = "strategies", feature = "simulation"))]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
 //! ```
 //!
 //! ### Advanced Features: Volatility Analysis
 //!
 //! ```rust
+//! # #[cfg(feature = "pricing")]
+//! # mod example {
 //! use optionstratlib::prelude::*;
 //!
-//! fn main() -> Result<(), optionstratlib::error::Error> {
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create an option for implied volatility calculation
 //!     let mut option = Options::new(
 //!         OptionType::European,
@@ -1108,14 +1128,23 @@
 //!     tracing::info!("Implied volatility: {:.2}%", iv.to_f64() * 100.0);
 //!     Ok(())
 //! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(feature = "pricing")]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
 //! ```
 //!
 //! ### Custom Strategy Creation
 //!
 //! ```rust
+//! # #[cfg(feature = "strategies")]
+//! # mod example {
 //! use optionstratlib::prelude::*;
 //!
-//! fn main() -> Result<(), optionstratlib::error::Error> {
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Define common parameters
 //!     let underlying_symbol = "DAX".to_string();
 //!     let underlying_price = pos_or_panic!(24000.0);
@@ -1191,6 +1220,13 @@
 //!     tracing::info!("Strategy created: {}", strategy.get_title());
 //!     Ok(())
 //! }
+//! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
+//! # }
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! #     #[cfg(feature = "strategies")]
+//! #     example::run()?;
+//! #     Ok(())
+//! # }
 //! ```
 //!
 //! ## Testing

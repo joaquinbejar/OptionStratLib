@@ -74,17 +74,21 @@ fmt-check:
 # without simulation, and `strategies,simulation`, the smallest set the facade
 # test suites and benches compile against (it leaves out `io` and
 # `synthetic`, so their gates are linted too). Each set is also documented
-# with warnings denied, so no doc link names a gated item.
+# with warnings denied, so no doc link names a gated item, and its library
+# and doc tests run, so every doc example compiles under the capability it
+# needs (the integration suites declare `required-features` and are skipped).
 FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation
 
 .PHONY: lint
 lint:
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
 	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
+	LOGLEVEL=WARN cargo test -q -p optionstratlib --no-default-features
 	@for features in $(FACADE_FEATURE_SETS); do \
 		echo "clippy optionstratlib --no-default-features --features $$features"; \
 		cargo clippy -p optionstratlib --all-targets --no-default-features --features $$features -- -D warnings || exit 1; \
 		RUSTDOCFLAGS="-D warnings" cargo doc -q -p optionstratlib --no-deps --no-default-features --features $$features || exit 1; \
+		LOGLEVEL=WARN cargo test -q -p optionstratlib --no-default-features --features $$features || exit 1; \
 	done
 
 .PHONY: lint-fix

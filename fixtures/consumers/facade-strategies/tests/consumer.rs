@@ -40,7 +40,15 @@ fn bull_call_spread() -> BullCallSpread {
 fn test_bull_call_spread_through_the_prelude() {
     let strategy = bull_call_spread();
     match strategy.get_break_even_points() {
-        Ok(points) => assert_eq!(points.len(), 1),
+        Ok(points) => {
+            assert_eq!(points.len(), 1);
+            assert!(
+                points
+                    .iter()
+                    .all(|point| *point > pos_or_panic!(5750.0) && *point < pos_or_panic!(5820.0)),
+                "the break-even lies between the strikes: {points:?}"
+            );
+        }
         Err(error) => panic!("break-even points: {error}"),
     }
     match strategy.get_max_loss() {
@@ -59,14 +67,24 @@ fn test_bull_call_spread_through_the_prelude() {
 
 #[test]
 fn test_strategy_probability_through_the_prelude() {
-    match strategy_probability(&bull_call_spread()) {
-        Ok(probability) => assert!(probability > Positive::ZERO && probability < Positive::ONE),
-        Err(error) => panic!("probability of profit: {error}"),
+    // The facade's prelude trait and the strategies crate's are one trait, so
+    // both paths give the same number for the same strategy.
+    let strategy = bull_call_spread();
+    let through_prelude = ProbabilityAnalysis::probability_of_profit(&strategy, None, None);
+    let through_component =
+        <BullCallSpread as optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis>::probability_of_profit(
+            &strategy, None, None,
+        );
+    match (through_prelude, through_component) {
+        (Ok(facade), Ok(component)) => {
+            assert_eq!(facade, component);
+            assert!(
+                facade > Positive::ZERO && facade < Positive::ONE,
+                "{facade}"
+            );
+        }
+        other => panic!("probability of profit: {other:?}"),
     }
-}
-
-fn strategy_probability(strategy: &BullCallSpread) -> Result<Positive, ProbabilityError> {
-    strategy.probability_of_profit(None, None)
 }
 
 #[test]
@@ -78,6 +96,9 @@ fn test_facade_paths_are_the_strategies_items() {
     let strategy: optionstratlib_strategies::strategies::BullCallSpread = bull_call_spread();
     let error: optionstratlib_strategies::error::StrategyError =
         optionstratlib::error::StrategyError::NotImplemented;
-    assert!(!strategy.get_title().is_empty());
+    assert_eq!(
+        strategy.get_title(),
+        "BullCallSpread Strategy: \n\tUnderlying: SP500 @ $5820 Short Call European Option\n\tUnderlying: SP500 @ $5750 Long Call European Option"
+    );
     assert!(!error.to_string().is_empty());
 }

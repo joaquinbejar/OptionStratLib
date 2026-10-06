@@ -557,7 +557,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `make test-consumer-facade` now cover all four single-capability
   facades, and `make check-fixtures` asserts six fixture graphs. The
   `analytics` and `strategies` facade features themselves came with #529 and
-  #531.
+  #531. The crate-level doc examples now compile under each capability on
+  its own: each runs only when the capability it uses is on (`pricing`,
+  `strategies`, or `strategies` plus `simulation` for the chart), and their
+  `main` returns `Box<dyn std::error::Error>` instead of the unified
+  `error::Error`, which exists only with `strategies` and `simulation`.
+  `make lint` now also runs `cargo test -p optionstratlib` (library and doc
+  tests) with no features and with each set in `FACADE_FEATURE_SETS`. The
+  analytics and strategies facade prelude groups stay as they are, gated by
+  their capability; curating the facade prelude is M7-03 (#551).
 
 - **Analytics consumer fixture without strategies** (#533).
   `fixtures/consumers/analytics-only` is a real crate, excluded from the

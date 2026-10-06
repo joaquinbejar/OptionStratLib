@@ -17,6 +17,5 @@ optionstratlib = { path = "../../..", version = "0.22.0", default-features = fal
 # The defining crate, named directly only to prove the facade paths are the
 # same items.
 optionstratlib-analytics = { path = "../../../crates/optionstratlib-analytics", version = "0.22.0" }
-chrono = "0.4"
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"

@@ -33,6 +33,8 @@
 //! ## Usage Example
 //!
 //! ```rust
+//! # #[cfg(feature = "market")]
+//! # mod example {
 //! use optionstratlib::error::{OptionsError, GreeksError, ChainError};
 //!
 //! // Options error handling
@@ -52,6 +54,7 @@
 //!     // Implementation
 //!     Ok(())
 //! }
+//! # }
 //! ```
 //!
 //! ## Error Design Principles

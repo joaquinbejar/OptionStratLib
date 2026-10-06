@@ -8,7 +8,11 @@ present = [
 ]
 # `utoipa`, `indicatif` and `prettytable-rs` are still unconditional facade
 # dependencies (see the facade-pricing fixture); they join this list with
-# M6-05 and M7-01.
+# M6-05 and M7-01. `optionstratlib-simulation` is a forward contract: the
+# crate does not exist until M5 (#536), and from then on this capability
+# must still not resolve it. The component crates also listed as direct
+# dependencies above are there only for the identity checks; compiling the
+# facade paths is what proves the facade enables them.
 absent = [
     "optionstratlib-simulation", "optionstratlib-backtest", "optionstratlib-visualization",
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",

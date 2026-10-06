@@ -4,7 +4,6 @@
 //! the rest, and proof that both name the items the analytics crate defines.
 //! No strategy, simulation, I/O, async or charting code is compiled.
 
-use chrono::Utc;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::model::Position;
 use optionstratlib::prelude::*;
@@ -13,6 +12,13 @@ use optionstratlib::prelude::*;
 /// has its own type, so this proves a facade path re-exports the component's
 /// function rather than wrapping it.
 fn same_item<T>(_: T, _: T) {}
+
+/// Compiles only when the facade's `SPANMargin` is the analytics crate's.
+fn analytics_span(
+    span: optionstratlib_analytics::risk::SPANMargin,
+) -> optionstratlib_analytics::risk::SPANMargin {
+    span
+}
 
 fn short_put() -> Position {
     let option = Options::new(
@@ -113,10 +119,22 @@ fn test_facade_paths_are_the_analytics_items() {
         <Position as optionstratlib::pnl::PnLCalculator>::calculate_pnl_at_expiration,
         <Position as optionstratlib_analytics::pnl::PnLCalculator>::calculate_pnl_at_expiration,
     );
-    let span: optionstratlib_analytics::risk::SPANMargin =
-        optionstratlib::risk::SPANMargin::new(dec!(0.1), dec!(0.05), dec!(0.1));
+    // `metrics` too, through the facade's `OptionChain`, which ties the
+    // market type to the analytics trait implemented on it.
+    same_item(
+        <OptionChain as optionstratlib::metrics::ImpliedVolatilityCurve>::iv_curve,
+        <OptionChain as optionstratlib_analytics::metrics::ImpliedVolatilityCurve>::iv_curve,
+    );
+    let span = analytics_span(optionstratlib::risk::SPANMargin::new(
+        dec!(0.1),
+        dec!(0.05),
+        dec!(0.1),
+    ));
+    match span.calculate_margin(&short_put()) {
+        Ok(margin) => assert_eq!(margin, dec!(10)),
+        Err(error) => panic!("SPAN margin: {error}"),
+    }
     let error: optionstratlib_analytics::error::ProbabilityError =
         optionstratlib::error::ProbabilityError::invalid_expiration("probe");
-    let _ = span;
     assert!(error.to_string().contains("probe"));
 }
