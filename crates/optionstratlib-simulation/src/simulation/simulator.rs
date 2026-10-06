@@ -474,6 +474,9 @@ mod tests {
     use std::convert::Infallible;
     use tracing::{debug, info};
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     // Helper structs and functions for testing
     #[derive(Clone)]
     struct TestWalker;
@@ -594,7 +597,7 @@ mod tests {
                 vol_mean: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(simulator) = Simulator::new(
@@ -646,7 +649,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(simulator) = Simulator::new(
@@ -690,7 +693,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(mut simulator) = Simulator::new(
@@ -735,7 +738,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(simulator) = Simulator::new(
@@ -799,7 +802,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(mut simulator) = Simulator::new(
@@ -848,7 +851,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(simulator) =
@@ -908,7 +911,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let calls: Cell<u32> = Cell::new(0);
@@ -960,7 +963,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let Ok(simulator) =
@@ -994,7 +997,7 @@ mod tests {
                 volatility: std_dev,
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         assert_eq!(walk_params.size, n_steps);

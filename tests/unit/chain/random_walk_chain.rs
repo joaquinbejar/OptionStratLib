@@ -15,6 +15,9 @@ use rust_decimal_macros::dec;
 use std::error::Error;
 use tracing::info;
 
+/// Seed of the simulated walks, so every run draws the same stream.
+const SEED: u64 = 685;
+
 #[derive(Clone)]
 struct MockWalker {}
 impl MockWalker {
@@ -103,7 +106,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
             volatility: std_dev,
         },
         walker,
-        seed: None,
+        seed: Some(SEED),
     };
 
     let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator)?;

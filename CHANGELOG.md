@@ -707,6 +707,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The statistical simulation tests are seeded** (#685). Every test that
+  drives a built-in stochastic walk now sets `WalkParams::seed`, the OU and
+  normal-sample tests draw from `deterministic_rng`, and the chain
+  panic-freedom properties take the seed as a generated input, so a failure
+  replays. Assertions and tolerances are unchanged. `seed: None` stays only
+  where the test is about the unseeded path, with a comment saying so.
+
 - **The synthetic chain and series generators live in
   `optionstratlib-market`, behind its own `synthetic` feature** (#537,
   ADR-0003). `generator_optionchain` and `generator_optionseries` move from
