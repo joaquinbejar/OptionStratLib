@@ -528,6 +528,9 @@ mod tests {
     use optionstratlib_core::utils::{Len, TimeFrame};
     use rust_decimal_macros::dec;
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     #[derive(Clone)]
     struct Walker {}
     impl Walker {
@@ -557,7 +560,7 @@ mod tests {
                 volatility: std_dev,
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
         let random_walk =
             RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive)
@@ -586,7 +589,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -665,7 +668,7 @@ mod tests {
                 rho: dec!(-0.5),
             },
             walker: Box::new(Walker::new()),
-            seed: None,
+            seed: Some(SEED),
         };
         let path = match walker.heston_with_vol(&params) {
             Ok(path) => path,
@@ -702,7 +705,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(Walker::new()),
-            seed: None,
+            seed: Some(SEED),
         };
         let path = match walker.generate_with_vol(&params) {
             Ok(path) => path,
@@ -853,7 +856,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let mut calls = 0;

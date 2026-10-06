@@ -141,11 +141,16 @@ pub(crate) fn ou_path<R: Rng + ?Sized>(
 mod tests_generate_ou_process {
     use super::*;
     use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::deterministic_rng;
     use rust_decimal_macros::dec;
+
+    /// Seed of the simulated paths, so every run draws the same stream.
+    const SEED: u64 = 685;
 
     #[test]
     fn test_process_length() {
         let steps = 500;
+        // Unseeded on purpose: covers the thread-RNG entry point, whose length is stream-independent.
         let process = generate_ou_process(
             Positive::ONE,
             pos_or_panic!(1.5),
@@ -160,13 +165,14 @@ mod tests_generate_ou_process {
 
     #[test]
     fn test_all_values_positive() {
-        let process = generate_ou_process(
+        let process = ou_path(
             Positive::ONE,
             pos_or_panic!(1.5),
             pos_or_panic!(0.2),
             pos_or_panic!(0.3),
             pos_or_panic!(0.01),
             1000,
+            &mut deterministic_rng(SEED),
         )
         .unwrap();
 
@@ -180,13 +186,14 @@ mod tests_generate_ou_process {
 
     #[test]
     fn test_mean_reversion_tendency() {
-        let process = generate_ou_process(
+        let process = ou_path(
             pos_or_panic!(0.1),
             Positive::ONE,
             Positive::ONE,       // high theta for fast reversion
             pos_or_panic!(0.01), // low volatility
             pos_or_panic!(0.01),
             1000,
+            &mut deterministic_rng(SEED),
         )
         .unwrap();
 

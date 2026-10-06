@@ -295,6 +295,7 @@ fn walk_params(
     walk_type: WalkType,
     start: Positive,
     days: Positive,
+    seed: u64,
 ) -> WalkParams<Positive, Positive> {
     WalkParams {
         size,
@@ -306,7 +307,7 @@ fn walk_params(
         ),
         walk_type,
         walker: Box::new(BareWalker),
-        seed: None,
+        seed: Some(seed),
     }
 }
 
@@ -394,8 +395,9 @@ proptest! {
         size in prop_oneof![Just(0usize), Just(1), Just(2), Just(4)],
         start in extreme_positive(),
         days in extreme_positive(),
+        seed in any::<u64>(),
     ) {
-        let params = walk_params(size, walk_type, start, days);
+        let params = walk_params(size, walk_type, start, days, seed);
         let _ = params.walker.generate(&params);
         let _ = params.walker.generate_with_vol(&params);
     }
@@ -409,8 +411,9 @@ proptest! {
         size in prop_oneof![Just(0usize), Just(1), Just(2), Just(4)],
         start in extreme_positive(),
         days in extreme_positive(),
+        seed in any::<u64>(),
     ) {
-        let params = walk_params(size, walk_type, start, days);
+        let params = walk_params(size, walk_type, start, days, seed);
         let _: Result<Vec<Step<Positive, Positive>>, SimulationError> =
             walk_steps(&params, |price, _volatility, _x| Ok(Some(*price)));
         let _: Result<Vec<Step<Positive, Positive>>, SimulationError> = generator_positive(&params);

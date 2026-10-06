@@ -168,6 +168,9 @@ mod tests {
     use optionstratlib_simulation::simulation::{WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     #[cfg(feature = "io")]
     #[test]
     fn test_create_chain_from_step() {
@@ -237,7 +240,7 @@ mod tests {
                 volatility: std_dev / 100.0,
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let random_walk = RandomWalk::new(
@@ -300,7 +303,7 @@ mod tests {
                 rho: dec!(-0.5),
             },
             walker: Box::new(WalkerOptionChain::new()),
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = match generator_optionchain(&walk_params) {
@@ -602,6 +605,9 @@ mod generators_coverage_tests {
     use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     #[derive(Clone)]
     struct TestWalker {}
     impl TestWalker {
@@ -640,7 +646,7 @@ mod generators_coverage_tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -678,7 +684,7 @@ mod generators_coverage_tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -717,7 +723,7 @@ mod generators_coverage_tests {
                 autocorrelation: None,
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -756,7 +762,7 @@ mod generators_coverage_tests {
                 mean: Default::default(),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -797,7 +803,7 @@ mod generators_coverage_tests {
                 jump_volatility: Default::default(),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -837,7 +843,7 @@ mod generators_coverage_tests {
                 beta: Default::default(),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -879,7 +885,7 @@ mod generators_coverage_tests {
                 rho: Default::default(),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -920,7 +926,7 @@ mod generators_coverage_tests {
                 vol_mean: Default::default(),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();

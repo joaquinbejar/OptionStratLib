@@ -1410,6 +1410,9 @@ mod tests_walk_type_able {
     use std::fmt::Display;
     use std::ops::AddAssign;
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     #[derive(Debug, Clone)]
     struct TestWalker {}
 
@@ -1442,7 +1445,7 @@ mod tests_walk_type_able {
             init_step,
             walk_type,
             walker: Box::new(TestWalker {}),
-            seed: None,
+            seed: Some(SEED),
         }
     }
 

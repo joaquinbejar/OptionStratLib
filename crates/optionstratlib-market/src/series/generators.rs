@@ -217,6 +217,9 @@ mod tests_generator_optionseries {
     use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
+    /// Seed of the simulated walks, so every run draws the same stream.
+    const SEED: u64 = 685;
+
     // Mock Walker for testing
     #[derive(Clone)]
     struct TestWalker {}
@@ -284,7 +287,7 @@ mod tests_generator_optionseries {
                 volatility: std_dev,
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         // Execute
@@ -335,7 +338,7 @@ mod tests_generator_optionseries {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         // Execute
@@ -516,7 +519,7 @@ mod tests_generator_optionseries {
                 },
                 walk_type,
                 walker: walker.clone(),
-                seed: None,
+                seed: Some(SEED),
             };
 
             // Function should run without panicking for all walk types
@@ -629,7 +632,7 @@ mod tests_generator_optionseries {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
-            seed: None,
+            seed: Some(SEED),
         };
 
         // Execute

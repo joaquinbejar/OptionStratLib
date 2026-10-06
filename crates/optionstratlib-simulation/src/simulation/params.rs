@@ -278,6 +278,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            // Unseeded on purpose: the test pins how `Display` renders `seed: None`.
             seed: None,
         };
 

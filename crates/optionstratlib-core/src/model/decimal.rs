@@ -1099,11 +1099,15 @@ mod tests_random_generation {
     use rand::distr::Distribution;
     use std::collections::HashMap;
 
+    /// Seed of the sampled streams, so every run draws the same values.
+    const SEED: u64 = 685;
+
     #[test]
     fn test_normal_sample_returns() {
         // Run the function multiple times to ensure it always returns a positive value
+        let mut rng = crate::utils::deterministic_rng(SEED);
         for _ in 0..1000 {
-            let sample = decimal_normal_sample();
+            let sample = decimal_normal_sample_with(&mut rng);
             assert!(sample <= Decimal::TEN);
             assert!(sample >= -Decimal::TEN);
         }
@@ -1114,9 +1118,10 @@ mod tests_random_generation {
         // Generate a large number of samples to check distribution characteristics
         const NUM_SAMPLES: usize = 10000;
         let mut samples = Vec::with_capacity(NUM_SAMPLES);
+        let mut rng = crate::utils::deterministic_rng(SEED);
 
         for _ in 0..NUM_SAMPLES {
-            samples.push(decimal_normal_sample().to_f64().unwrap());
+            samples.push(decimal_normal_sample_with(&mut rng).to_f64().unwrap());
         }
 
         // Calculate mean and standard deviation
@@ -1134,7 +1139,7 @@ mod tests_random_generation {
 
     #[test]
     fn test_normal_distribution_transformation() {
-        let mut t_rng = rand::rng();
+        let mut t_rng = crate::utils::deterministic_rng(SEED);
         // Deliberately a distribution with a negative mean.
         let normal = rand_distr::Normal::new(-1.0, 0.5).unwrap();
 
@@ -1162,6 +1167,7 @@ mod tests_random_generation {
     #[test]
     fn test_normal_sample_consistency() {
         // This test ensures that multiple calls in sequence produce different values
+        // Unseeded on purpose: the test is about the thread-RNG entry point.
         let sample1 = decimal_normal_sample();
         let sample2 = decimal_normal_sample();
         let sample3 = decimal_normal_sample();
