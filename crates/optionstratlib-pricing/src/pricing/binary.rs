@@ -141,12 +141,12 @@ fn cash_or_nothing_price(option: &Options, payout: Decimal) -> Result<Decimal, P
 
     let price = match option.option_style {
         OptionStyle::Call => {
-            let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
+            let n_d2 = big_n(d2_val)?;
             let payout_disc = d_mul(payout, discount, "pricing::binary::cash::call::payout")?;
             d_mul(payout_disc, n_d2, "pricing::binary::cash::call::price")?
         }
         OptionStyle::Put => {
-            let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
+            let n_neg_d2 = big_n(-d2_val)?;
             let payout_disc = d_mul(payout, discount, "pricing::binary::cash::put::payout")?;
             d_mul(payout_disc, n_neg_d2, "pricing::binary::cash::put::price")?
         }
@@ -217,7 +217,7 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
 
     let price = match option.option_style {
         OptionStyle::Call => {
-            let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
+            let n_d1 = big_n(d1_val)?;
             let s_disc = d_mul(
                 s.to_dec(),
                 dividend_discount,
@@ -226,7 +226,7 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
             d_mul(s_disc, n_d1, "pricing::binary::asset::call::price")?
         }
         OptionStyle::Put => {
-            let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
+            let n_neg_d1 = big_n(-d1_val)?;
             let s_disc = d_mul(
                 s.to_dec(),
                 dividend_discount,

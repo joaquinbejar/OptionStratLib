@@ -52,6 +52,8 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             // `barrier_level` and `rebate` are `Positive`, i.e. `Decimal`-backed
             // and always finite, so no non-finite check is needed.
             let bl = barrier_level.to_dec();
+            // An unset rebate is no rebate: a contract default, not a
+            // fallback on a failed step (#639).
             let rb = rebate.unwrap_or(Positive::ZERO).to_dec();
             (barrier_type, bl, rb)
         }

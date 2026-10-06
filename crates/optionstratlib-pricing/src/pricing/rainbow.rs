@@ -57,6 +57,9 @@ use tracing::trace;
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
 ///
+/// `ExoticParams::rainbow_second_asset_dividend` defaults to the first
+/// asset's dividend yield and `rainbow_correlation` to `0.5` when unset.
+///
 /// # Errors
 ///
 /// - [`PricingError::MethodError`] when the option type is not Rainbow, when
@@ -108,6 +111,9 @@ fn price_two_asset_rainbow(
         .ok_or_else(|| PricingError::other("Missing rainbow_second_asset_volatility"))?
         .to_dec();
 
+    // Parameter defaults documented above, not fallbacks on a failed step
+    // (#639): an unset second dividend yield takes the first asset's, an
+    // unset correlation is `0.5`.
     let q1 = option.dividend_yield.to_dec();
     let q2 = params
         .rainbow_second_asset_dividend

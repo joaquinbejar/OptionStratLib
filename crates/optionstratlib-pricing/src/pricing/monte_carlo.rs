@@ -4,7 +4,7 @@ use crate::pricing::utils::wiener_increment;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, d_sum_iter, finite_decimal};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, finite_decimal};
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
@@ -179,8 +179,10 @@ pub fn monte_carlo_option_pricing(
 /// - Returns `PricingError::method_error` when `num_simulations` cannot be
 ///   represented as a `Decimal` (effectively unreachable for valid `usize`
 ///   inputs but surfaced explicitly for completeness).
-/// - Per-simulation `option.payoff_at_price(...)` failures fall back silently
-///   to `Decimal::ZERO` for that simulation; the function does not panic.
+/// - Propagates a per-simulation `option.payoff_at_price(...)` failure as
+///   `PricingError::Options` (a payoff out of the `Decimal` range).
+/// - Returns `PricingError::Decimal` when the payoff sum, the mean or the
+///   discounting leaves the `Decimal` range.
 ///
 /// This function assumes that the `Options` struct and `Positive` type
 /// are implemented elsewhere in the codebase and provide necessary functionality (e.g., payoff calculation).
@@ -205,15 +207,15 @@ pub fn price_option_monte_carlo(
         "pricing::monte_carlo::discount_factor",
     )?;
 
-    // Calculate payoff for each final price and sum them
-    let total_payoff: Decimal = d_sum_iter(
-        final_prices.iter().map(|&final_price| {
-            option
-                .payoff_at_price(&final_price)
-                .unwrap_or(Decimal::ZERO)
-        }),
-        "pricing::monte_carlo::total_payoff",
-    )?;
+    // Calculate payoff for each final price and sum them. A payoff that
+    // cannot be evaluated is an error (#639); it used to count as a zero
+    // payoff for that path, dragging the mean down silently.
+    let total_payoff = final_prices
+        .iter()
+        .try_fold(Decimal::ZERO, |sum, final_price| {
+            let payoff = option.payoff_at_price(final_price)?;
+            Ok::<Decimal, PricingError>(d_add(sum, payoff, "pricing::monte_carlo::total_payoff")?)
+        })?;
 
     // Average payoff discounted to present value. Both the mean and the
     // discounting are fused monetary flows, so they go through the checked
@@ -226,7 +228,9 @@ pub fn price_option_monte_carlo(
     })?;
     let mean_payoff = d_div(total_payoff, n_dec, "pricing::monte_carlo::mean")?;
     let avg_payoff = d_mul(discount_factor, mean_payoff, "pricing::monte_carlo::price")?;
-    Ok(Positive::new_decimal(avg_payoff.abs()).unwrap_or(Positive::ZERO))
+    // `|x|` is a valid `Positive` for every `Decimal`, so this cannot fail;
+    // it propagates rather than falling back (#639).
+    Ok(Positive::new_decimal(avg_payoff.abs())?)
 }
 
 #[cfg(test)]
@@ -364,6 +368,28 @@ mod tests_price_option_monte_carlo {
         // Assert
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Positive::ZERO);
+    }
+
+    /// A path whose quantity-scaled payoff leaves the `Decimal` range is an
+    /// error; it used to count as a zero payoff and drag the mean down
+    /// silently (#639).
+    #[test]
+    fn test_price_option_monte_carlo_unrepresentable_payoff_returns_error() {
+        let mut option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            Positive::HUNDRED,
+            pos_or_panic!(1000.0),
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        );
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(365.0));
+        let prices = vec![pos_or_panic!(110.0), pos_or_panic!(1e27)];
+        let result = price_option_monte_carlo(&option, &prices);
+        assert!(
+            matches!(result, Err(PricingError::Options(_))),
+            "unrepresentable payoff: {result:?}"
+        );
     }
 
     #[test]
