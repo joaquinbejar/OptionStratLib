@@ -49,6 +49,7 @@ use optionstratlib_core::model::{
 };
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -56,7 +57,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -83,7 +83,7 @@ pub const BULL_PUT_SPREAD_DESCRIPTION: &str = "A bull put spread is created by b
 /// - Generates upfront income from the net premium received
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BullPutSpread {
     /// The name of the strategy, typically "Bull Put Spread"
@@ -105,6 +105,9 @@ pub struct BullPutSpread {
     /// The short put position (higher strike price) that generates premium income
     pub short_put: Position,
 }
+
+impl_json_debug_pretty!(BullPutSpread);
+impl_json_display!(BullPutSpread);
 
 impl BullPutSpread {
     /// Creates a new Bull Put Spread options strategy.

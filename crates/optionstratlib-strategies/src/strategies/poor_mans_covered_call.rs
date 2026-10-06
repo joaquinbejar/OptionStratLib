@@ -57,6 +57,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain};
@@ -65,7 +66,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -115,7 +115,7 @@ pub(super) const PMCC_DESCRIPTION: &str = "A Poor Man's Covered Call (PMCC) is a
 /// - The strategy often involves rolling the short call forward to continue generating income
 /// - The long call should have sufficient time value to avoid assignment complications
 /// - Ideally implemented when the underlying asset has a strong positive outlook over the long term
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct PoorMansCoveredCall {
     /// Name identifier for this specific strategy instance
@@ -131,6 +131,9 @@ pub struct PoorMansCoveredCall {
     /// The shorter-term out-of-the-money call option that is sold
     pub(super) short_call: Position,
 }
+
+impl_json_debug_pretty!(PoorMansCoveredCall);
+impl_json_display!(PoorMansCoveredCall);
 
 impl PoorMansCoveredCall {
     /// # Creates a new Poor Man's Covered Call strategy instance

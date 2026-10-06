@@ -31,6 +31,7 @@ use optionstratlib_core::model::{
     utils::mean_and_std,
 };
 use optionstratlib_core::spos;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -38,7 +39,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -77,7 +77,7 @@ pub const BULL_CALL_LADDER_DESCRIPTION: &str = "A bull call ladder buys one call
 /// middle one, which is [`crate::strategies::LongButterflySpread`]. The old
 /// name is gone rather than kept as an alias, so code written for it fails
 /// to compile instead of silently building something else.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BullCallLadder {
     /// The name of the strategy, typically used for identification purposes.
@@ -102,6 +102,9 @@ pub struct BullCallLadder {
     /// The short call position at the higher strike price.
     pub short_call_high: Position,
 }
+
+impl_json_debug_pretty!(BullCallLadder);
+impl_json_display!(BullCallLadder);
 
 impl BullCallLadder {
     /// Creates a new Bull Call Ladder options strategy.

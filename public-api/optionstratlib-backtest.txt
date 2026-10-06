@@ -126,9 +126,6 @@ pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::worst_
 impl optionstratlib_backtest::backtesting::SimulationStatsResult
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib_simulation::simulation::outcome::PathOutcome>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
-impl optionstratlib_backtest::backtesting::SimulationStatsResult
-pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_individual_results(&self)
-pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_summary(&self)
 impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationStatsResult
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationStatsResult
@@ -136,10 +133,18 @@ pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &
 pub mod optionstratlib_backtest::backtesting::stats
 pub struct optionstratlib_backtest::backtesting::stats::SimulationStats
 impl optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::avg_holding_period(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::exit_reasons(&self) -> &std::collections::hash::map::HashMap<optionstratlib_simulation::simulation::exit::ExitPolicy, usize>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::expired_trades(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::loss_closes(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::max_loss(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::max_profit(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::profitable_closes(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::results(&self) -> &[optionstratlib_backtest::backtesting::SimulationResult]
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::statistics(&self) -> core::result::Result<optionstratlib_simulation::simulation::outcome::PathStatistics, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::total_pnl(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::total_simulations(&self) -> usize
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
@@ -424,10 +429,18 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_backtest::backtesting::Simu
 pub fn optionstratlib_backtest::backtesting::SimulationResult::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_backtest::backtesting::SimulationStats
 impl optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::avg_holding_period(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::exit_reasons(&self) -> &std::collections::hash::map::HashMap<optionstratlib_simulation::simulation::exit::ExitPolicy, usize>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::expired_trades(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::loss_closes(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::max_loss(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::max_profit(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::profitable_closes(&self) -> usize
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::results(&self) -> &[optionstratlib_backtest::backtesting::SimulationResult]
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::statistics(&self) -> core::result::Result<optionstratlib_simulation::simulation::outcome::PathStatistics, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::total_pnl(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::total_simulations(&self) -> usize
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
@@ -447,9 +460,6 @@ pub optionstratlib_backtest::backtesting::SimulationStatsResult::worst_pnl: rust
 impl optionstratlib_backtest::backtesting::SimulationStatsResult
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib_simulation::simulation::outcome::PathOutcome>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
-impl optionstratlib_backtest::backtesting::SimulationStatsResult
-pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_individual_results(&self)
-pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_summary(&self)
 impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationStatsResult
 pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationStatsResult

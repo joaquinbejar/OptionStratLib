@@ -2,14 +2,39 @@ pub mod optionstratlib_visualization
 pub mod optionstratlib_visualization::error
 pub enum optionstratlib_visualization::error::GraphError
 pub optionstratlib_visualization::error::GraphError::Curve(optionstratlib_math::error::curves::CurveError)
+pub optionstratlib_visualization::error::GraphError::Decimal(alloc::boxed::Box<optionstratlib_core::error::decimal::DecimalError>)
 pub optionstratlib_visualization::error::GraphError::Io(core::io::error::Error)
 pub optionstratlib_visualization::error::GraphError::Render(alloc::string::String)
 pub optionstratlib_visualization::error::GraphError::Surface(optionstratlib_math::error::surfaces::SurfaceError)
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_visualization::error::GraphError
+pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_visualization::error::GraphError
 pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_math::error::curves::CurveError) -> Self
 impl core::convert::From<optionstratlib_math::error::surfaces::SurfaceError> for optionstratlib_visualization::error::GraphError
 pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_math::error::surfaces::SurfaceError) -> Self
 pub mod optionstratlib_visualization::visualization
+pub mod optionstratlib_visualization::visualization::terminal
+pub trait optionstratlib_visualization::visualization::terminal::ChainReport
+pub fn optionstratlib_visualization::visualization::terminal::ChainReport::print_table(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_visualization::visualization::terminal::ChainReport::render_table(&self) -> alloc::string::String
+impl optionstratlib_visualization::visualization::terminal::ChainReport for optionstratlib_market::chains::chain::OptionChain
+pub fn optionstratlib_market::chains::chain::OptionChain::print_table(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_market::chains::chain::OptionChain::render_table(&self) -> alloc::string::String
+pub trait optionstratlib_visualization::visualization::terminal::SimulationReport
+pub fn optionstratlib_visualization::visualization::terminal::SimulationReport::print_individual_results(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_visualization::visualization::terminal::SimulationReport::print_summary(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_visualization::visualization::terminal::SimulationReport::render_individual_results(&self) -> alloc::string::String
+pub fn optionstratlib_visualization::visualization::terminal::SimulationReport::render_summary(&self) -> core::result::Result<alloc::string::String, optionstratlib_visualization::error::GraphError>
+impl optionstratlib_visualization::visualization::terminal::SimulationReport for optionstratlib_backtest::backtesting::results::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::results::SimulationStatsResult::print_individual_results(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_backtest::backtesting::results::SimulationStatsResult::print_summary(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_backtest::backtesting::results::SimulationStatsResult::render_individual_results(&self) -> alloc::string::String
+pub fn optionstratlib_backtest::backtesting::results::SimulationStatsResult::render_summary(&self) -> core::result::Result<alloc::string::String, optionstratlib_visualization::error::GraphError>
+impl optionstratlib_visualization::visualization::terminal::SimulationReport for optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self) -> core::result::Result<(), optionstratlib_visualization::error::GraphError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::render_individual_results(&self) -> alloc::string::String
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::render_summary(&self) -> core::result::Result<alloc::string::String, optionstratlib_visualization::error::GraphError>
 pub enum optionstratlib_visualization::visualization::ColorScheme
 pub optionstratlib_visualization::visualization::ColorScheme::Custom(alloc::vec::Vec<alloc::string::String>)
 pub optionstratlib_visualization::visualization::ColorScheme::Default

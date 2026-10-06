@@ -4,6 +4,7 @@
    Date: 29/1/25
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use optionstratlib::visualization::terminal::ChainReport;
 use osl_example_support::setup_logger;
 use tracing::info;
 
@@ -18,7 +19,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     let mut option_chain = OptionChain::build_chain(&chain_params)?;
     option_chain.update_greeks();
     info!("{}", option_chain);
-    option_chain.show();
+    option_chain.print_table()?;
     let curve = option_chain.curve(&BasicAxisTypes::Volatility, &OptionStyle::Call, &Side::Long)?;
 
     curve

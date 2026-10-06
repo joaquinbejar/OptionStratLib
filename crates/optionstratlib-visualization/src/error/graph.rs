@@ -1,5 +1,6 @@
 //! Target crate (ADR-0001 D6, roadmap M1-14): **visualization**. Owns `GraphError`.
 
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_math::error::{CurveError, SurfaceError};
 use thiserror::Error;
 
@@ -27,6 +28,19 @@ pub enum GraphError {
     /// Error from surface operations.
     #[error(transparent)]
     Surface(SurfaceError),
+
+    /// A figure a report derives for display (a total, an average) left the
+    /// representable `Decimal` range.
+    #[error(transparent)]
+    Decimal(Box<DecimalError>),
+}
+
+impl From<DecimalError> for GraphError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: DecimalError) -> Self {
+        GraphError::Decimal(Box::new(err))
+    }
 }
 
 impl From<CurveError> for GraphError {

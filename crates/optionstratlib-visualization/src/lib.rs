@@ -14,8 +14,9 @@
 //! types, and an optional Plotly backend. It is the leaf of the workspace:
 //! it depends on `optionstratlib-core`, `optionstratlib-math`,
 //! `optionstratlib-pricing`, `optionstratlib-simulation`,
-//! `optionstratlib-market` and `optionstratlib-strategies`, and no
-//! OptionStratLib crate depends on it, so headless consumers never build it.
+//! `optionstratlib-market`, `optionstratlib-strategies` and
+//! `optionstratlib-backtest`, and no OptionStratLib crate depends on it, so
+//! headless consumers never build it.
 //!
 //! - [`visualization`]: the [`visualization::Graph`] trait, the chart data
 //!   ([`visualization::GraphData`], [`visualization::Series2D`],
@@ -24,6 +25,10 @@
 //!   [`visualization::Plottable`], and the `Graph` implementations for
 //!   options, positions, curves, surfaces, random walks, simulators and every
 //!   concrete strategy.
+//! - [`visualization::terminal`]: terminal tables for option chains and
+//!   simulation statistics, the only code in the library that writes to
+//!   stdout, and only when asked to ([`visualization::terminal::ChainReport`],
+//!   [`visualization::terminal::SimulationReport`]).
 //! - [`error`]: the [`error::GraphError`] type.
 //!
 //! ## One graph contract

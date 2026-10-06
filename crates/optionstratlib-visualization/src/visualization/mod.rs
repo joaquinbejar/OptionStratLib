@@ -322,6 +322,9 @@ mod strategies;
 mod styles;
 /// `impl Graph` and `impl Plottable` for `Surface`.
 mod surfaces;
+/// Terminal tables for chain and simulation reports: the explicit adapter
+/// that writes them to stdout (M6-05).
+pub mod terminal;
 mod tests;
 /// Colour helpers, and the Plotly trace builders behind `plotly`.
 mod utils;

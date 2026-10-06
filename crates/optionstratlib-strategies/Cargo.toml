@@ -31,12 +31,10 @@ optionstratlib-analytics = { workspace = true }
 chrono = { workspace = true }
 itertools = { workspace = true }
 num-traits = { workspace = true }
-pretty-simple-display = { workspace = true }
 rayon = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
@@ -48,3 +46,4 @@ optionstratlib-market = { workspace = true, features = ["io"] }
 approx = { workspace = true }
 proptest = { workspace = true }
 static_assertions = "1.1"
+serde_json = { workspace = true }

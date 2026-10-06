@@ -7,6 +7,7 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::strategies::base::lower_break_even;
 use optionstratlib_core::model::decimal::d_div;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
 use crate::error::StrategyError;
 use crate::error::strategies::ProfitLossErrorKind;
@@ -39,7 +40,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -67,7 +67,7 @@ pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an
 /// - `short_put`: The short put position associated with this strategy. It is declared private (via
 ///   `pub(super)`) to restrict its accessibility from other modules, ensuring controlled and encapsulated
 ///   use.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ShortPut {
     /// Name identifier for this specific strategy instance
@@ -81,6 +81,9 @@ pub struct ShortPut {
     /// The short put position
     pub(super) short_put: Position,
 }
+
+impl_json_debug_pretty!(ShortPut);
+impl_json_display!(ShortPut);
 
 impl ShortPut {
     /// Creates a new `ShortPut` strategy instance with the given parameters.

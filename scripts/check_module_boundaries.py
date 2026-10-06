@@ -138,6 +138,7 @@ ERROR_FILE_LAYER = {
 # (`greeks/utils.rs`, `chains/utils.rs`, ...) are owned by their parent
 # module and need no entry.
 UTILS_FILE_LAYER = {
+    "json_format": "core",
     "numeric": "core",
     "rng": "core",
     "time": "core",
@@ -1003,74 +1004,80 @@ FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
 # can bring one in (#517). `utoipa` is missing from both lists only because
 # `expiration_date` 0.4.0 forces `positive/utoipa` on every build (#628); it
 # goes back in once that is fixed upstream.
+# Terminal presentation packages (M6-05, #546): progress bars, terminal
+# tables and the JSON `Debug` / `Display` derive crate. No crate below
+# visualization resolves any of them; terminal tables are
+# `visualization::terminal`'s alone, and the JSON formatting the derive crate
+# generated is `optionstratlib_core::utils::json_format`.
+PRESENTATION_PACKAGES = frozenset({"indicatif", "prettytable-rs", "pretty-simple-display"})
+
 FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-core": frozenset({
         "statrs", "rayon", "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static",
-        "tracing-subscriber", "indicatif", "prettytable-rs",
+        "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     "optionstratlib-math": frozenset({
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
-        "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
+        "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     # The "must be absent" column of ADR-0002's `osl-fixture-pricing-only`
     # row, plus the presentation crates math also excludes.
     "optionstratlib-pricing": frozenset({
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
-        "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
+        "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     # The "must be absent" column of ADR-0002's
     # `osl-fixture-simulation-only` row, plus the presentation crates pricing
-    # also excludes. `prettytable-rs` is in it: the simulation statistics
-    # report that rendered a terminal table left for backtesting before the
-    # extraction, so the M6-05 exception market still carries does not apply
-    # here (#536).
+    # also excludes (#536).
     "optionstratlib-simulation": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
-        "prettytable-rs",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2). The
     # simulation crate is on it too: only `synthetic` may bring it (#537).
+    # The chain table is plain-text `Display` since M6-05; its terminal form
+    # lives in visualization.
     "optionstratlib-market": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
         "optionstratlib-simulation",
     }),
     # ADR-0002 §3 backtest row: the plotting, I/O and async crates stay out,
-    # and so does `indicatif` (its progress bar became `tracing` events,
-    # #538). `prettytable-rs` is not listed: the report table of
-    # `SimulationStatsResult::print_summary` keeps it until M6-05, as market
-    # does.
+    # and so do the presentation crates: the progress bar became `tracing`
+    # events (#538) and the report tables moved to
+    # `visualization::terminal` (M6-05).
     "optionstratlib-backtest": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     # ADR-0002 §3 visualization row: with no feature the leaf crate builds
-    # chart data only, so no Plotly, image-export, WebDriver, async, I/O or
-    # progress-bar package. `plotly` and `static_export` add theirs through
-    # FEATURE_SETS (#542). `prettytable-rs` is not listed: market and
-    # strategies still carry it until M6-05.
+    # chart data and terminal tables only, so no Plotly, image-export,
+    # WebDriver, async, I/O or progress-bar package. `plotly` and
+    # `static_export` add theirs through FEATURE_SETS (#542). `prettytable-rs`
+    # is allowed: `visualization::terminal` is its one owner (M6-05).
     "optionstratlib-visualization": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "pretty-simple-display",
     }),
     # The facade (#544): by default, and with `visualization` or `plotly`, it
     # resolves no image-export, WebDriver, runtime or HTTP package. It may
-    # name `csv`, `zip` and `prettytable-rs` by default (`io`, market's
-    # report table until M6-05); `async` and `static_export` bring the rest
-    # through FEATURE_SETS. This is the "must be absent" column of ADR-0002's
-    # `osl-fixture-headless-full` row, minus `tracing-subscriber` and
-    # `indicatif` which no component resolves any more.
+    # name `csv`, `zip` (`io`) and `prettytable-rs` (the terminal tables of
+    # `visualization::terminal`, their one owner since M6-05) by default;
+    # `async` and `static_export` bring the rest through FEATURE_SETS. This is
+    # the "must be absent" column of ADR-0002's `osl-fixture-headless-full`
+    # row, plus the JSON derive crate no crate uses since M6-05.
     "optionstratlib": frozenset({
         "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
         "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "pretty-simple-display",
     }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
     # adds a package beyond `utoipa` (#529).
     "optionstratlib-analytics": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
     # ADR-0002 §3 strategies row: the analytics set. Strategies need no market
     # I/O, no simulation, no plotting and no progress bars (`indicatif` left
@@ -1078,7 +1085,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     # adds a package beyond `utoipa` (#531).
     "optionstratlib-strategies": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
     }),
 }
 
@@ -2134,7 +2141,12 @@ def self_test() -> int:
         "strategies pulls market io": ({("optionstratlib-strategies", "default"): {"csv", "zip"}}, 2),
         "strategies pulls indicatif": ({("optionstratlib-strategies", "all features"): {"indicatif"}}, 1),
         "clean simulation tree": ({("optionstratlib-simulation", "default"): {"rayon", "rand", "statrs"}}, 0),
-        "clean backtest tree": ({("optionstratlib-backtest", "default"): {"uuid", "prettytable-rs"}}, 0),
+        "clean backtest tree": ({("optionstratlib-backtest", "default"): {"uuid"}}, 0),
+        "backtest pulls prettytable-rs": ({("optionstratlib-backtest", "default"): {"prettytable-rs"}}, 1),
+        "market pulls prettytable-rs": ({("optionstratlib-market", "all features"): {"prettytable-rs"}}, 1),
+        "core pulls pretty-simple-display": ({("optionstratlib-core", "default"): {"pretty-simple-display"}}, 1),
+        "strategies pulls pretty-simple-display": ({("optionstratlib-strategies", "default"): {"pretty-simple-display"}}, 1),
+        "visualization pulls pretty-simple-display": ({("optionstratlib-visualization", "default"): {"pretty-simple-display"}}, 1),
         "backtest pulls indicatif": ({("optionstratlib-backtest", "default"): {"indicatif"}}, 1),
         "backtest pulls plotly": ({("optionstratlib-backtest", "all features"): {"plotly"}}, 1),
         "clean visualization tree": ({("optionstratlib-visualization", "default"): {"num-traits", "prettytable-rs"}}, 0),

@@ -5,6 +5,7 @@
 #![allow(clippy::indexing_slicing)]
 
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 /*
 Strangle Strategy
 
@@ -55,7 +56,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -102,7 +102,7 @@ is expected and the underlying asset's price is anticipated to remain stable.";
 /// and selling a put with a strike price of $90, when the underlying is trading at $100.
 /// The premium collected might be $2 for the call and $2 for the put, for a total of $4.
 /// Break-even points would be at $86 ($90 - $4) and $114 ($110 + $4).
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ShortStrangle {
     /// Name identifier for this specific strategy instance
@@ -118,6 +118,9 @@ pub struct ShortStrangle {
     /// The short put leg of the strategy (typically out-of-the-money)
     pub short_put: Position,
 }
+
+impl_json_debug_pretty!(ShortStrangle);
+impl_json_display!(ShortStrangle);
 
 impl ShortStrangle {
     /// Creates a new Short Strangle options strategy.

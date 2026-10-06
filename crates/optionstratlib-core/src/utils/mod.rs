@@ -11,6 +11,7 @@
 //!
 //! | File | Owner | Contents |
 //! |------|-------|----------|
+//! | `json_format.rs` | core | `write_json`, `write_json_pretty` and the `impl_json_display!` / `impl_json_debug!` / `impl_json_debug_pretty!` macros |
 //! | `numeric.rs` | core | `approx_equal`, `calculate_log_returns` |
 //! | `rng.rs` | core | `deterministic_rng`, `get_random_element`, `random_decimal`, `DETERMINISTIC_RNG_DEFAULT_SEED` |
 //! | `time.rs` | core | `TimeFrame`, `units_per_year`, `convert_time_frame`, date formatting |
@@ -82,6 +83,9 @@
 //!
 //! Random element selection is O(n) in the size of the set.
 
+/// JSON-backed `Debug` and `Display` writers and the macros that wire a
+/// type to them.
+pub mod json_format;
 /// Tolerance-based `f64` comparison and the logarithmic-return transform.
 pub mod numeric;
 /// Deterministic seeding and generic random-sampling helpers.

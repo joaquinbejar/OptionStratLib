@@ -37,6 +37,7 @@ use positive::pos_or_panic;
 
 use indicatif::{ProgressBar, ProgressStyle};
 use optionstratlib::prelude::*;
+use optionstratlib::visualization::terminal::SimulationReport;
 use std::collections::HashMap;
 
 /// Walker implementation for the simulation.
@@ -457,10 +458,10 @@ fn main() -> Result<(), Error> {
     progress_bar.finish_with_message("Simulations completed!");
 
     // Print final statistics
-    stats.print_summary();
+    stats.print_summary()?;
 
     // Print individual simulation results
-    stats.print_individual_results();
+    stats.print_individual_results()?;
 
     // Save the simulator visualization
     let path: &std::path::Path = "Draws/Simulation/short_put_simulation.png".as_ref();

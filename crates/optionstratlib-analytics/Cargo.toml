@@ -31,7 +31,6 @@ optionstratlib-market = { workspace = true }
 chrono = { workspace = true }
 lazy_static = { workspace = true }
 num-traits = { workspace = true }
-pretty-simple-display = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }

@@ -7,7 +7,6 @@
 use crate::model::types::UnderlyingAssetType;
 use num_traits::ToPrimitive;
 use positive::Positive;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// This struct encapsulates all the information needed to track an option position,
 /// including quantity, premium information, and profit/loss calculations.
 /// This balance is specifically designed for options trading.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Balance {
     /// Symbol or Epic of the option contract
@@ -34,6 +33,9 @@ pub struct Balance {
     /// Margin information for accounts that support leverage
     pub margin_info: Option<MarginInfo>,
 }
+
+crate::impl_json_debug_pretty!(Balance);
+crate::impl_json_display!(Balance);
 
 impl Balance {
     /// Creates a new Balance instance for an option position.
@@ -178,7 +180,7 @@ impl Balance {
 }
 
 /// Represents margin information for accounts that support leverage
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct MarginInfo {
     /// Available margin for new positions
@@ -193,11 +195,14 @@ pub struct MarginInfo {
     pub margin_ratio: Option<Decimal>,
 }
 
+crate::impl_json_debug_pretty!(MarginInfo);
+crate::impl_json_display!(MarginInfo);
+
 /// Represents a portfolio containing multiple option balances.
 ///
 /// This struct provides functionality to manage and analyze a collection
 /// of option positions across different exchanges.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Portfolio {
     /// Collection of option balances
@@ -205,6 +210,9 @@ pub struct Portfolio {
     /// Name or identifier for the portfolio
     pub name: String,
 }
+
+crate::impl_json_debug_pretty!(Portfolio);
+crate::impl_json_display!(Portfolio);
 
 impl Portfolio {
     /// Creates a new empty Portfolio.

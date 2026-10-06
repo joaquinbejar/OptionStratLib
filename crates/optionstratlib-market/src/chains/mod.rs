@@ -107,6 +107,10 @@ mod options;
 
 mod optiondata;
 
+/// The tabular view of a chain: column headers, the formatted cells of a row
+/// and the plain-text `Display` of [`OptionChain`].
+mod table;
+
 pub(crate) mod model_impls;
 
 pub use chain::OptionChain;
@@ -116,4 +120,5 @@ pub use legs::StrategyLegs;
 pub use model_impls::UpdateFromOptionData;
 pub use optiondata::OptionData;
 pub use options::{DeltasInStrike, OptionsInStrike};
+pub use table::{OPTION_CHAIN_TABLE_COLUMNS, OPTION_CHAIN_TABLE_HEADERS};
 pub use utils::{FindOptimalSide, OptionChainBuildParams};

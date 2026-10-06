@@ -109,7 +109,6 @@ serde = { workspace = true, features = ["derive"] }
 rayon = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
-pretty-simple-display = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras"] }
 thiserror = { workspace = true }
 positive = { workspace = true }
@@ -244,7 +243,6 @@ rand_distr = "0.6"
 # Defaults off: nothing here uses its CSV support, and it would pull `csv`
 # into every consumer. Packages that want `win_crlf` ask for it.
 prettytable-rs = { version = "0.10", default-features = false }
-pretty-simple-display = "0.1"
 utoipa = { version = "6.0", features = ["chrono", "decimal"] }
 thiserror = "2.0"
 positive = { version = "0.7" }

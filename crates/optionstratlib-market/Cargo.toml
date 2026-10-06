@@ -40,8 +40,6 @@ optionstratlib-simulation = { workspace = true, optional = true }
 chrono = { workspace = true }
 csv = { workspace = true, optional = true }
 num-traits = { workspace = true }
-pretty-simple-display = { workspace = true }
-prettytable-rs = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }

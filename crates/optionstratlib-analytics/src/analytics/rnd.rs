@@ -132,9 +132,9 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_sum_iter};
 use optionstratlib_core::model::utils::sub_floor_zero;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_market::error::ChainError;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -163,7 +163,7 @@ use tracing::debug;
 ///     derivative_tolerance: pos_or_panic!(0.001),
 /// };
 /// ```
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct RNDParameters {
     /// Risk-free rate for calculations
@@ -173,6 +173,9 @@ pub struct RNDParameters {
     /// Tolerance for numerical derivatives
     pub derivative_tolerance: Positive,
 }
+
+impl_json_debug_pretty!(RNDParameters);
+impl_json_display!(RNDParameters);
 
 impl Default for RNDParameters {
     fn default() -> Self {

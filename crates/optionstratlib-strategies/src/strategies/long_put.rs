@@ -7,6 +7,7 @@
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::strategies::base::lower_break_even;
 use optionstratlib_core::model::decimal::d_div;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
 use crate::error::StrategyError;
 use crate::error::strategies::ProfitLossErrorKind;
@@ -39,7 +40,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -65,7 +65,7 @@ pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy
 ///   nor loses money based on the underlying asset's movement.
 /// * `long_put` - Represents the specific long put position within the strategy, detailing
 ///   the option contract being used.
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct LongPut {
     /// Name identifier for this specific strategy instance
@@ -79,6 +79,9 @@ pub struct LongPut {
     /// The long put position
     pub(super) long_put: Position,
 }
+
+impl_json_debug_pretty!(LongPut);
+impl_json_display!(LongPut);
 
 impl LongPut {
     /// Constructs a new instance of a `LongPut` strategy.

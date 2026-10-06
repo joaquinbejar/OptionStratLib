@@ -12,4 +12,5 @@ absent = [
     "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
     "fantoccini", "webdriver", "tracing-subscriber", "prettytable-rs", "indicatif",
+    "pretty-simple-display",
 ]

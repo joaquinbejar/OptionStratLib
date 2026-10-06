@@ -7,11 +7,9 @@ use crate::backtesting::results::SimulationResult;
 use crate::error::BacktestError;
 use optionstratlib_core::model::decimal::d_add;
 use optionstratlib_simulation::simulation::{ExitPolicy, PathOutcome, PathStatistics};
-use prettytable::{Cell, Row, Table, format};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
-use tracing::info;
 
 /// Running statistics over the runs of a strategy simulation.
 ///
@@ -94,7 +92,7 @@ impl SimulationStats {
     ///
     /// The counters are driven by the generic [`PathOutcome`] view of the
     /// result through [`SimulationStats::update_outcome`]; the result
-    /// itself is then stored for [`SimulationStats::print_individual_results`].
+    /// itself is then stored and read back through [`SimulationStats::results`].
     ///
     /// The view is the backtest adapter's `From<&SimulationResult> for
     /// PathOutcome` for every field but `pnl`, which is
@@ -212,7 +210,6 @@ impl SimulationStats {
     /// result folded in through `update` is its realized leg (see
     /// [`SimulationStats::update`]), which equals the `PnL::total_pnl` the
     /// aggregate uses for every result the library builds.
-    /// [`SimulationStats::print_summary`] does not read these figures.
     ///
     /// # Errors
     ///
@@ -224,157 +221,93 @@ impl SimulationStats {
         Ok(PathStatistics::from_outcomes(&self.outcomes)?)
     }
 
-    /// Prints a formatted summary of the simulation statistics.
-    pub fn print_summary(&self) {
-        info!("========== SIMULATION SUMMARY ==========");
-
-        // General Info Table
-        let mut info_table = Table::new();
-        info_table.set_format(*format::consts::FORMAT_BOX_CHARS);
-        info_table.add_row(Row::new(vec![
-            Cell::new("Metric").style_spec("Fb"),
-            Cell::new("Value").style_spec("Fb"),
-        ]));
-        info_table.add_row(Row::new(vec![
-            Cell::new("Total Simulations"),
-            Cell::new(&self.total_simulations.to_string()),
-        ]));
-        info_table.printstd();
-
-        // Trade Outcomes Table
-        info!("--- Trade Outcomes ---");
-        let mut outcomes_table = Table::new();
-        outcomes_table.set_format(*format::consts::FORMAT_BOX_CHARS);
-        outcomes_table.add_row(Row::new(vec![
-            Cell::new("Outcome").style_spec("Fb"),
-            Cell::new("Count").style_spec("Fb"),
-            Cell::new("Percentage").style_spec("Fb"),
-        ]));
-
-        if self.total_simulations > 0 {
-            let win_rate = (self.profitable_closes as f64 / self.total_simulations as f64) * 100.0;
-            let loss_rate = (self.loss_closes as f64 / self.total_simulations as f64) * 100.0;
-            let expired_rate = (self.expired_trades as f64 / self.total_simulations as f64) * 100.0;
-
-            outcomes_table.add_row(Row::new(vec![
-                Cell::new("Profitable Closes (50% reduction)"),
-                Cell::new(&self.profitable_closes.to_string()).style_spec("Fg"),
-                Cell::new(&format!("{:.2}%", win_rate)).style_spec("Fg"),
-            ]));
-            outcomes_table.add_row(Row::new(vec![
-                Cell::new("Loss Closes (100% increase)"),
-                Cell::new(&self.loss_closes.to_string()).style_spec("Fr"),
-                Cell::new(&format!("{:.2}%", loss_rate)).style_spec("Fr"),
-            ]));
-            outcomes_table.add_row(Row::new(vec![
-                Cell::new("Expired Trades"),
-                Cell::new(&self.expired_trades.to_string()),
-                Cell::new(&format!("{:.2}%", expired_rate)),
-            ]));
-        }
-        outcomes_table.printstd();
-
-        // P&L Statistics Table
-        info!("--- Profit/Loss Statistics ---");
-        let mut pnl_table = Table::new();
-        pnl_table.set_format(*format::consts::FORMAT_BOX_CHARS);
-        pnl_table.add_row(Row::new(vec![
-            Cell::new("Metric").style_spec("Fb"),
-            Cell::new("Amount").style_spec("Fb"),
-        ]));
-
-        pnl_table.add_row(Row::new(vec![
-            Cell::new("Total P&L"),
-            Cell::new(&format!("${:.2}", self.total_pnl)),
-        ]));
-
-        if self.total_simulations > 0 {
-            let avg_pnl = self.total_pnl / Decimal::from(self.total_simulations);
-            pnl_table.add_row(Row::new(vec![
-                Cell::new("Average P&L per Trade"),
-                Cell::new(&format!("${:.2}", avg_pnl)),
-            ]));
-        }
-
-        pnl_table.add_row(Row::new(vec![
-            Cell::new("Maximum Profit"),
-            Cell::new(&format!("${:.2}", self.max_profit)).style_spec("Fg"),
-        ]));
-        pnl_table.add_row(Row::new(vec![
-            Cell::new("Maximum Loss"),
-            Cell::new(&format!("${:.2}", self.max_loss)).style_spec("Fr"),
-        ]));
-        pnl_table.printstd();
-
-        // Holding Period Table
-        info!("--- Holding Period ---");
-        let mut holding_table = Table::new();
-        holding_table.set_format(*format::consts::FORMAT_BOX_CHARS);
-        holding_table.add_row(Row::new(vec![
-            Cell::new("Metric").style_spec("Fb"),
-            Cell::new("Value").style_spec("Fb"),
-        ]));
-        holding_table.add_row(Row::new(vec![
-            Cell::new("Average Holding Period"),
-            Cell::new(&format!("{:.2} steps", self.avg_holding_period)),
-        ]));
-        holding_table.printstd();
-
-        // Exit Reasons Table
-        info!("--- Exit Reasons ---");
-        let mut exit_table = Table::new();
-        exit_table.set_format(*format::consts::FORMAT_BOX_CHARS);
-        exit_table.add_row(Row::new(vec![
-            Cell::new("Exit Reason").style_spec("Fb"),
-            Cell::new("Count").style_spec("Fb"),
-            Cell::new("Percentage").style_spec("Fb"),
-        ]));
-
-        for (reason, count) in &self.exit_reasons {
-            let percentage = (*count as f64 / self.total_simulations as f64) * 100.0;
-            exit_table.add_row(Row::new(vec![
-                Cell::new(&reason.to_string()),
-                Cell::new(&count.to_string()),
-                Cell::new(&format!("{:.2}%", percentage)),
-            ]));
-        }
-        exit_table.printstd();
-
-        info!("==================================================");
+    /// Number of results folded in.
+    #[must_use]
+    #[inline]
+    pub fn total_simulations(&self) -> usize {
+        self.total_simulations
     }
 
-    /// Prints detailed results for each individual simulation in a table format.
-    pub fn print_individual_results(&self) {
-        info!("========== INDIVIDUAL SIMULATION RESULTS ==========");
+    /// Number of runs that closed on their take-profit condition.
+    #[must_use]
+    #[inline]
+    pub fn profitable_closes(&self) -> usize {
+        self.profitable_closes
+    }
 
-        let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_BOX_CHARS);
+    /// Number of runs that closed on their stop-loss condition.
+    #[must_use]
+    #[inline]
+    pub fn loss_closes(&self) -> usize {
+        self.loss_closes
+    }
 
-        // Add header
-        table.add_row(Row::new(vec![
-            Cell::new("Sim"),
-            Cell::new("Max\nPremium"),
-            Cell::new("Min\nPremium"),
-            Cell::new("Avg\nPremium"),
-            Cell::new("Final\nP&L"),
-            Cell::new("Holding\nPeriod"),
-            Cell::new("Exit\nReason"),
-        ]));
+    /// Number of runs that reached expiration without another exit.
+    #[must_use]
+    #[inline]
+    pub fn expired_trades(&self) -> usize {
+        self.expired_trades
+    }
 
-        // Add data rows
-        for result in &self.results {
-            table.add_row(Row::new(vec![
-                Cell::new(&result.simulation_count.to_string()),
-                Cell::new(&format!("${:.2}", result.max_premium)),
-                Cell::new(&format!("${:.2}", result.min_premium)),
-                Cell::new(&format!("${:.2}", result.avg_premium)),
-                Cell::new(&format!("${:.2}", result.pnl.realized.unwrap_or(dec!(0.0)))),
-                Cell::new(&result.holding_period.to_string()),
-                Cell::new(&result.exit_reason.to_string()),
-            ]));
-        }
+    /// Sum of the realized P&L of every run, in the strategy's currency.
+    ///
+    /// A run without a realized P&L counts as zero (see
+    /// [`SimulationStats::update_outcome`]).
+    #[must_use]
+    #[inline]
+    pub fn total_pnl(&self) -> Decimal {
+        self.total_pnl
+    }
 
-        table.printstd();
+    /// Largest realized P&L of a single run, in the strategy's currency.
+    ///
+    /// `Decimal::MIN` until a run with a realized P&L has been folded in.
+    #[must_use]
+    #[inline]
+    pub fn max_profit(&self) -> Decimal {
+        self.max_profit
+    }
+
+    /// Smallest realized P&L of a single run, in the strategy's currency.
+    ///
+    /// `Decimal::MAX` until a run with a realized P&L has been folded in.
+    #[must_use]
+    #[inline]
+    pub fn max_loss(&self) -> Decimal {
+        self.max_loss
+    }
+
+    /// Average holding period over every run, in simulation steps; zero
+    /// before the first run.
+    ///
+    /// The running average is kept as an `f64` internally and converted at
+    /// this boundary with [`Decimal::from_f64_retain`], which keeps the
+    /// binary value's own digits (to `Decimal`'s 28 significant digits)
+    /// instead of a shortest decimal approximation, so rounding the result
+    /// half-to-even reproduces the `f64`'s own rounding. It is a ratio of
+    /// counts, so it is always finite and this is `Some`; `None` would mean
+    /// the average left the `Decimal` range, and is reported rather than
+    /// replaced by a made-up figure.
+    #[must_use]
+    #[inline]
+    pub fn avg_holding_period(&self) -> Option<Decimal> {
+        Decimal::from_f64_retain(self.avg_holding_period)
+    }
+
+    /// How many runs each exit policy closed.
+    #[must_use]
+    #[inline]
+    pub fn exit_reasons(&self) -> &HashMap<ExitPolicy, usize> {
+        &self.exit_reasons
+    }
+
+    /// The results folded in through [`SimulationStats::update`], in
+    /// arrival order. Outcomes folded in through
+    /// [`SimulationStats::update_outcome`] alone are not stored.
+    #[must_use]
+    #[inline]
+    pub fn results(&self) -> &[SimulationResult] {
+        &self.results
     }
 }
 
@@ -830,48 +763,6 @@ mod tests {
     }
 
     #[test]
-    fn test_print_summary_does_not_panic() {
-        let mut stats = SimulationStats::new();
-
-        // Test with empty stats
-        stats.print_summary();
-
-        // Test with some data
-        stats
-            .update(create_test_result(
-                dec!(50.0),
-                10,
-                true,
-                false,
-                false,
-                ExitPolicy::ProfitPercent(dec!(0.5)),
-            ))
-            .unwrap();
-        stats.print_summary();
-    }
-
-    #[test]
-    fn test_print_individual_results_does_not_panic() {
-        let mut stats = SimulationStats::new();
-
-        // Test with empty results
-        stats.print_individual_results();
-
-        // Test with some results
-        stats
-            .update(create_test_result(
-                dec!(50.0),
-                10,
-                true,
-                false,
-                false,
-                ExitPolicy::ProfitPercent(dec!(0.5)),
-            ))
-            .unwrap();
-        stats.print_individual_results();
-    }
-
-    #[test]
     fn test_clone_trait() {
         let mut stats = SimulationStats::new();
         stats
@@ -1305,5 +1196,62 @@ mod tests {
 
         assert_eq!(stats.results.len(), 10);
         assert_eq!(stats.total_simulations, 10);
+    }
+
+    /// The read accessors report exactly the folded counters and totals, so
+    /// a renderer outside this crate sees what `update` accumulated.
+    #[test]
+    fn test_accessors_report_the_folded_state() {
+        let empty = SimulationStats::new();
+        assert_eq!(empty.total_simulations(), 0);
+        assert_eq!(empty.max_profit(), Decimal::MIN);
+        assert_eq!(empty.max_loss(), Decimal::MAX);
+        assert!(empty.results().is_empty());
+        assert!(empty.exit_reasons().is_empty());
+        assert_eq!(empty.avg_holding_period(), Some(Decimal::ZERO));
+
+        let mut stats = SimulationStats::new();
+        stats
+            .update(create_test_result(
+                dec!(40.0),
+                4,
+                true,
+                false,
+                false,
+                ExitPolicy::ProfitPercent(dec!(0.5)),
+            ))
+            .unwrap();
+        stats
+            .update(create_test_result(
+                dec!(-10.0),
+                8,
+                false,
+                true,
+                false,
+                ExitPolicy::LossPercent(dec!(1.0)),
+            ))
+            .unwrap();
+        stats
+            .update(create_test_result(
+                dec!(5.0),
+                12,
+                false,
+                false,
+                true,
+                ExitPolicy::Expiration,
+            ))
+            .unwrap();
+
+        assert_eq!(stats.total_simulations(), 3);
+        assert_eq!(stats.profitable_closes(), 1);
+        assert_eq!(stats.loss_closes(), 1);
+        assert_eq!(stats.expired_trades(), 1);
+        assert_eq!(stats.total_pnl(), dec!(35.0));
+        assert_eq!(stats.max_profit(), dec!(40.0));
+        assert_eq!(stats.max_loss(), dec!(-10.0));
+        assert_eq!(stats.avg_holding_period(), Some(dec!(8)));
+        assert_eq!(stats.exit_reasons().len(), 3);
+        assert_eq!(stats.exit_reasons().get(&ExitPolicy::Expiration), Some(&1));
+        assert_eq!(stats.results().len(), 3);
     }
 }

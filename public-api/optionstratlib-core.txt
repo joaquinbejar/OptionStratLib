@@ -1035,6 +1035,9 @@ pub fn optionstratlib_core::model::reject_unrepresentable_expiration(&expiration
 pub fn optionstratlib_core::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::save_trades(&[optionstratlib_core::model::Trade], &str) -> core::io::error::Result<()>
 pub mod optionstratlib_core::utils
+pub mod optionstratlib_core::utils::json_format
+pub fn optionstratlib_core::utils::json_format::write_json<T: serde_core::ser::Serialize + ?core::marker::Sized>(&T, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn optionstratlib_core::utils::json_format::write_json_pretty<T: serde_core::ser::Serialize + ?core::marker::Sized>(&T, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub mod optionstratlib_core::utils::numeric
 pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool
 pub fn optionstratlib_core::utils::numeric::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
@@ -1107,5 +1110,8 @@ pub macro optionstratlib_core::d2f!
 pub macro optionstratlib_core::d2fu!
 pub macro optionstratlib_core::f2d!
 pub macro optionstratlib_core::f2du!
+pub macro optionstratlib_core::impl_json_debug!
+pub macro optionstratlib_core::impl_json_debug_pretty!
+pub macro optionstratlib_core::impl_json_display!
 pub macro optionstratlib_core::nz!
 pub const optionstratlib_core::VERSION: &str

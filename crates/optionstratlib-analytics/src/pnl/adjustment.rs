@@ -9,7 +9,7 @@
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::{OptionStyle, Side};
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -104,7 +104,7 @@ pub enum DeltaAdjustment {
 
 /// Two adjustments that must be executed together with the same size, so
 /// that neither leg is left unhedged if only one of them were applied.
-#[derive(DebugPretty, DisplaySimple, PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct DeltaAdjustmentSameSize {
     /// The first adjustment of the pair.
@@ -112,6 +112,9 @@ pub struct DeltaAdjustmentSameSize {
     /// The second adjustment of the pair, sized like the first.
     pub second: Box<DeltaAdjustment>,
 }
+
+impl_json_debug_pretty!(DeltaAdjustmentSameSize);
+impl_json_display!(DeltaAdjustmentSameSize);
 
 impl fmt::Display for DeltaAdjustment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

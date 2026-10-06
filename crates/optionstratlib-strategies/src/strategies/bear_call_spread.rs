@@ -48,6 +48,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -55,7 +56,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -79,7 +79,7 @@ pub const BEAR_CALL_SPREAD_DESCRIPTION: &str = "A bear call spread is created by
 /// while the maximum loss occurs when the underlying price is at or above the higher strike price.
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BearCallSpread {
     /// Name identifier for the strategy instance.
@@ -100,6 +100,9 @@ pub struct BearCallSpread {
     /// The long call position (call option purchased at the higher strike price).
     pub long_call: Position,
 }
+
+impl_json_debug_pretty!(BearCallSpread);
+impl_json_display!(BearCallSpread);
 
 impl BearCallSpread {
     /// Creates a new Bear Call Spread options strategy.

@@ -4,7 +4,7 @@ use crate::series::params::OptionSeriesBuildParams;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::utils::Len;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ use std::fmt;
 /// reading, so the variant does not round-trip, and today each date can come
 /// back one day earlier (#643). A key that is not a date is an error, not a
 /// skipped chain.
-#[derive(DebugPretty, DisplaySimple, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionSeries {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
@@ -45,6 +45,9 @@ pub struct OptionSeries {
     /// The annual dividend yield of the underlying asset.
     pub dividend_yield: Option<Positive>,
 }
+
+impl_json_debug_pretty!(OptionSeries);
+impl_json_display!(OptionSeries);
 
 impl OptionSeries {
     /// Creates a new instance of the struct with the specified symbol and underlying price.

@@ -39,6 +39,7 @@ use optionstratlib::error::Error;
 //! - PNG visualization of the last simulation in `Draws/Simulation/long_call_strategy_simulation.png`
 
 use optionstratlib::prelude::*;
+use optionstratlib::visualization::terminal::SimulationReport;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
@@ -175,10 +176,10 @@ fn main() -> Result<(), Error> {
     let stats = strategy.simulate(&simulator, exit_policy)?;
 
     // Print final statistics using the built-in formatting methods
-    stats.print_summary();
+    stats.print_summary()?;
 
     // Print individual simulation results
-    stats.print_individual_results();
+    stats.print_individual_results()?;
 
     // Save the simulator visualization
     let path = Path::new("Draws/Simulation/long_call_strategy_simulation.png");

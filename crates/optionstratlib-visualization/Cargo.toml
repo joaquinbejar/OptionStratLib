@@ -30,8 +30,13 @@ optionstratlib-pricing = { workspace = true }
 optionstratlib-simulation = { workspace = true }
 optionstratlib-market = { workspace = true }
 optionstratlib-strategies = { workspace = true }
+optionstratlib-backtest = { workspace = true }
 num-traits = { workspace = true }
 plotly = { workspace = true, optional = true }
+# Terminal tables for chain and simulation reports (`visualization::terminal`,
+# M6-05): the presentation crate is their only owner, so no lower crate
+# resolves a terminal-table package.
+prettytable-rs = { workspace = true }
 rust_decimal = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

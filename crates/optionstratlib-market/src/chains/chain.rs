@@ -4,14 +4,17 @@
    Date: 26/9/24
 ******************************************************************************/
 use crate::chains::utils::FindOptimalSide;
+#[cfg(feature = "io")]
+use crate::chains::utils::default_empty_string;
 use crate::chains::utils::{
     OptionChainBuildParams, OptionChainParams, OptionDataPriceParams, RandomPositionsParams,
-    adjust_volatility, default_empty_string, rounder, strike_step,
+    adjust_volatility, rounder, strike_step,
 };
 use crate::chains::{OptionData, OptionsInStrike};
 use crate::error::chains::{ChainError, OptionDataErrorKind};
 use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
+use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::d_add;
 use optionstratlib_core::model::{
@@ -27,8 +30,6 @@ use optionstratlib_math::geometrics::LinearInterpolation;
 use optionstratlib_pricing::error::VolatilityError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::volatility::{AtmIvProvider, VolatilitySmile};
-use pretty_simple_display::DebugSimple;
-use prettytable::{Attr, Cell, Row, Table, color, format};
 use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
@@ -98,7 +99,7 @@ pub const SKEW_SLOPE: Decimal = dec!(-0.2);
 /// optional `risk_free_rate` and `dividend_yield`, which are omitted when
 /// `None`. Deserialization rejects a missing required field or a duplicate
 /// one. `save_to_json` and `load_from_json` use exactly this form.
-#[derive(DebugSimple, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionChain {
     /// The ticker symbol for the underlying asset (e.g., "AAPL", "SPY").
@@ -121,6 +122,8 @@ pub struct OptionChain {
     /// The annual dividend yield of the underlying asset.
     pub dividend_yield: Option<Positive>,
 }
+
+impl_json_debug!(OptionChain);
 
 impl Serialize for OptionChain {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -2873,190 +2876,6 @@ impl OptionChainParams for OptionChain {
             self.dividend_yield,
             Some(self.symbol.clone()),
         ))
-    }
-}
-
-impl OptionChain {
-    /// Print the option chain with colored headers to stdout.
-    ///
-    /// This method prints the option chain directly to stdout using prettytable's
-    /// `printstd()` method, which properly displays colors in the terminal.
-    /// Use this method instead of `info!("{}", chain)` to see colored headers.
-    #[inline(never)]
-    pub fn show(&self) {
-        // Print header information
-        let mut header = Table::new();
-        header.set_format(*format::consts::FORMAT_BOX_CHARS);
-        header.add_row(Row::new(vec![
-            Cell::new("Symbol").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Underlying Price").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
-        ]));
-        header.add_row(Row::new(vec![
-            Cell::new(&self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&self.underlying_price.to_string())
-                .with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
-        ]));
-
-        header.printstd();
-
-        // Create the table
-        let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_BOX_CHARS);
-
-        // Add header row with green color
-        table.add_row(Row::new(vec![
-            Cell::new("Strike").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Call Bid").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Call Ask").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Call Mid").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Put Bid").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Put Ask").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Put Mid").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("IV").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("C-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("P-Delta").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Gamma").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Vol.").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("OI").with_style(Attr::ForegroundColor(color::GREEN)),
-        ]));
-
-        // Add data rows
-        for option in &self.options {
-            // Check if strike price is a multiple of 25
-            let is_multiple_of_25 = option.strike_price.is_multiple_of_dec(dec!(25));
-
-            let cells = vec![
-                Cell::new(&option.strike_price.to_string()),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_bid,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_ask,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_middle,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_bid,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_ask,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_middle,
-                )),
-                Cell::new(&format!("{:.3}", option.implied_volatility)),
-                Cell::new(&format!(
-                    "{:.3}",
-                    option.delta_call.unwrap_or(Decimal::ZERO)
-                )),
-                Cell::new(&format!("{:.3}", option.delta_put.unwrap_or(Decimal::ZERO))),
-                Cell::new(&format!(
-                    "{:.4}",
-                    option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
-                )),
-                Cell::new(&default_empty_string(option.volume)),
-                Cell::new(&default_empty_string(option.open_interest)),
-            ];
-
-            // Apply yellow color to all cells if strike price is multiple of 25
-            if is_multiple_of_25 {
-                let colored_cells: Vec<Cell> = cells
-                    .into_iter()
-                    .map(|cell| cell.with_style(Attr::ForegroundColor(color::YELLOW)))
-                    .collect();
-                table.add_row(Row::new(colored_cells));
-            } else {
-                table.add_row(Row::new(cells));
-            }
-        }
-
-        // Print the table with colors using printstd()
-        table.printstd();
-    }
-}
-
-impl fmt::Display for OptionChain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut header = Table::new();
-        header.set_format(*format::consts::FORMAT_BOX_CHARS);
-        header.add_row(Row::new(vec![
-            Cell::new("Symbol").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Underlying Price").with_style(Attr::ForegroundColor(color::GREEN)),
-            Cell::new("Expiration Date").with_style(Attr::ForegroundColor(color::GREEN)),
-        ]));
-        header.add_row(Row::new(vec![
-            Cell::new(&self.symbol).with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&self.underlying_price.to_string())
-                .with_style(Attr::ForegroundColor(color::MAGENTA)),
-            Cell::new(&self.expiration_date).with_style(Attr::ForegroundColor(color::MAGENTA)),
-        ]));
-
-        write!(f, "\n{}", header)?;
-
-        // Create the table
-        let mut table = Table::new();
-        table.set_format(*format::consts::FORMAT_BOX_CHARS);
-
-        // Add header row with green color (colors may not display through Display trait)
-        table.add_row(Row::new(vec![
-            Cell::new("Strike"),
-            Cell::new("Call Bid"),
-            Cell::new("Call Ask"),
-            Cell::new("Call Mid"),
-            Cell::new("Put Bid"),
-            Cell::new("Put Ask"),
-            Cell::new("Put Mid"),
-            Cell::new("IV"),
-            Cell::new("C-Delta"),
-            Cell::new("P-Delta"),
-            Cell::new("Gamma"),
-            Cell::new("Vol."),
-            Cell::new("OI"),
-        ]));
-
-        // Add data rows
-        for option in &self.options {
-            table.add_row(Row::new(vec![
-                Cell::new(&option.strike_price.to_string()),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_bid,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_ask,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.call_middle,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_bid,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_ask,
-                )),
-                Cell::new(&crate::chains::utils::empty_string_round_to_3(
-                    option.put_middle,
-                )),
-                Cell::new(&format!("{:.3}", option.implied_volatility)),
-                Cell::new(&format!(
-                    "{:.3}",
-                    option.delta_call.unwrap_or(Decimal::ZERO)
-                )),
-                Cell::new(&format!("{:.3}", option.delta_put.unwrap_or(Decimal::ZERO))),
-                Cell::new(&format!(
-                    "{:.4}",
-                    option.gamma.unwrap_or(Decimal::ZERO) * Decimal::ONE_HUNDRED
-                )),
-                Cell::new(&default_empty_string(option.volume)),
-                Cell::new(&default_empty_string(option.open_interest)),
-            ]));
-        }
-
-        // Print the table (colors may not display through Display trait)
-        write!(f, "{}", table)?;
-        Ok(())
     }
 }
 

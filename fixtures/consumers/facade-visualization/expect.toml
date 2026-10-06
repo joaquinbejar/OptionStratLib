@@ -10,9 +10,11 @@ present = [
     "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
     "optionstratlib-visualization",
 ]
-# `prettytable-rs` stays out of this list until M6-05 (market and the backtest
-# report table still carry it).
+# `prettytable-rs` stays out of this list by design: the visualization
+# crate's terminal adapter owns the terminal tables (M6-05, #546), and no
+# crate below it resolves the package (`make check-graph`).
 absent = [
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly",
     "plotly_static", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    "pretty-simple-display",
 ]

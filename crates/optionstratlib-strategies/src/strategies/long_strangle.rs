@@ -46,6 +46,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -53,7 +54,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -120,7 +120,7 @@ direction is uncertain.";
 /// * Requires significant price movement to be profitable
 /// * Suffers from time decay (theta) as both options lose value over time
 /// * Generally more expensive than directional strategies due to purchasing two options
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct LongStrangle {
     /// Name identifier for this specific strategy instance
@@ -136,6 +136,9 @@ pub struct LongStrangle {
     /// The long put position component of the strategy
     pub(super) long_put: Position,
 }
+
+impl_json_debug_pretty!(LongStrangle);
+impl_json_display!(LongStrangle);
 
 impl LongStrangle {
     /// ## Creation

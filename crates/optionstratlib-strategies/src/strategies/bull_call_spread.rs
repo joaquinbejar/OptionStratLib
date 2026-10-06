@@ -51,6 +51,7 @@ use optionstratlib_core::model::{
 };
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -58,7 +59,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -87,7 +87,7 @@ pub const BULL_CALL_SPREAD_DESCRIPTION: &str = "A bull call spread is created by
 /// - Limited profit potential (capped by the difference between strike prices minus the net debit)
 /// - Requires more capital than a single option position
 /// - Loses value as expiration approaches if the underlying price doesn't rise
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BullCallSpread {
     /// The name of the strategy, typically including underlying asset information.
@@ -108,6 +108,9 @@ pub struct BullCallSpread {
     /// The short call position (higher strike price).
     pub short_call: Position,
 }
+
+impl_json_debug_pretty!(BullCallSpread);
+impl_json_display!(BullCallSpread);
 
 impl BullCallSpread {
     /// Creates a new Bull Call Spread strategy.
