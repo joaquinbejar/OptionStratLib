@@ -944,8 +944,9 @@ optionstratlib = { version = "0.22.0", features = ["plotly"] }
 - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
   (`chains::generator_optionchain`, `series::generator_optionseries`, defined by
   `optionstratlib-market` behind its own `synthetic` feature), whose simulation
-  failures arrive as `ChainError::Generator`; implies `market` and `simulation`. Leave it out (`default-features = false, features = ["market"]`)
-  for a market surface that names no simulation type at all.
+  failures arrive as `ChainError::Generator`; implies `market` and `simulation`.
+  Leave it out (`default-features = false, features = ["market"]`) for a
+  market surface that names no simulation type at all.
   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
   dependency graphs
 

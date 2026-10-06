@@ -817,6 +817,9 @@ def gated_module_files(src: Path = SRC) -> set[str]:
     return gated
 
 
+# The market crate's sources, scanned by `synthetic_gate_violations` with
+# `market_crate=True` (#537). `main` fails if it is missing, so a moved crate
+# cannot make the gate pass by scanning nothing.
 MARKET_SRC = SRC.parent / "crates" / "optionstratlib-market" / "src"
 
 
@@ -1018,10 +1021,12 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
         "prettytable-rs",
     }),
-    # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2).
+    # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2). The
+    # simulation crate is on it too: only `synthetic` may bring it (#537).
     "optionstratlib-market": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "optionstratlib-simulation",
     }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
@@ -1048,9 +1053,9 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
     "optionstratlib-market": {
         "io": ("io", frozenset({"csv", "zip"})),
         "async": ("async", frozenset({"csv", "zip", "tokio"})),
-        # `synthetic` adds only the simulation crate, whose own graph is
-        # already in the minimal row (ADR-0003 section 2, #537).
-        "synthetic": ("synthetic", frozenset()),
+        # `synthetic` adds the simulation crate, whose own graph is already in
+        # the minimal row (ADR-0003 section 2, #537).
+        "synthetic": ("synthetic", frozenset({"optionstratlib-simulation"})),
     },
 }
 
@@ -1602,6 +1607,14 @@ def self_test() -> int:
             {"lib.rs": "pub use optionstratlib_simulation::simulation::Step;\n"},
             1,
         ),
+        "an ungated crate alias is caught": (
+            {"chains/x.rs": "use optionstratlib_simulation as sim;\n"},
+            1,
+        ),
+        "an ungated grouped path is caught": (
+            {"chains/x.rs": "use {optionstratlib_simulation::simulation::Step, std::fmt};\n"},
+            1,
+        ),
     }
     for name, (files, expected) in crate_gate_cases.items():
         with tempfile.TemporaryDirectory() as tmp:
@@ -1789,6 +1802,10 @@ def self_test() -> int:
         "market csv under io": ({("optionstratlib-market", "io"): {"csv", "zip"}}, 0),
         "market tokio under io only": ({("optionstratlib-market", "io"): {"tokio"}}, 1),
         "market tokio under async": ({("optionstratlib-market", "async"): {"tokio", "csv"}}, 0),
+        "market simulation by default": ({("optionstratlib-market", "default"): {"optionstratlib-simulation"}}, 1),
+        "market simulation under io": ({("optionstratlib-market", "io"): {"optionstratlib-simulation", "csv"}}, 1),
+        "market simulation under synthetic": ({("optionstratlib-market", "synthetic"): {"optionstratlib-simulation"}}, 0),
+        "market simulation under all features": ({("optionstratlib-market", "all features"): {"optionstratlib-simulation"}}, 0),
         "clean analytics tree": ({("optionstratlib-analytics", "default"): {"lazy_static", "serde_json"}}, 0),
         "analytics pulls market io": ({("optionstratlib-analytics", "default"): {"csv", "zip"}}, 2),
         "analytics tokio under all features": ({("optionstratlib-analytics", "all features"): {"tokio"}}, 1),
@@ -2041,6 +2058,11 @@ def main() -> int:
         for item in violations:
             print(f"  {item}")
         return 1
+    if not MARKET_SRC.is_dir():
+        print(f"market crate sources not found at {MARKET_SRC}; update MARKET_SRC")
+        return 1
+    # The facade-mode pass scans nothing today (market left the facade with
+    # #524); it stays as a guard should market code reappear under `src/`.
     ungated = synthetic_gate_violations() + [
         f"crates/optionstratlib-market/src/{item}"
         for item in synthetic_gate_violations(MARKET_SRC, market_crate=True)

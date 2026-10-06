@@ -491,3 +491,33 @@ fn test_simulation_items_through_facade_modules_and_prelude() {
     let _: optionstratlib_simulation::error::SimulationResult<()> =
         optionstratlib::error::SimulationResult::<()>::Ok(());
 }
+
+/// The synthetic generators are `optionstratlib-market` items, reached
+/// through the facade's `chains` / `series` modules and the prelude (#537).
+#[cfg(feature = "synthetic")]
+#[test]
+fn test_synthetic_generators_through_facade_modules_and_prelude() {
+    same_item(
+        optionstratlib::chains::generator_optionchain,
+        optionstratlib_market::chains::generator_optionchain,
+    );
+    same_item(
+        optionstratlib::prelude::generator_optionchain,
+        optionstratlib_market::chains::generator_optionchain,
+    );
+    same_item(
+        optionstratlib::series::generator_optionseries,
+        optionstratlib_market::series::generator_optionseries,
+    );
+    same_item(
+        optionstratlib::prelude::generator_optionseries,
+        optionstratlib_market::series::generator_optionseries,
+    );
+    let error: optionstratlib_market::error::ChainError = optionstratlib::error::ChainError::from(
+        optionstratlib::error::SimulationError::walk_error("probe"),
+    );
+    assert!(matches!(
+        error,
+        optionstratlib::error::ChainError::Generator(_)
+    ));
+}

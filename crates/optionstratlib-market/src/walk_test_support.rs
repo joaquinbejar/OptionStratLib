@@ -12,8 +12,8 @@
 //!
 //! `optionstratlib-simulation` keeps its own `RampWalker` for the walk
 //! driver tests: a crate's `#[cfg(test)]` items are not visible to another
-//! crate's tests. This copy goes with the generators when #537 moves them
-//! into `optionstratlib-market`.
+//! crate's tests. This copy came with the generators into
+//! `optionstratlib-market` (#537).
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_simulation::error::SimulationError;

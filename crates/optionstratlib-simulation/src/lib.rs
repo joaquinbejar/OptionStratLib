@@ -38,8 +38,9 @@
 //!
 //! The evaluation of a strategy over simulated paths, its statistics report
 //! and the charts of a walk stay with the backtesting and visualization
-//! layers, and the chain and series generators built on these walks with
-//! the `synthetic` capability; the `optionstratlib` facade provides them.
+//! layers, which the `optionstratlib` facade provides; the chain and series
+//! generators built on these walks are in `optionstratlib-market`, behind
+//! its `synthetic` feature.
 //!
 //! ## Imports
 //!
