@@ -100,6 +100,8 @@ fn test_simulator_accessors_display_profit_and_indexing() {
 
     let shown = format!("{sim}");
     assert_eq!(shown.lines().next(), Some("SIM"), "{shown}");
+    assert!(shown.contains("\tRandomWalk Title: SIM_0"), "{shown}");
+    assert!(shown.contains("\tRandomWalk Title: SIM_1"), "{shown}");
 
     match sim.calculate_profit_at(&pos_or_panic!(55.0)) {
         Err(error) => assert!(
