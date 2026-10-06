@@ -34,6 +34,7 @@ fn main() -> Result<(), Error> {
             volatility: std_dev,
         },
         walker,
+        seed: None,
     };
 
     let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive)?;

@@ -284,6 +284,7 @@ mod tests_generator_optionseries {
                 volatility: std_dev,
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -334,6 +335,7 @@ mod tests_generator_optionseries {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -367,6 +369,7 @@ mod tests_generator_optionseries {
                 symbol: None,
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -411,6 +414,7 @@ mod tests_generator_optionseries {
                 symbol: None,
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -512,6 +516,7 @@ mod tests_generator_optionseries {
                 },
                 walk_type,
                 walker: walker.clone(),
+                seed: None,
             };
 
             // Function should run without panicking for all walk types
@@ -554,6 +559,7 @@ mod tests_generator_optionseries {
                 symbol: None,
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -623,6 +629,7 @@ mod tests_generator_optionseries {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         // Execute
@@ -664,6 +671,7 @@ mod tests_generator_optionseries {
             walker: Box::new(RampWalker {
                 delta: Positive::TWO,
             }),
+            seed: None,
         };
 
         let steps = match generator_optionseries(&walk_params) {
@@ -748,6 +756,7 @@ mod tests_generator_optionseries {
             walker: Box::new(RampWalker {
                 delta: Positive::ONE,
             }),
+            seed: None,
         };
 
         let steps = match generator_optionseries(&walk_params) {

@@ -9,11 +9,12 @@ use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::utils::Len;
+use optionstratlib_core::utils::{Len, deterministic_rng};
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::pricing::Profit;
 use optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo;
 use optionstratlib_pricing::pricing::unified::MonteCarloPricer;
+use rand::RngExt;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -70,6 +71,12 @@ where
     ///   `"{title}_{i}"`.
     /// * `size` - Number of random walks to generate.
     /// * `params` - Walk parameters shared across all generated walks.
+    ///   When `params.seed` is `Some(seed)`, walk `i` receives the `i`-th
+    ///   `u64` drawn from
+    ///   [`optionstratlib_core::utils::deterministic_rng`]`(seed)` as its own
+    ///   seed: the walks differ from one another, and the whole simulator is
+    ///   reproducible bit for bit. With `None` every walk draws from the
+    ///   thread RNG.
     /// * `generator` - A fallible step generator. Cloned per walk; pass a
     ///   function pointer or a stateless closure for best ergonomics.
     ///
@@ -95,9 +102,29 @@ where
         Y: TryInto<Positive> + Display + Clone,
     {
         let mut random_walks = Vec::with_capacity(size);
-        for i in 0..size {
-            let walk_title = format!("{title}_{i}");
-            random_walks.push(RandomWalk::new(walk_title, params, generator.clone())?);
+        match params.seed {
+            None => {
+                for i in 0..size {
+                    let walk_title = format!("{title}_{i}");
+                    random_walks.push(RandomWalk::new(walk_title, params, generator.clone())?);
+                }
+            }
+            Some(seed) => {
+                // Walk `i` is seeded with the `i`-th `u64` of
+                // `deterministic_rng(seed)`: distinct paths, reproducible
+                // run to run, and independent of how many walks follow.
+                let mut seeds = deterministic_rng(seed);
+                let mut walk_params = params.clone();
+                for i in 0..size {
+                    walk_params.seed = Some(seeds.random::<u64>());
+                    let walk_title = format!("{title}_{i}");
+                    random_walks.push(RandomWalk::new(
+                        walk_title,
+                        &walk_params,
+                        generator.clone(),
+                    )?);
+                }
+            }
         }
         Ok(Self {
             title,
@@ -489,6 +516,7 @@ mod tests {
                 prices,
                 symbol: None,
             },
+            seed: None,
         };
         let simulator =
             Simulator::new("MC parity".to_string(), 8, &params, generator_positive).unwrap();
@@ -566,6 +594,7 @@ mod tests {
                 vol_mean: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(simulator) = Simulator::new(
@@ -617,6 +646,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(simulator) = Simulator::new(
@@ -660,6 +690,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(mut simulator) = Simulator::new(
@@ -704,6 +735,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(simulator) = Simulator::new(
@@ -767,6 +799,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(mut simulator) = Simulator::new(
@@ -815,6 +848,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(simulator) =
@@ -874,6 +908,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let calls: Cell<u32> = Cell::new(0);
@@ -925,6 +960,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let Ok(simulator) =
@@ -958,6 +994,7 @@ mod tests {
                 volatility: std_dev,
             },
             walker,
+            seed: None,
         };
 
         assert_eq!(walk_params.size, n_steps);

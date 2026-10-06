@@ -251,6 +251,7 @@ pub fn optionstratlib_core::model::decimal::d_sub(rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::decimal::d_sum(&[rust_decimal::decimal::Decimal], &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::model::decimal::d_sum_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::decimal::decimal_normal_sample() -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::decimal::decimal_normal_sample_with<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>

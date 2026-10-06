@@ -82,6 +82,7 @@ fn main() -> Result<(), Error> {
             symbol: Some(symbol),
         },
         walker,
+        seed: None,
     };
 
     let random_walk = RandomWalk::new(

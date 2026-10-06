@@ -306,6 +306,7 @@ fn walk_params(
         ),
         walk_type,
         walker: Box::new(BareWalker),
+        seed: None,
     }
 }
 

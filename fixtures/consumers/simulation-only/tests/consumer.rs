@@ -75,6 +75,7 @@ fn simulator(prices: Vec<Positive>, walks: usize) -> Simulator<Positive, Positiv
             prices,
             symbol: Some("XYZ".to_string()),
         },
+        seed: None,
     };
     match Simulator::new("fixture".to_string(), walks, &params, generator_positive) {
         Ok(sim) => sim,

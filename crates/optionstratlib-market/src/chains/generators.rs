@@ -237,6 +237,7 @@ mod tests {
                 volatility: std_dev / 100.0,
             },
             walker,
+            seed: None,
         };
 
         let random_walk = RandomWalk::new(
@@ -299,6 +300,7 @@ mod tests {
                 rho: dec!(-0.5),
             },
             walker: Box::new(WalkerOptionChain::new()),
+            seed: None,
         };
 
         let steps = match generator_optionchain(&walk_params) {
@@ -374,6 +376,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::TWO,
             }),
+            seed: None,
         };
 
         let steps = match generator_optionchain(&walk_params) {
@@ -491,6 +494,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::ONE, // unused: Historical keeps the default
             }),
+            seed: None,
         };
 
         let steps = match generator_optionchain(&walk_params) {
@@ -575,6 +579,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(EmptyWalker),
+            seed: None,
         };
         let steps = match generator_optionchain(&walk_params) {
             Ok(steps) => steps,
@@ -635,6 +640,7 @@ mod generators_coverage_tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -672,6 +678,7 @@ mod generators_coverage_tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -710,6 +717,7 @@ mod generators_coverage_tests {
                 autocorrelation: None,
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -748,6 +756,7 @@ mod generators_coverage_tests {
                 mean: Default::default(),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -788,6 +797,7 @@ mod generators_coverage_tests {
                 jump_volatility: Default::default(),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -827,6 +837,7 @@ mod generators_coverage_tests {
                 beta: Default::default(),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -868,6 +879,7 @@ mod generators_coverage_tests {
                 rho: Default::default(),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -908,6 +920,7 @@ mod generators_coverage_tests {
                 vol_mean: Default::default(),
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();
@@ -949,6 +962,7 @@ mod generators_coverage_tests {
                 symbol: None,
             },
             walker,
+            seed: None,
         };
 
         let steps = generator_optionchain(&walk_params).unwrap();

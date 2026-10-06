@@ -36,6 +36,7 @@ fn test_random_walk_graph_data_and_config() {
             ],
             symbol: None,
         },
+        seed: None,
     };
     let walk = match RandomWalk::new("RW_Title".to_string(), &params, generator_positive) {
         Ok(walk) => walk,

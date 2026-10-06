@@ -340,6 +340,7 @@ impl optionstratlib_simulation::simulation::PathStatistics
 pub fn optionstratlib_simulation::simulation::PathStatistics::from_outcomes(&[optionstratlib_simulation::simulation::PathOutcome]) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
 pub struct optionstratlib_simulation::simulation::WalkParams<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display + core::marker::Sized, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::marker::Sized + core::clone::Clone
 pub optionstratlib_simulation::simulation::WalkParams::init_step: optionstratlib_simulation::simulation::steps::Step<X, Y>
+pub optionstratlib_simulation::simulation::WalkParams::seed: core::option::Option<u64>
 pub optionstratlib_simulation::simulation::WalkParams::size: usize
 pub optionstratlib_simulation::simulation::WalkParams::walk_type: optionstratlib_simulation::simulation::WalkType
 pub optionstratlib_simulation::simulation::WalkParams::walker: alloc::boxed::Box<dyn optionstratlib_simulation::simulation::WalkTypeAble<X, Y>>

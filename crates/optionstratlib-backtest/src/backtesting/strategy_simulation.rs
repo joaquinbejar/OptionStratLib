@@ -596,6 +596,7 @@ mod test_support {
                 prices,
                 symbol: Some("TEST".to_string()),
             },
+            seed: None,
         }
     }
 }

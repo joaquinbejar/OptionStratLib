@@ -55,6 +55,7 @@ fn main() -> Result<(), Error> {
             volatility: volatility_dt,
         },
         walker,
+        seed: None,
     };
 
     let simulator = Simulator::new(

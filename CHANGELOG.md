@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`WalkParams` has a `seed: Option<u64>` field** (#539). Every struct
+  literal now names it; `seed: None` keeps the previous behaviour exactly:
+  the built-in walk kernels draw from the thread RNG, through the same
+  generator, in the same order, so an unseeded walk is what it was. The
+  field is the seed-ownership point of the simulation boundary (see Added).
+  Migrate `WalkParams { size, init_step, walk_type, walker }` to
+  `WalkParams { size, init_step, walk_type, walker, seed: None }`.
+
 - **Backtesting is its own crate, `optionstratlib-backtest`** (#538).
   `backtesting` (`Simulate` and its single-leg implementations, the adapters
   from the simulation engine's `PathOutcome` / `PathStatistics` to
@@ -697,6 +705,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **Seeded, reproducible stochastic walks** (#539). With
+  `WalkParams::seed = Some(seed)` every built-in stochastic walk (Brownian,
+  geometric Brownian, log-returns, mean-reverting, jump-diffusion, GARCH,
+  Heston, custom OU-volatility and telegraph), the public kernels
+  `garch_walk` / `heston_walk` / `custom_walk` / `telegraph_walk`, and the
+  drivers `walk_steps`, `walk_steps_par` and `generator_positive` draw the
+  whole path from `deterministic_rng(seed)`: the same parameters and seed
+  give the same path bit for bit on every run with a given `rand` /
+  `rand_distr` version (`StdRng` and `StandardNormal` may change their
+  streams across releases; a dependency bump that does is a reviewed change
+  of the pinned fixtures). `Simulator::new` with a seeded
+  `WalkParams` seeds walk `i` with the `i`-th `u64` of
+  `deterministic_rng(seed)`, so its walks differ from one another, do not
+  depend on how many walks follow, and the simulator is reproducible.
+  Sequential/parallel contract: `walk_steps_par` draws the path once,
+  serially, before fanning out `next_y`, and assembles in step order, so a
+  seeded `walk_steps_par` equals `walk_steps` bit for bit for a pure
+  `next_y`. Historical walks replay their prices and ignore the seed.
+  `WalkParams`' `Display`, which the walk drivers log at debug level, now
+  ends with `seed: …`, so a seeded run can be reproduced from its log. Core
+  gains `decimal_normal_sample_with(&mut impl Rng)`, the
+  standard-normal `Decimal` draw from a caller's generator;
+  `decimal_normal_sample()` is now that helper applied to the thread RNG.
+  `optionstratlib-simulation` depends on `rand` directly (it was already in
+  its graph through core), recorded in the feature-tree fixtures. Fixed-seed
+  regressions: `optionstratlib-simulation/tests/deterministic_simulation_test.rs`
+  pins every stochastic path and volatility path, simulator terminal
+  prices, exit reasons, holding periods, P&L and `PathStatistics` bit for
+  bit, and the Monte-Carlo price over seeded paths exactly (its `f64`
+  payoff step is a correctly rounded subtraction and multiply);
+  `optionstratlib-backtest/tests/simulation_regression_test.rs`
+  pins exit reasons and holding periods of `LongCall` / `ShortPut`
+  simulations exactly and their Black-Scholes P&L within `1e-9`.
 
 - **Facade consumer fixtures for `simulation` and `backtest`** (#541).
   `fixtures/consumers/facade-simulation` uses the facade with

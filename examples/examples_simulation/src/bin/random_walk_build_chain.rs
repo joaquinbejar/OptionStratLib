@@ -66,6 +66,7 @@ fn main() -> Result<(), Error> {
             volatility: implied_volatility,
         },
         walker,
+        seed: None,
     };
 
     let random_walk = RandomWalk::new(

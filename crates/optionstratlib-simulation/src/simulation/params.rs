@@ -26,6 +26,26 @@ use std::ops::AddAssign;
 /// * `init_step` - Initial step values (starting point) for the random walk
 /// * `walk_type` - The specific stochastic process algorithm to use for the simulation
 /// * `walker` - Implementation of the walk algorithm that satisfies the `WalkTypeAble` trait
+/// * `seed` - Optional seed for the walk's random stream; `None` draws from the thread RNG
+///
+/// # Seeding
+///
+/// With `seed: None` every stochastic walk draws its normal samples from the
+/// thread-local RNG ([`rand::rng()`]), so two runs differ. With
+/// `seed: Some(s)` the built-in walk kernels draw from
+/// [`optionstratlib_core::utils::deterministic_rng`]`(s)` instead, one
+/// generator per generated path, so the same parameters and seed produce the
+/// same path bit for bit on every run with a given version of `rand` and
+/// `rand_distr`. That is the scope of the promise: `StdRng` and
+/// `StandardNormal` may change their streams across releases, and a
+/// dependency bump that does so is a reviewed change of the pinned fixtures,
+/// not a silent one. [`WalkType::Historical`] replays its
+/// prices and ignores the seed. A walker that overrides a walk method owns
+/// its own randomness and decides whether to honour `seed`.
+///
+/// [`crate::simulation::simulator::Simulator::new`] derives a distinct seed
+/// for each of its walks from this one, so a seeded simulator is reproducible
+/// without every walk repeating the same path.
 ///
 /// # Usage
 ///
@@ -54,6 +74,12 @@ where
     /// Implementation of the walk algorithm that satisfies the WalkTypeAble trait
     /// Provides the concrete logic for generating steps according to the selected walk_type
     pub walker: Box<dyn WalkTypeAble<X, Y>>,
+
+    /// Seed of the walk's random stream. `None` draws from the thread RNG
+    /// (non-reproducible); `Some(seed)` makes every stochastic built-in walk
+    /// reproducible bit for bit for a given `rand` / `rand_distr` version.
+    /// See the struct-level "Seeding" section.
+    pub seed: Option<u64>,
 }
 
 /// Access methods for the initial y-axis step value.
@@ -130,8 +156,8 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "WalkParams {{ size: {}, init_step: {}, walk_type: {} }}",
-            self.size, self.init_step, self.walk_type
+            "WalkParams {{ size: {}, init_step: {}, walk_type: {}, seed: {:?} }}",
+            self.size, self.init_step, self.walk_type, self.seed
         )
     }
 }
@@ -180,6 +206,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            seed: None,
         };
 
         assert_eq!(walk_params.size, 100);
@@ -214,6 +241,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            seed: None,
         };
         let cloned_params = &walk_params;
 
@@ -250,6 +278,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            seed: None,
         };
 
         let display_string = format!("{walk_params}");
@@ -258,6 +287,30 @@ mod tests {
         assert!(display_string.contains("size: 50"));
         assert!(display_string.contains(&format!("{init_step}")));
         assert!(display_string.contains("walk_type: GeometricBrownian"));
+        assert!(display_string.ends_with("seed: None }"));
+    }
+
+    #[test]
+    fn test_walk_params_display_seeded_shows_seed() {
+        let walk_params = WalkParams {
+            size: 10,
+            init_step: Step {
+                x: Xstep::new(
+                    Positive::ONE,
+                    TimeFrame::Day,
+                    ExpirationDate::Days(pos_or_panic!(30.0)),
+                ),
+                y: Ystep::new(0, Positive::HUNDRED),
+            },
+            walk_type: WalkType::Brownian {
+                dt: Positive::ONE,
+                drift: Decimal::ZERO,
+                volatility: pos_or_panic!(0.2),
+            },
+            walker: Box::new(MockWalker),
+            seed: Some(539),
+        };
+        assert!(format!("{walk_params}").ends_with("seed: Some(539) }"));
     }
 
     #[test]
@@ -283,6 +336,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            seed: None,
         };
 
         assert_eq!(walk_params.size, size);
@@ -313,6 +367,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(MockWalker),
+            seed: None,
         };
 
         assert_eq!(walk_params.size, 50);

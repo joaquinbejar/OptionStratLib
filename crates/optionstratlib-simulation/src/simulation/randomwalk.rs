@@ -377,6 +377,7 @@ mod tests_random_walk {
             init_step,
             walk_type,
             walker: Box::new(TestWalker {}),
+            seed: None,
         }
     }
 

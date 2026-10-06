@@ -41,6 +41,7 @@ fn params(prices: &[f64]) -> WalkParams<Positive, Positive> {
             prices: prices.iter().map(|p| pos_or_panic!(*p)).collect(),
             symbol: Some("ABC".to_string()),
         },
+        seed: None,
     }
 }
 
