@@ -85,8 +85,7 @@ proptest! {
 
     /// Every call that walks a price range: the display range, the payoff
     /// chart, the expected value integration and the full probability
-    /// analysis, plus the custom strategy whose break-even scan walks a cent
-    /// at a time.
+    /// analysis.
     #[test]
     fn test_price_range_walks_never_panic(
         // `expected_value` samples at one percent of the spot over a range set
