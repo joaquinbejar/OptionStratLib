@@ -1,0 +1,25 @@
+# Consumer fixture: a crate that simulates price paths and evaluates them with
+# its own evaluator, on `optionstratlib-simulation` and core alone (ADR-0002
+# section 5 `osl-fixture-simulation-only`, #540). Excluded from the root
+# workspace so feature unification with the other members cannot widen its
+# graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-simulation-only"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: simulated paths and a generic evaluator on optionstratlib-simulation alone."
+license = "MIT"
+
+[features]
+# `--all-features` runs the fixture with every simulation feature on;
+# `schema` is the only one.
+schema = ["optionstratlib-simulation/schema"]
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-simulation = { path = "../../../crates/optionstratlib-simulation", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

@@ -1,0 +1,26 @@
+# Consumer fixture: a strategy backtested over simulated paths with explicit
+# component dependencies and no facade (#540). Excluded from the root
+# workspace so feature unification with the other members cannot widen its
+# graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-full-backtest"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: a strategy backtest on the component crates, without the facade."
+license = "MIT"
+
+[features]
+# `--all-features` runs the fixture with every backtest feature on; `schema`
+# is the only one.
+schema = ["optionstratlib-backtest/schema"]
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-simulation = { path = "../../../crates/optionstratlib-simulation", version = "0.22.0" }
+optionstratlib-strategies = { path = "../../../crates/optionstratlib-strategies", version = "0.22.0" }
+optionstratlib-backtest = { path = "../../../crates/optionstratlib-backtest", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"
