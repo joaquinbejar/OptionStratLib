@@ -81,7 +81,7 @@ fmt-check:
 # with warnings denied, so no doc link names a gated item, and its library
 # and doc tests run, so every doc example compiles under the capability it
 # needs (the integration suites declare `required-features` and are skipped).
-FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest
+FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest market,synthetic
 
 .PHONY: lint
 lint:

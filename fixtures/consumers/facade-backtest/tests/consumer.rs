@@ -1,8 +1,8 @@
 //! A downstream backtest on the `optionstratlib` facade with
 //! `default-features = false, features = ["backtest"]` (#541): a long call
 //! simulated over replayed paths through the `prelude`, and proof that the
-//! facade paths name the items the backtest crate defines. No plotting, I/O
-//! or async code is compiled. The figures are the ones the backtest crate's
+//! facade paths name the items the backtest crate defines. No plotly, I/O or
+//! async package is resolved. The figures are the ones the backtest crate's
 //! golden regression pins (`long_call/path0/exit0`, `long_call/path1/exit0`).
 
 use optionstratlib::prelude::*;
@@ -75,7 +75,9 @@ fn test_long_call_backtest_through_the_prelude() {
     assert_eq!(rising.average_holding_period, dec!(4));
     // Worthless at expiry: -premium 5 - fees 1 = -6 per walk.
     let falling = backtest(&[100.0, 95.0, 90.0, 85.0, 80.0]);
+    assert_eq!(falling.total_simulations, 2);
     assert_eq!(falling.average_pnl, dec!(-6));
+    assert_eq!(falling.win_rate, dec!(0));
     assert_eq!(falling.loss_count, 2);
     assert_eq!(falling.average_holding_period, dec!(4));
 }
