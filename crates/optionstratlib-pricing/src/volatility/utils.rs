@@ -24,6 +24,8 @@ use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
 
 use crate::pricing::OptionPricing;
+use crate::pricing::black_scholes_model::european_price_band;
+use crate::pricing::constants::IV_TOLERANCE;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
@@ -219,9 +221,15 @@ pub fn ewma_volatility(
 /// The implementation is a parallel grid search over
 /// `100 * max_iterations` candidate volatilities rather than a
 /// Newton–Raphson iteration. It returns
-/// `VolatilityError::IvNotFound` when the best candidate is the
-/// lower boundary `1 / (100 * max_iterations)` (the search never
-/// improved), `VolatilityError::NoValidVolatility` when every grid
+/// `VolatilityError::IvNotFound` when the best candidate is an edge of the
+/// grid, `1 / (100 * max_iterations)` or `1 - 1 / (100 * max_iterations)`
+/// (the root lies at or beyond it), and when a European target lies outside
+/// the no-arbitrage band of Black–Scholes prices, below
+/// `max(S e^(-qT) - K e^(-rT), 0)` (call) / `max(K e^(-rT) - S e^(-qT), 0)`
+/// (put) or above `S e^(-qT)` / `K e^(-rT)`, widened by `1e-5` (#652);
+/// `VolatilityError::Options` or `VolatilityError::DecimalError` when the
+/// band's discount factors leave the `Decimal` range;
+/// `VolatilityError::NoValidVolatility` when every grid
 /// point failed the Black–Scholes evaluation, and
 /// `VolatilityError::PositiveError` when the boundary `Positive`
 /// conversion fails. Black–Scholes errors on individual candidates
@@ -269,16 +277,31 @@ pub fn implied_volatility(
         .filter_map(|x| x) // Remove errors
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    match result {
-        Some((best_iv, _)) => {
-            let iv = best_iv.clamp(*MIN_VOLATILITY, MAX_VOLATILITY);
-            if iv == Positive::new(1f64 / iterations as f64)? {
-                Err(VolatilityError::IvNotFound)
-            } else {
-                Ok(iv)
-            }
+    let Some((best_iv, _)) = result else {
+        return Err(VolatilityError::NoValidVolatility);
+    };
+    // A European target outside the no-arbitrage band has no implied
+    // volatility (#652): the argmin would otherwise land on whichever grid
+    // point happens to round nearest, an edge or a point near one.
+    if matches!(base_option.option_type, OptionType::European) {
+        let (lower, upper) = european_price_band(&base_option)
+            .map_err(optionstratlib_core::error::OptionsError::from)?;
+        let target = market_price.to_dec();
+        if target < d_sub(lower, IV_TOLERANCE, "volatility::iv_grid::band::lower")?
+            || target > d_add(upper, IV_TOLERANCE, "volatility::iv_grid::band::upper")?
+        {
+            return Err(VolatilityError::IvNotFound);
         }
-        None => Err(VolatilityError::NoValidVolatility),
+    }
+    let iv = best_iv.clamp(*MIN_VOLATILITY, MAX_VOLATILITY);
+    // The nearest price sits on an edge of the grid: the root is at or
+    // beyond that edge, so the grid did not find it.
+    let lowest = Positive::new(1f64 / iterations as f64)?;
+    let highest = Positive::new((iterations - 1) as f64 / iterations as f64)?;
+    if iv == lowest || iv == highest {
+        Err(VolatilityError::IvNotFound)
+    } else {
+        Ok(iv)
     }
 }
 

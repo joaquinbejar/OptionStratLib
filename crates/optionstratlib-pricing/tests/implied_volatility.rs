@@ -24,7 +24,7 @@
 //! resolution, across moneyness, maturities, both styles and, for the
 //! bisection, both sides. Error paths cover an expired option, an
 //! out-of-the-money target at the zero-volatility floor, an overflowing grid
-//! size. Targets outside the no-arbitrage band are #652.
+//! size, and targets outside the no-arbitrage band (#652).
 //!
 //! # Sources
 //!
@@ -49,11 +49,6 @@
 //! price is nearest the target, which for a strictly increasing price is one
 //! of the two grid neighbours of the true `σ`: the bound is one grid step,
 //! `1e-3`. Test volatilities sit off the grid on purpose.
-//!
-//! # Known discrepancies (filed, tested in the fix)
-//!
-//! Both solvers return a volatility for targets outside the no-arbitrage
-//! band instead of an error (#652); that test lives in the issue.
 
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
@@ -320,5 +315,162 @@ fn test_grid_search_overflowing_grid_size_returns_numerical_failure() {
     assert!(
         matches!(result, Err(VolatilityError::NumericalFailure { .. })),
         "overflowing grid: {result:?}"
+    );
+}
+
+/// Targets outside the no-arbitrage band have no implied volatility: a call
+/// below its intrinsic value (`S = 120, K = 100, r = 0`, target `15 < 20`)
+/// and a call above the spot (target `130 > 120`). The bisection used to
+/// return the edges of its `[0, 5]` bracket, `0.0000763` and `4.99992`
+/// (#652); it now reports `InvalidPrice`.
+#[test]
+fn test_bisection_rejects_targets_outside_the_arbitrage_band() {
+    let itm = european(
+        OptionStyle::Call,
+        Side::Long,
+        120.0,
+        100.0,
+        90.0,
+        0.27,
+        Decimal::ZERO,
+        0.0,
+    );
+    let below = itm.calculate_implied_volatility(dec!(15));
+    assert!(below.is_err(), "target below intrinsic: {below:?}");
+    assert!(
+        matches!(below, Err(VolatilityError::InvalidPrice { .. })),
+        "target below intrinsic: {below:?}"
+    );
+    let above = itm.calculate_implied_volatility(dec!(130));
+    assert!(above.is_err(), "target above spot: {above:?}");
+    assert!(
+        matches!(above, Err(VolatilityError::InvalidPrice { .. })),
+        "target above spot: {above:?}"
+    );
+}
+
+/// Same targets through the grid search. It used to return `0.046` below
+/// intrinsic (a deep in-the-money price that rounds a hair under 20 at that
+/// grid point won the argmin) and `0.999`, the top of its grid, above the
+/// spot (#652).
+#[test]
+fn test_grid_search_rejects_targets_outside_the_arbitrage_band() {
+    let solve = |target: f64| {
+        calculate_iv(
+            pos_or_panic!(target),
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            pos_or_panic!(120.0),
+            pos_or_panic!(90.0),
+            "IV".to_string(),
+        )
+    };
+    let below = solve(15.0);
+    assert!(
+        matches!(below, Err(VolatilityError::IvNotFound)),
+        "target below intrinsic: {below:?}"
+    );
+    let above = solve(130.0);
+    assert!(above.is_err(), "target above spot: {above:?}");
+}
+
+/// A put target above `K e^(-rT)` and a short call target whose magnitude
+/// is below intrinsic sit outside the band on the other legs of the check:
+/// the put's upper bound and the short side's sign flip.
+#[test]
+fn test_bisection_rejects_put_above_discounted_strike_and_short_below_intrinsic() {
+    let put = european(
+        OptionStyle::Put,
+        Side::Long,
+        100.0,
+        100.0,
+        365.0,
+        0.2,
+        dec!(0.05),
+        0.0,
+    );
+    // K e^(-rT) = 100 e^(-0.05) = 95.1229.
+    let above = put.calculate_implied_volatility(dec!(96));
+    assert!(
+        matches!(above, Err(VolatilityError::InvalidPrice { .. })),
+        "put above discounted strike: {above:?}"
+    );
+    let short = european(
+        OptionStyle::Call,
+        Side::Short,
+        120.0,
+        100.0,
+        90.0,
+        0.27,
+        Decimal::ZERO,
+        0.0,
+    );
+    let below = short.calculate_implied_volatility(dec!(-15));
+    assert!(
+        matches!(below, Err(VolatilityError::InvalidPrice { .. })),
+        "short target below intrinsic: {below:?}"
+    );
+}
+
+/// A target inside the band whose implied volatility exceeds the `500 %`
+/// bracket is not bracketed: the bisection reports `NoConvergence` instead
+/// of the bracket top (#652). `S = K = 100, T = 1, r = q = 0`: the price
+/// at `σ = 5` is `100 (2 N(2.5) - 1) = 98.758`, the band's upper bound is
+/// `100`, and the target is `99.5`.
+#[test]
+fn test_bisection_target_above_bracket_top_returns_no_convergence() {
+    let atm = european(
+        OptionStyle::Call,
+        Side::Long,
+        100.0,
+        100.0,
+        365.0,
+        0.2,
+        Decimal::ZERO,
+        0.0,
+    );
+    let result = atm.calculate_implied_volatility(dec!(99.5));
+    assert!(
+        matches!(result, Err(VolatilityError::NoConvergence { .. })),
+        "target above the bracket top: {result:?}"
+    );
+    // The bracket top itself still inverts.
+    let mut top = atm.clone();
+    top.implied_volatility = pos_or_panic!(4.99);
+    let target = ok(black_scholes(&top), "price at the bracket top");
+    let solved = ok(atm.calculate_implied_volatility(target), "bisection");
+    assert!(
+        (solved.to_dec() - dec!(4.99)).abs() <= BISECTION_BRACKET,
+        "recovered {solved}"
+    );
+}
+
+/// The grid search reports its top edge as `IvNotFound` like its bottom
+/// edge: a target inside the band whose implied volatility exceeds the grid
+/// (`σ = 1.5 > 0.999`) is not found (#652).
+#[test]
+fn test_grid_search_target_above_grid_top_returns_iv_not_found() {
+    let opt = european(
+        OptionStyle::Call,
+        Side::Long,
+        100.0,
+        100.0,
+        365.0,
+        1.5,
+        Decimal::ZERO,
+        0.0,
+    );
+    let target = ok(black_scholes(&opt), "price");
+    let result = calculate_iv(
+        ok(Positive::new_decimal(target), "positive price"),
+        pos_or_panic!(100.0),
+        OptionStyle::Call,
+        pos_or_panic!(100.0),
+        pos_or_panic!(365.0),
+        "IV".to_string(),
+    );
+    assert!(
+        matches!(result, Err(VolatilityError::IvNotFound)),
+        "target above the grid top: {result:?}"
     );
 }

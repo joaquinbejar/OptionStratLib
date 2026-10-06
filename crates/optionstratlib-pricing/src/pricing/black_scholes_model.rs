@@ -4,7 +4,7 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::error::PricingError;
-use crate::kernels::{big_n, calculate_d_values, d_values_and_time};
+use crate::kernels::{big_n, calculate_d_values, d_values_and_time, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -102,6 +102,68 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
             "Black-Scholes",
         )),
     }
+}
+
+/// No-arbitrage band of a long European vanilla's Black-Scholes price,
+/// `(lower, upper)`, used by the implied-volatility solvers (#652).
+///
+/// The Black-Scholes price is strictly increasing in `σ` between its two
+/// limits (Hull, *Options, Futures and Other Derivatives*, bounds on option
+/// prices and implied volatilities):
+///
+/// ```text
+/// call: max(S e^(-qT) - K e^(-rT), 0)  <  C(σ)  <  S e^(-qT)
+/// put:  max(K e^(-rT) - S e^(-qT), 0)  <  P(σ)  <  K e^(-rT)
+/// ```
+///
+/// A target price outside `[lower, upper]` has no implied volatility. The
+/// band ignores `option.side` and `option.implied_volatility`.
+///
+/// # Errors
+///
+/// Returns `PricingError::Options` when the expiration cannot be converted
+/// to a year fraction, and `PricingError::Decimal` when a discount factor or a discounted leg leaves the `Decimal` range.
+pub(crate) fn european_price_band(option: &Options) -> Result<(Decimal, Decimal), PricingError> {
+    let t = option.time_to_expiration()?.to_dec();
+    let spot_pv = d_mul(
+        option.underlying_price.to_dec(),
+        discount_factor(
+            option.dividend_yield.to_dec(),
+            t,
+            "pricing::black_scholes::band::qt",
+            "pricing::black_scholes::band::exp_qt",
+        )?,
+        "pricing::black_scholes::band::spot_pv",
+    )?;
+    let strike_pv = d_mul(
+        option.strike_price.to_dec(),
+        discount_factor(
+            option.risk_free_rate,
+            t,
+            "pricing::black_scholes::band::rt",
+            "pricing::black_scholes::band::exp_rt",
+        )?,
+        "pricing::black_scholes::band::strike_pv",
+    )?;
+    let band = match option.option_style {
+        OptionStyle::Call => (
+            d_sub(
+                spot_pv,
+                strike_pv,
+                "pricing::black_scholes::band::call_lower",
+            )?,
+            spot_pv,
+        ),
+        OptionStyle::Put => (
+            d_sub(
+                strike_pv,
+                spot_pv,
+                "pricing::black_scholes::band::put_lower",
+            )?,
+            strike_pv,
+        ),
+    };
+    Ok((band.0.max(Decimal::ZERO), band.1))
 }
 
 /// Calculates the price of a European option.

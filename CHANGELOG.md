@@ -717,6 +717,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     15-place drift (0.002802439458791824 -> 0.003104587227155649). No
     tolerance changed.
 
+- **The implied-volatility solvers report targets that have no implied
+  volatility** (#652). A Black-Scholes price is strictly increasing in `σ`
+  inside the no-arbitrage band `max(S e^(-qT) - K e^(-rT), 0)` to
+  `S e^(-qT)` for a call, `max(K e^(-rT) - S e^(-qT), 0)` to `K e^(-rT)` for
+  a put (Hull, bounds on option prices). A target outside that band, widened
+  by `IV_TOLERANCE = 1e-5`, used to return an edge of the solver's search
+  instead of an error; both solvers now check the band for European options.
+  - `OptionPricing::calculate_implied_volatility` (bisection on
+    `σ ∈ [0, 5]`) returns `VolatilityError::InvalidPrice` for such a target,
+    where it returned `0.0000763` (target `15` for a call with intrinsic
+    `20`) or `4.99992` (target `130` above a spot of `120`). Its
+    `NoConvergence` variant is now reachable: a target inside the band whose
+    implied volatility exceeds `500 %` returns it instead of `4.9999`
+    (`S = K = 100, T = 1, r = q = 0`, target `99.5` above the `σ = 5` price
+    `98.758`).
+  - `volatility::implied_volatility` and `calculate_iv` (grid search over
+    `σ = i / 1000`) return `VolatilityError::IvNotFound` for such a target,
+    where they returned `0.046` and `0.999`, and now treat the top grid
+    point like the bottom one: a best match on either edge means the root
+    lies at or beyond it, so a target whose implied volatility exceeds the
+    grid (`σ = 1.5`) returns `IvNotFound` instead of `0.999`.
+  - Migration: a caller that read an edge value as "no solution" now
+    receives the error; targets inside the band and the bracket invert to
+    the same volatilities as before.
+
 - **The Heston and telegraph walk kernels report `Decimal` overflow instead
   of panicking** (#686). Three expressions in
   `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the
