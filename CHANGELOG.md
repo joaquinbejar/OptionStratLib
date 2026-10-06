@@ -648,6 +648,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The American pricers honour early exercise and `Side`** (#648).
+  - `barone_adesi_whaley` at `σ = 0` returned the European value
+    `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an
+    in-the-money put: `S = 80, K = 100, r = 10 %, T = 1` priced `10.4837`
+    instead of `20`. It now returns the exact deterministic optimum, the best
+    of exercising now, at expiry, or at the interior stationary point
+    `τ* = ln(rK / (qS)) / (r - q)` when that lies inside `(0, T)` (a put with
+    `r < q`, a call with `r > q`; `S = K = 100, T = 50, r = 1 %, q = 5 %`
+    gives `53.4992` where the expiry-only value was `52.4446`). Every
+    `barone_adesi_whaley` result is also floored at the intrinsic value
+    (Hull: an American option is worth at least immediate exercise), which
+    changes the `q = 0` call at a negative rate: `S = 150, K = 100,
+    σ = 10 %, r = -2 %, T = 1` goes from the European `47.9800` to `50`.
+  - `price_binomial` and `generate_binomial_tree` applied the early-exercise
+    `max(continuation, intrinsic)` to side-signed values, so a short
+    American picked the writer's smaller liability: `S = 100, K = 105,
+    σ = 25 %, r = 5 %, T = 0.5`, 200 steps, priced the short call at `0`
+    instead of `-5.9823`. The lattice is now valued from the holder's side
+    and the side applied once, so a short price (and every node of a short
+    tree) is the negated long one. European prices are unchanged.
+  - `OptionPricing::calculate_price_binomial_tree` negated the root of the
+    already side-signed tree a second time, so every short option priced at
+    the long price. It now returns the root as is; the unit test that
+    asserted a positive short price asserts the negated long price instead.
+
 - **`price_option_monte_carlo` discounts at the risk-free rate** (#651).
   The supplied-path Monte Carlo pricer discounted the mean payoff at
   `e^(-(r - q)T)`. The dividend yield belongs to the drift `r - q` of the
@@ -1677,7 +1702,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `main` now return `Box<dyn std::error::Error>`, which is what mixing two
   layers' errors in one entry point actually means.
 
-
 - **Four misplaced helpers return to their owning layer** (#599, multi-crate
   roadmap M1). Each edge existed only because of where a file sat.
   `model::utils::calculate_optimal_price_range` is a chain helper reporting
@@ -1740,7 +1764,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   edges the boundary checker tolerated for this file (`model -> analytics`,
   `model -> error/probability`) are gone, leaving 29. Bodies and tests moved
   unchanged.
-
 
 - **Every error file names its target crate and wraps only lower layers**
   (#511, multi-crate roadmap M1-14). The `From` conversions whose source
