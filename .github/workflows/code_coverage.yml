@@ -86,8 +86,19 @@ jobs:
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # INSTALL TARPALUIN FOR CODE COVERAGE
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      # The cache restores ~/.cargo/bin but not cargo's install metadata, so a
+      # restored binary makes a plain `cargo install` fail with "binary already
+      # exists". Keep a restored binary that meets the floor; otherwise
+      # (re)install it with --force.
       - name: Install Tarpaulin.
-        run: cargo install cargo-tarpaulin --locked --version '>=0.37.5'
+        run: |
+          required=0.37.5
+          have=$(cargo tarpaulin --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+          if [ -n "$have" ] && [ "$(printf '%s\n' "$required" "$have" | sort -V | head -1)" = "$required" ]; then
+            echo "cargo-tarpaulin $have satisfies >= $required"
+          else
+            cargo install cargo-tarpaulin --locked --force --version ">=$required"
+          fi
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       # GENERATE CODE COVERAGE REPORT
       # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
