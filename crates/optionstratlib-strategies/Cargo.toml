@@ -1,0 +1,48 @@
+[package]
+name = "optionstratlib-strategies"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Option strategies of OptionStratLib: spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality and strategy probability analysis."
+readme = "README.md"
+keywords = ["finance", "options", "strategies", "spreads", "trading"]
+categories = ["finance", "mathematics"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on the strategy types (ADR-0002).
+schema = [
+    "dep:utoipa",
+    "optionstratlib-core/schema",
+    "optionstratlib-pricing/schema",
+    "optionstratlib-market/schema",
+    "optionstratlib-analytics/schema",
+]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+optionstratlib-market = { workspace = true }
+optionstratlib-analytics = { workspace = true }
+chrono = { workspace = true }
+itertools = { workspace = true }
+num-traits = { workspace = true }
+pretty-simple-display = { workspace = true }
+rayon = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The chain fixture the PMCC optimiser tests read is a JSON file.
+optionstratlib-market = { workspace = true, features = ["io"] }
+approx = { workspace = true }
+static_assertions = "1.1"

@@ -107,3 +107,6 @@ jobs:
 
       - name: Build the analytics facade without simulation
         run: cargo build --no-default-features --features analytics
+
+      - name: Build the strategies facade without simulation
+        run: cargo build --no-default-features --features strategies

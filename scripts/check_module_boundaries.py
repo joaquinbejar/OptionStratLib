@@ -1013,6 +1013,14 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     }),
+    # ADR-0002 §3 strategies row: the analytics set. Strategies need no market
+    # I/O, no simulation, no plotting and no progress bars (`indicatif` left
+    # the strategy loops before the extraction), and no feature of their own
+    # adds a package beyond `utoipa` (#531).
+    "optionstratlib-strategies": frozenset({
+        "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
 }
 
 # Named feature sets checked on their own, besides default and all
@@ -1600,6 +1608,28 @@ def self_test() -> int:
             1,
         ),
         "analytics depends on simulation": ([pkg("optionstratlib-analytics", ("optionstratlib-simulation",))], 1),
+        # #531: strategies sit on analytics, market, pricing and core, with
+        # no math edge (ADR-0001 D9) and nothing from the layers above.
+        "strategies depends on analytics": (
+            [pkg("optionstratlib-strategies", ("optionstratlib-analytics",), ("optionstratlib-market",),
+                 ("optionstratlib-pricing",), ("optionstratlib-core",))],
+            0,
+        ),
+        "strategies depends on math": ([pkg("optionstratlib-strategies", ("optionstratlib-math",))], 1),
+        "strategies depends on simulation": (
+            [pkg("optionstratlib-strategies", ("optionstratlib-simulation",))],
+            1,
+        ),
+        "strategies dev-depends on simulation": (
+            [pkg("optionstratlib-strategies", ("optionstratlib-simulation", "dev"))],
+            1,
+        ),
+        "strategies depends on backtest": ([pkg("optionstratlib-strategies", ("optionstratlib-backtest",))], 1),
+        "strategies optionally depends on visualization": (
+            [pkg("optionstratlib-strategies", ("optionstratlib-visualization", None, True))],
+            1,
+        ),
+        "strategies depends on the facade": ([pkg("optionstratlib-strategies", ("optionstratlib", "dev"))], 1),
     }
     for name, (packages, expected) in crate_cases.items():
         got = len(crate_graph_violations(packages))
@@ -1672,6 +1702,9 @@ def self_test() -> int:
         "clean analytics tree": ({("optionstratlib-analytics", "default"): {"lazy_static", "serde_json"}}, 0),
         "analytics pulls market io": ({("optionstratlib-analytics", "default"): {"csv", "zip"}}, 2),
         "analytics tokio under all features": ({("optionstratlib-analytics", "all features"): {"tokio"}}, 1),
+        "clean strategies tree": ({("optionstratlib-strategies", "default"): {"rayon", "itertools", "serde_json"}}, 0),
+        "strategies pulls market io": ({("optionstratlib-strategies", "default"): {"csv", "zip"}}, 2),
+        "strategies pulls indicatif": ({("optionstratlib-strategies", "all features"): {"indicatif"}}, 1),
     }
     for name, (trees_case, expected) in forbidden_cases.items():
         got = len(forbidden_package_violations(trees_case))
@@ -1720,6 +1753,39 @@ def self_test() -> int:
                 rel: source,
                 "src/error/mod.rs": "pub use optionstratlib_analytics::error::ProbabilityError;\n",
                 "crates/optionstratlib-analytics/src/error/probability.rs": "pub enum ProbabilityError { A }\n",
+            }
+            for path, content in files.items():
+                target = Path(tmp) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            edges, _ = scan(root)
+            got = len(violations_of(edges))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected}, got {got})")
+
+    # A strategies-owned error moved into its crate keeps the strategies
+    # layer: a backtesting facade file wrapping it is a downward edge, an
+    # analytics-layer facade file naming it is an upward one (#531).
+    for name, (rel, source, expected) in {
+        "backtesting wraps a strategies error": (
+            "src/error/backtesting.rs",
+            "pub enum BacktestError { Strategy(Box<crate::error::StrategyError>) }\n",
+            0,
+        ),
+        "an analytics-layer file names a strategies error": (
+            "src/pnl/x.rs",
+            "use crate::error::StrategyError;\n",
+            1,
+        ),
+    }.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            files = {
+                rel: source,
+                "src/error/mod.rs": "pub use optionstratlib_strategies::error::StrategyError;\n",
+                "crates/optionstratlib-strategies/src/error/strategies.rs": "pub enum StrategyError { A }\n",
             }
             for path, content in files.items():
                 target = Path(tmp) / path

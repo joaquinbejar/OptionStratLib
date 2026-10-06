@@ -104,7 +104,7 @@
 //! | simulation | `simulation.rs` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs`, now in `optionstratlib-analytics` |
-//! | strategies | `strategies.rs` |
+//! | strategies | `strategies.rs`, now in `optionstratlib-strategies` |
 //! | visualization | `graph.rs` |
 //! | facade | `unified.rs`, this file's re-exports |
 //!
@@ -115,20 +115,11 @@
 //! batch that follows the 0.22.0 version bump; removing a variant is a
 //! breaking change the published-baseline semver gate rejects before then.
 
-/// ### Strategy Errors (`StrategyError`)
-/// Covers:
-/// * Price calculations
-/// * Break-even analysis
-/// * Profit/Loss calculations
-/// * Operation validation
-#[cfg(all(feature = "analytics", feature = "simulation"))]
-pub mod strategies;
-
 /// Backtest-owned failures (a strategy driven through a simulation).
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 mod backtesting;
 
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 mod graph;
 
 /// ### Simulation Errors (`SimulationError`)
@@ -143,7 +134,7 @@ pub mod simulation;
 /// ### Unified Error Type
 /// Top-level error type that encompasses all errors in the library.
 /// Provides a single error type for unified error handling across modules.
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 pub mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
@@ -179,13 +170,16 @@ pub use optionstratlib_analytics::error::{
     ProbabilityError, ProjectionError, TransactionError, probability,
 };
 
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+/// Strategy errors (`optionstratlib-strategies`): building, validating,
+/// optimising and evaluating a strategy.
+#[cfg(feature = "strategies")]
+pub use optionstratlib_strategies::error::{StrategyError, strategies};
+
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 pub use backtesting::BacktestError;
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 pub use graph::GraphError;
 #[cfg(feature = "simulation")]
 pub use simulation::{SimulationError, SimulationResult};
-#[cfg(all(feature = "analytics", feature = "simulation"))]
-pub use strategies::StrategyError;
-#[cfg(all(feature = "analytics", feature = "simulation"))]
+#[cfg(all(feature = "strategies", feature = "simulation"))]
 pub use unified::Error;

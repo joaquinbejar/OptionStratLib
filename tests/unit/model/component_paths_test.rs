@@ -1,5 +1,5 @@
 //! Facade paths and direct-component paths name the same types (#520, #528,
-//! #529, #530).
+//! #529, #530, #531).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -378,4 +378,69 @@ fn test_strategy_delta_adjustments_are_analytics_owned_and_priced()
         .collect::<Result<Vec<optionstratlib_analytics::pnl::PnL>, _>>()?;
     assert!(!priced.is_empty());
     Ok(())
+}
+
+fn strategies_bull_call_spread(
+    value: optionstratlib_strategies::strategies::BullCallSpread,
+) -> optionstratlib_strategies::strategies::BullCallSpread {
+    value
+}
+
+fn strategies_request(
+    value: optionstratlib_strategies::strategies::StrategyRequest,
+) -> optionstratlib_strategies::strategies::StrategyRequest {
+    value
+}
+
+fn strategies_type(
+    value: optionstratlib_strategies::strategies::base::StrategyType,
+) -> optionstratlib_strategies::strategies::base::StrategyType {
+    value
+}
+
+/// The strategies, their traits and `StrategyError` reached through the
+/// facade (`strategies`, `error`, `prelude`) are the
+/// `optionstratlib-strategies` items, and `FindOptimalSide` has one public
+/// path, the market one: the strategies re-export is gone (#531).
+#[test]
+fn test_strategies_items_through_facade_modules_and_prelude() {
+    let spread = strategies_bull_call_spread(optionstratlib::strategies::BullCallSpread::default());
+    let from_prelude: optionstratlib::prelude::BullCallSpread = spread;
+    assert_eq!(
+        optionstratlib::prelude::BasicAble::get_title(&from_prelude),
+        optionstratlib_strategies::strategies::BasicAble::get_title(
+            &optionstratlib_strategies::strategies::BullCallSpread::default()
+        )
+    );
+
+    let request = strategies_request(optionstratlib::strategies::StrategyRequest::new(
+        optionstratlib::strategies::base::StrategyType::BullCallSpread,
+        Vec::new(),
+    ));
+    assert_eq!(
+        strategies_type(request.strategy_type),
+        optionstratlib::prelude::StrategyType::BullCallSpread
+    );
+
+    // Both paths name the same trait, so they resolve to the same method item.
+    same_item(
+        <optionstratlib::strategies::IronCondor as optionstratlib::strategies::Strategies>::get_max_profit,
+        <optionstratlib_strategies::strategies::IronCondor as optionstratlib_strategies::strategies::Strategies>::get_max_profit,
+    );
+    same_item(
+        <optionstratlib::strategies::LongCall as optionstratlib::prelude::DeltaNeutrality>::delta_neutrality,
+        <optionstratlib_strategies::strategies::LongCall as optionstratlib_strategies::strategies::DeltaNeutrality>::delta_neutrality,
+    );
+
+    let _: optionstratlib_strategies::error::StrategyError =
+        optionstratlib::prelude::StrategyError::operation_not_supported("probe", "probe");
+    let _: optionstratlib_strategies::error::strategies::StrategyResult<()> =
+        optionstratlib::error::strategies::StrategyResult::<()>::Ok(());
+
+    let side: optionstratlib_market::chains::utils::FindOptimalSide =
+        optionstratlib::prelude::FindOptimalSide::All;
+    assert!(matches!(
+        side,
+        optionstratlib::chains::utils::FindOptimalSide::All
+    ));
 }

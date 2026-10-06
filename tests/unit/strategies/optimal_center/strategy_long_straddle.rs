@@ -1,13 +1,9 @@
 use positive::{Positive, pos_or_panic};
 use {
-    optionstratlib::ExpirationDate,
-    optionstratlib::OptionStyle,
-    optionstratlib::chains::chain::OptionChain,
-    optionstratlib::strategies::base::Optimizable,
-    optionstratlib::strategies::base::Positionable,
-    optionstratlib::strategies::{FindOptimalSide, LongStraddle},
-    rust_decimal_macros::dec,
-    std::error::Error,
+    optionstratlib::ExpirationDate, optionstratlib::OptionStyle,
+    optionstratlib::chains::chain::OptionChain, optionstratlib::chains::utils::FindOptimalSide,
+    optionstratlib::strategies::LongStraddle, optionstratlib::strategies::base::Optimizable,
+    optionstratlib::strategies::base::Positionable, rust_decimal_macros::dec, std::error::Error,
 };
 
 #[test]
