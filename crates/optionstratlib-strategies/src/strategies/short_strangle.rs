@@ -29,7 +29,6 @@ use crate::strategies::{
     probabilities::ProbabilityAnalysis,
     utils::{OptimizationCriteria, calculate_price_range},
 };
-use crate::test_strategy_traits;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -3874,4 +3873,8 @@ mod tests_generate_delta_adjustments {
     }
 }
 
-test_strategy_traits!(ShortStrangle, test_short_strangle_implementations);
+#[cfg(test)]
+crate::strategies::macros::test_strategy_traits!(
+    ShortStrangle,
+    test_short_strangle_implementations
+);

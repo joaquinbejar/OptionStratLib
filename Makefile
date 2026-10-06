@@ -33,9 +33,18 @@ test:
 	LOGLEVEL=WARN cargo test -p optionstratlib-analytics --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-strategies
 	LOGLEVEL=WARN cargo test -p optionstratlib-strategies --all-features
+	@$(MAKE) --no-print-directory test-workspace-integration
 	cargo build --no-default-features
 	LOGLEVEL=WARN cargo test --features plotly
 	LOGLEVEL=WARN cargo test --features static_export,plotly
+
+# Cross-component integration tests (ADR-0004 sections 7 and 8, #534): the
+# `osl-workspace-tests` member under tests/workspace, which declares every
+# component it uses directly and does not build the facade. Called by `test`
+# and by the Components workflow.
+.PHONY: test-workspace-integration
+test-workspace-integration:
+	LOGLEVEL=WARN cargo test -p osl-workspace-tests
 
 # Run the tests that need a real browser: PNG/SVG export through a WebDriver,
 # and the one that hands a chart to the default browser. They are `#[ignore]`d

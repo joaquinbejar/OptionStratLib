@@ -1,0 +1,90 @@
+use optionstratlib_analytics::pnl::DeltaAdjustment::BuyOptions;
+use optionstratlib_core::model::types::OptionStyle;
+use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
+use optionstratlib_core::{assert_pos_relative_eq, model::Positive, pos_or_panic};
+use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
+use optionstratlib_pricing::greeks::Greeks;
+use optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread;
+use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
+use rust_decimal_macros::dec;
+use std::error::Error;
+
+#[test]
+fn test_bull_put_spread_integration() -> Result<(), Box<dyn Error>> {
+    // Define inputs for the BullPutSpread strategy
+    let underlying_price = pos_or_panic!(5781.88);
+
+    let strategy = BullPutSpread::new(
+        "SP500".to_string(),
+        underlying_price,      // underlying_price
+        pos_or_panic!(5750.0), // long_strike_itm
+        pos_or_panic!(5920.0), // short_strike
+        ExpirationDate::Days(Positive::TWO),
+        pos_or_panic!(0.18),  // implied_volatility
+        dec!(0.05),           // risk_free_rate
+        Positive::ZERO,       // dividend_yield
+        Positive::TWO,        // long quantity
+        pos_or_panic!(15.04), // premium_long
+        pos_or_panic!(89.85), // premium_short
+        pos_or_panic!(0.78),  // open_fee_long
+        pos_or_panic!(0.78),  // open_fee_long
+        pos_or_panic!(0.73),  // close_fee_long
+        pos_or_panic!(0.73),  // close_fee_short
+    )?;
+
+    let greeks = strategy.greeks().unwrap();
+    let epsilon = dec!(0.001);
+
+    assert_decimal_eq!(greeks.delta, dec!(1.2605), epsilon);
+    assert_decimal_eq!(greeks.gamma, dec!(0.0071310473009228589611795350), epsilon);
+    assert_decimal_eq!(greeks.theta, dec!(-11.612255478054994005539973366), epsilon);
+    assert_decimal_eq!(greeks.vega, dec!(2.3512624123749661890785713898), epsilon);
+    assert_decimal_eq!(greeks.rho, dec!(0.4126298489470579973843417200), epsilon);
+    assert_decimal_eq!(greeks.rho_d, dec!(-0.3993721506766651671755520557), epsilon);
+    assert_decimal_eq!(greeks.vanna, dec!(-3.4252305281268174807145442770), epsilon);
+    assert_decimal_eq!(greeks.vomma, dec!(-9.440083302074009445241430993), epsilon);
+    assert_decimal_eq!(greeks.veta, dec!(0.0019634772948035069654012298), epsilon);
+    assert_decimal_eq!(greeks.charm, dec!(0.1484873107837533965976830508), epsilon);
+    assert_decimal_eq!(greeks.color, dec!(-0.0031543873952532372533422008), epsilon);
+
+    assert_decimal_eq!(
+        strategy.delta_neutrality().unwrap().net_delta,
+        dec!(1.2605),
+        DELTA_THRESHOLD
+    );
+    assert_decimal_eq!(
+        strategy.delta_neutrality().unwrap().individual_deltas[1].delta,
+        dec!(1.9189),
+        DELTA_THRESHOLD
+    );
+    assert_decimal_eq!(
+        strategy.delta_neutrality().unwrap().individual_deltas[0].delta,
+        dec!(-0.6583),
+        DELTA_THRESHOLD
+    );
+    assert!(!strategy.is_delta_neutral());
+    assert_eq!(strategy.delta_adjustments().unwrap().len(), 3);
+    let binding = strategy.delta_adjustments().unwrap();
+    let suggestion = binding.first().unwrap();
+    let delta = pos_or_panic!(3.829496711654006);
+    let k = pos_or_panic!(5750.0);
+    match suggestion {
+        BuyOptions {
+            quantity,
+            strike,
+            option_style,
+            side,
+        } => {
+            assert_pos_relative_eq!(
+                *quantity,
+                delta,
+                Positive::new_decimal(DELTA_THRESHOLD).unwrap()
+            );
+            assert_pos_relative_eq!(*strike, k, Positive::new_decimal(DELTA_THRESHOLD).unwrap());
+            assert_eq!(*option_style, OptionStyle::Put);
+            assert_eq!(*side, optionstratlib_core::model::types::Side::Long);
+        }
+        _ => panic!("Invalid suggestion"),
+    }
+    Ok(())
+}

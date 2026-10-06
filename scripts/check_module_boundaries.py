@@ -199,7 +199,9 @@ DEFERRED: DeferredTable = {}
 # Workspace package -> layer (ADR-0001 D1). Every published package carries
 # the `optionstratlib` prefix; one missing from this table fails the check.
 # Packages without the prefix (`osl-example-*`, `osl-fixture-*`, the example
-# crates) are consumers, not components, and are not checked.
+# crates, and `osl-workspace-tests`, the cross-component integration tests
+# under tests/workspace, #534) are consumers, not components, and are not
+# checked: they sit above every layer and may name any component.
 CRATE_LAYER = {
     "optionstratlib-core": "core",
     "optionstratlib-math": "math",
@@ -1579,6 +1581,11 @@ def self_test() -> int:
         "unknown component": ([pkg("optionstratlib-extra")], 1),
         "unknown dependency": ([pkg("optionstratlib-core", ("optionstratlib-extra",))], 1),
         "example consumer is not checked": ([pkg("examples_chain", ("optionstratlib",))], 0),
+        "workspace integration tests are not checked": (
+            [pkg("osl-workspace-tests", ("optionstratlib-core", "dev"), ("optionstratlib-pricing", "dev"),
+                 ("optionstratlib-strategies", "dev"))],
+            0,
+        ),
         "synthetic optional edge": (
             [pkg("optionstratlib-market", ("optionstratlib-simulation", None, True),
                  features={"synthetic": ["dep:optionstratlib-simulation"]})],

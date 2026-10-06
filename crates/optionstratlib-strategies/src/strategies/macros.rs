@@ -1,10 +1,12 @@
-//! Simpler macro to test that a strategy implements all required traits
+//! Test-only support: the trait conformance check every concrete strategy
+//! runs. It is compiled only for this crate's own unit tests and is not part
+//! of the public API (#534).
 
-/// Macro to test trait implementations for a specific strategy type.
+/// Generates a test module asserting that a strategy type implements all the
+/// traits the system requires of a strategy.
 ///
-/// This macro generates a module with a test function to ensure that the specified strategy type
-/// implements all the necessary traits required by the system. It uses the `static_assertions` crate
-/// to perform compile-time checks for these trait implementations.
+/// The checks are compile-time `static_assertions` (a dev-dependency of this
+/// crate), wrapped in a `#[test]` so each strategy reports them as a test.
 ///
 /// # Parameters
 ///
@@ -32,27 +34,18 @@
 /// - `Deserialize<'static>`
 /// - `std::fmt::Display`
 ///
-/// These traits are essential for strategies to function appropriately within the system.
+/// The traits are resolved in the invoking module (`use super::*`), so the
+/// strategy file must have them in scope. Invoke it behind `#[cfg(test)]`:
 ///
-/// This will generate a test module named `my_strategy_tests`, which contains a test function to
-/// verify that `MyStrategyType` implements all the required traits.
-///
-/// # Note
-///
-/// This macro relies on the `static_assertions` crate to perform the compile-time checks. Ensure
-/// that the crate is included in your `Cargo.toml`:
-///
-/// ```toml
-/// [dev-dependencies]
-/// static_assertions = "1.1"
+/// ```ignore
+/// #[cfg(test)]
+/// crate::strategies::macros::test_strategy_traits!(LongCall, test_long_call_implementations);
 /// ```
 ///
 /// `Graph` is not asserted here: it is a visualization trait, and the visualization layer's
 /// tests assert it for every concrete strategy.
-#[macro_export]
 macro_rules! test_strategy_traits {
     ($strategy_type:ty, $module_name:ident) => {
-        #[cfg(test)]
         mod $module_name {
             use super::*;
             use static_assertions::assert_impl_all;
@@ -82,3 +75,5 @@ macro_rules! test_strategy_traits {
         }
     };
 }
+
+pub(crate) use test_strategy_traits;

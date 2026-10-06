@@ -50,6 +50,10 @@ jobs:
       - name: Verify component crates standalone
         run: make check-components
 
+      # Cross-component regressions, against the components only (#534).
+      - name: Workspace integration tests
+        run: make test-workspace-integration
+
       # Consumer fixtures build from a fresh target dir of their own, so the
       # cached workspace target cannot hide a missing dependency (#527).
       - name: Consumer fixtures

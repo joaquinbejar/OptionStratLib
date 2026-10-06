@@ -25,7 +25,6 @@ use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
-use crate::test_strategy_traits;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -1295,7 +1294,8 @@ impl PnLCalculator for IronCondor {
     }
 }
 
-test_strategy_traits!(IronCondor, test_short_call_implementations);
+#[cfg(test)]
+crate::strategies::macros::test_strategy_traits!(IronCondor, test_short_call_implementations);
 
 #[cfg(test)]
 mod tests_iron_condor {

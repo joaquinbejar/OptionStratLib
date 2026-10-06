@@ -56,7 +56,7 @@
 //! | Straddles and strangles | `LongStraddle`, `ShortStraddle`, `LongStrangle`, `ShortStrangle` |
 //! | Covered and protective | `CoveredCall`, `ProtectivePut`, `Collar`, `PoorMansCoveredCall` |
 //! | Custom | `CustomStrategy` |
-//! | Shared, always available | `base`, `default`, `model_impls`, `macros` (`test_strategy_traits!`), `utils`, `build` (`StrategyRequest`, `StrategyConstructor`), `combinations`, `delta_neutral`, `probabilities`, and `error` |
+//! | Shared, always available | `base`, `default`, `model_impls`, `utils`, `build` (`StrategyRequest`, `StrategyConstructor`), `combinations`, `delta_neutral`, `probabilities`, and `error` |
 //!
 //! There are no per-family features: the crate is one capability, as
 //! ADR-0002 Decision 3 sets for 0.22. #532 measured whether splitting it

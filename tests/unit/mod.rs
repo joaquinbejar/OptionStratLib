@@ -6,8 +6,6 @@
 
 mod backtesting;
 
-mod strategies;
-
 mod chain;
 
 mod error;

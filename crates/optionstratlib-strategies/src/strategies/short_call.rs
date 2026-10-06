@@ -15,7 +15,6 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use crate::test_strategy_traits;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -543,4 +542,5 @@ impl PnLCalculator for ShortCall {
 
 impl Strategable for ShortCall {}
 
-test_strategy_traits!(ShortCall, test_short_call_implementations);
+#[cfg(test)]
+crate::strategies::macros::test_strategy_traits!(ShortCall, test_short_call_implementations);

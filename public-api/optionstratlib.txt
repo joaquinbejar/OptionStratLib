@@ -25,7 +25,6 @@ pub use optionstratlib::risk
 pub use optionstratlib::series
 pub use optionstratlib::strategies
 pub use optionstratlib::surfaces
-pub use optionstratlib::test_strategy_traits
 pub use optionstratlib::utils
 pub use optionstratlib::volatility
 pub mod optionstratlib::backtesting

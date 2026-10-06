@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`test_strategy_traits!` is no longer public API; the strategy
+  integration tests move to the crates they test** (#534).
+  - The macro was `#[macro_export]`ed from `optionstratlib-strategies` and
+    re-exported at the facade root (`optionstratlib::test_strategy_traits!`),
+    although it only generates a `#[cfg(test)]` module of
+    `static_assertions` checks. It is now a crate-private, test-only macro
+    of `optionstratlib-strategies` (`#[cfg(test)] mod macros`), and the
+    `strategies::macros` module and both public paths are removed. Every
+    concrete strategy still runs the same trait conformance test under the
+    same name. A downstream crate that used it asserts the traits itself,
+    e.g. `static_assertions::assert_impl_all!(MyStrategy: Strategies,
+    Validable, Optimizable, ...)`.
+  - The strategy suites of the facade's `tests/unit/strategies` (custom,
+    single-leg, protective put, no-lower-break-even, `delta`, `simple`,
+    `optimal`, `optimal_center`) move to
+    `crates/optionstratlib-strategies/tests/integration`, and the strategy
+    properties of `tests/property/strategies_panic_freedom_test.rs` to
+    `crates/optionstratlib-strategies/tests/panic_freedom_test.rs`; they
+    import the component paths and run without the facade, and the
+    optimisation suites read their chain fixtures from the workspace root.
+    The probability kernel, SPAN margin and P&L primitive properties of that
+    file move to `crates/optionstratlib-analytics/tests/panic_freedom_test.rs`.
+    `proptest`, already a workspace dependency, becomes a dev-dependency of
+    both crates.
+  - The strategy Greeks against per-leg pricing Greeks regression
+    (`greeks_side_sign_test`, #428) moves to the new `osl-workspace-tests`
+    member under `tests/workspace` (ADR-0004 section 8): unpublished, sources
+    under `src/`, with core, pricing and strategies declared as direct
+    dev-dependencies and no facade. `make test-workspace-integration` runs
+    it; `make test` and the Components workflow call it.
+  - What needs visualization stays in the facade: the strategy `Graph` test
+    (now `tests/unit/visualization/strategy_graph_test.rs`) and the
+    price-range walk property, which draws the payoff chart. No regression
+    data, tolerance, case count or test name changes.
+
 - **`Strategy::max_profit` and `Strategy::max_loss` are `Option<Positive>`**
   (#661), not `Option<f64>`: they are monetary amounts, and the public
   boundary carries them as validated non-negative values like the typed
