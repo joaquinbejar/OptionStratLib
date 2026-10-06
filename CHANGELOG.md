@@ -661,6 +661,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`5 e^(-0.05)`), and `tests/convergence.rs` gains
   `test_monte_carlo_supplied_paths_discount_at_risk_free_rate`.
 
+- **Telegraph walks switch regime with probability `1 - e^(-λ·dt)` per
+  step** (#683). The switch trial turned a standard normal draw into
+  `(|z| + 1) / 2`, which is never below one half and is unbounded above, so
+  whenever `1 - e^(-λ·dt) <= 0.5` (every usual rate on daily or finer steps)
+  the regime never switched, and above that the frequency was wrong. The
+  trial now draws a genuine `U(0,1)` from the same per-path generator with
+  `decimal_uniform_sample_with` (#684), so `P(switch) = 1 - e^(-λ·dt)`; a
+  zero rate never switches and a rate whose `e^(-λ·dt)` flushes to zero
+  switches on every step. This changes every telegraph path, seeded or not;
+  a seeded path stays reproducible bit for bit for its seed. The draw order
+  is unchanged: the sign of one normal picks the initial regime, then each
+  step draws the switch trial and the price normal. The telegraph case of
+  `deterministic_simulation_test.rs` is re-baselined (its first four steps
+  keep their values) and keeps `λ = 250`, now so that its seven-step path
+  switches in both directions rather than to switch at all. A seeded test
+  runs 200,000 daily steps at the realistic rates `λ_down = 12` and
+  `λ_up = 4` a year, tallies the trials and switches from each regime off
+  the volatility path, and checks each count against its binomial mean
+  within five standard errors; the zero-rate and flushed-rate limits are
+  tested too.
+
 - **Jump-diffusion walks jump with probability `λ·dt` per step** (#684). The
   jump trial compared a standard normal draw with `λ·dt`, so it fired with
   probability `Φ(λ·dt)`, about one half for every realistic intensity: a
