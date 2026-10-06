@@ -16,13 +16,13 @@
 //! # Example Usage
 //!
 //! ```rust,no_run
-//! # fn main() -> Result<(), optionstratlib::error::Error> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! # use std::fs;
 //! use std::path::PathBuf;
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::geometrics::GeometricObject;
-//! use optionstratlib::visualization::Plottable;
-//! use optionstratlib::surfaces::{Point3D, Surface};
+//! use optionstratlib_math::geometrics::GeometricObject;
+//! use optionstratlib_visualization::visualization::Plottable;
+//! use optionstratlib_math::surfaces::{Point3D, Surface};
 //!
 //! # let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
 //! # let p2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
@@ -49,9 +49,9 @@
 //! # }
 //! ```
 //!
-use crate::error::SurfaceError;
-use crate::surfaces::Surface;
 use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable, Surface3D};
+use optionstratlib_math::error::SurfaceError;
+use optionstratlib_math::surfaces::Surface;
 
 /// `Graph` adapter for a [`Surface`]; lives in `visualization` because the
 /// trait is visualization-owned and `Surface` is a math container
@@ -85,9 +85,9 @@ impl Plottable for Surface {
 #[cfg(test)]
 mod tests_extended {
     use super::*;
-    use crate::error::CurveError;
-    use crate::surfaces::Point3D;
     use crate::visualization::{GraphConfig, GraphData, Series2D, TraceMode};
+    use optionstratlib_math::error::CurveError;
+    use optionstratlib_math::surfaces::Point3D;
     use rust_decimal_macros::dec;
     use std::any::{Any, TypeId};
     use std::collections::BTreeSet;

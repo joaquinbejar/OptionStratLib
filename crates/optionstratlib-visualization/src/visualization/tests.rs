@@ -111,8 +111,8 @@ mod tests_utils {
 
 #[cfg(test)]
 mod tests_model {
-    use crate::surfaces::{Point3D, Surface};
     use crate::visualization::{GraphData, GraphType, PlotType, Series2D, Surface3D, TraceMode};
+    use optionstratlib_math::surfaces::{Point3D, Surface};
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 

@@ -30,7 +30,7 @@ include = [
 # crate it names and the facade paths over it; none replaces a type. The
 # default enables every capability that exists today, so the default surface
 # is the whole library.
-default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "synthetic", "io"]
+default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io"]
 # `curves`, `surfaces`, `geometrics` and the math errors.
 math = ["dep:optionstratlib-math"]
 # `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
@@ -64,12 +64,18 @@ synthetic = ["market", "simulation", "optionstratlib-market/synthetic"]
 # chains and OHLCV candles (ADR-0003). On by default; without it the build
 # resolves no `csv` or `zip`.
 io = ["market", "optionstratlib-market/io"]
-# Charts over the whole library: `visualization` renders strategies, chains
-# and simulations, so it needs every capability below it.
-plotly = ["dep:plotly", "backtest"]
+# `visualization`, `GraphError` and the unified `error::Error`: chart data,
+# the `Graph` contract and its implementations, without a rendering backend.
+# It implies `backtest`, the layer below it (ADR-0002 section 2), and
+# resolves no Plotly package.
+visualization = ["dep:optionstratlib-visualization", "backtest"]
+# Interactive Plotly rendering (`Graph::to_plot`, `write_html`, `show`).
+plotly = ["visualization", "optionstratlib-visualization/plotly"]
+# PNG / SVG export through `plotly_static`; implies `async` as in 0.21.
 static_export = [
     "plotly",
     "async",
+    "optionstratlib-visualization/static_export",
 ]
 async = [
     "market",
@@ -90,9 +96,9 @@ optionstratlib-market = { workspace = true, optional = true, features = ["schema
 optionstratlib-analytics = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-strategies = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-backtest = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-visualization = { workspace = true, optional = true }
 chrono = { workspace = true, features = ["serde"] }
 approx = { workspace = true }
-plotly = { workspace = true, default-features = false, optional = true, features = ["static_export_default"] }
 statrs = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }
@@ -127,7 +133,7 @@ proptest = { workspace = true }
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
-required-features = ["backtest"]
+required-features = ["visualization"]
 
 [[test]]
 name = "property_tests"
@@ -170,6 +176,7 @@ members = [
     "crates/optionstratlib-analytics",
     "crates/optionstratlib-strategies",
     "crates/optionstratlib-backtest",
+    "crates/optionstratlib-visualization",
     "tests/workspace",
     "examples/support",
     "examples/examples_chain",
@@ -207,10 +214,14 @@ optionstratlib-market = { path = "crates/optionstratlib-market", version = "0.22
 optionstratlib-analytics = { path = "crates/optionstratlib-analytics", version = "0.22.0" }
 optionstratlib-strategies = { path = "crates/optionstratlib-strategies", version = "0.22.0" }
 optionstratlib-backtest = { path = "crates/optionstratlib-backtest", version = "0.22.0" }
+optionstratlib-visualization = { path = "crates/optionstratlib-visualization", version = "0.22.0" }
 tracing = "0.1"
 rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
-plotly = { version = "0.14", default-features = false, features = ["static_export_default"] }
+# Without `static_export_default`: `optionstratlib-visualization/static_export`
+# enables it, so `plotly` alone resolves no image-export or async package
+# (ADR-0002 section 3).
+plotly = { version = "0.14", default-features = false }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10" }
 statrs = "0.19"

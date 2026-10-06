@@ -2,9 +2,9 @@
 // This module tests the Graph trait regardless of which feature is enabled
 #[cfg(test)]
 mod graph_tests {
-    use optionstratlib::visualization::Series2D;
-    use optionstratlib::visualization::TraceMode;
-    use optionstratlib::visualization::{Graph, GraphConfig, GraphData};
+    use optionstratlib_visualization::visualization::Series2D;
+    use optionstratlib_visualization::visualization::TraceMode;
+    use optionstratlib_visualization::visualization::{Graph, GraphConfig, GraphData};
     use rust_decimal_macros::dec;
 
     // A minimal implementation of Graph that only implements graph_data()

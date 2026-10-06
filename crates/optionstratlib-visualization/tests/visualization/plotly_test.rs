@@ -1,7 +1,9 @@
 #[cfg(feature = "plotly")]
 mod plotly_tests {
-    use optionstratlib::visualization::{ColorScheme, LineStyle, TraceMode};
-    use optionstratlib::visualization::{Graph, GraphConfig, GraphData, Series2D, Surface3D};
+    use optionstratlib_visualization::visualization::{ColorScheme, LineStyle, TraceMode};
+    use optionstratlib_visualization::visualization::{
+        Graph, GraphConfig, GraphData, Series2D, Surface3D,
+    };
     // use plotly::{Scatter, Surface}; // Scatter and Surface not directly used here after changes
     // use mockall::predicate::*;
     use mockall::*;
@@ -22,6 +24,9 @@ mod plotly_tests {
             fn add_trace<T: plotly::Trace + 'static>(&mut self, trace: T) -> &mut Self;
             fn set_layout(&mut self, layout: plotly::Layout) -> &mut Self;
             fn write_html(&self, path: &std::path::Path);
+            // `plotly_static` exists only with `static_export`, which
+            // enables `plotly/static_export_default` (#542).
+            #[cfg(feature = "static_export")]
             fn write_image(&self, path: &std::path::Path, format: plotly::plotly_static::ImageFormat, width: usize, height: usize, scale: f64);
             fn show(&self);
         }
@@ -391,8 +396,10 @@ mod plotly_tests {
 #[cfg(test)]
 #[cfg(feature = "plotly")]
 mod tests_plotly_utils {
-    use optionstratlib::visualization::pick_color;
-    use optionstratlib::visualization::{ColorScheme, GraphConfig, get_color_from_scheme};
+    use optionstratlib_visualization::visualization::pick_color;
+    use optionstratlib_visualization::visualization::{
+        ColorScheme, GraphConfig, get_color_from_scheme,
+    };
 
     #[test]
     fn test_pick_color_delegates_to_color_scheme() {
@@ -459,20 +466,20 @@ mod tests_plotly_utils {
 #[cfg(feature = "plotly")]
 mod tests_plotly_interface {
 
-    use optionstratlib::visualization::{
+    use optionstratlib_visualization::visualization::{
         Graph, GraphConfig, GraphData, Series2D, Surface3D, TraceMode,
     };
     use rust_decimal_macros::dec;
 
     #[cfg(feature = "static_export")]
     use {
-        optionstratlib::visualization::{ColorScheme, LineStyle, OutputType},
+        optionstratlib_visualization::visualization::{ColorScheme, LineStyle, OutputType},
         plotly::Plot,
         std::fs,
         std::path::PathBuf,
     };
     use {
-        optionstratlib::visualization::{make_scatter, make_surface, to_plotly_mode},
+        optionstratlib_visualization::visualization::{make_scatter, make_surface, to_plotly_mode},
         plotly::{Scatter, Surface, Trace, common::Mode},
         rust_decimal::Decimal,
     };

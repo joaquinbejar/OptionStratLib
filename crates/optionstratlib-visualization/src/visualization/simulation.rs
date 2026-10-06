@@ -1,15 +1,15 @@
 //! `Graph` implementations for the simulation containers.
 //!
-//! A [`crate::simulation::randomwalk::RandomWalk`] plots as one price series against days to expiry
-//! (negated so time runs left to right); a [`crate::simulation::simulator::Simulator`] plots every walk
+//! A [`optionstratlib_simulation::simulation::randomwalk::RandomWalk`] plots as one price series against days to expiry
+//! (negated so time runs left to right); a [`optionstratlib_simulation::simulation::simulator::Simulator`] plots every walk
 //! it holds as one series each. The implementations live here because
 //! `Graph` is a visualization trait and simulation must not depend on
 //! visualization (ADR-0001 D2, simulation row).
 
-use crate::simulation::randomwalk::RandomWalk;
-use crate::simulation::simulator::Simulator;
 use crate::visualization::{ColorScheme, Graph, GraphConfig, GraphData, Series2D, TraceMode};
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
+use optionstratlib_simulation::simulation::simulator::Simulator;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::AddAssign;
@@ -113,11 +113,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ExpirationDate;
-    use crate::simulation::steps::Step;
-    use crate::simulation::{WalkParams, WalkType, WalkTypeAble, generator_positive};
-    use crate::utils::TimeFrame;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_simulation::simulation::steps::Step;
+    use optionstratlib_simulation::simulation::{
+        WalkParams, WalkType, WalkTypeAble, generator_positive,
+    };
     use rust_decimal_macros::dec;
 
     #[derive(Clone)]

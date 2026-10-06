@@ -53,7 +53,8 @@
 #                `reqwest 0.11`, which is a *build*-dependency of
 #                `plotly_static` (via `webdriver-downloader`), itself pulled in
 #                only by the `static_export` feature:
-#                    optionstratlib -> plotly -> plotly_static
+#                    optionstratlib -> optionstratlib-visualization
+#                      -> plotly -> plotly_static
 #                      -> [build-dependencies] webdriver-downloader
 #                      -> reqwest 0.11 -> rustls-pemfile 1.0.4
 #                It runs on the build machine while downloading a webdriver, is
@@ -75,7 +76,8 @@
 #                package is not in the graph; it appears only under
 #                `--all-features`, on the same build-machine path as the
 #                `rustls-pemfile` entry above:
-#                    optionstratlib -> plotly -> plotly_static
+#                    optionstratlib -> optionstratlib-visualization
+#                      -> plotly -> plotly_static
 #                      -> [build-dependencies] webdriver-downloader
 #                      -> fantoccini / reqwest 0.11 -> hyper 0.14 -> h2 0.3.27
 #                It is the HTTP/2 client used to download a webdriver while

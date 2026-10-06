@@ -2,13 +2,15 @@
 //! `tests/unit/simulation/model_and_randomwalk_tests.rs`, whose `Graph` part
 //! belongs with the visualization layer.
 
-use optionstratlib::model::{ExpirationDate, Positive};
-use optionstratlib::prelude::pos_or_panic;
-use optionstratlib::simulation::randomwalk::RandomWalk;
-use optionstratlib::simulation::steps::Step;
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble, generator_positive};
-use optionstratlib::utils::TimeFrame;
-use optionstratlib::visualization::{Graph, GraphData};
+use optionstratlib_core::model::{ExpirationDate, Positive};
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::TimeFrame;
+use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
+use optionstratlib_simulation::simulation::steps::Step;
+use optionstratlib_simulation::simulation::{
+    WalkParams, WalkType, WalkTypeAble, generator_positive,
+};
+use optionstratlib_visualization::visualization::{Graph, GraphData};
 
 /// A walker that keeps every default: a `Historical` walk replays its prices.
 #[derive(Clone)]

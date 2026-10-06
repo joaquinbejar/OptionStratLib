@@ -5,4 +5,3 @@
 
 mod chains_panic_freedom_test;
 mod model_panic_freedom_test;
-mod strategies_panic_freedom_test;

@@ -2,16 +2,16 @@
 //!
 //! # Visualization Library Usage Guide
 //!
-//! This guide explains how to use the plotly.rs-based visualization library to create financial charts and other types of visualizations.
+//! This guide explains how to use the visualization layer to create financial charts and other types of visualizations.
 //!
 //! ## Setup
 //!
-//! First, ensure you have the correct dependencies in your `Cargo.toml`:
+//! The chart data builds with no feature; rendering through plotly.rs needs
+//! `plotly`, and PNG/SVG export needs `static_export`:
 //!
 //! ```toml
 //! [dependencies]
-//! plotly = "0.12.1"
-//! serde = { version = "1.0", features = ["derive"] }
+//! optionstratlib-visualization = { version = "0.22.0", features = ["plotly"] }
 //! ```
 //!
 //! ## Core Concepts
@@ -27,7 +27,7 @@
 //! The `Graph` trait is the central component that any object wanting to be visualized must implement:
 //!
 //! ```rust,ignore,no_run
-//! use optionstratlib::visualization::{GraphConfig, GraphData};
+//! use optionstratlib_visualization::visualization::{GraphConfig, GraphData};
 //!
 //! pub trait Graph {
 //!     fn graph_data(&self) -> GraphData;
@@ -36,7 +36,7 @@
 //!         GraphConfig::default()
 //!     }
 //!     
-//!     // Additional methods provided by default...
+//!     // Rendering methods provided under `plotly` and `static_export`...
 //! }
 //! ```
 //!
@@ -44,12 +44,18 @@
 //! - `graph_data()`: to provide the data to visualize
 //! - Optionally, `graph_config()`: to customize the appearance
 //!
+//! The trait has this one definition on every feature surface; the backend
+//! features only add provided rendering methods (`to_plot`, `write_html`,
+//! `show`, `render`, `to_interactive_html` under `plotly`, and `write_png`,
+//! `write_svg` under `static_export`), so an implementation written without
+//! a backend compiles unchanged with one.
+//!
 //! ### Data Types
 //!
 //! The library supports these types of visualizations through the `GraphData` enum:
 //!
 //! ```rust
-//! use optionstratlib::visualization::{MultiSeries2D, Series2D, Surface3D};
+//! use optionstratlib_visualization::visualization::{MultiSeries2D, Series2D, Surface3D};
 //!
 //! pub enum GraphData {
 //!     Series(Series2D),              // Line or scatter 2D
@@ -61,13 +67,13 @@
 //! ## Example: Simple Line Chart
 //!
 //! ```rust,no_run
-//! # fn main() -> Result<(), optionstratlib::error::Error> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::visualization::{Graph, GraphData, Series2D, GraphConfig, OutputType};
-//! use optionstratlib::visualization::{LineStyle, ColorScheme, TraceMode};
+//! use optionstratlib_visualization::visualization::{Graph, GraphData, Series2D, GraphConfig, OutputType};
+//! use optionstratlib_visualization::visualization::{LineStyle, ColorScheme, TraceMode};
 //!
 //! struct MyData {
 //!     x: Vec<Decimal>,
@@ -126,7 +132,7 @@
 //! ```rust
 //!
 //! use rust_decimal::Decimal;
-//! use optionstratlib::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Surface3D};
+//! use optionstratlib_visualization::visualization::{ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Surface3D};
 //!
 //! struct SurfaceData {
 //!     x: Vec<Decimal>,
@@ -202,7 +208,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib::visualization::{GraphData, Series2D, TraceMode};
+//! use optionstratlib_visualization::visualization::{GraphData, Series2D, TraceMode};
 //! let series1 = Series2D {
 //!     x: vec![dec!(1.0), dec!(2.0), dec!(3.0)],
 //!     y: vec![dec!(4.0), dec!(5.0), dec!(6.0)],
@@ -229,8 +235,8 @@
 //! If you need interactive HTML with advanced hover and tooltip functions, use the `to_interactive_html` method:
 //!
 //! ```rust
-//! use optionstratlib::visualization::{Graph, GraphData, Series2D, TraceMode, GraphConfig};
-//! use optionstratlib::error::GraphError;
+//! use optionstratlib_visualization::visualization::{Graph, GraphData, Series2D, TraceMode, GraphConfig};
+//! use optionstratlib_visualization::error::GraphError;
 //! use std::path::PathBuf;
 //! use tracing::info;
 //! use rust_decimal_macros::dec;
@@ -303,7 +309,9 @@ mod config;
 mod curves;
 /// Filesystem preparation for chart export. Owned by `visualization`:
 /// writing a rendered chart to disk is the only production use of it.
-pub mod file;
+mod file;
+/// The `Graph` contract, one definition on every feature surface.
+mod graph;
 mod interface;
 mod model;
 mod model_impls;
@@ -315,24 +323,12 @@ mod styles;
 /// `impl Graph` and `impl Plottable` for `Surface`.
 mod surfaces;
 mod tests;
-pub(crate) mod utils;
-
-#[cfg(not(feature = "plotly"))]
-mod default;
-#[cfg(feature = "plotly")]
-mod plotly;
-
-#[cfg(feature = "plotly")]
-pub use {
-    plotly::Graph,
-    utils::{make_scatter, make_surface, pick_color, to_plotly_mode},
-};
-
-#[cfg(not(feature = "plotly"))]
-pub use default::Graph;
+/// Colour helpers, and the Plotly trace builders behind `plotly`.
+mod utils;
 
 pub use config::GraphConfig;
 pub use file::prepare_file_path;
+pub use graph::Graph;
 pub use interface::GraphType;
 pub use model::{
     GraphData, Label2D, Label3D, MultiSeries2D, OutputType, Series2D, Surface3D, VisPoint2D,
@@ -341,3 +337,5 @@ pub use model::{
 pub use plot_builder::{PlotBuilder, Plottable};
 pub use styles::{ColorScheme, LineStyle, PlotType, TraceMode};
 pub use utils::get_color_from_scheme;
+#[cfg(feature = "plotly")]
+pub use utils::{make_scatter, make_surface, pick_color, to_plotly_mode};

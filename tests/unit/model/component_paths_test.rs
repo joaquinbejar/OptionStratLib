@@ -1,5 +1,5 @@
 //! Facade paths and direct-component paths name the same types (#520, #528,
-//! #529, #530, #531, #536).
+//! #529, #530, #531, #536, #542).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -538,4 +538,38 @@ fn test_backtest_items_through_facade_modules_and_prelude() {
             optionstratlib::error::SimulationError::walk_error("probe"),
         );
     assert!(error.to_string().contains("probe"));
+}
+
+/// Visualization items are `optionstratlib-visualization`'s, reached through
+/// the facade's `visualization` module, the prelude and `error`, and the
+/// unified `error::Error` wraps its `GraphError` (#542).
+#[test]
+fn test_visualization_items_through_facade_modules_and_prelude() {
+    use optionstratlib::prelude::{GeometricObject, Graph};
+
+    same_item(
+        optionstratlib::visualization::prepare_file_path,
+        optionstratlib_visualization::visualization::prepare_file_path,
+    );
+    let series: optionstratlib_visualization::visualization::Series2D =
+        optionstratlib::prelude::Series2D::default();
+    let data: optionstratlib_visualization::visualization::GraphData =
+        optionstratlib::prelude::GraphData::Series(series);
+    assert!(matches!(
+        data,
+        optionstratlib::visualization::GraphData::Series(_)
+    ));
+    let curve = optionstratlib::curves::Curve::from_vector(vec![
+        optionstratlib::curves::Point2D::new(dec!(0), dec!(1)),
+        optionstratlib::curves::Point2D::new(dec!(1), dec!(2)),
+    ]);
+    assert!(matches!(
+        curve.graph_data(),
+        optionstratlib_visualization::visualization::GraphData::Series(_)
+    ));
+    let error: optionstratlib_visualization::error::GraphError =
+        optionstratlib::error::GraphError::Render("probe".to_string());
+    let unified: optionstratlib::error::Error = error.into();
+    assert!(matches!(unified, optionstratlib::error::Error::Graph(_)));
+    assert!(unified.to_string().contains("probe"));
 }

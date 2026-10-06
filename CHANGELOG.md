@@ -9,6 +9,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Visualization is its own crate, `optionstratlib-visualization`** (#542).
+  `visualization` (the `Graph` contract, `GraphData`, `GraphConfig`,
+  `Series2D`, `Surface3D`, styles, `PlotBuilder` / `Plottable`, the Plotly
+  trace builders and the `Graph` implementations for `Options`, `Position`,
+  `Curve`, `Surface`, `RandomWalk`, `Simulator` and every concrete strategy)
+  and `GraphError` move to `crates/optionstratlib-visualization`, the leaf of
+  the workspace: it depends on core, math, pricing, simulation, market and
+  strategies, and no other crate depends on it. Its features are `plotly`
+  (`dep:plotly` without `static_export_default`) and `static_export`
+  (`plotly` plus `plotly/static_export_default`), so `plotly` alone no longer
+  resolves `plotly_static`, `fantoccini`, `webdriver`, `tokio` or `reqwest`;
+  the workspace `plotly` dependency drops `static_export_default` for the
+  same reason (ADR-0002 section 3). The facade re-exports `visualization`,
+  `GraphError` and `impl_graph_for_payoff_strategy!` behind a new
+  `visualization` feature (`dep:optionstratlib-visualization`, `backtest`; in
+  `default`), `plotly` now implies `visualization` and forwards
+  `optionstratlib-visualization/plotly`, and `static_export` forwards
+  `optionstratlib-visualization/static_export`; the facade no longer depends
+  on `plotly` itself. The unified `error::Error` wraps `GraphError`, so it
+  and the `prelude` chart items (`Graph`, `GraphData`, `Series2D`,
+  `Surface3D`, `TraceMode`, `Plottable`, `Error`, `GraphError`) need
+  `visualization` instead of `backtest`; the facade unit suite declares
+  `required-features = ["visualization"]`. Changes to the graph contract:
+  - **One `Graph` trait on every feature surface.** There were two
+    definitions, one without `plotly` and one with it; there is now one,
+    whose required items (`graph_data`, with `graph_config` provided) are the
+    same everywhere. `plotly` adds the provided `to_plot`, `write_html`,
+    `show`, `render` and `to_interactive_html`, `static_export` adds
+    `write_png` and `write_svg`; no implementation changes with a feature.
+  - **`OutputType::Png` and `OutputType::Svg` exist without `plotly`**
+    (ADR-0002 section 4 forbids feature-gated variants). Behaviour change:
+    `Graph::render` with a PNG or SVG target in a build without
+    `static_export` returns `GraphError::Render` instead of returning `Ok`
+    without writing anything.
+  - `optionstratlib::visualization::file` is gone; `prepare_file_path` stays
+    at `visualization::prepare_file_path`, its one path.
+  The visualization unit tests, the facade's `tests/unit/visualization`
+  suite, `tests/unit/error/graph_test.rs` and the strategy panic-freedom
+  property (which charts strategies) moved into the crate's tests, on
+  component paths only. `make check-graph` forbids plotting, image-export,
+  async and I/O packages in a featureless visualization build and allows
+  `plotly` and the static-export packages only under their features, with
+  crate-graph and forbidden-package self-tests; a new `visualization` facade
+  surface fixture (`make check-feature-trees`) pins the headless graph;
+  `check-components` (including `--features plotly` alone), `make test`,
+  `make doc`, `make test-visual`, the public-API snapshots, the facade
+  capability matrix (`visualization` alone) and CI cover the new crate.
+  `Series2D::line_width` and the `VisPoint2D` / `VisPoint3D` widths are
+  pixel sizes and join the reviewed `f64` allowlist.
+
 - **`WalkParams` has a `seed: Option<u64>` field** (#539). Every struct
   literal now names it; `seed: None` keeps the previous behaviour exactly:
   the built-in walk kernels draw from the thread RNG, through the same
