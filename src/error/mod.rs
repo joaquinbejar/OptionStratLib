@@ -108,6 +108,7 @@
 //! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs`, now in `optionstratlib-analytics` |
 //! | strategies | `strategies.rs`, now in `optionstratlib-strategies` |
+//! | backtest | `backtesting.rs`, now in `optionstratlib-backtest` |
 //! | visualization | `graph.rs` |
 //! | facade | `unified.rs`, this file's re-exports |
 //!

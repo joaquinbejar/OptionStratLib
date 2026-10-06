@@ -20,7 +20,7 @@
 //!   implementations, the adapters from the simulation engine's generic
 //!   `PathOutcome` / `PathStatistics` to the backtest results, run
 //!   statistics, report types and performance metrics.
-//! - [`error`]: [`error::BacktestError`].
+//! - [`error`]: the [`error::BacktestError`] type.
 //!
 //! The generic engine (random walks, exit policies, path evaluation and
 //! statistics) is `optionstratlib-simulation`'s; this crate adapts it to

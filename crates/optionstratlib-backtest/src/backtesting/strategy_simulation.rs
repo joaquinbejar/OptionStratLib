@@ -10,8 +10,9 @@
 //! [`crate::backtesting::strategy_simulation::SingleLegSimulation`]: the side of the leg and the fee adjustment
 //! applied to every mark after the opening one.
 //!
-//! The progress bar drawn while the walks are evaluated stays with the
-//! loop; M6-05 removes it from the library.
+//! Progress over the walks is reported as `tracing` events, one `debug`
+//! event per evaluated path and an `info` event at the end, so the caller's
+//! subscriber decides whether and how to show it (ADR-0002 section 6, #538).
 
 use crate::backtesting::results::{SimulationResult, SimulationStatsResult};
 use crate::error::BacktestError;
@@ -47,7 +48,8 @@ use std::ops::AddAssign;
 /// # Examples
 ///
 /// ```ignore
-/// use optionstratlib::simulation::{Simulate, ExitPolicy};
+/// use optionstratlib_backtest::backtesting::Simulate;
+/// use optionstratlib_simulation::simulation::ExitPolicy;
 /// use rust_decimal_macros::dec;
 ///
 /// let strategy = ShortPut::new(/* ... */);
@@ -394,15 +396,15 @@ where
 /// Simulates a single-leg strategy across every walk of `sim`.
 ///
 /// Prices the leg once for the opening premium, evaluates each walk with
-/// [`SingleLegPathEvaluator`] (drawing a progress bar meanwhile) and
+/// [`SingleLegPathEvaluator`] (emitting a `debug` event per path and an
+/// `info` event at the end) and
 /// aggregates the results with [`SimulationStatsResult::from_results`].
 ///
 /// # Errors
 ///
-/// Returns a [`SimulationError`] when the strategy has no single leg, the
-/// progress bar template is rejected, a Black-Scholes price or an
-/// expiration P&L fails, a step cannot be read as a price, or the
-/// aggregate statistics overflow.
+/// Returns a [`BacktestError`] when the strategy has no single leg, a
+/// Black-Scholes price or an expiration P&L fails, a step cannot be read as
+/// a price, or the aggregate statistics overflow.
 #[must_use = "the simulation statistics are the only product of this call"]
 #[tracing::instrument(level = "debug", skip(strategy, sim), fields(walks = sim.len()))]
 pub fn simulate_single_leg<S, X, Y>(

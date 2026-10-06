@@ -1743,6 +1743,11 @@ def self_test() -> int:
             [pkg("optionstratlib-backtest", ("optionstratlib-strategies",), ("optionstratlib-simulation",))],
             0,
         ),
+        "backtest depends on math": ([pkg("optionstratlib-backtest", ("optionstratlib-math",))], 1),
+        "backtest dev-depends on the facade": (
+            [pkg("optionstratlib-backtest", ("optionstratlib", "dev"))],
+            1,
+        ),
         "backtest depends on visualization": (
             [pkg("optionstratlib-backtest", ("optionstratlib-visualization",))],
             1,

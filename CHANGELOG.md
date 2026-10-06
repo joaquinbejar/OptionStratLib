@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backtest crate for `SimulationStatsResult::print_summary` until M6-05, as
   in market; the facade drops its own direct `prettytable-rs`, `indicatif`
   and normal `uuid` dependencies (`uuid` is a dev-dependency for one test).
+  With the facade no longer enabling `prettytable-rs/win_crlf`, the chain and
+  statistics tables print LF line endings on Windows too.
   `make check-graph` forbids plotting, I/O, async and `indicatif` packages in
   backtest, with crate-graph and forbidden-package self-tests;
   `check-components`, `make test`, `make doc`, the public-API snapshots, the
