@@ -227,17 +227,20 @@ COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-prici
 COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async optionstratlib-market:synthetic
 
 # `cargo package` verifies each crate against the others through a temporary
-# local registry, and Cargo keeps what it unpacks from such a registry under
-# `registry/src/-<hash>/` and `registry/cache/-<hash>/` (local registries are
-# the ones whose directory name starts with `-`; crates.io's never does). The
-# workspace version stays 0.22.0 while the code changes, so a copy left by an
-# earlier run, or restored by the CI cache of `registry/cache`, would be
-# reused and a crate would be verified against a stale neighbour. The
-# packaged `.crate` files and that temporary registry also sit in
-# `<target>/package/`, which the CI cache restores with `target/`. Drop both
-# first; nothing from crates.io is touched.
+# local registry. Cargo treats a crate from a registry as immutable: it never
+# re-reads its source, so an `optionstratlib-*` 0.22.0 compiled from that
+# registry by an earlier run (and restored by the CI cache of `target/`) is
+# reused as is, and a crate is verified against a stale neighbour (seen on
+# main after #672). The version stays 0.22.0 while the code changes, so drop
+# every copy first: the unpacked and cached sources under `$CARGO_HOME`
+# (local registries only, the directories whose name starts with `-`;
+# crates.io's never does), the packaged `.crate` files and temporary registry
+# in `<target>/package/`, and the compiled `optionstratlib` artifacts and
+# fingerprints in `<target>/debug/`. Nothing from crates.io is touched; the
+# workspace crates are simply rebuilt.
 CARGO_HOME_DIR := $(or $(CARGO_HOME),$(HOME)/.cargo)
-PACKAGE_DIR := $(or $(CARGO_TARGET_DIR),target)/package
+TARGET_DIR := $(or $(CARGO_TARGET_DIR),target)
+PACKAGE_DIR := $(TARGET_DIR)/package
 
 .PHONY: check-components
 check-components:
@@ -266,6 +269,8 @@ check-components:
 		LOGLEVEL=WARN cargo test -p $$crate --no-default-features --features $$features; \
 		cargo clippy -p $$crate --all-targets --no-default-features --features $$features -- -D warnings; \
 	done
+	@rm -rf $(PACKAGE_DIR) $(TARGET_DIR)/debug/.fingerprint/optionstratlib-* \
+		$(TARGET_DIR)/debug/deps/liboptionstratlib_* $(TARGET_DIR)/debug/deps/optionstratlib_*
 	cargo package $(addprefix -p ,$(COMPONENT_CRATES)) --allow-dirty
 	@echo "OK: $(COMPONENT_CRATES) verified standalone"
 
