@@ -3,12 +3,12 @@
    Email: jb@taunais.com
    Date: 23/3/25
 ******************************************************************************/
-use crate::ExpirationDate;
 use crate::error::SimulationError;
 use crate::simulation::steps::{Xstep, Ystep};
-use crate::utils::TimeFrame;
 use num_traits::FromPrimitive;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::TimeFrame;
 use rust_decimal::Decimal;
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
@@ -330,7 +330,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]
@@ -545,7 +545,7 @@ mod tests {
 #[cfg(test)]
 mod tests_positive {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     #[test]
     fn test_step_new() {
@@ -717,7 +717,7 @@ mod tests_positive {
 #[cfg(test)]
 mod tests_step {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     // Helper struct for testing
     #[derive(Debug, Copy, Clone, PartialEq)]
@@ -982,7 +982,7 @@ mod tests_step_serialization {
     use super::*;
 
     use chrono::{TimeZone, Utc};
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use serde_json::{self, Value};
 
     // Helper function to create a test step with f64 values

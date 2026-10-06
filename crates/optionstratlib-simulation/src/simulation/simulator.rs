@@ -4,16 +4,16 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::Options;
-use crate::error::PricingError;
-use crate::pricing::Profit;
-use crate::pricing::monte_carlo::price_option_monte_carlo;
-use crate::pricing::unified::MonteCarloPricer;
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
-use crate::utils::Len;
-use positive::Positive;
+use optionstratlib_core::model::Options;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::Len;
+use optionstratlib_pricing::error::PricingError;
+use optionstratlib_pricing::pricing::Profit;
+use optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo;
+use optionstratlib_pricing::pricing::unified::MonteCarloPricer;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -433,16 +433,16 @@ where
 #[allow(irrefutable_let_patterns)]
 mod tests {
     use super::*;
-    use crate::ExpirationDate;
     use crate::error::SimulationError;
-    use crate::pricing::OptionPricing;
     use crate::simulation::generator_positive;
     use crate::simulation::{
         WalkParams, WalkType, WalkTypeAble,
         steps::{Step, Xstep, Ystep},
     };
-    use crate::utils::{TimeFrame, time::convert_time_frame};
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::{TimeFrame, time::convert_time_frame};
+    use optionstratlib_pricing::pricing::OptionPricing;
     use rust_decimal_macros::dec;
     use std::convert::Infallible;
     use tracing::{debug, info};
@@ -469,8 +469,8 @@ mod tests {
     /// simulator or borrows it.
     #[test]
     fn test_monte_carlo_pricer_matches_the_simulator_on_the_same_paths() {
-        use crate::model::types::{OptionStyle, OptionType, Side};
-        use crate::pricing::{GenericPricingEngine, price_option_with};
+        use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+        use optionstratlib_pricing::pricing::{GenericPricingEngine, price_option_with};
 
         let prices: Vec<Positive> = (0..12)
             .map(|i| pos_or_panic!(100.0 + f64::from(i) * 1.5))
@@ -527,10 +527,10 @@ mod tests {
     /// the Black-Scholes price.
     #[test]
     fn test_monte_carlo_price_from_simulator_matches_black_scholes() {
-        use crate::model::utils::create_sample_option;
-        use crate::pricing::monte_carlo::price_option_monte_carlo;
-        use crate::{OptionStyle, Side};
-        use positive::assert_pos_relative_eq;
+        use optionstratlib_core::assert_pos_relative_eq;
+        use optionstratlib_core::model::utils::create_sample_option;
+        use optionstratlib_core::model::{OptionStyle, Side};
+        use optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo;
 
         let walker = Box::new(TestWalker);
         let initial_price = pos_or_panic!(1000.0);

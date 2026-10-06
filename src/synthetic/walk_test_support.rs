@@ -3,11 +3,17 @@
    Email: jb@taunais.com
    Date: 12/7/26
 ******************************************************************************/
-//! Deterministic walkers for generator tests.
+//! Deterministic walkers for the chain and series generator tests.
 //!
 //! `RampWalker` replaces the RNG-driven default walk methods with a fixed
 //! arithmetic ramp so multi-step generator tests can assert exact prices,
-//! indices and dates without seeds or wall-clock dependence.
+//! indices and dates without seeds or wall-clock dependence. `EmptyWalker`
+//! returns an empty path for every walk method.
+//!
+//! `optionstratlib-simulation` keeps its own `RampWalker` for the walk
+//! driver tests: a crate's `#[cfg(test)]` items are not visible to another
+//! crate's tests. This copy goes with the generators when #537 moves them
+//! into `optionstratlib-market`.
 
 use crate::error::SimulationError;
 use crate::simulation::{WalkParams, WalkTypeAble};
@@ -86,12 +92,10 @@ where
 }
 
 /// Test walker whose every walk method returns an empty path, for pinning
-/// the empty-output contract of the generators (only built with `synthetic`).
-#[cfg(feature = "synthetic")]
+/// the empty-output contract of the generators.
 #[derive(Clone)]
 pub(crate) struct EmptyWalker;
 
-#[cfg(feature = "synthetic")]
 impl<X, Y> WalkTypeAble<X, Y> for EmptyWalker
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,

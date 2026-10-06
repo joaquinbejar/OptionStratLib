@@ -21,15 +21,37 @@ mod series;
 pub use chains::generator_optionchain;
 pub use series::generator_optionseries;
 
+/// Deterministic walkers shared by the generator tests.
+#[cfg(test)]
+mod walk_test_support;
+
 use crate::error::{ChainError, SimulationError};
 
-/// A simulation failure inside a chain or series generator travels as
-/// [`ChainError::Generator`], keeping the `SimulationError` as its
-/// downcastable source. It lives here, the one module that sits above both
-/// market and simulation, so neither layer names the other (#524).
-impl From<SimulationError> for ChainError {
+/// The error a generator step carries through the walk driver.
+///
+/// `walk_steps_par` raises its own failures as `E::from(SimulationError)`.
+/// `ChainError` and `SimulationError` are defined in two other crates
+/// (`optionstratlib-market`, `optionstratlib-simulation`), so the facade
+/// cannot implement that conversion on `ChainError` itself; it implements it
+/// on this private carrier instead, and the generators unwrap it on return.
+/// A simulation failure therefore still reaches the caller as
+/// [`ChainError::Generator`] with the `SimulationError` as its downcastable
+/// source, and a step's own `ChainError` comes back unchanged (#536).
+#[derive(Debug)]
+struct GeneratorFailure(ChainError);
+
+impl GeneratorFailure {
+    /// The `ChainError` the generator returns.
     #[inline]
+    fn into_inner(self) -> ChainError {
+        self.0
+    }
+}
+
+impl From<SimulationError> for GeneratorFailure {
+    #[cold]
+    #[inline(never)]
     fn from(err: SimulationError) -> Self {
-        ChainError::generator(err)
+        GeneratorFailure(ChainError::generator(err))
     }
 }

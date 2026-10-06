@@ -14,6 +14,4 @@ mod visualization;
 
 mod lib_test;
 
-mod pricing;
-
 mod model;

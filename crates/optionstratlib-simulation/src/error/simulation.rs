@@ -1,8 +1,9 @@
-//! Target crate (ADR-0001 D6, roadmap M1-14): **simulation**. Owns `SimulationError`; the `Strategy`, `Chain` and `GraphError` variants are upper-layer references removed in the batch behind the 0.22.0 bump.
+//! Owned by `optionstratlib-simulation` (ADR-0001 D6, roadmap M1-14). Owns `SimulationError`; every variant wraps an error of this layer or of core and pricing below it.
 
-use crate::error::{DecimalError, OptionsError, PricingError};
-use expiration_date::error::ExpirationDateError;
-use positive::Positive;
+use optionstratlib_core::error::{DecimalError, OptionsError};
+use optionstratlib_core::model::ExpirationDateError;
+use optionstratlib_core::model::Positive;
+use optionstratlib_pricing::error::PricingError;
 use rust_decimal::Decimal;
 use thiserror::Error;
 
@@ -102,7 +103,7 @@ pub enum SimulationError {
 
     /// Positive value errors
     #[error(transparent)]
-    PositiveError(#[from] positive::PositiveError),
+    PositiveError(#[from] optionstratlib_core::model::PositiveError),
 
     /// A simulation kernel produced a non-finite `f64` value (`NaN` /
     /// `±∞`) at an `f64` → `Decimal` boundary.
@@ -112,7 +113,7 @@ pub enum SimulationError {
     /// an intermediate `f64` would otherwise be silently cast into
     /// `Decimal::ZERO`. `context` is a static call-site tag
     /// following the same convention as
-    /// [`crate::error::DecimalError::Overflow`].
+    /// [`optionstratlib_core::error::DecimalError::Overflow`].
     #[error("simulation non-finite {context}: {value}")]
     NonFinite {
         /// Static tag identifying the kernel and step that produced
@@ -124,7 +125,7 @@ pub enum SimulationError {
     /// A volatility failure raised by the pricing capability this layer
     /// depends on. Boxed because `VolatilityError` is the larger enum.
     #[error(transparent)]
-    Volatility(Box<crate::error::VolatilityError>),
+    Volatility(Box<optionstratlib_pricing::error::VolatilityError>),
 }
 
 impl SimulationError {
@@ -177,9 +178,9 @@ impl SimulationError {
     }
 }
 
-impl From<crate::error::VolatilityError> for SimulationError {
+impl From<optionstratlib_pricing::error::VolatilityError> for SimulationError {
     #[inline]
-    fn from(err: crate::error::VolatilityError) -> Self {
+    fn from(err: optionstratlib_pricing::error::VolatilityError) -> Self {
         // Volatility is a pricing capability simulation depends on, so the
         // cause stays typed. Only the market wrapper it used to route
         // through was the problem, never the payload.
@@ -195,7 +196,7 @@ pub type SimulationResult<T> = Result<T, SimulationError>;
 #[cfg(test)]
 mod tests_typed_causes {
     use super::*;
-    use crate::error::VolatilityError;
+    use optionstratlib_pricing::error::VolatilityError;
 
     /// The conversion a simulation kernel uses when a volatility call fails
     /// keeps the pricing cause, so a caller can match on it instead of

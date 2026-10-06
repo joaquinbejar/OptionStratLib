@@ -105,6 +105,9 @@ jobs:
       - name: Build the minimal market surface
         run: cargo build --no-default-features --features market
 
+      - name: Build the simulation facade without market data
+        run: cargo build --no-default-features --features simulation
+
       - name: Build the analytics facade without simulation
         run: cargo build --no-default-features --features analytics
 

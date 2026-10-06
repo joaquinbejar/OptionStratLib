@@ -104,7 +104,7 @@
 //! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs`, now in `optionstratlib-core` |
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, now in `optionstratlib-pricing` |
-//! | simulation | `simulation.rs` |
+//! | simulation | `simulation.rs`, now in `optionstratlib-simulation` |
 //! | market | `chains.rs`, `csv.rs` (behind `io`), now in `optionstratlib-market` |
 //! | analytics | `transaction.rs`, `probability.rs`, `projections.rs`, now in `optionstratlib-analytics` |
 //! | strategies | `strategies.rs`, now in `optionstratlib-strategies` |
@@ -113,8 +113,7 @@
 //!
 //! Variants that still reference a higher layer
 //! (`CurveError::{MetricsError, Greeks, Graph}`, `SurfaceError::Greeks` and
-//! its graph variants, `VolatilityError::Chain`,
-//! `SimulationError::{Strategy, Chain, GraphError}`) are removed in the
+//! its graph variants, `VolatilityError::Chain`) are removed in the
 //! batch that follows the 0.22.0 version bump; removing a variant is a
 //! breaking change the published-baseline semver gate rejects before then.
 
@@ -124,15 +123,6 @@ mod backtesting;
 
 #[cfg(all(feature = "strategies", feature = "simulation"))]
 mod graph;
-
-/// ### Simulation Errors (`SimulationError`)
-/// Handles:
-/// * Random walk generation failures
-/// * Monte Carlo simulation errors
-/// * Stochastic process parameter validation
-/// * Step calculation issues
-#[cfg(feature = "simulation")]
-pub mod simulation;
 
 /// ### Unified Error Type
 /// Top-level error type that encompasses all errors in the library.
@@ -161,6 +151,11 @@ pub use optionstratlib_pricing::error::{
     GreeksError, PricingError, PricingResult, VolatilityError, greeks, pricing,
 };
 
+/// Simulation errors (`optionstratlib-simulation`): random walk generation,
+/// stochastic process parameters and step calculation.
+#[cfg(feature = "simulation")]
+pub use optionstratlib_simulation::error::{SimulationError, SimulationResult, simulation};
+
 /// Market errors (`optionstratlib-market`): option chains, series and
 /// OHLCV readers.
 #[cfg(feature = "market")]
@@ -182,7 +177,5 @@ pub use optionstratlib_strategies::error::{StrategyError, strategies};
 pub use backtesting::BacktestError;
 #[cfg(all(feature = "strategies", feature = "simulation"))]
 pub use graph::GraphError;
-#[cfg(feature = "simulation")]
-pub use simulation::{SimulationError, SimulationResult};
 #[cfg(all(feature = "strategies", feature = "simulation"))]
 pub use unified::Error;

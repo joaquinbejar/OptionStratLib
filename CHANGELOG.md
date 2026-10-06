@@ -9,6 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Simulation is its own crate, `optionstratlib-simulation`** (#536).
+  `simulation` (random walks, stochastic processes, steps, the walk driver,
+  `RandomWalk`, `Simulator`, the Ornstein-Uhlenbeck process, exit policies
+  and the generic `PathEvaluator` / `PathOutcome` / `PathStatistics`) and
+  `SimulationError` (with `SimulationResult` and the `error::simulation`
+  module) move to `crates/optionstratlib-simulation`, which depends on core
+  and pricing and on no market, analytics, strategy, backtesting, plotting,
+  I/O or terminal-table crate. Formulas, seeds, results and serialized forms
+  are unchanged. What does change:
+  - The facade `simulation` feature becomes
+    `["dep:optionstratlib-simulation", "pricing"]` and re-exports the module
+    and the errors from the crate; `market`, `analytics`, `strategies` or
+    `pricing` alone resolve no simulation crate. Backtesting, visualization,
+    the unified `error::Error` and the `synthetic` generators stay in the
+    facade with their current gates.
+  - `impl From<SimulationError> for ChainError` is removed: both types now
+    belong to other crates, so the facade cannot implement it. The
+    `synthetic` generators still return a simulation failure as
+    `ChainError::Generator` whose source downcasts to `SimulationError`; a
+    caller that converted by hand writes `ChainError::generator(err)`. The
+    conversion comes back in `optionstratlib-market` behind its `synthetic`
+    feature when the generators move there (#537).
+  - `optionstratlib-simulation` derives `utoipa::ToSchema` (`WalkType`,
+    `ExitPolicy`) only under its `schema` feature; the facade enables it.
+    Foundational types are imported through `optionstratlib-core`
+    (ADR-0001 D8).
+  - Unit tests move with their files. `tests/unit/pricing/unified_pricing_test.rs`
+    moves to `crates/optionstratlib-simulation/tests`. The volatility
+    panic-freedom properties move to
+    `crates/optionstratlib-pricing/tests/volatility_panic_freedom_test.rs` and
+    the Ornstein-Uhlenbeck one to
+    `crates/optionstratlib-simulation/tests/ou_panic_freedom_test.rs`, so
+    each runs without the facade. The deterministic `RampWalker` stays with
+    the walk driver tests and the facade's generator tests keep their own
+    copy until #537.
+  - `check-graph` forbids the ADR-0002 simulation-only package set
+    (`prettytable-rs` included) in simulation, with crate graph,
+    forbidden-package and error-layer self-tests; `check-components`,
+    `make test`, `make doc`, CI (a simulation-only facade build), the
+    public-API snapshots and the float gate cover the crate. The `synthetic`
+    feature-tree fixture now records the simulation crate as a real edge.
+
 - **`test_strategy_traits!` is no longer public API; the strategy
   integration tests move to the crates they test** (#534).
   - The macro was `#[macro_export]`ed from `optionstratlib-strategies` and

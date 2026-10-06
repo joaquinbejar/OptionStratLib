@@ -10,12 +10,12 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::error::PricingError;
-use crate::pricing::Profit;
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
-use crate::utils::Len;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::Len;
+use optionstratlib_pricing::error::PricingError;
+use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
@@ -310,7 +310,7 @@ where
 #[allow(irrefutable_let_patterns)]
 mod tests_random_walk {
     use super::*;
-    use crate::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use crate::error::SimulationError;
 
@@ -318,12 +318,12 @@ mod tests_random_walk {
     use crate::simulation::WalkType;
     use crate::simulation::WalkTypeAble;
     use crate::simulation::steps::Step;
-    use crate::utils::TimeFrame;
+    use optionstratlib_core::utils::TimeFrame;
 
     use num_traits::ToPrimitive;
     use rust_decimal::Decimal;
 
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use std::convert::Infallible;
     use std::fmt::Display;
     use std::ops::AddAssign;

@@ -1,8 +1,8 @@
 //! # Random Walk Simulation Library
 //!
 //! This library provides tools for simulating and analyzing random walk processes
-//! and other stochastic models. It includes implementations of various random walk algorithms,
-//! statistical utilities, and visualization capabilities.
+//! and other stochastic models. It includes implementations of various random walk algorithms
+//! and statistical utilities; charts of a walk are drawn by the `optionstratlib` facade.
 //!
 //! The library is organized into several modules:
 //! - `model`: Contains the data structures and types that represent stochastic processes
@@ -32,7 +32,6 @@
 //! - Stochastic volatility modeling
 //! - Real-time volatility estimation
 //! - Integration with option pricing parameters
-//! - Visualization support
 //! - Iterator interface for sequential processing
 //!
 //! ## Performance Considerations

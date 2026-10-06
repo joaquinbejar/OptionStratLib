@@ -5,14 +5,14 @@
 #![allow(clippy::indexing_slicing)]
 
 use crate::error::SimulationError;
-use crate::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample, finite_decimal, p_sqrt,
-};
 use crate::simulation::model::WalkPath;
 use crate::simulation::ou::generate_ou_process;
 use crate::simulation::{WalkParams, WalkType};
 use num_traits::ToPrimitive;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{
+    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample, finite_decimal, p_sqrt,
+};
 use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::fmt::{Debug, Display};
@@ -1242,14 +1242,14 @@ where
 #[cfg(test)]
 mod tests_walk_type_able {
     use super::*;
-    use crate::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
     use crate::simulation::model::WalkType;
     use crate::simulation::params::WalkParams;
     use crate::simulation::steps::Step;
     use crate::simulation::traits::WalkTypeAble;
-    use crate::utils::TimeFrame;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
     use rust_decimal::Decimal;
     use std::fmt::Display;
     use std::ops::AddAssign;

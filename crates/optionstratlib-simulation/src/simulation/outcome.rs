@@ -19,12 +19,12 @@
 //! [`PathOutcome`].
 
 use crate::error::SimulationError;
-use crate::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub, d_sum_iter};
 use crate::simulation::ExitPolicy;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::simulator::Simulator;
-use crate::utils::Len;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub, d_sum_iter};
+use optionstratlib_core::utils::Len;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -326,11 +326,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ExpirationDate;
     use crate::simulation::steps::Step;
     use crate::simulation::{WalkParams, WalkType, WalkTypeAble, generator_positive};
-    use crate::utils::TimeFrame;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::TimeFrame;
 
     fn outcome(
         pnl: Option<Decimal>,

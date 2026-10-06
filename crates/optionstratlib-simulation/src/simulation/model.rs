@@ -1,12 +1,12 @@
-use crate::utils::TimeFrame;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::TimeFrame;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use utoipa::ToSchema;
 
 /// Enum defining different types of random walks
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub enum WalkType {
     /// Standard Brownian motion (normal increments)
     Brownian {
@@ -317,7 +317,7 @@ impl Display for WalkType {
 #[cfg(test)]
 mod tests_walk_type {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
@@ -815,7 +815,7 @@ mod tests_walk_type {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{from_str, to_string};
