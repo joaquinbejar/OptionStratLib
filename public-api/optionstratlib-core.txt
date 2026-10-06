@@ -254,6 +254,7 @@ pub fn optionstratlib_core::model::decimal::decimal_normal_sample() -> rust_deci
 pub fn optionstratlib_core::model::decimal::decimal_normal_sample_with<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::decimal_uniform_sample_with<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::model::decimal::finite_decimal(f64) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::decimal::p_sqrt(&positive::positive::Positive, &'static str) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>

@@ -126,6 +126,8 @@ fn jump_diffusion() -> WalkType {
         dt: dt(),
         drift: dec!(0.05),
         volatility: pos(dec!(0.2)),
+        // `λ·dt = 0.4`, so the jump branch fires within the short pinned
+        // path; a realistic one jump a year would almost never reach it.
         intensity: pos(dec!(100)),
         jump_mean: dec!(-1),
         jump_volatility: pos(dec!(2)),
@@ -414,17 +416,19 @@ fn test_deterministic_mean_reverting_seeded_path_matches_pinned() {
 
 #[test]
 fn test_deterministic_jump_diffusion_seeded_path_matches_pinned() {
+    // Re-baselined by #684: the jump trial now draws a genuine U(0,1), so
+    // `P(jump) = λ·dt = 0.4` per step instead of `Φ(0.4)`.
     assert_pinned(
         jump_diffusion(),
         &[
             dec!(100),
-            dec!(99.61317285683911975202940205),
-            dec!(97.89870927422375722189810795),
-            dec!(98.13905039419769786000761419),
-            dec!(99.16668235010884753752691006),
-            dec!(96.94428208375887613843649026),
-            dec!(93.97848696597266434426916457),
-            dec!(94.41782063238668894106333136),
+            dec!(100.08802014209121235202940205),
+            dec!(100.42064822804596520422076232),
+            dec!(99.57712864670563978447619335),
+            dec!(99.82158685372681364852693795),
+            dec!(100.82133776726378230222513836),
+            dec!(98.59969284016619166847340400),
+            dec!(95.63425965993297671711051973),
         ],
         None,
     );
