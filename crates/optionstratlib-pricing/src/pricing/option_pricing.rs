@@ -42,6 +42,7 @@
 //! ```
 
 use crate::error::{PricingError, VolatilityError};
+use crate::pricing::black_scholes_model::european_price_band;
 use crate::pricing::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
@@ -50,8 +51,8 @@ use crate::pricing::{
 use optionstratlib_core::error::{OptionsError, OptionsResult};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::d_sub;
-use optionstratlib_core::model::types::Side;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
+use optionstratlib_core::model::types::{OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
@@ -259,15 +260,28 @@ pub trait OptionPricing {
     ///   of the target market price or when the difference between the high and low bounds is smaller
     ///   than a threshold (`0.0001`).
     ///
+    /// - **No-arbitrage band**: a European target is first checked against the band of attainable
+    ///   Black–Scholes prices (Hull, bounds on option prices); outside it no implied volatility
+    ///   exists and the solver reports an error rather than an edge of its bracket.
+    ///
     /// # Errors
     ///
-    /// Returns [`VolatilityError::PositiveError`] when the midpoint
-    /// volatility breaches the `Positive` invariant,
-    /// [`VolatilityError::NoConvergence`] when the bisection exhausts
-    /// `MAX_ITERATIONS_IV` without matching the target price, or propagates
-    /// [`VolatilityError::Options`] from the underlying Black–Scholes
-    /// evaluation (wrapped as [`OptionsError::ImpliedVolatilityInvariant`]
-    /// when the invariant check fails).
+    /// - [`VolatilityError::InvalidPrice`] when a European target lies
+    ///   outside the no-arbitrage band `[max(S e^(-qT) - K e^(-rT), 0),
+    ///   S e^(-qT)]` (call) or `[max(K e^(-rT) - S e^(-qT), 0), K e^(-rT)]`
+    ///   (put), widened by `IV_TOLERANCE`: no volatility reproduces such a
+    ///   price. `price` is the magnitude of `market_price`.
+    /// - [`VolatilityError::NoConvergence`] when the target is inside the band
+    ///   but above the price at the top of the bracket (`σ = 500 %`), so the
+    ///   bisection cannot bracket the root, or when it exhausts
+    ///   `MAX_ITERATIONS_IV` (1000, far above the ~16 halvings the bracket
+    ///   floor needs).
+    /// - [`VolatilityError::DecimalError`] when a bracket or residual step
+    ///   overflows `Decimal` (a target near `Decimal::MAX`).
+    /// - [`VolatilityError::Options`] from the underlying Black–Scholes
+    ///   evaluation or the band (an expired option, for instance), wrapped
+    ///   as [`OptionsError::ImpliedVolatilityInvariant`] when the midpoint
+    ///   invariant check fails.
     fn calculate_implied_volatility(
         &self,
         market_price: Decimal,
@@ -351,15 +365,34 @@ impl OptionPricing for Options {
             market_price
         };
 
+        // A European target outside the no-arbitrage band has no implied
+        // volatility (#652); without this check the bisection collapses on
+        // an edge of its bracket and reports that edge as the answer.
+        if matches!(self.option_type, OptionType::European) {
+            let (lower, upper) = european_price_band(self).map_err(OptionsError::from)?;
+            let below = target_price < d_sub(lower, IV_TOLERANCE, "pricing::iv::band::lower")?;
+            let above = target_price > d_add(upper, IV_TOLERANCE, "pricing::iv::band::upper")?;
+            if below || above {
+                return Err(outside_band_error(market_price, target_price, lower, upper));
+            }
+        }
+
         // Initialize high and low bounds for volatility (500% max).
-        let mut high = Positive::new(5.0)?;
+        let mut high = IV_BISECTION_MAX_VOLATILITY;
         let mut low = Positive::ZERO;
+        // The top of the bracket only moves down when a midpoint prices above
+        // the target, so while it has not moved the root may lie above it.
+        let mut high_moved = false;
 
         // Binary search through volatilities until we find one that gives us our target price
         // or until we reach maximum iterations
-        for _ in 0..MAX_ITERATIONS_IV {
+        for iteration in 1..=MAX_ITERATIONS_IV {
             // Calculate midpoint volatility
-            let mid_vol = (high.to_dec() + low.to_dec()) / Decimal::TWO;
+            let mid_vol = d_div(
+                d_add(high.to_dec(), low.to_dec(), "pricing::iv::bracket_sum")?,
+                Decimal::TWO,
+                "pricing::iv::midpoint",
+            )?;
             // mid_vol is the average of two non-negative bounds, so it is
             // structurally non-negative; a None here would indicate a
             // breached invariant on the bounds themselves.
@@ -378,19 +411,36 @@ impl OptionPricing for Options {
             let actual_price = if is_short { -price } else { price };
 
             // Check if we're close enough to the target price
-            if (actual_price - target_price).abs() < IV_TOLERANCE {
+            if d_sub(actual_price, target_price, "pricing::iv::residual")?.abs() < IV_TOLERANCE {
                 return Ok(volatility);
             }
 
             // Update bounds based on whether this price was too high or too low
             if actual_price > target_price {
                 high = volatility;
+                high_moved = true;
             } else {
                 low = volatility;
             }
 
             // Check if our range is too small (meaning we've converged)
-            if (high - low).to_dec() < dec!(0.0001) {
+            if (high - low).to_dec() < IV_BISECTION_BRACKET {
+                if !high_moved {
+                    // Every midpoint priced below the target. The root is
+                    // bracketed only if the bracket top still prices at or
+                    // above it; otherwise the implied volatility exceeds the
+                    // bracket and the bisection did not converge (#652).
+                    let mut top = self.clone();
+                    top.implied_volatility = IV_BISECTION_MAX_VOLATILITY;
+                    let top_price = OptionPricing::calculate_price_black_scholes(&top)?;
+                    let top_price = if is_short { -top_price } else { top_price };
+                    if top_price < d_sub(target_price, IV_TOLERANCE, "pricing::iv::top")? {
+                        return Err(VolatilityError::NoConvergence {
+                            iterations: iteration,
+                            last_volatility: volatility,
+                        });
+                    }
+                }
                 return Ok(volatility);
             }
         }
@@ -400,6 +450,38 @@ impl OptionPricing for Options {
             iterations: MAX_ITERATIONS_IV,
             last_volatility: (high + low) / Positive::TWO,
         })
+    }
+}
+
+/// Top of the bisection bracket of
+/// [`OptionPricing::calculate_implied_volatility`]: 500 % per year.
+const IV_BISECTION_MAX_VOLATILITY: Positive = Positive::FIVE;
+
+/// Width at which the bisection bracket counts as converged, in volatility
+/// units (`0.01 %` per year).
+const IV_BISECTION_BRACKET: Decimal = dec!(0.0001);
+
+/// Builds the error for a target outside the no-arbitrage band.
+///
+/// `price` carries the magnitude of the quoted `market_price` (a short
+/// position quotes it negative); the reason names the signed long-equivalent
+/// target and the band it missed.
+#[cold]
+#[inline(never)]
+fn outside_band_error(
+    market_price: Decimal,
+    target_price: Decimal,
+    lower: Decimal,
+    upper: Decimal,
+) -> VolatilityError {
+    match Positive::new_decimal(market_price.abs()) {
+        Ok(price) => VolatilityError::InvalidPrice {
+            price,
+            reason: format!(
+                "target {target_price} is outside the no-arbitrage band [{lower}, {upper}], so no implied volatility exists"
+            ),
+        },
+        Err(e) => VolatilityError::PositiveError(e),
     }
 }
 
