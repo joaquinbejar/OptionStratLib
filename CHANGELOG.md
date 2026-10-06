@@ -661,6 +661,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`5 e^(-0.05)`), and `tests/convergence.rs` gains
   `test_monte_carlo_supplied_paths_discount_at_risk_free_rate`.
 
+- **Jump-diffusion walks jump with probability `λ·dt` per step** (#684). The
+  jump trial compared a standard normal draw with `λ·dt`, so it fired with
+  probability `Φ(λ·dt)`, about one half for every realistic intensity: a
+  one-jump-a-year walk on daily steps jumped on half of its steps instead of
+  0.4% of them. The trial now draws a genuine `U(0,1)` from the same per-path
+  generator with the new `decimal_uniform_sample_with`, so
+  `P(jump) = λ·dt`, `λ·dt >= 1` jumps on every step and `λ = 0` never
+  jumps. This changes every jump-diffusion path, seeded or not; a seeded
+  path stays reproducible bit for bit for its seed, only the stream differs.
+  The draw order per step is unchanged: diffusion normal, jump trial, then
+  the jump-size normal only when the trial fires. The jump-diffusion case of
+  `deterministic_simulation_test.rs` is re-baselined; no other seeded
+  fixture runs a jump-diffusion walk. Seeded tests check the jump count over
+  500,000 steps at `λ·dt = 0.004` and over 100,000 steps at `λ·dt = 0.1`
+  against the binomial mean within five standard errors, plus the
+  `λ·dt = 1` and `λ = 0` limits.
+
 - **The Heston and telegraph walk kernels report `Decimal` overflow instead
   of panicking** (#686). Three expressions in
   `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the
@@ -846,6 +863,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **`decimal_uniform_sample_with`, a `Decimal` uniform draw on `[0, 1)`**
+  (#684), in `optionstratlib_core::model::decimal` next to
+  `decimal_normal_sample_with`. It draws an integer `k` uniformly from
+  `0..10^18` and returns `k / 10^18`, so the range is exactly
+  `[0, 1 - 10^-18]`, no `f64` is involved, and `P(sample < p) = p` for any
+  threshold with at most 18 decimal places. The simulation kernels use it
+  for their Bernoulli trials.
 
 - **The Plotly and static-export gate is verified, not just wired** (#544).
   `make check-graph` now fails when any workspace package other than

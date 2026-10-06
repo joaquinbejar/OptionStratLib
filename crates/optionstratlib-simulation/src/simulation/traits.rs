@@ -11,7 +11,8 @@ use crate::simulation::{WalkParams, WalkType};
 use num_traits::ToPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample_with, finite_decimal, p_sqrt,
+    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample_with,
+    decimal_uniform_sample_with, finite_decimal, p_sqrt,
 };
 use optionstratlib_core::utils::deterministic_rng;
 use rand::Rng;
@@ -742,7 +743,11 @@ where
     }
 }
 
-/// Built-in jump-diffusion kernel, drawing its normal samples from `rng`.
+/// Built-in jump-diffusion kernel, drawing its normal and uniform samples
+/// from `rng`.
+///
+/// Each step draws the diffusion normal, then the uniform of the jump
+/// trial, then, only when the trial fires, the normal of the jump size.
 fn jump_diffusion_path<X, Y, R>(
     params: &WalkParams<X, Y>,
     rng: &mut R,
@@ -778,8 +783,9 @@ where
                 )?;
 
                 let drift_term = d_mul(drift, dt.to_dec(), "simulation::jump::drift")?;
-                let jump = if decimal_normal_sample_with(rng) < lambda_dt.to_dec() {
-                    // Bernoulli(λdt)
+                // Bernoulli(λdt) trial on a genuine U(0,1) draw (#684):
+                // `P(u < λdt) = λdt`, and a step with `λdt >= 1` always jumps.
+                let jump = if decimal_uniform_sample_with(rng) < lambda_dt.to_dec() {
                     d_add(
                         jump_mean,
                         d_mul(
@@ -1553,6 +1559,95 @@ mod tests_walk_type_able {
         let result = walker.jump_diffusion(&params)?;
 
         assert_eq!(result.len(), 6);
+        Ok(())
+    }
+
+    /// Counts the jumps of a seeded jump-diffusion path with no diffusion
+    /// and no drift, where every jump moves the price by exactly `+1`.
+    fn count_jumps(
+        steps: usize,
+        intensity: Positive,
+        dt: Positive,
+    ) -> Result<u64, SimulationError> {
+        let params = create_test_params(
+            steps + 1,
+            1.0,
+            100.0,
+            WalkType::JumpDiffusion {
+                dt,
+                drift: Decimal::ZERO,
+                volatility: Positive::ZERO,
+                intensity,
+                jump_mean: Decimal::ONE,
+                jump_volatility: Positive::ZERO,
+            },
+        );
+        let path = TestWalker {}.jump_diffusion(&params)?;
+        assert_eq!(path.len(), steps + 1);
+        let mut jumps = 0_u64;
+        for pair in path.windows(2) {
+            let increment = pair[1].to_dec() - pair[0].to_dec();
+            if increment == Decimal::ONE {
+                jumps += 1;
+            } else {
+                assert_eq!(increment, Decimal::ZERO, "step moved without a jump");
+            }
+        }
+        Ok(jumps)
+    }
+
+    /// Asserts that `jumps` out of `steps` Bernoulli(`p`) trials lie within
+    /// five standard errors, `5 * sqrt(steps * p * (1 - p))`, of the mean
+    /// `steps * p`. A correct kernel misses the band with probability below
+    /// 6e-7 for any seed.
+    fn assert_bernoulli_frequency(jumps: u64, steps: usize, p: f64) {
+        let n = steps as f64;
+        let mean = n * p;
+        let bound = 5.0 * (n * p * (1.0 - p)).sqrt();
+        assert!(
+            (jumps as f64 - mean).abs() < bound,
+            "{jumps} jumps in {steps} steps, expected {mean} +- {bound}"
+        );
+    }
+
+    #[test]
+    fn test_jump_diffusion_daily_jump_frequency_matches_lambda_dt() -> Result<(), SimulationError> {
+        // #684: one jump a year on daily steps, `λ·dt = 1 * 0.004 = 0.004`.
+        // 500_000 steps expect 2_000 jumps, standard error 44.6, so the band
+        // is 2_000 +- 223. The former normal-draw trial fired on about half
+        // of the steps, `Φ(0.004) ≈ 0.5016`, some 250_800 jumps.
+        const STEPS: usize = 500_000;
+        let jumps = count_jumps(STEPS, Positive::ONE, pos_or_panic!(0.004))?;
+        assert_bernoulli_frequency(jumps, STEPS, 0.004);
+        Ok(())
+    }
+
+    #[test]
+    fn test_jump_diffusion_frequent_jump_frequency_matches_lambda_dt() -> Result<(), SimulationError>
+    {
+        // `λ·dt = 25 * 0.004 = 0.1`: 100_000 steps expect 10_000 jumps,
+        // standard error 94.9, band 10_000 +- 474.
+        const STEPS: usize = 100_000;
+        let jumps = count_jumps(STEPS, pos_or_panic!(25.0), pos_or_panic!(0.004))?;
+        assert_bernoulli_frequency(jumps, STEPS, 0.1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_jump_diffusion_lambda_dt_at_least_one_jumps_every_step() -> Result<(), SimulationError>
+    {
+        // `λ·dt = 1` is the Bernoulli limit: the uniform trial never exceeds it.
+        const STEPS: usize = 1_000;
+        let jumps = count_jumps(STEPS, pos_or_panic!(250.0), pos_or_panic!(0.004))?;
+        assert_eq!(jumps, STEPS as u64);
+        Ok(())
+    }
+
+    #[test]
+    fn test_jump_diffusion_zero_intensity_never_jumps() -> Result<(), SimulationError> {
+        const STEPS: usize = 1_000;
+        let jumps = count_jumps(STEPS, Positive::ZERO, pos_or_panic!(0.004))?;
+        assert_eq!(jumps, 0);
         Ok(())
     }
 

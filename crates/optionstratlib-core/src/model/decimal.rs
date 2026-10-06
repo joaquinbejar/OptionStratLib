@@ -6,8 +6,8 @@
 use crate::error::decimal::DecimalError;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::{Positive, PositiveError};
-use rand::Rng;
 use rand::distr::Distribution;
+use rand::{Rng, RngExt};
 use rand_distr::StandardNormal;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use rust_decimal_macros::dec;
@@ -426,6 +426,50 @@ pub fn decimal_normal_sample() -> Decimal {
 pub fn decimal_normal_sample_with<R: Rng + ?Sized>(rng: &mut R) -> Decimal {
     let sample: f64 = StandardNormal.sample(rng);
     Decimal::from_f64(sample).unwrap_or(Decimal::ZERO)
+}
+
+/// Decimal places of a [`decimal_uniform_sample_with`] draw.
+const UNIFORM_SAMPLE_SCALE: u32 = 18;
+
+/// Number of grid points of a [`decimal_uniform_sample_with`] draw,
+/// `10^UNIFORM_SAMPLE_SCALE`; below `i64::MAX`, so every point is an exact
+/// `i64` mantissa.
+const UNIFORM_SAMPLE_GRID: i64 = 1_000_000_000_000_000_000;
+
+/// Draws a uniform sample on `[0, 1)` from `rng`, as a `Decimal`.
+///
+/// The sample is `k / 10^18`, with the integer `k` drawn uniformly from
+/// `0..10^18` by [`rand::RngExt::random_range`]. Its range is therefore
+/// `[0, 1 - 10^-18]`: zero is reachable, one never is. No `f64` is
+/// involved, so the value is exact and identical on every platform.
+///
+/// For any threshold `p` in `[0, 1]` with at most 18 decimal places,
+/// `P(sample < p) = p` exactly, up to the bias of `rand`'s single-sample
+/// range method (below `2^-64` per grid point). A threshold with more
+/// places is rounded up to the grid, an error below `10^-18`. This makes
+/// `sample < p` the Bernoulli(`p`) trial of jump and regime-switch
+/// decisions; `p >= 1` always fires and `p <= 0` never does.
+///
+/// The generator advances by the one or two `u64` draws the range method
+/// makes, so a seeded `rng` yields the same sequence of samples on every
+/// run.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib_core::model::decimal::decimal_uniform_sample_with;
+/// use optionstratlib_core::utils::deterministic_rng;
+/// use rust_decimal::Decimal;
+///
+/// let mut rng = deterministic_rng(42);
+/// let u = decimal_uniform_sample_with(&mut rng);
+/// assert!(u >= Decimal::ZERO && u < Decimal::ONE);
+/// ```
+#[must_use]
+#[inline]
+pub fn decimal_uniform_sample_with<R: Rng + ?Sized>(rng: &mut R) -> Decimal {
+    let k = rng.random_range(0..UNIFORM_SAMPLE_GRID);
+    Decimal::new(k, UNIFORM_SAMPLE_SCALE)
 }
 
 /// Scale applied to banker's-rounding divisions in [`d_div`].
@@ -1216,6 +1260,110 @@ mod tests_random_generation {
             dec!(0.2625763573739537),
         ];
         assert_eq!(draws, expected);
+    }
+
+    #[test]
+    fn test_decimal_uniform_sample_with_range_is_half_open_unit_interval() {
+        let mut rng = crate::utils::deterministic_rng(SEED);
+        for _ in 0..100_000 {
+            let u = decimal_uniform_sample_with(&mut rng);
+            assert!(u >= Decimal::ZERO, "{u} below zero");
+            assert!(u < Decimal::ONE, "{u} not below one");
+            assert_eq!(u.scale(), UNIFORM_SAMPLE_SCALE, "{u} off the grid");
+        }
+    }
+
+    #[test]
+    fn test_decimal_uniform_sample_with_same_seed_is_identical() {
+        let mut first = crate::utils::deterministic_rng(42);
+        let mut second = crate::utils::deterministic_rng(42);
+        for _ in 0..1000 {
+            assert_eq!(
+                decimal_uniform_sample_with(&mut first),
+                decimal_uniform_sample_with(&mut second)
+            );
+        }
+    }
+
+    #[test]
+    fn test_decimal_uniform_sample_with_seed_pins_first_draws() {
+        let mut rng = crate::utils::deterministic_rng(42);
+        let draws: Vec<Decimal> = (0..3)
+            .map(|_| decimal_uniform_sample_with(&mut rng))
+            .collect();
+        // Recorded from this implementation (`StdRng`, rand 0.10).
+        let expected = vec![
+            dec!(0.526557409002773877),
+            dec!(0.542725209903143899),
+            dec!(0.636465099143894996),
+        ];
+        assert_eq!(draws, expected);
+    }
+
+    #[test]
+    fn test_decimal_uniform_sample_with_moments_match_uniform() {
+        // U(0,1) has mean 1/2 and variance 1/12. Over N draws the sample
+        // mean has standard error sqrt(1/12 / N) = 0.000913 at N = 100_000;
+        // the bound is five standard errors. The empirical frequency of
+        // `u < p` is Binomial(N, p) / N, standard error sqrt(p (1-p) / N),
+        // and each is checked within five standard errors as well.
+        const N: usize = 100_000;
+        let mut rng = crate::utils::deterministic_rng(SEED);
+        let thresholds = [dec!(0.004), dec!(0.1), dec!(0.5), dec!(0.9)];
+        let mut below = [0_u64; 4];
+        let mut sum = 0.0_f64;
+        for _ in 0..N {
+            let u = decimal_uniform_sample_with(&mut rng);
+            sum += u.to_f64().unwrap();
+            for (count, p) in below.iter_mut().zip(thresholds) {
+                if u < p {
+                    *count += 1;
+                }
+            }
+        }
+        let n = N as f64;
+        let mean_se = (1.0 / 12.0 / n).sqrt();
+        assert!((sum / n - 0.5).abs() < 5.0 * mean_se, "mean {}", sum / n);
+        for (count, p) in below.iter().zip(thresholds) {
+            let p = p.to_f64().unwrap();
+            let freq = *count as f64 / n;
+            let se = (p * (1.0 - p) / n).sqrt();
+            assert!((freq - p).abs() < 5.0 * se, "P(u < {p}) = {freq}");
+        }
+    }
+
+    /// Generator that returns the same 64-bit word on every draw.
+    struct ConstantWord(u64);
+
+    impl rand::TryRng for ConstantWord {
+        type Error = std::convert::Infallible;
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+            Ok((self.0 >> 32) as u32)
+        }
+
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+            Ok(self.0)
+        }
+
+        fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+            dst.fill(0);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_decimal_uniform_sample_with_extreme_words_hit_grid_ends() {
+        // The all-zero word maps to the lowest grid point, the all-ones word
+        // to the highest: the range is exactly `[0, 1 - 10^-18]`.
+        assert_eq!(
+            decimal_uniform_sample_with(&mut ConstantWord(0)),
+            Decimal::ZERO
+        );
+        assert_eq!(
+            decimal_uniform_sample_with(&mut ConstantWord(u64::MAX)),
+            dec!(0.999999999999999999)
+        );
     }
 }
 
