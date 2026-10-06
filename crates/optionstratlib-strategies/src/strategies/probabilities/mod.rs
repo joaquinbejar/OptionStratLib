@@ -213,12 +213,14 @@
 //!
 //! Uses log-normal distribution with drift:
 //! ```text
-//! ln(ST/S0) ~ N(μT, σ²T)
+//! ln(ST/S0) ~ N((μ - σ²/2)T, σ²T)
 //! ```
 //! where:
 //! - ST: Price at time T
 //! - S0: Current price
-//! - μ: Drift rate
+//! - μ: Arithmetic drift rate of the price (the risk-free rate, plus the
+//!   trend drift times its confidence when a trend is given); with μ = r,
+//!   P(ST < K) = N(-d2)
 //! - σ: Volatility
 //! - T: Time to expiration
 //!

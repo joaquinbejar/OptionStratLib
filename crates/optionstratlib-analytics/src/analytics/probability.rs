@@ -56,10 +56,15 @@ pub(crate) fn flat_volatility_0_2() -> VolatilityAdjustment {
 /// Price trend applied on top of the risk-free drift by the probability
 /// kernels.
 ///
-/// The kernels drift the lognormal distribution at
-/// `risk_free_rate + drift_rate * confidence`. Both fields are dimensionless
-/// and private: [`PriceTrend::new`] is the only way to build one, so a
-/// `confidence` outside `[0, 1]` cannot reach a kernel.
+/// The kernels drift the price at `risk_free_rate + drift_rate * confidence`.
+/// That is the arithmetic drift `mu` (the expected return of the price), not
+/// the drift of its logarithm: the kernels apply the lognormal convexity
+/// correction themselves and drift `ln S` at `mu - sigma^2 / 2`, so a
+/// `drift_rate` read off as an expected return is passed as is (#664).
+///
+/// Both fields are dimensionless and private: [`PriceTrend::new`] is the
+/// only way to build one, so a `confidence` outside `[0, 1]` cannot reach a
+/// kernel.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PriceTrend {
     /// Annual drift rate, as a fraction (`0.1` is 10%); positive for an
@@ -133,6 +138,19 @@ fn trend_field_to_f64(name: &str, value: Decimal) -> Result<f64, ProbabilityErro
 /// This function estimates the probability of a stock following a log-normal distribution
 /// to reach a specified target price before expiration. It also provides the probability
 /// of the stock price being below or above the target price at the expiration date.
+///
+/// With `sigma` the adjusted volatility, `T` the years to expiry and `mu` the
+/// arithmetic drift (`risk_free_rate`, plus `drift_rate * confidence` when a
+/// `trend` is given),
+///
+/// ```text
+/// z = (ln(K / S) - (mu - sigma^2 / 2) * T) / (sigma * sqrt(T))
+/// P(S_T < K) = N(z)        P(S_T >= K) = 1 - N(z)
+/// ```
+///
+/// so with no trend `z = -d2` and `P(S_T < K) = N(-d2)`, the risk-neutral
+/// probability that a call at `K` expires out of the money (Hull, *Options,
+/// Futures, and Other Derivatives*, ch. 15).
 ///
 /// # Parameters
 ///
@@ -264,7 +282,13 @@ pub fn calculate_single_point_probability(
             ),
         })
     })?;
-    let z_score: Decimal = f2du!((log_ratio_f - drift_rate * time_to_expiry) / std_dev)?;
+    // `drift_rate` is the arithmetic drift `mu` of the price, so the log price
+    // drifts at `mu - sigma^2 / 2` (Ito). With `mu = r` the threshold is
+    // `-d2` and `P(S_T < K) = N(-d2)` (Hull, ch. 15); omitting the convexity
+    // term understated it for every `sigma > 0` (#664).
+    let sigma = volatility.to_f64();
+    let log_drift = drift_rate - sigma * sigma / 2.0;
+    let z_score: Decimal = f2du!((log_ratio_f - log_drift * time_to_expiry) / std_dev)?;
 
     // Calculate probabilities using the standard normal distribution
     let prob_below: Positive = Positive::new_decimal(big_n(z_score)?).unwrap_or(Positive::ZERO);
@@ -554,8 +578,13 @@ mod tests_single_point_probability {
         assert!(result.is_ok());
         let (prob_below, prob_above) = result.unwrap();
         assert_relative_eq!((prob_above + prob_below).to_f64(), 1.0, epsilon = 1e-10);
-        assert_relative_eq!(prob_below.to_f64(), 0.5, epsilon = 1e-10);
-        assert_relative_eq!(prob_above.to_f64(), 0.5, epsilon = 1e-10);
+        // At the money with zero drift the log price drifts at
+        // `-sigma^2 / 2`, so `P(S_T < S) = N(sigma sqrt(T) / 2) = N(0.4)`, not
+        // one half: the median of a lognormal price sits below its mean.
+        // #664: 0.5 -> 0.655421741610324 (below), 0.5 -> 0.344578258389676
+        // (above).
+        assert_relative_eq!(prob_below.to_f64(), 0.655_421_741_610_324, epsilon = 1e-10);
+        assert_relative_eq!(prob_above.to_f64(), 0.344_578_258_389_676, epsilon = 1e-10);
     }
 
     #[test]
@@ -1014,30 +1043,39 @@ mod tests_price_trend {
     }
 
     /// Pinned from the `f64`-field kernel (`PriceTrend { drift_rate: -0.37,
-    /// confidence: 0.65 }`) before the fields became `Decimal` (#656).
+    /// confidence: 0.65 }`) before the fields became `Decimal` (#656), then
+    /// re-baselined when the threshold gained the lognormal `-sigma^2 / 2`
+    /// term (#664); each value agrees with the closed-form `N(z)` to `1e-11`.
     #[test]
     fn test_price_trend_kernel_output_unchanged_matches_f64_fields() {
         let trend = || Some(price_trend(dec!(-0.37), dec!(0.65)));
 
+        // #664: 0.895412344777716 -> 0.903902952229174 and
+        // 0.104587655222284 -> 0.096097047770826.
         let (below, above) = below_above(trend(), pos_or_panic!(110.0));
-        assert_eq!(below.to_dec(), dec!(0.895412344777716));
-        assert_eq!(above.to_dec(), dec!(0.104587655222284));
+        assert_eq!(below.to_dec(), dec!(0.903902952229174));
+        assert_eq!(above.to_dec(), dec!(0.096097047770826));
 
+        // #664: 0.2950713010903496 -> 0.3119431542059403,
+        // 0.6003410436873664 -> 0.5919597980232337 and
+        // 0.104587655222284 -> 0.096097047770826.
         let (below, inside, above) = in_range(trend());
-        assert_eq!(below.to_dec(), dec!(0.2950713010903496));
-        assert_eq!(inside.to_dec(), dec!(0.6003410436873664));
-        assert_eq!(above.to_dec(), dec!(0.104587655222284));
+        assert_eq!(below.to_dec(), dec!(0.3119431542059403));
+        assert_eq!(inside.to_dec(), dec!(0.5919597980232337));
+        assert_eq!(above.to_dec(), dec!(0.096097047770826));
 
         // The trend moves the result: without it the same inputs give a
         // different probability, so the pin above exercises the drift.
+        // #664: 0.82862940208696 -> 0.840628037745865.
         let (below_no_trend, _) = below_above(None, pos_or_panic!(110.0));
-        assert_eq!(below_no_trend.to_dec(), dec!(0.82862940208696));
+        assert_eq!(below_no_trend.to_dec(), dec!(0.840628037745865));
     }
 
     /// Fields with 15 and 28 decimal places, where `Decimal::to_f64` lands one
     /// ULP away from the nearest `f64`. Pinned from the `f64`-field kernel fed
     /// the nearest `f64`s (`drift_rate: 2.999789999999902`, `confidence:
-    /// 0.12345678901234568`).
+    /// 0.12345678901234568`), then re-baselined when the threshold gained the
+    /// lognormal `-sigma^2 / 2` term (#664).
     #[test]
     fn test_price_trend_kernel_many_decimal_places_matches_f64_fields() {
         let trend = || {
@@ -1047,13 +1085,177 @@ mod tests_price_trend {
             ))
         };
 
+        // #664: 0.682928086717717 -> 0.699924018145762 and
+        // 0.317071913282283 -> 0.300075981854238.
         let (below, above) = below_above(trend(), pos_or_panic!(110.0));
-        assert_eq!(below.to_dec(), dec!(0.682928086717717));
-        assert_eq!(above.to_dec(), dec!(0.317071913282283));
+        assert_eq!(below.to_dec(), dec!(0.699924018145762));
+        assert_eq!(above.to_dec(), dec!(0.300075981854238));
 
+        // #664: 0.0936575883560122 -> 0.10199178784555,
+        // 0.5892704983617048 -> 0.597932230300212 and
+        // 0.317071913282283 -> 0.300075981854238.
         let (below, inside, above) = in_range(trend());
-        assert_eq!(below.to_dec(), dec!(0.0936575883560122));
-        assert_eq!(inside.to_dec(), dec!(0.5892704983617048));
-        assert_eq!(above.to_dec(), dec!(0.317071913282283));
+        assert_eq!(below.to_dec(), dec!(0.10199178784555));
+        assert_eq!(inside.to_dec(), dec!(0.597932230300212));
+        assert_eq!(above.to_dec(), dec!(0.300075981854238));
+    }
+}
+
+/// The single-point kernel against the closed-form lognormal threshold
+/// (#664): with no trend `P(S_T < K) = N(-d2)`, with
+/// `d2 = (ln(S / K) + (r - sigma^2 / 2) T) / (sigma sqrt(T))` (Hull,
+/// *Options, Futures, and Other Derivatives*, ch. 15). The references are
+/// `0.5 * erfc(d2 / sqrt(2))` evaluated in double precision outside the
+/// library.
+#[cfg(test)]
+mod tests_lognormal_threshold {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// Absolute agreement with the reference. The kernel's normal CDF
+    /// (`big_n`, through `statrs`) is accurate to about `2e-11` in this range:
+    /// `big_n(0.807915)` returns `0.790430242158675` where the CDF is
+    /// `0.790430242178701`. The threshold itself is exact to the last digits
+    /// of the `Decimal` inputs, so `1e-10` still separates the corrected
+    /// threshold from the uncorrected one by seven orders of magnitude (the
+    /// smallest gap in the table below is `7.4e-4`).
+    const REFERENCE_TOLERANCE: f64 = 1e-10;
+
+    fn volatility(sigma: f64) -> VolatilityAdjustment {
+        VolatilityAdjustment {
+            base_volatility: pos_or_panic!(sigma),
+            std_dev_adjustment: Positive::ZERO,
+        }
+    }
+
+    fn single_point(
+        spot: f64,
+        strike: f64,
+        sigma: f64,
+        days: f64,
+        rate: Decimal,
+        trend: Option<PriceTrend>,
+    ) -> (Positive, Positive) {
+        match calculate_single_point_probability(
+            &pos_or_panic!(spot),
+            &pos_or_panic!(strike),
+            volatility(sigma),
+            trend,
+            &ExpirationDate::Days(pos_or_panic!(days)),
+            Some(rate),
+        ) {
+            Ok(pair) => pair,
+            Err(e) => panic!("kernel evaluates an ordinary input: {e}"),
+        }
+    }
+
+    fn assert_close(actual: Positive, expected: f64, case: &str) {
+        let diff = (actual.to_f64() - expected).abs();
+        assert!(
+            diff < REFERENCE_TOLERANCE,
+            "{case}: got {actual}, N(-d2) = {expected}, diff {diff:e}"
+        );
+    }
+
+    /// `(spot, strike, sigma, days, rate, N(-d2))`; the first row is Hull's
+    /// worked example (S = 42, K = 40, r = 10%, sigma = 20%, T = 0.5,
+    /// d2 = 0.6278).
+    const CASES: [(f64, f64, f64, f64, Decimal, f64); 6] = [
+        (42.0, 40.0, 0.2, 182.5, dec!(0.1), 0.265_053_963_154_091_47),
+        (100.0, 105.0, 0.2, 30.0, dec!(0.05), 0.790_430_264_386_178_2),
+        (
+            100.0,
+            100.0,
+            0.3,
+            365.0,
+            dec!(0.05),
+            0.493_351_269_806_317_44,
+        ),
+        (100.0, 90.0, 0.5, 730.0, dec!(0.02), 0.558_821_741_169_794_4),
+        (50.0, 60.0, 0.15, 91.25, dec!(0.0), 0.993_215_097_131_548_5),
+        (100.0, 105.0, 0.8, 365.0, dec!(0.0), 0.677_596_286_987_641_4),
+    ];
+
+    #[test]
+    fn test_single_point_no_trend_matches_n_minus_d2() {
+        for (spot, strike, sigma, days, rate, expected) in CASES {
+            let (below, _) = single_point(spot, strike, sigma, days, rate, None);
+            let case = format!("S={spot} K={strike} sigma={sigma} days={days} r={rate}");
+            assert_close(below, expected, &case);
+        }
+    }
+
+    /// The two tails partition the outcome space: `P(S_T < K) +
+    /// P(S_T >= K) = 1`, and the upper tail is `N(d2)`.
+    #[test]
+    fn test_single_point_tails_sum_to_one_and_upper_is_n_d2() {
+        for (spot, strike, sigma, days, rate, expected) in CASES {
+            let (below, above) = single_point(spot, strike, sigma, days, rate, None);
+            let case = format!("S={spot} K={strike} sigma={sigma} days={days} r={rate}");
+            assert!(
+                (below.to_f64() + above.to_f64() - 1.0).abs() < REFERENCE_TOLERANCE,
+                "{case}: {below} + {above} != 1"
+            );
+            assert_close(above, 1.0 - expected, &case);
+        }
+    }
+
+    /// The range kernel is the difference of the two single-point
+    /// probabilities, so it inherits the corrected threshold: the mass in
+    /// `[90, 110)` is `N(-d2(110)) - N(-d2(90))`.
+    #[test]
+    fn test_price_probability_range_matches_n_minus_d2_difference() {
+        // S = 100, sigma = 0.25, T = 0.5, r = 0.03.
+        let below_90 = 0.276_766_764_798_688_95;
+        let below_110 = 0.706_328_827_515_829_9;
+        let (below, inside, above) = match calculate_price_probability(
+            &Positive::HUNDRED,
+            &pos_or_panic!(90.0),
+            &pos_or_panic!(110.0),
+            volatility(0.25),
+            None,
+            &ExpirationDate::Days(pos_or_panic!(182.5)),
+            Some(dec!(0.03)),
+        ) {
+            Ok(triple) => triple,
+            Err(e) => panic!("kernel evaluates an ordinary input: {e}"),
+        };
+        assert_close(below, below_90, "below 90");
+        assert_close(inside, below_110 - below_90, "in [90, 110)");
+        assert_close(above, 1.0 - below_110, "above 110");
+        assert_eq!(
+            below.to_dec() + inside.to_dec() + above.to_dec(),
+            Decimal::ONE
+        );
+    }
+
+    /// The trend drift is an arithmetic drift `mu`, corrected by
+    /// `-sigma^2 / 2` like the risk-free rate: a full-confidence trend of
+    /// `mu` over a zero rate gives the same threshold as a rate of `mu` and no
+    /// trend, `N(-d2)` evaluated at `r = mu`.
+    #[test]
+    fn test_single_point_trend_drift_is_arithmetic_and_convexity_corrected() {
+        let trend =
+            PriceTrend::new(dec!(0.1), Decimal::ONE).unwrap_or_else(|e| panic!("valid trend: {e}"));
+        let (with_trend, _) = single_point(42.0, 40.0, 0.2, 182.5, dec!(0.0), Some(trend));
+        let (with_rate, _) = single_point(42.0, 40.0, 0.2, 182.5, dec!(0.1), None);
+        assert_eq!(with_trend, with_rate);
+        assert_close(with_trend, 0.265_053_963_154_091_47, "trend mu = 0.1");
+
+        // A trend held with zero confidence leaves the risk-neutral threshold.
+        let ignored = PriceTrend::new(dec!(0.4), Decimal::ZERO)
+            .unwrap_or_else(|e| panic!("valid trend: {e}"));
+        let (with_ignored, _) = single_point(42.0, 40.0, 0.2, 182.5, dec!(0.1), Some(ignored));
+        assert_eq!(with_ignored, with_rate);
+    }
+
+    /// At the money with `r = sigma^2 / 2` the log drift is zero, so the
+    /// median of `S_T` is the spot and the probability is exactly one half;
+    /// the uncorrected threshold put it at `N(-sigma sqrt(T) / 2)`.
+    #[test]
+    fn test_single_point_zero_log_drift_at_the_money_is_one_half() {
+        let (below, above) = single_point(100.0, 100.0, 0.2, 365.0, dec!(0.02), None);
+        assert_close(below, 0.5, "below");
+        assert_close(above, 0.5, "above");
     }
 }

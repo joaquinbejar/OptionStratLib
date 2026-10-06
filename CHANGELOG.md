@@ -678,6 +678,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the binomial mean within five standard errors, plus the
   `λ·dt = 1` and `λ = 0` limits.
 
+- **The price-probability kernel uses the lognormal threshold, so the
+  risk-neutral case is `N(-d2)`** (#664). `calculate_single_point_probability`
+  in `crates/optionstratlib-analytics/src/analytics/probability.rs` computed
+  `z = (ln(K / S) - mu T) / (sigma sqrt(T))`, which leaves out the Ito
+  convexity term: the log price drifts at `mu - sigma^2 / 2`, not `mu`. It now
+  computes `z = (ln(K / S) - (mu - sigma^2 / 2) T) / (sigma sqrt(T))`, so with
+  no trend `P(S_T < K) = N(-d2)` (Hull, ch. 15). The drift input is the
+  arithmetic drift: `risk_free_rate`, plus `drift_rate * confidence` when a
+  `PriceTrend` is given, corrected by `-sigma^2 / 2` like the rate; the
+  `PriceTrend` and kernel docs state it, and the strategies probability docs
+  give the model as `ln(S_T / S_0) ~ N((mu - sigma^2 / 2) T, sigma^2 T)`.
+  - Which results change: every probability the kernel returns for
+    `sigma > 0`, and everything built on it: `calculate_price_probability`,
+    `ProfitLossRange::calculate_probability`, and the strategy
+    `probability_of_profit`, `probability_of_loss`,
+    `calculate_extreme_probabilities`, `expected_value` and
+    `analyze_probabilities`. The probability below a target rises, by
+    `N(-d2) - N(-d2 - sigma sqrt(T) / 2)`: S = 100, K = 105, sigma = 0.2,
+    T = 30/365, r = 0.05 moved from 0.78208 to 0.79043.
+  - New regressions against closed-form `N(-d2)` for six `(S, K, sigma, T,
+    r)` including Hull's worked example (S = 42, K = 40, r = 10%,
+    sigma = 20%, T = 0.5, `N(-d2) = 0.26505`), the tail partition
+    `P(S_T < K) + P(S_T >= K) = 1`, the range kernel as the difference of two
+    `N(-d2)` values, and a trend of `mu` matching a rate of `mu`.
+  - Re-baselined pins, each with a comment naming #664: in
+    `probability.rs`, `tests_price_trend` (trend -0.37 / 0.65: below 110
+    0.895412344777716 -> 0.903902952229174, above 0.104587655222284 ->
+    0.096097047770826, range triple 0.2950713010903496 / 0.6003410436873664
+    -> 0.3119431542059403 / 0.5919597980232337, no trend 0.82862940208696 ->
+    0.840628037745865; trend 2.999789999999902 / 0.1234567890123456789012345678:
+    below 0.682928086717717 -> 0.699924018145762, above 0.317071913282283 ->
+    0.300075981854238, range 0.0936575883560122 / 0.5892704983617048 ->
+    0.10199178784555 / 0.597932230300212) and `test_target_equals_current`
+    (at the money, zero drift, sigma 0.8, T = 1: 0.5 / 0.5 -> 0.655421741610324
+    / 0.344578258389676, `N(0.4)`); in the strategies
+    `probabilities/core.rs`, the `BullCallSpread` expected value with a
+    15-place drift (0.002802439458791824 -> 0.003104587227155649). No
+    tolerance changed.
+
 - **The Heston and telegraph walk kernels report `Decimal` overflow instead
   of panicking** (#686). Three expressions in
   `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the
