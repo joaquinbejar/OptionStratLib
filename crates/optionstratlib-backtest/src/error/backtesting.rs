@@ -44,6 +44,23 @@ pub enum BacktestError {
     /// A value that must stay strictly positive left its range.
     #[error(transparent)]
     Positive(#[from] optionstratlib_core::model::PositiveError),
+
+    /// A run counter kept by the backtest reached the top of its range.
+    #[error("backtest counter `{counter}` overflowed")]
+    CounterOverflow {
+        /// Name of the counter that could not advance.
+        counter: &'static str,
+    },
+}
+
+impl BacktestError {
+    /// Creates a [`BacktestError::CounterOverflow`] for `counter`.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn counter_overflow(counter: &'static str) -> Self {
+        BacktestError::CounterOverflow { counter }
+    }
 }
 
 impl From<PricingError> for BacktestError {
@@ -78,5 +95,25 @@ impl From<SimulationError> for BacktestError {
     #[inline]
     fn from(error: SimulationError) -> Self {
         BacktestError::Simulation(Box::new(error))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_counter_overflow_names_the_counter() {
+        let error = BacktestError::counter_overflow("total_simulations");
+        assert!(matches!(
+            error,
+            BacktestError::CounterOverflow {
+                counter: "total_simulations"
+            }
+        ));
+        assert_eq!(
+            error.to_string(),
+            "backtest counter `total_simulations` overflowed"
+        );
     }
 }

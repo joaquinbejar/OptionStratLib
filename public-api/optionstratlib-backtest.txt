@@ -139,8 +139,9 @@ impl optionstratlib_backtest::backtesting::stats::SimulationStats
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::statistics(&self) -> core::result::Result<optionstratlib_simulation::simulation::outcome::PathStatistics, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::default() -> Self
 pub mod optionstratlib_backtest::backtesting::strategy_simulation
@@ -426,8 +427,9 @@ impl optionstratlib_backtest::backtesting::stats::SimulationStats
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
-pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::statistics(&self) -> core::result::Result<optionstratlib_simulation::simulation::outcome::PathStatistics, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_backtest::error::BacktestError>
 impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
 pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::default() -> Self
 pub struct optionstratlib_backtest::backtesting::SimulationStatsResult
@@ -519,12 +521,16 @@ impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X
 pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
 pub mod optionstratlib_backtest::error
 pub enum optionstratlib_backtest::error::BacktestError
+pub optionstratlib_backtest::error::BacktestError::CounterOverflow
+pub optionstratlib_backtest::error::BacktestError::CounterOverflow::counter: &'static str
 pub optionstratlib_backtest::error::BacktestError::Decimal(alloc::boxed::Box<optionstratlib_core::error::decimal::DecimalError>)
 pub optionstratlib_backtest::error::BacktestError::Options(alloc::boxed::Box<optionstratlib_core::error::options::OptionsError>)
 pub optionstratlib_backtest::error::BacktestError::Positive(positive::error::PositiveError)
 pub optionstratlib_backtest::error::BacktestError::Pricing(alloc::boxed::Box<optionstratlib_pricing::error::pricing::PricingError>)
 pub optionstratlib_backtest::error::BacktestError::Simulation(alloc::boxed::Box<optionstratlib_simulation::error::simulation::SimulationError>)
 pub optionstratlib_backtest::error::BacktestError::Strategy(alloc::boxed::Box<optionstratlib_strategies::error::strategies::StrategyError>)
+impl optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::counter_overflow(&'static str) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_backtest::error::BacktestError
 pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_backtest::error::BacktestError
