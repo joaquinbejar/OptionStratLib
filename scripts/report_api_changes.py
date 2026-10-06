@@ -154,6 +154,60 @@ def parse_report(text: str, returncode: int, tool: str, lints: set[str]) -> set[
     return findings
 
 
+def manifest_features_fallback(text: str) -> dict[str, list[str]]:
+    """The `[features]` table of a Cargo manifest, without `tomllib`.
+
+    Python before 3.11 has no TOML parser. This reads only what a facade
+    `[features]` table holds: `name = [ "feature", ... ]` entries, arrays
+    possibly spanning lines, comments after `#`. Anything else in the table
+    is an error, never a silent skip.
+    """
+    section = re.search(r"^\[features\][ \t]*$(.*?)(?=^\[|\Z)", text, re.M | re.S)
+    if section is None:
+        raise ReportError("manifest has no [features] table")
+    body = "\n".join(line.split("#", 1)[0] for line in section.group(1).splitlines())
+    features: dict[str, list[str]] = {}
+    position = 0
+    entry = re.compile(r"\s*([A-Za-z0-9_-]+)\s*=\s*\[([^\]]*)\]\s*", re.S)
+    while body[position:].strip():
+        match = entry.match(body, position)
+        if match is None:
+            raise ReportError(f"unrecognised [features] entry: {body[position:].strip()[:60]!r}")
+        items = [item.strip() for item in match.group(2).split(",") if item.strip()]
+        if not all(re.fullmatch(r'"[^"]*"', item) for item in items):
+            raise ReportError(f"feature {match.group(1)!r} has a non-string member")
+        features[match.group(1)] = [item[1:-1] for item in items]
+        position = match.end()
+    return features
+
+
+def manifest_features(text: str) -> dict[str, list[str]]:
+    """The `[features]` table of a Cargo manifest, as `name -> members`."""
+    try:
+        import tomllib
+    except ImportError:  # Python before 3.11.
+        return manifest_features_fallback(text)
+    features = tomllib.loads(text).get("features")
+    if not isinstance(features, dict):
+        raise ReportError("manifest has no [features] table")
+    return features
+
+
+def default_surface_drift(manifest_default: list[str], surface_default: list[str]) -> str | None:
+    """Why `SURFACES["default"]` no longer is the manifest default, or None.
+
+    Order does not change the surface, so the lists compare as sets; a
+    duplicate on either side is still drift.
+    """
+    if len(set(surface_default)) == len(surface_default) and len(set(manifest_default)) == len(manifest_default):
+        if set(surface_default) == set(manifest_default):
+            return None
+    return (
+        f'SURFACES["default"] lists {surface_default} but the root Cargo.toml '
+        f"[features] default is {manifest_default}; update SURFACES[\"default\"] to match"
+    )
+
+
 def git(*args: str, cwd: Path = ROOT) -> str:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
 
@@ -270,16 +324,85 @@ def self_test() -> int:
     ok = parse_report(coloured, 0, tool, lints) == set()
     failures += 0 if ok else 1
     print(f"self-test {'ok' if ok else 'FAIL'}: ANSI-coloured clean report yields no finding")
+    failures += self_test_surfaces()
     return 1 if failures else 0
+
+
+def self_test_surfaces() -> int:
+    """The hand-written surfaces still describe the facade manifest (#688)."""
+    failures = 0
+    manifest = (ROOT / "Cargo.toml").read_text()
+    try:
+        features = manifest_features(manifest)
+        default = features.get("default")
+        if not isinstance(default, list):
+            raise ReportError("root Cargo.toml has no [features] default list")
+        drift = default_surface_drift(default, SURFACES["default"]["features"])
+        ok, detail = drift is None, drift or f"{len(default)} features"
+    except ReportError as error:
+        features, ok, detail = {}, False, str(error)
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: the default surface is the root Cargo.toml default ({detail})")
+    # A renamed or removed feature would make `cargo semver-checks` reject
+    # the surface only in CI; name it here instead.
+    named = {feature for surface in SURFACES.values() for feature in surface.get("features", [])}
+    missing = sorted(named - set(features))
+    ok = bool(features) and not missing
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: every surface feature is a facade feature (missing: {missing})")
+    # The comparison itself: a difference fails naming both lists, and
+    # order alone is no difference.
+    drift = default_surface_drift(["pricing", "io"], ["pricing"])
+    ok = drift is not None and "['pricing', 'io']" in drift and "['pricing']" in drift
+    ok = ok and default_surface_drift(["io", "pricing"], ["pricing", "io"]) is None
+    ok = ok and default_surface_drift(["io"], ["io", "io"]) is not None
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: a default list that differs is reported with both lists")
+    # The fallback parser for Python before 3.11 reads a multi-line array
+    # with comments, rejects what it cannot read, and agrees with the root
+    # manifest's parse.
+    sample = '[package]\nname = "x"\n\n[features]\n# c\ndefault = ["a", # one\n  "b",\n]\nb = []\n\n[dependencies]\n'
+    try:
+        ok = manifest_features_fallback(sample) == {"default": ["a", "b"], "b": []}
+        ok = ok and manifest_features_fallback(manifest) == features
+    except ReportError:
+        ok = False
+    for broken in ('[features]\ndefault = "a"\n', '[package]\nname = "x"\n', "[features]\ndefault = [a]\n"):
+        try:
+            manifest_features_fallback(broken)
+            ok = False
+        except ReportError:
+            pass
+    failures += 0 if ok else 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: the fallback [features] parser matches the manifest and fails closed")
+    return failures
 
 
 SURFACES: dict[str, dict] = {
     # `--only-explicit-features` plus the features named here, so each
     # surface is exactly what it says. `default` is spelled out rather than
     # read from the manifest, so a change to the default feature set shows
-    # up here as a diff instead of silently moving the surface.
+    # up here as a diff instead of silently moving the surface; the
+    # self-test fails until this list matches the root `Cargo.toml` (#688).
+    # The other named surfaces are each feature alone, without the defaults,
+    # as `default-features = false` builds them: `plotly` resolves the
+    # `visualization` chain down to `backtest` and `simulation` but not
+    # `synthetic` or `io`, `static_export` adds `async` (hence `io`) to it,
+    # and `async` resolves `market` and `io` only.
     "none": {"features": []},
-    "default": {"features": ["synthetic"]},
+    "default": {
+        "features": [
+            "pricing",
+            "market",
+            "analytics",
+            "strategies",
+            "simulation",
+            "backtest",
+            "visualization",
+            "synthetic",
+            "io",
+        ]
+    },
     "plotly": {"features": ["plotly"]},
     "static_export": {"features": ["static_export"]},
     "async": {"features": ["async"]},
