@@ -144,6 +144,7 @@ crate-type = ["rlib"]
 [workspace]
 # Consumer fixtures resolve on their own (ADR-0004 section 3).
 exclude = [
+    "fixtures/consumers/analytics-only",
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-pricing",
     "fixtures/consumers/pricing-only",

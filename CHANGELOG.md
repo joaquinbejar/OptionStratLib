@@ -496,6 +496,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Analytics consumer fixture without strategies** (#533).
+  `fixtures/consumers/analytics-only` is a real crate, excluded from the
+  workspace, that depends on core, math, pricing, market and analytics only
+  (path plus version), with no strategies crate and no facade. Its test
+  computes a short put's P&L at expiration through `PnLCalculator` and its
+  SPAN margin (both the floor-bound and the scenario-bound case), checks
+  that the range and single-point probability kernels agree on their tails,
+  and computes the risk-neutral density (non-negative, summing to one, mean
+  near spot), the skew and the implied-volatility curve of a built
+  `OptionChain`, all with canonical lower-layer types. `expect.toml` keeps
+  strategies, simulation, backtest, visualization, CSV, ZIP, Tokio and Plotly
+  out of its graph. `make {check,test,tree}-consumer-analytics-only` and
+  `check-consumer-analytics-only-minimal` run it with all and with no
+  analytics features, and the Components CI job runs them from a fresh
+  target directory. Measured with the M0 method on commit b99f8a6b (rustc
+  1.99.0, Apple M5 Max): `cargo fetch`, then three clean
+  `cargo check --manifest-path fixtures/consumers/analytics-only/Cargo.toml`
+  runs with no features, each from an emptied target directory: 7.15, 6.51
+  and 6.32 s (median 6.5 s); 77 distinct packages (78 entries, `syn` twice)
+  with no features and with all features. Fixture lockfiles are not
+  committed, so the counts can move with registry updates (recorded, not
+  asserted, as ADR-0004 section 3 sets).
+
 - **One strategy capability, by measured decision** (#532). The
   `optionstratlib-strategies` docs now list the seven strategy families
   (single leg, vertical spreads, butterflies, condors, straddles and

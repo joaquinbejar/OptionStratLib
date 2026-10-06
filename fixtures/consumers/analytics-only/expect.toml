@@ -1,0 +1,16 @@
+# Analytics without strategies (#533): packages the resolved normal graph
+# must contain, and packages it must not. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
+    "optionstratlib-market", "optionstratlib-analytics", "serde_json", "lazy_static",
+]
+# `utoipa` is missing only because `expiration_date` 0.4.0 forces
+# `positive/utoipa` on every build (#628), and `prettytable-rs` because market
+# still depends on it unconditionally until M6-05; both join this list then.
+absent = [
+    "optionstratlib", "optionstratlib-strategies", "optionstratlib-simulation",
+    "optionstratlib-backtest", "optionstratlib-visualization", "csv", "zip", "tokio",
+    "reqwest", "futures", "async-trait", "plotly", "plotly_static", "fantoccini",
+    "webdriver", "tracing-subscriber", "indicatif",
+]

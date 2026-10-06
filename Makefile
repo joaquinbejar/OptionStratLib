@@ -103,6 +103,7 @@ check: test fmt-check lint scan-banned check-graph check-api-report
 # enables can widen their graph. `check-fixtures` asserts every fixture's
 # expect.toml (present / absent packages) and prints its package count.
 FIXTURE_PRICING_ONLY := fixtures/consumers/pricing-only/Cargo.toml
+FIXTURE_ANALYTICS_ONLY := fixtures/consumers/analytics-only/Cargo.toml
 FIXTURE_TARGET_DIR := target/fixtures
 
 .PHONY: check-fixtures
@@ -128,6 +129,28 @@ test-consumer-core-pricing:
 tree-consumer-core-pricing:
 	cargo tree --manifest-path $(FIXTURE_PRICING_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py pricing-only
+
+# The analytics consumer without strategies or the facade (#533): `check`
+# builds and lints it with every analytics feature, `-minimal` with none.
+.PHONY: check-consumer-analytics-only
+check-consumer-analytics-only:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo check --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --all-features
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo clippy --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --all-features -- -D warnings
+
+.PHONY: check-consumer-analytics-only-minimal
+check-consumer-analytics-only-minimal:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo check --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --no-default-features
+
+.PHONY: test-consumer-analytics-only
+test-consumer-analytics-only:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo test --manifest-path $(FIXTURE_ANALYTICS_ONLY) --no-default-features
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo test --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-features
+
+.PHONY: tree-consumer-analytics-only
+tree-consumer-analytics-only:
+	cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py analytics-only
+	@echo "all features: $$(cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
 # The facade built with one capability each (#528): `pricing` alone and
 # `market` alone, each consumed through the prelude and the canonical paths.
