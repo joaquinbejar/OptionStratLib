@@ -42,7 +42,9 @@ tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
-# The chain fixture the PMCC optimiser tests read is a JSON file.
+# The chain fixtures the PMCC optimiser tests and the optimisation suites
+# under tests/integration read are JSON files.
 optionstratlib-market = { workspace = true, features = ["io"] }
 approx = { workspace = true }
+proptest = { workspace = true }
 static_assertions = "1.1"

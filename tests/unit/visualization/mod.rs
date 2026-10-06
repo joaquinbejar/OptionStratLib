@@ -4,3 +4,4 @@ mod graph_default_test;
 mod model_test;
 mod plotly_render_test;
 mod plotly_test;
+mod strategy_graph_test;

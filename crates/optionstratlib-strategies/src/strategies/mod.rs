@@ -242,8 +242,9 @@ pub mod long_put;
 pub mod long_straddle;
 /// Strangle strategy implementation
 pub mod long_strangle;
-/// Macros for options strategies
-pub mod macros;
+// Test-only support (`test_strategy_traits!`), not public API.
+#[cfg(test)]
+mod macros;
 
 mod model_impls;
 /// Poor Man's Covered Call strategy implementation

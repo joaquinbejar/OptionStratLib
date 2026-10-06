@@ -156,6 +156,7 @@ members = [
     "crates/optionstratlib-market",
     "crates/optionstratlib-analytics",
     "crates/optionstratlib-strategies",
+    "tests/workspace",
     "examples/support",
     "examples/examples_chain",
     "examples/examples_curves",

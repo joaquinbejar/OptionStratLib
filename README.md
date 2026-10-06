@@ -387,7 +387,7 @@ the paths below are the same types whichever crate you import them from.
 | `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `VolatilityError` and the `error::greeks` and `error::pricing` modules) | pricing models, Greeks, implied and historical volatility |
 | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 | `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
-| `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError` and the `error::strategies` module in `error`; the `test_strategy_traits!` macro at the root | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
+| `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError` and the `error::strategies` module in `error` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
 
 Each facade path is an explicit module or item re-export (`pub use
 optionstratlib_core::model;`, `pub use

@@ -16,7 +16,6 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
-use crate::test_strategy_traits;
 use chrono::Utc;
 use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -538,7 +537,8 @@ impl PnLCalculator for LongPut {
 
 impl Strategable for LongPut {}
 
-test_strategy_traits!(LongPut, test_long_put_implementations);
+#[cfg(test)]
+crate::strategies::macros::test_strategy_traits!(LongPut, test_long_put_implementations);
 
 #[cfg(test)]
 mod tests_break_even {

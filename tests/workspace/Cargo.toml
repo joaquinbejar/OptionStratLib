@@ -1,0 +1,23 @@
+# Workspace integration tests (ADR-0004 section 8, #534): regressions that
+# need several component crates together in a way that belongs to none of
+# them alone. A workspace member so it builds against the path versions of
+# the crates; never published. The sources live under `src/`, never
+# `tests/workspace/main.rs`, which the root package would auto-discover as
+# one of its own integration tests. Run it with
+# `make test-workspace-integration`.
+[package]
+name = "osl-workspace-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Cross-component integration tests of the OptionStratLib workspace; never published."
+
+# Every component a test uses is declared here directly; the facade is not,
+# because no test in this package is about the facade.
+[dev-dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+optionstratlib-strategies = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }

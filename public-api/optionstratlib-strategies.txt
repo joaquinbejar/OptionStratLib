@@ -4228,7 +4228,6 @@ pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::name(
 pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_strategies::strategies::long_strangle::LongStrangle
 pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-pub mod optionstratlib_strategies::strategies::macros
 pub mod optionstratlib_strategies::strategies::poor_mans_covered_call
 pub struct optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall
 pub optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -9728,5 +9727,4 @@ pub fn optionstratlib_strategies::strategies::calculate_profit_ratio(positive::p
 pub fn optionstratlib_strategies::strategies::credit_spread_break_even(positive::positive::Positive, positive::positive::Positive, bool) -> positive::positive::Positive
 pub fn optionstratlib_strategies::strategies::debit_spread_break_even(positive::positive::Positive, positive::positive::Positive, bool) -> positive::positive::Positive
 pub fn optionstratlib_strategies::strategies::process_n_times_iter<T, Y, F>(&[T], usize, F) -> core::result::Result<alloc::vec::Vec<Y>, optionstratlib_strategies::error::strategies::StrategyError> where F: core::ops::function::FnMut(&[&T]) -> alloc::vec::Vec<Y> + core::marker::Send + core::marker::Sync, T: core::clone::Clone + core::marker::Send + core::marker::Sync, Y: core::marker::Send
-pub macro optionstratlib_strategies::test_strategy_traits!
 pub const optionstratlib_strategies::VERSION: &str
