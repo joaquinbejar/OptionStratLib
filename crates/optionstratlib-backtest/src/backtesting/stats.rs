@@ -4,9 +4,9 @@
    Date: 8/11/25
 ******************************************************************************/
 use crate::backtesting::results::SimulationResult;
-use crate::error::SimulationError;
-use crate::model::decimal::d_add;
-use crate::simulation::{ExitPolicy, PathOutcome};
+use optionstratlib_core::model::decimal::d_add;
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_simulation::simulation::{ExitPolicy, PathOutcome};
 use prettytable::{Cell, Row, Table, format};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -347,10 +347,10 @@ impl SimulationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pnl::PnL;
+    use optionstratlib_analytics::pnl::PnL;
 
     use chrono::Utc;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use std::collections::HashMap;
 
     /// A rejected result must leave the accumulator exactly as it was: the

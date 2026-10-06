@@ -1,7 +1,7 @@
-use crate::greeks::GreeksSnapshot;
-use crate::model::Position;
 use chrono::{DateTime, NaiveDateTime, Utc};
-use positive::Positive;
+use optionstratlib_core::model::Position;
+use optionstratlib_core::model::Positive;
+use optionstratlib_pricing::greeks::GreeksSnapshot;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

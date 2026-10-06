@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Backtesting is its own crate, `optionstratlib-backtest`** (#538).
+  `backtesting` (`Simulate` and its single-leg implementations, the adapters
+  from the simulation engine's `PathOutcome` / `PathStatistics` to
+  `SimulationResult` / `SimulationStatsResult`, run statistics, report types
+  and performance metrics) and `BacktestError` move to
+  `crates/optionstratlib-backtest`, which depends on core, pricing,
+  simulation, analytics and strategies and on no math, chain I/O, plotting or
+  async crate. The generic engine types stay `optionstratlib-simulation`'s
+  and are reused, not duplicated. The facade re-exports `backtesting` and
+  `BacktestError` behind a new `backtest` feature (`dep:optionstratlib-backtest`,
+  `strategies`, `simulation`; in `default`, implied by `plotly`); the
+  still-local visualization module, the unified `error::Error` and their
+  `prelude` items now need `backtest`, and the facade test suites and benches
+  declare `required-features = ["backtest"]`. Behaviour change:
+  `simulate_single_leg` (and every `Simulate::simulate` built on it) no
+  longer draws an `indicatif` progress bar; it reports each evaluated path as
+  a `tracing` debug event and the end of the run as an info event (ADR-0002
+  section 6), so `indicatif` leaves the facade and the backtest graph. The
+  results are unchanged: the 60 unit tests moved with their code and the
+  single-leg golden regression (`tests/golden/single_leg_simulation.json`)
+  moved into the crate's tests unchanged. `prettytable-rs` stays in the
+  backtest crate for `SimulationStatsResult::print_summary` until M6-05, as
+  in market; the facade drops its own direct `prettytable-rs`, `indicatif`
+  and normal `uuid` dependencies (`uuid` is a dev-dependency for one test).
+  `make check-graph` forbids plotting, I/O, async and `indicatif` packages in
+  backtest, with crate-graph and forbidden-package self-tests;
+  `check-components`, `make test`, `make doc`, the public-API snapshots, the
+  facade capability matrix (`backtest` alone) and CI cover the new crate.
+
 - **`PriceTrend` has private `Decimal` fields and a validating constructor**
   (#656). `drift_rate` (annual drift as a fraction, any sign) and
   `confidence` were public `f64` fields that the kernels checked on every

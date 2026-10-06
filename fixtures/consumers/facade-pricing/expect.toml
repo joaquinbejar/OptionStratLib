@@ -5,13 +5,11 @@ present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "rayon", "statrs",
 ]
-# The facade still depends unconditionally on `utoipa`, `indicatif` and
-# `prettytable-rs` while analytics, strategies, backtesting and visualization
-# live in it; M6-05 and M7-01 make those leave the pricing graph, and they
-# join this list then.
+# `utoipa` (#628) and `prettytable-rs` (still a dependency of market until
+# M6-05) are missing from this list; they join it then.
 absent = [
     "optionstratlib-market", "optionstratlib-simulation", "optionstratlib-analytics",
     "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
-    "fantoccini", "webdriver", "tracing-subscriber",
+    "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
 ]

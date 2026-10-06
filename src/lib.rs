@@ -384,6 +384,7 @@
 //! | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 //! | `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
 //! | `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError` and the `error::strategies` module in `error` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
+//! | `optionstratlib-backtest` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics |
 //!
 //! Each facade path is an explicit module or item re-export (`pub use
 //! optionstratlib_core::model;`, `pub use
@@ -399,10 +400,9 @@
 //! optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
 //! ```
 //!
-//! The rest of the library (backtesting and visualization) still lives in
-//! this crate and moves out milestone by milestone. Until then backtesting,
-//! visualization, the unified `error::Error` and their `prelude` items need
-//! both `strategies` and `simulation`, and the `schema` derives of these
+//! The rest of the library (visualization) still lives in this crate until
+//! M6 extracts it. Until then visualization, the unified `error::Error` and
+//! their `prelude` items need `backtest`, and the `schema` derives of these
 //! modules stay always on; the facade default enables all of it.
 //!
 //! ## Module Boundaries
@@ -929,8 +929,12 @@
 //!   walks, stochastic processes, simulators, exit policies, path statistics)
 //!   and its facade paths; implies `pricing` but not `market`, and resolves no
 //!   option chain, strategy, backtesting or plotting code
+//! - `backtest` (default): the `optionstratlib-backtest` crate (strategies
+//!   evaluated over simulated paths, run statistics, reports and metrics) and
+//!   its facade paths; implies `strategies` and `simulation`, and resolves no
+//!   plotting code. Its progress is reported as `tracing` events
 //! - `plotly`: Enables interactive visualization using plotly.rs (implies
-//!   `strategies` and `simulation`, which `visualization` renders)
+//!   `backtest`, whose results and strategies `visualization` renders)
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
@@ -1039,7 +1043,7 @@
 //! ### Working with Trading Strategies
 //!
 //! ```rust
-//! # #[cfg(all(feature = "strategies", feature = "simulation"))]
+//! # #[cfg(feature = "backtest")]
 //! # mod example {
 //! use positive::{Positive, pos_or_panic};
 //! use optionstratlib::ExpirationDate;
@@ -1096,7 +1100,7 @@
 //! # pub fn run() -> Result<(), Box<dyn std::error::Error>> { main() }
 //! # }
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! #     #[cfg(all(feature = "strategies", feature = "simulation"))]
+//! #     #[cfg(feature = "backtest")]
 //! #     example::run()?;
 //! #     Ok(())
 //! # }
@@ -1403,13 +1407,16 @@ pub use optionstratlib_core::model;
 #[cfg(feature = "analytics")]
 pub use optionstratlib_analytics::analytics;
 
-/// * `backtesting` - Tools for historical performance evaluation of options strategies.
+/// * `backtesting` - Strategy backtests over simulated paths.
 ///
-/// Provides framework and utilities to simulate and analyze how option strategies
-/// would have performed using historical market data. Supports various performance
-/// metrics, drawdown analysis, and strategy comparison.
-#[cfg(all(feature = "strategies", feature = "simulation"))]
-pub mod backtesting;
+/// Evaluates a strategy on every path of a simulator, ends each path by an
+/// exit policy and summarises the run: statistics, report types and
+/// performance metrics.
+///
+/// Defined by `optionstratlib-backtest` and re-exported here (feature
+/// `backtest`).
+#[cfg(feature = "backtest")]
+pub use optionstratlib_backtest::backtesting;
 
 /// * `chains` - Functionality for working with options chains and series data.
 ///
@@ -1571,7 +1578,7 @@ pub use optionstratlib_core::utils;
 /// Graphics and visualization utilities for creating charts, graphs, and interactive
 /// plots of options data, strategies, and analytics. Supports various plot types
 /// optimized for different aspects of options analysis.
-#[cfg(all(feature = "strategies", feature = "simulation"))]
+#[cfg(feature = "backtest")]
 pub mod visualization;
 
 /// * `volatility` - Volatility modeling, forecasting, and analysis utilities.

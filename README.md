@@ -389,6 +389,7 @@ the paths below are the same types whichever crate you import them from.
 | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 | `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
 | `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError` and the `error::strategies` module in `error` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
+| `optionstratlib-backtest` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics |
 
 Each facade path is an explicit module or item re-export (`pub use
 optionstratlib_core::model;`, `pub use
@@ -404,10 +405,9 @@ docs list its entry points, or enable only its facade feature:
 optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
 ```
 
-The rest of the library (backtesting and visualization) still lives in
-this crate and moves out milestone by milestone. Until then backtesting,
-visualization, the unified `error::Error` and their `prelude` items need
-both `strategies` and `simulation`, and the `schema` derives of these
+The rest of the library (visualization) still lives in this crate until
+M6 extracts it. Until then visualization, the unified `error::Error` and
+their `prelude` items need `backtest`, and the `schema` derives of these
 modules stay always on; the facade default enables all of it.
 
 ### Module Boundaries
@@ -934,8 +934,12 @@ optionstratlib = { version = "0.22.0", features = ["plotly"] }
   walks, stochastic processes, simulators, exit policies, path statistics)
   and its facade paths; implies `pricing` but not `market`, and resolves no
   option chain, strategy, backtesting or plotting code
+- `backtest` (default): the `optionstratlib-backtest` crate (strategies
+  evaluated over simulated paths, run statistics, reports and metrics) and
+  its facade paths; implies `strategies` and `simulation`, and resolves no
+  plotting code. Its progress is reported as `tracing` events
 - `plotly`: Enables interactive visualization using plotly.rs (implies
-  `strategies` and `simulation`, which `visualization` renders)
+  `backtest`, whose results and strategies `visualization` renders)
 - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
 - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);

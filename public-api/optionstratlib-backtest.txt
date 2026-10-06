@@ -1,0 +1,538 @@
+pub mod optionstratlib_backtest
+pub mod optionstratlib_backtest::backtesting
+pub mod optionstratlib_backtest::backtesting::adapters
+pub mod optionstratlib_backtest::backtesting::metrics
+pub struct optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::expected_shortfall: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::max_consecutive_losses: usize
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::pain_index: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::tail_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::ulcer_index: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::value_at_risk_95: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::AdvancedRiskMetrics::value_at_risk_99: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::metrics::BenchmarkComparison
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::alpha: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::benchmark_name: alloc::string::String
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::benchmark_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::beta: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::correlation: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::down_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::information_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::tracking_error: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::BenchmarkComparison::up_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::annualized_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::avg_gain: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::avg_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::calmar_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::downside_deviation: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::gain_loss_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::profit_factor: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::sharpe_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::sortino_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::total_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::metrics::GeneralPerformanceMetrics::win_rate: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::avg_market_volatility: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::bear_market_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::bull_market_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::high_volatility_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::low_volatility_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::metrics::MarketConditionMetrics::sideways_market_days: positive::positive::Positive
+pub struct optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_charm_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_color_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_delta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_gamma_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_theta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_vanna_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_vega_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_veta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::avg_vomma_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::calls_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::long_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::premium_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::puts_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::return_on_margin: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::return_on_premium: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::OptionsSpecificMetrics::short_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::metrics::RollingMetrics
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::rolling_returns: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::rolling_sharpe: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::rolling_sortino: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::rolling_volatility: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::rolling_win_rate: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::timestamps: alloc::vec::Vec<chrono::naive::datetime::NaiveDateTime>
+pub optionstratlib_backtest::backtesting::metrics::RollingMetrics::window_size: positive::positive::Positive
+pub mod optionstratlib_backtest::backtesting::results
+pub struct optionstratlib_backtest::backtesting::results::BacktestResult
+pub optionstratlib_backtest::backtesting::results::BacktestResult::capital_utilization: optionstratlib_backtest::backtesting::CapitalUtilization
+pub optionstratlib_backtest::backtesting::results::BacktestResult::custom_metrics: std::collections::hash::map::HashMap<alloc::string::String, rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::drawdown_analysis: optionstratlib_backtest::backtesting::DrawdownAnalysis
+pub optionstratlib_backtest::backtesting::results::BacktestResult::final_capital: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::BacktestResult::general_performance: optionstratlib_backtest::backtesting::GeneralPerformanceMetrics
+pub optionstratlib_backtest::backtesting::results::BacktestResult::initial_capital: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::BacktestResult::market_conditions: core::option::Option<optionstratlib_backtest::backtesting::MarketConditionMetrics>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::monte_carlo_simulation: core::option::Option<optionstratlib_backtest::backtesting::SimulationResult>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::options_metrics: optionstratlib_backtest::backtesting::OptionsSpecificMetrics
+pub optionstratlib_backtest::backtesting::results::BacktestResult::risk_metrics: core::option::Option<optionstratlib_backtest::backtesting::AdvancedRiskMetrics>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::strategy_name: alloc::string::String
+pub optionstratlib_backtest::backtesting::results::BacktestResult::test_period_end: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::test_period_start: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::time_series: optionstratlib_backtest::backtesting::TimeSeriesData
+pub optionstratlib_backtest::backtesting::results::BacktestResult::trade_statistics: optionstratlib_backtest::backtesting::TradeStatistics
+pub optionstratlib_backtest::backtesting::results::BacktestResult::trades: alloc::vec::Vec<optionstratlib_backtest::backtesting::TradeRecord>
+pub optionstratlib_backtest::backtesting::results::BacktestResult::volatility_data: core::option::Option<optionstratlib_backtest::backtesting::VolatilityData>
+pub struct optionstratlib_backtest::backtesting::results::SimulationResult
+pub optionstratlib_backtest::backtesting::results::SimulationResult::avg_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationResult::exit_reason: optionstratlib_simulation::simulation::exit::ExitPolicy
+pub optionstratlib_backtest::backtesting::results::SimulationResult::expiration_premium: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::results::SimulationResult::expired: bool
+pub optionstratlib_backtest::backtesting::results::SimulationResult::final_equity_percentiles: std::collections::hash::map::HashMap<u8, rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::results::SimulationResult::hit_stop_loss: bool
+pub optionstratlib_backtest::backtesting::results::SimulationResult::hit_take_profit: bool
+pub optionstratlib_backtest::backtesting::results::SimulationResult::holding_period: usize
+pub optionstratlib_backtest::backtesting::results::SimulationResult::max_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationResult::min_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationResult::pnl: optionstratlib_analytics::pnl::utils::PnL
+pub optionstratlib_backtest::backtesting::results::SimulationResult::risk_metrics: core::option::Option<optionstratlib_analytics::risk::model::RiskMetricsSimulation>
+pub optionstratlib_backtest::backtesting::results::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib_backtest::backtesting::SimulationResult> for optionstratlib_simulation::simulation::outcome::PathOutcome
+pub fn optionstratlib_simulation::simulation::outcome::PathOutcome::from(&optionstratlib_backtest::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib_simulation::simulation::outcome::PathOutcome> for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::from(optionstratlib_simulation::simulation::outcome::PathOutcome) -> Self
+impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_backtest::backtesting::SimulationResult::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_backtest::backtesting::results::SimulationStatsResult
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::average_holding_period: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::average_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::best_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::loss_count: usize
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::median_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::profitable_count: usize
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::results: alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::std_dev_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::total_simulations: usize
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::results::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib_simulation::simulation::outcome::PathOutcome>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_individual_results(&self)
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_summary(&self)
+impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub mod optionstratlib_backtest::backtesting::stats
+pub struct optionstratlib_backtest::backtesting::stats::SimulationStats
+impl optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::default() -> Self
+pub mod optionstratlib_backtest::backtesting::strategy_simulation
+pub struct optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>
+impl<'a, S> optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S> where S: optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::initial_premium(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'a, S>::new(&'a S) -> core::result::Result<Self, optionstratlib_backtest::error::BacktestError>
+impl<S, X, Y> optionstratlib_simulation::simulation::outcome::PathEvaluator<X, Y> for optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S> where S: optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub type optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Error = optionstratlib_backtest::error::BacktestError
+pub type optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::Outcome = optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::SingleLegPathEvaluator<'_, S>::evaluate_path(&self, &optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>, &optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationResult, optionstratlib_backtest::error::BacktestError>
+pub trait optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::Simulate::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::long_call::LongCall::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::long_put::LongPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::short_call::ShortCall::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+pub trait optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation: optionstratlib_analytics::pnl::traits::PnLCalculator + optionstratlib_strategies::strategies::base::Positionable
+pub const optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation::IS_LONG: bool
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation::simulated_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib_strategies::strategies::long_call::LongCall
+pub const optionstratlib_strategies::strategies::long_call::LongCall::IS_LONG: bool
+pub fn optionstratlib_strategies::strategies::long_call::LongCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_strategies::strategies::long_call::LongCall::simulated_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib_strategies::strategies::long_put::LongPut
+pub const optionstratlib_strategies::strategies::long_put::LongPut::IS_LONG: bool
+pub fn optionstratlib_strategies::strategies::long_put::LongPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_strategies::strategies::long_put::LongPut::simulated_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib_strategies::strategies::short_call::ShortCall
+pub const optionstratlib_strategies::strategies::short_call::ShortCall::IS_LONG: bool
+pub fn optionstratlib_strategies::strategies::short_call::ShortCall::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_strategies::strategies::short_call::ShortCall::simulated_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation for optionstratlib_strategies::strategies::short_put::ShortPut
+pub const optionstratlib_strategies::strategies::short_put::ShortPut::IS_LONG: bool
+pub fn optionstratlib_strategies::strategies::short_put::ShortPut::mark_adjustment(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_backtest::error::BacktestError>
+pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulated_option(&self) -> core::result::Result<&optionstratlib_core::model::option::Options, optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::strategy_simulation::simulate_single_leg<S, X, Y>(&S, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError> where S: optionstratlib_backtest::backtesting::strategy_simulation::SingleLegSimulation, X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub mod optionstratlib_backtest::backtesting::types
+pub enum optionstratlib_backtest::backtesting::types::ExitReason
+pub optionstratlib_backtest::backtesting::types::ExitReason::Expiration
+pub optionstratlib_backtest::backtesting::types::ExitReason::ManualClose
+pub optionstratlib_backtest::backtesting::types::ExitReason::MarginCall
+pub optionstratlib_backtest::backtesting::types::ExitReason::Other(alloc::string::String)
+pub optionstratlib_backtest::backtesting::types::ExitReason::RollOver
+pub optionstratlib_backtest::backtesting::types::ExitReason::StopLoss
+pub optionstratlib_backtest::backtesting::types::ExitReason::TargetReached
+pub struct optionstratlib_backtest::backtesting::types::CapitalUtilization
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::avg_capital_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::avg_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::avg_position_size: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::capital_efficiency: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::max_capital_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::max_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::max_position_size: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::net_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::total_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::total_premium_paid: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::CapitalUtilization::total_premium_received: rust_decimal::decimal::Decimal
+pub struct optionstratlib_backtest::backtesting::types::DrawdownAnalysis
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::avg_drawdown: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::avg_recovery_time: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::drawdowns: alloc::vec::Vec<optionstratlib_backtest::backtesting::DrawdownEvent>
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::max_drawdown: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::max_drawdown_duration: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::recovery_duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::time_to_max_drawdown: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::total_underwater_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::DrawdownAnalysis::underwater_percentage: rust_decimal::decimal::Decimal
+pub struct optionstratlib_backtest::backtesting::types::DrawdownEvent
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::bottom_date: chrono::naive::datetime::NaiveDateTime
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::duration: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::magnitude: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::recovery_date: core::option::Option<chrono::naive::datetime::NaiveDateTime>
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::recovery_duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::types::DrawdownEvent::start_date: chrono::naive::datetime::NaiveDateTime
+pub struct optionstratlib_backtest::backtesting::types::TimeSeriesData
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::charm_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::color_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::custom_series: std::collections::hash::map::HashMap<alloc::string::String, alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::delta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::drawdown_curve: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::equity_curve: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::gamma_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::margin_usage: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::position_count: alloc::vec::Vec<usize>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::theta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::timestamps: alloc::vec::Vec<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::vanna_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::vega_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::veta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::types::TimeSeriesData::vomma_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub struct optionstratlib_backtest::backtesting::types::TradeRecord
+pub optionstratlib_backtest::backtesting::types::TradeRecord::duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::entry_date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::entry_greeks: core::option::Option<optionstratlib_pricing::greeks::equations::GreeksSnapshot>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::exit_date: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::exit_greeks: core::option::Option<optionstratlib_pricing::greeks::equations::GreeksSnapshot>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::exit_price: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::exit_reason: core::option::Option<optionstratlib_backtest::backtesting::ExitReason>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::id: uuid::Uuid
+pub optionstratlib_backtest::backtesting::types::TradeRecord::margin_required: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::notes: core::option::Option<alloc::string::String>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::position: optionstratlib_core::model::position::Position
+pub optionstratlib_backtest::backtesting::types::TradeRecord::profit_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::return_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::slippage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeRecord::strategy: core::option::Option<uuid::Uuid>
+pub struct optionstratlib_backtest::backtesting::types::TradeStatistics
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::average_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::average_trade_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::break_even: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::call_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::largest_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::largest_win: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::long_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::losers: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::max_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::median_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::median_trade_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::min_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::number_of_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::put_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::short_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::spread_trades: usize
+pub optionstratlib_backtest::backtesting::types::TradeStatistics::winners: usize
+pub struct optionstratlib_backtest::backtesting::types::VolatilityData
+pub optionstratlib_backtest::backtesting::types::VolatilityData::avg_iv_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::VolatilityData::implied_volatility_used: bool
+pub optionstratlib_backtest::backtesting::types::VolatilityData::iv_percentile_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::types::VolatilityData::iv_rank_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub enum optionstratlib_backtest::backtesting::ExitReason
+pub optionstratlib_backtest::backtesting::ExitReason::Expiration
+pub optionstratlib_backtest::backtesting::ExitReason::ManualClose
+pub optionstratlib_backtest::backtesting::ExitReason::MarginCall
+pub optionstratlib_backtest::backtesting::ExitReason::Other(alloc::string::String)
+pub optionstratlib_backtest::backtesting::ExitReason::RollOver
+pub optionstratlib_backtest::backtesting::ExitReason::StopLoss
+pub optionstratlib_backtest::backtesting::ExitReason::TargetReached
+pub struct optionstratlib_backtest::backtesting::AdvancedRiskMetrics
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::expected_shortfall: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::max_consecutive_losses: usize
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::pain_index: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::tail_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::ulcer_index: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::value_at_risk_95: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::AdvancedRiskMetrics::value_at_risk_99: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::BacktestResult
+pub optionstratlib_backtest::backtesting::BacktestResult::capital_utilization: optionstratlib_backtest::backtesting::CapitalUtilization
+pub optionstratlib_backtest::backtesting::BacktestResult::custom_metrics: std::collections::hash::map::HashMap<alloc::string::String, rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::BacktestResult::drawdown_analysis: optionstratlib_backtest::backtesting::DrawdownAnalysis
+pub optionstratlib_backtest::backtesting::BacktestResult::final_capital: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BacktestResult::general_performance: optionstratlib_backtest::backtesting::GeneralPerformanceMetrics
+pub optionstratlib_backtest::backtesting::BacktestResult::initial_capital: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BacktestResult::market_conditions: core::option::Option<optionstratlib_backtest::backtesting::MarketConditionMetrics>
+pub optionstratlib_backtest::backtesting::BacktestResult::monte_carlo_simulation: core::option::Option<optionstratlib_backtest::backtesting::SimulationResult>
+pub optionstratlib_backtest::backtesting::BacktestResult::options_metrics: optionstratlib_backtest::backtesting::OptionsSpecificMetrics
+pub optionstratlib_backtest::backtesting::BacktestResult::risk_metrics: core::option::Option<optionstratlib_backtest::backtesting::AdvancedRiskMetrics>
+pub optionstratlib_backtest::backtesting::BacktestResult::strategy_name: alloc::string::String
+pub optionstratlib_backtest::backtesting::BacktestResult::test_period_end: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::BacktestResult::test_period_start: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::BacktestResult::time_series: optionstratlib_backtest::backtesting::TimeSeriesData
+pub optionstratlib_backtest::backtesting::BacktestResult::trade_statistics: optionstratlib_backtest::backtesting::TradeStatistics
+pub optionstratlib_backtest::backtesting::BacktestResult::trades: alloc::vec::Vec<optionstratlib_backtest::backtesting::TradeRecord>
+pub optionstratlib_backtest::backtesting::BacktestResult::volatility_data: core::option::Option<optionstratlib_backtest::backtesting::VolatilityData>
+pub struct optionstratlib_backtest::backtesting::BenchmarkComparison
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::alpha: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::benchmark_name: alloc::string::String
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::benchmark_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::beta: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::correlation: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::down_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::information_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::tracking_error: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::BenchmarkComparison::up_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::CapitalUtilization
+pub optionstratlib_backtest::backtesting::CapitalUtilization::avg_capital_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::avg_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::avg_position_size: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::capital_efficiency: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::max_capital_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::max_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::max_position_size: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::net_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::total_margin_used: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::total_premium_paid: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::CapitalUtilization::total_premium_received: rust_decimal::decimal::Decimal
+pub struct optionstratlib_backtest::backtesting::DrawdownAnalysis
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::avg_drawdown: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::avg_recovery_time: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::drawdowns: alloc::vec::Vec<optionstratlib_backtest::backtesting::DrawdownEvent>
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::max_drawdown: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::max_drawdown_duration: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::recovery_duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::time_to_max_drawdown: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::total_underwater_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::DrawdownAnalysis::underwater_percentage: rust_decimal::decimal::Decimal
+pub struct optionstratlib_backtest::backtesting::DrawdownEvent
+pub optionstratlib_backtest::backtesting::DrawdownEvent::bottom_date: chrono::naive::datetime::NaiveDateTime
+pub optionstratlib_backtest::backtesting::DrawdownEvent::duration: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::DrawdownEvent::magnitude: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::DrawdownEvent::recovery_date: core::option::Option<chrono::naive::datetime::NaiveDateTime>
+pub optionstratlib_backtest::backtesting::DrawdownEvent::recovery_duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::DrawdownEvent::start_date: chrono::naive::datetime::NaiveDateTime
+pub struct optionstratlib_backtest::backtesting::GeneralPerformanceMetrics
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::annualized_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::avg_gain: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::avg_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::calmar_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::downside_deviation: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::gain_loss_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::profit_factor: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::sharpe_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::sortino_ratio: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::total_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::GeneralPerformanceMetrics::win_rate: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::MarketConditionMetrics
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::avg_market_volatility: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::bear_market_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::bull_market_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::high_volatility_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::low_volatility_days: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::MarketConditionMetrics::sideways_market_days: positive::positive::Positive
+pub struct optionstratlib_backtest::backtesting::OptionsSpecificMetrics
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_charm_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_color_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_delta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_gamma_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_theta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_vanna_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_vega_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_veta_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::avg_vomma_exposure: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::calls_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::long_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::premium_capture: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::puts_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::return_on_margin: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::return_on_premium: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::OptionsSpecificMetrics::short_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub struct optionstratlib_backtest::backtesting::RollingMetrics
+pub optionstratlib_backtest::backtesting::RollingMetrics::rolling_returns: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::RollingMetrics::rolling_sharpe: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::RollingMetrics::rolling_sortino: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::RollingMetrics::rolling_volatility: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::RollingMetrics::rolling_win_rate: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::RollingMetrics::timestamps: alloc::vec::Vec<chrono::naive::datetime::NaiveDateTime>
+pub optionstratlib_backtest::backtesting::RollingMetrics::window_size: positive::positive::Positive
+pub struct optionstratlib_backtest::backtesting::SimulationResult
+pub optionstratlib_backtest::backtesting::SimulationResult::avg_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationResult::exit_reason: optionstratlib_simulation::simulation::exit::ExitPolicy
+pub optionstratlib_backtest::backtesting::SimulationResult::expiration_premium: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::SimulationResult::expired: bool
+pub optionstratlib_backtest::backtesting::SimulationResult::final_equity_percentiles: std::collections::hash::map::HashMap<u8, rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::SimulationResult::hit_stop_loss: bool
+pub optionstratlib_backtest::backtesting::SimulationResult::hit_take_profit: bool
+pub optionstratlib_backtest::backtesting::SimulationResult::holding_period: usize
+pub optionstratlib_backtest::backtesting::SimulationResult::max_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationResult::min_premium: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationResult::pnl: optionstratlib_analytics::pnl::utils::PnL
+pub optionstratlib_backtest::backtesting::SimulationResult::risk_metrics: core::option::Option<optionstratlib_analytics::risk::model::RiskMetricsSimulation>
+pub optionstratlib_backtest::backtesting::SimulationResult::simulation_count: usize
+impl core::convert::From<&optionstratlib_backtest::backtesting::SimulationResult> for optionstratlib_simulation::simulation::outcome::PathOutcome
+pub fn optionstratlib_simulation::simulation::outcome::PathOutcome::from(&optionstratlib_backtest::backtesting::SimulationResult) -> Self
+impl core::convert::From<optionstratlib_simulation::simulation::outcome::PathOutcome> for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::from(optionstratlib_simulation::simulation::outcome::PathOutcome) -> Self
+impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl utoipa::ToSchema for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::name() -> alloc::borrow::Cow<'static, str>
+pub fn optionstratlib_backtest::backtesting::SimulationResult::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
+impl utoipa::__dev::ComposeSchema for optionstratlib_backtest::backtesting::SimulationResult
+pub fn optionstratlib_backtest::backtesting::SimulationResult::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_backtest::backtesting::SimulationStats
+impl optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::new() -> Self
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_individual_results(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::print_summary(&self)
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update(&mut self, optionstratlib_backtest::backtesting::SimulationResult) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::update_outcome(&mut self, &optionstratlib_simulation::simulation::outcome::PathOutcome) -> core::result::Result<(), optionstratlib_simulation::error::simulation::SimulationError>
+impl core::default::Default for optionstratlib_backtest::backtesting::stats::SimulationStats
+pub fn optionstratlib_backtest::backtesting::stats::SimulationStats::default() -> Self
+pub struct optionstratlib_backtest::backtesting::SimulationStatsResult
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::average_holding_period: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::average_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::best_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::loss_count: usize
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::median_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::profitable_count: usize
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::results: alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::std_dev_pnl: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::total_simulations: usize
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::win_rate: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::SimulationStatsResult::worst_pnl: rust_decimal::decimal::Decimal
+impl optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_outcomes(alloc::vec::Vec<optionstratlib_simulation::simulation::outcome::PathOutcome>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::from_results(alloc::vec::Vec<optionstratlib_backtest::backtesting::SimulationResult>) -> core::result::Result<Self, optionstratlib_simulation::error::simulation::SimulationError>
+impl optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_individual_results(&self)
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::print_summary(&self)
+impl core::fmt::Debug for optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for optionstratlib_backtest::backtesting::SimulationStatsResult
+pub fn optionstratlib_backtest::backtesting::SimulationStatsResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct optionstratlib_backtest::backtesting::TimeSeriesData
+pub optionstratlib_backtest::backtesting::TimeSeriesData::charm_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::color_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::custom_series: std::collections::hash::map::HashMap<alloc::string::String, alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::delta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::drawdown_curve: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::equity_curve: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::gamma_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::margin_usage: alloc::vec::Vec<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::position_count: alloc::vec::Vec<usize>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::theta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::timestamps: alloc::vec::Vec<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::vanna_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::vega_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::veta_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub optionstratlib_backtest::backtesting::TimeSeriesData::vomma_exposure: core::option::Option<alloc::vec::Vec<rust_decimal::decimal::Decimal>>
+pub struct optionstratlib_backtest::backtesting::TradeRecord
+pub optionstratlib_backtest::backtesting::TradeRecord::duration: core::option::Option<positive::positive::Positive>
+pub optionstratlib_backtest::backtesting::TradeRecord::entry_date: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub optionstratlib_backtest::backtesting::TradeRecord::entry_greeks: core::option::Option<optionstratlib_pricing::greeks::equations::GreeksSnapshot>
+pub optionstratlib_backtest::backtesting::TradeRecord::exit_date: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub optionstratlib_backtest::backtesting::TradeRecord::exit_greeks: core::option::Option<optionstratlib_pricing::greeks::equations::GreeksSnapshot>
+pub optionstratlib_backtest::backtesting::TradeRecord::exit_price: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeRecord::exit_reason: core::option::Option<optionstratlib_backtest::backtesting::ExitReason>
+pub optionstratlib_backtest::backtesting::TradeRecord::id: uuid::Uuid
+pub optionstratlib_backtest::backtesting::TradeRecord::margin_required: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeRecord::notes: core::option::Option<alloc::string::String>
+pub optionstratlib_backtest::backtesting::TradeRecord::position: optionstratlib_core::model::position::Position
+pub optionstratlib_backtest::backtesting::TradeRecord::profit_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeRecord::return_percentage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeRecord::slippage: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeRecord::strategy: core::option::Option<uuid::Uuid>
+pub struct optionstratlib_backtest::backtesting::TradeStatistics
+pub optionstratlib_backtest::backtesting::TradeStatistics::average_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::TradeStatistics::average_trade_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::TradeStatistics::break_even: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::call_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::largest_loss: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeStatistics::largest_win: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::TradeStatistics::long_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::losers: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::max_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::TradeStatistics::median_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::TradeStatistics::median_trade_return: rust_decimal::decimal::Decimal
+pub optionstratlib_backtest::backtesting::TradeStatistics::min_holding_period: positive::positive::Positive
+pub optionstratlib_backtest::backtesting::TradeStatistics::number_of_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::put_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::short_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::spread_trades: usize
+pub optionstratlib_backtest::backtesting::TradeStatistics::winners: usize
+pub struct optionstratlib_backtest::backtesting::VolatilityData
+pub optionstratlib_backtest::backtesting::VolatilityData::avg_iv_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::VolatilityData::implied_volatility_used: bool
+pub optionstratlib_backtest::backtesting::VolatilityData::iv_percentile_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub optionstratlib_backtest::backtesting::VolatilityData::iv_rank_traded: core::option::Option<rust_decimal::decimal::Decimal>
+pub trait optionstratlib_backtest::backtesting::Simulate<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_backtest::backtesting::Simulate::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::long_call::LongCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::long_call::LongCall::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::long_put::LongPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::long_put::LongPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::short_call::ShortCall where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::short_call::ShortCall::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+impl<X, Y> optionstratlib_backtest::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
+pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib_backtest::backtesting::SimulationStatsResult, optionstratlib_backtest::error::BacktestError>
+pub mod optionstratlib_backtest::error
+pub enum optionstratlib_backtest::error::BacktestError
+pub optionstratlib_backtest::error::BacktestError::Decimal(alloc::boxed::Box<optionstratlib_core::error::decimal::DecimalError>)
+pub optionstratlib_backtest::error::BacktestError::Options(alloc::boxed::Box<optionstratlib_core::error::options::OptionsError>)
+pub optionstratlib_backtest::error::BacktestError::Positive(positive::error::PositiveError)
+pub optionstratlib_backtest::error::BacktestError::Pricing(alloc::boxed::Box<optionstratlib_pricing::error::pricing::PricingError>)
+pub optionstratlib_backtest::error::BacktestError::Simulation(alloc::boxed::Box<optionstratlib_simulation::error::simulation::SimulationError>)
+pub optionstratlib_backtest::error::BacktestError::Strategy(alloc::boxed::Box<optionstratlib_strategies::error::strategies::StrategyError>)
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_core::error::options::OptionsError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_core::error::options::OptionsError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::pricing::PricingError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_pricing::error::pricing::PricingError) -> Self
+impl core::convert::From<optionstratlib_simulation::error::simulation::SimulationError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_simulation::error::simulation::SimulationError) -> Self
+impl core::convert::From<optionstratlib_strategies::error::strategies::StrategyError> for optionstratlib_backtest::error::BacktestError
+pub fn optionstratlib_backtest::error::BacktestError::from(optionstratlib_strategies::error::strategies::StrategyError) -> Self
+pub const optionstratlib_backtest::VERSION: &str

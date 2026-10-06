@@ -10,14 +10,15 @@ use crate::backtesting::types::{
     CapitalUtilization, DrawdownAnalysis, TimeSeriesData, TradeRecord, TradeStatistics,
     VolatilityData,
 };
-use crate::pnl::PnL;
-use crate::risk::RiskMetricsSimulation;
-use crate::simulation::ExitPolicy;
 use chrono::{DateTime, Utc};
+use optionstratlib_analytics::pnl::PnL;
+use optionstratlib_analytics::risk::RiskMetricsSimulation;
+use optionstratlib_simulation::simulation::ExitPolicy;
 use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(feature = "schema")]
 use utoipa::ToSchema;
 
 /// Comprehensive container for all results generated during a backtest simulation.
@@ -105,7 +106,8 @@ pub struct BacktestResult {
 /// `SimulationResult` is a serializable and cloneable structure, making it convenient
 /// for storing, displaying, and transmitting simulation outcomes. It also provides
 /// a user-friendly debug and display interface through derived traits.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default, ToSchema)]
+#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(ToSchema))]
 pub struct SimulationResult {
     /// Number of simulation runs
     pub simulation_count: usize,
@@ -405,10 +407,10 @@ impl SimulationStatsResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pnl::PnL;
-    use positive::pos_or_panic;
+    use optionstratlib_analytics::pnl::PnL;
+    use optionstratlib_core::pos_or_panic;
 
-    use crate::simulation::ExitPolicy;
+    use optionstratlib_simulation::simulation::ExitPolicy;
     use rust_decimal_macros::dec;
 
     fn create_test_simulation_result(

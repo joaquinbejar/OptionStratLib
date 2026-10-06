@@ -30,7 +30,7 @@ include = [
 # crate it names and the facade paths over it; none replaces a type. The
 # default enables every capability that exists today, so the default surface
 # is the whole library.
-default = ["pricing", "market", "analytics", "strategies", "simulation", "synthetic", "io"]
+default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "synthetic", "io"]
 # `curves`, `surfaces`, `geometrics` and the math errors.
 math = ["dep:optionstratlib-math"]
 # `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
@@ -52,6 +52,9 @@ strategies = ["dep:optionstratlib-strategies", "analytics"]
 # strategies, backtesting or plotting. It implies only `pricing`, so
 # `market`, `analytics` or `strategies` alone resolves no simulation crate.
 simulation = ["dep:optionstratlib-simulation", "pricing"]
+# `backtesting` and `BacktestError`: strategies evaluated over simulated
+# paths, run statistics and reports, without plotting (ADR-0002 section 2).
+backtest = ["dep:optionstratlib-backtest", "strategies", "simulation"]
 # `synthetic`: the simulation-backed chain and series generators
 # (`chains::generator_optionchain`, `series::generator_optionseries`). It
 # forwards to `optionstratlib-market/synthetic`, the only market-to-simulation
@@ -63,7 +66,7 @@ synthetic = ["market", "simulation", "optionstratlib-market/synthetic"]
 io = ["market", "optionstratlib-market/io"]
 # Charts over the whole library: `visualization` renders strategies, chains
 # and simulations, so it needs every capability below it.
-plotly = ["dep:plotly", "strategies", "simulation"]
+plotly = ["dep:plotly", "backtest"]
 static_export = [
     "plotly",
     "async",
@@ -86,6 +89,7 @@ optionstratlib-simulation = { workspace = true, optional = true, features = ["sc
 optionstratlib-market = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-analytics = { workspace = true, optional = true, features = ["schema"] }
 optionstratlib-strategies = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-backtest = { workspace = true, optional = true, features = ["schema"] }
 chrono = { workspace = true, features = ["serde"] }
 approx = { workspace = true }
 plotly = { workspace = true, default-features = false, optional = true, features = ["static_export_default"] }
@@ -99,11 +103,8 @@ serde = { workspace = true, features = ["derive"] }
 rayon = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
-uuid = { workspace = true, features = ["v4", "serde"] }
-prettytable-rs = { workspace = true, features = ["win_crlf"] }
 pretty-simple-display = { workspace = true }
 utoipa = { workspace = true, features = ["axum_extras"] }
-indicatif = { workspace = true }
 thiserror = { workspace = true }
 positive = { workspace = true }
 expiration_date = { workspace = true }
@@ -116,6 +117,7 @@ futures = { workspace = true, optional = true }
 
 
 [dev-dependencies]
+uuid = { workspace = true, features = ["v4", "serde"] }
 criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
 mockall = { workspace = true }
 tempfile = { workspace = true }
@@ -125,18 +127,18 @@ proptest = { workspace = true }
 [[test]]
 name = "tests"
 path = "tests/unit/mod.rs"
-required-features = ["strategies", "simulation"]
+required-features = ["backtest"]
 
 [[test]]
 name = "property_tests"
 path = "tests/property/mod.rs"
-required-features = ["strategies", "simulation"]
+required-features = ["backtest"]
 
 [[bench]]
 name = "benches"
 path = "benches/mod.rs"
 harness = false
-required-features = ["strategies", "simulation"]
+required-features = ["backtest"]
 
 [lib]
 name = "optionstratlib"
@@ -163,6 +165,7 @@ members = [
     "crates/optionstratlib-market",
     "crates/optionstratlib-analytics",
     "crates/optionstratlib-strategies",
+    "crates/optionstratlib-backtest",
     "tests/workspace",
     "examples/support",
     "examples/examples_chain",
@@ -199,6 +202,7 @@ optionstratlib-simulation = { path = "crates/optionstratlib-simulation", version
 optionstratlib-market = { path = "crates/optionstratlib-market", version = "0.22.0" }
 optionstratlib-analytics = { path = "crates/optionstratlib-analytics", version = "0.22.0" }
 optionstratlib-strategies = { path = "crates/optionstratlib-strategies", version = "0.22.0" }
+optionstratlib-backtest = { path = "crates/optionstratlib-backtest", version = "0.22.0" }
 tracing = "0.1"
 rust_decimal = { version = "1.43", features = ["maths", "serde"] }
 rust_decimal_macros = "1.40"
@@ -223,7 +227,6 @@ rand_distr = "0.6"
 prettytable-rs = { version = "0.10", default-features = false }
 pretty-simple-display = "0.1"
 utoipa = { version = "6.0", features = ["chrono", "decimal"] }
-indicatif = "0.18"
 thiserror = "2.0"
 positive = { version = "0.7" }
 expiration_date = { version = "0.4" }

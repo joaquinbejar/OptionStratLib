@@ -11,7 +11,10 @@
 //! flattening it into a message (#511). Neither `StrategyError` nor
 //! `SimulationError` may name the other.
 
-use crate::error::{DecimalError, OptionsError, PricingError, SimulationError, StrategyError};
+use optionstratlib_core::error::{DecimalError, OptionsError};
+use optionstratlib_pricing::error::PricingError;
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_strategies::error::StrategyError;
 use thiserror::Error;
 
 /// Failure of a backtest run.
@@ -40,7 +43,7 @@ pub enum BacktestError {
 
     /// A value that must stay strictly positive left its range.
     #[error(transparent)]
-    Positive(#[from] positive::PositiveError),
+    Positive(#[from] optionstratlib_core::model::PositiveError),
 }
 
 impl From<PricingError> for BacktestError {

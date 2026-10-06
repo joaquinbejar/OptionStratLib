@@ -6,23 +6,24 @@
 //! with `Utc::now()` by the P&L path, so it is normalised before the
 //! comparison; every other field must match byte for byte.
 //!
-//! Regenerate with `OSL_WRITE_GOLDEN=1 cargo test --test tests single_leg_simulation_golden`
+//! Regenerate with `OSL_WRITE_GOLDEN=1 cargo test -p optionstratlib-backtest --test single_leg_simulation_golden_test`
 //! only when a numerical change is intended and reviewed.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::backtesting::Simulate;
-use optionstratlib::backtesting::results::SimulationStatsResult;
-use optionstratlib::model::Options;
-use optionstratlib::model::position::Position;
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::simulation::steps::Step;
-use optionstratlib::simulation::{
+use optionstratlib_backtest::backtesting::Simulate;
+use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Options;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::position::Position;
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::TimeFrame;
+use optionstratlib_simulation::simulation::steps::Step;
+use optionstratlib_simulation::simulation::{
     ExitPolicy, WalkParams, WalkType, WalkTypeAble, generator_positive, simulator::Simulator,
 };
-use optionstratlib::strategies::base::Positionable;
-use optionstratlib::strategies::{LongCall, LongPut, ShortCall, ShortPut};
-use optionstratlib::utils::TimeFrame;
-use positive::{Positive, pos_or_panic};
+use optionstratlib_strategies::strategies::base::Positionable;
+use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut};
 use rust_decimal_macros::dec;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -172,8 +173,7 @@ fn collect() -> Value {
 }
 
 fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/unit/backtesting/golden/single_leg_simulation.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/single_leg_simulation.json")
 }
 
 #[test]
