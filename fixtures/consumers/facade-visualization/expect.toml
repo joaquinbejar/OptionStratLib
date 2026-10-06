@@ -1,0 +1,18 @@
+# The facade with `default-features = false, features = ["visualization"]`:
+# packages the resolved normal graph must contain, and packages it must not.
+# `visualization` implies `backtest` and the chart crate, and no rendering
+# backend: Plotly, the image exporter, WebDriver and the async runtime come
+# only with `plotly` and `static_export`. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "optionstratlib-simulation", "optionstratlib-market",
+    "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
+    "optionstratlib-visualization",
+]
+# `prettytable-rs` stays out of this list until M6-05 (market and the backtest
+# report table still carry it).
+absent = [
+    "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly",
+    "plotly_static", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+]

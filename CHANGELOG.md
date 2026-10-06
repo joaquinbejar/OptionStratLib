@@ -834,6 +834,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Plotly and static-export gate is verified, not just wired** (#544).
+  `make check-graph` now fails when any workspace package other than
+  `optionstratlib-visualization` (the facade and the examples included) declares `plotly` or
+  `plotly_static`, when a lower-layer crate has a `plotly` or `static_export`
+  feature or a feature that names the visualization crate, when the facade
+  reaches the visualization crate other than through `visualization`,
+  `plotly` and `static_export` or enables `plotly` or `static_export` by
+  default, or when the visualization crate declares `plotly` non-optionally,
+  with default features or with `static_export_default`, or its two features
+  stop being exactly `dep:plotly` and `plotly` plus
+  `plotly/static_export_default`; the self-tests cover each case. The facade
+  joins the forbidden-package check: its default, `visualization`, `plotly`,
+  `async` and `static_export` trees, and all features, may resolve the
+  image-export, WebDriver, runtime and HTTP packages only where they ask for
+  them. `make check-feature-trees` pins the `plotly` and `static_export`
+  surfaces besides the headless ones and asserts, independently of the
+  recorded fixtures, that Plotly, the export stack and the visualization
+  crate appear only on the surfaces that ask for them (`--self-test`). Four
+  consumer fixtures cover the facade surfaces: `facade-visualization`,
+  `facade-plotly`, `facade-static-export` and `headless-full` (the facade
+  defaults), each with `present` and `absent` package lists, a downstream
+  `Graph` consumer and `compile_fail` doctests that the methods a surface
+  lacks do not compile; they run under `make check-consumer-facade` and
+  `make test-consumer-facade`. `make test-export` runs the PNG and SVG
+  export tests (they need a chromedriver matching the installed Chrome) and
+  passed on this revision; those tests now also assert the artifact (the
+  file exists, is not empty and starts with the PNG signature or contains
+  `<svg`). The `examples_metrics` and `examples_surfaces`
+  crates no longer declare `plotly` themselves (nothing used it); they get
+  Plotly and static export through the facade features.
+
 - **Seeded, reproducible stochastic walks** (#539). With
   `WalkParams::seed = Some(seed)` every built-in stochastic walk (Brownian,
   geometric Brownian, log-returns, mean-reverting, jump-diffusion, GARCH,

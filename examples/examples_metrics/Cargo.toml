@@ -10,4 +10,3 @@ positive = { workspace = true }
 tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
-plotly = { workspace = true, features = ["static_export_default"] }

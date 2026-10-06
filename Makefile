@@ -62,6 +62,14 @@ test-workspace-integration:
 test-visual:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored
 
+# The PNG and SVG half of `test-visual`: the `static_export` acceptance run of
+# #544, without the test that opens the default browser. It writes real image
+# files through `plotly_static`, so it needs the same matching chromedriver
+# (`WEBDRIVER_PATH`) and runs outside `make test` and CI for that reason.
+.PHONY: test-export
+test-export:
+	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored png svg
+
 # Format the code
 .PHONY: fmt
 fmt:
@@ -231,8 +239,12 @@ test-consumer-market:
 # (#528), `analytics` alone, which must not resolve strategies, and
 # `strategies` alone (#535), and `simulation` alone, which must not resolve
 # market, strategies or backtest, and `backtest` alone (#541), each consumed
-# through the prelude and the canonical paths.
-FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest
+# through the prelude and the canonical paths. The chart surfaces (#544):
+# `visualization` alone resolves no Plotly package, `plotly` alone no
+# image-export package, `static_export` alone the whole export stack, and
+# `headless-full` (the facade defaults) none of them; each one also asserts
+# with a `compile_fail` doctest which `Graph` methods it does not have.
+FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest facade-visualization facade-plotly facade-static-export headless-full
 
 .PHONY: check-consumer-facade
 check-consumer-facade:
@@ -328,9 +340,14 @@ check-components:
 # resolved with `cargo tree --target all` so it is host-independent. The
 # difference between the two is derived and printed: since #536 it is the
 # edge to `optionstratlib-simulation` and that crate's own graph, which is
-# the point. Run `make feature-trees-update` to record an intended change.
+# the point. The `plotly` and `static_export` surfaces are pinned too, and
+# every surface carries dependency assertions that `feature-trees-update`
+# cannot record over (#544): the Plotly, image-export and runtime packages
+# and the visualization crate appear only where a surface asks for them.
+# Run `make feature-trees-update` to record an intended change.
 .PHONY: check-feature-trees
 check-feature-trees:
+	@python3 scripts/check_feature_trees.py --self-test > /dev/null || (python3 scripts/check_feature_trees.py --self-test; exit 1)
 	@python3 scripts/check_feature_trees.py
 
 .PHONY: feature-trees-update

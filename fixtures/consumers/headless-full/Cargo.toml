@@ -1,0 +1,22 @@
+# Consumer fixture: the `optionstratlib` facade with its default features (ADR-0002
+# section 5 `osl-fixture-headless-full`, #544): every capability, and no
+# Plotly, image-export, WebDriver, async-runtime or HTTP package. Excluded from the root workspace so feature
+# unification with the other members cannot widen its graph; built with
+# `--manifest-path`.
+[package]
+name = "osl-fixture-headless-full"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: the optionstratlib facade built with its default features."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib = { path = "../../..", version = "0.22.0" }
+# The defining crate, named directly only to prove the facade paths are the
+# same items.
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

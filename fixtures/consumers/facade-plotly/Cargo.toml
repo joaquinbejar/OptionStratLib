@@ -1,0 +1,23 @@
+# Consumer fixture: the `optionstratlib` facade with default features plus
+# `plotly` (ADR-0002 section 5 `osl-fixture-facade-plotly`, #544): interactive
+# rendering, with no static-export package. The `plotly` feature alone is
+# pinned by the `plotly` surface of `make check-feature-trees`. Excluded from the root workspace so feature
+# unification with the other members cannot widen its graph; built with
+# `--manifest-path`.
+[package]
+name = "osl-fixture-facade-plotly"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: the optionstratlib facade built with its default features and plotly."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib = { path = "../../..", version = "0.22.0", features = ["plotly"] }
+# The defining crate, named directly only to prove the facade paths are the
+# same items.
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

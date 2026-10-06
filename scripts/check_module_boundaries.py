@@ -51,6 +51,14 @@ checks apply, both read from `cargo metadata`:
   with default features and with all of them, holds none of the packages the
   ADR-0002 fixture table lists as absent (`FORBIDDEN_PACKAGES`, #517).
 
+* the Plotly gate: only `optionstratlib-visualization` among the workspace
+  packages (examples and tests included) declares `plotly` or `plotly_static`, and declares them optional,
+  without default features and without `static_export_default`; no lower-layer
+  crate has a `plotly` or `static_export` feature or a feature that names the
+  visualization crate; the facade forwards to it only through `visualization`,
+  `plotly` and `static_export`, and its default features name neither
+  `plotly` nor `static_export` (`plotly_gate_violations`, #544).
+
 These read `cargo metadata` and `cargo tree`, so `make check-graph` needs a
 Rust toolchain on the PATH; a failing cargo command fails the check.
 
@@ -1046,6 +1054,17 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     }),
+    # The facade (#544): by default, and with `visualization` or `plotly`, it
+    # resolves no image-export, WebDriver, runtime or HTTP package. It may
+    # name `csv`, `zip` and `prettytable-rs` by default (`io`, market's
+    # report table until M6-05); `async` and `static_export` bring the rest
+    # through FEATURE_SETS. This is the "must be absent" column of ADR-0002's
+    # `osl-fixture-headless-full` row, minus `tracing-subscriber` and
+    # `indicatif` which no component resolves any more.
+    "optionstratlib": frozenset({
+        "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
+        "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
     # adds a package beyond `utoipa` (#529).
@@ -1074,6 +1093,17 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
         # `synthetic` adds the simulation crate, whose own graph is already in
         # the minimal row (ADR-0003 section 2, #537).
         "synthetic": ("synthetic", frozenset({"optionstratlib-simulation"})),
+    },
+    # The facade routes `plotly` and `static_export` to the visualization
+    # crate's features, so each set adds what that crate's set adds, plus the
+    # async stack `static_export` implies (ADR-0002 section 2, #544).
+    "optionstratlib": {
+        "visualization": ("visualization", frozenset()),
+        "plotly": ("plotly", frozenset({"plotly"})),
+        "async": ("async", frozenset({"tokio", "reqwest", "futures", "async-trait"})),
+        "static_export": ("static_export", frozenset({
+            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures", "async-trait",
+        })),
     },
     # ADR-0002 §3 visualization row (#542): `plotly` brings Plotly itself and
     # nothing for image export, which only `static_export` adds: the
@@ -1232,6 +1262,103 @@ def crate_graph_violations(packages: list[dict]) -> list[str]:
             ):
                 continue
             found.append(f"{name} ({layer}) -> {target} ({target_layer}, {kind})")
+    return found
+
+
+# The packages that bring Plotly and its static image export. Only the
+# visualization crate may declare them (ADR-0002 section 3). The consumers
+# under examples/ and tests/ go through the facade features, as a downstream
+# crate does.
+PLOTLY_BACKENDS = frozenset({"plotly", "plotly_static"})
+PLOTLY_OWNER = "optionstratlib-visualization"
+# The visualization crate's backend features, exactly: `plotly` enables the
+# optional dependency and nothing else, and `static_export` adds only the
+# export feature of that dependency, which is what pulls `plotly_static`,
+# WebDriver and the async runtime.
+PLOTLY_OWNER_FEATURES = {
+    "plotly": frozenset({"dep:plotly"}),
+    "static_export": frozenset({"plotly", "plotly/static_export_default"}),
+}
+# Facade features that may name the visualization crate, with the one value
+# each may use.
+FACADE_VISUALIZATION_FEATURES = {
+    "visualization": "dep:optionstratlib-visualization",
+    "plotly": "optionstratlib-visualization/plotly",
+    "static_export": "optionstratlib-visualization/static_export",
+}
+
+
+def plotly_gate_violations(packages: list[dict]) -> list[str]:
+    """Ways a library package could resolve Plotly or static export outside its gate.
+
+    `crate_graph_violations` already forbids a lower layer depending on the
+    visualization crate; this adds the part it cannot see: a package that
+    declares the Plotly packages itself, and a feature that forwards to them
+    or to the visualization crate from a layer that must stay headless.
+    """
+    found: list[str] = []
+    for package in packages:
+        name = package["name"]
+        features = package.get("features", {})
+        deps = package.get("dependencies", [])
+        if not is_component(name):
+            # Examples and tests reach Plotly through the facade features
+            # like any downstream crate; a direct dependency would resolve
+            # `plotly_static` behind the gate's back (#544).
+            for dep in deps:
+                if dep["name"] in PLOTLY_BACKENDS:
+                    kind = dep.get("kind") or "normal"
+                    found.append(f"{name} -> {dep['name']} ({kind}): enable the facade `plotly` or `static_export` feature instead")
+            continue
+        if name == PLOTLY_OWNER:
+            plotly = [d for d in deps if d["name"] == "plotly"]
+            if not plotly:
+                found.append(f"{name}: no `plotly` dependency, the gate has nothing to guard")
+            for dep in plotly:
+                kind = dep.get("kind") or "normal"
+                if kind == "normal" and not dep.get("optional"):
+                    found.append(f"{name}: `plotly` must be an optional dependency")
+                if dep.get("uses_default_features", False):
+                    found.append(f"{name}: `plotly` ({kind}) must be declared with default-features = false")
+                if "static_export_default" in dep.get("features", []):
+                    found.append(
+                        f"{name}: `plotly` ({kind}) must not enable static_export_default; only the "
+                        "`static_export` feature does"
+                    )
+            for feature, expected in PLOTLY_OWNER_FEATURES.items():
+                got = frozenset(features.get(feature, []))
+                if got != expected:
+                    found.append(f"{name}: feature `{feature}` is {sorted(got)}, expected {sorted(expected)}")
+            if "default" in features and features["default"]:
+                found.append(f"{name}: default features must stay empty, got {features['default']}")
+            continue
+        for dep in deps:
+            if dep["name"] in PLOTLY_BACKENDS:
+                kind = dep.get("kind") or "normal"
+                found.append(f"{name} -> {dep['name']} ({kind}): only {PLOTLY_OWNER} may declare it")
+        layer = CRATE_LAYER.get(name)
+        for feature, values in sorted(features.items()):
+            named = [v for v in values if v.removeprefix("dep:").split("/")[0].rstrip("?") == PLOTLY_OWNER]
+            if layer == "facade":
+                # Direct names only: an indirect enable (a default feature that
+                # implies `plotly`) is caught by the facade's default tree in
+                # FORBIDDEN_PACKAGES and by the `headless-full` fixture.
+                if feature == "default":
+                    for value in values:
+                        if value in ("plotly", "static_export"):
+                            found.append(f"{name}: default features must not enable `{value}`")
+                allowed = FACADE_VISUALIZATION_FEATURES.get(feature)
+                for value in named:
+                    if value != allowed:
+                        found.append(
+                            f"{name}: feature `{feature}` names `{value}`; only visualization, plotly and "
+                            "static_export may reach the visualization crate, each through its own entry"
+                        )
+                continue
+            if feature in ("plotly", "static_export"):
+                found.append(f"{name} ({layer}): feature `{feature}`; only the facade and {PLOTLY_OWNER} have it")
+            for value in named:
+                found.append(f"{name} ({layer}): feature `{feature}` names `{value}`, a headless layer cannot reach {PLOTLY_OWNER}")
     return found
 
 
@@ -1807,6 +1934,134 @@ def self_test() -> int:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: crate graph, {name} (expected {expected}, got {got})")
 
+    # --- the Plotly gate (#544)
+    def gated(name: str, *deps: dict, features: dict | None = None) -> dict:
+        return {"name": name, "features": features or {}, "dependencies": list(deps)}
+
+    def dep(name: str, *, kind: str | None = None, optional: bool = False, defaults: bool = False,
+            features: tuple[str, ...] = ()) -> dict:
+        return {"name": name, "kind": kind, "optional": optional, "uses_default_features": defaults,
+                "features": list(features)}
+
+    visualization_ok = gated(
+        "optionstratlib-visualization",
+        dep("plotly", optional=True),
+        dep("optionstratlib-core"),
+        features={"default": [], "plotly": ["dep:plotly"], "static_export": ["plotly", "plotly/static_export_default"]},
+    )
+    facade_ok = gated(
+        "optionstratlib",
+        dep("optionstratlib-visualization", optional=True),
+        features={
+            "default": ["visualization"],
+            "visualization": ["dep:optionstratlib-visualization", "backtest"],
+            "plotly": ["visualization", "optionstratlib-visualization/plotly"],
+            "static_export": ["plotly", "async", "optionstratlib-visualization/static_export"],
+        },
+    )
+
+    def replaced(package: dict, **changes: object) -> dict:
+        return {**package, **changes}
+
+    plotly_cases = {
+        "the real shape": ([visualization_ok, facade_ok, gated("optionstratlib-core", dep("serde"))], 0),
+        "an example names plotly itself": (
+            [visualization_ok, gated("examples_metrics", dep("plotly", features=("static_export_default",)))],
+            1,
+        ),
+        "an example names plotly_static": (
+            [visualization_ok, gated("examples_metrics", dep("plotly_static", kind="dev"))],
+            1,
+        ),
+        "an example enables the facade features": (
+            [visualization_ok, gated("examples_metrics", dep("optionstratlib"), dep("positive"))],
+            0,
+        ),
+        "the facade declares plotly": ([visualization_ok, replaced(facade_ok, dependencies=[dep("plotly", optional=True)])], 1),
+        "the facade declares plotly_static": (
+            [visualization_ok, replaced(facade_ok, dependencies=[dep("plotly_static", optional=True)])],
+            1,
+        ),
+        "market declares plotly": ([visualization_ok, gated("optionstratlib-market", dep("plotly", optional=True))], 1),
+        "strategies dev-depends on plotly": (
+            [visualization_ok, gated("optionstratlib-strategies", dep("plotly", kind="dev"))],
+            1,
+        ),
+        "analytics has a plotly feature": (
+            [visualization_ok, gated("optionstratlib-analytics", features={"plotly": []})],
+            1,
+        ),
+        "backtest has a static_export feature": (
+            [visualization_ok, gated("optionstratlib-backtest", features={"static_export": []})],
+            1,
+        ),
+        "pricing forwards a feature to the visualization crate": (
+            [visualization_ok, gated("optionstratlib-pricing", features={"charts": ["optionstratlib-visualization/plotly"]})],
+            1,
+        ),
+        "market optionally enables the visualization crate": (
+            [visualization_ok, gated("optionstratlib-market", features={"charts": ["dep:optionstratlib-visualization"]})],
+            1,
+        ),
+        "schema forwarding is not a visualization edge": (
+            [visualization_ok, gated("optionstratlib-market", features={"schema": ["optionstratlib-core/schema"]})],
+            0,
+        ),
+        "the facade enables plotly by default": (
+            [visualization_ok, replaced(facade_ok, features={**facade_ok["features"], "default": ["visualization", "plotly"]})],
+            1,
+        ),
+        "the facade enables static_export by default": (
+            [visualization_ok, replaced(facade_ok, features={**facade_ok["features"], "default": ["static_export"]})],
+            1,
+        ),
+        "a facade feature reaches the backend of the visualization crate": (
+            [visualization_ok, replaced(facade_ok, features={**facade_ok["features"], "async": ["optionstratlib-visualization/static_export"]})],
+            1,
+        ),
+        "the facade plotly feature forwards the export feature": (
+            [
+                visualization_ok,
+                replaced(
+                    facade_ok,
+                    features={**facade_ok["features"], "plotly": ["visualization", "optionstratlib-visualization/static_export"]},
+                ),
+            ],
+            1,
+        ),
+        "visualization declares plotly non-optionally": (
+            [replaced(visualization_ok, dependencies=[dep("plotly")])],
+            1,
+        ),
+        "visualization keeps plotly default features": (
+            [replaced(visualization_ok, dependencies=[dep("plotly", optional=True, defaults=True)])],
+            1,
+        ),
+        "visualization enables static_export_default on plotly": (
+            [replaced(visualization_ok, dependencies=[dep("plotly", optional=True, features=("static_export_default",))])],
+            1,
+        ),
+        "visualization plotly feature enables export": (
+            [replaced(visualization_ok, features={**visualization_ok["features"], "plotly": ["dep:plotly", "plotly/static_export_default"]})],
+            1,
+        ),
+        "visualization static_export drops plotly": (
+            [replaced(visualization_ok, features={**visualization_ok["features"], "static_export": ["plotly/static_export_default"]})],
+            1,
+        ),
+        "visualization enables plotly by default": (
+            [replaced(visualization_ok, features={**visualization_ok["features"], "default": ["plotly"]})],
+            1,
+        ),
+        "visualization lost its plotly dependency": ([replaced(visualization_ok, dependencies=[])], 1),
+    }
+    for name, (packages_case, expected) in plotly_cases.items():
+        got = len(plotly_gate_violations(packages_case))
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: plotly gate, {name} (expected {expected}, got {got})")
+
     def meta(members: list[dict], resolved: list[tuple[str, str]]) -> dict:
         for index, member in enumerate(members):
             member["id"] = f"member-{index}"
@@ -1894,6 +2149,25 @@ def self_test() -> int:
             0,
         ),
         "visualization csv under all features": ({("optionstratlib-visualization", "all features"): {"plotly", "csv"}}, 1),
+        "clean facade tree": ({("optionstratlib", "default"): {"optionstratlib-core", "csv", "zip", "prettytable-rs"}}, 0),
+        "facade pulls plotly by default": ({("optionstratlib", "default"): {"plotly"}}, 1),
+        "facade pulls tokio by default": ({("optionstratlib", "default"): {"tokio"}}, 1),
+        "facade visualization pulls plotly": ({("optionstratlib", "visualization"): {"plotly"}}, 1),
+        "facade plotly alone": ({("optionstratlib", "plotly"): {"plotly"}}, 0),
+        "facade plotly pulls the export stack": (
+            {("optionstratlib", "plotly"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest"}},
+            5,
+        ),
+        "facade static_export": (
+            {("optionstratlib", "static_export"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures"}},
+            0,
+        ),
+        "facade async pulls plotly": ({("optionstratlib", "async"): {"tokio", "plotly"}}, 1),
+        "facade all features": (
+            {("optionstratlib", "all features"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest"}},
+            0,
+        ),
+        "facade all features pulls tracing-subscriber": ({("optionstratlib", "all features"): {"tracing-subscriber"}}, 1),
         "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),
         "simulation pulls market io": ({("optionstratlib-simulation", "all features"): {"csv", "zip"}}, 2),
     }
@@ -2160,6 +2434,8 @@ def main() -> int:
         ("foundational type crates must resolve once, at one requirement, and only core may "
          "depend on them (ADR-0001 D8, #515):", foundational_violations(metadata)),
         ("forbidden workspace crate dependencies (ADR-0001 D1/D9):", crate_graph_violations(packages)),
+        ("Plotly and static export reachable outside the visualization gate (ADR-0002 section 3, #544):",
+         plotly_gate_violations(packages)),
         ("facade files in a layer that a workspace crate owns (one canonical definition):",
          facade_redefinitions(SRC, packages)),
     ]
@@ -2195,6 +2471,7 @@ def main() -> int:
     marks = ", ".join(f"{layer}={n}" for layer, n in sorted(marked_lines().items())) or "none"
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
+    print(f"OK: only {PLOTLY_OWNER} declares Plotly, behind `plotly` and `static_export`, and no lower layer reaches it")
     print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
     print(f"OK: internal module edges acyclic in {', '.join(sorted(INTRA_CRATE_RULES))}")
     print(f"OK: no forbidden package in {', '.join(sorted({c for c, _ in trees})) or 'any component'} (default, all features and each named feature set)")
