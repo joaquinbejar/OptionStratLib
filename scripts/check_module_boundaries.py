@@ -1557,6 +1557,25 @@ def self_test() -> int:
             0,
         ),
         "mandatory market -> simulation": ([pkg("optionstratlib-market", ("optionstratlib-simulation",))], 1),
+        # #530: analytics stays strategy-free. The upper crates do not exist
+        # yet; their `CRATE_LAYER` entries already report an edge to them as
+        # a layer violation, whatever the dependency kind.
+        "analytics depends on market": ([pkg("optionstratlib-analytics", ("optionstratlib-market",))], 0),
+        "analytics depends on strategies": ([pkg("optionstratlib-analytics", ("optionstratlib-strategies",))], 1),
+        "analytics dev-depends on strategies": (
+            [pkg("optionstratlib-analytics", ("optionstratlib-strategies", "dev"))],
+            1,
+        ),
+        "analytics optionally depends on strategies": (
+            [pkg("optionstratlib-analytics", ("optionstratlib-strategies", None, True))],
+            1,
+        ),
+        "analytics depends on backtest": ([pkg("optionstratlib-analytics", ("optionstratlib-backtest",))], 1),
+        "analytics depends on visualization": (
+            [pkg("optionstratlib-analytics", ("optionstratlib-visualization",))],
+            1,
+        ),
+        "analytics depends on simulation": ([pkg("optionstratlib-analytics", ("optionstratlib-simulation",))], 1),
     }
     for name, (packages, expected) in crate_cases.items():
         got = len(crate_graph_violations(packages))

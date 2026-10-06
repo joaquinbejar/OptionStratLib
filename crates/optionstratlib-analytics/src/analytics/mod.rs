@@ -4,8 +4,9 @@
 //! This module is the monolith-side home of the future
 //! `optionstratlib-analytics` crate for code that has no natural place in
 //! `pnl`, `risk` or `metrics`. It depends downward only (core model, Greeks);
-//! the strategy layer consumes it through its `ProbabilityAnalysis` trait and
-//! re-exports the historical `strategies::probabilities` paths.
+//! the strategy layer consumes it through its `ProbabilityAnalysis` trait.
+//! The kernels and their inputs have one public path, `analytics::…`; the
+//! strategy layer does not re-export them.
 
 pub mod probability;
 

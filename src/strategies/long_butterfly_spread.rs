@@ -9,6 +9,7 @@ use super::base::{
 };
 use super::shared::ButterflyStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::price_gap;
 use crate::{
@@ -32,7 +33,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -1792,9 +1793,10 @@ mod tests_long_butterfly_delta {
     use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
 
     use rust_decimal_macros::dec;
@@ -1966,9 +1968,10 @@ mod tests_long_butterfly_delta_size {
     use super::*;
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::long_butterfly_spread::LongButterflySpread;
     use positive::assert_pos_relative_eq;
     use rust_decimal::Decimal;
@@ -3223,7 +3226,7 @@ mod tests_butterfly_probability {
 
     use crate::model::ExpirationDate;
 
-    use crate::strategies::probabilities::calculate_price_probability;
+    use crate::analytics::calculate_price_probability;
     use rust_decimal_macros::dec;
 
     /// The flat 0.2 volatility the probability kernels used to substitute

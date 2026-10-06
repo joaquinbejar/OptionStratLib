@@ -34,7 +34,8 @@
 //! use optionstratlib::strategies::Strategies;
 //! use optionstratlib::error::ProbabilityError;
 //!
-//! use optionstratlib::strategies::probabilities::{PriceTrend, StrategyProbabilityAnalysis, VolatilityAdjustment};
+//! use optionstratlib::analytics::{PriceTrend, VolatilityAdjustment};
+//! use optionstratlib::strategies::probabilities::StrategyProbabilityAnalysis;
 //!
 //! pub trait ProbabilityAnalysis: Strategies + Profit {
 //!     fn analyze_probabilities(
@@ -60,7 +61,8 @@
 //! use rust_decimal_macros::dec;
 //! use tracing::info;
 //! use optionstratlib::model::types::{ OptionStyle, OptionType, Side};
-//! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment, PriceTrend, StrategyProbabilityAnalysis};
+//! use optionstratlib::analytics::{PriceTrend, VolatilityAdjustment};
+//! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, StrategyProbabilityAnalysis};
 //! use optionstratlib::ExpirationDate;use positive::Positive;
 //! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
@@ -95,7 +97,8 @@
 //! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use rust_decimal_macros::dec;
 //! use optionstratlib::ExpirationDate;
-//! use optionstratlib::strategies::probabilities::{ProbabilityAnalysis, VolatilityAdjustment};
+//! use optionstratlib::analytics::VolatilityAdjustment;
+//! use optionstratlib::strategies::probabilities::ProbabilityAnalysis;
 //! use positive::Positive;
 //! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
@@ -137,7 +140,8 @@
 //! use positive::Positive;
 //! use positive::pos_or_panic;
 //! use optionstratlib::strategies::bear_call_spread::BearCallSpread;
-//! use optionstratlib::strategies::probabilities::{PriceTrend, ProbabilityAnalysis};
+//! use optionstratlib::analytics::PriceTrend;
+//! use optionstratlib::strategies::probabilities::ProbabilityAnalysis;
 //! let strategy = BearCallSpread::new(
 //!         "SP500".to_string(),
 //!         pos_or_panic!(5781.88),   // underlying_price
@@ -170,7 +174,7 @@
 //! ```rust
 //! # fn run() -> Result<(), optionstratlib::error::Error> {
 //! use tracing::info;
-//! use optionstratlib::strategies::probabilities::{calculate_price_probability, VolatilityAdjustment};
+//! use optionstratlib::analytics::{VolatilityAdjustment, calculate_price_probability};
 //! use optionstratlib::ExpirationDate;
 //! use positive::Positive;
 //! use positive::pos_or_panic;
@@ -244,14 +248,5 @@
 mod analysis;
 pub(crate) mod core;
 
-/// The neutral kernels and inputs are owned by [`crate::analytics::probability`];
-/// these re-exports keep the historical `strategies::probabilities` paths.
-pub use crate::analytics::probability::{
-    PriceTrend, VolatilityAdjustment, calculate_price_probability,
-    calculate_single_point_probability,
-};
-/// The range-probability extension trait is owned by
-/// [`crate::analytics::profit_range`]; re-exported for discoverability.
-pub use crate::analytics::profit_range::ProfitRangeProbability;
 pub use analysis::StrategyProbabilityAnalysis;
 pub use core::ProbabilityAnalysis;

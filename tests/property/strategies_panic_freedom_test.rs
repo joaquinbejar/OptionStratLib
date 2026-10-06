@@ -19,6 +19,10 @@
 //! The assertion is deliberately weak: whatever comes back, it must come back.
 
 use optionstratlib::ExpirationDate;
+use optionstratlib::analytics::PriceTrend;
+use optionstratlib::analytics::VolatilityAdjustment;
+use optionstratlib::analytics::calculate_price_probability;
+use optionstratlib::analytics::calculate_single_point_probability;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{Action, OptionStyle, OptionType, Side};
 use optionstratlib::model::{Options, Position};
@@ -30,10 +34,7 @@ use optionstratlib::strategies::base::{
 };
 use optionstratlib::strategies::custom::CustomStrategy;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
-use optionstratlib::strategies::probabilities::{
-    PriceTrend, ProbabilityAnalysis, VolatilityAdjustment, calculate_price_probability,
-    calculate_single_point_probability,
-};
+use optionstratlib::strategies::probabilities::ProbabilityAnalysis;
 use optionstratlib::strategies::{
     BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, Collar,
     CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongStraddle,

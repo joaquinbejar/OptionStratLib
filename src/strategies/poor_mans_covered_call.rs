@@ -34,6 +34,7 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::chains::OptionData;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::{lower_break_even, price_gap};
@@ -59,7 +60,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -1553,9 +1554,10 @@ mod tests_short_straddle_delta {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
     use rust_decimal_macros::dec;
 
@@ -1699,9 +1701,10 @@ mod tests_short_straddle_delta_size {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::poor_mans_covered_call::PoorMansCoveredCall;
     use rust_decimal_macros::dec;
 

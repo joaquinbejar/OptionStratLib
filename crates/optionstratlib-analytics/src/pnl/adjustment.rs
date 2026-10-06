@@ -4,8 +4,8 @@
 //! options or underlying, or do nothing. It carries only core types, so the
 //! analytics layer (P&L) can consume it through
 //! [`crate::pnl::PnLCalculator::adjustments_pnl`] without depending on the
-//! strategies that produce it. The strategies module re-exports it under its
-//! historical `strategies::delta_neutral::DeltaAdjustment` path.
+//! strategies that produce it. `pnl::DeltaAdjustment` is its only public
+//! path; the strategies' `DeltaNeutrality` adapter returns this type.
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::{OptionStyle, Side};

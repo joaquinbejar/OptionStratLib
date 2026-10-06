@@ -9,6 +9,7 @@ use super::base::{
 };
 use super::shared::ButterflyStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::pricing::OptionPricing;
 use crate::test_strategy_traits;
@@ -33,7 +34,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };
@@ -1334,10 +1335,11 @@ mod tests_call_butterfly_delta {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::call_butterfly::CallButterfly;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {
@@ -1506,10 +1508,11 @@ mod tests_call_butterfly_delta_size {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::call_butterfly::CallButterfly;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> CallButterfly {

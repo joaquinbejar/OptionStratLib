@@ -67,9 +67,8 @@ use std::fmt;
 use tracing::{debug, warn};
 use utoipa::ToSchema;
 
-pub use crate::greeks::DELTA_THRESHOLD;
-
-pub use crate::pnl::{DeltaAdjustment, DeltaAdjustmentSameSize};
+use crate::greeks::DELTA_THRESHOLD;
+use crate::pnl::{DeltaAdjustment, DeltaAdjustmentSameSize};
 
 /// Represents the delta and associated details for a single position in an options strategy.
 ///
@@ -1089,13 +1088,13 @@ pub struct DeltaNeutralResponse {
 }
 
 #[cfg(test)]
-mod tests_adjustment_reexport {
+mod tests_adjustment_owner {
     use super::*;
 
     #[test]
     fn test_delta_adjustment_is_the_analytics_owned_type() {
-        // `strategies::delta_neutral::DeltaAdjustment` is a re-export of the
-        // analytics-owned enum, not a second definition.
+        // The delta-neutral model consumes the analytics-owned enum; it
+        // defines no second `DeltaAdjustment`.
         let adj: crate::pnl::DeltaAdjustment = DeltaAdjustment::NoAdjustmentNeeded;
         assert!(matches!(adj, DeltaAdjustment::NoAdjustmentNeeded));
     }

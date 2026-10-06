@@ -13,9 +13,11 @@ use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::chains::UpdateFromOptionData;
 use crate::model::decimal::p_sqrt;
 use crate::model::decimal::{d_div, d_mul};
+use crate::pnl::DeltaAdjustment;
 use crate::strategies::base::price_gap;
 use crate::strategies::utils::calculate_price_range_bounded;
 use crate::{
@@ -36,10 +38,10 @@ use crate::{
     pnl::{PnLCalculator, utils::PnL},
     pricing::Profit,
     strategies::{
-        BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
+        BasicAble, Strategies, StrategyConstructor,
         combinations::process_n_times_iter,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
 };

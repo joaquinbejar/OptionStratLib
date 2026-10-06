@@ -22,6 +22,7 @@ use crate::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use crate::pnl::DeltaAdjustment;
 use crate::pnl::{PnL, PnLCalculator};
 use crate::pricing::OptionPricing;
 use crate::pricing::Profit;
@@ -31,8 +32,7 @@ use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{
-    BasicAble, DeltaAdjustment, FindOptimalSide, Strategable, Strategies, StrategyConstructor,
-    Validable,
+    BasicAble, FindOptimalSide, Strategable, Strategies, StrategyConstructor, Validable,
 };
 use crate::{ExpirationDate, Options, test_strategy_traits};
 use chrono::Utc;

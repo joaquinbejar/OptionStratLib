@@ -31,8 +31,7 @@ use rust_decimal_macros::dec;
 ///
 /// ## Related Components
 /// Owned by the Greeks layer because `calculate_delta_neutral_sizes` needs it;
-/// the delta-neutral strategies module re-exports it under its historical
-/// `strategies::delta_neutral::DELTA_THRESHOLD` path.
+/// `greeks::DELTA_THRESHOLD` is its only public path.
 pub const DELTA_THRESHOLD: Decimal = dec!(0.0001);
 
 /// Computes the probability density function (PDF) of the standard normal distribution
