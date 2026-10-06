@@ -724,6 +724,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     put-call parity bound tightens from `2.0` to `1e-9`, since the old gap
     of `S2 (1 - e^(-rT)) ≈ 1.23` is gone.
 
+- **The barrier pricer follows Reiner-Rubinstein for all eight contracts,
+  pays each rebate on the right leg and honours `Side`** (#646).
+  `barrier_black_scholes` now composes every contract from Haug's
+  §4.17.1 terms `A`–`F` (*The Complete Guide to Option Pricing Formulas*).
+  - Up-barrier calls and every barrier put used the wrong terms. Without a
+    rebate, at `S = 100, T = 0.5, r = 8 %, q = 4 %, σ = 25 %`, the
+    up-and-out call (`K = 100, H = 105`) goes from `-2.2564` to `0.0127`,
+    and the down-and-out put (`K = 90, H = 95`) from `9.3890`, above the
+    vanilla put `2.2845`, to `0.0000`. Knock-outs now stay within
+    `[0, vanilla]`.
+  - The rebate legs were swapped: a knock-in received the rebate paid at
+    the hit (`F`) and a knock-out the one paid at expiry (`E`). With a rebate
+    of 3 the down-and-out call at `K = 90, 100, 110, H = 95` goes from
+    `7.4188, 5.1867, 3.2701` to `9.0246, 6.7924, 4.8759` and the down-and-in
+    call from `9.3684, 5.6167, 3.6633` to `7.7627, 4.0109, 2.0576`. Every
+    rebate-3 entry of Haug's Table 4-13 at `σ = 25 %` and `30 %` is now
+    reproduced to four decimals.
+  - A short barrier is the negated long price; the pricer used to ignore
+    `option.side` (`S = 100, K = 105, H = 90, T = 0.5, σ = 25 %, r = 5 %,
+    q = 1 %`: the short down-and-out call goes from `+5.1218` to
+    `-5.1218`).
+  - A spot already at or beyond the barrier prices the knock-in as the
+    vanilla and the knock-out as its rebate paid now, instead of evaluating
+    the formulas outside their domain.
+  - Down-barrier calls without a rebate are unchanged.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an

@@ -28,7 +28,9 @@
 //!   in the library's units (vega and rho per 1 %, theta per calendar day).
 //! * Exotic decompositions: binary (asset-or-nothing minus `K` cash-or-nothing
 //!   is the vanilla call; call plus put of each binary is the discounted
-//!   payout), barrier in-out parity without rebate, simple chooser at
+//!   payout), barrier in-out parity without rebate (also with the spot
+//!   beyond the barrier), knock-outs bounded by the vanilla and short
+//!   barriers negated (#646), simple chooser at
 //!   `t = T` is the straddle, Margrabe exchange parity, power option with
 //!   exponent 1 is Black-Scholes, Kemna-Vorst geometric Asian is
 //!   Black-Scholes with `σ/√3` and carry `(r - q - σ²/6)/2`, quanto with zero
@@ -71,11 +73,6 @@
 //! of rate moves an at-the-money price on these grids by more than `1e-4`).
 //! The Kirk-to-Margrabe continuity check and the four-decimal quanto value
 //! name their own bound at the assertion.
-//!
-//! # Known discrepancies (filed, tested in the fix)
-//!
-//! Identities the library breaks today are not in this suite; each lives
-//! in its issue with the test code: barrier bounds and `Side` (#646).
 
 use optionstratlib_core::model::option::ExoticParams;
 use optionstratlib_core::model::types::{
@@ -890,6 +887,148 @@ fn test_barrier_in_out_parity_without_rebate_grid_holds() {
                     );
                 }
             }
+        }
+    }
+}
+
+/// A short barrier is the negated long barrier (#646). `barrier_black_scholes`
+/// used to ignore `option.side`; at `S = 100, K = 105, H = 90, T = 0.5,
+/// σ = 25 %, r = 5 %, q = 1 %` both sides of the down-and-out call priced
+/// `+5.1218`.
+#[test]
+fn test_barrier_short_price_equals_negated_long() {
+    for barrier_type in [
+        BarrierType::DownAndOut,
+        BarrierType::DownAndIn,
+        BarrierType::UpAndOut,
+        BarrierType::UpAndIn,
+    ] {
+        let level = match barrier_type {
+            BarrierType::DownAndOut | BarrierType::DownAndIn => 90.0,
+            _ => 115.0,
+        };
+        for rebate in [None, Some(pos_or_panic!(2.0))] {
+            let option_type = OptionType::Barrier {
+                barrier_type,
+                barrier_level: pos_or_panic!(level),
+                rebate,
+            };
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                let long = exotic_for_side(option_type.clone(), style, Side::Long);
+                let short = exotic_for_side(option_type.clone(), style, Side::Short);
+                assert_eq!(
+                    ok(black_scholes(&short), "short"),
+                    -ok(black_scholes(&long), "long"),
+                    "barrier {barrier_type:?} {style:?} rebate {rebate:?}"
+                );
+            }
+        }
+    }
+}
+
+/// A knock-out without rebate is worth between zero and the vanilla (#646).
+/// The library used to return, at `S = 100, T = 0.5, r = 8 %, q = 4 %,
+/// σ = 25 %`, an up-and-out call at `K = 100, H = 105` of `-2.2564`
+/// (Reiner-Rubinstein: `0.0127`) and a down-and-out put at `K = 90, H = 95`
+/// of `9.3890` against a vanilla put of `2.2845` (Reiner-Rubinstein:
+/// `0.0000`). The in-out parity held, so the knock-in legs carried the
+/// mirror error.
+#[test]
+fn test_barrier_knock_out_bounded_by_vanilla_grid_holds() {
+    for (knock_out, level) in [
+        (BarrierType::DownAndOut, 95.0),
+        (BarrierType::UpAndOut, 105.0),
+    ] {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            for &k in &STRIKES {
+                let price = |option_type: OptionType| {
+                    ok(
+                        black_scholes(&option(
+                            option_type,
+                            style,
+                            Side::Long,
+                            100.0,
+                            k,
+                            182.5,
+                            0.25,
+                            dec!(0.08),
+                            0.04,
+                            None,
+                        )),
+                        "barrier",
+                    )
+                };
+                let out = price(barrier(knock_out, level));
+                let vanilla = price(OptionType::European);
+                assert!(
+                    out >= -IDENTITY_TOL && out <= vanilla + IDENTITY_TOL,
+                    "{knock_out:?} {style:?} k={k}: {out} outside [0, {vanilla}]"
+                );
+            }
+        }
+    }
+    let up_and_out_call = ok(
+        black_scholes(&option(
+            barrier(BarrierType::UpAndOut, 105.0),
+            OptionStyle::Call,
+            Side::Long,
+            100.0,
+            100.0,
+            182.5,
+            0.25,
+            dec!(0.08),
+            0.04,
+            None,
+        )),
+        "up-and-out call",
+    );
+    assert_close(
+        up_and_out_call,
+        dec!(0.0127),
+        dec!(0.00005),
+        "up-and-out call k=100 h=105",
+    );
+}
+
+/// With the spot already beyond the barrier, the knock-in is the vanilla
+/// and the knock-out is worth nothing without a rebate, so in-out parity
+/// holds there too (#646).
+#[test]
+fn test_barrier_breached_in_out_parity_holds() {
+    for (knock_in, knock_out, level) in [
+        (BarrierType::DownAndIn, BarrierType::DownAndOut, 105.0),
+        (BarrierType::UpAndIn, BarrierType::UpAndOut, 95.0),
+    ] {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let price = |option_type: OptionType| {
+                ok(
+                    black_scholes(&option(
+                        option_type,
+                        style,
+                        Side::Long,
+                        100.0,
+                        100.0,
+                        182.5,
+                        0.25,
+                        dec!(0.08),
+                        0.04,
+                        None,
+                    )),
+                    "barrier",
+                )
+            };
+            let vanilla = price(OptionType::European);
+            assert_close(
+                price(barrier(knock_in, level)),
+                vanilla,
+                IDENTITY_TOL,
+                &format!("breached {knock_in:?} {style:?}"),
+            );
+            assert_eq!(
+                price(barrier(knock_out, level)),
+                Decimal::ZERO,
+                "breached {knock_out:?} {style:?}"
+            );
         }
     }
 }
