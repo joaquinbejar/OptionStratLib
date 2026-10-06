@@ -131,8 +131,8 @@ pub optionstratlib_strategies::strategies::base::Strategy::break_even_points: al
 pub optionstratlib_strategies::strategies::base::Strategy::description: alloc::string::String
 pub optionstratlib_strategies::strategies::base::Strategy::kind: optionstratlib_strategies::strategies::base::StrategyType
 pub optionstratlib_strategies::strategies::base::Strategy::legs: alloc::vec::Vec<optionstratlib_core::model::position::Position>
-pub optionstratlib_strategies::strategies::base::Strategy::max_loss: core::option::Option<f64>
-pub optionstratlib_strategies::strategies::base::Strategy::max_profit: core::option::Option<f64>
+pub optionstratlib_strategies::strategies::base::Strategy::max_loss: core::option::Option<positive::positive::Positive>
+pub optionstratlib_strategies::strategies::base::Strategy::max_profit: core::option::Option<positive::positive::Positive>
 pub optionstratlib_strategies::strategies::base::Strategy::name: alloc::string::String
 impl optionstratlib_strategies::strategies::base::Strategy
 pub fn optionstratlib_strategies::strategies::base::Strategy::new(alloc::string::String, optionstratlib_strategies::strategies::base::StrategyType, alloc::string::String) -> Self
