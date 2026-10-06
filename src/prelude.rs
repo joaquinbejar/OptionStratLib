@@ -167,14 +167,14 @@ pub use crate::simulation::{
 };
 
 // Chain and series types and generators
+#[cfg(feature = "synthetic")]
+pub use crate::chains::generator_optionchain;
 #[cfg(feature = "market")]
 pub use crate::chains::{OptionChainBuildParams, utils::OptionDataPriceParams};
+#[cfg(feature = "synthetic")]
+pub use crate::series::generator_optionseries;
 #[cfg(feature = "market")]
 pub use crate::series::{OptionSeries, OptionSeriesBuildParams};
-#[cfg(feature = "synthetic")]
-pub use crate::synthetic::generator_optionchain;
-#[cfg(feature = "synthetic")]
-pub use crate::synthetic::generator_optionseries;
 
 // Volatility functions
 #[cfg(feature = "pricing")]

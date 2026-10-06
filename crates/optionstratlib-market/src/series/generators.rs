@@ -1,16 +1,15 @@
-use super::GeneratorFailure;
 use crate::error::ChainError;
 use crate::series::{OptionSeries, OptionSeriesBuildParams};
-use crate::simulation::steps::{Step, Xstep};
-use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_simulation::simulation::steps::{Step, Xstep};
+use optionstratlib_simulation::simulation::{WalkParams, walk_steps_par};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::sync::Mutex;
 
 #[cfg(test)]
-use positive::pos_or_panic;
+use optionstratlib_core::pos_or_panic;
 
 /// Creates a new `OptionSeries` from pre-derived build parameters, a new price,
 /// an optional volatility, and the aged series expirations.
@@ -74,8 +73,8 @@ fn create_series_from_step(
 /// progression in the x-axis and the calculated output (y-axis) using the mathematical rules
 /// of the given walk type.
 ///
-/// # Contract (shared with [`crate::synthetic::generator_optionchain`] and
-/// [`crate::simulation::generator_positive`])
+/// # Contract (shared with [`crate::chains::generator_optionchain`] and
+/// [`optionstratlib_simulation::simulation::generator_positive`])
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
 /// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
@@ -123,7 +122,7 @@ fn create_series_from_step(
 /// prices than `walk_params.size` — and propagates errors from the
 /// volatility-estimation or chain-construction primitives. The returned vector is
 /// guaranteed to start with `walk_params.init_step`
-/// (matching the contract of [`crate::synthetic::generator_optionchain`]).
+/// (matching the contract of [`crate::chains::generator_optionchain`]).
 pub fn generator_optionseries(
     walk_params: &WalkParams<Positive, OptionSeries>,
 ) -> Result<Vec<Step<Positive, OptionSeries>>, ChainError> {
@@ -137,7 +136,7 @@ pub fn generator_optionseries(
     let init_ystep = walk_params.ystep_ref();
     let init_x = walk_params.init_step.x;
     // A step reports its own `ChainError`; the driver's failures arrive
-    // through `GeneratorFailure` (see the `synthetic` module).
+    // through `From<SimulationError> for ChainError`.
     let build_step = |new_price: &Positive,
                       volatility: Option<Positive>,
                       x_step: &Xstep<Positive>|
@@ -199,26 +198,23 @@ pub fn generator_optionseries(
             create_series_from_step(&build_params, new_price, volatility, aged_series)?;
         Ok(Some(y_step_series))
     };
-    walk_steps_par(walk_params, |new_price, volatility, x_step| {
-        build_step(new_price, volatility, x_step).map_err(GeneratorFailure)
-    })
-    .map_err(GeneratorFailure::into_inner)
+    walk_steps_par(walk_params, build_step)
 }
 
 #[cfg(test)]
 mod tests_generator_optionseries {
     use super::*;
-    use positive::{assert_pos_relative_eq, spos};
+    use optionstratlib_core::{assert_pos_relative_eq, spos};
 
-    use crate::ExpirationDate;
     use crate::chains::utils::OptionChainBuildParams;
     use crate::chains::utils::OptionDataPriceParams;
-    use crate::error::SimulationError;
     use crate::series::{OptionSeries, OptionSeriesBuildParams};
-    use crate::simulation::steps::{Step, Xstep, Ystep};
-    use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
-    use crate::utils::TimeFrame;
-    use crate::utils::time::convert_time_frame;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_core::utils::time::convert_time_frame;
+    use optionstratlib_simulation::error::SimulationError;
+    use optionstratlib_simulation::simulation::steps::{Step, Xstep, Ystep};
+    use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
     // Mock Walker for testing
@@ -646,7 +642,7 @@ mod tests_generator_optionseries {
     /// walk (issue #406/#410 behavior, pinned here).
     #[test]
     fn test_generator_optionseries_multi_step_aging() {
-        use crate::synthetic::walk_test_support::RampWalker;
+        use crate::walk_test_support::RampWalker;
 
         let initial_series = create_test_option_series(); // expirations 30/60/90d
         let size = 4;
@@ -706,7 +702,7 @@ mod tests_generator_optionseries {
     fn test_generator_optionseries_stops_when_all_expired() {
         use crate::chains::utils::OptionChainBuildParams;
         use crate::chains::utils::OptionDataPriceParams;
-        use crate::synthetic::walk_test_support::RampWalker;
+        use crate::walk_test_support::RampWalker;
 
         // Single 2-day expiration in the series; walk x-expiry far out.
         let price_params = OptionDataPriceParams::new(

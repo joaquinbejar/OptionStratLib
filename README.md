@@ -404,13 +404,11 @@ docs list its entry points, or enable only its facade feature:
 optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
 ```
 
-The rest of the library (backtesting, visualization, and the `synthetic`
-chain and series generators) still lives in this crate and moves out
-milestone by milestone. Until then backtesting, visualization, the unified
-`error::Error` and their `prelude` items need both `strategies` and
-`simulation`, `synthetic` needs `market` and `simulation`, and the
-`schema` derives of these modules stay always on; the facade default
-enables all of it.
+The rest of the library (backtesting and visualization) still lives in
+this crate and moves out milestone by milestone. Until then backtesting,
+visualization, the unified `error::Error` and their `prelude` items need
+both `strategies` and `simulation`, and the `schema` derives of these
+modules stay always on; the facade default enables all of it.
 
 ### Module Boundaries
 
@@ -944,10 +942,11 @@ optionstratlib = { version = "0.22.0", features = ["plotly"] }
   `default-features = false` drops it, and `csv` and `zip` with it
 - `async`: asynchronous versions of that I/O (implies `market` and `io`; adds tokio)
 - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
-  (`synthetic::generator_optionchain`, `synthetic::generator_optionseries`), whose
-  simulation failures arrive as `ChainError::Generator`; implies `market` and
-  `simulation`. Leave it out (`default-features = false, features = ["market"]`)
-  for a market surface that names no simulation type at all.
+  (`chains::generator_optionchain`, `series::generator_optionseries`, defined by
+  `optionstratlib-market` behind its own `synthetic` feature), whose simulation
+  failures arrive as `ChainError::Generator`; implies `market` and `simulation`.
+  Leave it out (`default-features = false, features = ["market"]`) for a
+  market surface that names no simulation type at all.
   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
   dependency graphs
 

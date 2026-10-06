@@ -783,6 +783,8 @@ pub use optionstratlib::prelude::debug
 pub use optionstratlib::prelude::dec
 pub use optionstratlib::prelude::error
 pub use optionstratlib::prelude::expanding_window_vols
+pub use optionstratlib::prelude::generator_optionchain
+pub use optionstratlib::prelude::generator_optionseries
 pub use optionstratlib::prelude::generator_positive
 pub use optionstratlib::prelude::get_tomorrow_formatted
 pub use optionstratlib::prelude::get_x_days_formatted
@@ -1719,12 +1721,7 @@ impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for 
 impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib_strategies::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::BacktestError>
 pub fn optionstratlib_strategies::strategies::short_put::ShortPut::simulate(&self, &optionstratlib_simulation::simulation::simulator::Simulator<X, Y>, optionstratlib_simulation::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::BacktestError>
-pub fn optionstratlib::prelude::generator_optionchain(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>>, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib::prelude::generator_optionseries(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::series::model::OptionSeries>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::series::model::OptionSeries>>, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib::prelude::make_surface(&optionstratlib::visualization::Surface3D) -> alloc::boxed::Box<plotly::traces::surface::Surface<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>
-pub mod optionstratlib::synthetic
-pub fn optionstratlib::synthetic::generator_optionchain(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>>, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib::synthetic::generator_optionseries(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::series::model::OptionSeries>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::series::model::OptionSeries>>, optionstratlib_market::error::chains::ChainError>
 pub mod optionstratlib::visualization
 pub mod optionstratlib::visualization::file
 pub fn optionstratlib::visualization::file::prepare_file_path(&std::path::Path) -> core::result::Result<(), core::io::error::Error>

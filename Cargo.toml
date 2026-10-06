@@ -52,11 +52,11 @@ strategies = ["dep:optionstratlib-strategies", "analytics"]
 # strategies, backtesting or plotting. It implies only `pricing`, so
 # `market`, `analytics` or `strategies` alone resolves no simulation crate.
 simulation = ["dep:optionstratlib-simulation", "pricing"]
-# `synthetic` is the only market-to-simulation dependency (chain and series
-# generators built on random walks) and becomes the optional
-# `Market -> Simulation` edge once the crates are split (roadmap M1-15,
-# ADR-0003).
-synthetic = ["market", "simulation"]
+# `synthetic`: the simulation-backed chain and series generators
+# (`chains::generator_optionchain`, `series::generator_optionseries`). It
+# forwards to `optionstratlib-market/synthetic`, the only market-to-simulation
+# dependency (ADR-0003).
+synthetic = ["market", "simulation", "optionstratlib-market/synthetic"]
 # Filesystem I/O for market data: CSV, JSON and ZIP readers and writers of
 # chains and OHLCV candles (ADR-0003). On by default; without it the build
 # resolves no `csv` or `zip`.
@@ -151,6 +151,8 @@ exclude = [
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-pricing",
     "fixtures/consumers/facade-strategies",
+    "fixtures/consumers/market-minimal",
+    "fixtures/consumers/market-synthetic",
     "fixtures/consumers/pricing-only",
 ]
 members = [

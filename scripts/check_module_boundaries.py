@@ -93,10 +93,6 @@ LAYER_OF = {
     "visualization": "visualization",
     "error": "facade",
     "prelude": "facade",
-    # The simulation-backed chain and series generators: market data built by
-    # the simulation engine, so they sit above both until M5 moves them into
-    # `optionstratlib-market` behind its `synthetic` feature (#524).
-    "synthetic": "facade",
 }
 
 # `src/error/<file>.rs` -> target crate layer (ADR-0001 D6).
@@ -172,10 +168,11 @@ ALWAYS_ALLOWED_TARGETS = {"error"}
 
 # Facade files whose market-to-simulation edge is the `synthetic`-gated
 # capability (ADR-0003, roadmap M1-15). Empty since #524: market is its own
-# crate, so the crate graph forbids the edge outright, and the generators
-# live in the facade-layer `synthetic` module, which may name both layers.
-# `synthetic_gate_violations` still proves that module sits behind the
-# feature. A path listed here that no longer exists is reported as stale.
+# crate, and since #537 the generators live in it behind its own `synthetic`
+# feature, so the crate graph accepts the edge only as that optional
+# dependency and `synthetic_gate_violations` proves every simulation
+# reference in the market crate sits behind the feature. A path listed here
+# that no longer exists is reported as stale.
 SYNTHETIC_FILES: set[str] = set()
 
 # `#[cfg(feature = "synthetic")]`, however the attribute is spaced.
@@ -820,7 +817,13 @@ def gated_module_files(src: Path = SRC) -> set[str]:
     return gated
 
 
-def synthetic_gate_violations(src: Path = SRC) -> list[str]:
+# The market crate's sources, scanned by `synthetic_gate_violations` with
+# `market_crate=True` (#537). `main` fails if it is missing, so a moved crate
+# cannot make the gate pass by scanning nothing.
+MARKET_SRC = SRC.parent / "crates" / "optionstratlib-market" / "src"
+
+
+def synthetic_gate_violations(src: Path = SRC, *, market_crate: bool = False) -> list[str]:
     """Prove the market-to-simulation edge really is behind `synthetic`.
 
     `SYNTHETIC_FILES` says an edge is the optional market capability; this
@@ -831,18 +834,19 @@ def synthetic_gate_violations(src: Path = SRC) -> list[str]:
     brings the whole file in. Anything else is in the minimal market surface
     and is reported, so "minimal market names no simulation type" is checked
     rather than asserted (roadmap M1-15).
+
+    With `market_crate`, `src` is the `optionstratlib-market` crate's own
+    source tree (#537): every file in it is market code, and a simulation
+    reference is a path through `optionstratlib_simulation` or a
+    `SimulationError`.
     """
     gated_modules = gated_module_files(src)
 
     problems: list[str] = []
-    # The facade's `synthetic` module holds the generators until M5 (#524):
-    # it must be declared under the feature, which gates every file in it.
-    if any(src.glob("synthetic/*.rs")) and "synthetic/mod.rs" not in gated_modules:
-        problems.append('synthetic/mod.rs: `mod synthetic` must be declared under #[cfg(feature = "synthetic")]')
     for path in sorted(src.rglob("*.rs")):
         rel = path.relative_to(src).as_posix()
         top = rel.split("/")[0]
-        if top not in MINIMAL_MARKET_MODULES and rel != "error/chains.rs":
+        if not market_crate and top not in MINIMAL_MARKET_MODULES and rel != "error/chains.rs":
             continue
         if rel in gated_modules:
             continue
@@ -854,7 +858,10 @@ def synthetic_gate_violations(src: Path = SRC) -> list[str]:
             # The same extraction the layer scan uses, so a grouped
             # `use crate::{simulation::X}` counts exactly as a plain
             # `use crate::simulation::X` does.
-            names_simulation = "simulation" in module_targets(text)
+            if market_crate:
+                names_simulation = "optionstratlib_simulation" in text
+            else:
+                names_simulation = "simulation" in module_targets(text)
             if not names_simulation and "SimulationError" not in text:
                 continue
             for offset, line in enumerate(span):
@@ -1014,10 +1021,12 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
         "prettytable-rs",
     }),
-    # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2).
+    # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2). The
+    # simulation crate is on it too: only `synthetic` may bring it (#537).
     "optionstratlib-market": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "optionstratlib-simulation",
     }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
@@ -1044,6 +1053,9 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
     "optionstratlib-market": {
         "io": ("io", frozenset({"csv", "zip"})),
         "async": ("async", frozenset({"csv", "zip", "tokio"})),
+        # `synthetic` adds the simulation crate, whose own graph is already in
+        # the minimal row (ADR-0003 section 2, #537).
+        "synthetic": ("synthetic", frozenset({"optionstratlib-simulation"})),
     },
 }
 
@@ -1440,14 +1452,6 @@ def self_test() -> int:
     # The synthetic gate: a simulation reference in market code counts only
     # when the feature attribute really carries it (M1-15).
     gate_cases = {
-        "facade synthetic module ungated": (
-            {"lib.rs": "pub mod synthetic;\n", "synthetic/mod.rs": "mod chains;\n", "synthetic/chains.rs": "use crate::simulation::X;\n"},
-            1,
-        ),
-        "facade synthetic module gated": (
-            {"lib.rs": '#[cfg(feature = "synthetic")]\npub mod synthetic;\n', "synthetic/mod.rs": "mod chains;\n", "synthetic/chains.rs": "use crate::simulation::X;\n"},
-            0,
-        ),
         "ungated variant in market error": (
             {"error/chains.rs": "pub enum ChainError {\n    Simulation(Box<crate::error::SimulationError>),\n}\n"},
             1,
@@ -1569,6 +1573,61 @@ def self_test() -> int:
             if not ok:
                 failures += 1
             print(f"self-test {'ok' if ok else 'FAIL'}: synthetic gate, {name} (expected {expected}, got {got})")
+    # The same gate over the market crate's own sources (#537), where the
+    # engine is reached through `optionstratlib_simulation`.
+    crate_gate_cases = {
+        "generators gated at their mod declaration": (
+            {
+                "chains/mod.rs": '#[cfg(feature = "synthetic")]\nmod generators;\n',
+                "chains/generators.rs": "use optionstratlib_simulation::simulation::WalkParams;\n",
+            },
+            0,
+        ),
+        "generators declared without the gate": (
+            {
+                "chains/mod.rs": "mod generators;\n",
+                "chains/generators.rs": "use optionstratlib_simulation::simulation::WalkParams;\n",
+            },
+            1,
+        ),
+        "From impl gated on the item": (
+            {
+                "error/chains.rs": (
+                    '#[cfg(feature = "synthetic")]\n'
+                    "impl From<optionstratlib_simulation::error::SimulationError> for ChainError {}\n"
+                ),
+            },
+            0,
+        ),
+        "From impl without the gate": (
+            {"error/chains.rs": "impl From<optionstratlib_simulation::error::SimulationError> for ChainError {}\n"},
+            1,
+        ),
+        "a file outside chains and series is checked too": (
+            {"lib.rs": "pub use optionstratlib_simulation::simulation::Step;\n"},
+            1,
+        ),
+        "an ungated crate alias is caught": (
+            {"chains/x.rs": "use optionstratlib_simulation as sim;\n"},
+            1,
+        ),
+        "an ungated grouped path is caught": (
+            {"chains/x.rs": "use {optionstratlib_simulation::simulation::Step, std::fmt};\n"},
+            1,
+        ),
+    }
+    for name, (files, expected) in crate_gate_cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            for rel, content in files.items():
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            got = len(synthetic_gate_violations(root, market_crate=True))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: market crate synthetic gate, {name} (expected {expected}, got {got})")
     # --- workspace crate graph (M2-01, carrying #507 forward)
     def pkg(name: str, *deps: tuple, features: dict | None = None) -> dict:
         return {
@@ -1743,6 +1802,10 @@ def self_test() -> int:
         "market csv under io": ({("optionstratlib-market", "io"): {"csv", "zip"}}, 0),
         "market tokio under io only": ({("optionstratlib-market", "io"): {"tokio"}}, 1),
         "market tokio under async": ({("optionstratlib-market", "async"): {"tokio", "csv"}}, 0),
+        "market simulation by default": ({("optionstratlib-market", "default"): {"optionstratlib-simulation"}}, 1),
+        "market simulation under io": ({("optionstratlib-market", "io"): {"optionstratlib-simulation", "csv"}}, 1),
+        "market simulation under synthetic": ({("optionstratlib-market", "synthetic"): {"optionstratlib-simulation"}}, 0),
+        "market simulation under all features": ({("optionstratlib-market", "all features"): {"optionstratlib-simulation"}}, 0),
         "clean analytics tree": ({("optionstratlib-analytics", "default"): {"lazy_static", "serde_json"}}, 0),
         "analytics pulls market io": ({("optionstratlib-analytics", "default"): {"csv", "zip"}}, 2),
         "analytics tokio under all features": ({("optionstratlib-analytics", "all features"): {"tokio"}}, 1),
@@ -1995,7 +2058,15 @@ def main() -> int:
         for item in violations:
             print(f"  {item}")
         return 1
-    ungated = synthetic_gate_violations()
+    if not MARKET_SRC.is_dir():
+        print(f"market crate sources not found at {MARKET_SRC}; update MARKET_SRC")
+        return 1
+    # The facade-mode pass scans nothing today (market left the facade with
+    # #524); it stays as a guard should market code reappear under `src/`.
+    ungated = synthetic_gate_violations() + [
+        f"crates/optionstratlib-market/src/{item}"
+        for item in synthetic_gate_violations(MARKET_SRC, market_crate=True)
+    ]
     if ungated:
         print('market code names a simulation type outside `#[cfg(feature = "synthetic")]` (ADR-0003, M1-15):')
         for item in ungated:

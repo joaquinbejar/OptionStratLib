@@ -1,0 +1,15 @@
+# ADR-0002 section 5, `osl-fixture-market-minimal`: packages the resolved
+# normal graph must contain, and packages it must not. Minimal market
+# resolves no simulation crate and no I/O. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
+    "optionstratlib-market", "serde_json",
+]
+# `utoipa` is missing only because `expiration_date` 0.4.0 forces
+# `positive/utoipa` on every build (#628); it joins this list once fixed.
+absent = [
+    "optionstratlib", "optionstratlib-simulation", "optionstratlib-analytics",
+    "optionstratlib-strategies", "csv", "zip", "tokio", "reqwest", "plotly",
+    "tracing-subscriber",
+]

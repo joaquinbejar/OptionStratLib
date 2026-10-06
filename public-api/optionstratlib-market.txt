@@ -425,6 +425,7 @@ impl optionstratlib_market::chains::UpdateFromOptionData for optionstratlib_core
 pub fn optionstratlib_core::model::option::Options::update_from_option_data(&mut self, &optionstratlib_market::chains::OptionData) -> core::result::Result<(), optionstratlib_core::error::position::PositionError>
 impl optionstratlib_market::chains::UpdateFromOptionData for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::update_from_option_data(&mut self, &optionstratlib_market::chains::OptionData) -> core::result::Result<(), optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_market::chains::generator_optionchain(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::chains::chain::OptionChain>>, optionstratlib_market::error::chains::ChainError>
 pub mod optionstratlib_market::error
 pub mod optionstratlib_market::error::chains
 pub enum optionstratlib_market::error::chains::ChainBuildErrorKind
@@ -484,6 +485,8 @@ impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::volatility::VolatilityError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_pricing::error::volatility::VolatilityError) -> Self
+impl core::convert::From<optionstratlib_simulation::error::simulation::SimulationError> for optionstratlib_market::error::chains::ChainError
+pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_simulation::error::simulation::SimulationError) -> Self
 impl core::convert::From<serde_json::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(serde_json::error::Error) -> Self
 pub enum optionstratlib_market::error::chains::FileErrorKind
@@ -565,6 +568,8 @@ impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::volatility::VolatilityError> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_pricing::error::volatility::VolatilityError) -> Self
+impl core::convert::From<optionstratlib_simulation::error::simulation::SimulationError> for optionstratlib_market::error::chains::ChainError
+pub fn optionstratlib_market::error::chains::ChainError::from(optionstratlib_simulation::error::simulation::SimulationError) -> Self
 impl core::convert::From<serde_json::error::Error> for optionstratlib_market::error::chains::ChainError
 pub fn optionstratlib_market::error::chains::ChainError::from(serde_json::error::Error) -> Self
 pub enum optionstratlib_market::error::OhlcvError
@@ -643,4 +648,5 @@ impl core::fmt::Debug for optionstratlib_market::series::OptionSeriesBuildParams
 pub fn optionstratlib_market::series::OptionSeriesBuildParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_market::series::OptionSeriesBuildParams
 pub fn optionstratlib_market::series::OptionSeriesBuildParams::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn optionstratlib_market::series::generator_optionseries(&optionstratlib_simulation::simulation::params::WalkParams<positive::positive::Positive, optionstratlib_market::series::OptionSeries>) -> core::result::Result<alloc::vec::Vec<optionstratlib_simulation::simulation::steps::step::Step<positive::positive::Positive, optionstratlib_market::series::OptionSeries>>, optionstratlib_market::error::chains::ChainError>
 pub const optionstratlib_market::VERSION: &str
