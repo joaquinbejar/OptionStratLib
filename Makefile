@@ -232,13 +232,17 @@ COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async o
 # the ones whose directory name starts with `-`; crates.io's never does). The
 # workspace version stays 0.22.0 while the code changes, so a copy left by an
 # earlier run, or restored by the CI cache of `registry/cache`, would be
-# reused and a crate would be verified against a stale neighbour. Drop those
-# copies of our own crates first; nothing from crates.io is touched.
+# reused and a crate would be verified against a stale neighbour. The
+# packaged `.crate` files and that temporary registry also sit in
+# `<target>/package/`, which the CI cache restores with `target/`. Drop both
+# first; nothing from crates.io is touched.
 CARGO_HOME_DIR := $(or $(CARGO_HOME),$(HOME)/.cargo)
+PACKAGE_DIR := $(or $(CARGO_TARGET_DIR),target)/package
 
 .PHONY: check-components
 check-components:
 	@rm -rf $(CARGO_HOME_DIR)/registry/src/-*/optionstratlib-* $(CARGO_HOME_DIR)/registry/cache/-*/optionstratlib-*
+	@rm -rf $(PACKAGE_DIR)
 	@set -e; for crate in $(COMPONENT_CRATES); do \
 		echo "=== $$crate"; \
 		LOGLEVEL=WARN cargo test -p $$crate; \
