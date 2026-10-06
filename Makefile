@@ -161,9 +161,11 @@ tree-consumer-analytics-only:
 	@python3 scripts/check_fixtures.py analytics-only
 	@echo "all features: $$(cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
-# The facade built with one capability each (#528): `pricing` alone and
-# `market` alone, each consumed through the prelude and the canonical paths.
-FACADE_FIXTURES := facade-pricing facade-market
+# The facade built with one capability each: `pricing` and `market` alone
+# (#528), `analytics` alone, which must not resolve strategies, and
+# `strategies` alone (#535), each consumed through the prelude and the
+# canonical paths.
+FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies
 
 .PHONY: check-consumer-facade
 check-consumer-facade:
