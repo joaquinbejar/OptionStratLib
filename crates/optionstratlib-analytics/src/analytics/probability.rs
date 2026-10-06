@@ -19,7 +19,7 @@ use num_traits::ToPrimitive;
 use optionstratlib_core::f2du;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{decimal_to_f64_correctly_rounded, p_sqrt};
+use optionstratlib_core::model::decimal::{decimal_to_f64, p_sqrt};
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::big_n;
@@ -126,7 +126,7 @@ fn invalid_confidence(confidence: Decimal) -> ProbabilityError {
 /// field written with the digits of a former `f64` literal gives back that
 /// literal exactly; a value with no `f64` form is reported.
 fn trend_field_to_f64(name: &str, value: Decimal) -> Result<f64, ProbabilityError> {
-    decimal_to_f64_correctly_rounded(value).map_err(|e| {
+    decimal_to_f64(value).map_err(|e| {
         ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
             reason: format!("trend {name} {value} has no f64 form: {e}"),
         })

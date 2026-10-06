@@ -164,7 +164,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   construction instead of at evaluation. Migrate
   `PriceTrend { drift_rate: 0.1, confidence: 0.95 }` to
   `PriceTrend::new(dec!(0.1), dec!(0.95))?`. The kernels convert each field
-  to its nearest `f64` with the new `decimal_to_f64_correctly_rounded` and
+  to its nearest `f64` with `decimal_to_f64` (correctly rounded since #670) and
   still multiply in `f64`, so `calculate_single_point_probability`,
   `calculate_price_probability`, `ProfitLossRange::calculate_probability`
   and `ProbabilityAnalysis::expected_value` return the same values as before
@@ -763,6 +763,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     receives the error; targets inside the band and the bracket invert to
     the same volatilities as before.
 
+- **`decimal_to_f64` returns the nearest `f64`, and is the only `Decimal` to
+  `f64` conversion in core** (#670). It went through `Decimal::to_f64`, which
+  divides the mantissa by a power of ten in floating point and can land a few
+  ULPs from the nearest `f64` once the value has 15 or more decimal places:
+  `2.999789999999902` came back as `2.999789999999903`, three ULPs above
+  `2.999789999999902_f64`. It now divides the mantissa by `5^scale` in `u128`
+  integers, rounds the quotient to 53 bits once (ties to even) from its
+  dropped bits and the exact remainder, and scales by an exact power of two,
+  so it returns the `f64` the literal with the same digits parses to. Zero of
+  either sign converts to `+0.0`. The error is built by a `#[cold]`
+  constructor through `ok_or_else`, so the success path no longer formats an
+  error string and does not allocate.
+  - `decimal_to_f64_correctly_rounded`, added earlier in this cycle (#656)
+    and never released, is folded into it and removed. Migration: call
+    `decimal_to_f64`, which now has the same contract. The `PriceTrend`
+    conversion in the analytics kernels and the trend adjustment of
+    `ProbabilityAnalysis::expected_value` call it, with unchanged results.
+  - Which results change: those of `decimal_to_f64` and of the `d2f!` /
+    `d2fu!` macros, by a few ULPs on values with 15 or more decimal places.
+    In the workspace the only other caller is `generate_binomial_tree`, which
+    converts each American or Bermuda node value before comparing it with the
+    intrinsic value of early exercise. A differential run over 9,720 trees (both
+    exercise styles, calls and puts, long and short, 3 to 64 steps, 14.8
+    million node values) changed 551,266 node values in 3,329 trees, by at
+    most `2e-12` absolute and `5.6e-14` relative. `price_binomial` does not
+    go through it and is unchanged. No pinned test value moved, and no
+    tolerance changed.
+  - New tests: a seeded sweep over every scale from 0 to 28 with mantissas
+    up to `2^53` and over the full 96 bits, exact ties at `2^53 + 1` and
+    `2^53 + 3` (as integers and scaled by `5^s / 10^s`), the values around
+    `2^53`, zero of either sign and scale, and the #670 case
+    (`2.999789999999902` against its nearest `f64` and against the former
+    `Decimal::to_f64` result).
+
 - **The Heston and telegraph walk kernels report `Decimal` overflow instead
   of panicking** (#686). Three expressions in
   `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the
@@ -1064,14 +1098,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   counts with all features. The machine and toolchain differ from the M0
   baseline (BASELINE.md). Fixture lockfiles are not committed, so the
   counts are recorded, not asserted (ADR-0004 section 3).
-
-- **`decimal_to_f64_correctly_rounded`** in
-  `optionstratlib_core::model::decimal` (#656): converts a `Decimal` to the
-  nearest `f64` by parsing its exact digits from a stack buffer, with no heap
-  allocation. `decimal_to_f64` (through `Decimal::to_f64`) can land one ULP
-  away from it at 15 or more decimal places, e.g. `2.999789999999902`; the
-  new function returns the `f64` literal written with the same digits.
-  Returns `DecimalError::ConversionError` rather than a non-finite value.
 
 - **Facade consumer fixtures for `analytics` and `strategies`** (#535).
   `fixtures/consumers/facade-analytics` uses the facade with
