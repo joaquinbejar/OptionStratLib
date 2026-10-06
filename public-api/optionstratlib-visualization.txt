@@ -438,16 +438,12 @@ pub fn optionstratlib_visualization::visualization::Series2D::plot_type() -> opt
 impl optionstratlib_visualization::visualization::GraphType for optionstratlib_visualization::visualization::Surface3D
 pub fn optionstratlib_visualization::visualization::Surface3D::plot_type() -> optionstratlib_visualization::visualization::PlotType
 pub trait optionstratlib_visualization::visualization::Plottable
-pub type optionstratlib_visualization::visualization::Plottable::Error
 pub fn optionstratlib_visualization::visualization::Plottable::plot(&self) -> optionstratlib_visualization::visualization::PlotBuilder<Self> where Self: core::marker::Sized + optionstratlib_visualization::visualization::Graph
 impl optionstratlib_visualization::visualization::Plottable for alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>
-pub type alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::Error = optionstratlib_math::error::curves::CurveError
 pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::plot(&self) -> optionstratlib_visualization::visualization::PlotBuilder<Self> where Self: core::marker::Sized
 impl optionstratlib_visualization::visualization::Plottable for optionstratlib_math::curves::curve::Curve
-pub type optionstratlib_math::curves::curve::Curve::Error = optionstratlib_math::error::curves::CurveError
 pub fn optionstratlib_math::curves::curve::Curve::plot(&self) -> optionstratlib_visualization::visualization::PlotBuilder<Self> where Self: core::marker::Sized
 impl optionstratlib_visualization::visualization::Plottable for optionstratlib_math::surfaces::surface::Surface
-pub type optionstratlib_math::surfaces::surface::Surface::Error = optionstratlib_math::error::surfaces::SurfaceError
 pub fn optionstratlib_math::surfaces::surface::Surface::plot(&self) -> optionstratlib_visualization::visualization::PlotBuilder<Self> where Self: core::marker::Sized
 pub fn optionstratlib_visualization::visualization::get_color_from_scheme(&optionstratlib_visualization::visualization::ColorScheme, usize) -> core::option::Option<alloc::string::String>
 pub fn optionstratlib_visualization::visualization::make_scatter(&optionstratlib_visualization::visualization::Series2D) -> alloc::boxed::Box<plotly::traces::scatter::Scatter<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>

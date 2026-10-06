@@ -19,13 +19,10 @@ use {crate::error::GraphError, std::path::Path};
 /// Implementers of this trait can be visualized using the plotting system with
 /// configurable options for appearance, labels, colors, and other visual attributes.
 ///
+/// Building a plot cannot fail; rendering and export are the fallible steps,
+/// and they return [`GraphError`](crate::error::GraphError) whatever the
+/// plotted type, so the trait carries no error type of its own.
 pub trait Plottable {
-    /// The error type returned by plotting operations.
-    ///
-    /// This associated type allows implementers to define their specific
-    /// error handling approach for plot generation and rendering.
-    type Error;
-
     /// Creates a plot builder for configuring and generating visualizations.
     ///
     /// Returns a `PlotBuilder` instance that provides a fluent interface for
@@ -255,8 +252,8 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     /// A `Result` indicating success or containing an error if the save operation failed
     ///
     /// # Errors
-    /// This method will return an error if the plot cannot be rendered or saved,
-    /// with the specific error type determined by the `Plottable` implementation.
+    /// Returns [`GraphError::Render`] if the plot cannot be rendered or
+    /// written to `path`.
     ///
     #[cfg(feature = "static_export")]
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {

@@ -42,5 +42,6 @@ chrono = { workspace = true }
 mockall = { workspace = true }
 proptest = { workspace = true }
 rust_decimal_macros = { workspace = true }
+serde_json = { workspace = true }
 static_assertions = "1.1"
 tempfile = { workspace = true }

@@ -3,10 +3,14 @@
 //! Provides a flexible plotting trait for mathematical curves and collections of curves.
 //!
 //! ## Features
-//! - Generic plotting for single and multiple curves
-//! - Customizable plot configuration
-//! - Multiple output formats
-//! - Error handling
+//! - `Graph` and `Plottable` for a single [`Curve`] and for a `Vec<Curve>`
+//!   drawn on one chart
+//! - Customizable plot configuration through [`PlotBuilder`]
+//! - HTML output with `plotly`, PNG and SVG with `static_export`
+//!
+//! Building a plot cannot fail. Rendering and export return
+//! [`GraphError`](crate::error::GraphError); no `CurveError` comes out of
+//! the plot path.
 //!
 //! ## Usage Examples
 //! ```rust,no_run
@@ -54,7 +58,6 @@
 
 use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable};
 use optionstratlib_math::curves::Curve;
-use optionstratlib_math::error::CurveError;
 
 /// `Graph` adapter for a single [`Curve`]; lives in `visualization` because
 /// the trait is visualization-owned and `Curve` is a math container
@@ -74,8 +77,6 @@ impl Graph for Vec<Curve> {
 
 /// Plottable implementation for single Curve
 impl Plottable for Curve {
-    type Error = CurveError;
-
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -153,8 +154,6 @@ impl Plottable for Curve {
 /// `PlotBuilder`, and `PlotOptions`. These modules provide the functionality
 /// required to create, configure, and render curve plots.
 impl Plottable for Vec<Curve> {
-    type Error = CurveError;
-
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,

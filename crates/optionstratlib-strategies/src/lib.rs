@@ -88,9 +88,10 @@
 //!   strategy. Gating a family would either gate enum variants, which
 //!   ADR-0002 section 4 forbids, or leave variants that `StrategyRequest`
 //!   builds only when a feature is on, a failure that depends on features at
-//!   run time. Family features would also have to be forwarded by the facade,
-//!   whose per-strategy `Graph` impls sit behind `plotly`, and each would add
-//!   a CI cell (alone, with `schema`, and in the facade).
+//!   run time. Family features would also have to be forwarded by the facade
+//!   and by `optionstratlib-visualization`, whose per-strategy `Graph` impls
+//!   name every strategy, and each would add a CI cell (alone, with `schema`,
+//!   and in the facade).
 //!
 //! The adopted state adds no CI cell and has no unsupported feature
 //! combination: `schema` is the crate's only feature, and none, default and
