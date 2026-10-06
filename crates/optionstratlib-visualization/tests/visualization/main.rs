@@ -3,6 +3,8 @@
 //! `static_export`) and `GraphError`. Moved from the facade's
 //! `tests/unit/visualization` and `tests/unit/error/graph_test.rs` (#542).
 
+#[cfg(feature = "static_export")]
+mod artifacts;
 mod default_test;
 mod file_test;
 mod graph_default_test;

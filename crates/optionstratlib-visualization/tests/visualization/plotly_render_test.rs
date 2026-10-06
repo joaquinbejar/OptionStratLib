@@ -5,6 +5,7 @@ mod plotly_render_tests {
         Graph, GraphConfig, GraphData, OutputType, Series2D,
     };
 
+    use crate::artifacts::{assert_png_artifact, assert_svg_artifact};
     use rust_decimal::Decimal;
     use std::path::PathBuf;
     use std::str::FromStr;
@@ -172,6 +173,7 @@ mod plotly_render_tests {
                 info!("PNG render error: {e}");
             }
             assert!(result.is_ok(), "Render to PNG should succeed");
+            assert_png_artifact(&file_path);
         }
 
         // Test the render method with SVG output
@@ -190,6 +192,7 @@ mod plotly_render_tests {
                 info!("SVG render error: {e}");
             }
             assert!(result.is_ok(), "Render to SVG should succeed");
+            assert_svg_artifact(&file_path);
         }
 
         // Test the render method with HTML output
@@ -237,6 +240,7 @@ mod plotly_render_tests {
                 info!("PNG export error: {e}");
             }
             assert!(result.is_ok(), "Write to PNG should succeed");
+            assert_png_artifact(&file_path);
         }
 
         // Test the write_svg method directly
@@ -255,6 +259,7 @@ mod plotly_render_tests {
                 info!("SVG export error: {e}");
             }
             assert!(result.is_ok(), "Write to SVG should succeed");
+            assert_svg_artifact(&file_path);
         }
 
         // Test the write_html method directly

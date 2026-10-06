@@ -1,0 +1,18 @@
+# The facade with its default features: packages the resolved normal graph
+# must contain, and packages it must not (ADR-0002 section 5,
+# `osl-fixture-headless-full`). Every capability is on, `io` brings `csv` and
+# `zip`, and no rendering backend does. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "optionstratlib-simulation", "optionstratlib-market",
+    "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
+    "optionstratlib-visualization", "csv", "zip",
+]
+# `prettytable-rs` is missing until M6-05 removes the report tables, and
+# `utoipa` (#628) is missing from the ADR's `present` column for the same
+# reason it is missing from the other lists.
+absent = [
+    "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest",
+    "futures", "async-trait", "tracing-subscriber", "indicatif",
+]

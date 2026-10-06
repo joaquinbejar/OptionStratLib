@@ -728,8 +728,9 @@ mod tests_plotly_interface {
 
     #[test]
     #[cfg(feature = "static_export")]
-    #[ignore]
+    #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
     fn test_write_png() {
+        use crate::artifacts::assert_png_artifact;
         use tempfile::tempdir;
 
         let graph = create_test_graph_with_series();
@@ -743,12 +744,14 @@ mod tests_plotly_interface {
         }
 
         assert!(result.is_ok(), "PNG export should succeed");
+        assert_png_artifact(&temp_path);
     }
 
     #[test]
     #[cfg(feature = "static_export")]
     #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
     fn test_write_svg() {
+        use crate::artifacts::assert_svg_artifact;
         use tempfile::tempdir;
 
         let graph = create_test_graph_with_surface();
@@ -762,6 +765,7 @@ mod tests_plotly_interface {
         }
 
         assert!(result.is_ok(), "SVG export should succeed");
+        assert_svg_artifact(&temp_path);
     }
 
     // Test for render with HTML OutputType

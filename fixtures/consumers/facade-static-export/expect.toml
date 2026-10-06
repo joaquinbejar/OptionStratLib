@@ -1,0 +1,12 @@
+# The facade with `default-features = false, features = ["static_export"]`:
+# packages the resolved normal graph must contain, and packages it must not.
+# `static_export` implies `plotly` and `async`, so Plotly, the `plotly_static`
+# exporter, its WebDriver client (`fantoccini`, `webdriver`), the async
+# runtime and the HTTP client all resolve. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-visualization", "plotly", "plotly_static",
+    "fantoccini", "webdriver", "tokio", "reqwest", "futures", "async-trait",
+]
+# `async` brings market's I/O (`csv`, `zip`) with it.
+absent = ["tracing-subscriber", "indicatif"]

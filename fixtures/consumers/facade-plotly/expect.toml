@@ -1,0 +1,15 @@
+# The facade with its default features and `plotly`: packages the resolved
+# normal graph must contain, and packages it must not (ADR-0002 section 5,
+# `osl-fixture-facade-plotly`). `plotly` is interactive rendering alone: the
+# image exporter, its WebDriver client, the async runtime and the HTTP client
+# come only with `static_export`. `io` is a default feature, so `csv` and
+# `zip` are expected. Checked by `make check-fixtures`
+# (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-visualization", "optionstratlib-backtest",
+    "plotly", "csv", "zip",
+]
+absent = [
+    "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures",
+    "async-trait", "tracing-subscriber", "indicatif",
+]
