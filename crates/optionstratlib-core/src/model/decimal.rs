@@ -4,7 +4,7 @@
    Date: 25/12/24
 ******************************************************************************/
 use crate::error::decimal::DecimalError;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use positive::{Positive, PositiveError};
 use rand::distr::Distribution;
 use rand::{Rng, RngExt};
@@ -160,73 +160,53 @@ impl DecimalStats for Vec<Decimal> {
     }
 }
 
-/// Converts a Decimal value to an f64.
-///
-/// This function attempts to convert a Decimal value to an f64 floating-point number.
-/// If the conversion fails, it returns a DecimalError with detailed information about
-/// the failure.
-///
-/// # Parameters
-///
-/// * `value` - The Decimal value to convert
-///
-/// # Returns
-///
-/// * `Result<f64, DecimalError>` - The converted f64 value if successful, or a DecimalError
-///   if the conversion fails
-///
-/// # Errors
-///
-/// Returns [`DecimalError::ConversionError`] when the `Decimal` operand cannot
-/// be represented as an `f64` (e.g. out-of-range magnitude or precision loss
-/// beyond the `f64` mantissa).
-///
-/// # Example
-///
-/// ```rust
-/// use rust_decimal::Decimal;
-/// use rust_decimal_macros::dec;
-/// use tracing::info;
-/// use optionstratlib_core::model::decimal::decimal_to_f64;
-///
-/// let decimal = dec!(3.14159);
-/// match decimal_to_f64(decimal) {
-///     Ok(float) => info!("Converted to f64: {}", float),
-///     Err(e) => info!("Conversion error: {:?}", e)
-/// }
-/// ```
-pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
-    value.to_f64().ok_or(DecimalError::ConversionError {
-        from_type: format!("Decimal: {value}"),
-        to_type: "f64".to_string(),
-        reason: "Failed to convert Decimal to f64".to_string(),
-    })
-}
+/// `5^0` to `5^28`. `10^scale = 2^scale * 5^scale`, so a `Decimal` is
+/// `mantissa / 5^scale * 2^-scale`: only the division by `5^scale` rounds,
+/// and `5^28 < 2^66` keeps it in `u128`.
+const POWERS_OF_FIVE: [u128; 29] = [
+    1,
+    5,
+    25,
+    125,
+    625,
+    3125,
+    15625,
+    78125,
+    390625,
+    1953125,
+    9765625,
+    48828125,
+    244140625,
+    1220703125,
+    6103515625,
+    30517578125,
+    152587890625,
+    762939453125,
+    3814697265625,
+    19073486328125,
+    95367431640625,
+    476837158203125,
+    2384185791015625,
+    11920928955078125,
+    59604644775390625,
+    298023223876953125,
+    1490116119384765625,
+    7450580596923828125,
+    37252902984619140625,
+];
 
-/// Longest `Display` form of a `Decimal`: a sign, `0.`, and 28 fractional
-/// digits is 31 bytes; 29 integer digits with a sign is 30.
-const DECIMAL_DISPLAY_CAPACITY: usize = 40;
+/// Bits in an `f64` significand, the implicit leading one included.
+const F64_SIGNIFICAND_BITS: u32 = 53;
 
-/// Stack buffer a `Decimal` formats into, so its digits can be parsed without
-/// a heap allocation.
-struct DecimalDisplayBuffer {
-    bytes: [u8; DECIMAL_DISPLAY_CAPACITY],
-    len: usize,
-}
+/// Bias of the `f64` exponent field.
+const F64_EXPONENT_BIAS: i32 = 1023;
 
-impl std::fmt::Write for DecimalDisplayBuffer {
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        let end = self.len.checked_add(s.len()).ok_or(std::fmt::Error)?;
-        let slot = self.bytes.get_mut(self.len..end).ok_or(std::fmt::Error)?;
-        slot.copy_from_slice(s.as_bytes());
-        self.len = end;
-        Ok(())
-    }
-}
+/// Bits below the `f64` exponent field.
+const F64_EXPONENT_SHIFT: u32 = 52;
 
 #[cold]
 #[inline(never)]
-fn correctly_rounded_conversion_error(value: Decimal, reason: &str) -> DecimalError {
+fn decimal_to_f64_error(value: Decimal, reason: &str) -> DecimalError {
     DecimalError::ConversionError {
         from_type: format!("Decimal: {value}"),
         to_type: "f64".to_string(),
@@ -236,63 +216,101 @@ fn correctly_rounded_conversion_error(value: Decimal, reason: &str) -> DecimalEr
 
 /// Converts a `Decimal` to the `f64` nearest to it (ties to even).
 ///
-/// [`decimal_to_f64`] goes through `Decimal::to_f64`, which divides the
-/// mantissa by a power of ten in floating point and can land one ULP away
-/// from the nearest `f64` once the value has 15 or more decimal places. This
-/// conversion parses the exact decimal digits instead, so it returns the same
-/// `f64` as the `f64` literal written with those digits. It formats into a
-/// stack buffer and does not allocate on success.
+/// The result is the `f64` the literal written with the same digits parses
+/// to: `decimal_to_f64(dec!(2.999789999999902))` is `2.999789999999902_f64`
+/// bit for bit. `Decimal::to_f64` divides the mantissa by a power of ten in
+/// floating point and can land a few ULPs away from it once the value has 15
+/// or more decimal places (`2.999789999999903` for that input), so this
+/// function does not use it (#670). Zero, of either sign, converts to `+0.0`.
 ///
-/// Use it where a kernel must reproduce, bit for bit, a result it used to
-/// compute from an `f64` input that is now a `Decimal` (the analytics
-/// `PriceTrend` fields, #656).
+/// The value is `mantissa / 5^scale * 2^-scale`. The mantissa, shifted to
+/// the top of a `u128`, is divided by `5^scale` in integers, which leaves a
+/// quotient of at least 62 bits and an exact remainder; the quotient is
+/// rounded to 53 bits from its dropped bits and the remainder, and scaled by
+/// an exact power of two. It does no floating-point rounding before that one
+/// step and does not allocate on success.
+///
+/// # Parameters
+///
+/// * `value` - The `Decimal` value to convert
 ///
 /// # Errors
 ///
-/// Returns [`DecimalError::ConversionError`] if the digits do not fit the
-/// buffer or do not parse, or if the result is not finite. Every `Decimal`
-/// lies within `f64` range, so none of these happens for a valid value; they
+/// Returns [`DecimalError::ConversionError`] if the scale exceeds the 28
+/// places a `Decimal` holds or an intermediate leaves its range. Every valid
+/// `Decimal` lies within `f64` range and converts, so neither happens; they
 /// are reported rather than assumed.
 ///
 /// # Example
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded;
+/// use optionstratlib_core::model::decimal::decimal_to_f64;
 ///
-/// let value = decimal_to_f64_correctly_rounded(dec!(0.95));
+/// let value = decimal_to_f64(dec!(0.95));
 /// assert!(matches!(value, Ok(v) if v.to_bits() == 0.95_f64.to_bits()));
+///
+/// // 15 decimal places: the nearest `f64`, which `Decimal::to_f64` misses.
+/// let value = decimal_to_f64(dec!(2.999789999999902));
+/// assert!(matches!(value, Ok(v) if v.to_bits() == 2.999_789_999_999_902_f64.to_bits()));
 /// ```
-pub fn decimal_to_f64_correctly_rounded(value: Decimal) -> Result<f64, DecimalError> {
-    use std::fmt::Write as _;
+pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
+    let mantissa = value.mantissa().unsigned_abs();
+    if mantissa == 0 {
+        return Ok(0.0);
+    }
+    let scale = value.scale();
+    let out_of_range = || decimal_to_f64_error(value, "intermediate outside its range");
+    let divisor = usize::try_from(scale)
+        .ok()
+        .and_then(|index| POWERS_OF_FIVE.get(index))
+        .copied()
+        .ok_or_else(|| decimal_to_f64_error(value, "scale exceeds the 28 places of a Decimal"))?;
 
-    let mut buffer = DecimalDisplayBuffer {
-        bytes: [0; DECIMAL_DISPLAY_CAPACITY],
-        len: 0,
-    };
-    if write!(buffer, "{value}").is_err() {
-        return Err(correctly_rounded_conversion_error(
-            value,
-            "decimal digits exceed the conversion buffer",
-        ));
+    // Left-aligned, the numerator is at least `2^127`, so after the division
+    // by `5^28 < 2^66` the quotient is above `2^61`: at least 62 bits.
+    let shift = mantissa.leading_zeros();
+    let numerator = mantissa << shift;
+    let quotient = numerator.checked_div(divisor).ok_or_else(out_of_range)?;
+    let remainder = numerator.checked_rem(divisor).ok_or_else(out_of_range)?;
+
+    // Keep the top 53 bits and round on the rest: above half rounds up, a
+    // tie (dropped bits exactly half and nothing in the remainder) rounds to
+    // an even significand.
+    let excess = (u128::BITS - quotient.leading_zeros())
+        .checked_sub(F64_SIGNIFICAND_BITS)
+        .ok_or_else(out_of_range)?;
+    let half = excess
+        .checked_sub(1)
+        .and_then(|bits| 1_u128.checked_shl(bits))
+        .ok_or_else(out_of_range)?;
+    let dropped = quotient & ((half << 1) - 1);
+    let mut significand = quotient >> excess;
+    if dropped > half || (dropped == half && (remainder != 0 || significand & 1 == 1)) {
+        significand = significand.checked_add(1).ok_or_else(out_of_range)?;
     }
-    let digits = buffer
-        .bytes
-        .get(..buffer.len)
-        .and_then(|bytes| std::str::from_utf8(bytes).ok())
-        .ok_or_else(|| {
-            correctly_rounded_conversion_error(value, "decimal digits are not valid UTF-8")
-        })?;
-    let parsed: f64 = digits.parse().map_err(|_| {
-        correctly_rounded_conversion_error(value, "decimal digits do not parse as f64")
-    })?;
-    if !parsed.is_finite() {
-        return Err(correctly_rounded_conversion_error(
-            value,
-            "decimal value is not finite as f64",
-        ));
-    }
-    Ok(parsed)
+
+    // `significand <= 2^53` converts exactly and the power of two is exact,
+    // so the product is the rounded quotient scaled by `2^-shift * 2^-scale`.
+    let exponent = i32::try_from(excess)
+        .ok()
+        .zip(i32::try_from(shift).ok())
+        .zip(i32::try_from(scale).ok())
+        .and_then(|((excess, shift), scale)| {
+            F64_EXPONENT_BIAS
+                .checked_add(excess)?
+                .checked_sub(shift)?
+                .checked_sub(scale)
+        })
+        .and_then(|biased| u64::try_from(biased).ok())
+        .ok_or_else(out_of_range)?;
+    let power_of_two = f64::from_bits(exponent << F64_EXPONENT_SHIFT);
+    let magnitude = significand as f64 * power_of_two;
+    Ok(if value.is_sign_negative() {
+        -magnitude
+    } else {
+        magnitude
+    })
 }
 
 /// Converts an f64 floating-point number to a Decimal.
@@ -1140,6 +1158,7 @@ mod tests_decimal_stats {
 mod tests_random_generation {
     use super::*;
     use approx::assert_relative_eq;
+    use num_traits::ToPrimitive;
     use rand::distr::Distribution;
     use std::collections::HashMap;
 
@@ -1543,12 +1562,13 @@ mod checked_helpers_tests {
 }
 
 #[cfg(test)]
-mod tests_decimal_to_f64_correctly_rounded {
+mod tests_decimal_to_f64_rounding {
     use super::*;
+    use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
     fn converted(value: Decimal) -> f64 {
-        match decimal_to_f64_correctly_rounded(value) {
+        match decimal_to_f64(value) {
             Ok(v) => v,
             Err(e) => panic!("every Decimal converts: {value}: {e}"),
         }
@@ -1591,7 +1611,7 @@ mod tests_decimal_to_f64_correctly_rounded {
     }
 
     #[test]
-    fn test_decimal_to_f64_correctly_rounded_seeded_15_to_28_places_matches_parse() {
+    fn test_decimal_to_f64_seeded_15_to_28_places_matches_parse() {
         let mut rng = Lcg(0x0656_f64d_ec1a);
         // Draws on which `Decimal::to_f64` misses the nearest `f64`: the sweep
         // must reach them for the comparison to mean anything.
@@ -1634,7 +1654,7 @@ mod tests_decimal_to_f64_correctly_rounded {
     }
 
     #[test]
-    fn test_decimal_to_f64_correctly_rounded_edges_match_parse() {
+    fn test_decimal_to_f64_edges_match_parse() {
         let edges = [
             Decimal::ZERO,
             Decimal::ONE,
@@ -1658,10 +1678,11 @@ mod tests_decimal_to_f64_correctly_rounded {
         }
     }
 
-    /// `Decimal::to_f64` lands one ULP away from the nearest `f64` on these;
-    /// the helper returns the `f64` literal written with the same digits.
+    /// `Decimal::to_f64`, which `decimal_to_f64` went through before #670,
+    /// lands away from the nearest `f64` on these; the conversion returns the
+    /// `f64` literal written with the same digits.
     #[test]
-    fn test_decimal_to_f64_correctly_rounded_where_to_f64_differs_matches_literal() {
+    fn test_decimal_to_f64_where_to_f64_differs_matches_literal() {
         let cases = [
             (dec!(2.999789999999902), 2.999_789_999_999_902_f64),
             (
@@ -1678,6 +1699,129 @@ mod tests_decimal_to_f64_correctly_rounded {
                 None => panic!("{value} has an f64 form"),
             };
             assert_ne!(plain.to_bits(), literal.to_bits(), "{value}");
+        }
+    }
+
+    /// The case #670 names: `2.999789999999902` has 15 decimal places, and
+    /// `Decimal::to_f64` returns `2.999789999999903`, three ULPs above the
+    /// nearest `f64`. The merged conversion returns the nearest one.
+    #[test]
+    fn test_decimal_to_f64_fifteen_places_returns_nearest_not_to_f64() {
+        let value = dec!(2.999789999999902);
+        let nearest = 2.999_789_999_999_902_f64;
+        let former = 2.999_789_999_999_903_f64;
+        assert_eq!(converted(value).to_bits(), nearest.to_bits());
+        assert_eq!(value.to_f64().map(f64::to_bits), Some(former.to_bits()));
+        assert_eq!(former.to_bits() - nearest.to_bits(), 3);
+    }
+
+    /// `2^53`, the largest significand an `f64` holds.
+    const TWO_POW_53: u128 = 1 << 53;
+
+    /// Draws a `Decimal` with a mantissa below `bound` and a scale of 0 to
+    /// 28, and the digits it is written with.
+    fn draw_decimal(rng: &mut Lcg, bound: u128) -> (Decimal, String) {
+        let mantissa = ((u128::from(rng.draw()) << 64)
+            | (u128::from(rng.draw()) << 32)
+            | u128::from(rng.draw()))
+            % bound;
+        let scale = match u32::try_from(rng.draw() % 29) {
+            Ok(s) => s,
+            Err(e) => panic!("a value below 29 fits u32: {e}"),
+        };
+        let negative = rng.draw() % 2 == 1;
+        let signed = match i128::try_from(mantissa) {
+            Ok(m) if negative => -m,
+            Ok(m) => m,
+            Err(e) => panic!("96-bit mantissa fits i128: {e}"),
+        };
+        let value = match Decimal::try_from_i128_with_scale(signed, scale) {
+            Ok(v) => v,
+            Err(e) => panic!("mantissa with scale {scale} is a Decimal: {e}"),
+        };
+        (value, digits(negative && mantissa != 0, mantissa, scale))
+    }
+
+    fn assert_matches_parse(value: Decimal, text: &str) {
+        let expected: f64 = match text.parse() {
+            Ok(v) => v,
+            Err(e) => panic!("{text} parses: {e}"),
+        };
+        assert_eq!(
+            converted(value).to_bits(),
+            expected.to_bits(),
+            "{value} ({text})"
+        );
+    }
+
+    /// Mantissas up to `2^53` (exact in `f64`) and over the full 96 bits,
+    /// each at every scale from 0 to 28, against the parse of the written
+    /// digits.
+    #[test]
+    fn test_decimal_to_f64_seeded_every_scale_matches_parse() {
+        let mut rng = Lcg(0x0670_f64d_ec1a);
+        for bound in [TWO_POW_53 + 1, 1_u128 << 96] {
+            for _ in 0..20_000 {
+                let (value, text) = draw_decimal(&mut rng, bound);
+                assert_matches_parse(value, &text);
+            }
+        }
+    }
+
+    /// Exact ties between two `f64`s round to the even significand: `2^53 +
+    /// 1` and `2^53 + 3` sit halfway between neighbours, as integers and
+    /// scaled by `5^s / 10^s = 2^-s`, which leaves the division by `5^s` with
+    /// no remainder.
+    #[test]
+    fn test_decimal_to_f64_exact_ties_round_to_even() {
+        for offset in [1_u128, 3] {
+            for scale in [0_u32, 1, 5, 18] {
+                let mantissa = (TWO_POW_53 + offset) * 5_u128.pow(scale);
+                let signed = match i128::try_from(mantissa) {
+                    Ok(m) => m,
+                    Err(e) => panic!("{mantissa} fits i128: {e}"),
+                };
+                for signed in [signed, -signed] {
+                    let value = Decimal::from_i128_with_scale(signed, scale);
+                    assert_matches_parse(value, &value.to_string());
+                }
+            }
+        }
+        // `2^53 + 1` rounds down to `2^53`, `2^53 + 3` up to `2^53 + 4`.
+        let down = Decimal::from_i128_with_scale(9_007_199_254_740_993, 0);
+        let up = Decimal::from_i128_with_scale(9_007_199_254_740_995, 0);
+        assert_eq!(
+            converted(down).to_bits(),
+            9_007_199_254_740_992_f64.to_bits()
+        );
+        assert_eq!(converted(up).to_bits(), 9_007_199_254_740_996_f64.to_bits());
+    }
+
+    /// Around `2^53`, the largest exact significand, at the smallest and
+    /// largest scales.
+    #[test]
+    fn test_decimal_to_f64_around_two_pow_53_matches_parse() {
+        let limit = match i128::try_from(TWO_POW_53) {
+            Ok(l) => l,
+            Err(e) => panic!("2^53 fits i128: {e}"),
+        };
+        for mantissa in [limit - 1, limit, limit + 1, limit + 2, limit + 3] {
+            for scale in [0, 1, 21, 22, 23, 28] {
+                for signed in [mantissa, -mantissa] {
+                    let value = Decimal::from_i128_with_scale(signed, scale);
+                    assert_matches_parse(value, &value.to_string());
+                }
+            }
+        }
+    }
+
+    /// Zero of either sign and at any scale converts to `+0.0`.
+    #[test]
+    fn test_decimal_to_f64_zero_any_sign_or_scale_is_positive_zero() {
+        let mut negative_zero = Decimal::new(0, 25);
+        negative_zero.set_sign_negative(true);
+        for value in [Decimal::ZERO, Decimal::new(0, 25), negative_zero] {
+            assert_eq!(converted(value).to_bits(), 0.0_f64.to_bits(), "{value:?}");
         }
     }
 }

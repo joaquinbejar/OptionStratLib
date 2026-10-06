@@ -8,7 +8,7 @@
 //! comprehensive probability analysis capabilities for option strategies.
 
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded;
+use optionstratlib_core::model::decimal::decimal_to_f64;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
@@ -317,7 +317,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                     // The nearest `f64`, so a drift written with the digits
                     // of the former `f64` field gives the same adjustment.
                     let drift = t.drift_rate();
-                    let drift = decimal_to_f64_correctly_rounded(drift).map_err(|e| {
+                    let drift = decimal_to_f64(drift).map_err(|e| {
                         ProbabilityError::CalculationError(
                             ProbabilityCalculationErrorKind::TrendError {
                                 reason: format!(
