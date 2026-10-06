@@ -83,8 +83,15 @@ fmt-check:
 # needs (the integration suites declare `required-features` and are skipped).
 FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest market,synthetic
 
+# Every test source must be reachable from its target root through `mod`
+# declarations, or it never compiles and its tests never run (#633).
+.PHONY: check-test-modules
+check-test-modules:
+	@python3 scripts/check_test_modules.py --self-test > /dev/null || (python3 scripts/check_test_modules.py --self-test; exit 1)
+	@python3 scripts/check_test_modules.py
+
 .PHONY: lint
-lint:
+lint: check-test-modules
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
 	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
 	LOGLEVEL=WARN cargo test -q -p optionstratlib --no-default-features

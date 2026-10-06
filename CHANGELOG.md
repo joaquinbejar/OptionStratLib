@@ -534,6 +534,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Three simulation tests that never compiled now run** (#633).
+  `tests/unit/simulation/model_and_randomwalk_tests.rs` was declared by no
+  `mod.rs` since #349, so its tests never compiled. They are revived against
+  the current API: the `WalkType` display, `RandomWalk` and `Simulator`
+  tests in `crates/optionstratlib-simulation/tests/model_and_randomwalk_test.rs`
+  (replayed historical walks instead of an ad-hoc generator, no `unwrap` or
+  `expect`), and the random walk's `Graph` data and config in the facade's
+  `tests/unit/visualization/simulation_graph_test.rs`. One assertion was
+  wrong from the start: it expected `Simulator`'s `Display` to begin with
+  `"Simulator Title: SIM"`, a string that only ever existed in that test
+  (commit 341379aa); `Display` prints the bare title, and the revived test
+  asserts that. `make check-test-modules` (`scripts/check_test_modules.py`,
+  with self-tests, run by `make lint` and so by CI) now fails on any test
+  source that its target root does not reach through `mod` declarations.
+
 - **`calculate_price_probability` and `expected_value` no longer floor an
   inverted CDF difference to zero** (#570). Both subtracted the probability
   below the lower bound from the one below the upper bound through
