@@ -496,6 +496,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **One strategy capability, by measured decision** (#532). The
+  `optionstratlib-strategies` docs now list the seven strategy families
+  (single leg, vertical spreads, butterflies, condors, straddles and
+  strangles, covered and protective, custom) and the shared surface every
+  family uses, and record why there are no per-family features in 0.22: the
+  crate adds no package to the analytics graph, and its own build (0.93 s
+  check, 1.86 s debug, 3.12 s release) bounds what any grouping could save,
+  against 5.85 s for a clean check of the layers below. Gating a family
+  would also gate `StrategyType` variants (forbidden by ADR-0002 section 4)
+  or make `StrategyRequest` fail depending on features. `make
+  measure-strategies` (`scripts/measure_strategies.py`) reproduces the
+  numbers, and `tests/strategy_families.rs` fails to compile if a new
+  strategy is not assigned a family.
+
 - **First consumer fixture: core plus pricing** (#527).
   `fixtures/consumers/pricing-only` is a real crate, excluded from the
   workspace, that depends on `optionstratlib-core` and

@@ -146,6 +146,13 @@ test-consumer-facade:
 		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
 	done
 
+# Measures what a per-family feature split of optionstratlib-strategies could
+# save: packages, the crate's own check and build time, rlib sizes (#532).
+# Informational, not run in CI; the crate docs record the numbers.
+.PHONY: measure-strategies
+measure-strategies:
+	@python3 scripts/measure_strategies.py
+
 .PHONY: check-graph
 check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)

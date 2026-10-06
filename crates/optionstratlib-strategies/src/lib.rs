@@ -39,6 +39,64 @@
 //! prelude serves broad imports. The optimiser side filter is a market type,
 //! `optionstratlib_market::chains::utils::FindOptimalSide`.
 //!
+//! ## Strategy families
+//!
+//! Every strategy belongs to exactly one family. The family traits in
+//! `shared` belong to their family (`SpreadStrategy` to vertical spreads,
+//! `ButterflyStrategy` to butterflies, `CondorStrategy` to condors,
+//! `StraddleStrategy` and `StrangleStrategy` to straddles and strangles);
+//! everything else is shared by all families.
+//!
+//! | Family | Strategies |
+//! | --- | --- |
+//! | Single leg | `LongCall`, `LongPut`, `ShortCall`, `ShortPut` |
+//! | Vertical spreads | `BullCallSpread`, `BullPutSpread`, `BearCallSpread`, `BearPutSpread` |
+//! | Butterflies | `LongButterflySpread`, `ShortButterflySpread`, `CallButterfly`, `IronButterfly` |
+//! | Condors | `IronCondor` |
+//! | Straddles and strangles | `LongStraddle`, `ShortStraddle`, `LongStrangle`, `ShortStrangle` |
+//! | Covered and protective | `CoveredCall`, `ProtectivePut`, `Collar`, `PoorMansCoveredCall` |
+//! | Custom | `CustomStrategy` |
+//! | Shared, always available | `base`, `default`, `model_impls`, `macros` (`test_strategy_traits!`), `utils`, `build` (`StrategyRequest`, `StrategyConstructor`), `combinations`, `delta_neutral`, `probabilities`, and `error` |
+//!
+//! There are no per-family features: the crate is one capability, as
+//! ADR-0002 Decision 3 sets for 0.22. #532 measured whether splitting it
+//! would pay, and it would not.
+//!
+//! - **Packages.** The crate adds no package to the graph of the layers
+//!   below it: `cargo tree -p optionstratlib-strategies -e normal` resolves
+//!   78 packages and `optionstratlib-analytics` 77, the difference being this
+//!   crate, with default and with all features. The two external crates only
+//!   it imports, `itertools` and `rayon`, are used only by the shared
+//!   optimiser (`combinations`) and are already in that graph through math
+//!   and pricing.
+//! - **Build time.** Because no family brings a package of its own, any
+//!   grouping still builds everything below analytics plus the shared code,
+//!   so the crate's own build time bounds what every candidate grouping can
+//!   save. With its dependencies built (`CARGO_INCREMENTAL=0`, touching
+//!   `src/lib.rs`), the whole crate takes a median 0.93 s to check, 1.86 s to
+//!   build in debug and 3.12 s in release, against 5.85 s for a clean check of
+//!   analytics and everything below it: at most about 14% of a clean check,
+//!   less than a second per check. Measured on commit 21d71751 with rustc
+//!   1.99.0, Apple M5 Max, 18 cores, three runs each. The crate-own time is a
+//!   metric added on top of the M0-01 method (doc/BASELINE.md), which times
+//!   the whole graph.
+//! - **Artifact.** The release `rlib` is 11.0 MB, about four times each lower
+//!   crate's; the linker drops what a binary does not use, so a consumer of
+//!   one family does not ship the others.
+//! - **Cost of splitting.** `StrategyType` and `StrategyRequest` name every
+//!   strategy. Gating a family would either gate enum variants, which
+//!   ADR-0002 section 4 forbids, or leave variants that `StrategyRequest`
+//!   builds only when a feature is on, a failure that depends on features at
+//!   run time. Family features would also have to be forwarded by the facade,
+//!   whose per-strategy `Graph` impls sit behind `plotly`, and each would add
+//!   a CI cell (alone, with `schema`, and in the facade).
+//!
+//! The adopted state adds no CI cell and has no unsupported feature
+//! combination: `schema` is the crate's only feature, and none, default and
+//! all features are built and tested. Reproduce the numbers with
+//! `make measure-strategies`; `tests/strategy_families.rs` keeps the family
+//! assignment of `StrategyType` exhaustive.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the strategy
