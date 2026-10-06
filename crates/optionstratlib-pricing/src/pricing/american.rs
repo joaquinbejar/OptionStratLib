@@ -46,9 +46,7 @@
 use crate::error::PricingError;
 use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub,
-};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_powd, d_sqrt, d_sub};
 use optionstratlib_core::model::types::OptionStyle;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -89,6 +87,14 @@ const TOLERANCE: f64 = 1e-6;
 /// - Otherwise, return P_european + A1 * (S/S**)^q1
 ///
 /// Where S* and S** are the critical (early exercise) prices.
+///
+/// Limits and floor:
+/// - `T = 0` returns the intrinsic value.
+/// - `σ = 0` returns the exact value on the deterministic forward path: the
+///   best of exercising now, at expiry, or at the interior optimum when the
+///   carry makes one exist (see `zero_volatility_american`).
+/// - The result is never below the intrinsic value `max(S - K, 0)` /
+///   `max(K - S, 0)`: an American option can be exercised immediately.
 ///
 /// # Example
 ///
@@ -141,6 +147,131 @@ pub fn barone_adesi_whaley(
     volatility: Positive,
     option_style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
+    let approximation = baw_approximation(
+        spot,
+        strike,
+        time_to_expiry,
+        risk_free_rate,
+        dividend_yield,
+        volatility,
+        option_style,
+    )?;
+    // Domain floor (#648): an American option can be exercised now, so it is
+    // worth at least its intrinsic value (Hull, *Options, Futures and Other
+    // Derivatives*, early exercise). The quadratic approximation respects it
+    // above the critical price, but the `q = 0` call returns the European
+    // value, which falls below `S - K` at a negative rate.
+    Ok(approximation.max(intrinsic_value(
+        spot.to_dec(),
+        strike.to_dec(),
+        option_style,
+    )?))
+}
+
+/// Intrinsic value `max(S - K, 0)` (call) or `max(K - S, 0)` (put).
+#[inline]
+fn intrinsic_value(
+    s: Decimal,
+    k: Decimal,
+    option_style: &OptionStyle,
+) -> Result<Decimal, PricingError> {
+    Ok(match option_style {
+        OptionStyle::Call => d_sub(s, k, "pricing::american::intrinsic::call")?,
+        OptionStyle::Put => d_sub(k, s, "pricing::american::intrinsic::put")?,
+    }
+    .max(Decimal::ZERO))
+}
+
+/// Exact American value when the underlying is deterministic (`σ = 0`).
+///
+/// The spot follows its forward, `S(τ) = S e^((r - q)τ)`, so exercising a put
+/// at `τ` is worth `f(τ) = K e^(-rτ) - S e^(-qτ)` today and a call `-f(τ)`.
+/// The holder picks the best `τ ∈ [0, T]` or lets the option lapse:
+///
+/// ```text
+/// V = max(0, f(0), f(T), f(τ*))      (put; -f for a call)
+/// τ* = ln(rK / (qS)) / (r - q)       (f'(τ*) = 0, only when 0 < τ* < T)
+/// ```
+///
+/// `f''(τ*) = r K e^(-rτ*) (r - q)`, so the stationary point is the
+/// interior maximum of the put when `r < q` and of the call when `r > q`;
+/// evaluating it whenever it lies inside `(0, T)` and keeping the larger
+/// value covers both without branching on the sign. It exists only for
+/// `r > 0`, `q > 0`, `r ≠ q`. `f(0)` is the intrinsic value, so the result
+/// never falls below it (#648).
+///
+/// # Errors
+///
+/// Returns [`PricingError::Decimal`] when a discount factor, the logarithm
+/// or a leg leaves the representable `Decimal` range.
+fn zero_volatility_american(
+    s: Decimal,
+    k: Decimal,
+    t: Decimal,
+    r: Decimal,
+    q: Decimal,
+    option_style: &OptionStyle,
+) -> Result<Decimal, PricingError> {
+    // Value today of exercising at `tau`, from the holder's side.
+    let exercise_at = |tau: Decimal| -> Result<Decimal, PricingError> {
+        let k_pv = d_mul(
+            k,
+            discount_factor(
+                r,
+                tau,
+                "pricing::american::zero_vol::rt",
+                "pricing::american::zero_vol::discount_r",
+            )?,
+            "pricing::american::zero_vol::k_pv",
+        )?;
+        let s_pv = d_mul(
+            s,
+            discount_factor(
+                q,
+                tau,
+                "pricing::american::zero_vol::qt",
+                "pricing::american::zero_vol::discount_q",
+            )?,
+            "pricing::american::zero_vol::s_pv",
+        )?;
+        Ok(match option_style {
+            OptionStyle::Call => d_sub(s_pv, k_pv, "pricing::american::zero_vol::call")?,
+            OptionStyle::Put => d_sub(k_pv, s_pv, "pricing::american::zero_vol::put")?,
+        })
+    };
+
+    let mut best = exercise_at(Decimal::ZERO)?
+        .max(exercise_at(t)?)
+        .max(Decimal::ZERO);
+    if r > Decimal::ZERO && q > Decimal::ZERO && r != q {
+        let ratio = d_div(
+            d_mul(r, k, "pricing::american::zero_vol::rk")?,
+            d_mul(q, s, "pricing::american::zero_vol::qs")?,
+            "pricing::american::zero_vol::ratio",
+        )?;
+        let tau_star = d_div(
+            d_ln(ratio, "pricing::american::zero_vol::ln_ratio")?,
+            d_sub(r, q, "pricing::american::zero_vol::carry")?,
+            "pricing::american::zero_vol::tau_star",
+        )?;
+        if tau_star > Decimal::ZERO && tau_star < t {
+            best = best.max(exercise_at(tau_star)?);
+        }
+    }
+    Ok(best)
+}
+
+/// The Barone-Adesi-Whaley quadratic approximation before the intrinsic
+/// floor of [`barone_adesi_whaley`]; same parameters and errors.
+fn baw_approximation(
+    spot: Positive,
+    strike: Positive,
+    time_to_expiry: Positive,
+    risk_free_rate: Decimal,
+    dividend_yield: Positive,
+    volatility: Positive,
+    option_style: &OptionStyle,
+) -> Result<Decimal, PricingError> {
     let s = spot.to_dec();
     let k = strike.to_dec();
     let t = time_to_expiry.to_dec();
@@ -151,35 +282,13 @@ pub fn barone_adesi_whaley(
     // Handle edge cases
     if t <= Decimal::ZERO {
         // At expiration, return intrinsic value
-        return Ok(match option_style {
-            OptionStyle::Call => {
-                d_sub(s, k, "pricing::american::intrinsic::call")?.max(Decimal::ZERO)
-            }
-            OptionStyle::Put => {
-                d_sub(k, s, "pricing::american::intrinsic::put")?.max(Decimal::ZERO)
-            }
-        });
+        return intrinsic_value(s, k, option_style);
     }
 
     if sigma <= Decimal::ZERO {
-        // Zero volatility: deterministic pricing
-        // Not `kernels::discount_factor`: both exponents are formed before
-        // either `exp`, so the shared two-step kernel would reorder the
-        // checked steps.
-        let neg_rt = d_mul(-r, t, "pricing::american::zero_vol::rt")?;
-        let neg_qt = d_mul(-q, t, "pricing::american::zero_vol::qt")?;
-        let discount_r = d_exp(neg_rt, "pricing::american::zero_vol::discount_r")?;
-        let discount_q = d_exp(neg_qt, "pricing::american::zero_vol::discount_q")?;
-        let s_disc = d_mul(s, discount_q, "pricing::american::zero_vol::s_disc")?;
-        let k_disc = d_mul(k, discount_r, "pricing::american::zero_vol::k_disc")?;
-        return Ok(match option_style {
-            OptionStyle::Call => {
-                d_sub(s_disc, k_disc, "pricing::american::zero_vol::call")?.max(Decimal::ZERO)
-            }
-            OptionStyle::Put => {
-                d_sub(k_disc, s_disc, "pricing::american::zero_vol::put")?.max(Decimal::ZERO)
-            }
-        });
+        // Zero volatility: the holder chooses the best exercise time on the
+        // deterministic forward path, not just expiry (#648).
+        return zero_volatility_american(s, k, t, r, q, option_style);
     }
 
     // Calculate European option price first

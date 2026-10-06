@@ -20,7 +20,8 @@
 //!   Black-76 on the forward (`C - P = e^(-rT) (F - K)`), Garman-Kohlhagen
 //!   with the foreign rate (`C - P = S e^(-r_f T) - K e^(-r_d T)`).
 //! * Garman-Kohlhagen is Black-Scholes-Merton with `q = r_f`, bit for bit.
-//! * Side symmetry: a short price or Greek is the negated long one.
+//! * Side symmetry: a short price or Greek is the negated long one, the
+//!   binomial American included (#648).
 //! * Greek identities: `Δc - Δp = e^(-qT)` (`e^(-rT)` for Black-76,
 //!   `e^(-r_f T)` for Garman-Kohlhagen), `Γc = Γp`, `Vc = Vp`,
 //!   `ρc - ρp = K T e^(-rT)` and `Θc - Θp = q S e^(-qT) - r K e^(-rT)`,
@@ -35,7 +36,8 @@
 //!   Kirk's spread approximation tends to Margrabe as the strike vanishes.
 //! * Limits where the library defines them: binomial and Barone-Adesi-Whaley
 //!   at `T = 0` (intrinsic) and `σ = 0` (discounted deterministic payoff),
-//!   binary options at `T = 0` and `σ = 0`, Black-Scholes delta at `T = 0`
+//!   the zero-volatility American floors and interior exercise optimum of
+//!   Barone-Adesi-Whaley (#648), binary options at `T = 0` and `σ = 0`, Black-Scholes delta at `T = 0`
 //!   and `σ = 0`, and deep in/out-of-the-money Black-Scholes asymptotes.
 //!   The closed forms (Black-Scholes, Black-76, Garman-Kohlhagen) do not
 //!   define the `T = 0` or `σ = 0` limit: `d1` divides by `σ√T`, so they
@@ -72,8 +74,7 @@
 //!
 //! Identities the library breaks today are not in this suite; each lives
 //! in its issue with the test code: barrier bounds and `Side` (#646),
-//! zero-vol BAW and short binomial American (#648), gap put sign (#649),
-//! quanto foreign rate and Kirk second dividend (#650).
+//! gap put sign (#649), quanto foreign rate and Kirk second dividend (#650).
 
 use optionstratlib_core::model::option::ExoticParams;
 use optionstratlib_core::model::types::{
@@ -87,8 +88,8 @@ use optionstratlib_pricing::greeks::{
     vega_b76, vega_gk,
 };
 use optionstratlib_pricing::pricing::{
-    BinomialPricingParams, barone_adesi_whaley, binary_black_scholes, black_76, black_scholes,
-    garman_kohlhagen, price_binomial, spread_black_scholes,
+    BinomialPricingParams, OptionPricing, barone_adesi_whaley, binary_black_scholes, black_76,
+    black_scholes, garman_kohlhagen, generate_binomial_tree, price_binomial, spread_black_scholes,
 };
 use rust_decimal::Decimal;
 use rust_decimal::prelude::MathematicalOps;
@@ -406,6 +407,86 @@ fn binomial_side_price(option_type: &OptionType, style: &OptionStyle, side: &Sid
         }),
         "binomial",
     )
+}
+
+/// A short American option is the negated long one: the writer does not
+/// hold the exercise right (#648). The CRR backward induction used to apply
+/// `max(continuation, intrinsic)` to the side-signed values, so the short
+/// position "exercised" whenever that lifted it to zero: at `S = 100,
+/// K = 105, σ = 25 %, r = 5 %, T = 0.5`, 200 steps, the long American call
+/// is `5.9823` and the short one was `0` instead of `-5.9823`.
+#[test]
+fn test_binomial_american_short_price_equals_negated_long() {
+    for style in [OptionStyle::Call, OptionStyle::Put] {
+        let american = OptionType::American;
+        assert_eq!(
+            binomial_side_price(&american, &style, &Side::Short),
+            -binomial_side_price(&american, &style, &Side::Long),
+            "binomial American {style:?}"
+        );
+    }
+}
+
+/// The binomial tree is signed by `side` node by node, and
+/// `calculate_price_binomial_tree` reads its root without negating it again
+/// (#648): a short tree is the negated long tree for European and American
+/// options, and its price matches `price_binomial`.
+#[test]
+fn test_binomial_tree_short_is_negated_long_tree() {
+    for option_type in [OptionType::European, OptionType::American] {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let tree = |side: &Side| {
+                ok(
+                    generate_binomial_tree(&BinomialPricingParams {
+                        asset: pos_or_panic!(100.0),
+                        volatility: pos_or_panic!(0.25),
+                        int_rate: dec!(0.05),
+                        strike: pos_or_panic!(105.0),
+                        expiry: pos_or_panic!(0.5),
+                        no_steps: step_count(50),
+                        option_type: &option_type,
+                        option_style: &style,
+                        side,
+                    }),
+                    "binomial tree",
+                )
+                .1
+            };
+            let long = tree(&Side::Long);
+            let short = tree(&Side::Short);
+            for (long_row, short_row) in long.iter().zip(short.iter()) {
+                for (l, s) in long_row.iter().zip(short_row.iter()) {
+                    assert_eq!(*s, -*l, "{option_type:?} {style:?} tree node");
+                }
+            }
+            let short_option = option(
+                option_type.clone(),
+                style,
+                Side::Short,
+                100.0,
+                105.0,
+                182.5,
+                0.25,
+                dec!(0.05),
+                0.0,
+                None,
+            );
+            let mut long_option = short_option.clone();
+            long_option.side = Side::Long;
+            let short_price = ok(
+                short_option.calculate_price_binomial_tree(step_count(50)),
+                "short tree price",
+            )
+            .0;
+            let long_price = ok(
+                long_option.calculate_price_binomial_tree(step_count(50)),
+                "long tree price",
+            )
+            .0;
+            assert!(short_price < Decimal::ZERO, "{option_type:?} {style:?}");
+            assert_eq!(short_price, -long_price, "{option_type:?} {style:?}");
+        }
+    }
 }
 
 /// Short European binomial and exotic prices are the negated long prices.
@@ -1330,6 +1411,84 @@ fn test_barone_adesi_whaley_zero_time_and_zero_volatility_call_limits() {
         IDENTITY_TOL,
         "baw call at zero vol",
     );
+}
+
+/// An American put can always be exercised, so it is worth at least its
+/// intrinsic value; the binomial `σ = 0` branch honours this. Barone-Adesi-
+/// Whaley's `σ = 0` branch used to return the European value
+/// `max(K e^(-rT) - S e^(-qT), 0)`: at `S = 80, K = 100, r = 10 %, T = 1` it
+/// priced `10.4837`, below the intrinsic `20` (#648).
+#[test]
+fn test_barone_adesi_whaley_zero_volatility_put_is_at_least_intrinsic() {
+    let frozen_put = ok(
+        barone_adesi_whaley(
+            pos_or_panic!(80.0),
+            pos_or_panic!(100.0),
+            Positive::ONE,
+            dec!(0.10),
+            Positive::ZERO,
+            Positive::ZERO,
+            &OptionStyle::Put,
+        ),
+        "baw σ=0 put",
+    );
+    assert!(
+        frozen_put >= dec!(20),
+        "american put {frozen_put} below intrinsic 20"
+    );
+    // With `q = 0` the put's exercise value `K e^(-rτ) - S` falls in `τ`,
+    // so exercising now is the optimum: exactly the intrinsic value.
+    assert_eq!(frozen_put, dec!(20));
+}
+
+/// At `σ = 0` the exercise value `K e^(-rτ) - S e^(-qτ)` of a put has an
+/// interior maximum at `τ* = ln(rK / (qS)) / (r - q)` when `r < q`, and the
+/// call's has one when `r > q` (#648). `S = K = 100, T = 50`:
+/// with `r = 1 %, q = 5 %` (put) or `r = 5 %, q = 1 %` (call), `τ* = 40.236`
+/// and the value is `100 (e^(-0.40236) - e^(-2.01180)) = 53.4992`, above
+/// both endpoints (`0` now, `52.4446` at expiry). Recomputed independently
+/// in `f64`.
+#[test]
+fn test_barone_adesi_whaley_zero_volatility_interior_exercise_optimum() {
+    let frozen = |rate: Decimal, dividend: f64, style: &OptionStyle| {
+        ok(
+            barone_adesi_whaley(
+                Positive::HUNDRED,
+                Positive::HUNDRED,
+                pos_or_panic!(50.0),
+                rate,
+                pos_or_panic!(dividend),
+                Positive::ZERO,
+                style,
+            ),
+            "baw σ=0 interior",
+        )
+    };
+    let put = frozen(dec!(0.01), 0.05, &OptionStyle::Put);
+    let call = frozen(dec!(0.05), 0.01, &OptionStyle::Call);
+    assert_close(put, dec!(53.49922439811375), dec!(0.000001), "put τ*");
+    assert_close(call, dec!(53.49922439811375), dec!(0.000001), "call τ*");
+}
+
+/// With `q = 0` Barone-Adesi-Whaley returns the European call, which a
+/// negative rate pushes below `S - K`; the American floor restores the
+/// intrinsic value (#648). `S = 150, K = 100, σ = 10 %, r = -2 %, T = 1`:
+/// European `47.9800`, intrinsic `50`.
+#[test]
+fn test_barone_adesi_whaley_negative_rate_call_is_floored_at_intrinsic() {
+    let call = ok(
+        barone_adesi_whaley(
+            pos_or_panic!(150.0),
+            Positive::HUNDRED,
+            Positive::ONE,
+            dec!(-0.02),
+            Positive::ZERO,
+            pos_or_panic!(0.1),
+            &OptionStyle::Call,
+        ),
+        "baw negative-rate call",
+    );
+    assert_eq!(call, dec!(50));
 }
 
 /// Binary options define both limits: at `T = 0` the payout if in the money

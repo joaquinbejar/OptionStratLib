@@ -52,7 +52,7 @@ use optionstratlib_core::error::{OptionsError, OptionsResult};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
-use optionstratlib_core::model::types::{OptionType, Side};
+use optionstratlib_core::model::types::OptionType;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
@@ -319,17 +319,15 @@ impl OptionPricing for Options {
             side: &self.side,
         };
         let (asset_tree, option_tree) = generate_binomial_tree(&params)?;
-        let root = option_tree
+        // The tree is already signed by `side` (#648); negating its root
+        // again priced a short option at the long price.
+        let price = option_tree
             .first()
             .and_then(|row| row.first())
             .copied()
             .ok_or(PricingError::BinomialNodeMissing {
                 node: "option[0][0]",
             })?;
-        let price = match self.side {
-            Side::Long => root,
-            Side::Short => -root,
-        };
         Ok((price, asset_tree, option_tree))
     }
 
@@ -488,7 +486,7 @@ fn outside_band_error(
 #[cfg(test)]
 mod tests_option_pricing_trait {
     use super::*;
-    use optionstratlib_core::model::types::OptionStyle;
+    use optionstratlib_core::model::types::{OptionStyle, Side};
     use optionstratlib_core::model::utils::create_sample_option_simplest;
     use optionstratlib_core::model::{ExpirationDate, OptionType};
     use optionstratlib_core::pos_or_panic;
@@ -582,7 +580,14 @@ mod tests_options_pricing {
         let (price, asset_tree, option_tree) = option
             .calculate_price_binomial_tree(optionstratlib_core::nz!(5))
             .unwrap();
-        assert!(price > Decimal::ZERO);
+        // A short position is a liability: the negated long price (#648). It
+        // used to come back positive, the root negated twice.
+        let long = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let (long_price, _, _) = long
+            .calculate_price_binomial_tree(optionstratlib_core::nz!(5))
+            .unwrap();
+        assert!(price < Decimal::ZERO);
+        assert_eq!(price, -long_price);
         assert_eq!(asset_tree.len(), 6);
         assert_eq!(option_tree.len(), 6);
     }

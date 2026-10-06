@@ -154,8 +154,19 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     let p = calculate_probability(params.int_rate, dt, d, u)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
+    // The lattice is valued from the holder's side and the requested side is
+    // applied once, to the root (#648). The early-exercise decision belongs to
+    // the holder: `max(continuation, intrinsic)` over short-signed values
+    // picked the writer's smaller liability, so a short American priced at
+    // zero instead of the negated long price.
+    let long_params = BinomialPricingParams {
+        side: &Side::Long,
+        ..params.clone()
+    };
+    info.side = Side::Long;
+
     let mut prices: Vec<Decimal> = (0..=no_steps_raw)
-        .map(|i| calculate_option_price(params.clone(), u, d, i))
+        .map(|i| calculate_option_price(long_params.clone(), u, d, i))
         .collect::<Result<Vec<_>, _>>()?;
 
     let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::half_dt")?;
@@ -221,10 +232,14 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
             }
         }
     }
-    prices
+    let root = prices
         .first()
         .copied()
-        .ok_or(PricingError::BinomialNodeMissing { node: "root" })
+        .ok_or(PricingError::BinomialNodeMissing { node: "root" })?;
+    Ok(match params.side {
+        Side::Long => root,
+        Side::Short => -root,
+    })
 }
 
 /// Price of a contract whose underlying is deterministic.
@@ -354,7 +369,9 @@ fn lattice_spot(
 ///
 /// A tuple containing two vectors of vectors:
 /// * `asset_tree`: The tree representing the possible future values of the asset at each step.
-/// * `option_tree`: The tree representing the values of the option at each step.
+/// * `option_tree`: The tree representing the values of the option at each step, signed by
+///   `params.side`: a short tree is the negated long tree, whose exercise decisions are the
+///   holder's.
 ///
 /// The `generate_binomial_tree` function calculates the possible asset prices and option prices
 /// at each node in a binomial tree based on the input parameters.
@@ -403,11 +420,13 @@ fn lattice_spot(
 /// [`PricingError::Positive`] when a `Positive` construction
 /// downstream underflows.
 pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeResult {
+    // Valued from the holder's side, then signed once at the end (#648): the
+    // early-exercise maximum must be taken over the holder's values.
     let mut info = PayoffInfo {
         spot: params.asset,
         strike: params.strike,
         style: *params.option_style,
-        side: *params.side,
+        side: Side::Long,
         spot_prices: None,
         spot_min: None,
         spot_max: None,
@@ -538,6 +557,12 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     ));
                 }
             }
+        }
+    }
+
+    if matches!(params.side, Side::Short) {
+        for node_val in option_tree.iter_mut().flatten() {
+            *node_val = -*node_val;
         }
     }
 
