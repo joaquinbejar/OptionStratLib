@@ -592,6 +592,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Heston and telegraph walk kernels report `Decimal` overflow instead
+  of panicking** (#686). Three expressions in
+  `crates/optionstratlib-simulation/src/simulation/traits.rs` still used the
+  raw `Decimal` operators, which abort on overflow: Heston's `1 - rho^2`
+  ahead of its square root, Heston's correlated draw
+  `rho * z1 + sqrt(1 - rho^2) * z`, and the telegraph conversion
+  `(|z| + 1) / 2`. They now go through `d_mul`, `d_add`, `d_sub` and
+  `d_div`, so an overflow surfaces as a `SimulationError` like every other
+  step of those kernels. The results are bit for bit unchanged: each checked
+  helper wraps the same `rust_decimal` routine the operator calls, and the
+  rounding `d_div` applies at scale 28 is a no-op on a quotient that already
+  carries at most 28 decimal places. The draw order is unchanged, and the
+  seeded regressions (`deterministic_simulation_test.rs`,
+  `simulation_regression_test.rs`) pass unmodified.
+
 - **Three simulation tests that never compiled now run** (#633).
   `tests/unit/simulation/model_and_randomwalk_tests.rs` was declared by no
   `mod.rs` from the commit that added it (341379aa), so its tests never

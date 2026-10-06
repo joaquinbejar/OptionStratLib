@@ -211,8 +211,13 @@ where
                 .map_err(|_| SimulationError::walk_error("Heston: sqrt(dt) failed (overflow)"))?;
             // sqrt(1 - rho^2) depends only on `rho`, hoist out of the
             // hot loop so we don't recompute it per step.
+            let one_minus_rho_sq = d_sub(
+                Decimal::ONE,
+                d_mul(rho, rho, "simulation::heston::one_minus_rho_sq")?,
+                "simulation::heston::one_minus_rho_sq",
+            )?;
             let one_minus_rho_sq_sqrt = d_sqrt(
-                Decimal::ONE - rho * rho,
+                one_minus_rho_sq,
                 "simulation::heston::one_minus_rho_sq_sqrt",
             )
             .map_err(|_| {
@@ -229,7 +234,15 @@ where
             for _ in 0..steps {
                 // Generate correlated random numbers
                 let z1 = decimal_normal_sample_with(rng);
-                let z2 = rho * z1 + one_minus_rho_sq_sqrt * decimal_normal_sample_with(rng);
+                let z2 = d_add(
+                    d_mul(rho, z1, "simulation::heston::z2")?,
+                    d_mul(
+                        one_minus_rho_sq_sqrt,
+                        decimal_normal_sample_with(rng),
+                        "simulation::heston::z2",
+                    )?,
+                    "simulation::heston::z2",
+                )?;
 
                 // Ensure variance stays positive (modified Euler scheme with truncation)
                 let variance_sqrt =
@@ -468,8 +481,15 @@ where
                 )?;
 
                 // Check for state transition using uniform random sample
-                let uniform_sample =
-                    (decimal_normal_sample_with(rng).abs() + Decimal::ONE) / Decimal::TWO; // Convert normal to uniform [0,1]
+                let uniform_sample = d_div(
+                    d_add(
+                        decimal_normal_sample_with(rng).abs(),
+                        Decimal::ONE,
+                        "simulation::telegraph::uniform_sample",
+                    )?,
+                    Decimal::TWO,
+                    "simulation::telegraph::uniform_sample",
+                )?; // Convert normal to uniform [0,1]
                 if uniform_sample < transition_prob {
                     state *= -1;
                 }
