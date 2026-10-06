@@ -749,16 +749,19 @@ mod tests_expected_value {
         .unwrap()
     }
 
-    /// A drift with 15 decimal places, where `Decimal::to_f64` lands one ULP
-    /// away from the nearest `f64` and the trend adjustment would move the
-    /// last digits (to `0.002802439458791802`). Pinned from the `f64`-field
-    /// code fed `drift_rate: 2.999789999999902, confidence: 0.95` (#656).
+    /// A drift with 15 decimal places, where `Decimal::to_f64` lands away
+    /// from the nearest `f64` (on `2.999789999999903`) and would move the
+    /// last digits (to `0.003104587227155627`). Pinned from the `f64`-field
+    /// code fed `drift_rate: 2.999789999999902, confidence: 0.95` (#656), then
+    /// re-baselined when the probability threshold gained the lognormal
+    /// `-sigma^2 / 2` term (#664: `0.002802439458791824` ->
+    /// `0.003104587227155649`).
     #[test]
     fn test_expected_value_many_decimal_places_drift_matches_f64_field() {
         let strategy = create_test_strategy();
         let trend = Some(price_trend(dec!(2.999789999999902), dec!(0.95)));
         match strategy.expected_value(None, trend) {
-            Ok(ev) => assert_eq!(ev.to_dec(), dec!(0.002802439458791824)),
+            Ok(ev) => assert_eq!(ev.to_dec(), dec!(0.003104587227155649)),
             Err(e) => panic!("expected value evaluates: {e}"),
         }
     }
