@@ -287,8 +287,7 @@ pub use combinations::process_n_times_iter;
 pub use covered_call::CoveredCall;
 pub use delta_neutral::{
     AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
-    AdjustmentTarget, DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutrality,
-    PortfolioGreeks,
+    AdjustmentTarget, DeltaInfo, DeltaNeutrality, PortfolioGreeks,
 };
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;

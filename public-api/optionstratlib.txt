@@ -7843,8 +7843,6 @@ pub fn optionstratlib::simulation::telegraph_walk<X, Y>(&optionstratlib::simulat
 pub fn optionstratlib::simulation::walk_steps<Y, E, F>(&optionstratlib::simulation::WalkParams<positive::positive::Positive, Y>, F) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, Y>>, E> where Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone, E: core::convert::From<optionstratlib::error::simulation::SimulationError>, F: core::ops::function::FnMut(&positive::positive::Positive, core::option::Option<positive::positive::Positive>, &optionstratlib::prelude::Xstep<positive::positive::Positive>) -> core::result::Result<core::option::Option<Y>, E>
 pub fn optionstratlib::simulation::walk_steps_par<Y, E, F>(&optionstratlib::simulation::WalkParams<positive::positive::Positive, Y>, F) -> core::result::Result<alloc::vec::Vec<optionstratlib::prelude::Step<positive::positive::Positive, Y>>, E> where Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone + core::marker::Send, E: core::convert::From<optionstratlib::error::simulation::SimulationError> + core::marker::Send, F: core::ops::function::Fn(&positive::positive::Positive, core::option::Option<positive::positive::Positive>, &optionstratlib::prelude::Xstep<positive::positive::Positive>) -> core::result::Result<core::option::Option<Y>, E> + core::marker::Sync
 pub mod optionstratlib::strategies
-pub use optionstratlib::strategies::DELTA_THRESHOLD
-pub use optionstratlib::strategies::DeltaAdjustment
 pub use optionstratlib::strategies::FindOptimalSide
 pub mod optionstratlib::strategies::base
 pub enum optionstratlib::strategies::base::StrategyType
@@ -10573,8 +10571,6 @@ impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::custom::Custom
 pub fn optionstratlib::strategies::custom::CustomStrategy::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub mod optionstratlib::strategies::default
 pub mod optionstratlib::strategies::delta_neutral
-pub use optionstratlib::strategies::delta_neutral::DELTA_THRESHOLD
-pub use optionstratlib::strategies::delta_neutral::DeltaAdjustment
 pub mod optionstratlib::strategies::delta_neutral::adjustment
 pub enum optionstratlib::strategies::delta_neutral::adjustment::AdjustmentAction
 pub optionstratlib::strategies::delta_neutral::adjustment::AdjustmentAction::AddLeg
@@ -12318,11 +12314,6 @@ pub fn optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall::
 impl utoipa::__dev::ComposeSchema for optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall
 pub fn optionstratlib::strategies::poor_mans_covered_call::PoorMansCoveredCall::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub mod optionstratlib::strategies::probabilities
-pub use optionstratlib::strategies::probabilities::PriceTrend
-pub use optionstratlib::strategies::probabilities::ProfitRangeProbability
-pub use optionstratlib::strategies::probabilities::VolatilityAdjustment
-pub use optionstratlib::strategies::probabilities::calculate_price_probability
-pub use optionstratlib::strategies::probabilities::calculate_single_point_probability
 pub struct optionstratlib::strategies::probabilities::StrategyProbabilityAnalysis
 pub optionstratlib::strategies::probabilities::StrategyProbabilityAnalysis::break_even_points: alloc::vec::Vec<positive::positive::Positive>
 pub optionstratlib::strategies::probabilities::StrategyProbabilityAnalysis::expected_value: positive::positive::Positive

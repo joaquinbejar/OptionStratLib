@@ -1,7 +1,7 @@
+use optionstratlib::greeks::DELTA_THRESHOLD;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::OptionStyle;
-use optionstratlib::strategies::DELTA_THRESHOLD;
-use optionstratlib::strategies::delta_neutral::DeltaAdjustment::BuyOptions;
+use optionstratlib::pnl::DeltaAdjustment::BuyOptions;
 use optionstratlib::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib::strategies::long_straddle::LongStraddle;
 use optionstratlib::{ExpirationDate, assert_decimal_eq};

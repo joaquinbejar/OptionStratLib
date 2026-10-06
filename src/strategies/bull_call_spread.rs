@@ -25,6 +25,7 @@ use super::base::{
 };
 use super::shared::SpreadStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::model::decimal::d_div;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
@@ -50,7 +51,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -2208,11 +2209,12 @@ mod tests_bull_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::bull_call_spread::BullCallSpread;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::{ExpirationDate, Side, assert_decimal_eq};
     use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;
@@ -2354,11 +2356,12 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::bull_call_spread::BullCallSpread;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::{ExpirationDate, Side, assert_decimal_eq};
     use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
     use rust_decimal::Decimal;

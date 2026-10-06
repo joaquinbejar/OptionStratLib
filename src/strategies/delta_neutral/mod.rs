@@ -12,8 +12,9 @@
 //!
 //! ## Key Components
 //!
-//! - **DeltaAdjustment**: Represents the adjustments (buying/selling options or the underlying asset)
-//!   required to move a strategy toward delta neutrality.
+//! - **DeltaAdjustment** (owned by [`crate::pnl`]): Represents the adjustments
+//!   (buying/selling options or the underlying asset) required to move a strategy toward
+//!   delta neutrality. `DeltaNeutrality` returns it; this module does not re-export it.
 //! - **DeltaInfo**: Provides detailed information about the delta status of a strategy,
 //!   including the net delta, individual position deltas, and current neutrality status.
 //! - **DeltaNeutrality Trait**: A trait for calculating net delta, checking delta-neutrality,
@@ -48,9 +49,6 @@ pub mod optimizer;
 pub mod portfolio;
 
 pub use adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentPlan};
-pub use model::{
-    DELTA_THRESHOLD, DeltaAdjustment, DeltaInfo, DeltaNeutralResponse, DeltaNeutrality,
-    DeltaPositionInfo,
-};
+pub use model::{DeltaInfo, DeltaNeutralResponse, DeltaNeutrality, DeltaPositionInfo};
 pub use optimizer::AdjustmentOptimizer;
 pub use portfolio::{AdjustmentTarget, PortfolioGreeks};

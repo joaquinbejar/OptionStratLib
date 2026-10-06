@@ -20,6 +20,7 @@ use super::base::{
 };
 use super::shared::CondorStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::{lower_break_even, price_gap};
 use crate::{
@@ -43,7 +44,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -2620,7 +2621,8 @@ mod tests_iron_condor_delta {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
-    use crate::strategies::{DELTA_THRESHOLD, DeltaAdjustment};
+    use crate::greeks::DELTA_THRESHOLD;
+    use crate::pnl::DeltaAdjustment;
     use rust_decimal_macros::dec;
 
     fn get_strategy(underlying_price: Positive) -> IronCondor {
@@ -2813,9 +2815,10 @@ mod tests_iron_condor_delta_size {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::iron_condor::IronCondor;
     use rust_decimal_macros::dec;
 

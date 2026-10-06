@@ -20,6 +20,8 @@ use super::base::{
 };
 use super::shared::StrangleStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
+use crate::pnl::DeltaAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
@@ -42,9 +44,9 @@ use crate::{
     pnl::{PnLCalculator, utils::PnL},
     pricing::Profit,
     strategies::{
-        BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
+        BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
@@ -1350,10 +1352,11 @@ mod tests_long_strangle_probability {
 mod tests_long_strangle_delta {
     use super::*;
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::long_strangle::{LongStrangle, Positive};
     use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;
@@ -1494,10 +1497,11 @@ mod tests_long_strangle_delta {
 mod tests_long_strangle_delta_size {
     use super::*;
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::{Action, OptionStyle};
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use crate::strategies::long_strangle::{LongStrangle, Positive};
     use positive::{assert_pos_relative_eq, pos_or_panic};
     use rust_decimal_macros::dec;

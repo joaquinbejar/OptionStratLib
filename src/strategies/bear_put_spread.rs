@@ -27,6 +27,7 @@ use super::base::{
 };
 use super::shared::SpreadStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
@@ -51,7 +52,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -2347,10 +2348,11 @@ mod tests_delta {
     use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::bear_put_spread::BearPutSpread;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {
@@ -2493,10 +2495,11 @@ mod tests_delta_size {
     use positive::{Positive, assert_pos_relative_eq};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
+    use crate::pnl::DeltaAdjustment;
     use crate::strategies::bear_put_spread::BearPutSpread;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearPutSpread {

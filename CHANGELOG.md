@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The strategies module no longer re-exports analytics, P&L or Greeks
+  items** (#530). Each item keeps one public path, its owning layer's; the
+  types, functions and results are unchanged. Removed paths and their
+  replacements:
+  - `strategies::probabilities::{PriceTrend, VolatilityAdjustment,
+    calculate_price_probability, calculate_single_point_probability}`:
+    use `analytics::{PriceTrend, VolatilityAdjustment,
+    calculate_price_probability, calculate_single_point_probability}`.
+  - `strategies::probabilities::ProfitRangeProbability`: use
+    `analytics::ProfitRangeProbability`.
+  - `strategies::DeltaAdjustment` and
+    `strategies::delta_neutral::DeltaAdjustment`: use `pnl::DeltaAdjustment`
+    (its `SameSize` payload is `pnl::DeltaAdjustmentSameSize`, as before).
+  - `strategies::DELTA_THRESHOLD` and
+    `strategies::delta_neutral::DELTA_THRESHOLD`: use
+    `greeks::DELTA_THRESHOLD` (also in the `prelude`, unchanged).
+  `strategies::probabilities` keeps `ProbabilityAnalysis` and
+  `StrategyProbabilityAnalysis`, and `DeltaNeutrality` still returns
+  `pnl::DeltaAdjustment`, so strategy adjustment P&L stays on the strategy
+  layer. The audit of `optionstratlib-analytics` found no public signature,
+  trait bound or error variant naming a strategy type; `check-graph` now
+  self-tests that an analytics dependency on `optionstratlib-strategies`,
+  `-backtest`, `-visualization` or `-simulation`, of any kind, is reported.
+
 - **P&L, risk, metrics and strategy-neutral analytics are their own crate,
   `optionstratlib-analytics`** (#529). `analytics`, `pnl`, `risk`, `metrics`
   and their errors (`ProbabilityError` with the `error::probability` module,

@@ -21,6 +21,8 @@ use super::base::{
 };
 use super::shared::StrangleStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
+use crate::pnl::DeltaAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
@@ -45,9 +47,9 @@ use crate::{
     pnl::{PnLCalculator, utils::PnL},
     pricing::Profit,
     strategies::{
-        BasicAble, DeltaAdjustment, Strategies, StrategyConstructor,
+        BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria, calculate_price_range},
     },
     test_strategy_traits,
@@ -2010,10 +2012,11 @@ mod tests_short_strangle_delta {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -2200,10 +2203,11 @@ mod tests_short_strangle_delta_size {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
     use crate::model::types::{Action, OptionStyle};
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal_macros::dec;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> ShortStrangle {
@@ -3360,11 +3364,11 @@ mod tests_strategy_constructor {
 
 #[cfg(test)]
 mod test_adjustments_pnl {
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::greeks::Greeks;
+    use crate::pnl::DeltaAdjustment;
     use crate::pnl::PnLCalculator;
-    use crate::strategies::{
-        BasicAble, DELTA_THRESHOLD, DeltaAdjustment, DeltaNeutrality, ShortStrangle,
-    };
+    use crate::strategies::{BasicAble, DeltaNeutrality, ShortStrangle};
     use crate::{ExpirationDate, OptionStyle, Side, assert_decimal_eq};
     use positive::{Positive, assert_pos_relative_eq, pos_or_panic};
 
@@ -3663,7 +3667,7 @@ mod tests_generate_delta_adjustments {
     use positive::{assert_pos_relative_eq, pos_or_panic};
 
     use crate::ExpirationDate;
-    use crate::strategies::DELTA_THRESHOLD;
+    use crate::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
     fn create_test_short_strangle() -> ShortStrangle {

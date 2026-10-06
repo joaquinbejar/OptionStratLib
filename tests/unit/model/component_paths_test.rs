@@ -1,5 +1,5 @@
 //! Facade paths and direct-component paths name the same types (#520, #528,
-//! #529).
+//! #529, #530).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -126,6 +126,10 @@ fn test_core_modules_root_types_and_macros_through_facade() {
 /// function proves the facade re-exports that function rather than wrapping it.
 fn same_item<T>(_: T, _: T) {}
 
+/// How far the below/inside/above probabilities of one price range may sum
+/// from one: the three come from separately rounded lognormal CDF values.
+const PROBABILITY_SUM_TOLERANCE: Decimal = dec!(0.01);
+
 fn pricing_engine(
     value: optionstratlib_pricing::pricing::GenericPricingEngine,
 ) -> optionstratlib_pricing::pricing::GenericPricingEngine {
@@ -237,4 +241,141 @@ fn test_analytics_items_through_facade_modules_and_prelude() {
         optionstratlib::prelude::ProbabilityError::invalid_probability(1.5, "probe");
     let _: optionstratlib_analytics::error::probability::ProbabilityResult<()> =
         optionstratlib::error::probability::ProbabilityResult::<()>::Ok(());
+}
+
+fn analytics_volatility_adjustment(
+    value: optionstratlib_analytics::analytics::VolatilityAdjustment,
+) -> optionstratlib_analytics::analytics::VolatilityAdjustment {
+    value
+}
+
+fn analytics_price_trend(
+    value: optionstratlib_analytics::analytics::PriceTrend,
+) -> optionstratlib_analytics::analytics::PriceTrend {
+    value
+}
+
+fn analytics_delta_adjustment(
+    value: optionstratlib_analytics::pnl::DeltaAdjustment,
+) -> optionstratlib_analytics::pnl::DeltaAdjustment {
+    value
+}
+
+fn analytics_delta_adjustment_same_size(
+    value: optionstratlib_analytics::pnl::DeltaAdjustmentSameSize,
+) -> optionstratlib_analytics::pnl::DeltaAdjustmentSameSize {
+    value
+}
+
+/// The probability kernels and their inputs have one public path,
+/// `optionstratlib::analytics`, and it names the analytics crate's items. The
+/// `strategies::probabilities` aliases are gone (#530).
+#[test]
+fn test_probability_kernels_through_facade_analytics() {
+    same_item(
+        optionstratlib::analytics::calculate_price_probability,
+        optionstratlib_analytics::analytics::calculate_price_probability,
+    );
+    same_item(
+        optionstratlib::analytics::calculate_single_point_probability,
+        optionstratlib_analytics::analytics::calculate_single_point_probability,
+    );
+    // Both paths name the same trait, so they resolve to the same method item.
+    same_item(
+        <optionstratlib::analytics::ProfitLossRange as optionstratlib::analytics::ProfitRangeProbability>::calculate_probability,
+        <optionstratlib_analytics::analytics::ProfitLossRange as optionstratlib_analytics::analytics::ProfitRangeProbability>::calculate_probability,
+    );
+
+    let volatility =
+        analytics_volatility_adjustment(optionstratlib::analytics::VolatilityAdjustment {
+            base_volatility: pos_or_panic!(0.2),
+            std_dev_adjustment: optionstratlib::prelude::Positive::ZERO,
+        });
+    let trend = analytics_price_trend(optionstratlib::analytics::PriceTrend {
+        drift_rate: 0.0,
+        confidence: 0.95,
+    });
+    let probabilities = optionstratlib::analytics::calculate_price_probability(
+        &pos_or_panic!(100.0),
+        &pos_or_panic!(95.0),
+        &pos_or_panic!(105.0),
+        volatility,
+        Some(trend),
+        &optionstratlib::ExpirationDate::Days(pos_or_panic!(30.0)),
+        None,
+    );
+    assert!(matches!(
+        probabilities,
+        Ok((below, inside, above))
+            if ((below + inside + above).to_dec() - Decimal::ONE).abs() <= PROBABILITY_SUM_TOLERANCE
+    ));
+}
+
+/// `DeltaAdjustment` and `DeltaAdjustmentSameSize` are reachable only through
+/// `optionstratlib::pnl`, and `DELTA_THRESHOLD` only through
+/// `optionstratlib::greeks` (#530).
+#[test]
+fn test_delta_adjustment_types_through_facade_pnl_and_greeks() {
+    let adjustment =
+        analytics_delta_adjustment(optionstratlib::pnl::DeltaAdjustment::NoAdjustmentNeeded);
+    let same_size =
+        analytics_delta_adjustment_same_size(optionstratlib::pnl::DeltaAdjustmentSameSize {
+            first: Box::new(optionstratlib::pnl::DeltaAdjustment::NoAdjustmentNeeded),
+            second: Box::new(adjustment),
+        });
+    assert_eq!(
+        *same_size.first,
+        optionstratlib::pnl::DeltaAdjustment::NoAdjustmentNeeded
+    );
+
+    let through_facade: &Decimal = &optionstratlib::greeks::DELTA_THRESHOLD;
+    assert_eq!(
+        *through_facade,
+        optionstratlib_pricing::greeks::DELTA_THRESHOLD
+    );
+    assert_eq!(*through_facade, optionstratlib::prelude::DELTA_THRESHOLD);
+}
+
+/// Strategy adjustment P&L stays on the upper layer: the strategy's
+/// `DeltaNeutrality` adapter returns the analytics-owned
+/// `pnl::DeltaAdjustment`, and the strategy's `PnLCalculator` prices it.
+#[test]
+fn test_strategy_delta_adjustments_are_analytics_owned_and_priced()
+-> Result<(), Box<dyn std::error::Error>> {
+    use optionstratlib::pnl::PnLCalculator;
+    use optionstratlib::strategies::{DeltaNeutrality, ShortStrangle};
+
+    let strategy = ShortStrangle::new(
+        "CL".to_string(),
+        pos_or_panic!(7138.5),
+        pos_or_panic!(7450.0),
+        pos_or_panic!(7250.0),
+        optionstratlib::ExpirationDate::Days(pos_or_panic!(45.0)),
+        pos_or_panic!(0.19),
+        pos_or_panic!(0.21),
+        dec!(0.05),
+        optionstratlib::prelude::Positive::ZERO,
+        optionstratlib::prelude::Positive::ONE,
+        pos_or_panic!(84.2),
+        pos_or_panic!(353.2),
+        pos_or_panic!(7.01),
+        pos_or_panic!(7.01),
+        pos_or_panic!(7.01),
+        pos_or_panic!(7.01),
+    )?;
+
+    let adjustments: Vec<optionstratlib_analytics::pnl::DeltaAdjustment> =
+        strategy.delta_adjustments()?;
+    let priced = adjustments
+        .iter()
+        .filter(|adjustment| {
+            !matches!(
+                adjustment,
+                optionstratlib::pnl::DeltaAdjustment::NoAdjustmentNeeded
+            )
+        })
+        .map(|adjustment| strategy.adjustments_pnl(adjustment))
+        .collect::<Result<Vec<optionstratlib_analytics::pnl::PnL>, _>>()?;
+    assert!(!priced.is_empty());
+    Ok(())
 }

@@ -9,6 +9,7 @@ use super::base::{
 };
 use super::shared::ButterflyStrategy;
 use crate::analytics::ProfitLossRange;
+use crate::analytics::VolatilityAdjustment;
 use crate::pricing::OptionPricing;
 use crate::strategies::base::lower_break_even;
 use crate::{
@@ -32,7 +33,7 @@ use crate::{
     strategies::{
         BasicAble, Strategies, StrategyConstructor,
         delta_neutral::DeltaNeutrality,
-        probabilities::{ProbabilityAnalysis, VolatilityAdjustment},
+        probabilities::ProbabilityAnalysis,
         utils::{FindOptimalSide, OptimizationCriteria},
     },
     test_strategy_traits,
@@ -1802,9 +1803,10 @@ mod tests_short_butterfly_delta {
     use super::*;
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use positive::assert_pos_relative_eq;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
@@ -1977,9 +1979,10 @@ mod tests_short_butterfly_delta_size {
     use positive::assert_pos_relative_eq;
 
     use crate::assert_decimal_eq;
+    use crate::greeks::DELTA_THRESHOLD;
     use crate::model::types::OptionStyle;
-    use crate::strategies::delta_neutral::DELTA_THRESHOLD;
-    use crate::strategies::delta_neutral::{DeltaAdjustment, DeltaNeutrality};
+    use crate::pnl::DeltaAdjustment;
+    use crate::strategies::delta_neutral::DeltaNeutrality;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
