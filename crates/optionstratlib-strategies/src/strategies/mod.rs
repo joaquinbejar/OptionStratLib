@@ -28,8 +28,9 @@
 //! - `poor_mans_covered_call`: Implements the Poor Man's Covered Call strategy.
 //! - `probabilities`: Provides probability calculations for the strategies.
 //! - `protective_put`: Implements the Protective Put strategy.
-//! - `straddle`: Implements the Straddle strategy.
-//! - `strangle`: Implements the Strangle strategy.
+//! - `long_straddle`, `short_straddle`: Implement the long and short Straddle strategies.
+//! - `long_strangle`, `short_strangle`: Implement the long and short Strangle strategies.
+//! - `long_call`, `long_put`, `short_call`, `short_put`: Implement the single-leg strategies.
 //! - `utils`: Provides utility functions for the strategies.
 //!
 //! ## Usage
