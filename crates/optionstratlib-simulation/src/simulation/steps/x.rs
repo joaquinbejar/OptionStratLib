@@ -3,11 +3,11 @@
    Email: jb@taunais.com
    Date: 24/3/25
 ******************************************************************************/
-use crate::ExpirationDate;
 use crate::error::SimulationError;
-use crate::utils::TimeFrame;
-use crate::utils::time::convert_time_frame;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::utils::TimeFrame;
+use optionstratlib_core::utils::time::convert_time_frame;
 use serde::{Serialize, Serializer};
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
@@ -68,10 +68,11 @@ where
 /// ```rust
 ///
 /// // Create a step with 7 days as the value, using days as the time unit
-/// use positive::{pos_or_panic, Positive};
-/// use optionstratlib::ExpirationDate;
-/// use optionstratlib::simulation::steps::Xstep;
-/// use optionstratlib::utils::TimeFrame;
+/// use optionstratlib_core::model::Positive;
+/// use optionstratlib_core::pos_or_panic;
+/// use optionstratlib_core::model::ExpirationDate;
+/// use optionstratlib_simulation::simulation::steps::Xstep;
+/// use optionstratlib_core::utils::TimeFrame;
 /// let step = Xstep::new(pos_or_panic!(7.0), TimeFrame::Day, ExpirationDate::Days(pos_or_panic!(30.0)));
 ///
 /// // Move to the next step (forward in time)
@@ -313,8 +314,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::ExpirationDate;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
 
     #[test]
     fn test_days_left() {
@@ -346,8 +347,8 @@ mod tests {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use crate::model::ExpirationDate;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

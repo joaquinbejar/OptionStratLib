@@ -1,6 +1,7 @@
+use super::GeneratorFailure;
 use crate::error::ChainError;
 use crate::series::{OptionSeries, OptionSeriesBuildParams};
-use crate::simulation::steps::Step;
+use crate::simulation::steps::{Step, Xstep};
 use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
 use positive::Positive;
@@ -116,8 +117,7 @@ fn create_series_from_step(
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Generator`] (via the `From<SimulationError>` conversion, its
-/// source downcasts to `SimulationError`) if the
+/// Returns [`ChainError::Generator`] (its source downcasts to `SimulationError`) if the
 /// random-walk generator returns an error — including
 /// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
 /// prices than `walk_params.size` — and propagates errors from the
@@ -136,7 +136,12 @@ pub fn generator_optionseries(
     // WalkParams is not Sync).
     let init_ystep = walk_params.ystep_ref();
     let init_x = walk_params.init_step.x;
-    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+    // A step reports its own `ChainError`; the driver's failures arrive
+    // through `GeneratorFailure` (see the `synthetic` module).
+    let build_step = |new_price: &Positive,
+                      volatility: Option<Positive>,
+                      x_step: &Xstep<Positive>|
+     -> Result<Option<OptionSeries>, ChainError> {
         let (build_params, initial_days_left) = {
             let mut guard = context.lock().map_err(|_| {
                 ChainError::invalid_parameters("build_params", "params cache lock poisoned")
@@ -149,7 +154,7 @@ pub fn generator_optionseries(
                 // previous rebuilt series on each iteration.
                 None => {
                     let build_params = init_ystep.value().to_build_params()?;
-                    let initial_days_left = init_x.days_left()?;
+                    let initial_days_left = init_x.days_left().map_err(ChainError::generator)?;
                     *guard = Some((build_params.clone(), initial_days_left));
                     (build_params, initial_days_left)
                 }
@@ -168,7 +173,7 @@ pub fn generator_optionseries(
         };
         let elapsed_days = initial_days_left
             .to_dec()
-            .checked_sub(x_step.days_left()?.to_dec())
+            .checked_sub(x_step.days_left().map_err(ChainError::generator)?.to_dec())
             .ok_or_else(overflow)?
             .max(Decimal::ZERO);
         let aged_series: Vec<Positive> = build_params
@@ -193,7 +198,11 @@ pub fn generator_optionseries(
         let y_step_series =
             create_series_from_step(&build_params, new_price, volatility, aged_series)?;
         Ok(Some(y_step_series))
+    };
+    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+        build_step(new_price, volatility, x_step).map_err(GeneratorFailure)
     })
+    .map_err(GeneratorFailure::into_inner)
 }
 
 #[cfg(test)]
@@ -637,7 +646,7 @@ mod tests_generator_optionseries {
     /// walk (issue #406/#410 behavior, pinned here).
     #[test]
     fn test_generator_optionseries_multi_step_aging() {
-        use crate::simulation::walk_test_support::RampWalker;
+        use crate::synthetic::walk_test_support::RampWalker;
 
         let initial_series = create_test_option_series(); // expirations 30/60/90d
         let size = 4;
@@ -697,7 +706,7 @@ mod tests_generator_optionseries {
     fn test_generator_optionseries_stops_when_all_expired() {
         use crate::chains::utils::OptionChainBuildParams;
         use crate::chains::utils::OptionDataPriceParams;
-        use crate::simulation::walk_test_support::RampWalker;
+        use crate::synthetic::walk_test_support::RampWalker;
 
         // Single 2-day expiration in the series; walk x-expiry far out.
         let price_params = OptionDataPriceParams::new(

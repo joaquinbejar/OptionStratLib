@@ -1,0 +1,35 @@
+[package]
+name = "optionstratlib-simulation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Random walks, stochastic processes, simulators, exit policies and path statistics of OptionStratLib, on Decimal and Positive boundaries."
+readme = "README.md"
+keywords = ["finance", "options", "simulation", "random-walk", "monte-carlo"]
+categories = ["finance", "mathematics", "simulation"]
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[features]
+default = []
+# `ToSchema` derives on the simulation types (ADR-0002).
+schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-pricing/schema"]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+num-traits = { workspace = true }
+rayon = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true, optional = true }
+
+[dev-dependencies]
+chrono = { workspace = true }
+proptest = { workspace = true }
+serde_json = { workspace = true }

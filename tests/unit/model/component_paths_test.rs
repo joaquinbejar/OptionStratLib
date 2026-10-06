@@ -1,5 +1,5 @@
 //! Facade paths and direct-component paths name the same types (#520, #528,
-//! #529, #530, #531).
+//! #529, #530, #531, #536).
 //!
 //! Each function takes a type from its defining component crate and is
 //! called with a value obtained through the `optionstratlib` facade (or the
@@ -443,4 +443,49 @@ fn test_strategies_items_through_facade_modules_and_prelude() {
         side,
         optionstratlib::chains::utils::FindOptimalSide::All
     ));
+}
+
+fn simulation_exit_policy(
+    value: optionstratlib_simulation::simulation::ExitPolicy,
+) -> optionstratlib_simulation::simulation::ExitPolicy {
+    value
+}
+
+fn simulation_ystep(
+    value: optionstratlib_simulation::simulation::steps::Ystep<Decimal>,
+) -> optionstratlib_simulation::simulation::steps::Ystep<Decimal> {
+    value
+}
+
+/// The walks, steps, exit policies and `SimulationError` reached through the
+/// facade (`simulation`, `error`, `prelude`) are the
+/// `optionstratlib-simulation` items (#536).
+#[test]
+fn test_simulation_items_through_facade_modules_and_prelude() {
+    let policy = simulation_exit_policy(optionstratlib::simulation::ExitPolicy::ProfitPercent(
+        dec!(0.5),
+    ));
+    let from_prelude: optionstratlib::prelude::ExitPolicy = policy;
+    assert_eq!(
+        from_prelude,
+        optionstratlib_simulation::simulation::ExitPolicy::ProfitPercent(dec!(0.5))
+    );
+
+    let step = simulation_ystep(optionstratlib::prelude::Ystep::new(1, dec!(10.5)));
+    assert_eq!(*step.value(), dec!(10.5));
+
+    // Both paths name the same function item.
+    same_item(
+        optionstratlib::simulation::generate_ou_process
+            as fn(_, _, _, _, _, _) -> Result<_, optionstratlib::error::SimulationError>,
+        optionstratlib_simulation::simulation::generate_ou_process
+            as fn(_, _, _, _, _, _) -> Result<_, optionstratlib_simulation::error::SimulationError>,
+    );
+
+    let _: optionstratlib_simulation::error::SimulationError =
+        optionstratlib::error::SimulationError::invalid_parameters("probe");
+    let _: optionstratlib_simulation::error::simulation::SimulationResult<()> =
+        optionstratlib::error::simulation::SimulationResult::<()>::Ok(());
+    let _: optionstratlib_simulation::error::SimulationResult<()> =
+        optionstratlib::error::SimulationResult::<()>::Ok(());
 }

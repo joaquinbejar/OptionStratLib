@@ -380,6 +380,7 @@
 //! | `optionstratlib-core` | always | `model`, `utils`, `constants`; the core errors in `error`; `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
 //! | `optionstratlib-math` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError` and the `error::curves` module) | generic curves, surfaces, interpolation |
 //! | `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `VolatilityError` and the `error::greeks` and `error::pricing` modules) | pricing models, Greeks, implied and historical volatility |
+//! | `optionstratlib-simulation` | `simulation` (implies `pricing`) | `simulation`; `SimulationError`, `SimulationResult` and the `error::simulation` module in `error` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics |
 //! | `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
 //! | `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
 //! | `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError` and the `error::strategies` module in `error` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
@@ -398,11 +399,13 @@
 //! optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
 //! ```
 //!
-//! The rest of the library (backtesting, visualization, and `simulation`
-//! behind its own feature) still lives in this crate and moves out milestone
-//! by milestone. Until then those modules, the unified `error::Error` and
-//! their `prelude` items need both `strategies` and `simulation`, and the
-//! `schema` derives stay always on; the facade default enables all of it.
+//! The rest of the library (backtesting, visualization, and the `synthetic`
+//! chain and series generators) still lives in this crate and moves out
+//! milestone by milestone. Until then backtesting, visualization, the unified
+//! `error::Error` and their `prelude` items need both `strategies` and
+//! `simulation`, `synthetic` needs `market` and `simulation`, and the
+//! `schema` derives of these modules stay always on; the facade default
+//! enables all of it.
 //!
 //! ## Module Boundaries
 //!
@@ -924,8 +927,10 @@
 //!   `pricing` alone resolves no market, I/O, async or visualization package,
 //!   `analytics` alone resolves no strategy, simulation or plotting code, and
 //!   `strategies` alone resolves no simulation, backtesting or plotting code
-//! - `simulation` (default): random walks and simulators; implies `pricing`
-//!   but not `market`
+//! - `simulation` (default): the `optionstratlib-simulation` crate (random
+//!   walks, stochastic processes, simulators, exit policies, path statistics)
+//!   and its facade paths; implies `pricing` but not `market`, and resolves no
+//!   option chain, strategy, backtesting or plotting code
 //! - `plotly`: Enables interactive visualization using plotly.rs (implies
 //!   `strategies` and `simulation`, which `visualization` renders)
 //! - `static_export`: PNG / SVG export via `plotly_static` (pulls in async runtime)
@@ -1525,10 +1530,13 @@ pub use optionstratlib_analytics::risk;
 /// * `simulation` - Simulation techniques for scenario analysis.
 ///
 /// Framework for Monte Carlo and other simulation methods to model potential
-/// market scenarios and their impact on options strategies. Includes path generation
-/// algorithms and statistical analysis of simulation results.
+/// market scenarios. Includes path generation algorithms, exit policies and
+/// the generic evaluation and statistics of simulated paths.
+///
+/// Defined by `optionstratlib-simulation` and re-exported here (feature
+/// `simulation`).
 #[cfg(feature = "simulation")]
-pub mod simulation;
+pub use optionstratlib_simulation::simulation;
 
 /// * `strategies` - Pre-defined option strategy templates and building blocks.
 ///

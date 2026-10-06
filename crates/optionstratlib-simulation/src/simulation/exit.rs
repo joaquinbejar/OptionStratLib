@@ -12,19 +12,19 @@
 //! - **Underlying price**: Exit when the underlying asset reaches a price level
 //! - **Combined conditions**: Exit when multiple conditions are met (AND/OR logic)
 
-use positive::Positive;
+use optionstratlib_core::model::Positive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt;
-use utoipa::ToSchema;
 
 /// Defines exit policies for option positions.
 ///
 /// Exit policies determine when a position should be closed based on various
 /// market conditions, profit/loss levels, or time constraints.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub enum ExitPolicy {
     /// Exit when profit reaches a percentage of initial premium.
     ///
@@ -560,7 +560,7 @@ pub fn check_exit_policy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
 

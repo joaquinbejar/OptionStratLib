@@ -4,16 +4,17 @@
    Date: 2024
 ******************************************************************************/
 
-use optionstratlib::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib::pricing::{
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+use optionstratlib_core::model::{ExpirationDate, Options};
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::utils::TimeFrame;
+use optionstratlib_pricing::pricing::{
     ClosedFormEngine, GenericPricingEngine, Priceable, price_option_with,
 };
-use optionstratlib::simulation::simulator::Simulator;
-use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
-use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::utils::TimeFrame;
-use optionstratlib::{ExpirationDate, Options};
-use positive::{Positive, pos_or_panic};
+use optionstratlib_simulation::simulation::simulator::Simulator;
+use optionstratlib_simulation::simulation::steps::{Step, Xstep, Ystep};
+use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
 use rust_decimal_macros::dec;
 use std::convert::Infallible;
 use std::error::Error;

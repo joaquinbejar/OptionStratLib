@@ -6,9 +6,9 @@
 //! 0.21 path is unchanged.
 
 use crate::error::SimulationError;
-use crate::model::decimal::{d_add, d_mul, decimal_normal_sample, p_sqrt};
-use crate::model::utils::sub_floor_zero;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_add, d_mul, decimal_normal_sample, p_sqrt};
+use optionstratlib_core::model::utils::sub_floor_zero;
 use rust_decimal::Decimal;
 
 /// Generates a mean-reverting Ornstein-Uhlenbeck process time series
@@ -51,10 +51,11 @@ use rust_decimal::Decimal;
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use positive::{pos_or_panic, Positive};
-/// use optionstratlib::simulation::ou::generate_ou_process;
+/// use optionstratlib_core::model::Positive;
+/// use optionstratlib_core::pos_or_panic;
+/// use optionstratlib_simulation::simulation::ou::generate_ou_process;
 ///
-/// # fn main() -> Result<(), optionstratlib::error::SimulationError> {
+/// # fn main() -> Result<(), optionstratlib_simulation::error::SimulationError> {
 /// // Simulate an OU process with initial value 1.0, mean 1.5,
 /// // reversion speed 0.1, volatility 0.2, time step 0.01, for 1000 steps
 /// let process = generate_ou_process(
@@ -111,7 +112,7 @@ pub fn generate_ou_process(
 #[cfg(test)]
 mod tests_generate_ou_process {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
     #[test]

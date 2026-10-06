@@ -6,12 +6,11 @@ difference between the market surface without `synthetic` and with it. Each
 surface gets its own fixture holding the whole graph, so a change that adds,
 removes or re-parents a dependency shows up even when it lands on both
 surfaces at once; the difference between the two is derived from them and
-printed. While the simulation engine is still facade source that difference
-is only the facade's own feature line, and that *is* the assertion for it:
-`synthetic` gates source, not crates, so the first crate the feature pulls in
-shows up as a fixture diff. When the
-workspace split lands (#525, #537) the same fixtures carry the real
-difference without the check having to change.
+printed. Since #536 extracted `optionstratlib-simulation` that difference is
+the edge to the simulation crate and its own graph, and that *is* the
+assertion: enabling `synthetic` adds exactly that crate. When #537 moves the
+generators behind market's own `synthetic` feature, the same fixtures carry
+the new edge without the check having to change.
 
 Normalisation, and what it costs:
 

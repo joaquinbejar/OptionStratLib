@@ -3,11 +3,12 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
+use super::GeneratorFailure;
 use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::chains::utils::OptionChainBuildParams;
 use crate::error::ChainError;
-use crate::simulation::steps::Step;
+use crate::simulation::steps::{Step, Xstep};
 use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
 use positive::Positive;
@@ -102,8 +103,7 @@ fn create_chain_from_step(
 ///
 /// # Errors
 ///
-/// Returns [`ChainError::Generator`] (via the `From<SimulationError>` conversion, its
-/// source downcasts to `SimulationError`) if the
+/// Returns [`ChainError::Generator`] (its source downcasts to `SimulationError`) if the
 /// random-walk generator returns an error — including
 /// `SimulationError::InsufficientHistoricalData` when a `Historical` walk has fewer
 /// prices than `walk_params.size` — and propagates errors from the historical helpers
@@ -120,7 +120,12 @@ pub fn generator_optionchain(
     // Capture only Sync data in the closure (the boxed walker inside
     // WalkParams is not Sync).
     let init_ystep = walk_params.ystep_ref();
-    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+    // A step reports its own `ChainError`; the driver's failures arrive
+    // through `GeneratorFailure` (see the `synthetic` module).
+    let build_step = |new_price: &Positive,
+                      volatility: Option<Positive>,
+                      x_step: &Xstep<Positive>|
+     -> Result<Option<OptionChain>, ChainError> {
         let params = {
             let mut guard = build_params.lock().map_err(|_| {
                 ChainError::invalid_parameters("build_params", "params cache lock poisoned")
@@ -141,7 +146,11 @@ pub fn generator_optionchain(
         let chain =
             create_chain_from_step(&params, new_price, volatility, Some(*x_step.datetime()))?;
         Ok(Some(chain))
+    };
+    walk_steps_par(walk_params, |new_price, volatility, x_step| {
+        build_step(new_price, volatility, x_step).map_err(GeneratorFailure)
     })
+    .map_err(GeneratorFailure::into_inner)
 }
 
 #[cfg(test)]
@@ -309,7 +318,7 @@ mod tests {
     #[test]
     fn test_generator_optionchain_multi_step_behavior() {
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-        use crate::simulation::walk_test_support::RampWalker;
+        use crate::synthetic::walk_test_support::RampWalker;
 
         let init_days = 60.0;
         let price_params = OptionDataPriceParams::new(
@@ -413,7 +422,7 @@ mod tests {
     #[test]
     fn test_generator_optionchain_historical_multi_step() {
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-        use crate::simulation::walk_test_support::RampWalker;
+        use crate::synthetic::walk_test_support::RampWalker;
         use crate::utils::numeric::calculate_log_returns;
         use crate::volatility::{adjust_volatility as annualize, constant_volatility};
         use rust_decimal::Decimal;
@@ -527,7 +536,7 @@ mod tests {
     /// no error) for the chain generator too.
     #[test]
     fn test_generator_optionchain_empty_walker_output() {
-        use crate::simulation::walk_test_support::EmptyWalker;
+        use crate::synthetic::walk_test_support::EmptyWalker;
         use crate::utils::time::get_tomorrow_formatted;
         use positive::spos;
 

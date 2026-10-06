@@ -27,6 +27,8 @@ test:
 	LOGLEVEL=WARN cargo test -p optionstratlib-math --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-pricing
 	LOGLEVEL=WARN cargo test -p optionstratlib-pricing --all-features
+	LOGLEVEL=WARN cargo test -p optionstratlib-simulation
+	LOGLEVEL=WARN cargo test -p optionstratlib-simulation --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-market
 	LOGLEVEL=WARN cargo test -p optionstratlib-market --all-features
 	LOGLEVEL=WARN cargo test -p optionstratlib-analytics
@@ -201,7 +203,7 @@ check-graph:
 # with broken links and missing docs denied, and the packaged archive. The
 # crates are packaged together because a component's path dependencies are
 # not on crates.io yet; `cargo package` resolves them from the same run.
-COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics optionstratlib-strategies
+COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-simulation optionstratlib-market optionstratlib-analytics optionstratlib-strategies
 # Named feature sets each component must also build, lint and test alone
 # (`crate:feature`), besides no, default and all features (ADR-0003, #525).
 COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async
@@ -237,9 +239,9 @@ check-components:
 # Pins the dependency graph of the market surface without `synthetic` and with
 # it (roadmap M1-15), one fixture each, as a `parent -> child` edge list
 # resolved with `cargo tree --target all` so it is host-independent. The
-# difference between the two is derived and printed; while simulation is
-# facade source it is only the facade's own feature line, which is the point. Run `make feature-trees-update` to record an
-# intended change.
+# difference between the two is derived and printed: since #536 it is the
+# edge to `optionstratlib-simulation` and that crate's own graph, which is
+# the point. Run `make feature-trees-update` to record an intended change.
 .PHONY: check-feature-trees
 check-feature-trees:
 	@python3 scripts/check_feature_trees.py
@@ -415,7 +417,7 @@ print-public-api-pins:
 # Workspace component crates with their own snapshot, `public-api/<crate>.txt`.
 # The facade re-exports their modules, and `cargo public-api` does not inline
 # another crate's items, so each component is tracked on its own.
-PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-market optionstratlib-analytics optionstratlib-strategies
+PUBLIC_API_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-simulation optionstratlib-market optionstratlib-analytics optionstratlib-strategies
 
 .PHONY: public-api-update
 public-api-update: check-cargo-public-api
@@ -486,7 +488,7 @@ pre-push: fix fmt lint-fix test readme doc
 # `rustdoc::broken_intra_doc_links`, so a broken link is an error and exits 101.
 .PHONY: doc
 doc:
-	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing -p optionstratlib-market -p optionstratlib-analytics -p optionstratlib-strategies
+	cargo doc --all-features --no-deps -p optionstratlib -p optionstratlib-core -p optionstratlib-math -p optionstratlib-pricing -p optionstratlib-simulation -p optionstratlib-market -p optionstratlib-analytics -p optionstratlib-strategies
 
 .PHONY: doc-open
 doc-open:

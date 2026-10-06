@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use crate::error::SimulationError;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
 use serde::{Serialize, Serializer};
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
@@ -59,7 +59,7 @@ where
 ///
 /// ```rust
 /// use rust_decimal_macros::dec;
-/// use optionstratlib::simulation::steps::Ystep;
+/// use optionstratlib_simulation::simulation::steps::Ystep;
 ///
 /// // Create a new step with initial value
 /// let step = Ystep::new(1, dec!(10.5));
@@ -218,7 +218,7 @@ mod tests_ystep {
 #[cfg(test)]
 mod tests_serialize {
     use super::*;
-    use positive::pos_or_panic;
+    use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
     use serde_json::{Value, json};

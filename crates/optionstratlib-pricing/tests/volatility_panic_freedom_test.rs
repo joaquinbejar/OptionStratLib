@@ -19,16 +19,18 @@
 //!
 //! The assertion is deliberately weak: whatever comes back, it must come
 //! back.
+//!
+//! The Ornstein-Uhlenbeck path, a simulation kernel, is driven over the same
+//! extremes in `optionstratlib-simulation` (`tests/ou_panic_freedom_test.rs`).
 
-use optionstratlib::simulation::ou::generate_ou_process;
-use optionstratlib::utils::time::TimeFrame;
-use optionstratlib::volatility::{
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Side};
+use optionstratlib_core::utils::time::TimeFrame;
+use optionstratlib_pricing::volatility::{
     adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,
     de_annualized_volatility, ewma_volatility, garch_volatility, historical_volatility,
     implied_volatility, simulate_heston_volatility, uncertain_volatility_bounds, volatility_for_dt,
 };
-use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
-use positive::Positive;
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -177,25 +179,6 @@ proptest! {
     ) {
         let _ = simulate_heston_volatility(param, param, param, param, dt, steps);
         let _ = simulate_heston_volatility(param, dec!(0.04), dec!(0.3), dec!(0.04), dt, steps);
-    }
-
-    /// The Ornstein-Uhlenbeck path returns for every extreme parameter,
-    /// including a zero time step and a level at `Positive::MAX`.
-    #[test]
-    fn test_generate_ou_process_never_panics(
-        level in extreme_positive(),
-        dt in extreme_positive(),
-        steps in 0usize..6,
-    ) {
-        let _ = generate_ou_process(level, level, level, level, dt, steps);
-        let _ = generate_ou_process(
-            Positive::ONE,
-            Positive::ONE,
-            Positive::ONE,
-            Positive::ONE,
-            dt,
-            steps,
-        );
     }
 
     /// Every square-root-of-time rescaling returns for every timeframe pair,

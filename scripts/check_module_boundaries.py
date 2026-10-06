@@ -1003,6 +1003,17 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
     }),
+    # The "must be absent" column of ADR-0002's
+    # `osl-fixture-simulation-only` row, plus the presentation crates pricing
+    # also excludes. `prettytable-rs` is in it: the simulation statistics
+    # report that rendered a terminal table left for backtesting before the
+    # extraction, so the M6-05 exception market still carries does not apply
+    # here (#536).
+    "optionstratlib-simulation": frozenset({
+        "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "prettytable-rs",
+    }),
     # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2).
     "optionstratlib-market": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
@@ -1637,6 +1648,32 @@ def self_test() -> int:
             1,
         ),
         "strategies depends on the facade": ([pkg("optionstratlib-strategies", ("optionstratlib", "dev"))], 1),
+        # #536: simulation sits on pricing and core (math is allowed, ADR-0001
+        # D9) and names no market, strategy, backtest or plotting crate.
+        "simulation depends on pricing": (
+            [pkg("optionstratlib-simulation", ("optionstratlib-pricing",), ("optionstratlib-core",))],
+            0,
+        ),
+        "simulation depends on math": ([pkg("optionstratlib-simulation", ("optionstratlib-math",))], 0),
+        "simulation depends on market": ([pkg("optionstratlib-simulation", ("optionstratlib-market",))], 1),
+        "simulation dev-depends on market": (
+            [pkg("optionstratlib-simulation", ("optionstratlib-market", "dev"))],
+            1,
+        ),
+        "simulation depends on analytics": (
+            [pkg("optionstratlib-simulation", ("optionstratlib-analytics",))],
+            1,
+        ),
+        "simulation depends on strategies": (
+            [pkg("optionstratlib-simulation", ("optionstratlib-strategies",))],
+            1,
+        ),
+        "simulation depends on backtest": ([pkg("optionstratlib-simulation", ("optionstratlib-backtest",))], 1),
+        "simulation optionally depends on visualization": (
+            [pkg("optionstratlib-simulation", ("optionstratlib-visualization", None, True))],
+            1,
+        ),
+        "simulation depends on the facade": ([pkg("optionstratlib-simulation", ("optionstratlib", "dev"))], 1),
     }
     for name, (packages, expected) in crate_cases.items():
         got = len(crate_graph_violations(packages))
@@ -1712,6 +1749,9 @@ def self_test() -> int:
         "clean strategies tree": ({("optionstratlib-strategies", "default"): {"rayon", "itertools", "serde_json"}}, 0),
         "strategies pulls market io": ({("optionstratlib-strategies", "default"): {"csv", "zip"}}, 2),
         "strategies pulls indicatif": ({("optionstratlib-strategies", "all features"): {"indicatif"}}, 1),
+        "clean simulation tree": ({("optionstratlib-simulation", "default"): {"rayon", "rand", "statrs"}}, 0),
+        "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),
+        "simulation pulls market io": ({("optionstratlib-simulation", "all features"): {"csv", "zip"}}, 2),
     }
     for name, (trees_case, expected) in forbidden_cases.items():
         got = len(forbidden_package_violations(trees_case))
@@ -1793,6 +1833,39 @@ def self_test() -> int:
                 rel: source,
                 "src/error/mod.rs": "pub use optionstratlib_strategies::error::StrategyError;\n",
                 "crates/optionstratlib-strategies/src/error/strategies.rs": "pub enum StrategyError { A }\n",
+            }
+            for path, content in files.items():
+                target = Path(tmp) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content)
+            edges, _ = scan(root)
+            got = len(violations_of(edges))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected}, got {got})")
+
+    # A simulation-owned error moved into its crate keeps the simulation
+    # layer: a backtesting facade file wrapping it is a downward edge, a
+    # pricing-layer facade file naming it is an upward one (#536).
+    for name, (rel, source, expected) in {
+        "backtesting wraps a simulation error": (
+            "src/error/backtesting.rs",
+            "pub enum BacktestError { Simulation(crate::error::SimulationError) }\n",
+            0,
+        ),
+        "a pricing-layer file names a simulation error": (
+            "src/volatility/x.rs",
+            "use crate::error::SimulationError;\n",
+            1,
+        ),
+    }.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            files = {
+                rel: source,
+                "src/error/mod.rs": "pub use optionstratlib_simulation::error::SimulationError;\n",
+                "crates/optionstratlib-simulation/src/error/simulation.rs": "pub enum SimulationError { A }\n",
             }
             for path, content in files.items():
                 target = Path(tmp) / path

@@ -15,13 +15,13 @@
 //! closure that builds its `Y` value from the new price.
 
 use crate::error::SimulationError;
-use crate::model::decimal::d_sqrt;
 use crate::simulation::steps::{Step, Xstep, Ystep};
 use crate::simulation::{WalkParams, WalkType};
-use crate::utils::TimeFrame;
-use crate::utils::numeric::calculate_log_returns;
-use crate::volatility::{adjust_volatility, constant_volatility};
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::d_sqrt;
+use optionstratlib_core::utils::TimeFrame;
+use optionstratlib_core::utils::numeric::calculate_log_returns;
+use optionstratlib_pricing::volatility::{adjust_volatility, constant_volatility};
 use rust_decimal::Decimal;
 use std::convert::TryInto;
 use std::fmt::Display;
@@ -73,7 +73,7 @@ where
 /// mathematics that can drift release to release.
 ///
 /// Uses the same sample-variance convention as
-/// [`crate::volatility::constant_volatility`], computed incrementally with
+/// [`optionstratlib_pricing::volatility::constant_volatility`], computed incrementally with
 /// checked arithmetic, and annualizes each estimate from `timeframe`.
 ///
 /// # Contract
@@ -90,16 +90,17 @@ where
 ///
 /// # Errors
 ///
-/// Propagates errors from [`crate::utils::numeric::calculate_log_returns`] /
-/// [`crate::volatility::adjust_volatility`] and surfaces arithmetic overflow as
+/// Propagates errors from [`optionstratlib_core::utils::numeric::calculate_log_returns`] /
+/// [`optionstratlib_pricing::volatility::adjust_volatility`] and surfaces arithmetic overflow as
 /// [`SimulationError`], keeping the driver free of chain-layer error types.
 ///
 /// # Examples
 ///
 /// ```
-/// use optionstratlib::simulation::expanding_window_vols;
-/// use optionstratlib::utils::TimeFrame;
-/// use positive::{Positive, pos_or_panic};
+/// use optionstratlib_simulation::simulation::expanding_window_vols;
+/// use optionstratlib_core::utils::TimeFrame;
+/// use optionstratlib_core::model::Positive;
+/// use optionstratlib_core::pos_or_panic;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // A flat prefix followed by a jump: the early estimates cannot see it.
@@ -500,12 +501,12 @@ pub fn generator_positive(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ExpirationDate;
     use crate::simulation::WalkTypeAble;
     use crate::simulation::randomwalk::RandomWalk;
-    use crate::utils::time::convert_time_frame;
-    use crate::utils::{Len, TimeFrame};
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::time::convert_time_frame;
+    use optionstratlib_core::utils::{Len, TimeFrame};
     use rust_decimal_macros::dec;
 
     #[derive(Clone)]

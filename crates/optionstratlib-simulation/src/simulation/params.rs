@@ -1,7 +1,7 @@
 use crate::error::SimulationError;
 use crate::simulation::steps::{Step, Ystep};
 use crate::simulation::{WalkType, WalkTypeAble};
-use positive::Positive;
+use optionstratlib_core::model::Positive;
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::ops::AddAssign;
@@ -139,10 +139,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ExpirationDate;
     use crate::simulation::steps::{Xstep, Ystep};
-    use crate::utils::time::TimeFrame;
-    use positive::pos_or_panic;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::time::TimeFrame;
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::fmt::Display;
