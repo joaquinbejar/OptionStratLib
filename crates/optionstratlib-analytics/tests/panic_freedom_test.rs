@@ -188,8 +188,8 @@ proptest! {
         std_dev_adjustment in extreme_positive(),
         rate in extreme_decimal(),
         expiration in extreme_expiration(),
-        drift in prop_oneof![Just(0.0f64), Just(1e30f64), Just(-1e30f64)],
-        confidence in prop_oneof![Just(0.0f64), Just(0.8f64), Just(2.0f64)],
+        drift in prop_oneof![Just(Decimal::ZERO), Just(Decimal::MAX), Just(Decimal::MIN)],
+        confidence in prop_oneof![Just(Decimal::ZERO), Just(dec!(0.8)), Just(Decimal::ONE)],
     ) {
         // The kernels take the volatility explicitly; the extreme generators
         // drive it instead of a `None` that used to hide a flat 0.2.
@@ -197,7 +197,10 @@ proptest! {
             base_volatility,
             std_dev_adjustment,
         };
-        let trend = Some(PriceTrend { drift_rate: drift, confidence });
+        // `PriceTrend::new` holds the confidence in [0, 1], so the extreme
+        // drifts are the inputs left for the kernels to survive.
+        let trend = PriceTrend::new(drift, confidence).ok();
+        prop_assert!(trend.is_some());
         let _ = calculate_single_point_probability(
             &current, &target, volatility, trend.clone(), &expiration, Some(rate),
         );

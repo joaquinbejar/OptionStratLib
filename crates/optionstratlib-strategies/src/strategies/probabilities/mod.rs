@@ -159,10 +159,10 @@
 //!         pos_or_panic!(0.73),   // close_fee_long
 //!         pos_or_panic!(0.73),   // close_fee_short
 //!     )?;
-//! let trend = Some(PriceTrend {
-//!     drift_rate: 0.05,   // 5% annual drift
-//!     confidence: 0.95,   // 95% confidence level
-//! });
+//! let trend = Some(PriceTrend::new(
+//!     dec!(0.05),   // 5% annual drift
+//!     dec!(0.95),   // 95% confidence level
+//! )?);
 //!
 //! let _analysis = strategy.analyze_probabilities(None, trend)?;
 //! # Ok(())

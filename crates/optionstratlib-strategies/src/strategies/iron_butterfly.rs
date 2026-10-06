@@ -2778,6 +2778,16 @@ mod tests_iron_butterfly_probability {
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     /// Creates a test Iron Butterfly with standard parameters
     fn create_test_butterfly() -> IronButterfly {
         IronButterfly::new(
@@ -2915,10 +2925,7 @@ mod tests_iron_butterfly_probability {
     #[test]
     fn test_with_price_trend() {
         let butterfly = create_test_butterfly();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let prob = butterfly.probability_of_profit(None, trend);
         assert!(prob.is_ok());

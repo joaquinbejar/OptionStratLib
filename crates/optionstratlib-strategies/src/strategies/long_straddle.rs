@@ -1032,6 +1032,16 @@ mod tests_long_straddle_probability {
     use optionstratlib_analytics::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     fn create_test_long_straddle() -> LongStraddle {
         LongStraddle::new(
             "TEST".to_string(),
@@ -1123,10 +1133,7 @@ mod tests_long_straddle_probability {
     #[test]
     fn test_probability_with_trend() {
         let straddle = create_test_long_straddle();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = straddle.probability_of_profit(None, trend);
         assert!(result.is_ok());

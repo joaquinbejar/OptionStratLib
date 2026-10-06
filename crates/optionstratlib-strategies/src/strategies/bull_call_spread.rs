@@ -2011,6 +2011,16 @@ mod tests_bull_call_spread_probability {
     use optionstratlib_analytics::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     #[test]
     fn test_get_expiration() {
         let spread = bull_call_spread_test();
@@ -2087,10 +2097,7 @@ mod tests_bull_call_spread_probability {
     #[test]
     fn test_probability_with_uptrend() {
         let spread = bull_call_spread_test();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.8,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.8), dec!(0.95)));
 
         let result = spread.probability_of_profit(None, trend);
         assert!(result.is_ok());
@@ -2103,10 +2110,7 @@ mod tests_bull_call_spread_probability {
     #[test]
     fn test_probability_with_downtrend() {
         let spread = bull_call_spread_test();
-        let trend = Some(PriceTrend {
-            drift_rate: -0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(-0.1), dec!(0.95)));
 
         let result = spread.probability_of_profit(None, trend);
         assert!(result.is_ok());

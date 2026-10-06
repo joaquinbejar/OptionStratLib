@@ -8,6 +8,7 @@
 //! comprehensive probability analysis capabilities for option strategies.
 
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
@@ -218,6 +219,9 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// only happens when the inputs sit past the precision of the price model;
     /// it is reported rather than floored to zero, which would weight the
     /// expected value by a distribution that does not sum to one.
+    ///
+    /// Returns [`ProbabilityCalculationErrorKind::TrendError`] when the trend
+    /// drift has no `f64` form.
     fn expected_value(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
@@ -308,7 +312,24 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         if expected_value <= 0.0 {
             Ok(Positive::ZERO)
         } else {
-            let trend_adjustment = trend.map_or(1.0, |t| 1.0 / (1.0 + t.drift_rate.abs()));
+            let trend_adjustment = match trend {
+                Some(t) => {
+                    // The nearest `f64`, so a drift written with the digits
+                    // of the former `f64` field gives the same adjustment.
+                    let drift = t.drift_rate();
+                    let drift = decimal_to_f64_correctly_rounded(drift).map_err(|e| {
+                        ProbabilityError::CalculationError(
+                            ProbabilityCalculationErrorKind::TrendError {
+                                reason: format!(
+                                    "expected_value: trend drift_rate {drift} has no f64 form: {e}"
+                                ),
+                            },
+                        )
+                    })?;
+                    1.0 / (1.0 + drift.abs())
+                }
+                None => 1.0,
+            };
             Positive::new(expected_value * trend_adjustment).map_err(ProbabilityError::from)
         }
     }
@@ -542,6 +563,16 @@ mod tests_probability_analysis {
     use optionstratlib_core::model::ExpirationDate;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     fn test_strategy() -> BullCallSpread {
         BullCallSpread::new(
             "GOLD".to_string(),
@@ -583,10 +614,7 @@ mod tests_probability_analysis {
             base_volatility: pos_or_panic!(0.2),
             std_dev_adjustment: pos_or_panic!(0.05),
         });
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = strategy.analyze_probabilities(vol_adj, trend);
 
@@ -609,10 +637,7 @@ mod tests_probability_analysis {
     #[test]
     fn test_expected_value_with_trend() {
         let strategy = test_strategy();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = strategy.expected_value(None, trend);
 
@@ -661,10 +686,7 @@ mod tests_probability_analysis {
             base_volatility: pos_or_panic!(0.2),
             std_dev_adjustment: pos_or_panic!(0.05),
         });
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = strategy.calculate_extreme_probabilities(vol_adj, trend);
 
@@ -695,6 +717,16 @@ mod tests_expected_value {
     use optionstratlib_core::model::ExpirationDate;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     // Helper function to create a test strategy
     fn create_test_strategy() -> BullCallSpread {
         BullCallSpread::new(
@@ -715,6 +747,20 @@ mod tests_expected_value {
             pos_or_panic!(0.54),  // open_fee_short
         )
         .unwrap()
+    }
+
+    /// A drift with 15 decimal places, where `Decimal::to_f64` lands one ULP
+    /// away from the nearest `f64` and the trend adjustment would move the
+    /// last digits (to `0.002802439458791802`). Pinned from the `f64`-field
+    /// code fed `drift_rate: 2.999789999999902, confidence: 0.95` (#656).
+    #[test]
+    fn test_expected_value_many_decimal_places_drift_matches_f64_field() {
+        let strategy = create_test_strategy();
+        let trend = Some(price_trend(dec!(2.999789999999902), dec!(0.95)));
+        match strategy.expected_value(None, trend) {
+            Ok(ev) => assert_eq!(ev.to_dec(), dec!(0.002802439458791824)),
+            Err(e) => panic!("expected value evaluates: {e}"),
+        }
     }
 
     #[test]
@@ -746,10 +792,7 @@ mod tests_expected_value {
     #[test]
     fn test_expected_value_with_trend() {
         let strategy = create_test_strategy();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = strategy.expected_value(None, trend);
         assert!(result.is_ok());
@@ -763,10 +806,7 @@ mod tests_expected_value {
             base_volatility: pos_or_panic!(0.25),
             std_dev_adjustment: pos_or_panic!(0.1),
         });
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let result = strategy.expected_value(vol_adj, trend);
         assert!(result.is_ok());
@@ -789,10 +829,7 @@ mod tests_expected_value {
     #[test]
     fn test_expected_value_with_negative_trend() {
         let strategy = create_test_strategy();
-        let trend = Some(PriceTrend {
-            drift_rate: -0.2,
-            confidence: 0.90,
-        });
+        let trend = Some(price_trend(dec!(-0.2), dec!(0.90)));
 
         let result = strategy.expected_value(None, trend);
         assert!(result.is_ok());

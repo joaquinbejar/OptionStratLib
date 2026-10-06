@@ -353,6 +353,16 @@ mod tests_calculate_probability {
 
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     fn create_basic_range() -> ProfitLossRange {
         ProfitLossRange::new(spos!(90.0), spos!(110.0), Positive::ZERO).unwrap()
     }
@@ -426,10 +436,10 @@ mod tests_calculate_probability {
     #[test]
     fn test_with_upward_trend() {
         let mut range = create_basic_range();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.10, // 10% tendencia alcista anual
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(
+            dec!(0.10), // 10% annual upward trend
+            dec!(0.95),
+        ));
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
@@ -446,10 +456,7 @@ mod tests_calculate_probability {
     #[test]
     fn test_with_downward_trend() {
         let mut range = create_basic_range();
-        let trend = Some(PriceTrend {
-            drift_rate: -0.10,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(-0.10), dec!(0.95)));
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,
@@ -502,10 +509,7 @@ mod tests_calculate_probability {
             base_volatility: pos_or_panic!(0.25),
             std_dev_adjustment: pos_or_panic!(0.05),
         };
-        let trend = Some(PriceTrend {
-            drift_rate: 0.10,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.10), dec!(0.95)));
 
         let result = range.calculate_probability(
             &Positive::HUNDRED,

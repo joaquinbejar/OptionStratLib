@@ -19,7 +19,7 @@ use num_traits::ToPrimitive;
 use optionstratlib_core::f2du;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::p_sqrt;
+use optionstratlib_core::model::decimal::{decimal_to_f64_correctly_rounded, p_sqrt};
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::big_n;
@@ -53,13 +53,79 @@ pub(crate) fn flat_volatility_0_2() -> VolatilityAdjustment {
     }
 }
 
-/// Struct to hold price trend parameters
-#[derive(Debug, Clone)]
+/// Price trend applied on top of the risk-free drift by the probability
+/// kernels.
+///
+/// The kernels drift the lognormal distribution at
+/// `risk_free_rate + drift_rate * confidence`. Both fields are dimensionless
+/// and private: [`PriceTrend::new`] is the only way to build one, so a
+/// `confidence` outside `[0, 1]` cannot reach a kernel.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PriceTrend {
-    /// Annual drift rate (positive for upward trend, negative for downward)
-    pub drift_rate: f64,
-    /// Confidence level for the trend (0 to 1)
-    pub confidence: f64,
+    /// Annual drift rate, as a fraction (`0.1` is 10%); positive for an
+    /// upward trend, negative for a downward one.
+    drift_rate: Decimal,
+    /// Weight given to the drift, in `[0, 1]`.
+    confidence: Decimal,
+}
+
+impl PriceTrend {
+    /// Builds a trend from an annual drift rate and the confidence in it.
+    ///
+    /// # Arguments
+    ///
+    /// * `drift_rate` - Annual drift rate as a fraction (`0.1` is 10%); any
+    ///   sign.
+    /// * `confidence` - Weight given to the drift, from `0` (ignored) to `1`
+    ///   (applied in full), both ends included.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProbabilityError::CalculationError`] with
+    /// [`ProbabilityCalculationErrorKind::TrendError`] when `confidence` is
+    /// below `0` or above `1`.
+    pub fn new(drift_rate: Decimal, confidence: Decimal) -> Result<Self, ProbabilityError> {
+        if !(Decimal::ZERO..=Decimal::ONE).contains(&confidence) {
+            return Err(invalid_confidence(confidence));
+        }
+        Ok(Self {
+            drift_rate,
+            confidence,
+        })
+    }
+
+    /// Annual drift rate, as a fraction; may be negative.
+    #[must_use]
+    #[inline]
+    pub fn drift_rate(&self) -> Decimal {
+        self.drift_rate
+    }
+
+    /// Weight given to the drift, in `[0, 1]`.
+    #[must_use]
+    #[inline]
+    pub fn confidence(&self) -> Decimal {
+        self.confidence
+    }
+}
+
+#[cold]
+#[inline(never)]
+fn invalid_confidence(confidence: Decimal) -> ProbabilityError {
+    ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
+        reason: format!("Confidence must be between 0 and 1, got {confidence}"),
+    })
+}
+
+/// Converts a trend field to the `f64` nearest to it for the kernel, so a
+/// field written with the digits of a former `f64` literal gives back that
+/// literal exactly; a value with no `f64` form is reported.
+fn trend_field_to_f64(name: &str, value: Decimal) -> Result<f64, ProbabilityError> {
+    decimal_to_f64_correctly_rounded(value).map_err(|e| {
+        ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
+            reason: format!("trend {name} {value} has no f64 form: {e}"),
+        })
+    })
 }
 
 /// Calculates the probability of a stock price reaching a target price within a given timeframe.
@@ -94,7 +160,9 @@ pub struct PriceTrend {
 /// - `time_to_expiry` is not positive, indicating the expiration date has passed or is invalid.
 /// - `volatility.base_volatility` is non-positive
 ///   ([`ProbabilityCalculationErrorKind::VolatilityAdjustmentError`]).
-/// - `trend.confidence` is not between 0 and 1.
+/// - a `trend` field has no `f64` form
+///   ([`ProbabilityCalculationErrorKind::TrendError`]); its confidence is
+///   already in `[0, 1]`, checked by [`PriceTrend::new`].
 /// - the price ratio, its logarithm, or the volatility scaling leaves the
 ///   representable range ([`ProbabilityError::PositiveError`]).
 ///
@@ -147,13 +215,13 @@ pub fn calculate_single_point_probability(
     // Adjust drift rate based on trend if provided
     let drift_rate = match trend {
         Some(t) => {
-            if !(0.0..=1.0).contains(&t.confidence) {
-                return Err(ProbabilityError::CalculationError(
-                    ProbabilityCalculationErrorKind::TrendError {
-                        reason: "Confidence must be between 0 and 1".to_string(),
-                    },
-                ));
-            }
+            // `PriceTrend::new` already holds the confidence in [0, 1]. Each
+            // field converts to its nearest `f64` and the product is taken in
+            // `f64`, as it always was, so a trend written with the digits of
+            // the former `f64` fields drifts the distribution by the same
+            // `f64`.
+            let trend_drift = trend_field_to_f64("drift_rate", t.drift_rate)?;
+            let confidence = trend_field_to_f64("confidence", t.confidence)?;
             let rf = risk_free.to_f64().ok_or_else(|| {
                 ProbabilityError::CalculationError(
                     ProbabilityCalculationErrorKind::ExpectedValueError {
@@ -163,7 +231,7 @@ pub fn calculate_single_point_probability(
                     },
                 )
             })?;
-            rf + (t.drift_rate * t.confidence)
+            rf + (trend_drift * confidence)
         }
         None => risk_free.to_f64().ok_or_else(|| {
             ProbabilityError::CalculationError(
@@ -232,7 +300,8 @@ pub fn calculate_single_point_probability(
 ///   [`PriceErrorKind::InvalidPriceRange`]).
 /// * Time to expiry is not positive
 /// * Volatility parameters are invalid
-/// * Trend confidence is not between 0 and 1
+/// * A `trend` field has no `f64` form
+///   ([`ProbabilityCalculationErrorKind::TrendError`])
 /// * The probability below the upper bound is smaller than below the lower
 ///   bound ([`ProbabilityError::CalculationError`] with
 ///   [`ProbabilityCalculationErrorKind::InvalidProbability`]). A distribution
@@ -317,6 +386,16 @@ mod tests_single_point_probability {
     use optionstratlib_core::constants::DAYS_IN_A_YEAR;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     // Helper function to create default volatility adjustment
     fn default_volatility_adj() -> VolatilityAdjustment {
         VolatilityAdjustment {
@@ -327,10 +406,7 @@ mod tests_single_point_probability {
 
     // Helper function to create default trend
     fn default_trend() -> PriceTrend {
-        PriceTrend {
-            drift_rate: 0.05,
-            confidence: 0.8,
-        }
+        price_trend(dec!(0.05), dec!(0.8))
     }
 
     #[test]
@@ -470,12 +546,7 @@ mod tests_single_point_probability {
                     std_dev_adjustment: Positive::ZERO,
                 }
             },
-            Some({
-                PriceTrend {
-                    drift_rate: 0.0,
-                    confidence: 1.0,
-                }
-            }),
+            Some(price_trend(dec!(0.0), dec!(1.0))),
             &ExpirationDate::Days(DAYS_IN_A_YEAR),
             None,
         );
@@ -556,29 +627,15 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_invalid_trend_confidence() {
-        let trend = Some(PriceTrend {
-            drift_rate: 0.05,
-            confidence: 1.5, // Invalid
-        });
-
-        let result = calculate_single_point_probability(
-            &Positive::HUNDRED,
-            &pos_or_panic!(105.0),
-            flat_volatility_0_2(),
-            trend,
-            &ExpirationDate::Days(DAYS_IN_A_YEAR),
-            None,
-        );
-
-        assert!(result.is_err());
-        let error = result.unwrap_err();
-        match error {
-            ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::TrendError {
-                reason,
-            }) => {
-                assert_eq!(reason, "Confidence must be between 0 and 1");
+        // The confidence is checked where the trend is built, so an invalid
+        // one never reaches the kernel.
+        match PriceTrend::new(dec!(0.05), dec!(1.5)) {
+            Err(ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::TrendError { reason },
+            )) => {
+                assert_eq!(reason, "Confidence must be between 0 and 1, got 1.5");
             }
-            _ => panic!("Unexpected error type"),
+            other => panic!("Unexpected result: {other:?}"),
         };
     }
 
@@ -639,10 +696,10 @@ mod tests_single_point_probability {
 
     #[test]
     fn test_extreme_trend() {
-        let trend = Some(PriceTrend {
-            drift_rate: 2.0, // 200% annual drift
-            confidence: 0.99,
-        });
+        let trend = Some(price_trend(
+            dec!(2.0), // 200% annual drift
+            dec!(0.99),
+        ));
 
         let result = calculate_single_point_probability(
             &Positive::HUNDRED,
@@ -861,5 +918,142 @@ mod tests_probability_inversion {
             below.to_dec() + inside.to_dec() + above.to_dec(),
             Decimal::ONE,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_price_trend {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn price_trend(drift_rate: Decimal, confidence: Decimal) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
+    fn trend_reason(result: Result<PriceTrend, ProbabilityError>) -> String {
+        match result {
+            Err(ProbabilityError::CalculationError(
+                ProbabilityCalculationErrorKind::TrendError { reason },
+            )) => reason,
+            other => panic!("expected a trend error, got {other:?}"),
+        }
+    }
+
+    fn below_above(trend: Option<PriceTrend>, target: Positive) -> (Positive, Positive) {
+        let volatility = VolatilityAdjustment {
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
+        };
+        match calculate_single_point_probability(
+            &Positive::HUNDRED,
+            &target,
+            volatility,
+            trend,
+            &ExpirationDate::Days(pos_or_panic!(45.0)),
+            Some(dec!(0.03)),
+        ) {
+            Ok(pair) => pair,
+            Err(e) => panic!("kernel evaluates an ordinary input: {e}"),
+        }
+    }
+
+    fn in_range(trend: Option<PriceTrend>) -> (Positive, Positive, Positive) {
+        let volatility = VolatilityAdjustment {
+            base_volatility: pos_or_panic!(0.25),
+            std_dev_adjustment: pos_or_panic!(0.1),
+        };
+        match calculate_price_probability(
+            &Positive::HUNDRED,
+            &pos_or_panic!(92.5),
+            &pos_or_panic!(110.0),
+            volatility,
+            trend,
+            &ExpirationDate::Days(pos_or_panic!(45.0)),
+            Some(dec!(0.03)),
+        ) {
+            Ok(triple) => triple,
+            Err(e) => panic!("kernel evaluates an ordinary input: {e}"),
+        }
+    }
+
+    #[test]
+    fn test_price_trend_new_confidence_bounds_accepted() {
+        let none = price_trend(dec!(-0.25), Decimal::ZERO);
+        assert_eq!(none.drift_rate(), dec!(-0.25));
+        assert_eq!(none.confidence(), Decimal::ZERO);
+
+        let full = price_trend(dec!(0.10), Decimal::ONE);
+        assert_eq!(full.drift_rate(), dec!(0.10));
+        assert_eq!(full.confidence(), Decimal::ONE);
+    }
+
+    #[test]
+    fn test_price_trend_new_confidence_below_zero_rejected() {
+        assert_eq!(
+            trend_reason(PriceTrend::new(dec!(0.10), dec!(-0.01))),
+            "Confidence must be between 0 and 1, got -0.01"
+        );
+    }
+
+    #[test]
+    fn test_price_trend_new_confidence_above_one_rejected() {
+        assert_eq!(
+            trend_reason(PriceTrend::new(dec!(0.10), dec!(1.01))),
+            "Confidence must be between 0 and 1, got 1.01"
+        );
+    }
+
+    #[test]
+    fn test_price_trend_new_any_drift_sign_accepted() {
+        for drift in [Decimal::MIN, dec!(-2), Decimal::ZERO, dec!(2), Decimal::MAX] {
+            assert_eq!(price_trend(drift, dec!(0.5)).drift_rate(), drift);
+        }
+    }
+
+    /// Pinned from the `f64`-field kernel (`PriceTrend { drift_rate: -0.37,
+    /// confidence: 0.65 }`) before the fields became `Decimal` (#656).
+    #[test]
+    fn test_price_trend_kernel_output_unchanged_matches_f64_fields() {
+        let trend = || Some(price_trend(dec!(-0.37), dec!(0.65)));
+
+        let (below, above) = below_above(trend(), pos_or_panic!(110.0));
+        assert_eq!(below.to_dec(), dec!(0.895412344777716));
+        assert_eq!(above.to_dec(), dec!(0.104587655222284));
+
+        let (below, inside, above) = in_range(trend());
+        assert_eq!(below.to_dec(), dec!(0.2950713010903496));
+        assert_eq!(inside.to_dec(), dec!(0.6003410436873664));
+        assert_eq!(above.to_dec(), dec!(0.104587655222284));
+
+        // The trend moves the result: without it the same inputs give a
+        // different probability, so the pin above exercises the drift.
+        let (below_no_trend, _) = below_above(None, pos_or_panic!(110.0));
+        assert_eq!(below_no_trend.to_dec(), dec!(0.82862940208696));
+    }
+
+    /// Fields with 15 and 28 decimal places, where `Decimal::to_f64` lands one
+    /// ULP away from the nearest `f64`. Pinned from the `f64`-field kernel fed
+    /// the nearest `f64`s (`drift_rate: 2.999789999999902`, `confidence:
+    /// 0.12345678901234568`).
+    #[test]
+    fn test_price_trend_kernel_many_decimal_places_matches_f64_fields() {
+        let trend = || {
+            Some(price_trend(
+                dec!(2.999789999999902),
+                dec!(0.1234567890123456789012345678),
+            ))
+        };
+
+        let (below, above) = below_above(trend(), pos_or_panic!(110.0));
+        assert_eq!(below.to_dec(), dec!(0.682928086717717));
+        assert_eq!(above.to_dec(), dec!(0.317071913282283));
+
+        let (below, inside, above) = in_range(trend());
+        assert_eq!(below.to_dec(), dec!(0.0936575883560122));
+        assert_eq!(inside.to_dec(), dec!(0.5892704983617048));
+        assert_eq!(above.to_dec(), dec!(0.317071913282283));
     }
 }
