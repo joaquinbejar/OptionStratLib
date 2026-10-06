@@ -150,8 +150,10 @@ crate-type = ["rlib"]
 exclude = [
     "fixtures/consumers/analytics-only",
     "fixtures/consumers/facade-analytics",
+    "fixtures/consumers/facade-backtest",
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-pricing",
+    "fixtures/consumers/facade-simulation",
     "fixtures/consumers/facade-strategies",
     "fixtures/consumers/full-backtest",
     "fixtures/consumers/market-minimal",

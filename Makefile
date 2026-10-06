@@ -217,9 +217,10 @@ test-consumer-market:
 
 # The facade built with one capability each: `pricing` and `market` alone
 # (#528), `analytics` alone, which must not resolve strategies, and
-# `strategies` alone (#535), each consumed through the prelude and the
-# canonical paths.
-FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies
+# `strategies` alone (#535), and `simulation` alone, which must not resolve
+# market, strategies or backtest, and `backtest` alone (#541), each consumed
+# through the prelude and the canonical paths.
+FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest
 
 .PHONY: check-consumer-facade
 check-consumer-facade:

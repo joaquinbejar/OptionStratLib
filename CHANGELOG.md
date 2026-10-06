@@ -678,6 +678,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Facade consumer fixtures for `simulation` and `backtest`** (#541).
+  `fixtures/consumers/facade-simulation` uses the facade with
+  `default-features = false, features = ["simulation"]`: replayed walks
+  through the prelude, a consumer `PathEvaluator` through
+  `optionstratlib::simulation::evaluate_paths` over a rising and a falling
+  replay (`PathStatistics`: mean 2, best 8, worst -4, win rate 50), and
+  `same_item` checks that the facade paths are the simulation crate's items.
+  Its `expect.toml` keeps market, analytics, strategies, backtest and
+  visualization out of the graph, so `simulation` stays independent of them.
+  `fixtures/consumers/facade-backtest` does the same with
+  `features = ["backtest"]`: a long call backtested over replayed paths
+  through the prelude (+14 and -6 per walk, the figures of the backtest
+  crate's golden regression), with every lower capability `backtest`
+  documents present and no plotting, I/O or async package. `make
+  check-consumer-facade` and `make test-consumer-facade` now cover six
+  single-capability facades. The `simulation` and `backtest` facade
+  features themselves came with #536 and #538, and the `market,synthetic`
+  routing with #537 (the `facade-market` fixture and the `synthetic`
+  feature-tree fixture pin both sides).
+
 - **Simulation-only and full-backtest consumer fixtures** (#540).
   `fixtures/consumers/simulation-only` depends on core and simulation alone:
   it replays historical walks, evaluates them with its own `PathEvaluator`
