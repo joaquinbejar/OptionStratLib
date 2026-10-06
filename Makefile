@@ -208,8 +208,19 @@ COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-prici
 # (`crate:feature`), besides no, default and all features (ADR-0003, #525).
 COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async
 
+# `cargo package` verifies each crate against the others through a temporary
+# local registry, and Cargo keeps what it unpacks from such a registry under
+# `registry/src/-<hash>/` and `registry/cache/-<hash>/` (local registries are
+# the ones whose directory name starts with `-`; crates.io's never does). The
+# workspace version stays 0.22.0 while the code changes, so a copy left by an
+# earlier run, or restored by the CI cache of `registry/cache`, would be
+# reused and a crate would be verified against a stale neighbour. Drop those
+# copies of our own crates first; nothing from crates.io is touched.
+CARGO_HOME_DIR := $(or $(CARGO_HOME),$(HOME)/.cargo)
+
 .PHONY: check-components
 check-components:
+	@rm -rf $(CARGO_HOME_DIR)/registry/src/-*/optionstratlib-* $(CARGO_HOME_DIR)/registry/cache/-*/optionstratlib-*
 	@set -e; for crate in $(COMPONENT_CRATES); do \
 		echo "=== $$crate"; \
 		LOGLEVEL=WARN cargo test -p $$crate; \
