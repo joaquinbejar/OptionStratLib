@@ -1,0 +1,18 @@
+# The facade with `default-features = false, features = ["backtest"]`:
+# packages the resolved normal graph must contain, and packages it must not.
+# `backtest` brings strategies and simulation (and through them analytics,
+# market, pricing, math and core) but no plotting, I/O or async package.
+# Checked by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "optionstratlib-simulation", "optionstratlib-market",
+    "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
+]
+# `utoipa` (#628) and `prettytable-rs` (still a dependency of market and of
+# the backtest report table until M6-05) are missing from this list; they
+# join it then.
+absent = [
+    "optionstratlib-visualization", "csv", "zip", "tokio", "reqwest", "futures",
+    "async-trait", "plotly", "plotly_static", "fantoccini", "webdriver",
+    "tracing-subscriber", "indicatif",
+]

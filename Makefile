@@ -81,7 +81,7 @@ fmt-check:
 # with warnings denied, so no doc link names a gated item, and its library
 # and doc tests run, so every doc example compiles under the capability it
 # needs (the integration suites declare `required-features` and are skipped).
-FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest
+FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest market,synthetic
 
 .PHONY: lint
 lint:
@@ -217,9 +217,10 @@ test-consumer-market:
 
 # The facade built with one capability each: `pricing` and `market` alone
 # (#528), `analytics` alone, which must not resolve strategies, and
-# `strategies` alone (#535), each consumed through the prelude and the
-# canonical paths.
-FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies
+# `strategies` alone (#535), and `simulation` alone, which must not resolve
+# market, strategies or backtest, and `backtest` alone (#541), each consumed
+# through the prelude and the canonical paths.
+FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest
 
 .PHONY: check-consumer-facade
 check-consumer-facade:

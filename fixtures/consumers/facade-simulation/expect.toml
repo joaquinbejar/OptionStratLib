@@ -1,0 +1,17 @@
+# The facade with `default-features = false, features = ["simulation"]`:
+# packages the resolved normal graph must contain, and packages it must not.
+# Checked by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "optionstratlib-simulation",
+]
+# `utoipa` is missing only because `expiration_date` 0.4.0 forces
+# `positive/utoipa` on every build (#628); it joins this list once fixed.
+# The defining crate is also a direct dependency above, for the identity
+# checks; compiling the facade paths is what proves the facade enables it.
+absent = [
+    "optionstratlib-market", "optionstratlib-analytics", "optionstratlib-strategies",
+    "optionstratlib-backtest", "optionstratlib-visualization", "csv", "zip", "tokio",
+    "reqwest", "futures", "async-trait", "plotly", "plotly_static", "fantoccini",
+    "webdriver", "tracing-subscriber", "indicatif", "prettytable-rs",
+]
