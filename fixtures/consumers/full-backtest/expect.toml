@@ -10,6 +10,6 @@ present = [
 # missing from this list; they join it then.
 absent = [
     "optionstratlib", "optionstratlib-visualization", "csv", "zip", "tokio", "reqwest",
-    "futures", "plotly", "plotly_static", "fantoccini", "webdriver", "tracing-subscriber",
+    "futures", "async-trait", "plotly", "plotly_static", "fantoccini", "webdriver", "tracing-subscriber",
     "indicatif",
 ]

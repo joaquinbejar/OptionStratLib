@@ -695,9 +695,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory. Measured with the M0 method on commit 6ef94913 (rustc 1.99.0,
   Apple M5 Max; `cargo fetch`, then three clean `cargo check` runs with no
   features from an emptied target and build directory): simulation-only 68
-  distinct packages, 5.79 / 5.82 / 5.93 s (median 5.82 s); full-backtest 80
-  distinct packages, 7.64 / 7.49 / 7.55 s (median 7.55 s); the same package
-  counts with all features. Fixture lockfiles are not committed, so the
+  distinct packages (69 entries, `syn` twice), 5.79 / 5.82 / 5.93 s (median 5.82 s); full-backtest 80
+  distinct packages (81 entries), 7.64 / 7.49 / 7.55 s (median 7.55 s); the same package
+  counts with all features. The machine and toolchain differ from the M0
+  baseline (BASELINE.md). Fixture lockfiles are not committed, so the
   counts are recorded, not asserted (ADR-0004 section 3).
 
 - **`decimal_to_f64_correctly_rounded`** in

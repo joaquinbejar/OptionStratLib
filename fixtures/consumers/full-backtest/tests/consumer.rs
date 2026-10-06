@@ -79,6 +79,10 @@ fn test_long_call_on_a_rising_path_reports_the_expiry_profit() {
     assert_eq!(stats.best_pnl, dec!(14));
     assert_eq!(stats.win_rate, dec!(100));
     assert_eq!(stats.average_holding_period, dec!(4));
+    for result in &stats.results {
+        assert_eq!(result.pnl.realized, Some(dec!(14)));
+        assert!(result.expired);
+    }
 }
 
 #[test]
@@ -91,4 +95,9 @@ fn test_long_call_on_a_falling_path_reports_the_premium_and_fees_lost() {
     assert_eq!(stats.average_pnl, dec!(-6));
     assert_eq!(stats.worst_pnl, dec!(-6));
     assert_eq!(stats.win_rate, dec!(0));
+    assert_eq!(stats.average_holding_period, dec!(4));
+    for result in &stats.results {
+        assert_eq!(result.pnl.realized, Some(dec!(-6)));
+        assert!(result.expired);
+    }
 }

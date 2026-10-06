@@ -34,7 +34,7 @@ impl PathEvaluator<Positive, Positive> for LastMinusFirst {
     fn evaluate_path(
         &self,
         walk: &RandomWalk<Positive, Positive>,
-        _exit: &ExitPolicy,
+        exit: &ExitPolicy,
     ) -> Result<PathOutcome, SimulationError> {
         let steps = walk.get_steps();
         let (Some(first), Some(last)) = (steps.first(), steps.last()) else {
@@ -53,7 +53,7 @@ impl PathEvaluator<Positive, Positive> for LastMinusFirst {
         Ok(PathOutcome {
             pnl: Some(pnl),
             holding_period,
-            exit_reason: ExitPolicy::Expiration,
+            exit_reason: exit.clone(),
             expired: true,
             ..PathOutcome::default()
         })
@@ -83,7 +83,7 @@ fn simulator(prices: Vec<Positive>, walks: usize) -> Simulator<Positive, Positiv
 }
 
 #[test]
-fn test_replayed_paths_follow_their_prices() {
+fn test_simulator_replayed_paths_follow_their_prices() {
     let prices = vec![
         Positive::HUNDRED,
         pos_or_panic!(105.0),
@@ -105,41 +105,87 @@ fn test_replayed_paths_follow_their_prices() {
 }
 
 #[test]
-fn test_generic_evaluator_and_path_statistics() {
-    let sim = simulator(
+fn test_evaluate_paths_rising_and_falling_replays_report_statistics() {
+    let exit = ExitPolicy::Expiration;
+    let rising = simulator(
         vec![
             Positive::HUNDRED,
-            pos_or_panic!(105.0),
-            pos_or_panic!(110.0),
+            pos_or_panic!(104.0),
+            pos_or_panic!(108.0),
         ],
-        3,
+        2,
     );
-    let outcomes = match evaluate_paths(&LastMinusFirst, &sim, &ExitPolicy::Expiration) {
+    let falling = simulator(
+        vec![Positive::HUNDRED, pos_or_panic!(98.0), pos_or_panic!(96.0)],
+        2,
+    );
+    let mut outcomes = match evaluate_paths(&LastMinusFirst, &rising, &exit) {
         Ok(outcomes) => outcomes,
-        Err(error) => panic!("evaluate_paths: {error}"),
+        Err(error) => panic!("rising: {error}"),
     };
-    assert_eq!(outcomes.len(), 3);
+    match evaluate_paths(&LastMinusFirst, &falling, &exit) {
+        Ok(more) => outcomes.extend(more),
+        Err(error) => panic!("falling: {error}"),
+    }
     assert!(
         outcomes
             .iter()
-            .all(|o| o.pnl == Some(dec!(10)) && o.holding_period == 2)
+            .all(|o| o.holding_period == 2 && o.exit_reason == exit)
     );
+    // P&L {8, 8, -4, -4}: mean 2, median (−4 + 8) / 2 = 2, sample standard
+    // deviation sqrt(4 · 36 / 3) = sqrt(48).
     match PathStatistics::from_outcomes(&outcomes) {
         Ok(stats) => {
-            assert_eq!(stats.total_paths, 3);
-            assert_eq!(stats.profitable_count, 3);
-            assert_eq!(stats.average_pnl, dec!(10));
-            assert_eq!(stats.median_pnl, dec!(10));
-            assert_eq!(stats.std_dev_pnl, dec!(0));
-            assert_eq!(stats.win_rate, dec!(100));
+            assert_eq!(stats.total_paths, 4);
+            assert_eq!(stats.profitable_count, 2);
+            assert_eq!(stats.loss_count, 2);
+            assert_eq!(stats.average_pnl, dec!(2));
+            assert_eq!(stats.median_pnl, dec!(2));
+            assert_eq!(stats.best_pnl, dec!(8));
+            assert_eq!(stats.worst_pnl, dec!(-4));
+            assert_eq!(stats.win_rate, dec!(50));
             assert_eq!(stats.average_holding_period, dec!(2));
+            let variance = stats.std_dev_pnl * stats.std_dev_pnl;
+            assert!(
+                (variance - dec!(48)).abs() < dec!(0.000001),
+                "std dev {}",
+                stats.std_dev_pnl
+            );
         }
         Err(error) => panic!("path statistics: {error}"),
     }
 }
 
+/// An evaluator that refuses every path, to check the error reaches the
+/// caller unchanged.
+struct AlwaysFails;
+
+impl PathEvaluator<Positive, Positive> for AlwaysFails {
+    type Outcome = PathOutcome;
+    type Error = SimulationError;
+
+    fn evaluate_path(
+        &self,
+        _walk: &RandomWalk<Positive, Positive>,
+        _exit: &ExitPolicy,
+    ) -> Result<PathOutcome, SimulationError> {
+        Err(SimulationError::invalid_parameters(
+            "fixture refuses every path",
+        ))
+    }
+}
+
 #[test]
-fn test_repeated_runs_are_identical() {
+fn test_evaluate_paths_propagates_the_evaluator_error() {
+    let sim = simulator(vec![Positive::HUNDRED, pos_or_panic!(101.0)], 2);
+    match evaluate_paths(&AlwaysFails, &sim, &ExitPolicy::Expiration) {
+        Err(SimulationError::InvalidParameters { .. }) => {}
+        other => panic!("expected the evaluator's error, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_evaluate_paths_repeated_runs_are_identical() {
     let prices = vec![Positive::HUNDRED, pos_or_panic!(97.0), pos_or_panic!(103.0)];
     let run = || match evaluate_paths(
         &LastMinusFirst,
@@ -149,5 +195,7 @@ fn test_repeated_runs_are_identical() {
         Ok(outcomes) => outcomes.iter().map(|o| o.pnl).collect::<Vec<_>>(),
         Err(error) => panic!("evaluate_paths: {error}"),
     };
-    assert_eq!(run(), run());
+    let first = run();
+    assert_eq!(first, vec![Some(dec!(3)), Some(dec!(3))]);
+    assert_eq!(first, run());
 }

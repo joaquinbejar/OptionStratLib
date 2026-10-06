@@ -10,6 +10,6 @@ present = [
 absent = [
     "optionstratlib", "optionstratlib-market", "optionstratlib-analytics",
     "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",
-    "csv", "zip", "tokio", "reqwest", "plotly", "tracing-subscriber", "prettytable-rs",
-    "indicatif",
+    "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
+    "fantoccini", "webdriver", "tracing-subscriber", "prettytable-rs", "indicatif",
 ]

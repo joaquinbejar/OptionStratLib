@@ -183,6 +183,7 @@ test-consumer-simulation-only:
 tree-consumer-simulation-only:
 	cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py simulation-only
+	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
 .PHONY: test-consumer-full-backtest
 test-consumer-full-backtest:
@@ -194,6 +195,7 @@ test-consumer-full-backtest:
 tree-consumer-full-backtest:
 	cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py full-backtest
+	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
 # The market crate with no features and with only `synthetic` (#537,
 # ADR-0003): minimal market resolves no simulation crate, and `synthetic`
