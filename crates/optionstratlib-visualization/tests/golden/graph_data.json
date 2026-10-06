@@ -1,0 +1,4149 @@
+{
+  "curve": {
+    "config": {
+      "color_scheme": "default",
+      "height": 720,
+      "legend": null,
+      "line_style": "solid",
+      "show_legend": true,
+      "title": "Graph",
+      "width": 1280,
+      "x_label": null,
+      "y_label": null,
+      "z_label": null
+    },
+    "data": {
+      "Series": {
+        "line_color": "#1f77b4",
+        "line_width": 2.0,
+        "mode": "lines",
+        "name": "Curve",
+        "x": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "y": [
+          "0",
+          "1.5",
+          "1.25",
+          "4"
+        ]
+      }
+    }
+  },
+  "curves": {
+    "config": {
+      "color_scheme": "default",
+      "height": 720,
+      "legend": null,
+      "line_style": "solid",
+      "show_legend": true,
+      "title": "Graph",
+      "width": 1280,
+      "x_label": null,
+      "y_label": null,
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#0D0887",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Curve 1",
+          "x": [
+            "0",
+            "1",
+            "2",
+            "3"
+          ],
+          "y": [
+            "0",
+            "1.5",
+            "1.25",
+            "4"
+          ]
+        },
+        {
+          "line_color": "#A01C9C",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Curve 2",
+          "x": [
+            "0",
+            "1",
+            "2"
+          ],
+          "y": [
+            "1",
+            "2.5",
+            "2.25"
+          ]
+        }
+      ]
+    }
+  },
+  "options_long_call": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "Underlying: TEST @ $100 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Underlying: TEST @ $100 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Positive Payoff",
+          "x": [
+            "70",
+            "71",
+            "72",
+            "73",
+            "74",
+            "75",
+            "76",
+            "77",
+            "78",
+            "79",
+            "80",
+            "81",
+            "82",
+            "83",
+            "84",
+            "85",
+            "86",
+            "87",
+            "88",
+            "89",
+            "90",
+            "91",
+            "92",
+            "93",
+            "94",
+            "95",
+            "96",
+            "97",
+            "98",
+            "99",
+            "100",
+            "101",
+            "102",
+            "103",
+            "104",
+            "105",
+            "106",
+            "107",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "116",
+            "117",
+            "118",
+            "119",
+            "120",
+            "121",
+            "122",
+            "123",
+            "124",
+            "125",
+            "126",
+            "127",
+            "128",
+            "129"
+          ],
+          "y": [
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20",
+            "21",
+            "22",
+            "23",
+            "24",
+            "25",
+            "26",
+            "27",
+            "28",
+            "29"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Negative Payoff",
+          "x": [
+            "70",
+            "71",
+            "72",
+            "73",
+            "74",
+            "75",
+            "76",
+            "77",
+            "78",
+            "79",
+            "80",
+            "81",
+            "82",
+            "83",
+            "84",
+            "85",
+            "86",
+            "87",
+            "88",
+            "89",
+            "90",
+            "91",
+            "92",
+            "93",
+            "94",
+            "95",
+            "96",
+            "97",
+            "98",
+            "99",
+            "100"
+          ],
+          "y": [
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "options_short_put": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "Underlying: TEST @ $95 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Underlying: TEST @ $95 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Positive Payoff",
+          "x": [
+            "95",
+            "96",
+            "97",
+            "98",
+            "99",
+            "100",
+            "101",
+            "102",
+            "103",
+            "104",
+            "105",
+            "106",
+            "107",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "116",
+            "117",
+            "118",
+            "119",
+            "120",
+            "121",
+            "122",
+            "123"
+          ],
+          "y": [
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Negative Payoff",
+          "x": [
+            "66",
+            "67",
+            "68",
+            "69",
+            "70",
+            "71",
+            "72",
+            "73",
+            "74",
+            "75",
+            "76",
+            "77",
+            "78",
+            "79",
+            "80",
+            "81",
+            "82",
+            "83",
+            "84",
+            "85",
+            "86",
+            "87",
+            "88",
+            "89",
+            "90",
+            "91",
+            "92",
+            "93",
+            "94",
+            "95",
+            "96",
+            "97",
+            "98",
+            "99",
+            "100",
+            "101",
+            "102",
+            "103",
+            "104",
+            "105",
+            "106",
+            "107",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "116",
+            "117",
+            "118",
+            "119",
+            "120",
+            "121",
+            "122",
+            "123"
+          ],
+          "y": [
+            "-29",
+            "-28",
+            "-27",
+            "-26",
+            "-25",
+            "-24",
+            "-23",
+            "-22",
+            "-21",
+            "-20",
+            "-19",
+            "-18",
+            "-17",
+            "-16",
+            "-15",
+            "-14",
+            "-13",
+            "-12",
+            "-11",
+            "-10",
+            "-9",
+            "-8",
+            "-7",
+            "-6",
+            "-5",
+            "-4",
+            "-3",
+            "-2",
+            "-1",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0",
+            "-0"
+          ]
+        }
+      ]
+    }
+  },
+  "plot_builder_curve": {
+    "config": {
+      "color_scheme": "high_contrast",
+      "height": 900,
+      "legend": [
+        "Golden Curve"
+      ],
+      "line_style": "dashed",
+      "show_legend": true,
+      "title": "Golden Curve",
+      "width": 1600,
+      "x_label": "Strike",
+      "y_label": "Value",
+      "z_label": null
+    },
+    "data": {
+      "Series": {
+        "line_color": "#1f77b4",
+        "line_width": 2.0,
+        "mode": "lines",
+        "name": "Curve",
+        "x": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ],
+        "y": [
+          "0",
+          "1.5",
+          "1.25",
+          "4"
+        ]
+      }
+    }
+  },
+  "position_long_put": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "Underlying: TEST @ $105 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Underlying: TEST @ $105 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Positive Payoff",
+          "x": [
+            "70",
+            "71",
+            "72",
+            "73",
+            "74",
+            "75",
+            "76",
+            "77",
+            "78",
+            "79",
+            "80",
+            "81",
+            "82",
+            "83",
+            "84",
+            "85",
+            "86",
+            "87",
+            "88",
+            "89",
+            "90",
+            "91",
+            "92",
+            "93",
+            "94",
+            "95",
+            "96",
+            "97",
+            "98",
+            "99",
+            "100",
+            "101",
+            "102",
+            "103",
+            "104",
+            "105",
+            "106",
+            "107",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "116",
+            "117",
+            "118",
+            "119",
+            "120",
+            "121",
+            "122",
+            "123",
+            "124",
+            "125",
+            "126",
+            "127",
+            "128",
+            "129",
+            "130",
+            "131",
+            "132",
+            "133",
+            "134",
+            "135",
+            "136",
+            "137",
+            "138",
+            "139"
+          ],
+          "y": [
+            "35",
+            "34",
+            "33",
+            "32",
+            "31",
+            "30",
+            "29",
+            "28",
+            "27",
+            "26",
+            "25",
+            "24",
+            "23",
+            "22",
+            "21",
+            "20",
+            "19",
+            "18",
+            "17",
+            "16",
+            "15",
+            "14",
+            "13",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "6",
+            "5",
+            "4",
+            "3",
+            "2",
+            "1",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Negative Payoff",
+          "x": [
+            "105",
+            "106",
+            "107",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "116",
+            "117",
+            "118",
+            "119",
+            "120",
+            "121",
+            "122",
+            "123",
+            "124",
+            "125",
+            "126",
+            "127",
+            "128",
+            "129",
+            "130",
+            "131",
+            "132",
+            "133",
+            "134",
+            "135",
+            "136",
+            "137",
+            "138",
+            "139"
+          ],
+          "y": [
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "random_walk": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": null,
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Golden_0",
+      "width": 1600,
+      "x_label": "Date",
+      "y_label": "Price",
+      "z_label": null
+    },
+    "data": {
+      "Series": {
+        "line_color": "#1f77b4",
+        "line_width": 2.0,
+        "mode": "lines",
+        "name": "Golden_0",
+        "x": [
+          "-30",
+          "-29",
+          "-28",
+          "-27",
+          "-26"
+        ],
+        "y": [
+          "100",
+          "101.5",
+          "99.25",
+          "102",
+          "100.75"
+        ]
+      }
+    }
+  },
+  "simulator": {
+    "config": {
+      "color_scheme": "high_contrast",
+      "height": 900,
+      "legend": null,
+      "line_style": "solid",
+      "show_legend": true,
+      "title": "Golden",
+      "width": 1600,
+      "x_label": "Date",
+      "y_label": "Price",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": null,
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Sim_0",
+          "x": [
+            "-30",
+            "-29",
+            "-28",
+            "-27",
+            "-26"
+          ],
+          "y": [
+            "100",
+            "101.5",
+            "99.25",
+            "102",
+            "100.75"
+          ]
+        },
+        {
+          "line_color": null,
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Sim_1",
+          "x": [
+            "-30",
+            "-29",
+            "-28",
+            "-27",
+            "-26"
+          ],
+          "y": [
+            "100",
+            "101.5",
+            "99.25",
+            "102",
+            "100.75"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_bear_call_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "BearCallSpread Strategy: \n\tUnderlying: TEST @ $95 Short Call European Option\n\tUnderlying: TEST @ $105 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "BearCallSpread Strategy: \n\tUnderlying: TEST @ $95 Short Call European Option\n\tUnderlying: TEST @ $105 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10"
+          ],
+          "y": [
+            "3.0",
+            "3.0",
+            "2.9",
+            "1.9",
+            "0.9"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10",
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "-0.1",
+            "-1.1",
+            "-2.1",
+            "-3.1",
+            "-4.1",
+            "-5.1",
+            "-6.1",
+            "-7.0",
+            "-7.0",
+            "-7.0",
+            "-7.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-7.500",
+            "3.500"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-2.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-7.500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 98.0",
+          "x": [
+            "98.0"
+          ],
+          "y": [
+            "3.2500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_bear_put_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "BearPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "BearPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10"
+          ],
+          "y": [
+            "-7.0",
+            "-7.0",
+            "-6.9",
+            "-5.9",
+            "-4.9",
+            "-3.9",
+            "-2.9",
+            "-1.9",
+            "-0.9"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "0.1",
+            "1.1",
+            "2.1",
+            "3.0",
+            "3.0",
+            "3.0",
+            "3.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-7.500",
+            "3.500"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-2.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-7.500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 98.0",
+          "x": [
+            "98.0"
+          ],
+          "y": [
+            "3.2500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_bull_call_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "BullCallSpread Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "BullCallSpread Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10"
+          ],
+          "y": [
+            "-7.0",
+            "-7.0",
+            "-6.9",
+            "-5.9",
+            "-4.9",
+            "-3.9",
+            "-2.9",
+            "-1.9",
+            "-0.9"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "0.1",
+            "1.1",
+            "2.1",
+            "3.0",
+            "3.0",
+            "3.0",
+            "3.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-7.500",
+            "3.500"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-2.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-7.500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 102.0",
+          "x": [
+            "102.0"
+          ],
+          "y": [
+            "3.2500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_bull_put_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "BullPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "BullPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10"
+          ],
+          "y": [
+            "3.0",
+            "3.0",
+            "2.9",
+            "1.9",
+            "0.9"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10",
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "-0.1",
+            "-1.1",
+            "-2.1",
+            "-3.1",
+            "-4.1",
+            "-5.1",
+            "-6.1",
+            "-7.0",
+            "-7.0",
+            "-7.0",
+            "-7.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-7.500",
+            "3.500"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-2.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-2.00",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-7.500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 102.0",
+          "x": [
+            "102.0"
+          ],
+          "y": [
+            "3.2500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_call_butterfly": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "CallButterfly Strategy: \n\tUnderlying: TEST @ $95 Short Call European Option\n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $105 Short Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "CallButterfly Strategy: \n\tUnderlying: TEST @ $95 Short Call European Option\n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $105 Short Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10"
+          ],
+          "y": [
+            "2.4",
+            "2.4",
+            "2.3",
+            "1.3",
+            "0.3"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10",
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "-0.7",
+            "-1.7",
+            "-2.6",
+            "-2.6",
+            "-2.6",
+            "-2.6",
+            "-2.6",
+            "-2.7",
+            "-3.7",
+            "-4.7",
+            "-5.7"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-6.105",
+            "2.805"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -2.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-2.6"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-2.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-6.105"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 102.4",
+          "x": [
+            "102.4"
+          ],
+          "y": [
+            "2.6025"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 102.6",
+          "x": [
+            "102.6"
+          ],
+          "y": [
+            "2.6025"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_collar": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "Collar Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Collar Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10"
+          ],
+          "y": [
+            "-7.898",
+            "-6.908",
+            "-5.917",
+            "-4.917",
+            "-3.917",
+            "-2.917",
+            "-1.917",
+            "-0.917"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "101.10",
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "0.083",
+            "1.083",
+            "2.083",
+            "3.083",
+            "4.082",
+            "5.072",
+            "6.062",
+            "7.052"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.64550",
+            "7.79950"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -1.01",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-1.017"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-1.01",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-8.64550"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 103.00",
+          "x": [
+            "103.00"
+          ],
+          "y": [
+            "7.425750"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_covered_call": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "CoveredCall Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $105 Short Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "CoveredCall Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $105 Short Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10"
+          ],
+          "y": [
+            "-7.886",
+            "-6.886",
+            "-5.886",
+            "-4.886",
+            "-3.886",
+            "-2.886",
+            "-1.886",
+            "-0.886"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "101.10",
+            "102.10",
+            "103.10",
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "0.114",
+            "1.114",
+            "2.114",
+            "3.114",
+            "4.113",
+            "5.103",
+            "6.093",
+            "7.083"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.63445",
+            "7.83145"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -0.98",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-0.986"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-0.98",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-8.63445"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 100.98",
+          "x": [
+            "100.98"
+          ],
+          "y": [
+            "7.457225"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_custom": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        " - CustomStrategy Strategy"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": " - CustomStrategy Strategy",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20"
+          ],
+          "y": [
+            "-95.2",
+            "-94.2",
+            "-93.2",
+            "-92.2",
+            "-91.2",
+            "-90.2",
+            "-89.2",
+            "-88.2",
+            "-87.2",
+            "-86.2",
+            "-85.2",
+            "-84.2",
+            "-83.2",
+            "-82.2",
+            "-81.2",
+            "-80.2",
+            "-79.2",
+            "-78.2",
+            "-77.2",
+            "-76.2",
+            "-75.2"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "0",
+            "20"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-96.200",
+            "-74.200"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -5.20",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.2"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-5.20",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-96.200"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_iron_butterfly": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "IronButterfly Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $100 Short Put European Option\n\tUnderlying: TEST @ $110 Long Call European Option\n\tUnderlying: TEST @ $90 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "IronButterfly Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $100 Short Put European Option\n\tUnderlying: TEST @ $110 Long Call European Option\n\tUnderlying: TEST @ $90 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "88.20",
+            "89.20",
+            "90.20",
+            "91.20",
+            "92.20",
+            "93.20",
+            "94.20",
+            "95.20",
+            "96.20",
+            "97.20"
+          ],
+          "y": [
+            "-7.7",
+            "-7.7",
+            "-7.5",
+            "-6.5",
+            "-5.5",
+            "-4.5",
+            "-3.5",
+            "-2.5",
+            "-1.5",
+            "-0.5"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "98.20",
+            "99.20",
+            "100.20",
+            "101.20",
+            "102.20"
+          ],
+          "y": [
+            "0.5",
+            "1.5",
+            "2.1",
+            "1.1",
+            "0.1"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 3",
+          "x": [
+            "103.20",
+            "104.20",
+            "105.20",
+            "106.20",
+            "107.20",
+            "108.20",
+            "109.20",
+            "110.20",
+            "111.20",
+            "112.20",
+            "113.20"
+          ],
+          "y": [
+            "-0.9",
+            "-1.9",
+            "-2.9",
+            "-3.9",
+            "-4.9",
+            "-5.9",
+            "-6.9",
+            "-7.7",
+            "-7.7",
+            "-7.7",
+            "-7.7"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "88.20",
+            "113.20"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.190",
+            "2.590"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: 2.30",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "2.3"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "2.30",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "2.590"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 97.7",
+          "x": [
+            "97.7"
+          ],
+          "y": [
+            "2.3450"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 102.3",
+          "x": [
+            "102.3"
+          ],
+          "y": [
+            "2.3450"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_iron_condor": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "IronCondor Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Short Put European Option\n\tUnderlying: TEST @ $115 Long Call European Option\n\tUnderlying: TEST @ $85 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "IronCondor Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Short Put European Option\n\tUnderlying: TEST @ $115 Long Call European Option\n\tUnderlying: TEST @ $85 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "83.30",
+            "84.30",
+            "85.30",
+            "86.30",
+            "87.30",
+            "88.30",
+            "89.30",
+            "90.30",
+            "91.30",
+            "92.30",
+            "93.30",
+            "94.30",
+            "95.30",
+            "96.30",
+            "97.30",
+            "98.30",
+            "99.30",
+            "100.30",
+            "101.30",
+            "102.30",
+            "103.30",
+            "104.30",
+            "105.30",
+            "106.30",
+            "107.30",
+            "108.30",
+            "109.30",
+            "110.30",
+            "111.30",
+            "112.30",
+            "113.30",
+            "114.30",
+            "115.30",
+            "116.30",
+            "117.30",
+            "118.30"
+          ],
+          "y": [
+            "-10.8",
+            "-10.8",
+            "-10.5",
+            "-9.5",
+            "-8.5",
+            "-7.5",
+            "-6.5",
+            "-5.5",
+            "-4.5",
+            "-3.5",
+            "-2.5",
+            "-1.5",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-0.8",
+            "-1.1",
+            "-2.1",
+            "-3.1",
+            "-4.1",
+            "-5.1",
+            "-6.1",
+            "-7.1",
+            "-8.1",
+            "-9.1",
+            "-10.1",
+            "-10.8",
+            "-10.8",
+            "-10.8",
+            "-10.8"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "83.30",
+            "118.30"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-11.300",
+            "-0.300"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -0.80",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-0.8"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-0.80",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-11.300"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 95",
+          "x": [
+            "95"
+          ],
+          "y": [
+            "-0.5500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 105",
+          "x": [
+            "105"
+          ],
+          "y": [
+            "-0.5500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_long_butterfly_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "LongButterflySpread Strategy: \n\tUnderlying: TEST @ $90 Long Call European Option\n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $110 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "LongButterflySpread Strategy: \n\tUnderlying: TEST @ $90 Long Call European Option\n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $110 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "88.20",
+            "89.20",
+            "90.20",
+            "91.20",
+            "92.20",
+            "93.20",
+            "94.20",
+            "95.20",
+            "96.20",
+            "97.20",
+            "98.20",
+            "99.20",
+            "100.20",
+            "101.20",
+            "102.20",
+            "103.20",
+            "104.20",
+            "105.20",
+            "106.20",
+            "107.20",
+            "108.20",
+            "109.20",
+            "110.20",
+            "111.20"
+          ],
+          "y": [
+            "-11.2",
+            "-11.2",
+            "-11.0",
+            "-10.0",
+            "-9.0",
+            "-8.0",
+            "-7.0",
+            "-6.0",
+            "-5.0",
+            "-4.0",
+            "-3.0",
+            "-2.0",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.2",
+            "-1.0",
+            "0.0"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "112.20",
+            "113.20"
+          ],
+          "y": [
+            "1.0",
+            "2.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "88.20",
+            "113.20"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-11.860",
+            "2.660"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -1.20",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-1.2"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-1.20",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-11.860"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 101.2",
+          "x": [
+            "101.2"
+          ],
+          "y": [
+            "2.3300"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 108.8",
+          "x": [
+            "108.8"
+          ],
+          "y": [
+            "2.3300"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_long_call": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "LongCall Strategy: \n\tUnderlying: TEST @ $100 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "LongCall Strategy: \n\tUnderlying: TEST @ $100 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "98.00",
+            "99.00",
+            "100.00",
+            "101.00",
+            "102.00",
+            "103.00"
+          ],
+          "y": [
+            "-5.5",
+            "-5.5",
+            "-5.5",
+            "-4.5",
+            "-3.5",
+            "-2.5"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "98.00",
+            "103.00"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-5.650",
+            "-2.350"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -5.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.5"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-5.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.650"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_long_put": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "LongPut Strategy: \n\tUnderlying: TEST @ $100 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "LongPut Strategy: \n\tUnderlying: TEST @ $100 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "98.00",
+            "99.00",
+            "100.00",
+            "101.00",
+            "102.00",
+            "103.00"
+          ],
+          "y": [
+            "-3.1",
+            "-4.1",
+            "-5.1",
+            "-5.1",
+            "-5.1",
+            "-5.1"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "98.00",
+            "103.00"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-5.200",
+            "-3.000"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -5.10",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.1"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-5.10",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.200"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_long_straddle": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "LongStraddle Strategy: \n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $100 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "LongStraddle Strategy: \n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $100 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "87.612",
+            "88.612"
+          ],
+          "y": [
+            "1.788",
+            "0.788"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "89.612",
+            "90.612",
+            "91.612",
+            "92.612",
+            "93.612",
+            "94.612",
+            "95.612",
+            "96.612",
+            "97.612",
+            "98.612",
+            "99.612",
+            "100.612",
+            "101.612",
+            "102.612",
+            "103.612",
+            "104.612",
+            "105.612",
+            "106.612",
+            "107.612",
+            "108.612",
+            "109.612"
+          ],
+          "y": [
+            "-0.212",
+            "-1.212",
+            "-2.212",
+            "-3.212",
+            "-4.212",
+            "-5.212",
+            "-6.212",
+            "-7.212",
+            "-8.212",
+            "-9.212",
+            "-10.212",
+            "-9.988",
+            "-8.988",
+            "-7.988",
+            "-6.988",
+            "-5.988",
+            "-4.988",
+            "-3.988",
+            "-2.988",
+            "-1.988",
+            "-0.988"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 3",
+          "x": [
+            "110.612",
+            "111.612",
+            "112.612",
+            "113.612"
+          ],
+          "y": [
+            "0.012",
+            "1.012",
+            "2.012",
+            "3.012"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "87.612",
+            "113.612"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-10.87320",
+            "3.67320"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -10.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-10.6"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-10.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-10.87320"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 89.4",
+          "x": [
+            "89.4"
+          ],
+          "y": [
+            "3.342600"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 110.6",
+          "x": [
+            "110.6"
+          ],
+          "y": [
+            "3.342600"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_long_strangle": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "LongStrangle Strategy: \n\tUnderlying: TEST @ $105 Long Call European Option\n\tUnderlying: TEST @ $95 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "LongStrangle Strategy: \n\tUnderlying: TEST @ $105 Long Call European Option\n\tUnderlying: TEST @ $95 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "65.5",
+            "66.5",
+            "67.5",
+            "68.5",
+            "69.5",
+            "70.5",
+            "71.5",
+            "72.5",
+            "73.5",
+            "74.5",
+            "75.5",
+            "76.5",
+            "77.5",
+            "78.5",
+            "79.5",
+            "80.5",
+            "81.5",
+            "82.5",
+            "83.5",
+            "84.5",
+            "85.5",
+            "86.5",
+            "87.5",
+            "88.5"
+          ],
+          "y": [
+            "23.0",
+            "22.0",
+            "21.0",
+            "20.0",
+            "19.0",
+            "18.0",
+            "17.0",
+            "16.0",
+            "15.0",
+            "14.0",
+            "13.0",
+            "12.0",
+            "11.0",
+            "10.0",
+            "9.0",
+            "8.0",
+            "7.0",
+            "6.0",
+            "5.0",
+            "4.0",
+            "3.0",
+            "2.0",
+            "1.0",
+            "0.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "89.5",
+            "90.5",
+            "91.5",
+            "92.5",
+            "93.5",
+            "94.5",
+            "95.5",
+            "96.5",
+            "97.5",
+            "98.5",
+            "99.5",
+            "100.5",
+            "101.5",
+            "102.5",
+            "103.5",
+            "104.5",
+            "105.5",
+            "106.5",
+            "107.5",
+            "108.5",
+            "109.5",
+            "110.5",
+            "111.5"
+          ],
+          "y": [
+            "-1.0",
+            "-2.0",
+            "-3.0",
+            "-4.0",
+            "-5.0",
+            "-6.0",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.5",
+            "-6.0",
+            "-5.0",
+            "-4.0",
+            "-3.0",
+            "-2.0",
+            "-1.0",
+            "0.0"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 3",
+          "x": [
+            "112.5",
+            "113.5",
+            "114.5",
+            "115.5",
+            "116.5",
+            "117.5",
+            "118.5",
+            "119.5",
+            "120.5",
+            "121.5",
+            "122.5",
+            "123.5",
+            "124.5",
+            "125.5",
+            "126.5",
+            "127.5",
+            "128.5",
+            "129.5",
+            "130.5",
+            "131.5",
+            "132.5",
+            "133.5",
+            "134.5",
+            "135.5"
+          ],
+          "y": [
+            "1.0",
+            "2.0",
+            "3.0",
+            "4.0",
+            "5.0",
+            "6.0",
+            "7.0",
+            "8.0",
+            "9.0",
+            "10.0",
+            "11.0",
+            "12.0",
+            "13.0",
+            "14.0",
+            "15.0",
+            "16.0",
+            "17.0",
+            "18.0",
+            "19.0",
+            "20.0",
+            "21.0",
+            "22.0",
+            "23.0",
+            "24.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "65.5",
+            "135.5"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.025",
+            "25.525"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -6.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-6.5"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-6.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-8.025"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 88.5",
+          "x": [
+            "88.5"
+          ],
+          "y": [
+            "24.7625"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 111.5",
+          "x": [
+            "111.5"
+          ],
+          "y": [
+            "24.7625"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_poor_mans_covered_call": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "PoorMansCoveredCall Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $90 Long Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "PoorMansCoveredCall Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $90 Long Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "88.20",
+            "89.20",
+            "90.20",
+            "91.20",
+            "92.20",
+            "93.20",
+            "94.20",
+            "95.20",
+            "96.20",
+            "97.20",
+            "98.20",
+            "99.20",
+            "100.20",
+            "101.20",
+            "102.20",
+            "103.20",
+            "104.20",
+            "105.20",
+            "106.20",
+            "107.20",
+            "108.20",
+            "109.20",
+            "110.20",
+            "111.20",
+            "112.20",
+            "113.20"
+          ],
+          "y": [
+            "-15.4",
+            "-15.4",
+            "-15.2",
+            "-14.2",
+            "-13.2",
+            "-12.2",
+            "-11.2",
+            "-10.2",
+            "-9.2",
+            "-8.2",
+            "-7.2",
+            "-6.2",
+            "-5.2",
+            "-4.2",
+            "-3.2",
+            "-2.2",
+            "-1.2",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4",
+            "-0.4"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "88.20",
+            "113.20"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-16.150",
+            "0.350"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -5.40",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-5.4"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-5.40",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-16.150"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 105.4",
+          "x": [
+            "105.4"
+          ],
+          "y": [
+            "-0.0250"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_protective_put": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "Protective Put Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $95 Long Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "Protective Put Strategy:\n\tLong 1 TEST @ 100\n\tUnderlying: TEST @ $95 Long Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "93.10",
+            "94.10",
+            "95.10",
+            "96.10",
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10",
+            "102.10",
+            "103.10"
+          ],
+          "y": [
+            "-8.110",
+            "-8.110",
+            "-8.010",
+            "-7.010",
+            "-6.010",
+            "-5.010",
+            "-4.010",
+            "-3.010",
+            "-2.010",
+            "-1.010",
+            "-0.010"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "104.10",
+            "105.10",
+            "106.10",
+            "107.10",
+            "108.10"
+          ],
+          "y": [
+            "0.990",
+            "1.990",
+            "2.990",
+            "3.990",
+            "4.990"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "93.10",
+            "108.10"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.76500",
+            "5.64500"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -3.11",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-3.110"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-3.11",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-8.76500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 103.11",
+          "x": [
+            "103.11"
+          ],
+          "y": [
+            "5.317500"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_short_butterfly_spread": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "ShortButterflySpread Strategy: \n\tUnderlying: TEST @ $90 Short Call European Option\n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $110 Short Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "ShortButterflySpread Strategy: \n\tUnderlying: TEST @ $90 Short Call European Option\n\tUnderlying: TEST @ $100 Long Call European Option\n\tUnderlying: TEST @ $110 Short Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "88.20",
+            "89.20",
+            "90.20",
+            "91.20",
+            "92.20",
+            "93.20",
+            "94.20",
+            "95.20"
+          ],
+          "y": [
+            "5.2",
+            "5.2",
+            "5.0",
+            "4.0",
+            "3.0",
+            "2.0",
+            "1.0",
+            "0.0"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "96.20",
+            "97.20",
+            "98.20",
+            "99.20",
+            "100.20",
+            "101.20",
+            "102.20",
+            "103.20",
+            "104.20",
+            "105.20",
+            "106.20",
+            "107.20",
+            "108.20",
+            "109.20",
+            "110.20",
+            "111.20",
+            "112.20",
+            "113.20"
+          ],
+          "y": [
+            "-1.0",
+            "-2.0",
+            "-3.0",
+            "-4.0",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-4.8",
+            "-5.0",
+            "-6.0",
+            "-7.0",
+            "-8.0"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "88.20",
+            "113.20"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-8.660",
+            "5.860"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: -4.80",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-4.8"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "-4.80",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "-8.660"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 95.2",
+          "x": [
+            "95.2"
+          ],
+          "y": [
+            "5.5300"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_short_call": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "ShortCall Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "ShortCall Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "98.00",
+            "99.00",
+            "100.00",
+            "101.00",
+            "102.00",
+            "103.00"
+          ],
+          "y": [
+            "3.5",
+            "3.5",
+            "3.5",
+            "2.5",
+            "1.5",
+            "0.5"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "98.00",
+            "103.00"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "0.350",
+            "3.650"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: 3.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "3.5"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "3.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "3.650"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_short_put": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "ShortPut Strategy: \n\tUnderlying: TEST @ $100 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "ShortPut Strategy: \n\tUnderlying: TEST @ $100 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "98.00",
+            "99.00",
+            "100.00",
+            "101.00",
+            "102.00",
+            "103.00"
+          ],
+          "y": [
+            "1.1",
+            "2.1",
+            "3.1",
+            "3.1",
+            "3.1",
+            "3.1"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "98.00",
+            "103.00"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "1.000",
+            "3.200"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: 3.10",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "3.1"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "3.10",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "3.200"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_short_straddle": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "ShortStraddle Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $100 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "ShortStraddle Strategy: \n\tUnderlying: TEST @ $100 Short Call European Option\n\tUnderlying: TEST @ $100 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "91.532",
+            "92.532"
+          ],
+          "y": [
+            "-1.868",
+            "-0.868"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "93.532",
+            "94.532",
+            "95.532",
+            "96.532",
+            "97.532",
+            "98.532",
+            "99.532",
+            "100.532",
+            "101.532",
+            "102.532",
+            "103.532",
+            "104.532",
+            "105.532",
+            "106.532"
+          ],
+          "y": [
+            "0.132",
+            "1.132",
+            "2.132",
+            "3.132",
+            "4.132",
+            "5.132",
+            "6.132",
+            "6.068",
+            "5.068",
+            "4.068",
+            "3.068",
+            "2.068",
+            "1.068",
+            "0.068"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 3",
+          "x": [
+            "107.532",
+            "108.532",
+            "109.532"
+          ],
+          "y": [
+            "-0.932",
+            "-1.932",
+            "-2.932"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "91.532",
+            "109.532"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-3.38520",
+            "6.58520"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: 6.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "6.6"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "6.60",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "6.58520"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 93.4",
+          "x": [
+            "93.4"
+          ],
+          "y": [
+            "6.358600"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 106.6",
+          "x": [
+            "106.6"
+          ],
+          "y": [
+            "6.358600"
+          ]
+        }
+      ]
+    }
+  },
+  "strategy_short_strangle": {
+    "config": {
+      "color_scheme": "default",
+      "height": 900,
+      "legend": [
+        "ShortStrangle Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Short Put European Option"
+      ],
+      "line_style": "solid",
+      "show_legend": false,
+      "title": "ShortStrangle Strategy: \n\tUnderlying: TEST @ $105 Short Call European Option\n\tUnderlying: TEST @ $95 Short Put European Option",
+      "width": 1600,
+      "x_label": "Underlying Price",
+      "y_label": "Profit/Loss",
+      "z_label": null
+    },
+    "data": {
+      "MultiSeries": [
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 1",
+          "x": [
+            "90.0",
+            "91.0",
+            "92.0"
+          ],
+          "y": [
+            "-2.5",
+            "-1.5",
+            "-0.5"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 2",
+          "x": [
+            "93.0",
+            "94.0",
+            "95.0",
+            "96.0",
+            "97.0",
+            "98.0",
+            "99.0",
+            "100.0",
+            "101.0",
+            "102.0",
+            "103.0",
+            "104.0",
+            "105.0",
+            "106.0",
+            "107.0"
+          ],
+          "y": [
+            "0.5",
+            "1.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "2.5",
+            "1.5",
+            "0.5"
+          ]
+        },
+        {
+          "line_color": "#FF0000",
+          "line_width": 2.0,
+          "mode": "lines",
+          "name": "Segment 3",
+          "x": [
+            "108.0",
+            "109.0",
+            "110.0",
+            "111.0"
+          ],
+          "y": [
+            "-0.5",
+            "-1.5",
+            "-2.5",
+            "-3.5"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Break Even",
+          "x": [
+            "90.0",
+            "111.0"
+          ],
+          "y": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "line_color": "#0000FF",
+          "line_width": 1.0,
+          "mode": "lines",
+          "name": "Current Price",
+          "x": [
+            "100",
+            "100"
+          ],
+          "y": [
+            "-3.800",
+            "2.800"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 10.0,
+          "mode": "markers",
+          "name": "Current P/L: 2.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "2.5"
+          ]
+        },
+        {
+          "line_color": "#2ca02c",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "2.50",
+          "x": [
+            "100"
+          ],
+          "y": [
+            "2.800"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 92.5",
+          "x": [
+            "92.5"
+          ],
+          "y": [
+            "2.6500"
+          ]
+        },
+        {
+          "line_color": "#000000",
+          "line_width": 0.0,
+          "mode": "text_labels",
+          "name": "BE: 107.5",
+          "x": [
+            "107.5"
+          ],
+          "y": [
+            "2.6500"
+          ]
+        }
+      ]
+    }
+  },
+  "surface": {
+    "config": {
+      "color_scheme": "default",
+      "height": 720,
+      "legend": null,
+      "line_style": "solid",
+      "show_legend": true,
+      "title": "Graph",
+      "width": 1280,
+      "x_label": null,
+      "y_label": null,
+      "z_label": null
+    },
+    "data": {
+      "GraphSurface": {
+        "name": "Surface",
+        "x": [
+          "0",
+          "0",
+          "1",
+          "1"
+        ],
+        "y": [
+          "0",
+          "1",
+          "0",
+          "1"
+        ],
+        "z": [
+          "0",
+          "1.5",
+          "0.5",
+          "2.25"
+        ]
+      }
+    }
+  }
+}

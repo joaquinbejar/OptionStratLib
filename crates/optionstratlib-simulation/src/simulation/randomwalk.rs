@@ -744,7 +744,7 @@ mod tests_random_walk {
             unreachable!()
         };
 
-        // Test Graph implementation methods
+        // The title the visualization layer charts the walk under.
         assert_eq!(walk.get_title(), "Graph Test");
     }
 

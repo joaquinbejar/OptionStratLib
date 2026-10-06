@@ -44,25 +44,68 @@
 //! `render` for a PNG or SVG without `static_export` returns
 //! [`error::GraphError::Render`] rather than doing nothing.
 //!
+//! ## Adapters
+//!
+//! Every chart of a library type is a `Graph` implementation in this crate.
+//! The orphan rule allows `impl Graph for T` only in the crate of `Graph` or
+//! in the crate of `T`, and no lower crate may depend on this one, so every
+//! adapter lives here: the lower crates name no chart type, and no domain
+//! type is wrapped or copied to chart it.
+//!
+//! | Type | Defining crate | Adapter module | Chart |
+//! | --- | --- | --- | --- |
+//! | `Options`, `Position` | core | `model_impls` | payoff at expiry, split into a positive and a negative series |
+//! | `Curve`, `Vec<Curve>` | math | `curves` | one series per curve |
+//! | `Surface` | math | `surfaces` | one 3D surface |
+//! | `RandomWalk`, `Simulator` | simulation | `simulation` | one price series per walk |
+//! | the 22 concrete strategies | strategies | `strategies` ([`impl_graph_for_payoff_strategy!`]) | profit and loss over the strategy's price range, with the break-even, current-price and P&L markers |
+//! | [`visualization::PlotBuilder`] | visualization | `plot_builder` | the wrapped value's data under the builder's configuration |
+//!
+//! `tests/graph_data_golden_test.rs` pins the data and configuration of
+//! every row against the output of the same adapters before they moved
+//! into this crate.
+//!
+//! ## Charting a strategy
+//!
 //! The strategy contract has no `Graph` supertrait: a strategy is charted
 //! because this crate implements `Graph` for it, so code that renders names
-//! the bound (`T: Strategies + Graph`) and code that does not, never builds
-//! this crate.
+//! the bound (`T: Strategies + Graph`) and code that does not never builds
+//! this crate. The capability this changes is the boxed strategy:
+//! `StrategyRequest::get_strategy` returns a `Box<dyn Strategable>`, which
+//! has no chart. A consumer that renders a strategy built from positions
+//! names the concrete type, through `StrategyConstructor`, or keeps its own
+//! object type with both bounds:
 //!
 //! ```rust
-//! use optionstratlib_core::model::{ExpirationDate, Positive};
+//! use optionstratlib_core::model::{ExpirationDate, Position, Positive};
 //! use optionstratlib_core::pos_or_panic;
-//! use optionstratlib_strategies::strategies::{BullCallSpread, Strategies};
+//! use optionstratlib_strategies::strategies::base::{Positionable, StrategyType};
+//! use optionstratlib_strategies::strategies::{
+//!     BullCallSpread, Strategable, Strategies, StrategyConstructor, StrategyRequest,
+//! };
 //! use optionstratlib_visualization::visualization::{Graph, GraphData};
 //! use rust_decimal::Decimal;
 //!
-//! /// A consumer that renders names the bound itself: `Strategies` has no
-//! /// `Graph` supertrait.
+//! /// A consumer that renders names the bound itself.
 //! fn payoff_series<S: Strategies + Graph>(strategy: &S) -> usize {
 //!     match strategy.graph_data() {
 //!         GraphData::MultiSeries(series) => series.len(),
 //!         GraphData::Series(_) => 1,
 //!         GraphData::GraphSurface(_) => 0,
+//!     }
+//! }
+//!
+//! /// An object type for strategies that can be charted.
+//! trait Chartable: Strategable + Graph {}
+//! impl<T: Strategable + Graph> Chartable for T {}
+//!
+//! /// Builds the strategy a request names, as a chartable object.
+//! fn build(request: &StrategyRequest) -> Result<Box<dyn Chartable>, Box<dyn std::error::Error>> {
+//!     match &request.strategy_type {
+//!         StrategyType::BullCallSpread => {
+//!             Ok(Box::new(BullCallSpread::get_strategy(&request.positions)?))
+//!         }
+//!         other => Err(format!("{other:?} is not charted here").into()),
 //!     }
 //! }
 //!
@@ -89,6 +132,13 @@
 //!     // With `plotly`, the same value renders; `write_html` writes the page.
 //!     #[cfg(feature = "plotly")]
 //!     assert!(!strategy.to_plot().to_json().is_empty());
+//!
+//!     // The same strategy as a request carries it, as positions: built back
+//!     // through the builder, it charts the same.
+//!     let positions: Vec<Position> = strategy.get_positions()?.into_iter().cloned().collect();
+//!     let request = StrategyRequest::new(StrategyType::BullCallSpread, positions);
+//!     let rebuilt = build(&request)?;
+//!     assert_eq!(rebuilt.graph_data(), strategy.graph_data());
 //!     Ok(())
 //! }
 //! ```

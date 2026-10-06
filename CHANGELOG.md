@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`Plottable` has no `Error` type, and the chart data of every graph
+  adapter is pinned** (#543). Graph behaviour has left the lower layers
+  (#542, #658); this finishes M6-02.
+  - `Plottable::Error` is removed. Nothing read it: building a plot cannot
+    fail, and rendering and export return `GraphError` whatever the plotted
+    type, so the `CurveError` / `SurfaceError` it named for `Curve`,
+    `Vec<Curve>` and `Surface` never came out of the plot path. Migration:
+    delete the `type Error = ..;` line from a `Plottable` impl.
+  - A new golden test, `optionstratlib-visualization`'s
+    `tests/graph_data_golden_test.rs`, pins the `graph_data` and
+    `graph_config` of every adapter: `Options`, `Position`, `Curve`,
+    `Vec<Curve>`, `Surface`, `PlotBuilder`, `RandomWalk`, `Simulator` and
+    the 22 concrete strategies. The golden file was generated on `624eeda2`,
+    before #542 moved the adapters out of the facade, and the extracted
+    crate reproduces it byte for byte, so the move changed no point of any
+    chart. The strategies that `StrategyRequest` builds are charted from
+    their positions through `StrategyConstructor`, which is the workflow for
+    rendering a built strategy now that `Strategable` has no `Graph`
+    supertrait. The test adds `serde_json`, already a workspace dependency,
+    as a dev-dependency of the crate.
+  - The crate docs list each adapter with its defining crate, and show the
+    builder-to-chart workflow as a doctest: dispatch on `strategy_type` to
+    the concrete type, or keep a `Box<dyn Chartable>` with
+    `trait Chartable: Strategable + Graph`. The `curves` and `surfaces`
+    module docs no longer describe `plotters`, `Vec<Surface>`, shading
+    helpers or a `SurfaceError` plot path. References in the simulation and
+    strategies crates that still placed `Graph` in the facade now point at
+    `optionstratlib-visualization`.
+
 - **Visualization is its own crate, `optionstratlib-visualization`** (#542).
   `visualization` (the `Graph` contract, `GraphData`, `GraphConfig`,
   `Series2D`, `Surface3D`, styles, `PlotBuilder` / `Plottable`, the Plotly

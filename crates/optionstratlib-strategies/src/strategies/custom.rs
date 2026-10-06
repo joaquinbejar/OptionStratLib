@@ -899,7 +899,8 @@ impl Profit for CustomStrategy {
     }
 }
 
-// Graph trait implementation is provided by the impl_graph_for_payoff_strategy! macro in visualization/strategies.rs
+// `Graph` is implemented in `optionstratlib-visualization`
+// (`visualization::strategies`, through `impl_graph_for_payoff_strategy!`).
 
 impl ProbabilityAnalysis for CustomStrategy {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {

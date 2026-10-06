@@ -1,17 +1,16 @@
-//! This module provides functionality for plotting surfaces using the `plotters` crate.
-//! It supports plotting single surfaces as well as collections of surfaces.
+//! # Surface Visualization Module
 //!
-//! The core of this module revolves around the `Plottable` trait, which is implemented for both
-//! `Surface` and `Vec<Surface>`. This trait provides a common interface for generating plots
-//! with customizable options.
+//! `Graph` and `Plottable` for a [`Surface`]: the surface charts as one
+//! [`Surface3D`] holding the `x`, `y` and `z` coordinates of its points, in
+//! point order.
 //!
-//! The `PlotBuilder` struct is used to configure and build the plots. It offers various methods
-//! to customize plot appearance, such as setting titles, labels, dimensions, and colors.
+//! [`PlotBuilder`] configures the chart (title, axis labels, line style,
+//! colours, legend). With `plotly` it renders to HTML; with `static_export`,
+//! `PlotBuilder::save` writes a PNG.
 //!
-//! The `save` method is used to save the generated plot to a file.
-//!
-//! The module also includes a set of utility functions for applying shading to points on a surface,
-//! aiding in the visualization of 3D surfaces.  Error handling is managed using the `SurfaceError` type.
+//! Building a plot cannot fail. Rendering and export return
+//! [`GraphError`](crate::error::GraphError); no `SurfaceError` comes out of
+//! the plot path.
 //!
 //! # Example Usage
 //!
@@ -50,7 +49,6 @@
 //! ```
 //!
 use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable, Surface3D};
-use optionstratlib_math::error::SurfaceError;
 use optionstratlib_math::surfaces::Surface;
 
 /// `Graph` adapter for a [`Surface`]; lives in `visualization` because the
@@ -69,8 +67,6 @@ impl Graph for Surface {
 
 /// Plottable implementation for single Surface
 impl Plottable for Surface {
-    type Error = SurfaceError;
-
     fn plot(&self) -> PlotBuilder<Self>
     where
         Self: Sized,
@@ -86,7 +82,6 @@ impl Plottable for Surface {
 mod tests_extended {
     use super::*;
     use crate::visualization::{GraphConfig, GraphData, Series2D, TraceMode};
-    use optionstratlib_math::error::CurveError;
     use optionstratlib_math::surfaces::Point3D;
     use rust_decimal_macros::dec;
     use std::any::{Any, TypeId};
@@ -147,8 +142,6 @@ mod tests_extended {
     }
 
     impl Plottable for MockChart {
-        type Error = CurveError;
-
         fn plot(&self) -> PlotBuilder<Self>
         where
             Self: Sized + Graph,

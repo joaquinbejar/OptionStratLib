@@ -2,8 +2,9 @@
 //!
 //! These tests lived in `tests/unit/simulation/model_and_randomwalk_tests.rs`,
 //! which no `mod.rs` declared, so they never compiled. They are revived here
-//! against the current API; the `Graph` part moved to the facade's
-//! visualization tests, where `Graph` lives. One assertion was wrong from the
+//! against the current API; the `Graph` part moved to
+//! `optionstratlib-visualization` (`tests/visualization/simulation_graph_test.rs`),
+//! where `Graph` lives. One assertion was wrong from the
 //! start: it expected `Simulator`'s `Display` to start with
 //! `"Simulator Title: SIM"`, a string that only ever appeared in this test
 //! (commit 341379aa); `Display` has always printed the bare title on the

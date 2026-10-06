@@ -22,7 +22,8 @@
 //! (#534). The probability kernel, SPAN margin and P&L primitive properties
 //! of that file live in `optionstratlib-analytics`
 //! (`tests/panic_freedom_test.rs`); the price-range walk, which also draws the
-//! payoff chart, stays in the facade beside `Graph`.
+//! payoff chart, lives in `optionstratlib-visualization`
+//! (`tests/strategies_panic_freedom_test.rs`) beside `Graph`.
 
 use optionstratlib_analytics::pnl::PnLCalculator;
 use optionstratlib_core::model::types::Action;
