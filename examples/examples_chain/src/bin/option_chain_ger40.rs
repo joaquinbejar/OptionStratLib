@@ -26,13 +26,14 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         Positive::ZERO, // call_strike
         Positive::ZERO, // put_strike
         ExpirationDate::Days(pos_or_panic!(0.2)),
-        Positive::ZERO,      // implied_volatility
-        Positive::ZERO,      // implied_volatility
-        Decimal::ZERO,       // risk_free_rate
-        Positive::ZERO,      // dividend_yield
-        Positive::ONE,       // quantity
-        Positive::ZERO,      // premium_short_call
-        Positive::ZERO,      // premium_short_put
+        Positive::ZERO, // implied_volatility
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        Positive::ONE,  // quantity
+        // A short leg needs a premium: `new` validates the seed since #696.
+        Positive::ONE,       // premium_short_call
+        Positive::ONE,       // premium_short_put
         pos_or_panic!(0.10), // open_fee_short_call
         pos_or_panic!(0.10), // close_fee_short_call
         pos_or_panic!(0.10), // open_fee_short_put

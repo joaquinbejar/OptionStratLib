@@ -136,6 +136,11 @@ impl BearCallSpread {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the short strike is not below the long
+    /// strike, or a leg fails `Position::validate` (for example a short call
+    /// with no premium).
+    ///
     /// Returns `StrategyError` if either freshly-constructed leg cannot be
     /// added to the strategy or if the break-even calculation fails. In
     /// practice these branches are unreachable for a freshly-built bear
@@ -226,7 +231,12 @@ impl BearCallSpread {
         );
         strategy.add_position(&long_call)?;
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BearCallSpread,
+                "the legs built by `new` fail validation",
+            ));
+        }
 
         strategy.update_break_even_points()?;
         Ok(strategy)
@@ -324,7 +334,12 @@ impl StrategyConstructor for BearCallSpread {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BearCallSpread,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
@@ -1520,9 +1535,15 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
-        .unwrap();
-        assert!(!spread.validate());
+        );
+        // `new` rejects the legs since #696 instead of returning them unvalidated.
+        assert!(matches!(
+            spread,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BearCallSpread,
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -1543,9 +1564,15 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
-        .unwrap();
-        assert!(!spread.validate());
+        );
+        // `new` rejects the legs since #696 instead of returning them unvalidated.
+        assert!(matches!(
+            spread,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BearCallSpread,
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -1606,9 +1633,15 @@ mod tests_bear_call_spread_validable {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
-        .unwrap();
-        assert!(!spread.validate());
+        );
+        // `new` rejects the legs since #696 instead of returning them unvalidated.
+        assert!(matches!(
+            spread,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BearCallSpread,
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -2354,13 +2387,17 @@ mod tests_delta {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
-    fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
+    fn get_strategy(short_strike: Positive, long_strike: Positive) -> BearCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        BearCallSpread::new(
+        let mut strategy = BearCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // short_strike placeholder
+            Positive::TWO,    // long_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2373,7 +2410,11 @@ mod tests_delta {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.short_call.option.strike_price = short_strike;
+        strategy.long_call.option.strike_price = long_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]
@@ -2491,6 +2532,7 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::strategies::base::BreakEvenable;
     use crate::strategies::bear_call_spread::BearCallSpread;
     use crate::strategies::delta_neutral::DeltaNeutrality;
     use optionstratlib_analytics::pnl::DeltaAdjustment;
@@ -2506,13 +2548,17 @@ mod tests_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
-    fn get_strategy(long_strike: Positive, short_strike: Positive) -> BearCallSpread {
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
+    fn get_strategy(short_strike: Positive, long_strike: Positive) -> BearCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        BearCallSpread::new(
+        let mut strategy = BearCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // short_strike placeholder
+            Positive::TWO,    // long_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2525,7 +2571,11 @@ mod tests_delta_size {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.short_call.option.strike_price = short_strike;
+        strategy.long_call.option.strike_price = long_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]

@@ -12,12 +12,13 @@ fn main() -> Result<(), Error> {
         underlying_price, // underlying_price
         Positive::ZERO,   // strike
         ExpirationDate::Days(pos_or_panic!(5.0)),
-        Positive::ZERO,      // implied_volatility
-        Decimal::ZERO,       // risk_free_rate
-        Positive::ZERO,      // dividend_yield
-        Positive::ONE,       // quantity
-        Positive::ZERO,      // premium_short_call
-        Positive::ZERO,      // premium_short_put
+        Positive::ZERO, // implied_volatility
+        Decimal::ZERO,  // risk_free_rate
+        Positive::ZERO, // dividend_yield
+        Positive::ONE,  // quantity
+        // A short leg needs a premium: `new` validates the seed since #696.
+        Positive::ONE,       // premium_short_call
+        Positive::ONE,       // premium_short_put
         pos_or_panic!(0.82), // open_fee_short_call
         pos_or_panic!(0.82), // close_fee_short_call
         pos_or_panic!(0.82), // open_fee_short_put

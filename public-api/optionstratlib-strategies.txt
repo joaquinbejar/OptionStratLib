@@ -24,6 +24,9 @@ pub optionstratlib_strategies::error::strategies::StrategyError::BreakEvenError(
 pub optionstratlib_strategies::error::strategies::StrategyError::EmptyCollection
 pub optionstratlib_strategies::error::strategies::StrategyError::EmptyCollection::context: alloc::string::String
 pub optionstratlib_strategies::error::strategies::StrategyError::GreeksError(optionstratlib_pricing::error::greeks::GreeksError)
+pub optionstratlib_strategies::error::strategies::StrategyError::InvalidStrategy
+pub optionstratlib_strategies::error::strategies::StrategyError::InvalidStrategy::reason: alloc::string::String
+pub optionstratlib_strategies::error::strategies::StrategyError::InvalidStrategy::strategy: optionstratlib_strategies::strategies::base::StrategyType
 pub optionstratlib_strategies::error::strategies::StrategyError::MissingGreek
 pub optionstratlib_strategies::error::strategies::StrategyError::MissingGreek::name: &'static str
 pub optionstratlib_strategies::error::strategies::StrategyError::NotImplemented
@@ -36,6 +39,7 @@ pub optionstratlib_strategies::error::strategies::StrategyError::ProfitLossError
 impl optionstratlib_strategies::error::strategies::StrategyError
 pub fn optionstratlib_strategies::error::strategies::StrategyError::empty_collection(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::invalid_parameters(&str, &str) -> Self
+pub fn optionstratlib_strategies::error::strategies::StrategyError::invalid_strategy(optionstratlib_strategies::strategies::base::StrategyType, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::missing_greek(&'static str) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::numeric_conversion(f64) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self
@@ -59,6 +63,9 @@ pub optionstratlib_strategies::error::StrategyError::BreakEvenError(optionstratl
 pub optionstratlib_strategies::error::StrategyError::EmptyCollection
 pub optionstratlib_strategies::error::StrategyError::EmptyCollection::context: alloc::string::String
 pub optionstratlib_strategies::error::StrategyError::GreeksError(optionstratlib_pricing::error::greeks::GreeksError)
+pub optionstratlib_strategies::error::StrategyError::InvalidStrategy
+pub optionstratlib_strategies::error::StrategyError::InvalidStrategy::reason: alloc::string::String
+pub optionstratlib_strategies::error::StrategyError::InvalidStrategy::strategy: optionstratlib_strategies::strategies::base::StrategyType
 pub optionstratlib_strategies::error::StrategyError::MissingGreek
 pub optionstratlib_strategies::error::StrategyError::MissingGreek::name: &'static str
 pub optionstratlib_strategies::error::StrategyError::NotImplemented
@@ -71,6 +78,7 @@ pub optionstratlib_strategies::error::StrategyError::ProfitLossError(optionstrat
 impl optionstratlib_strategies::error::strategies::StrategyError
 pub fn optionstratlib_strategies::error::strategies::StrategyError::empty_collection(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::invalid_parameters(&str, &str) -> Self
+pub fn optionstratlib_strategies::error::strategies::StrategyError::invalid_strategy(optionstratlib_strategies::strategies::base::StrategyType, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::missing_greek(&'static str) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::numeric_conversion(f64) -> Self
 pub fn optionstratlib_strategies::error::strategies::StrategyError::operation_not_supported(&str, &str) -> Self

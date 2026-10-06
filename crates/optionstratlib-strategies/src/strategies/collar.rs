@@ -187,6 +187,10 @@ impl Collar {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the put strike is not below the call
+    /// strike.
+    ///
     /// Returns `StrategyError` if the break-even calculation fails. In
     /// practice this branch is unreachable for a freshly-built collar and
     /// is surfaced only to keep the constructor panic-free.
@@ -295,7 +299,12 @@ impl Collar {
             short_call,
         };
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::Collar,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)

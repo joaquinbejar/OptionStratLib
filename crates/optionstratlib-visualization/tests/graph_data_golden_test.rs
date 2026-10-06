@@ -7,6 +7,11 @@
 //! adapters still lived in the facade. Every field must match byte for byte:
 //! moving an adapter must not change one point of a chart.
 //!
+//! Two entries were regenerated on purpose since: `strategy_bull_put_spread`
+//! and `strategy_bear_put_spread` (#696), whose builders used to take each
+//! other's legs. The golden pinned a bull put spread with a bear put spread's
+//! payoff and the reverse; both now chart the textbook legs.
+//!
 //! The strategies that `StrategyRequest` can build are built that way, from
 //! their positions, then charted through the concrete type: the
 //! builder-to-visualization workflow left by the removal of the `Graph`
@@ -201,20 +206,22 @@ fn requests() -> Result<Vec<(&'static str, StrategyRequest)>, Box<dyn Error>> {
                 leg(Long, Call, dec!(105), dec!(2.5))?,
             ],
         ),
+        // Textbook put verticals since #696: the bull put spread is long the
+        // lower strike and short the higher, the bear put spread the reverse.
         (
             "bull_put_spread",
             StrategyType::BullPutSpread,
             vec![
-                leg(Short, Put, dec!(95), dec!(2.5))?,
-                leg(Long, Put, dec!(105), dec!(7.5))?,
+                leg(Long, Put, dec!(95), dec!(2.5))?,
+                leg(Short, Put, dec!(105), dec!(7.5))?,
             ],
         ),
         (
             "bear_put_spread",
             StrategyType::BearPutSpread,
             vec![
-                leg(Long, Put, dec!(95), dec!(2.5))?,
-                leg(Short, Put, dec!(105), dec!(7.5))?,
+                leg(Short, Put, dec!(95), dec!(2.5))?,
+                leg(Long, Put, dec!(105), dec!(7.5))?,
             ],
         ),
         (

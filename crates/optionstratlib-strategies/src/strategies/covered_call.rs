@@ -161,6 +161,9 @@ impl CoveredCall {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the legs fail `CoveredCall::validate`.
+    ///
     /// Returns `StrategyError` if the break-even calculation fails. In
     /// practice this branch is unreachable for a freshly-built covered
     /// call and is surfaced only to keep the constructor panic-free.
@@ -238,7 +241,12 @@ impl CoveredCall {
             short_call,
         };
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::CoveredCall,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
@@ -355,7 +363,13 @@ impl CoveredCall {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let premium_received = self.short_call.premium * self.short_call.option.quantity;
+        // Checked: a premium and a contract count near the top of the
+        // `Positive` range overflow, and the struct's public fields let such a
+        // leg in without passing `new` (#696).
+        let premium_received = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?;
         let total_fees = self
             .spot_leg
             .open_fee
@@ -401,7 +415,13 @@ impl CoveredCall {
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        let premium_received = self.short_call.premium * self.short_call.option.quantity;
+        // Checked: a premium and a contract count near the top of the
+        // `Positive` range overflow, and the struct's public fields let such a
+        // leg in without passing `new` (#696).
+        let premium_received = self
+            .short_call
+            .premium
+            .checked_mul(&self.short_call.option.quantity)?;
         let total_fees = self
             .spot_leg
             .open_fee
@@ -998,5 +1018,18 @@ mod tests {
     fn test_quantity() {
         let cc = create_test_covered_call();
         assert_eq!(cc.quantity(), Positive::HUNDRED);
+    }
+
+    /// A short call whose premium times its contract count leaves the
+    /// `Positive` range reports the overflow instead of aborting. `new` would
+    /// not build it, but the public fields can; the panic-freedom property
+    /// found this once #696 drove its rejected cases through them.
+    #[test]
+    fn test_covered_call_premium_overflow_reports_error() {
+        let mut cc = create_test_covered_call();
+        cc.short_call.premium = Positive::MAX;
+        cc.short_call.option.quantity = pos_or_panic!(10000.0);
+        assert!(cc.max_profit_potential().is_err());
+        assert!(cc.max_loss_potential().is_err());
     }
 }

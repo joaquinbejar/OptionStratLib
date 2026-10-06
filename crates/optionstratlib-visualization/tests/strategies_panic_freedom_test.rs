@@ -16,8 +16,10 @@
 
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::{OptionStyle, OptionType, Options, Position, Side};
+use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::BullCallSpread;
-use optionstratlib_strategies::strategies::base::Strategies;
+use optionstratlib_strategies::strategies::base::{BreakEvenable, Positionable, Strategies};
 use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
 use optionstratlib_visualization::visualization::Graph;
 use proptest::prelude::*;
@@ -106,16 +108,47 @@ proptest! {
         ],
         expiration in extreme_expiration(),
     ) {
-        if let Ok(strategy) = BullCallSpread::new(
+        let strategy = match BullCallSpread::new(
             "PROP".to_string(), underlying, long_strike, short_strike, expiration,
             volatility, dec!(0.05), Positive::ZERO, quantity, premium, premium,
             Positive::ZERO, Positive::ZERO, Positive::ZERO, Positive::ZERO,
         ) {
-            let _ = strategy.get_best_range_to_show(step);
-            let _ = strategy.graph_data();
-            let _ = strategy.expected_value(None, None);
-            let _ = strategy.analyze_probabilities(None, None);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                // Since #696 `new` rejects the legs that fail `validate`
+                // (equal or inverted strikes, a short leg with no premium).
+                // The public fields still admit them, so the rejected case is
+                // assembled by hand and walked all the same.
+                prop_assert!(
+                    matches!(
+                        error,
+                        StrategyError::InvalidStrategy { .. } | StrategyError::OperationError(_)
+                    ),
+                    "unexpected error: {error}"
+                );
+                let leg = |side: Side, strike: Positive| {
+                    let strike = if strike == Positive::ZERO { underlying } else { strike };
+                    Position::new(
+                        Options::new(
+                            OptionType::European, side, "PROP".to_string(), strike,
+                            expiration, volatility, quantity, underlying, dec!(0.05),
+                            OptionStyle::Call, Positive::ZERO, None,
+                        ),
+                        premium, chrono::Utc::now(), Positive::ZERO, Positive::ZERO,
+                        None, None,
+                    )
+                };
+                let mut strategy = BullCallSpread::default();
+                let _ = strategy.add_position(&leg(Side::Long, long_strike));
+                let _ = strategy.add_position(&leg(Side::Short, short_strike));
+                let _ = strategy.update_break_even_points();
+                strategy
+            }
+        };
+        let _ = strategy.get_best_range_to_show(step);
+        let _ = strategy.graph_data();
+        let _ = strategy.expected_value(None, None);
+        let _ = strategy.analyze_probabilities(None, None);
     }
 
 }

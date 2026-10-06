@@ -69,6 +69,7 @@
 //! Provides `StrategyResult<T>` for convenient error handling in strategy operations.
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **strategies**. Owns `StrategyError`, `BreakEvenErrorKind`, `ProfitLossErrorKind`.
+use crate::strategies::base::StrategyType;
 use optionstratlib_analytics::error::probability::{
     ProbabilityCalculationErrorKind, ProbabilityError,
 };
@@ -161,6 +162,21 @@ pub enum StrategyError {
     EmptyCollection {
         /// Description of where the empty collection was encountered.
         context: String,
+    },
+
+    /// A strategy was assembled but its legs fail the strategy's own
+    /// `Validable::validate` check.
+    ///
+    /// Raised by the strategy constructors (`new`) and by
+    /// `StrategyConstructor::get_strategy` instead of returning a strategy
+    /// whose legs do not form the named strategy: an inverted vertical, a
+    /// short leg with no premium, legs with mismatched strikes, and so on.
+    #[error("invalid {strategy} strategy: {reason}")]
+    InvalidStrategy {
+        /// The strategy whose validation failed.
+        strategy: StrategyType,
+        /// Where the validation failed, for example the constructor name.
+        reason: String,
     },
 }
 
@@ -404,6 +420,22 @@ impl StrategyError {
         StrategyError::MissingGreek { name }
     }
 
+    /// Builds an `InvalidStrategy` error for a strategy whose legs fail its
+    /// own validation.
+    ///
+    /// # Errors
+    ///
+    /// This is an error constructor — it always returns the variant.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn invalid_strategy(strategy: StrategyType, reason: impl Into<String>) -> Self {
+        StrategyError::InvalidStrategy {
+            strategy,
+            reason: reason.into(),
+        }
+    }
+
     /// Builds an `EmptyCollection` error for an unexpectedly empty collection.
     ///
     /// # Errors
@@ -540,6 +572,10 @@ impl From<StrategyError> for ProbabilityError {
             StrategyError::EmptyCollection { context } => {
                 reason(format!("empty collection: {context}"))
             }
+            StrategyError::InvalidStrategy {
+                strategy,
+                reason: r,
+            } => reason(format!("invalid {strategy} strategy: {r}")),
         }
     }
 }

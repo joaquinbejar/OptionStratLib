@@ -17,9 +17,11 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = ShortStrangle::new(
         "CL".to_string(),
-        underlying_price,       // underlying_price
-        pos_or_panic!(24100.0), // call_strike
-        pos_or_panic!(24300.0), // put_strike
+        underlying_price, // underlying_price
+        // Seed legs, replaced by the optimizer; `new` validates them since
+        // #696, so the call strike sits above the put strike.
+        pos_or_panic!(24300.0), // call_strike
+        pos_or_panic!(24100.0), // put_strike
         ExpirationDate::Days(pos_or_panic!(45.0)),
         pos_or_panic!(0.3745), // implied_volatility
         pos_or_panic!(0.3745), // implied_volatility

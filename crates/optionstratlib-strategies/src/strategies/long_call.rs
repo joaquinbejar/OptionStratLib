@@ -104,6 +104,10 @@ impl LongCall {
     /// An initialized instance of `LongCall` strategy configured with the provided parameters.
     ///
     /// # Errors
+    ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the leg fails `Position::validate`.
+    ///
     /// Returns `StrategyError` if the freshly-constructed long call leg
     /// cannot be added to the strategy. In practice this branch is
     /// unreachable for a freshly-built single-leg strategy and is surfaced
@@ -155,6 +159,12 @@ impl LongCall {
         );
         strategy.add_position(&long_call)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongCall,
+                "the legs built by `new` fail validation",
+            ));
+        }
         Ok(strategy)
     }
 }

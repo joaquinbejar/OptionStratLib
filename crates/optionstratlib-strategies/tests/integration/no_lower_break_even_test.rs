@@ -33,7 +33,9 @@ fn test_bear_put_spread_profit_area_with_no_lower_break_even() {
         Positive::ZERO,
         Positive::ONE,
         pos_or_panic!(50.0),
-        Positive::ZERO,
+        // A short leg needs a premium to pass `validate`, which `new`
+        // enforces since #696; the 49.00 debit still dwarfs the strike.
+        Positive::ONE,
         Positive::ZERO,
         Positive::ZERO,
         Positive::ZERO,

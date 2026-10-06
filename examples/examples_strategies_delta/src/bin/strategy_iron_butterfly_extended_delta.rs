@@ -19,9 +19,10 @@ fn main() -> Result<(), Error> {
     let strategy = IronButterfly::new(
         "SP500".to_string(),
         underlying_price,
-        pos_or_panic!(5800.0),
-        pos_or_panic!(5750.0),
-        pos_or_panic!(5850.0),
+        // Wings outside the body (#696): long call above, long put below.
+        pos_or_panic!(5800.0), // short_strike
+        pos_or_panic!(5850.0), // long_call_strike
+        pos_or_panic!(5750.0), // long_put_strike
         ExpirationDate::Days(pos_or_panic!(60.0)),
         pos_or_panic!(0.18),
         dec!(0.05),

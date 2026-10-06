@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 93f2873971866b3e819518817eba551eb65d669fac7e365b73173ebf5cca7f3a # shrinks to underlying = 0, put_strike = 0, call_strike = 0, volatility = 0, quantity = 1000000, premium = 79228162514264337593543950335, fee = 0, rate = 0, expiration = Days(0), probe = 0

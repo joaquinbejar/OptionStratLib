@@ -110,6 +110,11 @@ impl ShortPut {
     /// A new instance of `ShortPut` containing the initialized short put position.
     ///
     /// # Errors
+    ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the leg fails `Position::validate` (for
+    /// example no premium).
+    ///
     /// Returns `StrategyError` if the freshly-constructed short put leg
     /// cannot be added to the strategy. In practice this branch is
     /// unreachable for a freshly-built single-leg strategy and is surfaced
@@ -157,6 +162,12 @@ impl ShortPut {
         );
         strategy.add_position(&short_put)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ShortPut,
+                "the legs built by `new` fail validation",
+            ));
+        }
         Ok(strategy)
     }
 }

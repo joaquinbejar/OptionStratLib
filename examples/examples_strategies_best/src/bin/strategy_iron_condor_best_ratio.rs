@@ -11,19 +11,21 @@ fn main() -> Result<(), Error> {
     let mut strategy = IronCondor::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        Positive::ZERO,   // short_call_strike
-        Positive::ZERO,   // short_put_strike
-        Positive::ZERO,   // long_call_strike
-        Positive::ZERO,   // long_put_strike
+        // Seed legs: `new` validates them since #696, so they must form the
+        // strategy; the optimizer below replaces them with the chain's best.
+        pos_or_panic!(5850.0), // short_call_strike
+        pos_or_panic!(5750.0), // short_put_strike
+        pos_or_panic!(5900.0), // long_call_strike
+        pos_or_panic!(5700.0), // long_put_strike
         ExpirationDate::Days(pos_or_panic!(5.0)),
         Positive::ZERO, // implied_volatility
         Decimal::ZERO,  // risk_free_rate
         Positive::ZERO, // dividend_yield
         Positive::ONE,  // quantity
-        Positive::ZERO, // premium_short_call
-        Positive::ZERO, // premium_short_put
-        Positive::ZERO, // premium_long_call
-        Positive::ZERO, // premium_long_put
+        Positive::ONE,  // premium_short_call
+        Positive::ONE,  // premium_short_put
+        Positive::ONE,  // premium_long_call
+        Positive::ONE,  // premium_long_put
         Positive::ONE,  // open_fee
         Positive::ONE,  // close_fee
     )?;

@@ -22,3 +22,4 @@ mod protective_put_test;
 mod short_call_test;
 mod short_put_test;
 mod simple;
+mod validated_builders_test;

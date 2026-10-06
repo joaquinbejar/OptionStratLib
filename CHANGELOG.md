@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The put spread builders take textbook legs, and every strategy
+  constructor and builder returns `StrategyError::InvalidStrategy` instead
+  of a strategy that fails its own `validate()`, except the three butterfly
+  builders deferred to #706** (#696).
+  - `BullPutSpread::get_strategy` now requires the long put at the lower
+    strike and the short put at the higher one (a credit spread), and
+    `BearPutSpread::get_strategy` the reverse (a debit spread). Each used to
+    require the other's legs, so it built the other strategy under its own
+    name, and a correctly built spread passed by position was rejected. A
+    `StrategyRequest` for either type now charts and prices the textbook
+    payoff: on the pinned 95/105 golden request the bull put break-even
+    moves from 98 to 102 and the bear put one from 102 to 98, and the
+    `test_strategy_{bull,bear}_put_spread` Greeks flip sign. Migration: send
+    long 95 / short 105 for a bull put spread and short 95 / long 105 for a
+    bear put spread; the inverted legs are now an `OperationError`.
+  - These now return the new `StrategyError::InvalidStrategy { strategy,
+    reason }` (helper: `StrategyError::invalid_strategy`) when the strategy
+    they assembled fails `validate()`. Most of them used to call
+    `validate()` and drop the answer; the rest did not call it at all.
+    - `new` on `BullPutSpread`, `BearPutSpread`, `BullCallSpread`,
+      `BearCallSpread`, `LongButterflySpread`, `ShortButterflySpread`,
+      `IronCondor`, `IronButterfly`, `LongStraddle`, `ShortStraddle`,
+      `LongStrangle`, `ShortStrangle`, `PoorMansCoveredCall`, `Collar`,
+      `CoveredCall`, `ProtectivePut`, `LongCall`, `ShortPut` and
+      `CustomStrategy` (and the crate-private `new` of `LongPut` and
+      `ShortCall`).
+    - `StrategyConstructor::get_strategy` on `BullPutSpread`,
+      `BearPutSpread`, `BullCallSpread`, `BearCallSpread`, `IronCondor`,
+      `IronButterfly`, `LongStraddle`, `ShortStraddle`, `LongStrangle`,
+      `ShortStrangle`, `PoorMansCoveredCall` and `CustomStrategy` (through
+      its `new`). The single legs have no builder: theirs returns
+      `OperationError` as before.
+  - Three exceptions, deferred to #706, which settles the butterfly
+    convention: `LongButterflySpread::get_strategy`,
+    `ShortButterflySpread::get_strategy` and `CallButterfly` (`new` and
+    `get_strategy`). The two spread builders accept the same quantity on
+    every leg, while `new` and `validate` require a doubled body (1/2/1);
+    `CallButterfly::get_strategy` takes short low / long middle / short
+    high, while its `new` and `validate` use long low / short middle / short
+    high, and the textbook call butterfly is long low / two short middle /
+    long high. Enforcing `validate` would reject inputs these builders
+    accept today and move the `call_butterfly` golden entry, so the two
+    builders log a `WARN` naming #706 instead, and `CallButterfly::new`
+    does not validate yet.
+  - Migration. These inputs used to build and are now rejected:
+    - by the strategy's own checks: inverted or equal strikes, including
+      both strikes left at zero so that they default to the spot (a
+      vertical, a strangle, a collar with the put at or above the call, an
+      iron condor or iron butterfly whose wings are not outside the body);
+    - by `Position::validate`: a short leg with a zero premium;
+    - by `Options::validate`: a zero quantity, a zero underlying price, an
+      empty underlying symbol and a zero strike. A negative risk-free rate
+      is not among them: #709 allows it.
+
+    A seed for `get_best_area` / `get_best_ratio` must therefore be a valid
+    strategy: give it ordered strikes and a non-zero short premium instead
+    of zeros (the optimizer replaces both). Match
+    `StrategyError::InvalidStrategy` where a caller relied on getting an
+    invalid strategy back. `StrategyError` is exhaustive, so a `match` on it
+    needs the new arm.
+  - `CoveredCall::max_profit_potential` and `max_loss_potential` multiplied
+    the call premium by its contract count with the unchecked operator. A
+    leg set that `new` rejects but the public fields admit overflowed it
+    and aborted; both report the overflow now. The panic-freedom properties
+    found it once they started driving the rejected cases through the
+    public fields instead of skipping them.
+  - The `strategy_bull_put_spread` and `strategy_bear_put_spread` entries of
+    the visualization golden file are regenerated on purpose; every other
+    entry is unchanged.
+
 - **`Plottable` has no `Error` type, and the chart data of every graph
   adapter is pinned** (#543). Graph behaviour has left the lower layers
   (#542, #658); this finishes M6-02.

@@ -182,6 +182,11 @@ impl IronCondor {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the strikes are not ordered long put <=
+    /// short put <= short call <= long call, or a leg fails
+    /// `Position::validate`.
+    ///
     /// Returns `StrategyError` if any freshly-constructed leg cannot be added
     /// to the strategy or if the break-even calculation fails. In practice
     /// these branches are unreachable for a freshly-built iron condor and
@@ -322,6 +327,12 @@ impl IronCondor {
         );
         strategy.add_position(&long_put)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::IronCondor,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
         Ok(strategy)
     }
@@ -450,7 +461,12 @@ impl StrategyConstructor for IronCondor {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::IronCondor,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
