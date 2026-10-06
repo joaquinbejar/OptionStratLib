@@ -739,13 +739,17 @@
 //!         +suggest_delta_adjustments()
 //!     }
 //!
-//!     Strategable --|> BasicAble
-//!     Strategable --|> Positionable
 //!     Strategable --|> Strategies
-//!     Strategable --|> BreakEvenable
+//!     Strategable --|> StrategyConstructor
 //!     Strategable --|> Profit
+//!     Strategable --|> ProbabilityAnalysis
 //!     Strategable --|> Greeks
 //!     Strategable --|> DeltaNeutrality
+//!     Strategable --|> PnLCalculator
+//!     Strategies --|> Validable
+//!     Strategies --|> Positionable
+//!     Strategies --|> BreakEvenable
+//!     Strategies --|> BasicAble
 //! ```
 //!
 //! ## Metrics Framework
