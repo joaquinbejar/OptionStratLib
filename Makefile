@@ -169,6 +169,34 @@ tree-consumer-analytics-only:
 	@python3 scripts/check_fixtures.py analytics-only
 	@echo "all features: $$(cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
+# The simulation-only and full-backtest consumers (#540): simulation with no
+# market, strategy or backtest crate, and a strategy backtest on the
+# component crates without the facade. `test-*` runs each with no features
+# and with all, `tree-*` prints and asserts its graph.
+.PHONY: test-consumer-simulation-only
+test-consumer-simulation-only:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo clippy --manifest-path fixtures/consumers/simulation-only/Cargo.toml --all-targets --all-features -- -D warnings
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo test --manifest-path fixtures/consumers/simulation-only/Cargo.toml --no-default-features
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo test --manifest-path fixtures/consumers/simulation-only/Cargo.toml --all-features
+
+.PHONY: tree-consumer-simulation-only
+tree-consumer-simulation-only:
+	cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py simulation-only
+	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
+
+.PHONY: test-consumer-full-backtest
+test-consumer-full-backtest:
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo clippy --manifest-path fixtures/consumers/full-backtest/Cargo.toml --all-targets --all-features -- -D warnings
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo test --manifest-path fixtures/consumers/full-backtest/Cargo.toml --no-default-features
+	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo test --manifest-path fixtures/consumers/full-backtest/Cargo.toml --all-features
+
+.PHONY: tree-consumer-full-backtest
+tree-consumer-full-backtest:
+	cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py full-backtest
+	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
+
 # The market crate with no features and with only `synthetic` (#537,
 # ADR-0003): minimal market resolves no simulation crate, and `synthetic`
 # adds exactly that one.

@@ -153,9 +153,11 @@ exclude = [
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-pricing",
     "fixtures/consumers/facade-strategies",
+    "fixtures/consumers/full-backtest",
     "fixtures/consumers/market-minimal",
     "fixtures/consumers/market-synthetic",
     "fixtures/consumers/pricing-only",
+    "fixtures/consumers/simulation-only",
 ]
 members = [
     "crates/optionstratlib-core",

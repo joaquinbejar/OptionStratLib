@@ -678,6 +678,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Simulation-only and full-backtest consumer fixtures** (#540).
+  `fixtures/consumers/simulation-only` depends on core and simulation alone:
+  it replays historical walks, evaluates them with its own `PathEvaluator`
+  through `evaluate_paths`, checks `PathStatistics`, and checks that repeated
+  runs are identical; its graph excludes market, strategies, backtest,
+  visualization, `prettytable-rs` and `indicatif`.
+  `fixtures/consumers/full-backtest` declares core, simulation, strategies
+  and backtest explicitly, with no facade, and backtests a long call over a
+  rising and a falling replayed path, checking the report against the
+  figures the backtest crate's golden regression pins (+14 and -6 per walk).
+  Historical walks replay their prices, so both are deterministic. `make
+  {test,tree}-consumer-simulation-only` and
+  `{test,tree}-consumer-full-backtest` run them with no features and with all
+  features, and the Components CI job runs them from a fresh target
+  directory. Measured with the M0 method on commit 6ef94913 (rustc 1.99.0,
+  Apple M5 Max; `cargo fetch`, then three clean `cargo check` runs with no
+  features from an emptied target and build directory): simulation-only 68
+  distinct packages (69 entries, `syn` twice), 5.79 / 5.82 / 5.93 s (median 5.82 s); full-backtest 80
+  distinct packages (81 entries), 7.64 / 7.49 / 7.55 s (median 7.55 s); the same package
+  counts with all features. The machine and toolchain differ from the M0
+  baseline (BASELINE.md). Fixture lockfiles are not committed, so the
+  counts are recorded, not asserted (ADR-0004 section 3).
+
 - **`decimal_to_f64_correctly_rounded`** in
   `optionstratlib_core::model::decimal` (#656): converts a `Decimal` to the
   nearest `f64` by parsing its exact digits from a stack buffer, with no heap
