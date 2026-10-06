@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`Strategy::max_profit` and `Strategy::max_loss` are `Option<Positive>`**
+  (#661), not `Option<f64>`: they are monetary amounts, and the public
+  boundary carries them as validated non-negative values like the typed
+  accessors `get_max_profit` / `get_max_loss` already did. Build them with
+  `Positive::new(x)` / `Positive::new_decimal(d)` (both return
+  `Result<Positive, PositiveError>`) or `pos_or_panic!(x)`. `Display` still
+  rounds them to cents, half to even, as the `f64` fields printed
+  (`Max Profit: $11.00` for 10.999); `Debug` prints them like the other
+  `Positive` fields (`Some(8)` where it printed `Some(8.0)`). The two
+  float-boundary allowlist entries go.
+
 - **Strategies are their own crate, `optionstratlib-strategies`** (#531).
   `strategies` and `StrategyError` (with the `error::strategies` module and
   its `From` impls, `From<StrategyError> for ProbabilityError` included)

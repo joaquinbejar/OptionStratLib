@@ -287,16 +287,32 @@ pub struct Strategy {
     pub legs: Vec<Position>,
 
     /// The maximum potential profit of the strategy, if limited and known.
-    /// Expressed as an absolute value, not percentage.
-    pub max_profit: Option<f64>,
+    /// Expressed as an absolute amount in the premium currency, not a
+    /// percentage. `None` means unlimited or not computed; the strategies'
+    /// `get_max_profit` accessor reports an unlimited profit as
+    /// `Positive::MAX` instead.
+    pub max_profit: Option<Positive>,
 
     /// The maximum potential loss of the strategy, if limited and known.
-    /// Expressed as an absolute value, not percentage.
-    pub max_loss: Option<f64>,
+    /// Expressed as an absolute amount in the premium currency, not a
+    /// percentage. `None` means unlimited or not computed; the strategies'
+    /// `get_max_loss` accessor reports an unlimited loss as `Positive::MAX`
+    /// instead.
+    pub max_loss: Option<Positive>,
 
     /// The price points of the underlying asset at which the strategy neither makes a profit nor a loss.
     /// These points are crucial for strategy planning and risk management.
     pub break_even_points: Vec<Positive>,
+}
+
+/// Rounds a monetary amount to cents for display, half to even, the way the
+/// former `f64` fields printed with `{:.2}`; `Decimal`'s own `{:.2}`
+/// truncates.
+#[inline]
+fn cents(amount: Positive) -> Decimal {
+    amount
+        .to_dec()
+        .round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointNearestEven)
 }
 
 impl fmt::Display for Strategy {
@@ -309,10 +325,10 @@ impl fmt::Display for Strategy {
             writeln!(f, "  {leg}")?;
         }
         if let Some(max_profit) = self.max_profit {
-            writeln!(f, "Max Profit: ${max_profit:.2}")?;
+            writeln!(f, "Max Profit: ${:.2}", cents(max_profit))?;
         }
         if let Some(max_loss) = self.max_loss {
-            writeln!(f, "Max Loss: ${max_loss:.2}")?;
+            writeln!(f, "Max Loss: ${:.2}", cents(max_loss))?;
         }
         writeln!(f, "Break-even Points:")?;
         for point in &self.break_even_points {
@@ -2671,6 +2687,20 @@ mod tests_strategy_type_display_debug {
     use serde::Serialize;
 
     #[test]
+    fn test_strategy_display_rounds_amounts_to_cents() {
+        let mut strategy = Strategy::new(
+            "Rounding".to_string(),
+            StrategyType::BullCallSpread,
+            "Display rounding".to_string(),
+        );
+        strategy.max_profit = Some(pos_or_panic!(10.999));
+        strategy.max_loss = Some(pos_or_panic!(2.994));
+        let shown = strategy.to_string();
+        assert!(shown.contains("Max Profit: $11.00\n"), "{shown}");
+        assert!(shown.contains("Max Loss: $2.99\n"), "{shown}");
+    }
+
+    #[test]
     fn test_strategy_display() {
         #[derive(Serialize)]
         struct ExtraFields {
@@ -2723,8 +2753,8 @@ mod tests_strategy_type_display_debug {
                     Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
-            max_profit: Some(10.0),
-            max_loss: Some(5.0),
+            max_profit: Some(pos_or_panic!(10.0)),
+            max_loss: Some(pos_or_panic!(5.0)),
             break_even_points: vec![pos_or_panic!(102.0), pos_or_panic!(108.0)],
         };
 
@@ -2787,12 +2817,12 @@ mod tests_strategy_type_display_debug {
                     Some(serde_json::to_value(&extra_fields).unwrap()),
                 ),
             ],
-            max_profit: Some(8.0),
-            max_loss: Some(2.0),
+            max_profit: Some(pos_or_panic!(8.0)),
+            max_loss: Some(pos_or_panic!(2.0)),
             break_even_points: vec![pos_or_panic!(82.0), pos_or_panic!(88.0)],
         };
 
-        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8.0), max_loss: Some(2.0), break_even_points: [82, 88] }";
+        let expected_output = "Strategy { name: \"Bear Put Spread\", kind: BearPutSpread, description: \"A bearish options strategy\", legs: [Position { option: Options { option_type: European, side: Side::Long, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }, Position { option: Options { option_type: European, side: Side::Short, underlying_symbol: \"AAPL\", strike_price: 110, expiration_date: DateTime(2024-08-08T00:00:00Z), implied_volatility: 0.02, quantity: 1, underlying_price: 100, risk_free_rate: 0.05, option_style: OptionStyle::Call, dividend_yield: 0.01, exotic_params: None }, premium: 5.75, date: 2024-08-08T00:00:00Z, open_fee: 0.5, close_fee: 0.45 }], max_profit: Some(8), max_loss: Some(2), break_even_points: [82, 88] }";
 
         assert_eq!(format!("{strategy:?}"), expected_output);
     }

@@ -30,5 +30,3 @@ pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f6
 pub optionstratlib_analytics::analytics::PriceTrend::drift_rate: f64 # same field at the analytics root re-export
 pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64 # dimensionless weight of the drift, pre-existing; rejected outside [0, 1] (NaN included) by the kernels; validated type tracked in #656
 pub optionstratlib_analytics::analytics::PriceTrend::confidence: f64 # same field at the analytics root re-export
-pub optionstratlib_strategies::strategies::base::Strategy::max_profit: core::option::Option<f64> # monetary maximum profit as f64, pre-existing descriptive field (Strategy::new leaves it None, only Display and Debug read it; get_max_profit returns Positive); monetary type tracked in #661
-pub optionstratlib_strategies::strategies::base::Strategy::max_loss: core::option::Option<f64> # monetary maximum loss as f64, pre-existing descriptive field (Strategy::new leaves it None, only Display and Debug read it; get_max_loss returns Positive); monetary type tracked in #661
