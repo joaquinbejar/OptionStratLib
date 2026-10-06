@@ -29,8 +29,9 @@
 //! - [`error`]: [`error::StrategyError`] and its kinds.
 //!
 //! Charts of a strategy (`Graph`) and the simulation of a strategy over a
-//! price path stay with the visualization and backtesting layers; the
-//! `optionstratlib` facade provides them.
+//! price path stay with the visualization and backtesting layers
+//! (`optionstratlib-visualization`, `optionstratlib-backtest`); the
+//! `optionstratlib` facade re-exports them.
 //!
 //! ## Imports
 //!

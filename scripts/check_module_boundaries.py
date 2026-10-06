@@ -1037,6 +1037,15 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     }),
+    # ADR-0002 §3 visualization row: with no feature the leaf crate builds
+    # chart data only, so no Plotly, image-export, WebDriver, async, I/O or
+    # progress-bar package. `plotly` and `static_export` add theirs through
+    # FEATURE_SETS (#542). `prettytable-rs` is not listed: market and
+    # strategies still carry it until M6-05.
+    "optionstratlib-visualization": frozenset({
+        "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
+        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+    }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
     # adds a package beyond `utoipa` (#529).
@@ -1065,6 +1074,16 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
         # `synthetic` adds the simulation crate, whose own graph is already in
         # the minimal row (ADR-0003 section 2, #537).
         "synthetic": ("synthetic", frozenset({"optionstratlib-simulation"})),
+    },
+    # ADR-0002 §3 visualization row (#542): `plotly` brings Plotly itself and
+    # nothing for image export, which only `static_export` adds: the
+    # `plotly_static` exporter, its WebDriver client and the async runtime it
+    # runs on.
+    "optionstratlib-visualization": {
+        "plotly": ("plotly", frozenset({"plotly"})),
+        "static_export": ("static_export", frozenset({
+            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait",
+        })),
     },
 }
 
@@ -1756,6 +1775,25 @@ def self_test() -> int:
             [pkg("optionstratlib-strategies", ("optionstratlib-backtest", "dev"))],
             1,
         ),
+        # #542: visualization is the leaf. It may name every component below
+        # it, math included (ADR-0001 D9), and nothing may name it.
+        "visualization depends on strategies, simulation and math": (
+            [pkg("optionstratlib-visualization", ("optionstratlib-strategies",), ("optionstratlib-simulation",),
+                 ("optionstratlib-math",))],
+            0,
+        ),
+        "visualization dev-depends on the facade": (
+            [pkg("optionstratlib-visualization", ("optionstratlib", "dev"))],
+            1,
+        ),
+        "backtest dev-depends on visualization": (
+            [pkg("optionstratlib-backtest", ("optionstratlib-visualization", "dev"))],
+            1,
+        ),
+        "facade optionally depends on visualization": (
+            [pkg("optionstratlib", ("optionstratlib-visualization", None, True))],
+            0,
+        ),
         "simulation optionally depends on visualization": (
             [pkg("optionstratlib-simulation", ("optionstratlib-visualization", None, True))],
             1,
@@ -1844,6 +1882,18 @@ def self_test() -> int:
         "clean backtest tree": ({("optionstratlib-backtest", "default"): {"uuid", "prettytable-rs"}}, 0),
         "backtest pulls indicatif": ({("optionstratlib-backtest", "default"): {"indicatif"}}, 1),
         "backtest pulls plotly": ({("optionstratlib-backtest", "all features"): {"plotly"}}, 1),
+        "clean visualization tree": ({("optionstratlib-visualization", "default"): {"num-traits", "prettytable-rs"}}, 0),
+        "visualization pulls plotly by default": ({("optionstratlib-visualization", "default"): {"plotly"}}, 1),
+        "visualization plotly under plotly": ({("optionstratlib-visualization", "plotly"): {"plotly"}}, 0),
+        "visualization plotly pulls static export": (
+            {("optionstratlib-visualization", "plotly"): {"plotly", "plotly_static", "tokio"}},
+            2,
+        ),
+        "visualization static export": (
+            {("optionstratlib-visualization", "static_export"): {"plotly", "plotly_static", "webdriver", "tokio"}},
+            0,
+        ),
+        "visualization csv under all features": ({("optionstratlib-visualization", "all features"): {"plotly", "csv"}}, 1),
         "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),
         "simulation pulls market io": ({("optionstratlib-simulation", "all features"): {"csv", "zip"}}, 2),
     }

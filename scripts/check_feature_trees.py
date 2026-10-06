@@ -58,6 +58,10 @@ SURFACES = {
     # `backtest` enables strategies and simulation and no market feature
     # beyond the minimal one: in particular not `synthetic` (#541).
     "backtest": ["--no-default-features", "--features", "backtest"],
+    # `visualization` adds the chart crate on top of `backtest` and no Plotly,
+    # image-export or async package: those come only with `plotly` and
+    # `static_export` (#542).
+    "visualization": ["--no-default-features", "--features", "visualization"],
 }
 
 HEADER = """# Dependency graph of the `{surface}` facade surface, resolved with

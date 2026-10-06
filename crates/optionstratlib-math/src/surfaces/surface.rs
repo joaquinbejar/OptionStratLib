@@ -2,7 +2,7 @@
 //! `Point3D`s, with construction from points or a parametric function,
 //! bilinear and other interpolation, arithmetic between surfaces and metric
 //! extraction. Failures are reported as `SurfaceError`. Plotting a surface is
-//! the visualization layer's job (`Plottable` in the `optionstratlib` facade).
+//! the visualization layer's job (`Plottable` in `optionstratlib-visualization`).
 //!
 
 use crate::curves::Point2D;

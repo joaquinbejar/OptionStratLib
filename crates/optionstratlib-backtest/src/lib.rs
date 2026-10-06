@@ -25,7 +25,8 @@
 //! The generic engine (random walks, exit policies, path evaluation and
 //! statistics) is `optionstratlib-simulation`'s; this crate adapts it to
 //! strategies and owns the reports. Charts stay with the visualization layer,
-//! which the `optionstratlib` facade provides.
+//! `optionstratlib-visualization`, which the `optionstratlib` facade
+//! re-exports.
 //!
 //! ## Imports
 //!

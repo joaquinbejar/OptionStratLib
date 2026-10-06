@@ -16,8 +16,8 @@ code.
 The optimiser side filter, `FindOptimalSide`, is a market type:
 `optionstratlib_market::chains::utils::FindOptimalSide`. Charts of a strategy
 and the simulation of a strategy over a price path stay with the
-visualization and backtesting layers; the `optionstratlib` facade provides
-them.
+visualization and backtesting layers (`optionstratlib-visualization`,
+`optionstratlib-backtest`); the `optionstratlib` facade re-exports them.
 
 ## Features
 

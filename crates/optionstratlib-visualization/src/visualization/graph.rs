@@ -1,26 +1,39 @@
+//! The `Graph` contract: one trait on every feature surface.
+//!
+//! An implementor supplies [`Graph::graph_data`] and may override
+//! [`Graph::graph_config`]; that is the whole contract, with or without a
+//! backend. `plotly` adds the provided rendering methods (`to_plot`,
+//! `write_html`, `show`, `render`, `to_interactive_html`) and
+//! `static_export` adds `write_png` and `write_svg`. Features only add
+//! provided methods, so an implementation never changes with them
+//! (ADR-0002 section 4).
+
 // Scoped allow: bulk migration of unchecked `[]` indexing to
 // `.get().ok_or_else(..)` tracked as follow-ups to #341.
 #![allow(clippy::indexing_slicing)]
 
-use crate::error::GraphError;
-use crate::visualization::OutputType;
-use crate::visualization::file::prepare_file_path;
-use crate::visualization::{GraphConfig, GraphData, make_scatter, make_surface, pick_color};
-use plotly::layout::Axis;
-use plotly::{Layout, Plot, common};
+use crate::visualization::{GraphConfig, GraphData};
+#[cfg(feature = "plotly")]
+use {
+    crate::error::GraphError,
+    crate::visualization::OutputType,
+    crate::visualization::file::prepare_file_path,
+    crate::visualization::{make_scatter, make_surface, pick_color},
+    plotly::layout::Axis,
+    plotly::{Layout, Plot, common},
+};
 
 #[cfg(feature = "static_export")]
-use plotly::plotly_static::ImageFormat;
-#[cfg(feature = "static_export")]
-use tracing::debug;
+use {plotly::plotly_static::ImageFormat, tracing::debug};
 
-/// Trait implemented by every strategy / chain / surface that can
-/// render itself as a Plotly figure.
+/// Chart contract of every type the library can draw: strategies, option
+/// chains' curves and surfaces, options, positions and simulations.
 ///
-/// Provides the data-only `graph_data()` / `graph_config()` hooks plus
-/// the feature-gated `to_plot` / `write_html` / `write_png` renderers.
-/// Implementers need only supply `graph_data`; the rest have safe
-/// defaults under the `plotly` (and `static_export`) features.
+/// The required items are the same on every feature surface: implementors
+/// supply `graph_data()` and may override `graph_config()`. The backend
+/// features add provided renderers on top: `to_plot`, `write_html`, `show`,
+/// `render` and `to_interactive_html` under `plotly`, and `write_png` and
+/// `write_svg` under `static_export`. None of them needs to be implemented.
 pub trait Graph {
     /// Return the raw data ready for plotting.
     fn graph_data(&self) -> GraphData;
@@ -340,7 +353,8 @@ pub trait Graph {
     ///
     /// Returns `GraphError::Render` when the chosen `OutputType`
     /// backend (PNG/SVG via `static_export`, HTML, etc.) fails to
-    /// serialize or render, and `GraphError::Io` when the
+    /// serialize or render, or when a PNG or SVG is asked for in a build
+    /// without `static_export`, and `GraphError::Io` when the
     /// destination path cannot be written.
     #[cfg(feature = "plotly")]
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
@@ -361,10 +375,12 @@ pub trait Graph {
                     Err(e) => return Err(GraphError::Render(format!("Failed to write SVG: {e}"))),
                 }
             }
+            #[cfg(not(feature = "static_export"))]
+            OutputType::Png(_) | OutputType::Svg(_) => {
+                return Err(static_export_disabled());
+            }
             OutputType::Browser => self.show()?,
             OutputType::Html(path) => self.to_interactive_html(path)?,
-            #[cfg(not(feature = "static_export"))]
-            _ => {}
         }
         Ok(())
     }
@@ -380,5 +396,162 @@ pub trait Graph {
     #[cfg(feature = "plotly")]
     fn to_interactive_html(&self, path: &std::path::Path) -> Result<(), GraphError> {
         self.write_html(path)
+    }
+}
+
+/// The error `Graph::render` returns for a PNG or SVG target in a build
+/// without the `static_export` feature, which is what writes images.
+#[cfg(all(feature = "plotly", not(feature = "static_export")))]
+#[cold]
+#[inline(never)]
+fn static_export_disabled() -> GraphError {
+    GraphError::Render(
+        "png and svg export need the `static_export` feature of optionstratlib-visualization"
+            .to_string(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::visualization::{ColorScheme, LineStyle, Series2D};
+    use rust_decimal_macros::dec;
+
+    // A simple struct that implements the Graph trait for testing
+    struct TestGraph {
+        data: GraphData,
+        config: Option<GraphConfig>,
+    }
+
+    impl TestGraph {
+        fn new(data: GraphData) -> Self {
+            TestGraph { data, config: None }
+        }
+
+        fn with_config(data: GraphData, config: GraphConfig) -> Self {
+            TestGraph {
+                data,
+                config: Some(config),
+            }
+        }
+    }
+
+    impl Graph for TestGraph {
+        fn graph_data(&self) -> GraphData {
+            self.data.clone()
+        }
+
+        fn graph_config(&self) -> GraphConfig {
+            match &self.config {
+                Some(config) => config.clone(),
+                None => GraphConfig::default(),
+            }
+        }
+    }
+
+    fn default_series() -> GraphData {
+        GraphData::Series(Series2D {
+            x: vec![dec!(1.0), dec!(2.0)],
+            y: vec![dec!(3.0), dec!(4.0)],
+            name: "Test Series".to_string(),
+            mode: crate::visualization::TraceMode::Lines,
+            line_color: None,
+            line_width: None,
+        })
+    }
+
+    #[test]
+    fn test_graph_data() {
+        // Create some test data
+        let data = default_series();
+        let graph = TestGraph::new(data.clone());
+
+        // Verify that graph_data returns the expected data
+        assert_eq!(graph.graph_data(), data);
+    }
+
+    #[test]
+    fn test_default_graph_config() {
+        let data = default_series();
+        let graph = TestGraph::new(data);
+
+        // Verify that the default config is returned when none is specified
+        let default_config = GraphConfig::default();
+        assert_eq!(graph.graph_config(), default_config);
+    }
+
+    #[test]
+    fn test_custom_graph_config() {
+        let data = default_series();
+
+        // Create a custom config
+        let custom_config = GraphConfig {
+            title: "Custom Title".to_string(),
+            width: 800,
+            height: 600,
+            x_label: Some("X Axis".to_string()),
+            y_label: Some("Y Axis".to_string()),
+            z_label: None,
+            line_style: LineStyle::Dashed,
+            color_scheme: ColorScheme::Default,
+            legend: Some(vec!["Series 1".to_string(), "Series 2".to_string()]),
+            show_legend: true,
+        };
+
+        let graph = TestGraph::with_config(data, custom_config.clone());
+
+        // Verify that the custom config is returned
+        assert_eq!(graph.graph_config(), custom_config);
+    }
+
+    #[test]
+    fn test_graph_config_fields() {
+        let data = default_series();
+
+        // Create a custom config with specific properties to test
+        let custom_config = GraphConfig {
+            title: "Test Chart".to_string(),
+            width: 1024,
+            height: 768,
+            x_label: Some("Time".to_string()),
+            y_label: Some("Value".to_string()),
+            z_label: Some("Depth".to_string()),
+            line_style: LineStyle::Solid,
+            color_scheme: ColorScheme::Viridis,
+            legend: Some(vec!["Data A".to_string(), "Data B".to_string()]),
+            show_legend: true,
+        };
+
+        let graph = TestGraph::with_config(data, custom_config);
+        let config = graph.graph_config();
+
+        // Test individual fields
+        assert_eq!(config.title, "Test Chart");
+        assert_eq!(config.width, 1024);
+        assert_eq!(config.height, 768);
+        assert_eq!(config.x_label, Some("Time".to_string()));
+        assert_eq!(config.y_label, Some("Value".to_string()));
+        assert_eq!(config.z_label, Some("Depth".to_string()));
+        assert_eq!(config.line_style, LineStyle::Solid);
+        assert_eq!(config.color_scheme, ColorScheme::Viridis);
+        assert_eq!(
+            config.legend,
+            Some(vec!["Data A".to_string(), "Data B".to_string()])
+        );
+        assert!(config.show_legend);
+    }
+
+    #[cfg(all(feature = "plotly", not(feature = "static_export")))]
+    #[test]
+    fn test_render_png_and_svg_without_static_export_return_render_error() {
+        let graph = TestGraph::new(default_series());
+        let path = std::path::PathBuf::from("render_without_static_export.png");
+        for output in [OutputType::Png(&path), OutputType::Svg(&path)] {
+            match graph.render(output) {
+                Err(GraphError::Render(message)) => assert!(message.contains("static_export")),
+                other => panic!("expected GraphError::Render, got {other:?}"),
+            }
+        }
+        assert!(!path.exists());
     }
 }

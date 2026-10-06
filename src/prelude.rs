@@ -81,11 +81,11 @@ pub use crate::pnl::{PnL, PnLCalculator};
 pub use crate::backtesting::*;
 
 // Visualization
-#[cfg(feature = "backtest")]
+#[cfg(feature = "visualization")]
 pub use crate::visualization::{Graph, GraphData, Series2D, Surface3D, TraceMode};
 
 #[cfg(feature = "plotly")]
-pub use crate::visualization::utils::make_surface;
+pub use crate::visualization::make_surface;
 
 // Chain operations
 #[cfg(feature = "market")]
@@ -106,7 +106,7 @@ pub use crate::surfaces::{Point3D, Surfacable, Surface};
 // Geometrics (commonly used in curve examples)
 #[cfg(feature = "math")]
 pub use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
-#[cfg(feature = "backtest")]
+#[cfg(feature = "visualization")]
 pub use crate::visualization::Plottable;
 
 // Volatility models
@@ -127,7 +127,7 @@ pub use crate::error::StrategyError;
 #[cfg(feature = "math")]
 pub use crate::error::{CurveError, InterpolationError, MetricsError, SurfaceError};
 pub use crate::error::{DecimalError, OperationErrorKind, OptionsError, PositionError};
-#[cfg(feature = "backtest")]
+#[cfg(feature = "visualization")]
 pub use crate::error::{Error, GraphError};
 #[cfg(feature = "pricing")]
 pub use crate::error::{GreeksError, PricingError, VolatilityError};

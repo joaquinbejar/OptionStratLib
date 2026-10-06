@@ -25,7 +25,7 @@
 //! Coordinates are `rust_decimal::Decimal`; arithmetic on them is checked.
 //! Option-specific projections of curves and surfaces (`BasicCurves`,
 //! `BasicSurfaces`) belong to the analytics layer, and plotting to
-//! visualization; the `optionstratlib` facade provides both.
+//! `optionstratlib-visualization`; the `optionstratlib` facade provides both.
 //!
 //! ## Imports: no prelude
 //!
@@ -60,7 +60,7 @@
 //! | Capability | Where | Owner |
 //! | --- | --- | --- |
 //! | `BasicCurves`, `BasicSurfaces`: projecting an option set onto a `Curve` or `Surface` (prices options, reads Greeks) | `optionstratlib::analytics` | analytics; final adapter in M4-01 (#529) |
-//! | `Graph` and `Plottable` for `Curve`, `Vec<Curve>` and `Surface` | `optionstratlib::visualization` | visualization; graph adapters in M6-02 (#543) |
+//! | `Graph` and `Plottable` for `Curve`, `Vec<Curve>` and `Surface` | `optionstratlib_visualization::visualization`, also `optionstratlib::visualization` | visualization (#542) |
 //!
 //! Rendering failures are `GraphError`s of the visualization layer; the math
 //! errors carry no rendering variant.

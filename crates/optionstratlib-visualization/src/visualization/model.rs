@@ -12,11 +12,11 @@
 //!
 //! Domain objects only describe *what* to plot; *how* lives here.
 
-use crate::curves::Curve;
-use crate::surfaces::Surface;
 use crate::visualization::interface::GraphType;
 use crate::visualization::styles::{PlotType, TraceMode};
 use crate::visualization::{ColorScheme, get_color_from_scheme};
+use optionstratlib_math::curves::Curve;
+use optionstratlib_math::surfaces::Surface;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -240,17 +240,18 @@ impl From<Surface> for GraphData {
 ///
 /// This enum allows specifying whether the output should be saved to a file
 /// in a specific format (PNG, HTML, SVG) or displayed directly in a browser.
+/// The variants are the same on every feature surface (ADR-0002 section 4);
+/// writing a PNG or SVG needs the `static_export` feature, and
+/// `Graph::render` reports a `GraphError::Render` for them without it.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum OutputType<'a> {
     /// PNG image output with a reference to the file path where it should be saved.
-    #[cfg(feature = "plotly")]
     Png(&'a PathBuf),
 
     /// HTML document output with a reference to the file path where it should be saved.
     Html(&'a PathBuf),
 
     /// SVG image output with a reference to the file path where it should be saved.
-    #[cfg(feature = "plotly")]
     Svg(&'a PathBuf),
 
     /// Output directly to the default web browser without saving to a file.

@@ -8,8 +8,6 @@ mod chain;
 
 mod error;
 
-mod visualization;
-
 mod lib_test;
 
 mod model;

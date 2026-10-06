@@ -17,6 +17,7 @@ pub use optionstratlib::f2d
 pub use optionstratlib::f2du
 pub use optionstratlib::geometrics
 pub use optionstratlib::greeks
+pub use optionstratlib::impl_graph_for_payoff_strategy
 pub use optionstratlib::metrics
 pub use optionstratlib::model
 pub use optionstratlib::nz
@@ -28,6 +29,7 @@ pub use optionstratlib::simulation
 pub use optionstratlib::strategies
 pub use optionstratlib::surfaces
 pub use optionstratlib::utils
+pub use optionstratlib::visualization
 pub use optionstratlib::volatility
 pub mod optionstratlib::error
 pub use optionstratlib::error::BacktestError
@@ -36,6 +38,7 @@ pub use optionstratlib::error::CurveError
 pub use optionstratlib::error::CurvesResult
 pub use optionstratlib::error::DecimalError
 pub use optionstratlib::error::DecimalResult
+pub use optionstratlib::error::GraphError
 pub use optionstratlib::error::GreeksError
 pub use optionstratlib::error::InterpolationError
 pub use optionstratlib::error::MetricsError
@@ -73,7 +76,7 @@ pub optionstratlib::error::unified::Error::Curve(optionstratlib_math::error::cur
 pub optionstratlib::error::unified::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib::error::unified::Error::EmptyCollection
 pub optionstratlib::error::unified::Error::EmptyCollection::context: &'static str
-pub optionstratlib::error::unified::Error::Graph(optionstratlib::error::GraphError)
+pub optionstratlib::error::unified::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
 pub optionstratlib::error::unified::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
 pub optionstratlib::error::unified::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
 pub optionstratlib::error::unified::Error::Io(core::io::error::Error)
@@ -98,7 +101,7 @@ pub optionstratlib::error::Error::Curve(optionstratlib_math::error::curves::Curv
 pub optionstratlib::error::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib::error::Error::EmptyCollection
 pub optionstratlib::error::Error::EmptyCollection::context: &'static str
-pub optionstratlib::error::Error::Graph(optionstratlib::error::GraphError)
+pub optionstratlib::error::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
 pub optionstratlib::error::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
 pub optionstratlib::error::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
 pub optionstratlib::error::Error::Io(core::io::error::Error)
@@ -116,15 +119,6 @@ pub optionstratlib::error::Error::Surface(optionstratlib_math::error::surfaces::
 pub optionstratlib::error::Error::Trade(optionstratlib_core::error::trade::TradeError)
 pub optionstratlib::error::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
 pub optionstratlib::error::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)
-pub enum optionstratlib::error::GraphError
-pub optionstratlib::error::GraphError::Curve(optionstratlib_math::error::curves::CurveError)
-pub optionstratlib::error::GraphError::Io(core::io::error::Error)
-pub optionstratlib::error::GraphError::Render(alloc::string::String)
-pub optionstratlib::error::GraphError::Surface(optionstratlib_math::error::surfaces::SurfaceError)
-impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib::error::GraphError
-pub fn optionstratlib::error::GraphError::from(optionstratlib_math::error::curves::CurveError) -> Self
-impl core::convert::From<optionstratlib_math::error::surfaces::SurfaceError> for optionstratlib::error::GraphError
-pub fn optionstratlib::error::GraphError::from(optionstratlib_math::error::surfaces::SurfaceError) -> Self
 pub mod optionstratlib::prelude
 pub use optionstratlib::prelude::<<crate::backtesting::*>>
 pub use optionstratlib::prelude::<<crate::greeks::*>>
@@ -164,6 +158,9 @@ pub use optionstratlib::prelude::ExitPolicy
 pub use optionstratlib::prelude::ExpirationDate
 pub use optionstratlib::prelude::FindOptimalSide
 pub use optionstratlib::prelude::GeometricObject
+pub use optionstratlib::prelude::Graph
+pub use optionstratlib::prelude::GraphData
+pub use optionstratlib::prelude::GraphError
 pub use optionstratlib::prelude::GreeksError
 pub use optionstratlib::prelude::InterpolationError
 pub use optionstratlib::prelude::IronButterfly
@@ -193,6 +190,7 @@ pub use optionstratlib::prelude::OptionsError
 pub use optionstratlib::prelude::Path
 pub use optionstratlib::prelude::Payoff
 pub use optionstratlib::prelude::PayoffInfo
+pub use optionstratlib::prelude::Plottable
 pub use optionstratlib::prelude::PnL
 pub use optionstratlib::prelude::PnLCalculator
 pub use optionstratlib::prelude::Point2D
@@ -208,6 +206,7 @@ pub use optionstratlib::prelude::ProbabilityAnalysis
 pub use optionstratlib::prelude::ProbabilityError
 pub use optionstratlib::prelude::ProtectivePut
 pub use optionstratlib::prelude::RandomWalk
+pub use optionstratlib::prelude::Series2D
 pub use optionstratlib::prelude::ShortButterflySpread
 pub use optionstratlib::prelude::ShortCall
 pub use optionstratlib::prelude::ShortPut
@@ -227,10 +226,12 @@ pub use optionstratlib::prelude::StrategyLegs
 pub use optionstratlib::prelude::StrategyType
 pub use optionstratlib::prelude::Surfacable
 pub use optionstratlib::prelude::Surface
+pub use optionstratlib::prelude::Surface3D
 pub use optionstratlib::prelude::SurfaceError
 pub use optionstratlib::prelude::TimeFrame
 pub use optionstratlib::prelude::ToPrimitive
 pub use optionstratlib::prelude::ToRound
+pub use optionstratlib::prelude::TraceMode
 pub use optionstratlib::prelude::Trade
 pub use optionstratlib::prelude::TransactionError
 pub use optionstratlib::prelude::Utc
@@ -259,6 +260,7 @@ pub use optionstratlib::prelude::generator_positive
 pub use optionstratlib::prelude::get_tomorrow_formatted
 pub use optionstratlib::prelude::get_x_days_formatted
 pub use optionstratlib::prelude::info
+pub use optionstratlib::prelude::make_surface
 pub use optionstratlib::prelude::pos_or_panic
 pub use optionstratlib::prelude::read_ohlcv_from_zip
 pub use optionstratlib::prelude::spos
@@ -273,7 +275,7 @@ pub optionstratlib::prelude::Error::Curve(optionstratlib_math::error::curves::Cu
 pub optionstratlib::prelude::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
 pub optionstratlib::prelude::Error::EmptyCollection
 pub optionstratlib::prelude::Error::EmptyCollection::context: &'static str
-pub optionstratlib::prelude::Error::Graph(optionstratlib::error::GraphError)
+pub optionstratlib::prelude::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
 pub optionstratlib::prelude::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
 pub optionstratlib::prelude::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
 pub optionstratlib::prelude::Error::Io(core::io::error::Error)
@@ -291,820 +293,5 @@ pub optionstratlib::prelude::Error::Surface(optionstratlib_math::error::surfaces
 pub optionstratlib::prelude::Error::Trade(optionstratlib_core::error::trade::TradeError)
 pub optionstratlib::prelude::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
 pub optionstratlib::prelude::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)
-pub enum optionstratlib::prelude::GraphData
-pub optionstratlib::prelude::GraphData::GraphSurface(optionstratlib::visualization::Surface3D)
-pub optionstratlib::prelude::GraphData::MultiSeries(optionstratlib::visualization::MultiSeries2D)
-pub optionstratlib::prelude::GraphData::Series(optionstratlib::visualization::Series2D)
-impl core::convert::From<alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>) -> Self
-impl core::convert::From<optionstratlib_math::curves::curve::Curve> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(optionstratlib_math::curves::curve::Curve) -> Self
-impl core::convert::From<optionstratlib_math::surfaces::surface::Surface> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(optionstratlib_math::surfaces::surface::Surface) -> Self
-pub enum optionstratlib::prelude::GraphError
-pub optionstratlib::prelude::GraphError::Curve(optionstratlib_math::error::curves::CurveError)
-pub optionstratlib::prelude::GraphError::Io(core::io::error::Error)
-pub optionstratlib::prelude::GraphError::Render(alloc::string::String)
-pub optionstratlib::prelude::GraphError::Surface(optionstratlib_math::error::surfaces::SurfaceError)
-impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib::error::GraphError
-pub fn optionstratlib::error::GraphError::from(optionstratlib_math::error::curves::CurveError) -> Self
-impl core::convert::From<optionstratlib_math::error::surfaces::SurfaceError> for optionstratlib::error::GraphError
-pub fn optionstratlib::error::GraphError::from(optionstratlib_math::error::surfaces::SurfaceError) -> Self
-#[repr(u8)] pub enum optionstratlib::prelude::TraceMode
-pub optionstratlib::prelude::TraceMode::Lines
-pub optionstratlib::prelude::TraceMode::LinesMarkers
-pub optionstratlib::prelude::TraceMode::Markers
-pub optionstratlib::prelude::TraceMode::TextLabels
-pub struct optionstratlib::prelude::Series2D
-pub optionstratlib::prelude::Series2D::line_color: core::option::Option<alloc::string::String>
-pub optionstratlib::prelude::Series2D::line_width: core::option::Option<f64>
-pub optionstratlib::prelude::Series2D::mode: optionstratlib::visualization::TraceMode
-pub optionstratlib::prelude::Series2D::name: alloc::string::String
-pub optionstratlib::prelude::Series2D::x: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::prelude::Series2D::y: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-impl core::default::Default for optionstratlib::visualization::Series2D
-pub fn optionstratlib::visualization::Series2D::default() -> Self
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Series2D
-pub fn optionstratlib::visualization::Series2D::plot_type() -> optionstratlib::visualization::PlotType
-pub struct optionstratlib::prelude::Surface3D
-pub optionstratlib::prelude::Surface3D::name: alloc::string::String
-pub optionstratlib::prelude::Surface3D::x: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::prelude::Surface3D::y: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::prelude::Surface3D::z: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Surface3D
-pub fn optionstratlib::visualization::Surface3D::plot_type() -> optionstratlib::visualization::PlotType
-pub trait optionstratlib::prelude::Graph
-pub fn optionstratlib::prelude::Graph::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::prelude::Graph::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib::prelude::Graph::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::prelude::Graph::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::prelude::Graph::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::prelude::Graph::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib::prelude::Graph::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::prelude::Graph::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::prelude::Graph::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::to_plot(&self) -> plotly::plot::Plot
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_core::model::option::Options
-pub fn optionstratlib_core::model::option::Options::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_core::model::option::Options::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_core::model::option::Options::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_core::model::option::Options::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_core::model::position::Position::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_core::model::position::Position::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_core::model::position::Position::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_math::curves::curve::Curve
-pub fn optionstratlib_math::curves::curve::Curve::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_math::curves::curve::Curve::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_math::curves::curve::Curve::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_math::curves::curve::Curve::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_math::surfaces::surface::Surface
-pub fn optionstratlib_math::surfaces::surface::Surface::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_math::surfaces::surface::Surface::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_math::surfaces::surface::Surface::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_math::surfaces::surface::Surface::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::call_butterfly::CallButterfly
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::collar::Collar
-pub fn optionstratlib_strategies::strategies::collar::Collar::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::collar::Collar::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::collar::Collar::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::covered_call::CoveredCall
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::custom::CustomStrategy
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::iron_butterfly::IronButterfly
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::iron_condor::IronCondor
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_call::LongCall
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_put::LongPut
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_straddle::LongStraddle
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_strangle::LongStrangle
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::protective_put::ProtectivePut
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_call::ShortCall
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_put::ShortPut
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_straddle::ShortStraddle
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_strangle::ShortStrangle
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<T: optionstratlib::visualization::Plottable + optionstratlib::visualization::Graph> optionstratlib::visualization::Graph for optionstratlib::visualization::PlotBuilder<T>
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::PlotBuilder<T>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<X, Y> optionstratlib::visualization::Graph for optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<X, Y> optionstratlib::visualization::Graph for optionstratlib_simulation::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub trait optionstratlib::prelude::Plottable
-pub type optionstratlib::prelude::Plottable::Error
-pub fn optionstratlib::prelude::Plottable::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized + optionstratlib::visualization::Graph
-impl optionstratlib::visualization::Plottable for alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>
-pub type alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::Error = optionstratlib_math::error::curves::CurveError
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-impl optionstratlib::visualization::Plottable for optionstratlib_math::curves::curve::Curve
-pub type optionstratlib_math::curves::curve::Curve::Error = optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::curves::curve::Curve::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-impl optionstratlib::visualization::Plottable for optionstratlib_math::surfaces::surface::Surface
-pub type optionstratlib_math::surfaces::surface::Surface::Error = optionstratlib_math::error::surfaces::SurfaceError
-pub fn optionstratlib_math::surfaces::surface::Surface::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-pub fn optionstratlib::prelude::make_surface(&optionstratlib::visualization::Surface3D) -> alloc::boxed::Box<plotly::traces::surface::Surface<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>
-pub mod optionstratlib::visualization
-pub mod optionstratlib::visualization::file
-pub fn optionstratlib::visualization::file::prepare_file_path(&std::path::Path) -> core::result::Result<(), core::io::error::Error>
-pub enum optionstratlib::visualization::ColorScheme
-pub optionstratlib::visualization::ColorScheme::Custom(alloc::vec::Vec<alloc::string::String>)
-pub optionstratlib::visualization::ColorScheme::Default
-pub optionstratlib::visualization::ColorScheme::HighContrast
-pub optionstratlib::visualization::ColorScheme::Plasma
-pub optionstratlib::visualization::ColorScheme::Viridis
-pub optionstratlib::visualization::ColorScheme::White
-pub enum optionstratlib::visualization::GraphData
-pub optionstratlib::visualization::GraphData::GraphSurface(optionstratlib::visualization::Surface3D)
-pub optionstratlib::visualization::GraphData::MultiSeries(optionstratlib::visualization::MultiSeries2D)
-pub optionstratlib::visualization::GraphData::Series(optionstratlib::visualization::Series2D)
-impl core::convert::From<alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>) -> Self
-impl core::convert::From<optionstratlib_math::curves::curve::Curve> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(optionstratlib_math::curves::curve::Curve) -> Self
-impl core::convert::From<optionstratlib_math::surfaces::surface::Surface> for optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::GraphData::from(optionstratlib_math::surfaces::surface::Surface) -> Self
-#[repr(u8)] pub enum optionstratlib::visualization::LineStyle
-pub optionstratlib::visualization::LineStyle::Dashed
-pub optionstratlib::visualization::LineStyle::Dotted
-pub optionstratlib::visualization::LineStyle::Solid
-pub enum optionstratlib::visualization::OutputType<'a>
-pub optionstratlib::visualization::OutputType::Browser
-pub optionstratlib::visualization::OutputType::Html(&'a std::path::PathBuf)
-pub optionstratlib::visualization::OutputType::Png(&'a std::path::PathBuf)
-pub optionstratlib::visualization::OutputType::Svg(&'a std::path::PathBuf)
-#[repr(u8)] pub enum optionstratlib::visualization::PlotType
-pub optionstratlib::visualization::PlotType::Heatmap
-pub optionstratlib::visualization::PlotType::Line2D
-pub optionstratlib::visualization::PlotType::Scatter2D
-pub optionstratlib::visualization::PlotType::Surface3D
-#[repr(u8)] pub enum optionstratlib::visualization::TraceMode
-pub optionstratlib::visualization::TraceMode::Lines
-pub optionstratlib::visualization::TraceMode::LinesMarkers
-pub optionstratlib::visualization::TraceMode::Markers
-pub optionstratlib::visualization::TraceMode::TextLabels
-pub struct optionstratlib::visualization::GraphConfig
-pub optionstratlib::visualization::GraphConfig::color_scheme: optionstratlib::visualization::ColorScheme
-pub optionstratlib::visualization::GraphConfig::height: u32
-pub optionstratlib::visualization::GraphConfig::legend: core::option::Option<alloc::vec::Vec<alloc::string::String>>
-pub optionstratlib::visualization::GraphConfig::line_style: optionstratlib::visualization::LineStyle
-pub optionstratlib::visualization::GraphConfig::show_legend: bool
-pub optionstratlib::visualization::GraphConfig::title: alloc::string::String
-pub optionstratlib::visualization::GraphConfig::width: u32
-pub optionstratlib::visualization::GraphConfig::x_label: core::option::Option<alloc::string::String>
-pub optionstratlib::visualization::GraphConfig::y_label: core::option::Option<alloc::string::String>
-pub optionstratlib::visualization::GraphConfig::z_label: core::option::Option<alloc::string::String>
-impl core::default::Default for optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::visualization::GraphConfig::default() -> Self
-pub struct optionstratlib::visualization::Label2D
-pub optionstratlib::visualization::Label2D::label: alloc::string::String
-pub optionstratlib::visualization::Label2D::point: optionstratlib::visualization::VisPoint2D
-pub struct optionstratlib::visualization::Label3D
-pub optionstratlib::visualization::Label3D::label: alloc::string::String
-pub optionstratlib::visualization::Label3D::point: optionstratlib::visualization::VisPoint3D
-pub struct optionstratlib::visualization::PlotBuilder<T: optionstratlib::visualization::Plottable + optionstratlib::visualization::Graph>
-impl<T: optionstratlib::visualization::Plottable + optionstratlib::visualization::Graph> optionstratlib::visualization::PlotBuilder<T>
-pub fn optionstratlib::visualization::PlotBuilder<T>::add_legend(self, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::color_scheme(self, optionstratlib::visualization::ColorScheme) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::dimensions(self, u32, u32) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::legend(self, alloc::vec::Vec<impl core::convert::Into<alloc::string::String>>) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::line_style(self, optionstratlib::visualization::LineStyle) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::save(self, impl core::convert::AsRef<std::path::Path>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::show_legend(self, bool) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::title(self, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::x_label(self, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::y_label(self, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn optionstratlib::visualization::PlotBuilder<T>::z_label(self, impl core::convert::Into<alloc::string::String>) -> Self
-impl<T: optionstratlib::visualization::Plottable + optionstratlib::visualization::Graph> optionstratlib::visualization::Graph for optionstratlib::visualization::PlotBuilder<T>
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::PlotBuilder<T>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub struct optionstratlib::visualization::Series2D
-pub optionstratlib::visualization::Series2D::line_color: core::option::Option<alloc::string::String>
-pub optionstratlib::visualization::Series2D::line_width: core::option::Option<f64>
-pub optionstratlib::visualization::Series2D::mode: optionstratlib::visualization::TraceMode
-pub optionstratlib::visualization::Series2D::name: alloc::string::String
-pub optionstratlib::visualization::Series2D::x: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::visualization::Series2D::y: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-impl core::default::Default for optionstratlib::visualization::Series2D
-pub fn optionstratlib::visualization::Series2D::default() -> Self
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Series2D
-pub fn optionstratlib::visualization::Series2D::plot_type() -> optionstratlib::visualization::PlotType
-pub struct optionstratlib::visualization::Surface3D
-pub optionstratlib::visualization::Surface3D::name: alloc::string::String
-pub optionstratlib::visualization::Surface3D::x: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::visualization::Surface3D::y: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub optionstratlib::visualization::Surface3D::z: alloc::vec::Vec<rust_decimal::decimal::Decimal>
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Surface3D
-pub fn optionstratlib::visualization::Surface3D::plot_type() -> optionstratlib::visualization::PlotType
-pub struct optionstratlib::visualization::VisPoint2D
-pub optionstratlib::visualization::VisPoint2D::color: core::option::Option<alloc::string::String>
-pub optionstratlib::visualization::VisPoint2D::mode: optionstratlib::visualization::TraceMode
-pub optionstratlib::visualization::VisPoint2D::name: alloc::string::String
-pub optionstratlib::visualization::VisPoint2D::width: core::option::Option<f64>
-pub optionstratlib::visualization::VisPoint2D::x: rust_decimal::decimal::Decimal
-pub optionstratlib::visualization::VisPoint2D::y: rust_decimal::decimal::Decimal
-pub struct optionstratlib::visualization::VisPoint3D
-pub optionstratlib::visualization::VisPoint3D::color: core::option::Option<alloc::string::String>
-pub optionstratlib::visualization::VisPoint3D::mode: optionstratlib::visualization::TraceMode
-pub optionstratlib::visualization::VisPoint3D::name: alloc::string::String
-pub optionstratlib::visualization::VisPoint3D::width: core::option::Option<f64>
-pub optionstratlib::visualization::VisPoint3D::x: rust_decimal::decimal::Decimal
-pub optionstratlib::visualization::VisPoint3D::y: rust_decimal::decimal::Decimal
-pub optionstratlib::visualization::VisPoint3D::z: rust_decimal::decimal::Decimal
-pub trait optionstratlib::visualization::Graph
-pub fn optionstratlib::visualization::Graph::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::visualization::Graph::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::Graph::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::Graph::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::Graph::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::Graph::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib::visualization::Graph::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::Graph::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::Graph::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::to_plot(&self) -> plotly::plot::Plot
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_core::model::option::Options
-pub fn optionstratlib_core::model::option::Options::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_core::model::option::Options::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_core::model::option::Options::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_core::model::option::Options::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::option::Options::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_core::model::position::Position::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_core::model::position::Position::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_core::model::position::Position::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_core::model::position::Position::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_math::curves::curve::Curve
-pub fn optionstratlib_math::curves::curve::Curve::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_math::curves::curve::Curve::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_math::curves::curve::Curve::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_math::curves::curve::Curve::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::curves::curve::Curve::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_math::surfaces::surface::Surface
-pub fn optionstratlib_math::surfaces::surface::Surface::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_math::surfaces::surface::Surface::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_math::surfaces::surface::Surface::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_math::surfaces::surface::Surface::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_math::surfaces::surface::Surface::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_call_spread::BearCallSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bear_put_spread::BearPutSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_call_spread::BullCallSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::bull_put_spread::BullPutSpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::call_butterfly::CallButterfly
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::call_butterfly::CallButterfly::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::collar::Collar
-pub fn optionstratlib_strategies::strategies::collar::Collar::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::collar::Collar::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::collar::Collar::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::collar::Collar::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::covered_call::CoveredCall
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::custom::CustomStrategy
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::custom::CustomStrategy::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::iron_butterfly::IronButterfly
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_butterfly::IronButterfly::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::iron_condor::IronCondor
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::iron_condor::IronCondor::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_butterfly_spread::LongButterflySpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_call::LongCall
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_call::LongCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_put::LongPut
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_put::LongPut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_straddle::LongStraddle
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_straddle::LongStraddle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::long_strangle::LongStrangle
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::long_strangle::LongStrangle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::poor_mans_covered_call::PoorMansCoveredCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::protective_put::ProtectivePut
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::protective_put::ProtectivePut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_butterfly_spread::ShortButterflySpread::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_call::ShortCall
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_call::ShortCall::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_put::ShortPut
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_put::ShortPut::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_straddle::ShortStraddle
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_straddle::ShortStraddle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl optionstratlib::visualization::Graph for optionstratlib_strategies::strategies::short_strangle::ShortStrangle
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_strategies::strategies::short_strangle::ShortStrangle::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<T: optionstratlib::visualization::Plottable + optionstratlib::visualization::Graph> optionstratlib::visualization::Graph for optionstratlib::visualization::PlotBuilder<T>
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib::visualization::PlotBuilder<T>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib::visualization::PlotBuilder<T>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib::visualization::PlotBuilder<T>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<X, Y> optionstratlib::visualization::Graph for optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::randomwalk::RandomWalk<X, Y>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-impl<X, Y> optionstratlib::visualization::Graph for optionstratlib_simulation::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::render(&self, optionstratlib::visualization::OutputType<'_>) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::show(&self) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::to_interactive_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::to_plot(&self) -> plotly::plot::Plot
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_html(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_png(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub fn optionstratlib_simulation::simulation::simulator::Simulator<X, Y>::write_svg(&self, &std::path::Path) -> core::result::Result<(), optionstratlib::error::GraphError>
-pub trait optionstratlib::visualization::GraphType
-pub fn optionstratlib::visualization::GraphType::plot_type() -> optionstratlib::visualization::PlotType
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Series2D
-pub fn optionstratlib::visualization::Series2D::plot_type() -> optionstratlib::visualization::PlotType
-impl optionstratlib::visualization::GraphType for optionstratlib::visualization::Surface3D
-pub fn optionstratlib::visualization::Surface3D::plot_type() -> optionstratlib::visualization::PlotType
-pub trait optionstratlib::visualization::Plottable
-pub type optionstratlib::visualization::Plottable::Error
-pub fn optionstratlib::visualization::Plottable::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized + optionstratlib::visualization::Graph
-impl optionstratlib::visualization::Plottable for alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>
-pub type alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::Error = optionstratlib_math::error::curves::CurveError
-pub fn alloc::vec::Vec<optionstratlib_math::curves::curve::Curve>::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-impl optionstratlib::visualization::Plottable for optionstratlib_math::curves::curve::Curve
-pub type optionstratlib_math::curves::curve::Curve::Error = optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::curves::curve::Curve::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-impl optionstratlib::visualization::Plottable for optionstratlib_math::surfaces::surface::Surface
-pub type optionstratlib_math::surfaces::surface::Surface::Error = optionstratlib_math::error::surfaces::SurfaceError
-pub fn optionstratlib_math::surfaces::surface::Surface::plot(&self) -> optionstratlib::visualization::PlotBuilder<Self> where Self: core::marker::Sized
-pub fn optionstratlib::visualization::get_color_from_scheme(&optionstratlib::visualization::ColorScheme, usize) -> core::option::Option<alloc::string::String>
-pub fn optionstratlib::visualization::make_scatter(&optionstratlib::visualization::Series2D) -> alloc::boxed::Box<plotly::traces::scatter::Scatter<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>
-pub fn optionstratlib::visualization::make_surface(&optionstratlib::visualization::Surface3D) -> alloc::boxed::Box<plotly::traces::surface::Surface<rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal>>
-pub fn optionstratlib::visualization::pick_color(&optionstratlib::visualization::GraphConfig, usize) -> core::option::Option<alloc::string::String>
-pub fn optionstratlib::visualization::prepare_file_path(&std::path::Path) -> core::result::Result<(), core::io::error::Error>
-pub fn optionstratlib::visualization::to_plotly_mode(&optionstratlib::visualization::TraceMode) -> plotly::common::Mode
-pub type optionstratlib::visualization::MultiSeries2D = alloc::vec::Vec<optionstratlib::visualization::Series2D>
-pub macro optionstratlib::impl_graph_for_payoff_strategy!
 pub const optionstratlib::VERSION: &str
 pub fn optionstratlib::version() -> &'static str

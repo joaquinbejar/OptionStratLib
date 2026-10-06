@@ -1,6 +1,6 @@
 //! Target crate (ADR-0001 D6, roadmap M1-14): **visualization**. Owns `GraphError`.
 
-use crate::error::{CurveError, SurfaceError};
+use optionstratlib_math::error::{CurveError, SurfaceError};
 use thiserror::Error;
 
 /// Represents errors that can occur during graph generation and rendering operations.

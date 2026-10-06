@@ -15,16 +15,17 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::pricing::Profit;
-use crate::strategies::base::BreakEvenable;
-use crate::strategies::{
+use crate::visualization::{
+    ColorScheme, Graph, GraphConfig, GraphData, Label2D, LineStyle, Series2D, TraceMode, VisPoint2D,
+};
+use optionstratlib_core::model::Positive;
+use optionstratlib_pricing::pricing::Profit;
+use optionstratlib_strategies::strategies::base::BreakEvenable;
+use optionstratlib_strategies::strategies::{
     BasicAble, BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly,
     IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
     PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
     Strategies,
-};
-use crate::visualization::{
-    ColorScheme, Graph, GraphConfig, GraphData, Label2D, LineStyle, Series2D, TraceMode, VisPoint2D,
 };
 use rust_decimal::Decimal;
 
@@ -77,6 +78,10 @@ use rust_decimal::Decimal;
 /// - The macro assumes that the types implemented provide specific methods (`get_best_range_to_show`,
 ///   `calculate_profit_at`, and `get_title`) necessary for the `Graph` trait.
 /// - Predefined values like colors, line widths, and dimensions can be adjusted within the macro if needed.
+/// - The expansion names its items unqualified, so the calling module imports
+///   `Graph`, `GraphConfig`, `GraphData`, `Series2D`, `Label2D`, `VisPoint2D`,
+///   `TraceMode`, `LineStyle`, `ColorScheme`, `Positive`, `Decimal` and the
+///   strategy traits it calls, as this module does.
 ///
 #[macro_export]
 macro_rules! impl_graph_for_payoff_strategy {
@@ -90,7 +95,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                     };
                     let underlying_price = self.get_underlying_price();
                     let pay_off_at_underlying_price = self.calculate_profit_at(&underlying_price).unwrap_or(Decimal::ZERO);
-                    let range = match self.get_best_range_to_show(positive::Positive::ONE){
+                    let range = match self.get_best_range_to_show(Positive::ONE){
                         Ok(range) => range,
                         Err(_) => return GraphData::Series(Series2D::default()),
                     };
@@ -404,25 +409,25 @@ impl_graph_for_payoff_strategy!(
     ShortPut,
     PoorMansCoveredCall,
     CallButterfly,
-    crate::strategies::custom::CustomStrategy,
-    crate::strategies::covered_call::CoveredCall,
-    crate::strategies::collar::Collar,
-    crate::strategies::protective_put::ProtectivePut
+    optionstratlib_strategies::strategies::custom::CustomStrategy,
+    optionstratlib_strategies::strategies::covered_call::CoveredCall,
+    optionstratlib_strategies::strategies::collar::Collar,
+    optionstratlib_strategies::strategies::protective_put::ProtectivePut
 );
 
 #[cfg(test)]
 mod tests {
-    use crate::strategies::collar::Collar;
-    use crate::strategies::covered_call::CoveredCall;
-    use crate::strategies::custom::CustomStrategy;
-    use crate::strategies::protective_put::ProtectivePut;
-    use crate::strategies::{
+    use crate::visualization::Graph;
+    use optionstratlib_strategies::strategies::collar::Collar;
+    use optionstratlib_strategies::strategies::covered_call::CoveredCall;
+    use optionstratlib_strategies::strategies::custom::CustomStrategy;
+    use optionstratlib_strategies::strategies::protective_put::ProtectivePut;
+    use optionstratlib_strategies::strategies::{
         BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
         IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
         PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle,
         ShortStrangle, Strategable,
     };
-    use crate::visualization::Graph;
     use static_assertions::assert_impl_all;
 
     // `Graph` is no longer a supertrait of `Strategable` (#658), so nothing

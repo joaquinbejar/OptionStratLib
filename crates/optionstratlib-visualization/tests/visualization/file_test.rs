@@ -1,4 +1,4 @@
-use optionstratlib::visualization::prepare_file_path;
+use optionstratlib_visualization::visualization::prepare_file_path;
 use std::fs;
 use tempfile::tempdir;
 

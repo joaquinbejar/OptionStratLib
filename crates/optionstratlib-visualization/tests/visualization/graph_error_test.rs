@@ -1,4 +1,5 @@
-use optionstratlib::error::{CurveError, GraphError, SurfaceError};
+use optionstratlib_math::error::{CurveError, SurfaceError};
+use optionstratlib_visualization::error::GraphError;
 use std::error::Error;
 use std::io;
 

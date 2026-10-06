@@ -12,14 +12,14 @@
 //! in the visualization layer (local trait, core-owned type) so the core
 //! model never references chart types.
 
-use crate::chains::utils::calculate_optimal_price_range;
-use crate::model::{Options, Position};
-use crate::strategies::base::BasicAble;
 use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
 use num_traits::FromPrimitive;
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::{Options, Position};
+use optionstratlib_market::chains::utils::calculate_optimal_price_range;
+use optionstratlib_strategies::strategies::base::BasicAble;
 use rust_decimal::Decimal;
 
 impl Graph for Options {

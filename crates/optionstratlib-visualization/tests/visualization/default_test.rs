@@ -1,4 +1,4 @@
-use optionstratlib::visualization::{
+use optionstratlib_visualization::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
 use rust_decimal_macros::dec;

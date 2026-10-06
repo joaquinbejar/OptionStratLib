@@ -10,14 +10,14 @@
 //!
 //! ## Usage Examples
 //! ```rust,no_run
-//! # fn main() -> Result<(), optionstratlib::error::Error> {
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Plot a single curve
 //! use std::fs;
 //! use std::path::{Path, PathBuf};
 //! use rust_decimal::Decimal;
-//! use optionstratlib::curves::{Curve, Point2D};
-//! use optionstratlib::geometrics::GeometricObject;
-//! use optionstratlib::visualization::Plottable;
+//! use optionstratlib_math::curves::{Curve, Point2D};
+//! use optionstratlib_math::geometrics::GeometricObject;
+//! use optionstratlib_visualization::visualization::Plottable;
 //!
 //! let curve = Curve::from_vector(vec![
 //!             Point2D::new(Decimal::ZERO, Decimal::ZERO), // p11
@@ -52,9 +52,9 @@
 //! # }
 //! ```
 
-use crate::curves::Curve;
-use crate::error::CurveError;
 use crate::visualization::{Graph, GraphData, PlotBuilder, Plottable};
+use optionstratlib_math::curves::Curve;
+use optionstratlib_math::error::CurveError;
 
 /// `Graph` adapter for a single [`Curve`]; lives in `visualization` because
 /// the trait is visualization-owned and `Curve` is a math container
@@ -169,8 +169,8 @@ impl Plottable for Vec<Curve> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::curves::Point2D;
-    use crate::geometrics::GeometricObject;
+    use optionstratlib_math::curves::Point2D;
+    use optionstratlib_math::geometrics::GeometricObject;
     use rust_decimal_macros::dec;
     #[cfg(feature = "plotly")]
     use {std::fs, std::path::Path, tracing::error};

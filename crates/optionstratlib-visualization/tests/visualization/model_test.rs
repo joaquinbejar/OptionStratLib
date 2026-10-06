@@ -1,6 +1,6 @@
-use optionstratlib::curves::{Curve, Point2D};
-use optionstratlib::surfaces::{Point3D, Surface};
-use optionstratlib::visualization::{
+use optionstratlib_math::curves::{Curve, Point2D};
+use optionstratlib_math::surfaces::{Point3D, Surface};
+use optionstratlib_visualization::visualization::{
     GraphData, GraphType, OutputType, PlotType, Series2D, Surface3D, TraceMode,
 };
 use rust_decimal_macros::dec;

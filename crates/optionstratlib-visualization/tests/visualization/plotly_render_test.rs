@@ -1,7 +1,9 @@
 #[cfg(all(feature = "static_export", feature = "plotly"))]
 mod plotly_render_tests {
 
-    use optionstratlib::visualization::{Graph, GraphConfig, GraphData, OutputType, Series2D};
+    use optionstratlib_visualization::visualization::{
+        Graph, GraphConfig, GraphData, OutputType, Series2D,
+    };
 
     use rust_decimal::Decimal;
     use std::path::PathBuf;
@@ -44,7 +46,7 @@ mod plotly_render_tests {
                 Decimal::from_str("6.0").unwrap(),
             ],
             name: "Test Series".to_string(),
-            mode: optionstratlib::visualization::TraceMode::Lines,
+            mode: optionstratlib_visualization::visualization::TraceMode::Lines,
             line_color: Some("#FF0000".to_string()),
             line_width: Some(2.0),
         }
@@ -59,8 +61,8 @@ mod plotly_render_tests {
             x_label: Some("X Axis".to_string()),
             y_label: Some("Y Axis".to_string()),
             z_label: Some("Z Axis".to_string()),
-            line_style: optionstratlib::visualization::LineStyle::Solid,
-            color_scheme: optionstratlib::visualization::ColorScheme::Viridis,
+            line_style: optionstratlib_visualization::visualization::LineStyle::Solid,
+            color_scheme: optionstratlib_visualization::visualization::ColorScheme::Viridis,
             legend: Some(vec!["Series 1".to_string()]),
             show_legend: true,
         }
@@ -84,8 +86,8 @@ mod plotly_render_tests {
                 x_label: None, // No x label
                 y_label: None, // No y label
                 z_label: None, // No z label
-                line_style: optionstratlib::visualization::LineStyle::Solid,
-                color_scheme: optionstratlib::visualization::ColorScheme::Viridis,
+                line_style: optionstratlib_visualization::visualization::LineStyle::Solid,
+                color_scheme: optionstratlib_visualization::visualization::ColorScheme::Viridis,
                 legend: None, // No legend
                 show_legend: false,
             };
@@ -113,8 +115,8 @@ mod plotly_render_tests {
                 x_label: Some("X Axis Label".to_string()),
                 y_label: Some("Y Axis Label".to_string()),
                 z_label: Some("Z Axis Label".to_string()),
-                line_style: optionstratlib::visualization::LineStyle::Solid,
-                color_scheme: optionstratlib::visualization::ColorScheme::Viridis,
+                line_style: optionstratlib_visualization::visualization::LineStyle::Solid,
+                color_scheme: optionstratlib_visualization::visualization::ColorScheme::Viridis,
                 legend: Some(vec!["Series 1".to_string()]),
                 show_legend: true,
             };

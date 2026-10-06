@@ -7,18 +7,19 @@
 //! but structurally valid. The assertion is deliberately weak: whatever comes
 //! back, it must come back.
 //!
-//! It stays in the facade because `Graph` is a visualization trait. The other
+//! It lives in `optionstratlib-visualization` because `Graph` is a
+//! visualization trait; it left the facade with the crate (#542). The other
 //! properties of this file moved with their layers (#534): the strategy ones
 //! to `optionstratlib-strategies` and the probability kernel, SPAN margin and
 //! P&L primitive ones to `optionstratlib-analytics`, both as
 //! `tests/panic_freedom_test.rs`.
 
-use optionstratlib::ExpirationDate;
-use optionstratlib::strategies::BullCallSpread;
-use optionstratlib::strategies::base::Strategies;
-use optionstratlib::strategies::probabilities::ProbabilityAnalysis;
-use optionstratlib::visualization::Graph;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
+use optionstratlib_strategies::strategies::BullCallSpread;
+use optionstratlib_strategies::strategies::base::Strategies;
+use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
+use optionstratlib_visualization::visualization::Graph;
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

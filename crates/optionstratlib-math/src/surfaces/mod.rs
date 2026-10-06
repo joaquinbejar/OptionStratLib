@@ -6,7 +6,7 @@
 //! * `Surface`: Represents a 3D surface.  See the `surface` module for more details.
 //! * `Point3D`: Represents a point in 3D space.  See the `types` module for more details.
 //! * `utils`: Contains utility functions for working with surfaces.  See the `utils` module for more details.
-//! * Plotting lives in the `optionstratlib` facade's `visualization` module (`Plottable` and the `Graph` impl for `Surface`);
+//! * Plotting lives in `optionstratlib-visualization` (`Plottable` and the `Graph` impl for `Surface`);
 //!   this module keeps only the geometry.
 //!
 

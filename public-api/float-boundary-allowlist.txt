@@ -27,3 +27,6 @@ pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result
 pub fn optionstratlib_math::surfaces::Point3D::from_f64_tuple(f64, f64, f64) -> core::result::Result<Self, optionstratlib_math::error::SurfaceError> # checked construction from f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::to_f64_tuple(&self) -> core::result::Result<(f64, f64, f64), optionstratlib_math::error::SurfaceError> # checked export to f64 coordinates
 pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>> # monetary strikes as f64, pre-existing; Positive conversion tracked in #642
+pub optionstratlib_visualization::visualization::Series2D::line_width: core::option::Option<f64> # rendering geometry: line width in pixels, passed to Plotly as is; not a market value (#542)
+pub optionstratlib_visualization::visualization::VisPoint2D::width: core::option::Option<f64> # rendering geometry: marker width in pixels; not a market value (#542)
+pub optionstratlib_visualization::visualization::VisPoint3D::width: core::option::Option<f64> # rendering geometry: marker width in pixels; not a market value (#542)
