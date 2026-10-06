@@ -11,6 +11,13 @@ use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use rust_decimal_macros::dec;
 
+fn price_trend(drift_rate: rust_decimal::Decimal, confidence: rust_decimal::Decimal) -> PriceTrend {
+    match PriceTrend::new(drift_rate, confidence) {
+        Ok(trend) => trend,
+        Err(e) => panic!("valid trend: {e}"),
+    }
+}
+
 fn adjustment() -> VolatilityAdjustment {
     VolatilityAdjustment {
         base_volatility: pos_or_panic!(0.20),
@@ -50,10 +57,7 @@ fn test_range_probability_is_bounded_by_its_tails() {
         &pos_or_panic!(95.0),
         &pos_or_panic!(105.0),
         adjustment(),
-        Some(PriceTrend {
-            drift_rate: 0.0,
-            confidence: 0.5,
-        }),
+        Some(price_trend(dec!(0.0), dec!(0.5))),
         &ExpirationDate::Days(pos_or_panic!(30.0)),
         Some(dec!(0.05)),
     );
@@ -71,10 +75,7 @@ fn test_range_probability_is_bounded_by_its_tails() {
     // The interval mass is the difference of the two single-point
     // probabilities of staying below each bound.
     let expiry = ExpirationDate::Days(pos_or_panic!(30.0));
-    let trend = || PriceTrend {
-        drift_rate: 0.0,
-        confidence: 0.5,
-    };
+    let trend = || price_trend(dec!(0.0), dec!(0.5));
     let below_lower = calculate_single_point_probability(
         &Positive::HUNDRED,
         &pos_or_panic!(95.0),

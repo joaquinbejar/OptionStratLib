@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`PriceTrend` has private `Decimal` fields and a validating constructor**
+  (#656). `drift_rate` (annual drift as a fraction, any sign) and
+  `confidence` were public `f64` fields that the kernels checked on every
+  call; they are now private `Decimal`s read through `drift_rate()` and
+  `confidence()`, and `PriceTrend::new(drift_rate, confidence)` returns
+  `Result<PriceTrend, ProbabilityError>`, rejecting a confidence outside
+  `[0, 1]` with `ProbabilityCalculationErrorKind::TrendError` at
+  construction instead of at evaluation. Migrate
+  `PriceTrend { drift_rate: 0.1, confidence: 0.95 }` to
+  `PriceTrend::new(dec!(0.1), dec!(0.95))?`. The kernels convert each field
+  to its nearest `f64` with the new `decimal_to_f64_correctly_rounded` and
+  still multiply in `f64`, so `calculate_single_point_probability`,
+  `calculate_price_probability`, `ProfitLossRange::calculate_probability`
+  and `ProbabilityAnalysis::expected_value` return the same values as before
+  for a trend written with the digits of the former `f64` literals, at any
+  number of decimal places. A caller holding a computed `f64` keeps identical
+  results by converting it with `Decimal::from_f64_retain`, not
+  `Decimal::from_f64` or `f64_to_decimal`, which round to fewer digits
+  (`0.1 + 0.2` becomes `0.3`). Two inputs are no longer expressible: a
+  confidence outside `[0, 1]`, which `ProbabilityAnalysis::expected_value`
+  used to answer through its zero-volatility early return and which is now
+  refused at construction, and a drift outside the `Decimal` range (about
+  ±7.9e28, finite, at most 28 decimal places). `PriceTrend` also derives
+  `PartialEq` and `Eq`. The four float-boundary allowlist entries go.
+
 - **Simulation is its own crate, `optionstratlib-simulation`** (#536).
   `simulation` (random walks, stochastic processes, steps, the walk driver,
   `RandomWalk`, `Simulator`, the Ornstein-Uhlenbeck process, exit policies
@@ -220,7 +245,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     forbids the minimal-market package set in analytics, and
     `check-components`, `make test`, `make doc`, the public-API snapshots and
     the float gate cover it (`PriceTrend::{drift_rate, confidence}`
-    allowlisted as pre-existing dimensionless kernel inputs).
+    allowlisted as pre-existing dimensionless kernel inputs, until #656
+    removed them).
 
 - **The facade routes `math`, `pricing`, `market` and `simulation` through
   features** (#528, ADR-0002 Decision 2). `optionstratlib-math`,
@@ -585,6 +611,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **`decimal_to_f64_correctly_rounded`** in
+  `optionstratlib_core::model::decimal` (#656): converts a `Decimal` to the
+  nearest `f64` by parsing its exact digits from a stack buffer, with no heap
+  allocation. `decimal_to_f64` (through `Decimal::to_f64`) can land one ULP
+  away from it at 15 or more decimal places, e.g. `2.999789999999902`; the
+  new function returns the `f64` literal written with the same digits.
+  Returns `DecimalError::ConversionError` rather than a non-finite value.
 
 - **Facade consumer fixtures for `analytics` and `strategies`** (#535).
   `fixtures/consumers/facade-analytics` uses the facade with

@@ -1841,6 +1841,16 @@ mod tests_poor_mans_covered_call_probability {
     use optionstratlib_analytics::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     /// Creates a test Poor Man's Covered Call with standard parameters
     fn create_test_pmcc() -> PoorMansCoveredCall {
         PoorMansCoveredCall::new(
@@ -1971,10 +1981,7 @@ mod tests_poor_mans_covered_call_probability {
     #[test]
     fn test_with_price_trend() {
         let pmcc = create_test_pmcc();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let prob = pmcc.probability_of_profit(None, trend);
         assert!(prob.is_ok());

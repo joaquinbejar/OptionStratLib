@@ -291,10 +291,12 @@ fn test_probability_kernels_through_facade_analytics() {
             base_volatility: pos_or_panic!(0.2),
             std_dev_adjustment: optionstratlib::prelude::Positive::ZERO,
         });
-    let trend = analytics_price_trend(optionstratlib::analytics::PriceTrend {
-        drift_rate: 0.0,
-        confidence: 0.95,
-    });
+    let trend = analytics_price_trend(
+        match optionstratlib::analytics::PriceTrend::new(dec!(0.0), dec!(0.95)) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        },
+    );
     let probabilities = optionstratlib::analytics::calculate_price_probability(
         &pos_or_panic!(100.0),
         &pos_or_panic!(95.0),

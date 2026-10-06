@@ -2,8 +2,10 @@ pub mod optionstratlib_analytics
 pub mod optionstratlib_analytics::analytics
 pub mod optionstratlib_analytics::analytics::probability
 pub struct optionstratlib_analytics::analytics::probability::PriceTrend
-pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64
-pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f64
+impl optionstratlib_analytics::analytics::probability::PriceTrend
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::confidence(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_analytics::error::probability::ProbabilityError>
 pub struct optionstratlib_analytics::analytics::probability::VolatilityAdjustment
 pub optionstratlib_analytics::analytics::probability::VolatilityAdjustment::base_volatility: positive::positive::Positive
 pub optionstratlib_analytics::analytics::probability::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
@@ -114,8 +116,10 @@ impl optionstratlib_analytics::analytics::rnd::RNDAnalysis for optionstratlib_ma
 pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
 pub struct optionstratlib_analytics::analytics::PriceTrend
-pub optionstratlib_analytics::analytics::PriceTrend::confidence: f64
-pub optionstratlib_analytics::analytics::PriceTrend::drift_rate: f64
+impl optionstratlib_analytics::analytics::probability::PriceTrend
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::confidence(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_analytics::analytics::probability::PriceTrend::new(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<Self, optionstratlib_analytics::error::probability::ProbabilityError>
 pub struct optionstratlib_analytics::analytics::ProfitLossRange
 pub optionstratlib_analytics::analytics::ProfitLossRange::lower_bound: core::option::Option<positive::positive::Positive>
 pub optionstratlib_analytics::analytics::ProfitLossRange::probability: positive::positive::Positive

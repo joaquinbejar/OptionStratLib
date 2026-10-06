@@ -3015,6 +3015,16 @@ mod tests_iron_condor_probability {
     use optionstratlib_analytics::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
 
+    fn price_trend(
+        drift_rate: rust_decimal::Decimal,
+        confidence: rust_decimal::Decimal,
+    ) -> PriceTrend {
+        match PriceTrend::new(drift_rate, confidence) {
+            Ok(trend) => trend,
+            Err(e) => panic!("valid trend: {e}"),
+        }
+    }
+
     /// Creates a test Iron Condor with standard parameters
     fn create_test_condor() -> IronCondor {
         IronCondor::new(
@@ -3156,10 +3166,7 @@ mod tests_iron_condor_probability {
     #[test]
     fn test_with_price_trend() {
         let condor = create_test_condor();
-        let trend = Some(PriceTrend {
-            drift_rate: 0.1,
-            confidence: 0.95,
-        });
+        let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
         let prob = condor.probability_of_profit(None, trend);
         assert!(prob.is_ok());

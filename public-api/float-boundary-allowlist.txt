@@ -20,13 +20,10 @@ pub fn optionstratlib_core::model::payoff::Payoff::payoff(&self, &optionstratlib
 pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64 # impl of the payoff kernel above (#637)
 pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)> # explicit export to f64 for plotting backends
 pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError> # checked Decimal -> f64 conversion for kernels; fails rather than lossy
+pub fn optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError> # checked Decimal -> nearest f64 for kernels that must reproduce a former f64 input bit for bit (the PriceTrend fields, #656); fails rather than returning a non-finite value
 pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> # checked f64 -> Decimal conversion; rejects non-finite input
 pub fn optionstratlib_math::curves::Point2D::from_f64_tuple(f64, f64) -> core::result::Result<Self, optionstratlib_math::error::curves::CurveError> # checked construction from f64 coordinates
 pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result::Result<(f64, f64), optionstratlib_math::error::curves::CurveError> # checked export to f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::from_f64_tuple(f64, f64, f64) -> core::result::Result<Self, optionstratlib_math::error::SurfaceError> # checked construction from f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::to_f64_tuple(&self) -> core::result::Result<(f64, f64, f64), optionstratlib_math::error::SurfaceError> # checked export to f64 coordinates
 pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>> # monetary strikes as f64, pre-existing; Positive conversion tracked in #642
-pub optionstratlib_analytics::analytics::probability::PriceTrend::drift_rate: f64 # dimensionless annual drift of the lognormal kernel, pre-existing; a non-finite result fails through f2du! in calculate_single_point_probability; validated type tracked in #656
-pub optionstratlib_analytics::analytics::PriceTrend::drift_rate: f64 # same field at the analytics root re-export
-pub optionstratlib_analytics::analytics::probability::PriceTrend::confidence: f64 # dimensionless weight of the drift, pre-existing; rejected outside [0, 1] (NaN included) by the kernels; validated type tracked in #656
-pub optionstratlib_analytics::analytics::PriceTrend::confidence: f64 # same field at the analytics root re-export

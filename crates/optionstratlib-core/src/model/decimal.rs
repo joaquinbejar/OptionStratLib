@@ -202,6 +202,98 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     })
 }
 
+/// Longest `Display` form of a `Decimal`: a sign, `0.`, and 28 fractional
+/// digits is 31 bytes; 29 integer digits with a sign is 30.
+const DECIMAL_DISPLAY_CAPACITY: usize = 40;
+
+/// Stack buffer a `Decimal` formats into, so its digits can be parsed without
+/// a heap allocation.
+struct DecimalDisplayBuffer {
+    bytes: [u8; DECIMAL_DISPLAY_CAPACITY],
+    len: usize,
+}
+
+impl std::fmt::Write for DecimalDisplayBuffer {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        let end = self.len.checked_add(s.len()).ok_or(std::fmt::Error)?;
+        let slot = self.bytes.get_mut(self.len..end).ok_or(std::fmt::Error)?;
+        slot.copy_from_slice(s.as_bytes());
+        self.len = end;
+        Ok(())
+    }
+}
+
+#[cold]
+#[inline(never)]
+fn correctly_rounded_conversion_error(value: Decimal, reason: &str) -> DecimalError {
+    DecimalError::ConversionError {
+        from_type: format!("Decimal: {value}"),
+        to_type: "f64".to_string(),
+        reason: reason.to_string(),
+    }
+}
+
+/// Converts a `Decimal` to the `f64` nearest to it (ties to even).
+///
+/// [`decimal_to_f64`] goes through `Decimal::to_f64`, which divides the
+/// mantissa by a power of ten in floating point and can land one ULP away
+/// from the nearest `f64` once the value has 15 or more decimal places. This
+/// conversion parses the exact decimal digits instead, so it returns the same
+/// `f64` as the `f64` literal written with those digits. It formats into a
+/// stack buffer and does not allocate on success.
+///
+/// Use it where a kernel must reproduce, bit for bit, a result it used to
+/// compute from an `f64` input that is now a `Decimal` (the analytics
+/// `PriceTrend` fields, #656).
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ConversionError`] if the digits do not fit the
+/// buffer or do not parse, or if the result is not finite. Every `Decimal`
+/// lies within `f64` range, so none of these happens for a valid value; they
+/// are reported rather than assumed.
+///
+/// # Example
+///
+/// ```rust
+/// use rust_decimal_macros::dec;
+/// use optionstratlib_core::model::decimal::decimal_to_f64_correctly_rounded;
+///
+/// let value = decimal_to_f64_correctly_rounded(dec!(0.95));
+/// assert!(matches!(value, Ok(v) if v.to_bits() == 0.95_f64.to_bits()));
+/// ```
+pub fn decimal_to_f64_correctly_rounded(value: Decimal) -> Result<f64, DecimalError> {
+    use std::fmt::Write as _;
+
+    let mut buffer = DecimalDisplayBuffer {
+        bytes: [0; DECIMAL_DISPLAY_CAPACITY],
+        len: 0,
+    };
+    if write!(buffer, "{value}").is_err() {
+        return Err(correctly_rounded_conversion_error(
+            value,
+            "decimal digits exceed the conversion buffer",
+        ));
+    }
+    let digits = buffer
+        .bytes
+        .get(..buffer.len)
+        .and_then(|bytes| std::str::from_utf8(bytes).ok())
+        .ok_or_else(|| {
+            correctly_rounded_conversion_error(value, "decimal digits are not valid UTF-8")
+        })?;
+    let parsed: f64 = digits.parse().map_err(|_| {
+        correctly_rounded_conversion_error(value, "decimal digits do not parse as f64")
+    })?;
+    if !parsed.is_finite() {
+        return Err(correctly_rounded_conversion_error(
+            value,
+            "decimal value is not finite as f64",
+        ));
+    }
+    Ok(parsed)
+}
+
 /// Converts an f64 floating-point number to a Decimal.
 ///
 /// This function attempts to convert an f64 floating-point number to a Decimal value.
@@ -1224,5 +1316,145 @@ mod checked_helpers_tests {
         assert!(
             matches!(err, DecimalError::Overflow { operation, .. } if operation == "test::sum_iter")
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_decimal_to_f64_correctly_rounded {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn converted(value: Decimal) -> f64 {
+        match decimal_to_f64_correctly_rounded(value) {
+            Ok(v) => v,
+            Err(e) => panic!("every Decimal converts: {value}: {e}"),
+        }
+    }
+
+    /// The digits of `mantissa * 10^-scale`, written without `Decimal`'s
+    /// `Display`, so the expectation does not share code with the helper.
+    fn digits(negative: bool, mantissa: u128, scale: u32) -> String {
+        let raw = mantissa.to_string();
+        let width = match usize::try_from(scale) {
+            Ok(w) => w,
+            Err(e) => panic!("scale {scale} fits usize: {e}"),
+        };
+        let padded = format!("{raw:0>w$}", w = width + 1);
+        let (integer, fraction) = padded.split_at(padded.len() - width);
+        let sign = if negative { "-" } else { "" };
+        if fraction.is_empty() {
+            format!("{sign}{integer}")
+        } else {
+            format!("{sign}{integer}.{fraction}")
+        }
+    }
+
+    /// A fixed-seed 64-bit linear congruential generator (Knuth's MMIX
+    /// constants), so the sweep needs no RNG dependency and draws the same
+    /// inputs on every run. The step is taken in `u128` with an explicit
+    /// modulus; `draw` returns the high 32 bits, the well-mixed ones.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn draw(&mut self) -> u64 {
+            let step = (u128::from(self.0) * 6_364_136_223_846_793_005 + 1_442_695_040_888_963_407)
+                % (1_u128 << 64);
+            self.0 = match u64::try_from(step) {
+                Ok(state) => state,
+                Err(e) => panic!("a value below 2^64 fits u64: {e}"),
+            };
+            self.0 >> 32
+        }
+    }
+
+    #[test]
+    fn test_decimal_to_f64_correctly_rounded_seeded_15_to_28_places_matches_parse() {
+        let mut rng = Lcg(0x0656_f64d_ec1a);
+        // Draws on which `Decimal::to_f64` misses the nearest `f64`: the sweep
+        // must reach them for the comparison to mean anything.
+        let mut plain_misses = 0_u32;
+        for _ in 0..20_000 {
+            // A 96-bit mantissa (the full `Decimal` range), a scale of 15 to
+            // 28 and a sign, all from the same draw stream.
+            let mantissa = (u128::from(rng.draw()) << 64)
+                | (u128::from(rng.draw()) << 32)
+                | u128::from(rng.draw());
+            let scale = match u32::try_from(rng.draw() % 14) {
+                Ok(offset) => 15 + offset,
+                Err(e) => panic!("a value below 14 fits u32: {e}"),
+            };
+            let negative = rng.draw() % 2 == 1;
+            let signed = match i128::try_from(mantissa) {
+                Ok(m) if negative => -m,
+                Ok(m) => m,
+                Err(e) => panic!("96-bit mantissa fits i128: {e}"),
+            };
+            let value = match Decimal::try_from_i128_with_scale(signed, scale) {
+                Ok(v) => v,
+                Err(e) => panic!("96-bit mantissa with scale {scale} is a Decimal: {e}"),
+            };
+            let text = digits(negative && mantissa != 0, mantissa, scale);
+            let expected: f64 = match text.parse() {
+                Ok(v) => v,
+                Err(e) => panic!("{text} parses: {e}"),
+            };
+            assert_eq!(
+                converted(value).to_bits(),
+                expected.to_bits(),
+                "{value} ({text})"
+            );
+            if value.to_f64().map(f64::to_bits) != Some(expected.to_bits()) {
+                plain_misses += 1;
+            }
+        }
+        assert!(plain_misses > 0, "the sweep never reached a to_f64 miss");
+    }
+
+    #[test]
+    fn test_decimal_to_f64_correctly_rounded_edges_match_parse() {
+        let edges = [
+            Decimal::ZERO,
+            Decimal::ONE,
+            Decimal::NEGATIVE_ONE,
+            Decimal::MAX,
+            Decimal::MIN,
+            Decimal::new(1, 28),
+            Decimal::new(-1, 28),
+            Decimal::from_i128_with_scale(79_228_162_514_264_337_593_543_950_335, 28),
+            Decimal::from_i128_with_scale(-79_228_162_514_264_337_593_543_950_335, 15),
+            dec!(0.95),
+            dec!(-0.37),
+            dec!(0.10),
+        ];
+        for value in edges {
+            let expected: f64 = match value.to_string().parse() {
+                Ok(v) => v,
+                Err(e) => panic!("{value} parses: {e}"),
+            };
+            assert_eq!(converted(value).to_bits(), expected.to_bits(), "{value}");
+        }
+    }
+
+    /// `Decimal::to_f64` lands one ULP away from the nearest `f64` on these;
+    /// the helper returns the `f64` literal written with the same digits.
+    #[test]
+    fn test_decimal_to_f64_correctly_rounded_where_to_f64_differs_matches_literal() {
+        let cases = [
+            (dec!(2.999789999999902), 2.999_789_999_999_902_f64),
+            (
+                dec!(0.1234567890123456789012345678),
+                // The nearest `f64` to the 28 digits, written in its
+                // shortest form (the full literal trips `excessive_precision`).
+                0.123_456_789_012_345_68_f64,
+            ),
+        ];
+        for (value, literal) in cases {
+            assert_eq!(converted(value).to_bits(), literal.to_bits(), "{value}");
+            let plain = match value.to_f64() {
+                Some(v) => v,
+                None => panic!("{value} has an f64 form"),
+            };
+            assert_ne!(plain.to_bits(), literal.to_bits(), "{value}");
+        }
     }
 }
