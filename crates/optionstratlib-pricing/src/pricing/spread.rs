@@ -119,7 +119,23 @@ pub fn spread_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
 
 /// Kirk's approximation for spread options with non-zero strike.
 ///
-/// Treats the spread option as a call on S1 with adjusted strike (S2 + K).
+/// Treats the spread option as a call on `S1` struck at the second asset's
+/// forward plus the strike (Haug, *The Complete Guide to Option Pricing
+/// Formulas*, §5.4.2), written on present values so no forward is formed:
+///
+/// ```text
+/// P1 = S1 e^(-q1 T)                    (e^(-rT) F1)
+/// P2 = S2 e^(-q2 T) + K e^(-rT)        (e^(-rT) (F2 + K))
+/// w  = S2 e^(-q2 T) / P2               (F2 / (F2 + K))
+/// σ² = σ1² + (w σ2)² - 2 ρ σ1 σ2 w
+/// d1 = (ln(P1 / P2) + σ² T / 2) / (σ √T),   d2 = d1 - σ √T
+/// c  = P1 N(d1) - P2 N(d2),   p = P2 N(-d2) - P1 N(-d1)
+/// ```
+///
+/// With `K = 0` this is Margrabe's formula, so the two branches of
+/// [`spread_black_scholes`] meet as the strike vanishes. Each asset carries
+/// its own dividend yield; the second asset used to be discounted at `r`
+/// with `q2` ignored, which is right only when `q2 = r` (#650).
 ///
 /// # Arguments
 ///
@@ -141,7 +157,7 @@ fn kirk_approximation(
     k: Decimal,
     r: Decimal,
     q1: Decimal,
-    _q2: Decimal,
+    q2: Decimal,
     sigma1: Decimal,
     sigma2: Decimal,
     rho: Decimal,
@@ -160,14 +176,59 @@ fn kirk_approximation(
         };
     }
 
-    let adjusted_strike = d_add(s2, k, "pricing::spread::kirk::adjusted_strike")?;
-    if adjusted_strike <= dec!(0.0) {
+    if d_add(s2, k, "pricing::spread::kirk::adjusted_strike")? <= dec!(0.0) {
         return Err(PricingError::other(
             "Adjusted strike (S2 + K) must be positive",
         ));
     }
 
-    let s2_ratio = d_div(s2, adjusted_strike, "pricing::spread::kirk::s2_ratio")?;
+    let s1_pv = d_mul(
+        s1,
+        discount_factor(
+            q1,
+            t,
+            "pricing::spread::kirk::neg_q1t",
+            "pricing::spread::kirk::dividend_discount",
+        )?,
+        "pricing::spread::kirk::s1_pv",
+    )?;
+    let s2_pv = d_mul(
+        s2,
+        discount_factor(
+            q2,
+            t,
+            "pricing::spread::kirk::neg_q2t",
+            "pricing::spread::kirk::dividend_discount2",
+        )?,
+        "pricing::spread::kirk::s2_pv",
+    )?;
+    let strike_pv = d_mul(
+        k,
+        discount_factor(
+            r,
+            t,
+            "pricing::spread::kirk::neg_rt",
+            "pricing::spread::kirk::discount",
+        )?,
+        "pricing::spread::kirk::strike_pv",
+    )?;
+    let adjusted_strike_pv = d_add(
+        s2_pv,
+        strike_pv,
+        "pricing::spread::kirk::adjusted_strike_pv",
+    )?;
+    if adjusted_strike_pv.is_zero() {
+        // `S2 + K > 0` but both discount factors flushed below the
+        // representable scale: `ln(P1 / P2)` diverges to `+∞`, the CDFs
+        // saturate, and the call is worth `S1`'s present value. That is the
+        // limit of the formula, not a substitute for it.
+        return Ok(match style {
+            OptionStyle::Call => s1_pv,
+            OptionStyle::Put => dec!(0.0),
+        });
+    }
+
+    let s2_ratio = d_div(s2_pv, adjusted_strike_pv, "pricing::spread::kirk::s2_ratio")?;
 
     let sigma_sq = d_sub(
         d_add(
@@ -201,60 +262,35 @@ fn kirk_approximation(
     let sqrt_t = d_sqrt(t, "pricing::spread::kirk::sqrt_t")?;
     let denominator = d_mul(sigma, sqrt_t, "pricing::spread::kirk::denominator")?;
 
-    let s1_pv = d_mul(
-        s1,
-        discount_factor(
-            q1,
-            t,
-            "pricing::spread::kirk::neg_q1t",
-            "pricing::spread::kirk::dividend_discount",
-        )?,
-        "pricing::spread::kirk::s1_pv",
-    )?;
-    let adjusted_strike_pv = d_mul(
-        adjusted_strike,
-        discount_factor(
-            r,
-            t,
-            "pricing::spread::kirk::neg_rt",
-            "pricing::spread::kirk::discount",
-        )?,
-        "pricing::spread::kirk::adjusted_strike_pv",
-    )?;
-
-    // `N(d1)`, `N(d2)`, `N(-d1)`, `N(-d2)`. A collapsed `σ√T` or a vanished `S1`
-    // drives the normal arguments to `±∞`, where the CDFs saturate: those are
-    // the limits of the formula, not substitutes for it.
+    // `N(d1)`, `N(d2)`, `N(-d1)`, `N(-d2)`. A collapsed `σ√T` or a vanished
+    // `S1` drives the normal arguments to `±∞`, where the CDFs saturate:
+    // those are the limits of the formula, not substitutes for it.
     let (n_d1, n_d2, n_neg_d1, n_neg_d2) = if denominator.is_zero() {
         // σ√T → 0: the option is worth its discounted intrinsic, i.e. the step
-        // function at the forward. The test has to compare the two present
-        // values, not the spot moneyness `S1 / (S2 + K)`: the carry `(r - q1)T`
-        // lives in the discounting, and dropping it flips the step whenever
-        // spot and forward straddle the adjusted strike. `sigma` is exactly
-        // zero at `rho = 1, sigma1 = w * sigma2`, so this branch is reachable
-        // from well-formed inputs.
+        // function at the forwards, which compares the two present values.
+        // `sigma` is exactly zero at `rho = 1, sigma1 = w * sigma2`, so this
+        // branch is reachable from well-formed inputs.
         if s1_pv >= adjusted_strike_pv {
             (dec!(1.0), dec!(1.0), dec!(0.0), dec!(0.0))
         } else {
             (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
         }
-    } else if s1.is_zero() {
-        // `S1 = 0`: `ln(S1 / (S2 + K))` diverges to `-∞` and the CDFs saturate.
+    } else if s1_pv.is_zero() {
+        // `S1 e^(-q1 T) = 0` (a zero spot, or a discount factor flushed to
+        // zero): `ln(P1 / P2)` diverges to `-∞` and the CDFs saturate.
         (dec!(0.0), dec!(0.0), dec!(1.0), dec!(1.0))
     } else {
-        // Log-moneyness as `ln(S1) - ln(S2 + K)`, never as `ln(S1 / (S2 + K))`:
-        // the quotient underflows to zero below `1e-28` and drags the
-        // `(r - q1)T` carry down with it, so a tiny-but-nonzero `S1` against a
-        // discount factor that has wiped out the adjusted strike would price at
-        // zero instead of at `S1`'s present value. The difference of the two
-        // logarithms is exact where the quotient is not, and both logarithms
-        // exist: `S2 + K` was rejected above unless positive and `S1 = 0` is
-        // the branch just above.
+        // Log-moneyness as `ln(P1) - ln(P2)`, never as `ln(P1 / P2)`: the
+        // quotient underflows to zero below `1e-28`, so a tiny-but-nonzero
+        // `S1` against a large adjusted strike would price at zero instead of
+        // at `S1`'s present value. The difference of the two logarithms is
+        // exact where the quotient is not, and both exist: `P2` was rejected
+        // above unless positive and `P1 = 0` is the branch just above.
         let log_moneyness = d_sub(
-            d_ln(s1, "pricing::spread::kirk::log_s1")?,
+            d_ln(s1_pv, "pricing::spread::kirk::log_s1_pv")?,
             d_ln(
-                adjusted_strike,
-                "pricing::spread::kirk::log_adjusted_strike",
+                adjusted_strike_pv,
+                "pricing::spread::kirk::log_adjusted_strike_pv",
             )?,
             "pricing::spread::kirk::log_moneyness",
         )?;
@@ -262,14 +298,10 @@ fn kirk_approximation(
             d_add(
                 log_moneyness,
                 d_mul(
-                    d_add(
-                        d_sub(r, q1, "pricing::spread::kirk::carry")?,
-                        d_div(
-                            d_mul(sigma, sigma, "pricing::spread::kirk::variance")?,
-                            dec!(2.0),
-                            "pricing::spread::kirk::half_variance",
-                        )?,
-                        "pricing::spread::kirk::drift_rate",
+                    d_div(
+                        d_mul(sigma, sigma, "pricing::spread::kirk::variance")?,
+                        dec!(2.0),
+                        "pricing::spread::kirk::half_variance",
                     )?,
                     t,
                     "pricing::spread::kirk::drift",
@@ -550,9 +582,10 @@ mod tests {
     }
 
     /// Kirk leg (`K != 0`). `S1 / (S2 + K)` rounds below the representable
-    /// `Decimal` scale, but an `r` large enough to wipe out the adjusted
-    /// strike's present value offsets the log-moneyness through the
-    /// `(r - q1)T` carry, so the call is worth `S1`'s present value.
+    /// `Decimal` scale, but an `r` and a `q2` large enough to wipe out the
+    /// adjusted strike's present value `S2 e^(-q2 T) + K e^(-rT)` offset the
+    /// log-moneyness, so the call is worth `S1`'s present value. Since #650
+    /// `S2` is discounted at its own `q2`, not at `r`, so the test sets both.
     #[test]
     fn test_kirk_underflowing_moneyness_with_offsetting_carry_prices_first_pv() {
         let mut option = create_spread_option(pos_or_panic!(50.0), OptionStyle::Call);
@@ -565,6 +598,7 @@ mod tests {
         option.dividend_yield = Positive::ZERO;
         if let Some(ref mut params) = option.exotic_params {
             params.spread_second_asset_volatility = Some(pos_or_panic!(0.2));
+            params.spread_second_asset_dividend = Some(pos_or_panic!(100.0));
         }
 
         let price = spread_black_scholes(&option).unwrap();
@@ -735,9 +769,12 @@ mod tests {
 
         let parity_diff = (call_price - put_price - forward_spread + k_pv).abs();
 
+        // `q1 = q2 = 0`: `C - P = S1 - S2 - K e^(-rT)` holds exactly for Kirk
+        // on present values (#650). Discounting `S2` at `r` used to leave a
+        // gap of `S2 (1 - e^(-rT)) ≈ 1.23`, which the old `2.0` bound hid.
         assert!(
-            parity_diff < dec!(2.0),
-            "Put-call parity should approximately hold, diff = {}",
+            parity_diff < dec!(0.000000001),
+            "Put-call parity should hold, diff = {}",
             parity_diff
         );
     }
@@ -794,18 +831,22 @@ mod tests_kirk_zero_volatility {
 
     /// Kirk's adjusted volatility is
     /// `sigma^2 = (sigma1 - w*sigma2)^2 + 2*w*sigma1*sigma2*(1 - rho)` with
-    /// `w = S2 / (S2 + K)`, which is exactly zero at `rho = 1` and
-    /// `sigma1 = w * sigma2`. These are well-formed inputs, so the zero-vol
-    /// branch is reachable and its step test has to be right.
+    /// `w = S2 e^(-q2 T) / (S2 e^(-q2 T) + K e^(-rT))`, which is exactly zero
+    /// at `rho = 1` and `sigma1 = w * sigma2`. These are well-formed inputs,
+    /// so the zero-vol branch is reachable and its step test has to be right.
     ///
-    /// `S2 = 100, K = 25` gives `w = 0.8` exactly, so `sigma1 = 0.2` against
-    /// `sigma2 = 0.25` collapses the adjusted volatility to exactly zero — the
-    /// weight has to divide exactly or the branch is never reached.
+    /// `S2 = 100, K = 25, r = q2 = 0` gives `w = 0.8` exactly, so
+    /// `sigma1 = 0.2` against `sigma2 = 0.25` collapses the adjusted
+    /// volatility to exactly zero — the weight has to divide exactly or the
+    /// branch is never reached. Since #650 `w` uses the present values, so
+    /// the rate has to be zero for the weight to stay exact; the carry that
+    /// separates spot from present-value moneyness comes from `q1` instead
+    /// (these tests used `r = 25 %` and `r = -10 %` before).
     ///
-    /// Spot moneyness `S1 / (S2 + K) = 0.8` says out-of-the-money, but with
-    /// `r = 25%` and `q1 = 0` the present values say the opposite:
-    /// `S1*e^{-q1*T} = 100` against `(S2 + K)*e^{-r*T} = 125*e^{-0.25} = 97.35`.
-    fn zero_vol_spread(option_style: OptionStyle, risk_free_rate: Decimal) -> Options {
+    /// Spot moneyness `S1 - (S2 + K) = 130 - 125` says in-the-money, but with
+    /// `q1 = 10 %` the present values say the opposite:
+    /// `S1 e^(-q1 T) = 130 e^(-0.1) = 117.63` against `S2 + K = 125`.
+    fn zero_vol_spread(option_style: OptionStyle, dividend_yield: Positive) -> Options {
         Options::new(
             OptionType::Spread {
                 second_asset: Positive::HUNDRED,
@@ -816,10 +857,10 @@ mod tests_kirk_zero_volatility {
             ExpirationDate::Days(pos_or_panic!(365.0)),
             pos_or_panic!(0.2),
             Positive::ONE,
-            Positive::HUNDRED,
-            risk_free_rate,
+            pos_or_panic!(130.0),
+            Decimal::ZERO,
             option_style,
-            Positive::ZERO,
+            dividend_yield,
             Some(ExoticParams {
                 spot_prices: None,
                 spot_min: None,
@@ -845,53 +886,45 @@ mod tests_kirk_zero_volatility {
         )
     }
 
-    #[test]
-    fn test_zero_volatility_call_uses_present_values_not_spot_moneyness() {
-        let option = zero_vol_spread(OptionStyle::Call, dec!(0.25));
-        let price = match spread_black_scholes(&option) {
+    fn price(option: &Options) -> Decimal {
+        match spread_black_scholes(option) {
             Ok(price) => price,
             Err(e) => panic!("the spread should price: {e}"),
-        };
+        }
+    }
 
-        // The discounted intrinsic is `S1*e^{-q1*T} - (S2 + K)*e^{-r*T}`,
-        // about 2.65. Testing the spot moneyness instead returns zero here.
+    #[test]
+    fn test_zero_volatility_call_uses_present_values_not_spot_moneyness() {
+        // The discounted intrinsic is `max(S1 e^(-q1 T) - (S2 + K), 0) = 0`.
+        // Testing the spot moneyness instead returns `130 - 125 = 5`.
+        let call = price(&zero_vol_spread(OptionStyle::Call, pos_or_panic!(0.10)));
+        assert_eq!(call, Decimal::ZERO, "zero-vol call priced at {call}");
+        let put = price(&zero_vol_spread(OptionStyle::Put, pos_or_panic!(0.10)));
+        // `125 - 130 e^(-0.1) = 7.3709`.
         assert!(
-            price > dec!(2.5) && price < dec!(2.8),
-            "zero-vol call priced at {price}, expected the discounted intrinsic near 2.65"
+            put > dec!(7.37) && put < dec!(7.38),
+            "zero-vol put priced at {put}, expected the discounted intrinsic near 7.371"
         );
     }
 
     #[test]
     fn test_zero_volatility_put_is_worthless_when_the_call_is_in_the_money() {
-        let option = zero_vol_spread(OptionStyle::Put, dec!(0.25));
-        let price = match spread_black_scholes(&option) {
-            Ok(price) => price,
-            Err(e) => panic!("the spread should price: {e}"),
-        };
-        assert_eq!(price, Decimal::ZERO, "put priced at {price}");
+        let put = price(&zero_vol_spread(OptionStyle::Put, Positive::ZERO));
+        assert_eq!(put, Decimal::ZERO, "put priced at {put}");
+        let call = price(&zero_vol_spread(OptionStyle::Call, Positive::ZERO));
+        assert_eq!(call, dec!(5), "call priced at {call}");
     }
 
     #[test]
     fn test_zero_volatility_step_flips_with_the_carry() {
-        // A negative rate pushes the adjusted strike's present value above the
-        // first asset's, so the same contract flips: the call is worthless and
-        // the put carries the intrinsic.
-        let call = zero_vol_spread(OptionStyle::Call, dec!(-0.10));
-        let put = zero_vol_spread(OptionStyle::Put, dec!(-0.10));
-
-        let call_price = match spread_black_scholes(&call) {
-            Ok(price) => price,
-            Err(e) => panic!("the call should price: {e}"),
-        };
-        let put_price = match spread_black_scholes(&put) {
-            Ok(price) => price,
-            Err(e) => panic!("the put should price: {e}"),
-        };
-
-        assert_eq!(call_price, Decimal::ZERO, "call priced at {call_price}");
-        assert!(
-            put_price > dec!(38.0),
-            "put priced at {put_price}, expected the discounted intrinsic near 38.1"
-        );
+        // A dividend yield on the first asset pushes its present value below
+        // the adjusted strike's, so the same contract flips: the call is
+        // worthless and the put carries the intrinsic.
+        let call = price(&zero_vol_spread(OptionStyle::Call, Positive::ZERO));
+        let put = price(&zero_vol_spread(OptionStyle::Put, Positive::ZERO));
+        assert!(call > Decimal::ZERO && put.is_zero(), "{call} / {put}");
+        let call = price(&zero_vol_spread(OptionStyle::Call, pos_or_panic!(0.10)));
+        let put = price(&zero_vol_spread(OptionStyle::Put, pos_or_panic!(0.10)));
+        assert!(call.is_zero() && put > Decimal::ZERO, "{call} / {put}");
     }
 }

@@ -32,8 +32,10 @@
 //!   `t = T` is the straddle, Margrabe exchange parity, power option with
 //!   exponent 1 is Black-Scholes, Kemna-Vorst geometric Asian is
 //!   Black-Scholes with `σ/√3` and carry `(r - q - σ²/6)/2`, quanto with zero
-//!   correlation and unit rate and `r_f = r_d` is Black-Scholes-Merton, and
-//!   Kirk's spread approximation tends to Margrabe as the strike vanishes.
+//!   correlation and unit rate and `r_f = r_d` is Black-Scholes-Merton (and
+//!   takes its carry from `r_f` otherwise, #650), and Kirk's spread
+//!   approximation tends to Margrabe as the strike vanishes, on forwards and
+//!   on a spot second asset, with exact spread put-call parity (#650).
 //! * Limits where the library defines them: binomial and Barone-Adesi-Whaley
 //!   at `T = 0` (intrinsic) and `σ = 0` (discounted deterministic payoff),
 //!   the zero-volatility American floors and interior exercise optimum of
@@ -73,8 +75,7 @@
 //! # Known discrepancies (filed, tested in the fix)
 //!
 //! Identities the library breaks today are not in this suite; each lives
-//! in its issue with the test code: barrier bounds and `Side` (#646),
-//! quanto foreign rate and Kirk second dividend (#650).
+//! in its issue with the test code: barrier bounds and `Side` (#646).
 
 use optionstratlib_core::model::option::ExoticParams;
 use optionstratlib_core::model::types::{
@@ -1169,6 +1170,77 @@ fn test_spread_kirk_tends_to_margrabe_as_strike_vanishes() {
         margrabe,
         dec!(0.002),
         "kirk vs margrabe, futures-style",
+    );
+}
+
+/// The same continuity on a spot second asset (`q2 = 0`): Kirk's adjusted
+/// strike is `F2 + K` with `F2 = S2 e^((r - q2)T)`, i.e. a present value of
+/// `S2 e^(-q2 T) + K e^(-rT)` (Haug §5.4.2 on forwards). The pricer used to
+/// discount `S2 + K` at `r` and ignore `q2`, so at `K = 1e-3` it priced
+/// `S1 = 100, S2 = 95, T = 0.5, r = 5 %, q1 = 5 %` about `1.24` above the
+/// Margrabe branch (#650).
+#[test]
+fn test_spread_kirk_tends_to_margrabe_with_spot_second_asset() {
+    let kirk = ok(spread_black_scholes(&spread_call(0.001, 0.05, 0.0)), "kirk");
+    let margrabe = ok(
+        spread_black_scholes(&spread_call(0.0, 0.05, 0.0)),
+        "margrabe",
+    );
+    assert_close(kirk, margrabe, dec!(0.002), "kirk vs margrabe, spot S2");
+}
+
+/// Kirk on present values satisfies spread put-call parity exactly,
+/// `C - P = S1 e^(-q1 T) - S2 e^(-q2 T) - K e^(-rT)`, whatever the two
+/// dividend yields (#650).
+#[test]
+fn test_spread_kirk_put_call_parity_with_both_dividends() {
+    for (q1, q2) in [(0.0, 0.0), (0.05, 0.0), (0.0, 0.03), (0.02, 0.07)] {
+        for k in [1.0, 5.0, 20.0] {
+            let call = spread_call(k, q1, q2);
+            let mut put = call.clone();
+            put.option_style = OptionStyle::Put;
+            let t = years(&call);
+            let expected = dec!(100) * discount(pos_or_panic!(q1).to_dec(), t)
+                - dec!(95) * discount(pos_or_panic!(q2).to_dec(), t)
+                - pos_or_panic!(k).to_dec() * discount(dec!(0.05), t);
+            assert_close(
+                ok(spread_black_scholes(&call), "kirk call")
+                    - ok(spread_black_scholes(&put), "kirk put"),
+                expected,
+                IDENTITY_TOL,
+                &format!("kirk parity q1={q1} q2={q2} k={k}"),
+            );
+        }
+    }
+}
+
+/// Haug §5.16.1: the quanto forward grows at `r_f - q - ρ σ_S σ_E` and is
+/// discounted at `r_d`. With `ρ = 0` and `E_p = 1` the put at
+/// `S = 100, K = 95, T = 0.5, r_d = 10 %, r_f = 3 %, q = 5 %, σ = 20 %` is
+/// Black-Scholes-Merton with carry `b = -2 %`: `3.5165` (recomputed
+/// independently in `f64`: `3.516470`). The pricer used to grow the forward
+/// at `r_d - q` and return `2.4648` for any `r_f` (#650).
+#[test]
+fn test_quanto_foreign_rate_enters_the_drift() {
+    let quanto = option(
+        OptionType::Quanto {
+            exchange_rate: Positive::ONE,
+        },
+        OptionStyle::Put,
+        Side::Long,
+        100.0,
+        95.0,
+        182.5,
+        0.20,
+        dec!(0.10),
+        0.05,
+        Some(quanto_params(dec!(0.03))),
+    );
+    assert_close(
+        ok(black_scholes(&quanto), "quanto"),
+        dec!(3.5165),
+        dec!(0.00005),
+        "quanto with r_f = 3 %",
     );
 }
 
