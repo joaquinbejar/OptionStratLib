@@ -126,6 +126,10 @@ fn test_core_modules_root_types_and_macros_through_facade() {
 /// function proves the facade re-exports that function rather than wrapping it.
 fn same_item<T>(_: T, _: T) {}
 
+/// How far the below/inside/above probabilities of one price range may sum
+/// from one: the three come from separately rounded lognormal CDF values.
+const PROBABILITY_SUM_TOLERANCE: Decimal = dec!(0.01);
+
 fn pricing_engine(
     value: optionstratlib_pricing::pricing::GenericPricingEngine,
 ) -> optionstratlib_pricing::pricing::GenericPricingEngine {
@@ -302,7 +306,8 @@ fn test_probability_kernels_through_facade_analytics() {
     );
     assert!(matches!(
         probabilities,
-        Ok((below, inside, above)) if (below + inside + above).to_dec() > dec!(0.99)
+        Ok((below, inside, above))
+            if ((below + inside + above).to_dec() - Decimal::ONE).abs() <= PROBABILITY_SUM_TOLERANCE
     ));
 }
 

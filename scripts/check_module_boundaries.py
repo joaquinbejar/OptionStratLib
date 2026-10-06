@@ -1566,6 +1566,10 @@ def self_test() -> int:
             [pkg("optionstratlib-analytics", ("optionstratlib-strategies", "dev"))],
             1,
         ),
+        "analytics build-depends on strategies": (
+            [pkg("optionstratlib-analytics", ("optionstratlib-strategies", "build"))],
+            1,
+        ),
         "analytics optionally depends on strategies": (
             [pkg("optionstratlib-analytics", ("optionstratlib-strategies", None, True))],
             1,
