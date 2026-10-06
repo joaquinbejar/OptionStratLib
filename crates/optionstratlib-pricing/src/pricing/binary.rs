@@ -23,6 +23,9 @@
 //! **Asset-or-Nothing Call**: `C = S * e^(-qT) * N(d1)`
 //! **Asset-or-Nothing Put**: `P = S * e^(-qT) * N(-d1)`
 //!
+//! **Gap Call**: `C = S * e^(-qT) * N(d1) - K * e^(-rT) * N(d2)`
+//! **Gap Put**: `P = K * e^(-rT) * N(-d2) - S * e^(-qT) * N(-d1)`
+//!
 //! # Greeks Note
 //!
 //! Binary options have discontinuous Delta at the strike price.
@@ -240,52 +243,40 @@ fn asset_or_nothing_price(option: &Options) -> Result<Decimal, PricingError> {
 ///
 /// Gap options pay the difference between the asset price and a "gap" strike
 /// if the option expires in-the-money. For simplicity, we use the standard
-/// strike as the gap strike in this implementation.
+/// strike as the gap strike in this implementation, so the trigger and the
+/// payoff strike coincide (`X1 = X2 = K`).
+///
+/// # Formula
+///
+/// Haug, *The Complete Guide to Option Pricing Formulas*, §4.19.3, built from
+/// the asset-or-nothing and unit cash-or-nothing legs of the same style:
+///
+/// ```text
+/// call: pays S_T - K if S_T > K   C = S e^(-qT) N(d1) - K e^(-rT) N(d2)
+/// put:  pays K - S_T if S_T < K   P = K e^(-rT) N(-d2) - S e^(-qT) N(-d1)
+/// ```
+///
+/// With `X1 = X2` both are the vanilla Black-Scholes-Merton prices.
 fn gap_binary_price(option: &Options) -> Result<Decimal, PricingError> {
-    // Gap binary is similar to asset-or-nothing minus cash-or-nothing
-    // C_gap = C_asset - K * C_cash_unit
     let asset_price = asset_or_nothing_price(option)?;
-    let cash_price = cash_or_nothing_price(option, option.strike_price.to_dec())?;
-
-    // For a gap call: pays (S - K) if S > K, otherwise 0
-    // This is: asset_or_nothing - K * cash_or_nothing(payout=1)
     let unit_cash = cash_or_nothing_price(option, dec!(1.0))?;
 
-    // Apply side correction (they already have side applied, so we need to be careful)
-    let side_multiplier = match option.side {
-        optionstratlib_core::model::types::Side::Long => dec!(1),
-        optionstratlib_core::model::types::Side::Short => dec!(-1),
-    };
-
-    // Remove side from components, compute gap, then reapply.
-    // `side_multiplier` is ±1 so the signed renormalisation cannot overflow,
-    // but the strike·unit_cash product and the following subtraction must be
-    // checked because they fuse two monetary flows into one.
-    let asset_unsigned = d_mul(
-        asset_price,
-        side_multiplier,
-        "pricing::binary::gap::asset_unsigned",
-    )?;
-    let unit_cash_unsigned = d_mul(
-        unit_cash,
-        side_multiplier,
-        "pricing::binary::gap::unit_cash_unsigned",
-    )?;
+    // Both legs already carry the side; the gap is formed on them directly,
+    // so it carries the side too. The strike·unit_cash product and the
+    // subtraction are checked because they fuse two monetary flows into one.
     let strike_cash = d_mul(
         option.strike_price.to_dec(),
-        unit_cash_unsigned,
+        unit_cash,
         "pricing::binary::gap::strike_cash",
     )?;
-    let gap_unsigned = d_sub(asset_unsigned, strike_cash, "pricing::binary::gap::price")?;
-
-    // Suppress unused variable warning
-    let _ = cash_price;
-
-    Ok(d_mul(
-        gap_unsigned,
-        side_multiplier,
-        "pricing::binary::gap::signed",
-    )?)
+    // A put pays the strike and delivers the asset, so its legs are the
+    // call's with the sign reversed (#649): `asset - K·cash` for a put was
+    // the negated vanilla put.
+    let gap = match option.option_style {
+        OptionStyle::Call => d_sub(asset_price, strike_cash, "pricing::binary::gap::call")?,
+        OptionStyle::Put => d_sub(strike_cash, asset_price, "pricing::binary::gap::put")?,
+    };
+    Ok(gap)
 }
 
 /// Calculates intrinsic value for cash-or-nothing at expiration.

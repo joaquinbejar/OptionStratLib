@@ -683,6 +683,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   calls and puts, long and short, out of, at and in the money, at 1, 2, 3,
   10 and 50 steps (largest gap `5.4e-14`). No existing pinned value moved.
 
+- **A gap put prices as a put** (#649). `binary_black_scholes` formed a gap
+  option as `asset-or-nothing - K · cash-or-nothing` for both styles, which
+  for a put is the negated put. The put is now
+  `K · cash-or-nothing put - asset-or-nothing put`
+  (`K e^(-rT) N(-d2) - S e^(-qT) N(-d1)`, Haug, *The Complete Guide to
+  Option Pricing Formulas*, §4.19.3 with the trigger equal to the strike),
+  so with the library's single strike it equals the vanilla put. Every gap
+  put changes sign: `S = 100, K = 105, T = 0.5, σ = 25 %, r = 5 %,
+  q = 1 %` goes from `-8.6574` to `8.6574` long (and from `8.6574` to
+  `-8.6574` short). Gap calls are unchanged. The side is no longer stripped
+  and reapplied around the legs, which already carry it.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an
