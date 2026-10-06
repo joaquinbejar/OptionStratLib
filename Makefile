@@ -239,9 +239,9 @@ check-components:
 # Pins the dependency graph of the market surface without `synthetic` and with
 # it (roadmap M1-15), one fixture each, as a `parent -> child` edge list
 # resolved with `cargo tree --target all` so it is host-independent. The
-# difference between the two is derived and printed; while simulation is
-# facade source it is only the facade's own feature line, which is the point. Run `make feature-trees-update` to record an
-# intended change.
+# difference between the two is derived and printed: since #536 it is the
+# edge to `optionstratlib-simulation` and that crate's own graph, which is
+# the point. Run `make feature-trees-update` to record an intended change.
 .PHONY: check-feature-trees
 check-feature-trees:
 	@python3 scripts/check_feature_trees.py

@@ -44,8 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     each runs without the facade. The deterministic `RampWalker` stays with
     the walk driver tests and the facade's generator tests keep their own
     copy until #537.
-  - `check-graph` forbids the ADR-0002 simulation-only package set
-    (`prettytable-rs` included) in simulation, with crate graph,
+  - `check-graph` forbids in simulation the packages of ADR-0002's
+    simulation-only absent list (`prettytable-rs` included) except
+    `utoipa`, which only the `schema` feature reaches, plus the plotting and
+    presentation crates, with crate graph,
     forbidden-package and error-layer self-tests; `check-components`,
     `make test`, `make doc`, CI (a simulation-only facade build), the
     public-API snapshots and the float gate cover the crate. The `synthetic`
