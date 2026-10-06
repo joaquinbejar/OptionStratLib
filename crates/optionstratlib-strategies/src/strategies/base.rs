@@ -288,17 +288,31 @@ pub struct Strategy {
 
     /// The maximum potential profit of the strategy, if limited and known.
     /// Expressed as an absolute amount in the premium currency, not a
-    /// percentage.
+    /// percentage. `None` means unlimited or not computed; the strategies'
+    /// `get_max_profit` accessor reports an unlimited profit as
+    /// `Positive::MAX` instead.
     pub max_profit: Option<Positive>,
 
     /// The maximum potential loss of the strategy, if limited and known.
     /// Expressed as an absolute amount in the premium currency, not a
-    /// percentage.
+    /// percentage. `None` means unlimited or not computed; the strategies'
+    /// `get_max_loss` accessor reports an unlimited loss as `Positive::MAX`
+    /// instead.
     pub max_loss: Option<Positive>,
 
     /// The price points of the underlying asset at which the strategy neither makes a profit nor a loss.
     /// These points are crucial for strategy planning and risk management.
     pub break_even_points: Vec<Positive>,
+}
+
+/// Rounds a monetary amount to cents for display, half to even, the way the
+/// former `f64` fields printed with `{:.2}`; `Decimal`'s own `{:.2}`
+/// truncates.
+#[inline]
+fn cents(amount: Positive) -> Decimal {
+    amount
+        .to_dec()
+        .round_dp_with_strategy(2, rust_decimal::RoundingStrategy::MidpointNearestEven)
 }
 
 impl fmt::Display for Strategy {
@@ -311,10 +325,10 @@ impl fmt::Display for Strategy {
             writeln!(f, "  {leg}")?;
         }
         if let Some(max_profit) = self.max_profit {
-            writeln!(f, "Max Profit: ${max_profit:.2}")?;
+            writeln!(f, "Max Profit: ${:.2}", cents(max_profit))?;
         }
         if let Some(max_loss) = self.max_loss {
-            writeln!(f, "Max Loss: ${max_loss:.2}")?;
+            writeln!(f, "Max Loss: ${:.2}", cents(max_loss))?;
         }
         writeln!(f, "Break-even Points:")?;
         for point in &self.break_even_points {
@@ -2671,6 +2685,20 @@ mod tests_strategy_type_display_debug {
     use optionstratlib_core::model::Positive;
     use optionstratlib_core::pos_or_panic;
     use serde::Serialize;
+
+    #[test]
+    fn test_strategy_display_rounds_amounts_to_cents() {
+        let mut strategy = Strategy::new(
+            "Rounding".to_string(),
+            StrategyType::BullCallSpread,
+            "Display rounding".to_string(),
+        );
+        strategy.max_profit = Some(pos_or_panic!(10.999));
+        strategy.max_loss = Some(pos_or_panic!(2.994));
+        let shown = strategy.to_string();
+        assert!(shown.contains("Max Profit: $11.00\n"), "{shown}");
+        assert!(shown.contains("Max Loss: $2.99\n"), "{shown}");
+    }
 
     #[test]
     fn test_strategy_display() {
