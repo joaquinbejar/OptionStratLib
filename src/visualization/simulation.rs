@@ -143,6 +143,7 @@ mod tests {
                 ],
                 symbol: None,
             },
+            seed: None,
         }
     }
 

@@ -21,6 +21,8 @@ schema = ["dep:utoipa", "optionstratlib-core/schema", "optionstratlib-pricing/sc
 optionstratlib-core = { workspace = true }
 optionstratlib-pricing = { workspace = true }
 num-traits = { workspace = true }
+# Seeded walks own a `StdRng` (#539); already in the graph through core.
+rand = { workspace = true }
 rayon = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }

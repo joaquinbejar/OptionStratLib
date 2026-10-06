@@ -103,6 +103,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
             volatility: std_dev,
         },
         walker,
+        seed: None,
     };
 
     let random_walk = RandomWalk::new("Random Walk".to_string(), &walk_params, generator)?;

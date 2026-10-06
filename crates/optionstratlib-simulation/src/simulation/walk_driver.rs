@@ -202,6 +202,9 @@ pub fn expanding_window_vols(
 ///   (`SimulationError::ExpirationReached`) or when `next_y` returns
 ///   `Ok(None)`; any other step-advance error is propagated.
 /// * The result is truncated to at most `walk_params.size` steps.
+/// * With `walk_params.seed` set, the path, and therefore the result for a
+///   pure `next_y`, is identical on every run (see
+///   [`WalkParams`]); [`walk_steps_par`] returns the same steps.
 ///
 /// # Parameters
 ///
@@ -329,6 +332,22 @@ where
 /// or series — is fanned out. Output is deterministic and equal to the
 /// serial driver's for the same inputs because every per-step input is
 /// precomputed and order is preserved on collection.
+///
+/// # Sequential/parallel equivalence
+///
+/// * The price path is drawn once, serially, from a single generator before
+///   anything is fanned out: `deterministic_rng(seed)` when
+///   [`WalkParams::seed`] is `Some(seed)`, the thread RNG otherwise. No
+///   random number is drawn on a rayon worker, so the thread count and the
+///   scheduling cannot reach the random stream.
+/// * Nothing is reduced across steps in parallel; the y-values are assembled
+///   in step order, so no `Decimal` or `f64` result depends on the order in
+///   which workers finish.
+/// * Hence, for a seeded walk and a `next_y` that is a pure function of its
+///   arguments, `walk_steps_par(p, f)` equals `walk_steps(p, f)` bit for bit,
+///   on every run.
+/// * An unseeded walk draws a new path on every call, serial or parallel, so
+///   two calls agree only in distribution.
 ///
 /// Semantics notes versus the serial driver:
 ///
@@ -538,6 +557,7 @@ mod tests {
                 volatility: std_dev,
             },
             walker,
+            seed: None,
         };
         let random_walk =
             RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive)
@@ -566,6 +586,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -608,6 +629,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(EmptyWalker {}),
+            seed: None,
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -643,6 +665,7 @@ mod tests {
                 rho: dec!(-0.5),
             },
             walker: Box::new(Walker::new()),
+            seed: None,
         };
         let path = match walker.heston_with_vol(&params) {
             Ok(path) => path,
@@ -679,6 +702,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker: Box::new(Walker::new()),
+            seed: None,
         };
         let path = match walker.generate_with_vol(&params) {
             Ok(path) => path,
@@ -829,6 +853,7 @@ mod tests {
                 volatility: pos_or_panic!(0.2),
             },
             walker,
+            seed: None,
         };
 
         let mut calls = 0;
@@ -876,6 +901,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::TWO,
             }),
+            seed: None,
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -923,6 +949,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::ONE,
             }),
+            seed: None,
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -964,6 +991,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::ONE,
             }),
+            seed: None,
         };
 
         let steps = match generator_positive(&walk_params) {
@@ -998,6 +1026,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::TWO,
             }),
+            seed: None,
         };
 
         let double =
@@ -1053,6 +1082,7 @@ mod tests {
             walker: Box::new(RampWalker {
                 delta: Positive::ONE, // prices 100, 101, 102, ...
             }),
+            seed: None,
         };
 
         // Stop at price 102 (step 2), error at price 103 (step 3): the

@@ -125,6 +125,7 @@ fn test_price_option_monte_carlo() -> Result<(), Box<dyn Error>> {
         init_step,
         walk_type: walk,
         walker: Box::new(TestWalker),
+        seed: None,
     };
     let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
@@ -163,6 +164,7 @@ fn test_priceable_trait_monte_carlo() -> Result<(), Box<dyn Error>> {
         init_step,
         walk_type: walk,
         walker: Box::new(TestWalker),
+        seed: None,
     };
     let simulator = Simulator::new("MC Test".to_string(), 1000, &params, simple_generator)?;
 
@@ -235,6 +237,7 @@ fn test_monte_carlo_with_heston() -> Result<(), Box<dyn Error>> {
         init_step,
         walk_type: walk,
         walker: Box::new(TestWalker),
+        seed: None,
     };
     let simulator = Simulator::new("Heston Test".to_string(), 500, &params, simple_generator)?;
 
@@ -276,6 +279,7 @@ fn test_monte_carlo_with_jump_diffusion() -> Result<(), Box<dyn Error>> {
         init_step,
         walk_type: walk,
         walker: Box::new(TestWalker),
+        seed: None,
     };
     let simulator = Simulator::new(
         "Jump Diffusion Test".to_string(),
@@ -326,6 +330,7 @@ fn test_monte_carlo_with_telegraph() -> Result<(), Box<dyn Error>> {
         init_step,
         walk_type: walk,
         walker: Box::new(TestWalker),
+        seed: None,
     };
     let simulator = Simulator::new("Telegraph Test".to_string(), 500, &params, simple_generator)?;
 

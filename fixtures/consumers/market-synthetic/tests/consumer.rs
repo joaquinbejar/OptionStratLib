@@ -62,6 +62,7 @@ fn walk(size: usize, prices: Vec<Positive>) -> WalkParams<Positive, OptionChain>
             symbol: None,
         },
         walker: Box::new(Replay),
+        seed: None,
     }
 }
 

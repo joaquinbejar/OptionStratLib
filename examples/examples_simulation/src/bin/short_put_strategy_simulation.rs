@@ -142,6 +142,7 @@ fn main() -> Result<(), Error> {
             vol_mean: volatility_dt,       // Mean volatility level (same as initial)
         },
         walker,
+        seed: None,
     };
 
     // Create Simulator with all random walks at once

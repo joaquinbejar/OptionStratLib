@@ -77,6 +77,7 @@ fn chain_walk_params(size: usize) -> WalkParams<Positive, OptionChain> {
             volatility: pos_or_panic!(0.2),
         },
         walker: Box::new(BenchWalker {}),
+        seed: None,
     }
 }
 
@@ -97,6 +98,7 @@ fn positive_walk_params(size: usize) -> WalkParams<Positive, Positive> {
             volatility: pos_or_panic!(0.2),
         },
         walker: Box::new(BenchWalker {}),
+        seed: None,
     }
 }
 

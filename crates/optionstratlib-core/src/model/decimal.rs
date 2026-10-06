@@ -6,6 +6,7 @@
 use crate::error::decimal::DecimalError;
 use num_traits::{FromPrimitive, ToPrimitive};
 use positive::{Positive, PositiveError};
+use rand::Rng;
 use rand::distr::Distribution;
 use rand_distr::StandardNormal;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
@@ -367,23 +368,23 @@ pub fn finite_decimal(value: f64) -> Option<Decimal> {
     }
 }
 
-/// Generates a random positive value from a standard normal distribution.
+/// Draws a standard normal sample from the thread-local RNG, as a `Decimal`.
 ///
-/// This function samples from a normal distribution with mean 0.0 and standard
-/// deviation 1.0, and returns the value as a `Positive` type. Since the normal
-/// distribution can produce negative values, the function uses the `pos!` macro
-/// to convert the sample to a `Positive` value, which will handle the conversion
-/// according to the `Positive` type's implementation.
+/// This is the unseeded path: every call reads the thread RNG, so two runs
+/// never see the same stream. Reproducible callers use
+/// [`decimal_normal_sample_with`] with a seeded generator such as
+/// [`crate::utils::deterministic_rng`]; this function is exactly that helper
+/// applied to [`rand::rng()`].
 ///
 /// # Returns
 ///
-/// A `Positive` value sampled from a standard normal distribution.
+/// A `Decimal` sampled from a standard normal distribution (it can be
+/// negative).
 ///
 /// # Examples
 ///
 /// ```rust
 /// use optionstratlib_core::model::decimal::decimal_normal_sample;
-/// use positive::Positive;
 /// let normal = decimal_normal_sample();
 /// ```
 ///
@@ -395,8 +396,35 @@ pub fn finite_decimal(value: f64) -> Option<Decimal> {
 /// identity at `(0.0, 1.0)`.
 #[must_use]
 pub fn decimal_normal_sample() -> Decimal {
-    let mut t_rng = rand::rng();
-    let sample: f64 = StandardNormal.sample(&mut t_rng);
+    decimal_normal_sample_with(&mut rand::rng())
+}
+
+/// Draws a standard normal sample from `rng`, as a `Decimal`.
+///
+/// One `f64` is drawn from [`rand_distr::StandardNormal`] and converted once
+/// with `Decimal::from_f64`; a sample the conversion rejects (none is
+/// finite and out of range in practice) becomes zero, as in
+/// [`decimal_normal_sample`]. The generator advances by exactly the draws
+/// `StandardNormal` makes, so a seeded `rng` yields the same sequence of
+/// samples on every run.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib_core::model::decimal::decimal_normal_sample_with;
+/// use optionstratlib_core::utils::deterministic_rng;
+///
+/// let mut first = deterministic_rng(42);
+/// let mut second = deterministic_rng(42);
+/// assert_eq!(
+///     decimal_normal_sample_with(&mut first),
+///     decimal_normal_sample_with(&mut second)
+/// );
+/// ```
+#[must_use]
+#[inline]
+pub fn decimal_normal_sample_with<R: Rng + ?Sized>(rng: &mut R) -> Decimal {
+    let sample: f64 = StandardNormal.sample(rng);
     Decimal::from_f64(sample).unwrap_or(Decimal::ZERO)
 }
 
@@ -1141,6 +1169,47 @@ mod tests_random_generation {
         // It's statistically extremely unlikely to get the same value three times in a row
         // This verifies that the RNG is properly producing different values
         assert!(sample1 != sample2 || sample2 != sample3);
+    }
+
+    #[test]
+    fn test_decimal_normal_sample_with_same_seed_is_identical() {
+        let mut first = crate::utils::deterministic_rng(42);
+        let mut second = crate::utils::deterministic_rng(42);
+        for _ in 0..1000 {
+            assert_eq!(
+                decimal_normal_sample_with(&mut first),
+                decimal_normal_sample_with(&mut second)
+            );
+        }
+    }
+
+    #[test]
+    fn test_decimal_normal_sample_with_is_the_converted_standard_normal_draw() {
+        // The helper adds nothing to the stream but the `Decimal` conversion.
+        let mut helper = crate::utils::deterministic_rng(7);
+        let mut raw = crate::utils::deterministic_rng(7);
+        for _ in 0..1000 {
+            let draw: f64 = StandardNormal.sample(&mut raw);
+            assert_eq!(
+                decimal_normal_sample_with(&mut helper),
+                Decimal::from_f64(draw).unwrap_or(Decimal::ZERO)
+            );
+        }
+    }
+
+    #[test]
+    fn test_decimal_normal_sample_with_seed_pins_first_draws() {
+        let mut rng = crate::utils::deterministic_rng(42);
+        let draws: Vec<Decimal> = (0..3)
+            .map(|_| decimal_normal_sample_with(&mut rng))
+            .collect();
+        // Recorded from this implementation (`StdRng`, rand 0.10).
+        let expected = vec![
+            dec!(0.0694279183619634),
+            dec!(0.1329381219941254),
+            dec!(0.2625763573739537),
+        ];
+        assert_eq!(draws, expected);
     }
 }
 

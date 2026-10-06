@@ -7,8 +7,9 @@
 
 use crate::error::SimulationError;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_mul, decimal_normal_sample, p_sqrt};
+use optionstratlib_core::model::decimal::{d_add, d_mul, decimal_normal_sample_with, p_sqrt};
 use optionstratlib_core::model::utils::sub_floor_zero;
+use rand::Rng;
 use rust_decimal::Decimal;
 
 /// Generates a mean-reverting Ornstein-Uhlenbeck process time series
@@ -35,6 +36,12 @@ use rust_decimal::Decimal;
 ///
 /// # Returns
 /// A vector containing the simulated values of the Ornstein-Uhlenbeck process at each time step
+///
+/// # Randomness
+///
+/// The normal increments come from the thread RNG, so two calls differ. A
+/// reproducible OU path is a [`crate::simulation::WalkType::MeanReverting`]
+/// walk with [`crate::simulation::WalkParams::seed`] set.
 ///
 /// # Errors
 ///
@@ -77,6 +84,27 @@ pub fn generate_ou_process(
     dt: Positive,
     steps: usize,
 ) -> Result<Vec<Positive>, SimulationError> {
+    ou_path(x0, mu, theta, volatility, dt, steps, &mut rand::rng())
+}
+
+/// Body of [`generate_ou_process`], drawing its normal samples from `rng`.
+///
+/// The seeded walk kernels (`MeanReverting`, and the volatility path of
+/// `Custom`) call it with the walk's generator so the whole path comes from
+/// one stream.
+///
+/// # Errors
+///
+/// Same as [`generate_ou_process`].
+pub(crate) fn ou_path<R: Rng + ?Sized>(
+    x0: Positive,
+    mu: Positive,
+    theta: Positive,
+    volatility: Positive,
+    dt: Positive,
+    steps: usize,
+    rng: &mut R,
+) -> Result<Vec<Positive>, SimulationError> {
     let sqrt_dt = p_sqrt(&dt, "volatility::utils::generate_ou_process")?;
     let mut x = x0.to_dec();
     let mut result = Vec::with_capacity(steps);
@@ -85,7 +113,7 @@ pub fn generate_ou_process(
     for _ in 1..steps {
         // Z√dt
         let dw = d_mul(
-            decimal_normal_sample(),
+            decimal_normal_sample_with(rng),
             sqrt_dt.to_dec(),
             "volatility::ou::dw",
         )?;

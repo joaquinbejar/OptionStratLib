@@ -73,6 +73,7 @@ fn simulator(prices: &[f64]) -> Simulator<Positive, Positive> {
             prices: prices.iter().map(|p| pos_or_panic!(*p)).collect(),
             symbol: Some("XYZ".to_string()),
         },
+        seed: None,
     };
     match Simulator::new("fixture".to_string(), 2, &params, generator_positive) {
         Ok(sim) => sim,

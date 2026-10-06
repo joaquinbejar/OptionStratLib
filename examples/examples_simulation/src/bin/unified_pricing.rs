@@ -118,6 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         init_step: init_step.clone(),
         walk_type: gbm_walk,
         walker: Box::new(SimpleWalker),
+        seed: None,
     };
 
     let gbm_simulator = Simulator::new(
@@ -152,6 +153,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         init_step: init_step.clone(),
         walk_type: heston_walk,
         walker: Box::new(SimpleWalker),
+        seed: None,
     };
 
     let heston_simulator = Simulator::new(
@@ -185,6 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         init_step: init_step.clone(),
         walk_type: jump_walk,
         walker: Box::new(SimpleWalker),
+        seed: None,
     };
 
     let jump_simulator = Simulator::new(
@@ -219,6 +222,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         init_step,
         walk_type: telegraph_walk,
         walker: Box::new(SimpleWalker),
+        seed: None,
     };
 
     let telegraph_simulator = Simulator::new(

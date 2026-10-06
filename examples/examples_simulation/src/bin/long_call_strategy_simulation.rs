@@ -152,6 +152,7 @@ fn main() -> Result<(), Error> {
             rho: dec!(-0.3),
         },
         walker,
+        seed: None,
     };
 
     // Create Simulator with all random walks at once
