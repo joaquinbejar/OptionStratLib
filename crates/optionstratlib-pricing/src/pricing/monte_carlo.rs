@@ -163,8 +163,9 @@ pub fn monte_carlo_option_pricing(
 /// # How it Works
 /// 1. The number of simulations is determined by the length of the `final_prices` slice. If the slice
 ///    is empty, the function immediately returns a price of `Positive::ZERO`.
-/// 2. Calculates the effective discount factor based on the risk-free rate, dividend yield, and
-///    time to expiration. This factor is used to discount future payoffs to their present value.
+/// 2. Calculates the discount factor `e^(-rT)` from the risk-free rate and the time to
+///    expiration. The dividend yield does not enter it: it belongs to the drift `r - q` of the
+///    risk-neutral law that generated `final_prices`, which is the caller's responsibility.
 /// 3. For each simulated final price in the `final_prices` slice:
 ///    - Compute the payoff using the `option.payoff_at_price` method.
 ///    - Accumulate the total payoff across all simulations.
@@ -194,14 +195,11 @@ pub fn price_option_monte_carlo(
         return Ok(Positive::ZERO);
     }
 
-    // Calculate total discount factor (risk-free rate adjusted for dividends)
-    let effective_rate = d_sub(
-        option.risk_free_rate,
-        option.dividend_yield.to_dec(),
-        "pricing::monte_carlo::effective_rate",
-    )?;
+    // Discount at the risk-free rate only (#651). The dividend yield shapes
+    // the risk-neutral terminal law the caller supplies (drift `r - q`); it
+    // never enters the discount factor `e^(-rT)`.
     let discount_factor = discount_factor(
-        effective_rate,
+        option.risk_free_rate,
         option.expiration_date.get_years()?.to_dec(),
         "pricing::monte_carlo::discount_exponent",
         "pricing::monte_carlo::discount_factor",
@@ -394,9 +392,12 @@ mod tests_price_option_monte_carlo {
         // Act
         let result = price_option_monte_carlo(&option, &prices);
         assert!(result.is_ok());
+        // Mean payoff (10 + 0 + 5) / 3 = 5 discounted at r alone (#651):
+        // 5 e^(-0.05) = 4.75614712. It was 5 e^(-0.03) = 4.85222766 while
+        // the pricer discounted at r - q.
         assert_pos_relative_eq!(
             result.unwrap(),
-            pos_or_panic!(4.85222766),
+            pos_or_panic!(4.75614712),
             pos_or_panic!(0.001)
         );
     }
