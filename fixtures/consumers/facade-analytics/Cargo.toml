@@ -1,0 +1,21 @@
+# Consumer fixture: the `optionstratlib` facade with only its `analytics`
+# capability (ADR-0002 Decision 2, #535). `analytics` must never enable
+# strategies. Excluded from the root workspace so feature unification with
+# the other members cannot widen its graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-facade-analytics"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: the optionstratlib facade built with the analytics feature alone."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib = { path = "../../..", version = "0.22.0", default-features = false, features = ["analytics"] }
+# The defining crate, named directly only to prove the facade paths are the
+# same items.
+optionstratlib-analytics = { path = "../../../crates/optionstratlib-analytics", version = "0.22.0" }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

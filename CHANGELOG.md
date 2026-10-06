@@ -542,6 +542,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Facade consumer fixtures for `analytics` and `strategies`** (#535).
+  `fixtures/consumers/facade-analytics` uses the facade with
+  `default-features = false, features = ["analytics"]`: a short put's P&L
+  at expiration through the prelude's `PnLCalculator`, the
+  implied-volatility curve of a built chain, SPAN margin through
+  `optionstratlib::risk`, and `same_item` checks that the facade paths are
+  the analytics crate's items. Its `expect.toml` keeps
+  `optionstratlib-strategies` out of the graph, so `analytics` provably never
+  enables strategies. `fixtures/consumers/facade-strategies` does the same
+  with `features = ["strategies"]`: a bull call spread's break-even, maximum
+  loss, cost and fees (the strategies crate's own regression figures) and its
+  probability of profit through the prelude. `make check-consumer-facade`
+  and `make test-consumer-facade` now cover all four single-capability
+  facades, and `make check-fixtures` asserts six fixture graphs. The
+  `analytics` and `strategies` facade features themselves came with #529 and
+  #531. The crate-level doc examples now compile under each capability on
+  its own: each runs only when the capability it uses is on (`pricing`,
+  `strategies`, or `strategies` plus `simulation` for the chart), and their
+  `main` returns `Box<dyn std::error::Error>` instead of the unified
+  `error::Error`, which exists only with `strategies` and `simulation`.
+  `make lint` now also runs `cargo test -p optionstratlib` (library and doc
+  tests) with no features and with each set in `FACADE_FEATURE_SETS`. The
+  analytics and strategies facade prelude groups stay as they are, gated by
+  their capability; curating the facade prelude is M7-03 (#551).
+
 - **Analytics consumer fixture without strategies** (#533).
   `fixtures/consumers/analytics-only` is a real crate, excluded from the
   workspace, that depends on core, math, pricing, market and analytics only
