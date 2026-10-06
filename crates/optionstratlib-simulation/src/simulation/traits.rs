@@ -424,7 +424,11 @@ where
     with_walk_rng!(params, telegraph_path)
 }
 
-/// Body of [`telegraph_walk`], drawing its normal samples from `rng`.
+/// Body of [`telegraph_walk`], drawing its normal and uniform samples from
+/// `rng`.
+///
+/// The initial regime takes the sign of one normal draw; each step then
+/// draws the uniform of the regime-switch trial, then the price normal.
 fn telegraph_path<X, Y, R>(
     params: &WalkParams<X, Y>,
     rng: &mut R,
@@ -481,17 +485,9 @@ where
                     "simulation::telegraph::transition",
                 )?;
 
-                // Check for state transition using uniform random sample
-                let uniform_sample = d_div(
-                    d_add(
-                        decimal_normal_sample_with(rng).abs(),
-                        Decimal::ONE,
-                        "simulation::telegraph::uniform_sample",
-                    )?,
-                    Decimal::TWO,
-                    "simulation::telegraph::uniform_sample",
-                )?; // Convert normal to uniform [0,1]
-                if uniform_sample < transition_prob {
+                // Bernoulli trial on a genuine U(0,1) draw (#683):
+                // `P(switch) = 1 - e^(-λ·dt)`.
+                if decimal_uniform_sample_with(rng) < transition_prob {
                     state *= -1;
                 }
 
@@ -1742,6 +1738,113 @@ mod tests_walk_type_able {
 
         assert_eq!(result.len(), 5);
         assert_eq!(result[0], Positive::HUNDRED); // Initial value should be preserved
+        Ok(())
+    }
+
+    /// Regime-switch tallies of a seeded telegraph path, read off its
+    /// volatility path: `+1` runs at `0.30`, `-1` at `0.10`.
+    #[derive(Debug, Default)]
+    struct SwitchTally {
+        /// Trials made from the `+1` regime, and how many switched.
+        up_trials: u64,
+        up_switches: u64,
+        /// Trials made from the `-1` regime, and how many switched.
+        down_trials: u64,
+        down_switches: u64,
+    }
+
+    fn tally_switches(
+        steps: usize,
+        lambda_up: Positive,
+        lambda_down: Positive,
+    ) -> Result<SwitchTally, SimulationError> {
+        let params = create_test_params(
+            steps + 1,
+            1.0,
+            100.0,
+            WalkType::Telegraph {
+                dt: pos_or_panic!(0.004),
+                drift: Decimal::ZERO,
+                volatility: pos_or_panic!(0.2),
+                lambda_up,
+                lambda_down,
+                vol_multiplier_up: Some(pos_or_panic!(1.5)),
+                vol_multiplier_down: Some(pos_or_panic!(0.5)),
+            },
+        );
+        let vols = telegraph_walk(&params)?
+            .vols
+            .ok_or_else(|| SimulationError::walk_error("telegraph returned no vols"))?;
+        assert_eq!(vols.len(), steps + 1);
+        let up = pos_or_panic!(0.3);
+        let down = pos_or_panic!(0.1);
+        let mut tally = SwitchTally::default();
+        // `vols[0]` is the base volatility, not a regime, so the first trial
+        // has no known starting regime; every later trial starts from the
+        // regime of the previous point.
+        for pair in vols.windows(2).skip(1) {
+            let (from, to) = (pair[0], pair[1]);
+            assert!(to == up || to == down, "{to} is not a regime volatility");
+            if from == up {
+                tally.up_trials += 1;
+                tally.up_switches += u64::from(to == down);
+            } else {
+                tally.down_trials += 1;
+                tally.down_switches += u64::from(to == up);
+            }
+        }
+        Ok(tally)
+    }
+
+    /// Asserts that `switches` out of `trials` Bernoulli(`1 - e^(-λ·dt)`)
+    /// trials lie within five standard errors, `5 * sqrt(n p (1 - p))`, of
+    /// the mean `n p`. Each trial is independent of the past given its
+    /// starting regime, so the count is binomial given the number of trials.
+    fn assert_switch_frequency(switches: u64, trials: u64, lambda_dt: f64) {
+        assert!(trials > 0, "no trial started from this regime");
+        let n = trials as f64;
+        let p = 1.0 - (-lambda_dt).exp();
+        let mean = n * p;
+        let bound = 5.0 * (n * p * (1.0 - p)).sqrt();
+        assert!(
+            (switches as f64 - mean).abs() < bound,
+            "{switches} switches in {trials} trials, expected {mean} +- {bound}"
+        );
+    }
+
+    #[test]
+    fn test_telegraph_switch_frequency_matches_one_minus_exp_lambda_dt()
+    -> Result<(), SimulationError> {
+        // #683: realistic regime rates on daily steps (dt = 0.004). Leaving
+        // `+1` at λ = 12 a year gives p = 1 - e^(-0.048) = 0.046866, leaving
+        // `-1` at λ = 4 a year gives p = 1 - e^(-0.016) = 0.015873. Over
+        // 200_000 steps the chain spends about a quarter of them in `+1`
+        // (λ_up / (λ_up + λ_down)), some 50_000 trials expecting 2_343
+        // switches +- 236, and 150_000 in `-1` expecting 2_381 +- 242. The
+        // former `(|z| + 1) / 2` sample is never below 0.5, so it never
+        // switched at these rates.
+        const STEPS: usize = 200_000;
+        let tally = tally_switches(STEPS, pos_or_panic!(4.0), pos_or_panic!(12.0))?;
+        assert_eq!(tally.up_trials + tally.down_trials, STEPS as u64 - 1);
+        assert_switch_frequency(tally.up_switches, tally.up_trials, 12.0 * 0.004);
+        assert_switch_frequency(tally.down_switches, tally.down_trials, 4.0 * 0.004);
+        Ok(())
+    }
+
+    #[test]
+    fn test_telegraph_zero_rates_never_switch() -> Result<(), SimulationError> {
+        let tally = tally_switches(1_000, Positive::ZERO, Positive::ZERO)?;
+        assert_eq!(tally.up_switches + tally.down_switches, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_telegraph_flushed_rate_switches_every_step() -> Result<(), SimulationError> {
+        // λ·dt = 100: `e^(-100)` is below the 28th decimal place, so the
+        // switch probability is exactly one.
+        let tally = tally_switches(1_000, pos_or_panic!(25_000.0), pos_or_panic!(25_000.0))?;
+        assert_eq!(tally.up_switches, tally.up_trials);
+        assert_eq!(tally.down_switches, tally.down_trials);
         Ok(())
     }
 

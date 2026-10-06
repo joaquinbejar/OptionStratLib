@@ -172,8 +172,11 @@ fn telegraph() -> WalkType {
         dt: dt(),
         drift: dec!(0.05),
         volatility: pos(dec!(0.2)),
-        // `1 - e^(-lambda dt)` must exceed one half for the kernel's
-        // normal-to-uniform mapping to switch regimes at all.
+        // `λ·dt = 1`, a switch probability of `1 - e^(-1) = 0.632` per
+        // step, so the short pinned path switches in both directions. Since
+        // #683 every positive rate switches at its own frequency, but a
+        // realistic one (a few a year) would almost never switch within these
+        // seven steps; the kernel's unit tests cover realistic rates.
         lambda_up: pos(dec!(250)),
         lambda_down: pos(dec!(250)),
         vol_multiplier_up: Some(pos(dec!(1.5))),
@@ -517,6 +520,10 @@ fn test_deterministic_custom_seeded_path_matches_pinned() {
 
 #[test]
 fn test_deterministic_telegraph_seeded_path_matches_pinned() {
+    // Re-baselined by #683: the regime switch now draws a genuine U(0,1),
+    // so `P(switch) = 1 - e^(-λ·dt) = 1 - e^(-1)` per step. The first four
+    // steps keep their values: the old and the new trial each consumed one
+    // word of the stream there and took the same decisions.
     assert_pinned(
         telegraph(),
         &[
@@ -525,9 +532,9 @@ fn test_deterministic_telegraph_seeded_path_matches_pinned() {
             dec!(100.11818070957388553378674917),
             dec!(100.50733678499377858361144734),
             dec!(98.05950298691601264031720460),
-            dec!(101.53832414434925509810460847),
-            dec!(101.29627513168677517275692753),
-            dec!(101.32761289744275152602649169),
+            dec!(99.21888939964810895011799167),
+            dec!(98.05223532103304649453577772),
+            dec!(97.57486799479786199841818131),
         ],
         Some(&[
             dec!(0.2),
@@ -535,8 +542,8 @@ fn test_deterministic_telegraph_seeded_path_matches_pinned() {
             dec!(0.10),
             dec!(0.30),
             dec!(0.30),
-            dec!(0.30),
             dec!(0.10),
+            dec!(0.30),
             dec!(0.10),
         ]),
     );
