@@ -1,0 +1,16 @@
+# ADR-0002 section 5, `osl-fixture-market-synthetic`: enabling `synthetic`
+# adds the simulation crate and nothing else from the absent list. Checked
+# by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
+    "optionstratlib-market", "optionstratlib-simulation",
+]
+# `utoipa` is missing only because `expiration_date` 0.4.0 forces
+# `positive/utoipa` on every build (#628); it joins this list once fixed.
+# `optionstratlib-simulation` is also a direct dependency here, for the walk
+# types; `cargo tree -p optionstratlib-market --features synthetic` in
+# `make check-graph` is what proves the feature adds it.
+absent = [
+    "optionstratlib", "optionstratlib-analytics", "optionstratlib-strategies",
+    "csv", "zip", "tokio", "reqwest", "plotly",
+]

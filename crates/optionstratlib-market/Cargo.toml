@@ -18,18 +18,25 @@ default = []
 io = ["dep:csv", "dep:zip"]
 # `tokio`-backed `*_async` wrappers over the `io` functions (ADR-0003).
 async = ["io", "dep:tokio"]
+# Simulation-backed generators: `chains::generator_optionchain` and
+# `series::generator_optionseries`, and `From<SimulationError> for
+# ChainError`. The only edge from market data to the simulation engine
+# (ADR-0003); without it market resolves no simulation crate.
+synthetic = ["dep:optionstratlib-simulation"]
 # `ToSchema` derives on the market types (ADR-0002).
 schema = [
     "dep:utoipa",
     "optionstratlib-core/schema",
     "optionstratlib-math/schema",
     "optionstratlib-pricing/schema",
+    "optionstratlib-simulation?/schema",
 ]
 
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true }
 optionstratlib-pricing = { workspace = true }
+optionstratlib-simulation = { workspace = true, optional = true }
 chrono = { workspace = true }
 csv = { workspace = true, optional = true }
 num-traits = { workspace = true }

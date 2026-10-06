@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The synthetic chain and series generators live in
+  `optionstratlib-market`, behind its own `synthetic` feature** (#537,
+  ADR-0003). `generator_optionchain` and `generator_optionseries` move from
+  the facade's transitional `synthetic` module into market's private
+  `chains::generators` and `series::generators`, re-exported as
+  `optionstratlib_market::chains::generator_optionchain` and
+  `optionstratlib_market::series::generator_optionseries`. Market declares
+  `synthetic = ["dep:optionstratlib-simulation"]`, the only
+  market-to-simulation edge; without it market resolves no simulation
+  crate. The facade `synthetic` feature now forwards to it, so the facade
+  paths are `optionstratlib::chains::generator_optionchain` and
+  `optionstratlib::series::generator_optionseries` (and the prelude, as
+  before); the `optionstratlib::synthetic` module is removed. A simulation
+  failure still reaches the caller as `ChainError::Generator`, now through
+  a `synthetic`-gated `From<SimulationError> for ChainError` in market (the
+  enum is the same in every configuration, ADR-0002 section 4); the
+  facade-private `GeneratorFailure` wrapper goes. The generic evaluation
+  contract (`PathEvaluator`, `PathOutcome`, `PathStatistics`) already lives
+  in `optionstratlib-simulation` (M1-07, #536). Checks:
+  - `make check-graph` proves every simulation reference in the market
+    crate sits behind `synthetic`, with self-tests, and checks market's
+    forbidden packages under `synthetic` too;
+  - `make check-components` builds, lints and tests market with `synthetic`
+    alone;
+  - two consumer fixtures, `fixtures/consumers/market-minimal` (no features:
+    chains, series and a JSON round trip, no simulation or I/O in the graph)
+    and `market-synthetic` (a replayed historical walk over a seed chain, and
+    a short history arriving as `ChainError::Generator` with a
+    `SimulationError` source), run in CI through
+    `make check-consumer-market` and `make test-consumer-market`;
+  - the `synthetic` feature-tree fixture now records the
+    `optionstratlib-market -> optionstratlib-simulation` edge.
+
 - **`PriceTrend` has private `Decimal` fields and a validating constructor**
   (#656). `drift_rate` (annual drift as a fraction, any sign) and
   `confidence` were public `f64` fields that the kernels checked on every

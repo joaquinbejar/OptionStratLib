@@ -3,17 +3,16 @@
    Email: jb@taunais.com
    Date: 27/3/25
 ******************************************************************************/
-use super::GeneratorFailure;
-use crate::ExpirationDate;
 use crate::chains::OptionChain;
 use crate::chains::utils::OptionChainBuildParams;
 use crate::error::ChainError;
-use crate::simulation::steps::{Step, Xstep};
-use crate::simulation::{WalkParams, walk_steps_par};
 use core::option::Option;
-use positive::Positive;
+use optionstratlib_core::model::ExpirationDate;
+use optionstratlib_core::model::Positive;
 #[cfg(test)]
-use positive::pos_or_panic;
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_simulation::simulation::steps::{Step, Xstep};
+use optionstratlib_simulation::simulation::{WalkParams, walk_steps_par};
 use rust_decimal_macros::dec;
 use std::sync::Mutex;
 
@@ -78,11 +77,11 @@ fn create_chain_from_step(
 /// data (capped at 100% before stamping the chain).
 ///
 /// Implemented on top of the shared walk driver
-/// ([`crate::simulation::walk_steps`]); this function only supplies the chain-rebuild
+/// ([`optionstratlib_simulation::simulation::walk_steps`]); this function only supplies the chain-rebuild
 /// closure.
 ///
-/// # Contract (shared with [`crate::simulation::generator_positive`] and
-/// [`crate::synthetic::generator_optionseries`])
+/// # Contract (shared with [`optionstratlib_simulation::simulation::generator_positive`] and
+/// [`crate::series::generator_optionseries`])
 ///
 /// * The returned vector always starts with `walk_params.init_step`.
 /// * If the walker yields no values beyond the initial one (e.g. a size-1 walk),
@@ -121,7 +120,7 @@ pub fn generator_optionchain(
     // WalkParams is not Sync).
     let init_ystep = walk_params.ystep_ref();
     // A step reports its own `ChainError`; the driver's failures arrive
-    // through `GeneratorFailure` (see the `synthetic` module).
+    // through `From<SimulationError> for ChainError`.
     let build_step = |new_price: &Positive,
                       volatility: Option<Positive>,
                       x_step: &Xstep<Positive>|
@@ -147,29 +146,36 @@ pub fn generator_optionchain(
             create_chain_from_step(&params, new_price, volatility, Some(*x_step.datetime()))?;
         Ok(Some(chain))
     };
-    walk_steps_par(walk_params, |new_price, volatility, x_step| {
-        build_step(new_price, volatility, x_step).map_err(GeneratorFailure)
-    })
-    .map_err(GeneratorFailure::into_inner)
+    walk_steps_par(walk_params, build_step)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::ExpirationDate;
+    use optionstratlib_core::model::ExpirationDate;
 
-    use crate::simulation::randomwalk::RandomWalk;
-    use crate::simulation::steps::{Xstep, Ystep};
-    use crate::simulation::{WalkType, WalkTypeAble};
-    use crate::utils::time::{convert_time_frame, get_x_days_formatted};
-    use crate::utils::{Len, TimeFrame};
+    // The chain fixtures these tests read are JSON files, so the tests that
+    // load them, and the imports only they use, need `io` as well.
+    #[cfg(feature = "io")]
+    use optionstratlib_core::utils::Len;
+    use optionstratlib_core::utils::TimeFrame;
+    #[cfg(feature = "io")]
+    use optionstratlib_core::utils::time::{convert_time_frame, get_x_days_formatted};
+    #[cfg(feature = "io")]
+    use optionstratlib_simulation::simulation::randomwalk::RandomWalk;
+    use optionstratlib_simulation::simulation::steps::{Xstep, Ystep};
+    use optionstratlib_simulation::simulation::{WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_create_chain_from_step() {
-        let mut initial_price =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut initial_price = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         initial_price.update_expiration_date(get_x_days_formatted(2));
         let new_price: Positive = pos_or_panic!(5790.0);
         let step = Step {
@@ -205,11 +211,15 @@ mod tests {
     }
     impl WalkTypeAble<Positive, OptionChain> for WalkerOptionChain {}
 
+    #[cfg(feature = "io")]
     #[test]
     fn test_create_chain_from_step_with_volatility_change() {
         let n_steps = 4;
-        let mut initial_chain =
-            OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json").unwrap();
+        let mut initial_chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .unwrap();
         initial_chain.update_expiration_date(get_x_days_formatted(2));
         let days = pos_or_panic!(30.0);
         let std_dev = pos_or_panic!(20.0);
@@ -318,7 +328,7 @@ mod tests {
     #[test]
     fn test_generator_optionchain_multi_step_behavior() {
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-        use crate::synthetic::walk_test_support::RampWalker;
+        use crate::walk_test_support::RampWalker;
 
         let init_days = 60.0;
         let price_params = OptionDataPriceParams::new(
@@ -422,9 +432,11 @@ mod tests {
     #[test]
     fn test_generator_optionchain_historical_multi_step() {
         use crate::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
-        use crate::synthetic::walk_test_support::RampWalker;
-        use crate::utils::numeric::calculate_log_returns;
-        use crate::volatility::{adjust_volatility as annualize, constant_volatility};
+        use crate::walk_test_support::RampWalker;
+        use optionstratlib_core::utils::numeric::calculate_log_returns;
+        use optionstratlib_pricing::volatility::{
+            adjust_volatility as annualize, constant_volatility,
+        };
         use rust_decimal::Decimal;
 
         let prices = vec![
@@ -536,9 +548,9 @@ mod tests {
     /// no error) for the chain generator too.
     #[test]
     fn test_generator_optionchain_empty_walker_output() {
-        use crate::synthetic::walk_test_support::EmptyWalker;
-        use crate::utils::time::get_tomorrow_formatted;
-        use positive::spos;
+        use crate::walk_test_support::EmptyWalker;
+        use optionstratlib_core::spos;
+        use optionstratlib_core::utils::time::get_tomorrow_formatted;
 
         let chain = OptionChain::new(
             "TEST",
@@ -575,14 +587,14 @@ mod tests {
 #[cfg(test)]
 mod generators_coverage_tests {
     use super::*;
-    use positive::{Positive, spos};
+    use optionstratlib_core::{model::Positive, spos};
 
-    use crate::ExpirationDate;
-    use crate::simulation::steps::{Step, Xstep, Ystep};
-    use crate::simulation::{WalkParams, WalkType, WalkTypeAble};
-    use crate::synthetic::generator_optionchain;
-    use crate::utils::TimeFrame;
-    use crate::utils::time::get_tomorrow_formatted;
+    use crate::chains::generator_optionchain;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::utils::TimeFrame;
+    use optionstratlib_core::utils::time::get_tomorrow_formatted;
+    use optionstratlib_simulation::simulation::steps::{Step, Xstep, Ystep};
+    use optionstratlib_simulation::simulation::{WalkParams, WalkType, WalkTypeAble};
     use rust_decimal_macros::dec;
 
     #[derive(Clone)]

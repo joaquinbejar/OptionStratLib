@@ -167,6 +167,24 @@ tree-consumer-analytics-only:
 	@python3 scripts/check_fixtures.py analytics-only
 	@echo "all features: $$(cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
 
+# The market crate with no features and with only `synthetic` (#537,
+# ADR-0003): minimal market resolves no simulation crate, and `synthetic`
+# adds exactly that one.
+MARKET_FIXTURES := market-minimal market-synthetic
+
+.PHONY: check-consumer-market
+check-consumer-market:
+	@for fixture in $(MARKET_FIXTURES); do \
+		manifest=fixtures/consumers/$$fixture/Cargo.toml; \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo clippy --manifest-path $$manifest --all-targets -- -D warnings || exit 1; \
+	done
+
+.PHONY: test-consumer-market
+test-consumer-market:
+	@for fixture in $(MARKET_FIXTURES); do \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
+	done
+
 # The facade built with one capability each: `pricing` and `market` alone
 # (#528), `analytics` alone, which must not resolve strategies, and
 # `strategies` alone (#535), each consumed through the prelude and the
@@ -206,7 +224,7 @@ check-graph:
 COMPONENT_CRATES := optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-simulation optionstratlib-market optionstratlib-analytics optionstratlib-strategies
 # Named feature sets each component must also build, lint and test alone
 # (`crate:feature`), besides no, default and all features (ADR-0003, #525).
-COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async
+COMPONENT_FEATURE_SETS := optionstratlib-market:io optionstratlib-market:async optionstratlib-market:synthetic
 
 # `cargo package` verifies each crate against the others through a temporary
 # local registry, and Cargo keeps what it unpacks from such a registry under

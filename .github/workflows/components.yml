@@ -66,5 +66,7 @@ jobs:
           make check-consumer-analytics-only
           make check-consumer-analytics-only-minimal
           make test-consumer-analytics-only
+          make check-consumer-market
+          make test-consumer-market
           make check-consumer-facade
           make test-consumer-facade

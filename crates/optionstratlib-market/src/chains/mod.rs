@@ -97,6 +97,11 @@ pub mod utils;
 #[cfg(feature = "io")]
 pub mod csv;
 
+/// Simulation-backed chain generation (ADR-0003): behind `synthetic`, the
+/// only market-to-simulation edge.
+#[cfg(feature = "synthetic")]
+mod generators;
+
 /// * `options` - Private module with core option pricing models and option-specific functionality
 mod options;
 
@@ -105,6 +110,8 @@ mod optiondata;
 pub(crate) mod model_impls;
 
 pub use chain::OptionChain;
+#[cfg(feature = "synthetic")]
+pub use generators::generator_optionchain;
 pub use legs::StrategyLegs;
 pub use model_impls::UpdateFromOptionData;
 pub use optiondata::OptionData;

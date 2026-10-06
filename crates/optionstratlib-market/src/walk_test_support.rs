@@ -15,9 +15,9 @@
 //! crate's tests. This copy goes with the generators when #537 moves them
 //! into `optionstratlib-market`.
 
-use crate::error::SimulationError;
-use crate::simulation::{WalkParams, WalkTypeAble};
-use positive::Positive;
+use optionstratlib_core::model::Positive;
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_simulation::simulation::{WalkParams, WalkTypeAble};
 use std::convert::TryInto;
 use std::fmt::Display;
 use std::ops::AddAssign;

@@ -145,6 +145,7 @@ optionstratlib-market -> num-traits
 optionstratlib-market -> optionstratlib-core
 optionstratlib-market -> optionstratlib-math
 optionstratlib-market -> optionstratlib-pricing
+optionstratlib-market -> optionstratlib-simulation
 optionstratlib-market -> pretty-simple-display
 optionstratlib-market -> prettytable-rs
 optionstratlib-market -> rust_decimal
@@ -371,7 +372,7 @@ once_cell [alloc,default,race,std]
 option_type [default,utoipa]
 optionstratlib [market,math,pricing,simulation,synthetic]
 optionstratlib-core [default,schema]
-optionstratlib-market [default,schema]
+optionstratlib-market [default,schema,synthetic]
 optionstratlib-math [default,schema]
 optionstratlib-pricing [default,schema]
 optionstratlib-simulation [default,schema]

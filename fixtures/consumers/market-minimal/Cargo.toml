@@ -1,0 +1,20 @@
+# Consumer fixture: `optionstratlib-market` with no features (ADR-0002
+# section 5 `osl-fixture-market-minimal`, ADR-0003, #537). Excluded from the
+# root workspace so feature unification with the other members cannot widen
+# its graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-market-minimal"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: option chains and series from optionstratlib-market with no features."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-market = { path = "../../../crates/optionstratlib-market", version = "0.22.0", default-features = false }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"
+serde_json = "1"

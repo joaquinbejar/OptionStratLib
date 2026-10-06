@@ -679,6 +679,19 @@ impl From<csv::Error> for ChainError {
     }
 }
 
+/// A simulation failure inside a synthetic generator (`synthetic` feature,
+/// ADR-0003): wrapped as [`ChainError::Generator`], whose source downcasts
+/// to `SimulationError`. Only the impl is gated; the enum is the same in
+/// every configuration (ADR-0002 section 4).
+#[cfg(feature = "synthetic")]
+impl From<optionstratlib_simulation::error::SimulationError> for ChainError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: optionstratlib_simulation::error::SimulationError) -> Self {
+        ChainError::generator(err)
+    }
+}
+
 impl From<serde_json::Error> for ChainError {
     fn from(err: serde_json::Error) -> Self {
         ChainError::FileError(FileErrorKind::ParseError {

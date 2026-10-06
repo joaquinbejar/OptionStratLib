@@ -49,5 +49,10 @@ pub mod series;
 /// Errors raised by the market layer.
 pub mod error;
 
+/// Deterministic walkers shared by the generator tests.
+#[cfg(test)]
+#[cfg(feature = "synthetic")]
+mod walk_test_support;
+
 /// Version of the `optionstratlib-market` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
