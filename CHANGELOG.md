@@ -24,8 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `calculate_price_probability`, `ProfitLossRange::calculate_probability`
   and `ProbabilityAnalysis::expected_value` return the same values as before
   for a trend written with the digits of the former `f64` literals, at any
-  number of decimal places. `PriceTrend` also derives `PartialEq` and `Eq`.
-  The four float-boundary allowlist entries go.
+  number of decimal places. A caller holding a computed `f64` keeps identical
+  results by converting it with `Decimal::from_f64_retain`, not
+  `Decimal::from_f64` or `f64_to_decimal`, which round to fewer digits
+  (`0.1 + 0.2` becomes `0.3`). Two inputs are no longer expressible: a
+  confidence outside `[0, 1]`, which `ProbabilityAnalysis::expected_value`
+  used to answer through its zero-volatility early return and which is now
+  refused at construction, and a drift outside the `Decimal` range (about
+  ±7.9e28, finite, at most 28 decimal places). `PriceTrend` also derives
+  `PartialEq` and `Eq`. The four float-boundary allowlist entries go.
 
 - **Simulation is its own crate, `optionstratlib-simulation`** (#536).
   `simulation` (random walks, stochastic processes, steps, the walk driver,
@@ -238,7 +245,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     forbids the minimal-market package set in analytics, and
     `check-components`, `make test`, `make doc`, the public-API snapshots and
     the float gate cover it (`PriceTrend::{drift_rate, confidence}`
-    allowlisted as pre-existing dimensionless kernel inputs).
+    allowlisted as pre-existing dimensionless kernel inputs, until #656
+    removed them).
 
 - **The facade routes `math`, `pricing`, `market` and `simulation` through
   features** (#528, ADR-0002 Decision 2). `optionstratlib-math`,
