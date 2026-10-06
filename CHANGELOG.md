@@ -501,12 +501,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (single leg, vertical spreads, butterflies, condors, straddles and
   strangles, covered and protective, custom) and the shared surface every
   family uses, and record why there are no per-family features in 0.22: the
-  crate adds no package to the analytics graph, its own check costs 0.9 s
-  (1.7 s debug, 3.0 s release build) against 5.7 s for the layers below,
-  and gating a family would gate `StrategyType` variants, which ADR-0002
-  section 4 forbids. `make measure-strategies` (`scripts/measure_strategies.py`)
-  reproduces the numbers, and `tests/strategy_families.rs` fails to compile
-  if a new strategy is not assigned a family.
+  crate adds no package to the analytics graph, and its own build (0.93 s
+  check, 1.86 s debug, 3.12 s release) bounds what any grouping could save,
+  against 5.85 s for a clean check of the layers below. Gating a family
+  would also gate `StrategyType` variants (forbidden by ADR-0002 section 4)
+  or make `StrategyRequest` fail depending on features. `make
+  measure-strategies` (`scripts/measure_strategies.py`) reproduces the
+  numbers, and `tests/strategy_families.rs` fails to compile if a new
+  strategy is not assigned a family.
 
 - **First consumer fixture: core plus pricing** (#527).
   `fixtures/consumers/pricing-only` is a real crate, excluded from the
