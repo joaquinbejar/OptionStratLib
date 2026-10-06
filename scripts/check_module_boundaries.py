@@ -190,14 +190,11 @@ MINIMAL_MARKET_MODULES = ("chains", "series")
 # (source module, target module) -> (files that may carry the edge, the issue
 # that removes it). Scoped to files on purpose: a new file introducing the
 # same module pair is a fresh violation, not tolerated debt. Every listed
-# line is annotated `// deferred edge` in the source.
-DEFERRED: dict[tuple[str, str], tuple[frozenset[str], str]] = {
-    # `Simulate::simulate` returns `SimulationStatsResult`; `SimulationStats`
-    # `impl BasicAble for Simulator/RandomWalk` lives in strategies.
-    ("strategies", "simulation"): (frozenset({"strategies/simulation_impls.rs"}), "0.22.0 batch (#505)"),
-    # `Strategable: ... + Graph` supertrait bound.
-    ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
-}
+# line is annotated `// deferred edge` in the source. Empty since #658, which
+# removed the last two (strategies -> simulation, strategies -> visualization);
+# the self-test proves the mechanism on a fixture table.
+DeferredTable = dict[tuple[str, str], tuple[frozenset[str], str]]
+DEFERRED: DeferredTable = {}
 
 # Workspace package -> layer (ADR-0001 D1). Every published package carries
 # the `optionstratlib` prefix; one missing from this table fails the check.
@@ -887,7 +884,9 @@ def _ungated_spans(lines: list[str], gated: set[int]) -> list[tuple[int, int]]:
     return spans
 
 
-def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
+def violations_of(edges: dict[tuple[str, str], list[str]], deferred_table: DeferredTable | None = None) -> list[str]:
+    """Forbidden edges; `deferred_table` defaults to `DEFERRED` (the self-test passes a fixture)."""
+    table = DEFERRED if deferred_table is None else deferred_table
     violations: list[str] = []
     for (src, dst), files in sorted(edges.items()):
         if dst in ALWAYS_ALLOWED_TARGETS:
@@ -897,7 +896,7 @@ def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
             continue
         if dst_layer == "simulation" and src_layer == "market" and all(f in SYNTHETIC_FILES for f in files):
             continue
-        deferred = DEFERRED.get((src, dst))
+        deferred = table.get((src, dst))
         if deferred is not None and set(files) <= deferred[0]:
             continue
         where = ", ".join(sorted(set(files)))
@@ -906,6 +905,18 @@ def violations_of(edges: dict[tuple[str, str], list[str]]) -> list[str]:
             where = f"{extra} (deferred only for {', '.join(sorted(deferred[0]))})"
         violations.append(f"{src} -> {dst} ({src_layer} -> {dst_layer}) in {where}")
     return violations
+
+
+def stale_deferred(present: set[tuple[str, str]], deferred_table: DeferredTable | None = None) -> list[str]:
+    """Deferred entries whose edge no longer exists, so the table gets pruned."""
+    table = DEFERRED if deferred_table is None else deferred_table
+    return [f"{s} -> {d} ({meta[1]})" for (s, d), meta in sorted(table.items()) if (s, d) not in present]
+
+
+def unowned_deferred(deferred_table: DeferredTable | None = None) -> list[str]:
+    """Deferred entries that name no owning issue (roadmap M1-10)."""
+    table = DEFERRED if deferred_table is None else deferred_table
+    return [f"{s} -> {d}" for (s, d), (_, owner) in sorted(table.items()) if not re.search(r"#\d+", owner)]
 
 
 def marked_lines(src: Path = SRC) -> dict[str, int]:
@@ -1227,12 +1238,6 @@ def self_test() -> int:
         "a utils target resolves to the owning file": (
             [("model/x.rs", "use crate::utils::rng::deterministic_rng;\n")], 0,
         ),
-        "deferred pair in its file": (
-            [("strategies/base.rs", "use crate::visualization::Graph;\n")], 0,
-        ),
-        "deferred pair in another file": (
-            [("strategies/other.rs", "use crate::visualization::Graph;\n")], 1,
-        ),
         # --- error-type resolution (#590)
         "bare error import": ([err, ("model/x.rs", "use crate::error::StrategyError;\n")], 1),
         "error import with alias": ([err, ("model/x.rs", "use crate::error::StrategyError as SE;\nfn f() -> SE { todo!() }\n")], 1),
@@ -1385,17 +1390,32 @@ def self_test() -> int:
                 failures += 1
             detail = f" [{needle}]" if needle else ""
             print(f"self-test {'ok' if ok else 'FAIL'}: {name}{detail} (expected {expected}, got {got})")
-    # A deferred entry whose edge is gone must be reported as stale.
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp) / "src"
-        (root / "model").mkdir(parents=True)
-        (root / "model" / "x.rs").write_text("pub fn nothing() {}\n")
-        _, present = scan(root)
-        stale = [key for key in DEFERRED if key not in present]
-        ok = len(stale) == len(DEFERRED)
-        print(f"self-test {'ok' if ok else 'FAIL'}: stale deferred entries are detected ({len(stale)} of {len(DEFERRED)})")
-        if not ok:
-            failures += 1
+    # The DEFERRED mechanism, proven on a fixture table so the self-test does
+    # not lean on the real one (empty since #658): an entry tolerates its pair
+    # only in the files it lists, and an entry whose edge is gone is stale.
+    fixture_deferred: DeferredTable = {
+        ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "fixture (#658)"),
+        ("strategies", "simulation"): (frozenset({"strategies/sim.rs"}), "fixture (#658)"),
+    }
+    deferred_cases = {
+        "deferred pair in its file": ("strategies/base.rs", 0, ["strategies -> simulation (fixture (#658))"]),
+        "deferred pair in another file": ("strategies/other.rs", 1, ["strategies -> simulation (fixture (#658))"]),
+    }
+    for name, (rel, expected, expected_stale) in deferred_cases.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "src"
+            (root / rel).parent.mkdir(parents=True)
+            (root / rel).write_text("use crate::visualization::Graph;\n")
+            edges, present = scan(root)
+            found = violations_of(edges, fixture_deferred)
+            stale = stale_deferred(present, fixture_deferred)
+            ok = len(found) == expected and stale == expected_stale
+            if not ok:
+                failures += 1
+            print(
+                f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected} violations and "
+                f"{len(expected_stale)} stale, got {len(found)} and {len(stale)})"
+            )
     # The synthetic gate: a simulation reference in market code counts only
     # when the feature attribute really carries it (M1-15).
     gate_cases = {
@@ -1755,8 +1775,17 @@ def self_test() -> int:
             print(f"self-test {'ok' if ok else 'FAIL'}: single definition, {name} (expected {expected}, got {got})")
 
     # Every tolerated edge must name the issue that removes it, so M1 cannot
-    # close with an undocumented production edge (roadmap M1-10).
-    unowned = [f"{s} -> {d}" for (s, d), (_, owner) in DEFERRED.items() if not re.search(r"#\d+", owner)]
+    # close with an undocumented production edge (roadmap M1-10). The rule
+    # is proven on a fixture, then applied to the real table.
+    unowned_fixture = unowned_deferred({
+        ("strategies", "visualization"): (frozenset({"strategies/base.rs"}), "0.22.0 batch (#505)"),
+        ("strategies", "simulation"): (frozenset({"strategies/sim.rs"}), "0.22.0 batch"),
+    })
+    ok = unowned_fixture == ["strategies -> simulation"]
+    if not ok:
+        failures += 1
+    print(f"self-test {'ok' if ok else 'FAIL'}: a deferred edge without an owning issue is refused (expected 1, got {len(unowned_fixture)})")
+    unowned = unowned_deferred()
     ok = not unowned
     if not ok:
         failures += 1
@@ -1804,7 +1833,7 @@ def main() -> int:
         return inventory()
     edges, present = scan()
     violations = violations_of(edges)
-    stale = [f"{s} -> {d} ({meta[1]})" for (s, d), meta in DEFERRED.items() if (s, d) not in present]
+    stale = stale_deferred(present)
     if stale:
         print("deferred edges no longer present, prune them from DEFERRED:")
         for item in stale:

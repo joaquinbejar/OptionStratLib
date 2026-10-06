@@ -24,7 +24,6 @@
 /// - `Validable`
 /// - `Optimizable`
 /// - `Profit`
-/// - `Graph`
 /// - `ProbabilityAnalysis`
 /// - `Greeks`
 /// - `DeltaNeutrality`
@@ -48,8 +47,8 @@
 /// static_assertions = "1.1"
 /// ```
 ///
-/// Additionally, ensure that `$crate::visualization::Graph` is correctly defined and accessible
-/// in your project.
+/// `Graph` is not asserted here: it is a visualization trait, and the visualization layer's
+/// tests assert it for every concrete strategy.
 #[macro_export]
 macro_rules! test_strategy_traits {
     ($strategy_type:ty, $module_name:ident) => {
@@ -58,7 +57,6 @@ macro_rules! test_strategy_traits {
             use super::*;
             use static_assertions::assert_impl_all;
             use std::fmt;
-            use $crate::visualization::Graph;
 
             #[test]
             fn test_traits() {
@@ -72,7 +70,6 @@ macro_rules! test_strategy_traits {
                     Validable,
                     Optimizable,
                     Profit,
-                    Graph,
                     ProbabilityAnalysis,
                     Greeks,
                     DeltaNeutrality,

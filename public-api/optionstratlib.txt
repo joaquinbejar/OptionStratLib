@@ -3942,26 +3942,6 @@ pub type optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::Output = opti
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::index(&self, usize) -> &Self::Output
 impl<X, Y> core::ops::index::IndexMut<usize> for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::index_mut(&mut self, usize) -> &mut Self::Output
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 impl<X, Y> optionstratlib::visualization::Graph for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
@@ -4758,26 +4738,6 @@ pub type optionstratlib::simulation::simulator::Simulator<X, Y>::Output = option
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::index(&self, usize) -> &Self::Output
 impl<X, Y> core::ops::index::IndexMut<usize> for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::index_mut(&mut self, usize) -> &mut Self::Output
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 impl<X, Y> optionstratlib::visualization::Graph for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
@@ -5418,46 +5378,6 @@ pub fn optionstratlib_core::model::position::Position::one_option_mut(&mut self)
 pub fn optionstratlib_core::model::position::Position::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub trait optionstratlib::prelude::BreakEvenable
 pub fn optionstratlib::prelude::BreakEvenable::get_break_even_points(&self) -> core::result::Result<&alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::prelude::BreakEvenable::update_break_even_points(&mut self) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
@@ -6835,7 +6755,7 @@ impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for 
 impl<X, Y> optionstratlib::backtesting::strategy_simulation::Simulate<X, Y> for optionstratlib::strategies::short_put::ShortPut where X: core::marker::Copy + core::convert::Into<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::Into<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::BacktestError>
 pub fn optionstratlib::strategies::short_put::ShortPut::simulate(&self, &optionstratlib::simulation::simulator::Simulator<X, Y>, optionstratlib::simulation::exit::ExitPolicy) -> core::result::Result<optionstratlib::backtesting::SimulationStatsResult, optionstratlib::error::BacktestError>
-pub trait optionstratlib::prelude::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::visualization::Graph + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
+pub trait optionstratlib::prelude::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
 pub fn optionstratlib::prelude::Strategable::info(&self) -> core::result::Result<optionstratlib::strategies::base::StrategyBasics, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::prelude::Strategable::name(&self) -> alloc::string::String
 pub fn optionstratlib::prelude::Strategable::type_name(&self) -> optionstratlib::strategies::base::StrategyType
@@ -7514,26 +7434,6 @@ pub type optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::Output = opti
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::index(&self, usize) -> &Self::Output
 impl<X, Y> core::ops::index::IndexMut<usize> for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::index_mut(&mut self, usize) -> &mut Self::Output
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 impl<X, Y> optionstratlib::visualization::Graph for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
 pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
@@ -7578,26 +7478,6 @@ pub type optionstratlib::simulation::simulator::Simulator<X, Y>::Output = option
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::index(&self, usize) -> &Self::Output
 impl<X, Y> core::ops::index::IndexMut<usize> for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::index_mut(&mut self, usize) -> &mut Self::Output
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 impl<X, Y> optionstratlib::visualization::Graph for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::marker::Copy + core::convert::TryInto<positive::positive::Positive> + core::ops::arith::AddAssign + core::fmt::Display, Y: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::graph_config(&self) -> optionstratlib::visualization::GraphConfig
 pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::graph_data(&self) -> optionstratlib::visualization::GraphData
@@ -8403,46 +8283,6 @@ pub fn optionstratlib_core::model::position::Position::one_option_mut(&mut self)
 pub fn optionstratlib_core::model::position::Position::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub trait optionstratlib::strategies::base::BreakEvenable
 pub fn optionstratlib::strategies::base::BreakEvenable::get_break_even_points(&self) -> core::result::Result<&alloc::vec::Vec<positive::positive::Positive>, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::base::BreakEvenable::update_break_even_points(&mut self) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
@@ -8926,7 +8766,7 @@ pub fn optionstratlib::strategies::short_strangle::ShortStrangle::get_positions(
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::modify_position(&mut self, &optionstratlib_core::model::position::Position) -> core::result::Result<(), optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::replace_position(&mut self, &optionstratlib_core::model::position::Position) -> core::result::Result<(), optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::valid_premium_for_shorts(&self, &positive::positive::Positive) -> bool
-pub trait optionstratlib::strategies::base::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::visualization::Graph + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
+pub trait optionstratlib::strategies::base::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
 pub fn optionstratlib::strategies::base::Strategable::info(&self) -> core::result::Result<optionstratlib::strategies::base::StrategyBasics, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::base::Strategable::name(&self) -> alloc::string::String
 pub fn optionstratlib::strategies::base::Strategable::type_name(&self) -> optionstratlib::strategies::base::StrategyType
@@ -11236,7 +11076,6 @@ pub fn optionstratlib::strategies::short_strangle::ShortStrangle::optimized_adju
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::optimized_adjustment_plan_with_chain(&self, &optionstratlib_market::chains::chain::OptionChain, optionstratlib::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib::strategies::delta_neutral::portfolio::AdjustmentTarget) -> core::result::Result<optionstratlib::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::portfolio_greeks(&self) -> core::result::Result<optionstratlib::strategies::delta_neutral::portfolio::PortfolioGreeks, optionstratlib_pricing::error::greeks::GreeksError>
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::trade_from_delta_adjustment(&mut self, financial_types::Action) -> core::result::Result<alloc::vec::Vec<optionstratlib_core::model::trade::Trade>, optionstratlib::error::strategies::StrategyError>
-pub mod optionstratlib::strategies::graph
 pub mod optionstratlib::strategies::iron_butterfly
 pub struct optionstratlib::strategies::iron_butterfly::IronButterfly
 pub optionstratlib::strategies::iron_butterfly::IronButterfly::break_even_points: alloc::vec::Vec<positive::positive::Positive>
@@ -16948,46 +16787,6 @@ pub fn optionstratlib_core::model::position::Position::one_option_mut(&mut self)
 pub fn optionstratlib_core::model::position::Position::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib_core::model::position::Position::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::randomwalk::RandomWalk<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::randomwalk::RandomWalk<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-impl<X, Y> optionstratlib::strategies::base::BasicAble for optionstratlib::simulation::simulator::Simulator<X, Y> where X: core::ops::arith::AddAssign + core::marker::Copy + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>, Y: core::clone::Clone + core::fmt::Display + core::convert::TryInto<positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_dividend_yield(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_expiration(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &expiration_date::ExpirationDate>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_implied_volatility(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_option_basic_type(&self) -> std::collections::hash::set::HashSet<option_type::basic_type::OptionBasicType<'_>>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_quantity(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_risk_free_rate(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &rust_decimal::decimal::Decimal>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_side(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::Side>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strike(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_strikes(&self) -> alloc::vec::Vec<&positive::positive::Positive>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_style(&self) -> std::collections::hash::map::HashMap<option_type::basic_type::OptionBasicType<'_>, &financial_types::OptionStyle>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_symbol(&self) -> &str
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_title(&self) -> alloc::string::String
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_type(&self) -> &option_type::option_type::OptionType
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::get_underlying_price(&self) -> &positive::positive::Positive
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option(&self) -> &optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::one_option_mut(&mut self) -> &mut optionstratlib_core::model::option::Options
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_expiration_date(&mut self, expiration_date::ExpirationDate) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_implied_volatility(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
-pub fn optionstratlib::simulation::simulator::Simulator<X, Y>::set_underlying_price(&mut self, &positive::positive::Positive) -> core::result::Result<(), optionstratlib::error::strategies::StrategyError>
 pub trait optionstratlib::strategies::ButterflyStrategy
 pub fn optionstratlib::strategies::ButterflyStrategy::body_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::ButterflyStrategy::get_butterfly_positions(&self) -> alloc::vec::Vec<&optionstratlib_core::model::position::Position>
@@ -17438,7 +17237,7 @@ pub fn optionstratlib::strategies::short_strangle::ShortStrangle::is_long(&self)
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::put_position(&self) -> &optionstratlib_core::model::position::Position
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::put_strike(&self) -> positive::positive::Positive
 pub fn optionstratlib::strategies::short_strangle::ShortStrangle::strangle_width(&self) -> positive::positive::Positive
-pub trait optionstratlib::strategies::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::visualization::Graph + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
+pub trait optionstratlib::strategies::Strategable: optionstratlib::strategies::base::Strategies + optionstratlib::strategies::StrategyConstructor + optionstratlib_pricing::pricing::payoff::Profit + optionstratlib::prelude::ProbabilityAnalysis + optionstratlib_pricing::greeks::equations::Greeks + optionstratlib::strategies::DeltaNeutrality + optionstratlib_analytics::pnl::traits::PnLCalculator
 pub fn optionstratlib::strategies::Strategable::info(&self) -> core::result::Result<optionstratlib::strategies::base::StrategyBasics, optionstratlib::error::strategies::StrategyError>
 pub fn optionstratlib::strategies::Strategable::name(&self) -> alloc::string::String
 pub fn optionstratlib::strategies::Strategable::type_name(&self) -> optionstratlib::strategies::base::StrategyType

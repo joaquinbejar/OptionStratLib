@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`Strategable` no longer requires `Graph`, and `Simulator` / `RandomWalk`
+  no longer implement `BasicAble`** (#658). These were the last two reverse
+  edges of the strategies layer (`strategies -> visualization`,
+  `strategies -> simulation`); with them gone the `DEFERRED` table of the
+  boundary checker is empty and `make check-graph` tolerates no edge, which
+  lets strategies become a crate that depends on neither (M4-03, #531).
+  - `Graph` is dropped from the `Strategable` supertraits. Every concrete
+    strategy still implements `Graph` in `visualization::strategies`, and
+    charts render as before. Generic code that charts through a
+    `Strategable` bound states it: `S: Strategable + Graph`. A
+    `Box<dyn Strategable>` (what `StrategyRequest::get_strategy` returns)
+    can no longer be charted directly. Build the concrete strategy and chart
+    that: match on `request.strategy_type` and call the type's
+    `StrategyConstructor::get_strategy(&request.positions)`, e.g.
+    `IronCondor::get_strategy(&request.positions)?.write_html(path)`. To
+    keep a trait object, define `trait Chartable: Strategable + Graph {}`
+    with a blanket impl for `T: Strategable + Graph` and box into
+    `Box<dyn Chartable>`.
+  - The `test_strategy_traits!` macro no longer asserts `Graph`; the
+    visualization layer's tests assert it for every strategy.
+  - `impl BasicAble for Simulator<X, Y>` and `impl BasicAble for
+    RandomWalk<X, Y>` are removed. They only forwarded to the inherent
+    `get_title`, which stays: call `simulator.get_title()` /
+    `walk.get_title()` (it returns `&str`; add `.to_string()` where the
+    trait's `String` was used). The trait's other methods leave with them;
+    on these types they only reached the defaults (empty collections, an
+    `OperationNotSupported` error from the setters, or the `one_option`
+    panic), so nothing usable is lost.
+  - The empty `strategies::graph` module, kept only so that path stayed
+    valid after the `Graph` impls moved to `visualization::strategies`
+    (#505), is removed; the impls and `impl_graph_for_payoff_strategy!` are
+    unchanged.
+
 - **The strategies module no longer re-exports analytics, P&L or Greeks
   items** (#530). Each item keeps one public path, its owning layer's; the
   types, functions and results are unchanged. Removed paths and their

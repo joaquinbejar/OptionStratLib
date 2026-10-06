@@ -227,9 +227,6 @@ pub mod default;
 /// Delta-neutral strategy implementation and utilities
 pub mod delta_neutral;
 
-/// Former home of the strategy chart construction; see the module docs.
-/// The `Graph` implementations now live in `visualization::strategies`.
-pub mod graph;
 /// Iron Butterfly strategy implementation
 pub mod iron_butterfly;
 /// Iron Condor strategy implementation
@@ -267,10 +264,6 @@ pub mod short_straddle;
 /// Short Strangle strategy implementation
 pub mod short_strangle;
 
-/// `BasicAble` implementations for the simulation containers
-/// (`Simulator`, `RandomWalk`); kept here because the trait is local to
-/// strategies and simulation must not depend on it.
-mod simulation_impls;
 /// Utility functions for options calculations and analysis
 pub mod utils;
 
