@@ -52,7 +52,11 @@
 //!
 //! ## Use in Financial Modeling
 //!
-//! In the context of financial options, the Telegraph Process can be used to model:
+//! The [`telegraph()`] pricer uses the process as a regime-switching
+//! volatility: the underlying diffuses at `sigma_plus` while the state is
+//! +1 and at `sigma_minus` while it is -1 (see [`RegimeVolatility`]), with
+//! the risk-neutral drift of the active regime, so discounted prices stay
+//! martingales. More generally the process can model:
 //! - Changes in volatility (high/low volatility regime)
 //! - Changes in market direction (bullish/bearish trend)
 //! - Changes in interest rates (high/low)
@@ -361,6 +365,146 @@ pub(crate) fn estimate_telegraph_parameters(
     Ok((lambda_up, lambda_down))
 }
 
+/// The two volatility levels the [`telegraph()`] pricer switches between.
+///
+/// While the telegraph state is +1 the underlying diffuses at
+/// `sigma_plus`, while it is -1 at `sigma_minus`. Both levels are annualised
+/// and strictly positive. With equal levels the regime has no effect and the
+/// pricer converges to Black-Scholes at that volatility.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib_core::pos_or_panic;
+/// use optionstratlib_pricing::pricing::RegimeVolatility;
+///
+/// let regimes = RegimeVolatility::new(pos_or_panic!(0.35), pos_or_panic!(0.15)).unwrap();
+/// assert_eq!(regimes.sigma_plus(), pos_or_panic!(0.35));
+/// assert_eq!(regimes.sigma_minus(), pos_or_panic!(0.15));
+/// assert!(RegimeVolatility::new(pos_or_panic!(0.35), pos_or_panic!(0.0)).is_err());
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegimeVolatility {
+    /// Volatility of the +1 regime.
+    sigma_plus: Positive,
+    /// Volatility of the -1 regime.
+    sigma_minus: Positive,
+}
+
+impl RegimeVolatility {
+    /// Builds the pair of regime volatilities.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::InvalidParameter`] when either level is zero.
+    pub fn new(sigma_plus: Positive, sigma_minus: Positive) -> Result<Self, PricingError> {
+        Ok(Self {
+            sigma_plus: strictly_positive_sigma("sigma_plus", sigma_plus)?,
+            sigma_minus: strictly_positive_sigma("sigma_minus", sigma_minus)?,
+        })
+    }
+
+    /// Builds a pair whose two regimes share the volatility `sigma`, under
+    /// which the telegraph pricer converges to Black-Scholes at `sigma`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError::InvalidParameter`] when `sigma` is zero.
+    pub fn constant(sigma: Positive) -> Result<Self, PricingError> {
+        Self::new(sigma, sigma)
+    }
+
+    /// Volatility of the +1 regime.
+    #[must_use]
+    #[inline]
+    pub fn sigma_plus(&self) -> Positive {
+        self.sigma_plus
+    }
+
+    /// Volatility of the -1 regime.
+    #[must_use]
+    #[inline]
+    pub fn sigma_minus(&self) -> Positive {
+        self.sigma_minus
+    }
+}
+
+/// Returns `sigma` when it is strictly positive, the typed rejection
+/// otherwise.
+fn strictly_positive_sigma(
+    parameter: &'static str,
+    sigma: Positive,
+) -> Result<Positive, PricingError> {
+    if sigma.is_zero() {
+        return Err(PricingError::invalid_parameter(
+            parameter,
+            sigma.to_dec(),
+            "a regime volatility must be strictly positive",
+        ));
+    }
+    Ok(sigma)
+}
+
+/// Returns a caller-supplied transition rate when it is non-negative, the
+/// typed rejection otherwise. Zero is admissible: the regime never leaves.
+fn non_negative_rate(
+    parameter: &'static str,
+    rate: Option<Decimal>,
+) -> Result<Option<Decimal>, PricingError> {
+    match rate {
+        Some(value) if value.is_sign_negative() && !value.is_zero() => {
+            Err(PricingError::invalid_parameter(
+                parameter,
+                value,
+                "a transition rate must be non-negative",
+            ))
+        }
+        _ => Ok(rate),
+    }
+}
+
+/// Per-step log-Euler coefficients of one volatility regime, as `f64` for
+/// the path loop.
+#[derive(Debug, Clone, Copy)]
+struct RegimeStep {
+    /// `(carry - sigma^2 / 2) * dt`.
+    drift_dt: f64,
+    /// `sigma * sqrt(dt)`.
+    diffusion: f64,
+}
+
+impl RegimeStep {
+    /// Coefficients for volatility `sigma` under the risk-neutral `carry`
+    /// (the drift rate of the underlying before the Ito correction).
+    fn new(
+        carry: Decimal,
+        sigma: Positive,
+        dt: Decimal,
+        sqrt_dt: Decimal,
+    ) -> Result<Self, PricingError> {
+        let sigma = sigma.to_dec();
+        let drift = d_sub(
+            carry,
+            d_mul(
+                dec!(0.5),
+                d_powd(sigma, Decimal::TWO, "pricing::telegraph::variance")?,
+                "pricing::telegraph::half_variance",
+            )?,
+            "pricing::telegraph::drift",
+        )?;
+        let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
+        let diffusion = d_mul(sigma, sqrt_dt, "pricing::telegraph::diffusion")?;
+        Ok(Self {
+            drift_dt: drift_dt.to_f64().ok_or_else(|| {
+                PricingError::method_error("telegraph", "drift * dt not representable as f64")
+            })?,
+            diffusion: diffusion.to_f64().ok_or_else(|| {
+                PricingError::method_error("telegraph", "sigma * sqrt(dt) not representable as f64")
+            })?,
+        })
+    }
+}
+
 /// Number of Monte-Carlo paths
 /// [`OptionPricing::calculate_price_telegraph`](crate::pricing::OptionPricing::calculate_price_telegraph)
 /// averages the discounted payoff over, and a sensible `no_paths` for
@@ -375,29 +519,36 @@ pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
     None => NonZeroUsize::MIN,
 };
 
-/// Prices an option using the Telegraph process simulation method.
+/// Prices an option under telegraph regime-switching volatility.
 ///
-/// The underlying follows a log-Euler geometric Brownian motion whose
-/// diffusion term is signed by a two-state telegraph process. Each step of
-/// length `dt = T / no_steps` first advances the regime `state` (flip
-/// probability `1 - exp(-lambda * dt)`, `lambda` being the exit rate of the
-/// current regime) and then updates the price as
+/// A two-state telegraph process selects the volatility of a log-Euler
+/// geometric Brownian motion: `sigma_plus` while the state is +1,
+/// `sigma_minus` while it is -1 (see [`RegimeVolatility`]). Each step of
+/// length `dt = T / no_steps` first advances the regime (flip probability
+/// `1 - exp(-lambda * dt)`, `lambda` being the exit rate of the current
+/// regime: `lambda_down` leaves +1, `lambda_up` leaves -1) and then updates
+/// the price with the active regime's volatility `sigma_s`:
 ///
 /// ```text
-/// S <- S * exp((r - q - sigma^2 / 2) * dt + sigma * state * sqrt(dt) * Z),  Z ~ N(0, 1)
+/// S <- S * exp((r - q - sigma_s^2 / 2) * dt + sigma_s * sqrt(dt) * Z),  Z ~ N(0, 1)
 /// ```
 ///
-/// where `q` is the option's continuous dividend yield (#756).
+/// where `q` is the option's continuous dividend yield (#756). The drift of
+/// every step is the risk-neutral one of the regime it is taken in, so the
+/// discounted, dividend-adjusted underlying is a martingale and put-call
+/// parity holds whatever the rates. Every path draws its own initial regime
+/// (+1 or -1 with equal probability), and the price is the average of the
+/// discounted payoff over `no_paths` paths: a Monte-Carlo estimate of the
+/// risk-neutral expectation.
 ///
-/// Every path draws its own initial regime (+1 or -1 with equal
-/// probability). The price is the average of the discounted payoff over
-/// `no_paths` paths, so it is a Monte-Carlo estimate of the
-/// risk-neutral expectation rather than a single draw.
-///
-/// Because the shock is symmetric and independent of the regime path, the
-/// sign the regime puts on the diffusion leaves the terminal law that of
-/// geometric Brownian motion: the estimate converges to the Black-Scholes
-/// price with the same dividend yield whatever the transition rates.
+/// Conditional on its regime path a price is lognormal with total variance
+/// `sigma_plus^2 * T_plus + sigma_minus^2 * T_minus`, `T_plus` and `T_minus`
+/// being the time spent in each regime. A European price therefore lies
+/// between the Black-Scholes prices at `sigma_minus` and `sigma_plus`, and
+/// rises with the share of time the rates keep the path in the higher
+/// volatility regime. With `sigma_plus == sigma_minus` the estimate
+/// converges to the Black-Scholes price at that volatility and the same
+/// dividend yield.
 ///
 /// # Arguments
 ///
@@ -405,8 +556,12 @@ pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
 /// * `no_steps` - Number of time steps of every simulated path
 /// * `no_paths` - Number of simulated paths the discounted payoff is averaged
 ///   over; [`TELEGRAPH_PATHS`] is the count the [`OptionPricing`] trait uses.
-/// * `lambda_up` - Optional transition rate from down state (-1) to up state (+1)
-/// * `lambda_down` - Optional transition rate from up state (+1) to down state (-1)
+/// * `lambda_up` - Optional transition rate from down state (-1) to up state
+///   (+1); must be non-negative when given
+/// * `lambda_down` - Optional transition rate from up state (+1) to down
+///   state (-1); must be non-negative when given
+/// * `volatility` - The volatilities of the +1 and -1 regimes. The option's
+///   own `implied_volatility` is not used to diffuse the price.
 /// * `rng` - The generator every draw is taken from: the returns simulated to
 ///   estimate a missing rate, then for each path its initial state, one
 ///   transition draw and one standard normal shock per step. A seeded
@@ -426,12 +581,22 @@ pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
 ///
 /// # Errors
 ///
-/// Returns `PricingError::ExpirationDate` when the option's
+/// Returns `PricingError::InvalidParameter` when a supplied transition rate
+/// is negative, `PricingError::ExpirationDate` when the option's
 /// expiration cannot be converted, a decimal error when parameter
 /// estimation produces degenerate rates, `PricingError::NonFinite` when a
 /// simulated terminal price is not representable, and
 /// `PricingError::MethodError` when an intermediate is not representable
 /// as `f64` or the averaging overflows.
+///
+/// # References
+///
+/// Hamilton (1989), "A New Approach to the Economic Analysis of
+/// Nonstationary Time Series and the Business Cycle", Econometrica 57(2),
+/// for the two-state Markov regime; Naik (1993), "Option Valuation and
+/// Hedging Strategies with Jumps in the Volatility of Asset Returns",
+/// Journal of Finance 48(5), for option pricing under a two-state
+/// volatility.
 ///
 /// [`OptionPricing`]: crate::pricing::OptionPricing
 #[tracing::instrument(skip(option, rng), level = "debug")]
@@ -441,8 +606,11 @@ pub fn telegraph<R: Rng + ?Sized>(
     no_paths: NonZeroUsize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
+    volatility: RegimeVolatility,
     rng: &mut R,
 ) -> Result<Decimal, PricingError> {
+    let lambda_up = non_negative_rate("lambda_up", lambda_up)?;
+    let lambda_down = non_negative_rate("lambda_down", lambda_down)?;
     let no_steps_raw = no_steps.get();
     let no_paths_raw = no_paths.get();
     let no_steps_dec = Decimal::from_usize(no_steps_raw).ok_or_else(|| {
@@ -498,34 +666,18 @@ pub fn telegraph<R: Rng + ?Sized>(
     let flip_from_up = flip_probability(lambda_down_temp, dt);
     let flip_from_down = flip_probability(lambda_up_temp, dt);
 
-    // Loop-invariant risk-neutral drift `r - q - σ²/2`. The dividend yield
-    // was missing until #756, which overpriced calls and underpriced puts on
-    // a dividend-paying underlying.
-    let volatility = option.implied_volatility.to_dec();
+    // Loop-invariant per-regime coefficients. `carry` is the risk-neutral
+    // drift rate `r - q` of the underlying before the Ito correction each
+    // regime subtracts; the dividend yield was missing until #756.
     let carry = d_sub(
         option.risk_free_rate,
         option.dividend_yield.to_dec(),
         "pricing::telegraph::carry",
     )?;
-    let drift: Decimal = d_sub(
-        carry,
-        d_mul(
-            dec!(0.5),
-            d_powd(volatility, Decimal::TWO, "pricing::telegraph::variance")?,
-            "pricing::telegraph::half_variance",
-        )?,
-        "pricing::telegraph::drift",
-    )?;
-    let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
     let sqrt_dt = d_sqrt(dt, "pricing::telegraph::sqrt_dt")
         .map_err(|_| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
-    let diffusion = d_mul(volatility, sqrt_dt, "pricing::telegraph::diffusion")?;
-    let drift_dt_f64 = drift_dt.to_f64().ok_or_else(|| {
-        PricingError::method_error("telegraph", "drift * dt not representable as f64")
-    })?;
-    let diffusion_f64 = diffusion.to_f64().ok_or_else(|| {
-        PricingError::method_error("telegraph", "sigma * sqrt(dt) not representable as f64")
-    })?;
+    let step_up = RegimeStep::new(carry, volatility.sigma_plus, dt, sqrt_dt)?;
+    let step_down = RegimeStep::new(carry, volatility.sigma_minus, dt, sqrt_dt)?;
 
     let spot = option.underlying_price.to_dec();
     let mut payoff_sum = Decimal::ZERO;
@@ -545,8 +697,8 @@ pub fn telegraph<R: Rng + ?Sized>(
                 state_up = !state_up;
             }
             let z: f64 = StandardNormal.sample(rng);
-            let shock = if state_up { z } else { -z };
-            log_return += drift_dt_f64 + diffusion_f64 * shock;
+            let step = if state_up { step_up } else { step_down };
+            log_return += step.drift_dt + step.diffusion * z;
         }
         let growth_f64 = log_return.exp(); // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; the non-finite value is rejected by `finite_decimal` below
         let growth = finite_decimal(growth_f64)
@@ -584,6 +736,12 @@ pub fn telegraph<R: Rng + ?Sized>(
     )?;
     let result = d_mul(mean_payoff, discount, "pricing::telegraph::price")?;
     Ok(result)
+}
+
+/// Both regimes at the 20% volatility the test options are quoted at.
+#[cfg(test)]
+fn regimes_20() -> RegimeVolatility {
+    RegimeVolatility::constant(optionstratlib_core::pos_or_panic!(0.2)).unwrap()
 }
 
 #[cfg(test)]
@@ -701,6 +859,7 @@ mod tests_telegraph_process_basis {
             optionstratlib_core::nz!(1_000),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
         // price is stochastic
@@ -827,6 +986,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
         // assert!(price > 0.0);
@@ -842,6 +1002,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             None,
             None,
+            regimes_20(),
             &mut rng,
         );
         // assert!(price > 0.0);
@@ -857,6 +1018,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             None,
+            regimes_20(),
             &mut rng,
         );
         let _price_down = telegraph(
@@ -865,6 +1027,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             None,
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
 
@@ -882,6 +1045,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
         let _price_1000 = telegraph(
@@ -890,6 +1054,7 @@ mod tests_telegraph_process_extended {
             optionstratlib_core::nz!(1_000),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
 
@@ -899,19 +1064,45 @@ mod tests_telegraph_process_extended {
     }
 
     #[test]
-    fn test_telegraph_zero_volatility() {
+    fn test_regime_volatility_zero_sigma_rejected() {
+        for (plus, minus, name) in [
+            (Positive::ZERO, pos_or_panic!(0.2), "sigma_plus"),
+            (pos_or_panic!(0.2), Positive::ZERO, "sigma_minus"),
+        ] {
+            match RegimeVolatility::new(plus, minus) {
+                Err(PricingError::InvalidParameter { parameter, .. }) => {
+                    assert_eq!(parameter, name)
+                }
+                other => panic!("expected InvalidParameter for {name}, got {other:?}"),
+            }
+        }
+        assert!(RegimeVolatility::constant(Positive::ZERO).is_err());
+    }
+
+    #[test]
+    fn test_telegraph_negative_rate_rejected() {
         let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
-        let mut option = create_mock_option();
-        option.implied_volatility = Positive::ZERO;
-        let _price = telegraph(
-            &option,
-            optionstratlib_core::nz!(100),
-            TELEGRAPH_PATHS,
-            Some(dec!(0.5)),
-            Some(dec!(0.5)),
-            &mut rng,
-        );
-        // assert_relative_eq!(price, 0.0, epsilon = 1e-6);
+        let option = create_mock_option();
+        for (up, down, name) in [
+            (Some(dec!(-0.5)), Some(dec!(0.5)), "lambda_up"),
+            (Some(dec!(0.5)), Some(dec!(-0.5)), "lambda_down"),
+            (None, Some(dec!(-0.1)), "lambda_down"),
+        ] {
+            match telegraph(
+                &option,
+                optionstratlib_core::nz!(10),
+                optionstratlib_core::nz!(10),
+                up,
+                down,
+                regimes_20(),
+                &mut rng,
+            ) {
+                Err(PricingError::InvalidParameter { parameter, .. }) => {
+                    assert_eq!(parameter, name)
+                }
+                other => panic!("expected InvalidParameter for {name}, got {other:?}"),
+            }
+        }
     }
 
     #[test]
@@ -925,6 +1116,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         );
         // assert!(price > 0.0);
@@ -940,6 +1132,7 @@ mod tests_telegraph_process_extended {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut rng,
         )
         .unwrap();
@@ -959,13 +1152,15 @@ mod tests_telegraph_seeded {
     use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use rust_decimal_macros::dec;
 
-    /// `telegraph(&option_30d(), 100, TELEGRAPH_PATHS, Some(0.5), Some(0.5))`
-    /// drawn from
+    /// `telegraph(&option_30d(), 100, TELEGRAPH_PATHS, Some(0.5), Some(0.5),
+    /// regimes_20())` drawn from
     /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`. Re-baselined by
     /// #743: the kernel now averages `TELEGRAPH_PATHS` paths driven by a
     /// standard normal shock instead of returning one path driven by a
-    /// positive uniform.
-    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.208194873575235296394764785);
+    /// positive uniform. Re-baselined by #755: the regime selects the
+    /// volatility instead of the sign of the shock, so each draw enters
+    /// unsigned (both regimes at 20% here).
+    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.237916421487854842265370875);
 
     fn option_30d() -> Options {
         Options {
@@ -1057,6 +1252,7 @@ mod tests_telegraph_seeded {
                     TELEGRAPH_PATHS,
                     lambdas.0,
                     lambdas.1,
+                    regimes_20(),
                     &mut deterministic_rng(seed),
                 )
                 .unwrap()
@@ -1073,6 +1269,7 @@ mod tests_telegraph_seeded {
             TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            regimes_20(),
             &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
@@ -1086,6 +1283,7 @@ mod tests_telegraph_seeded {
         let via_trait = option
             .calculate_price_telegraph(
                 optionstratlib_core::nz!(100),
+                regimes_20(),
                 &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
             )
             .unwrap();
@@ -1095,6 +1293,7 @@ mod tests_telegraph_seeded {
             TELEGRAPH_PATHS,
             None,
             None,
+            regimes_20(),
             &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
@@ -1141,6 +1340,7 @@ mod tests_telegraph_seeded {
                 optionstratlib_core::nz!(40_000),
                 Some(Decimal::ZERO),
                 Some(Decimal::ZERO),
+                regimes_20(),
                 &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
             )
             .unwrap();
@@ -1174,6 +1374,7 @@ mod tests_telegraph_seeded {
                 optionstratlib_core::nz!(40_000),
                 Some(Decimal::ZERO),
                 Some(Decimal::ZERO),
+                regimes_20(),
                 &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
             )
             .unwrap();
@@ -1201,6 +1402,7 @@ mod tests_telegraph_seeded {
                         paths,
                         Some(dec!(0.5)),
                         Some(dec!(0.5)),
+                        regimes_20(),
                         &mut deterministic_rng(seed),
                     )
                     .unwrap()
@@ -1224,8 +1426,10 @@ mod tests_telegraph_seeded {
     fn test_telegraph_put_call_parity_on_same_seed() {
         // Same seed, same paths: C - P is the discounted mean of S_T - K,
         // an unbiased estimate of S - K e^{-rT} = 4.877 whatever the
-        // regime rates. S_T has a standard deviation of about 20.3, so over
-        // 40 000 paths the standard error is 0.10; the band is 5 of them.
+        // regime rates and levels, because every step carries the
+        // risk-neutral drift of its regime. With volatilities 0.3 / 0.1 S_T
+        // has a standard deviation below 32, so over 40 000 paths the
+        // standard error is below 0.16; the band is 3 of them.
         let price = |style| {
             telegraph(
                 &option_1y_atm(style),
@@ -1233,6 +1437,7 @@ mod tests_telegraph_seeded {
                 optionstratlib_core::nz!(40_000),
                 Some(dec!(1.0)),
                 Some(dec!(2.0)),
+                regimes_split(),
                 &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
             )
             .unwrap()
@@ -1243,5 +1448,115 @@ mod tests_telegraph_seeded {
             (parity - forward_gap).abs() < dec!(0.5),
             "C - P = {parity}, expected about {forward_gap}"
         );
+    }
+
+    /// Regimes at 30% (+1) and 10% (-1) volatility.
+    fn regimes_split() -> RegimeVolatility {
+        RegimeVolatility::new(pos_or_panic!(0.3), pos_or_panic!(0.1)).unwrap()
+    }
+
+    /// Black-Scholes price of `option` at volatility `sigma`.
+    fn black_scholes_at(option: &Options, sigma: Positive) -> Decimal {
+        let mut option = option.clone();
+        option.implied_volatility = sigma;
+        crate::pricing::black_scholes_model::black_scholes(&option).unwrap()
+    }
+
+    fn price_split(style: OptionStyle, lambda_up: Decimal, lambda_down: Decimal) -> Decimal {
+        telegraph(
+            &option_1y_atm(style),
+            optionstratlib_core::nz!(12),
+            optionstratlib_core::nz!(40_000),
+            Some(lambda_up),
+            Some(lambda_down),
+            regimes_split(),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_telegraph_equal_regimes_with_switching_converges_to_black_scholes() {
+        // Equal levels: switching (rates 1 and 2) leaves the law that of
+        // GBM at 20%, so the estimate is unbiased for Black-Scholes
+        // (10.4506 call, 5.5735 put). Bands are 5 standard errors over
+        // 40 000 paths, as in the switching-disabled test.
+        for (style, band) in [
+            (OptionStyle::Call, dec!(0.37)),
+            (OptionStyle::Put, dec!(0.22)),
+        ] {
+            let option = option_1y_atm(style);
+            let price = telegraph(
+                &option,
+                optionstratlib_core::nz!(12),
+                optionstratlib_core::nz!(40_000),
+                Some(dec!(1.0)),
+                Some(dec!(2.0)),
+                regimes_20(),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+            )
+            .unwrap();
+            let reference = black_scholes_at(&option, pos_or_panic!(0.2));
+            assert!(
+                (price - reference).abs() < band,
+                "{style:?}: telegraph {price} vs Black-Scholes {reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_telegraph_frozen_regimes_match_black_scholes_mixture() {
+        // Zero rates freeze each path in its initial regime, drawn +1 or -1
+        // with equal probability, so the price is the closed-form mixture
+        // (BS(0.3) + BS(0.1)) / 2 = (14.2313 + 6.8051) / 2 = 10.5182 for the
+        // call. The payoff standard deviation is below 20, so over 40 000
+        // paths the standard error is below 0.1; the band is 5 of them.
+        let option = option_1y_atm(OptionStyle::Call);
+        let price = price_split(OptionStyle::Call, Decimal::ZERO, Decimal::ZERO);
+        let mixture = (black_scholes_at(&option, pos_or_panic!(0.3))
+            + black_scholes_at(&option, pos_or_panic!(0.1)))
+            / Decimal::TWO;
+        assert!(
+            (price - mixture).abs() < dec!(0.5),
+            "telegraph {price} vs Black-Scholes mixture {mixture}"
+        );
+    }
+
+    #[test]
+    fn test_telegraph_more_time_in_high_vol_regime_raises_price() {
+        // Stationary share of time in the +1 (30%) regime is
+        // lambda_up / (lambda_up + lambda_down): 0.95 with (19, 1), 0.5 with
+        // (1, 1), 0.05 with (1, 19). The prices are then close to BS at the
+        // effective volatilities sqrt(0.95 * 0.09 + 0.05 * 0.01) = 0.293,
+        // 0.224 and 0.116, about 13.9, 11.4 and 7.4: gaps of several units
+        // against standard errors near 0.1.
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let mostly_high = price_split(style, dec!(19), dec!(1));
+            let balanced = price_split(style, dec!(1), dec!(1));
+            let mostly_low = price_split(style, dec!(1), dec!(19));
+            assert!(
+                mostly_high > balanced + Decimal::ONE && balanced > mostly_low + Decimal::ONE,
+                "{style:?}: prices {mostly_high} / {balanced} / {mostly_low} not ordered by the time in the high-volatility regime"
+            );
+        }
+    }
+
+    #[test]
+    fn test_telegraph_split_regimes_price_between_black_scholes_bounds() {
+        // Conditional on its regime path the price is Black-Scholes at an
+        // integrated variance between 0.01 and 0.09, so the expectation lies
+        // between BS(0.1) and BS(0.3) (call 6.81 and 14.23, put 1.93 and
+        // 9.35). The rates (1, 2) keep it well inside; the margin of 0.5
+        // covers 5 standard errors.
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let option = option_1y_atm(style);
+            let price = price_split(style, dec!(1), dec!(2));
+            let low = black_scholes_at(&option, pos_or_panic!(0.1));
+            let high = black_scholes_at(&option, pos_or_panic!(0.3));
+            assert!(
+                low + dec!(0.5) < price && price + dec!(0.5) < high,
+                "{style:?}: telegraph {price} outside [{low}, {high}]"
+            );
+        }
     }
 }

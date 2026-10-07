@@ -23,9 +23,9 @@ use optionstratlib_core::model::types::{
 };
 use optionstratlib_core::utils::deterministic_rng;
 use optionstratlib_pricing::pricing::{
-    BinomialPricingParams, asian_black_scholes, barone_adesi_whaley, barrier_black_scholes,
-    binary_black_scholes, chooser_black_scholes, cliquet_black_scholes, compound_black_scholes,
-    exchange_black_scholes, generate_binomial_tree, lookback_black_scholes,
+    BinomialPricingParams, RegimeVolatility, asian_black_scholes, barone_adesi_whaley,
+    barrier_black_scholes, binary_black_scholes, chooser_black_scholes, cliquet_black_scholes,
+    compound_black_scholes, exchange_black_scholes, generate_binomial_tree, lookback_black_scholes,
     monte_carlo_option_pricing, power_black_scholes, price_binomial, probability_keep_under_strike,
     quanto_black_scholes, rainbow_black_scholes, simulate_returns, spread_black_scholes, telegraph,
 };
@@ -392,8 +392,20 @@ proptest! {
         let _ = price_binomial(params.clone());
         let _ = generate_binomial_tree(&params);
         let _ = monte_carlo_option_pricing(&option, steps, simulations, &mut rng);
-        let _ = telegraph(&option, steps, simulations, Some(dec!(0.5)), Some(dec!(0.3)), &mut rng);
-        let _ = telegraph(&option, steps, simulations, None, None, &mut rng);
+        // The extreme volatility as both regimes, and against the extreme
+        // strike as the other level; a zero level is rejected, not priced.
+        for regimes in [
+            RegimeVolatility::constant(volatility),
+            RegimeVolatility::new(volatility, strike),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            let _ = telegraph(
+                &option, steps, simulations, Some(dec!(0.5)), Some(dec!(0.3)), regimes, &mut rng,
+            );
+            let _ = telegraph(&option, steps, simulations, None, None, regimes, &mut rng);
+        }
         let _ = probability_keep_under_strike(option, Some(strike));
         let _ = simulate_returns(rate, volatility, 8, days.to_dec(), &mut rng);
     }
