@@ -722,6 +722,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the manifest, and the self-test checks it against `tomllib` where both
   exist.
 
+- **`generate_binomial_tree` exercises at the Bermuda root, and its root is
+  `price_binomial` exactly** (#716). The Bermuda branch still exempted the
+  root, although `price_binomial` exercises there when a date lies within
+  `dt / 2` of `t = 0`. A put on `S = 50`, `K = 100`, `sigma = 0.2`,
+  `r = 5%`, `T = 1` with dates `[0, 0.5]` rooted at 45.122942450071399,
+  47.530991202833290, 45.122942450071418, 47.530991202833271 and
+  47.530994940751114 on 1, 2, 3, 10 and 50 steps, and with the single date
+  `0.001` between 45.1229424500714 and 45.1246968721929; it now roots at 50
+  (the short tree -50), as `price_binomial` gives. On a coarse lattice a date
+  away from `t = 0` snaps to the root by the same rule (`0.25` on one step,
+  `dt / 2 = 0.5`). The tree also compares American and Bermuda nodes with
+  their intrinsic value in `Decimal`, as `price_binomial` does, instead of
+  through an `f64` round trip, and builds each spot with `lattice_spot`'s
+  factor order (`S · u^ups · d^downs`), so the two walk the same numbers.
+  Asset nodes move by at most `1e-26`, interior American nodes by at most
+  `3.0e-13` and interior Bermuda nodes by at most `5.5e-14`; European
+  option nodes do not move. The 16-digit root #708 introduced is full
+  precision again (`S = 90`, `K = 100` American put at 1 step:
+  10.57571371000381 -> 10.575713710003807657116643569). Over 80 American
+  and 320 Bermuda cases (calls and puts, long and short, `S` in 50, 90,
+  100, 130, 1, 2, 3, 10 and 50 steps, four schedules) the tree root now
+  equals `price_binomial` digit for digit; the American test that allowed
+  `1e-12` asserts equality, and new tests pin the Bermuda root to
+  intrinsic, the `dt / 2` rule and the equality.
+
 - **`generate_binomial_tree` exercises at the American root** (#708). The
   root node took the continuation value without comparing it with the
   intrinsic value, unlike every other American node and unlike
