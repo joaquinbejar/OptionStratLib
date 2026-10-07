@@ -648,6 +648,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The fixed-strike lookback follows Conze-Viswanathan** (#647).
+  `lookback_black_scholes` priced a fixed-strike lookback as a vanilla plus
+  an ad hoc premium `S σ√T (N(λ) - ½) / 2`. It now uses the closed form of
+  Conze and Viswanathan (1991), Haug, *The Complete Guide to Option Pricing
+  Formulas*, §4.15.2, on a new contract (`S_max = S_min = S`), with the
+  `b → 0` limit of its `σ²/(2b)` term below a carry of `1e-8`.
+  - Calls on Haug's grid (`S = 100, T = 0.5, r = b = 10 %`), rows
+    `K = 95, 100, 105`, columns `σ = 10, 20, 30 %`: from `10.8209, 12.6609,
+    15.1705`; `6.8087, 9.4397, 12.3250`; `3.8380, 6.8563, 9.9210` to
+    `13.2687, 18.9263, 24.9858`; `8.5126, 14.1702, 20.2296`; `4.3908,
+    9.8905, 15.8512`.
+  - Puts used the same ad hoc premium and move onto the same formula:
+    `0.6899, 4.4448, 8.9213`; `3.3917, 8.3177, 13.1579`; `8.1478, 13.0739,
+    17.9140` on that grid.
+  - At `σ = 0` the extremum of the deterministic path `S e^(bτ)` is taken
+    over the whole life, so with a negative carry the call keeps the
+    payoff on the starting spot instead of the lower forward (and the put,
+    symmetrically, with a positive carry). Other zero-volatility prices are
+    unchanged.
+
 - **The `default` API-change report covers the real default surface**
   (#688). `scripts/report_api_changes.py` still defined it as the 0.21
   feature set, `synthetic` alone, which under `--only-explicit-features`
