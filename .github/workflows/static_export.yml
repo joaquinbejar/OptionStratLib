@@ -1,0 +1,70 @@
+name: Static Export
+
+# Runs the `#[ignore]`d PNG/SVG WebDriver tests (`make test-export`, #544), the
+# only proof that `static_export` renders files. They need Chrome and a
+# chromedriver of the same version, so they stay out of PR CI (ADR-0004 fast
+# tier and release gates do not require them) and run on a schedule instead.
+# A failure shows up in this workflow's runs; it is not a required check and
+# the workflow never triggers on pull requests, so it cannot block a merge.
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-export:
+    name: test-export
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+
+      # `install-chromedriver` installs the driver that matches the Chrome it
+      # installs, which is the pairing the tests need.
+      - name: Install Chrome and matching chromedriver
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-export-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-export-
+
+      - name: Run PNG/SVG export tests
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER_PATH: ${{ steps.chrome.outputs.chromedriver-path }}
+        run: |
+          set -euo pipefail
+          export WEBDRIVER_PATH="$CHROMEDRIVER_PATH"
+          "$CHROME_PATH" --version
+          "$WEBDRIVER_PATH" --version
+          make test-export
