@@ -70,7 +70,8 @@ and a modular architecture built on modern Rust 2024 edition.
 #### 5. **Trading Strategies (25+ Strategies)**
 - **Single Leg**: Long/Short Calls and Puts
 - **Spreads**: Bull/Bear Call/Put Spreads
-- **Butterflies**: Long/Short Butterfly Spreads, Call Butterfly
+- **Butterflies**: Long/Short Butterfly Spreads (the long one is the textbook long call butterfly)
+- **Ladders**: Bull Call Ladder
 - **Complex**: Iron Condor, Iron Butterfly
 - **Volatility**: Long/Short Straddles and Strangles
 - **Income**: Covered Calls (with spot leg support), Poor Man's Covered Call
@@ -276,7 +277,8 @@ Comprehensive trading strategy implementations:
 - `base.rs`: Core traits (Strategable, BasicAble, Positionable, etc.)
 - **Single Leg**: `long_call.rs`, `short_call.rs`, `long_put.rs`, `short_put.rs`
 - **Spreads**: `bull_call_spread.rs`, `bear_call_spread.rs`, `bull_put_spread.rs`, `bear_put_spread.rs`
-- **Butterflies**: `long_butterfly_spread.rs`, `short_butterfly_spread.rs`, `call_butterfly.rs`
+- **Ladders**: `bull_call_ladder.rs`
+- **Butterflies**: `long_butterfly_spread.rs`, `short_butterfly_spread.rs`
 - **Complex**: `iron_condor.rs`, `iron_butterfly.rs`
 - **Volatility**: `long_straddle.rs`, `short_straddle.rs`, `long_strangle.rs`, `short_strangle.rs`
 - **Income**: `covered_call.rs`, `poor_mans_covered_call.rs`
@@ -834,12 +836,12 @@ Defined risk strategies with limited profit/loss:
 - **Bear Call Spread**: Moderately bearish credit spread
 - **Bull Put Spread**: Moderately bullish credit spread
 - **Bear Put Spread**: Moderately bearish debit spread
+- **Bull Call Ladder**: A bull call spread with a second, higher short call; unlimited loss above the upper break-even
 
 #### **Butterfly Strategies**
 Market neutral strategies profiting from low volatility:
 - **Long Butterfly Spread**: Profits from price staying near middle strike
 - **Short Butterfly Spread**: Profits from price moving away from middle strike
-- **Call Butterfly**: Butterfly using only call options
 
 #### **Complex Multi-Leg Strategies**
 Advanced strategies for experienced traders:

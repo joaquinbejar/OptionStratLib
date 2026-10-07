@@ -52,7 +52,8 @@
 //! | --- | --- |
 //! | Single leg | `LongCall`, `LongPut`, `ShortCall`, `ShortPut` |
 //! | Vertical spreads | `BullCallSpread`, `BullPutSpread`, `BearCallSpread`, `BearPutSpread` |
-//! | Butterflies | `LongButterflySpread`, `ShortButterflySpread`, `CallButterfly`, `IronButterfly` |
+//! | Ladders | `BullCallLadder` |
+//! | Butterflies | `LongButterflySpread`, `ShortButterflySpread`, `IronButterfly` |
 //! | Condors | `IronCondor` |
 //! | Straddles and strangles | `LongStraddle`, `ShortStraddle`, `LongStrangle`, `ShortStrangle` |
 //! | Covered and protective | `CoveredCall`, `ProtectivePut`, `Collar`, `PoorMansCoveredCall` |

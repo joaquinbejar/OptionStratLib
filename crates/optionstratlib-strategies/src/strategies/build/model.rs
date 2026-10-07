@@ -8,7 +8,7 @@ use crate::error::StrategyError;
 use crate::strategies::base::StrategyType;
 use crate::strategies::custom::CustomStrategy;
 use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
     IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall,
     ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
@@ -126,8 +126,8 @@ impl StrategyRequest {
             StrategyType::PoorMansCoveredCall => Ok(Box::new(PoorMansCoveredCall::get_strategy(
                 &self.positions,
             )?)),
-            StrategyType::CallButterfly => {
-                Ok(Box::new(CallButterfly::get_strategy(&self.positions)?))
+            StrategyType::BullCallLadder => {
+                Ok(Box::new(BullCallLadder::get_strategy(&self.positions)?))
             }
             StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?)),
         }

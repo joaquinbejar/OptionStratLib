@@ -41,7 +41,7 @@ use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
 use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
 use optionstratlib_strategies::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, Collar,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, Collar,
     CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongStraddle,
     LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortPut,
     ShortStraddle, ShortStrangle, StrategyConstructor,
@@ -869,13 +869,23 @@ proptest! {
             }
         };
         exercise_with_and_without_break_evens!(strategy, probe);
-        if let Ok(strategy) = CallButterfly::new(
+        // The 1x1x1 call ladder that was `CallButterfly` before #706.
+        let strategy = match BullCallLadder::new(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<BullCallLadder>(&[
+                    leg(OptionStyle::Call, Side::Long, low_strike, quantity),
+                    leg(OptionStyle::Call, Side::Short, middle_strike, quantity),
+                    leg(OptionStyle::Call, Side::Short, high_strike, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
     }
 
     /// The leg-set construction path of the two butterfly spreads. Until #463

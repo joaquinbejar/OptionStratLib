@@ -22,7 +22,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_pricing::pricing::Profit;
 use optionstratlib_strategies::strategies::base::BreakEvenable;
 use optionstratlib_strategies::strategies::{
-    BasicAble, BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly,
+    BasicAble, BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread,
     IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
     PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
     Strategies,
@@ -408,7 +408,7 @@ impl_graph_for_payoff_strategy!(
     ShortCall,
     ShortPut,
     PoorMansCoveredCall,
-    CallButterfly,
+    BullCallLadder,
     optionstratlib_strategies::strategies::custom::CustomStrategy,
     optionstratlib_strategies::strategies::covered_call::CoveredCall,
     optionstratlib_strategies::strategies::collar::Collar,
@@ -423,10 +423,10 @@ mod tests {
     use optionstratlib_strategies::strategies::custom::CustomStrategy;
     use optionstratlib_strategies::strategies::protective_put::ProtectivePut;
     use optionstratlib_strategies::strategies::{
-        BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
-        IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
-        PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle,
-        ShortStrangle, Strategable,
+        BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread,
+        IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle,
+        LongStrangle, PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut,
+        ShortStraddle, ShortStrangle, Strategable,
     };
     use static_assertions::assert_impl_all;
 
@@ -452,7 +452,7 @@ mod tests {
         assert_impl_all!(ShortCall: Strategable, Graph);
         assert_impl_all!(ShortPut: Strategable, Graph);
         assert_impl_all!(PoorMansCoveredCall: Strategable, Graph);
-        assert_impl_all!(CallButterfly: Strategable, Graph);
+        assert_impl_all!(BullCallLadder: Strategable, Graph);
         assert_impl_all!(CustomStrategy: Strategable, Graph);
         assert_impl_all!(CoveredCall: Strategable, Graph);
         assert_impl_all!(Collar: Strategable, Graph);

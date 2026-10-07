@@ -7,7 +7,6 @@
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
-use super::shared::ButterflyStrategy;
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::{
@@ -43,65 +42,78 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info};
 
-/// The default description for the Call Butterfly (Ratio Call Spread) strategy.
-pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
-    at a higher strike price. This strategy is used when a moderate rise in the underlying \
-    asset's price is expected, but with limited upside potential.";
+/// The default description for the Bull Call Ladder strategy.
+pub const BULL_CALL_LADDER_DESCRIPTION: &str = "A bull call ladder buys one call at a lower strike and sells one call \
+    at a middle strike and one call at a higher strike, all with the same expiration. It is a \
+    bull call spread financed further by a second short call: it profits from a moderate rise \
+    in the underlying, and the loss is unlimited above the upper break-even.";
 
-/// Represents a Call Butterfly options trading strategy.
+/// Represents a Bull Call Ladder options trading strategy.
 ///
-/// A Call Butterfly is an options strategy that combines three call options with different
-/// strike prices but the same expiration date. It consists of:
-/// - One long call at a lower strike price
-/// - Two short calls at a middle strike price
-/// - One long call at a higher strike price
+/// A bull call ladder (also called a long call ladder) combines three call
+/// options with the same expiration and quantity at three strikes:
+/// - one long call at the lower strike `K1`,
+/// - one short call at the middle strike `K2`,
+/// - one short call at the higher strike `K3`.
 ///
-/// This strategy has limited risk and limited profit potential. It benefits from low volatility
-/// and is most profitable when the underlying asset's price is at the middle strike price at expiration.
+/// ```text
+/// P&L at expiry
+///   |        ________
+///   |       /        \
+///   |______/          \
+///   |                  \   unlimited loss
+///   +----K1---K2----K3---\---> underlying
+/// ```
 ///
-/// # Attributes
+/// Below `K1` every call expires worthless and the position keeps its net
+/// premium. Between `K1` and `K2` it gains one for one, between `K2` and `K3`
+/// it holds its maximum, and above `K3` it is net short one call, so the loss
+/// is unlimited.
 ///
-/// The structure stores both strategy metadata and the specific positions that make up the butterfly.
+/// Until #706 this type was named `CallButterfly`, a name it never matched:
+/// a textbook call butterfly is long the outer strikes and short twice the
+/// middle one, which is [`crate::strategies::LongButterflySpread`]. The old
+/// name is gone rather than kept as an alias, so code written for it fails
+/// to compile instead of silently building something else.
 #[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
-pub struct CallButterfly {
+pub struct BullCallLadder {
     /// The name of the strategy, typically used for identification purposes.
     pub name: String,
 
-    /// The type of strategy, which for this struct will be StrategyType::CallButterfly.
+    /// The type of strategy, `StrategyType::BullCallLadder`.
     pub kind: StrategyType,
 
     /// A detailed description of the strategy, its objectives, and potential outcomes.
     pub description: String,
 
     /// The price points at which the strategy breaks even (neither profits nor loses).
-    /// There are typically two break-even points for a call butterfly.
+    /// A debit ladder has two; a credit ladder has only the upper one.
     pub break_even_points: Vec<Positive>,
 
     /// The long call position at the lower strike price.
     pub long_call: Position,
 
-    /// The first short call position at the middle strike price.
+    /// The short call position at the middle strike price.
     pub short_call_low: Position,
 
-    /// The second short call position at the middle strike price.
-    /// Combined with short_call_low, these represent the "body" of the butterfly.
+    /// The short call position at the higher strike price.
     pub short_call_high: Position,
 }
 
-impl CallButterfly {
-    /// Creates a new Call Butterfly options strategy.
+impl BullCallLadder {
+    /// Creates a new Bull Call Ladder options strategy.
     ///
-    /// A Call Butterfly strategy consists of:
-    /// - 1 long call at a lower strike price
-    /// - 2 short calls at a middle strike price (represented as two separate positions: low and high)
-    /// - 1 long call at a higher strike price
+    /// A Bull Call Ladder consists of, all with the same quantity:
+    /// - 1 long call at the lower strike
+    /// - 1 short call at the middle strike
+    /// - 1 short call at the higher strike
     ///
-    /// This strategy is used when a trader expects low volatility and believes the underlying asset
-    /// will be near the middle strike price at expiration. It offers limited risk and a defined
-    /// maximum profit if the underlying price is at the middle strike at expiration.
+    /// It is used for a moderately bullish view: the second short call
+    /// finances the bull call spread further, at the cost of an unlimited
+    /// loss above the upper break-even.
     ///
     /// # Parameters
     ///
@@ -111,9 +123,9 @@ impl CallButterfly {
     /// * `dividend_yield` - Dividend yield of the underlying asset
     ///
     /// ## Strike Prices
-    /// * `long_call_strike` - Strike price for the long call option
-    /// * `short_call_low_strike` - Strike price for the first short call option
-    /// * `short_call_high_strike` - Strike price for the second short call option
+    /// * `long_call_strike` - Strike price for the long call option (lowest)
+    /// * `short_call_low_strike` - Strike price for the middle short call option
+    /// * `short_call_high_strike` - Strike price for the higher short call option
     ///
     /// ## Market Parameters
     /// * `expiration` - Expiration date for all options in the strategy
@@ -134,13 +146,17 @@ impl CallButterfly {
     ///
     /// # Returns
     ///
-    /// A fully initialized `CallButterfly` strategy with all positions and break-even points calculated.
+    /// A fully initialized `BullCallLadder` strategy with all positions and break-even points calculated.
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#706): the strikes are not strictly ordered
+    /// long < short low < short high, or a leg fails `Position::validate`.
+    ///
     /// Returns `StrategyError` if any freshly-constructed leg cannot be added
     /// to the strategy or if the break-even calculation fails. In practice
-    /// these branches are unreachable for a freshly-built call butterfly and
+    /// these branches are unreachable for a freshly-built call ladder and
     /// are surfaced only to keep the constructor panic-free.
     #[allow(clippy::too_many_arguments)]
     #[inline(never)]
@@ -165,10 +181,10 @@ impl CallButterfly {
         open_fee_short_high: Positive,
         close_fee_short_high: Positive,
     ) -> Result<Self, StrategyError> {
-        let mut strategy = CallButterfly {
+        let mut strategy = BullCallLadder {
             name: underlying_symbol.to_string(),
-            kind: StrategyType::CallButterfly,
-            description: CALL_BUTTERFLY_DESCRIPTION.to_string(),
+            kind: StrategyType::BullCallLadder,
+            description: BULL_CALL_LADDER_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call: Position::default(),
             short_call_low: Position::default(),
@@ -252,18 +268,24 @@ impl CallButterfly {
         strategy.add_position(&short_call_high)?;
         strategy.short_call_high = short_call_high;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullCallLadder,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
         Ok(strategy)
     }
 }
 
-impl StrategyConstructor for CallButterfly {
+impl StrategyConstructor for BullCallLadder {
     fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        // Need exactly 3 options for a call butterfly
+        // Need exactly 3 options for a call ladder
         if vec_positions.len() != 3 {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
-                    operation: "Call Butterfly get_strategy".to_string(),
+                    operation: "Bull Call Ladder get_strategy".to_string(),
                     reason: "Must have exactly 3 options".to_string(),
                 },
             ));
@@ -279,32 +301,33 @@ impl StrategyConstructor for CallButterfly {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let low_short_call_position = &sorted_positions[0];
-        let long_call_position = &sorted_positions[1];
+        let long_call_position = &sorted_positions[0];
+        let low_short_call_position = &sorted_positions[1];
         let high_short_call_position = &sorted_positions[2];
 
         // Validate options are calls
-        if low_short_call_position.option.option_style != OptionStyle::Call
-            || long_call_position.option.option_style != OptionStyle::Call
+        if long_call_position.option.option_style != OptionStyle::Call
+            || low_short_call_position.option.option_style != OptionStyle::Call
             || high_short_call_position.option.option_style != OptionStyle::Call
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
-                    operation: "Call Butterfly get_strategy".to_string(),
+                    operation: "Bull Call Ladder get_strategy".to_string(),
                     reason: "Options must be calls".to_string(),
                 },
             ));
         }
 
-        // Validate option sides
-        if low_short_call_position.option.side != Side::Short
-            || long_call_position.option.side != Side::Long
+        // Validate option sides: long the lowest strike, short the other two,
+        // the same convention as `new` and `validate` (#706).
+        if long_call_position.option.side != Side::Long
+            || low_short_call_position.option.side != Side::Short
             || high_short_call_position.option.side != Side::Short
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
-                    operation: "Call Butterfly get_strategy".to_string(),
-                    reason: "Call Butterfly requires one long call and two short calls".to_string(),
+                    operation: "Bull Call Ladder get_strategy".to_string(),
+                    reason: "Bull Call Ladder requires a long lowest-strike call and two short higher-strike calls".to_string(),
                 },
             ));
         }
@@ -317,23 +340,13 @@ impl StrategyConstructor for CallButterfly {
         {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
-                    operation: "Call Butterfly get_strategy".to_string(),
+                    operation: "Bull Call Ladder get_strategy".to_string(),
                     reason: "Options must have the same expiration date".to_string(),
                 },
             ));
         }
 
         // Create positions
-        let short_call_low = Position::new(
-            low_short_call_position.option.clone(),
-            low_short_call_position.premium,
-            Utc::now(),
-            low_short_call_position.open_fee,
-            low_short_call_position.close_fee,
-            low_short_call_position.epic.clone(),
-            low_short_call_position.extra_fields.clone(),
-        );
-
         let long_call = Position::new(
             long_call_position.option.clone(),
             long_call_position.premium,
@@ -342,6 +355,16 @@ impl StrategyConstructor for CallButterfly {
             long_call_position.close_fee,
             long_call_position.epic.clone(),
             long_call_position.extra_fields.clone(),
+        );
+
+        let short_call_low = Position::new(
+            low_short_call_position.option.clone(),
+            low_short_call_position.premium,
+            Utc::now(),
+            low_short_call_position.open_fee,
+            low_short_call_position.close_fee,
+            low_short_call_position.epic.clone(),
+            low_short_call_position.extra_fields.clone(),
         );
 
         let short_call_high = Position::new(
@@ -355,28 +378,21 @@ impl StrategyConstructor for CallButterfly {
         );
 
         // Create strategy
-        let mut strategy = CallButterfly {
-            name: "Call Butterfly".to_string(),
-            kind: StrategyType::CallButterfly,
-            description: CALL_BUTTERFLY_DESCRIPTION.to_string(),
+        let mut strategy = BullCallLadder {
+            name: "Bull Call Ladder".to_string(),
+            kind: StrategyType::BullCallLadder,
+            description: BULL_CALL_LADDER_DESCRIPTION.to_string(),
             break_even_points: Vec::new(),
             long_call,
             short_call_low,
             short_call_high,
         };
 
-        // The side check above takes short low / long middle / short high,
-        // while `validate` and `new` use long low / short middle / short high.
-        // Every input this builder accepts therefore fails `validate`, so
-        // rejecting it here would make the builder unusable. The textbook
-        // convention that settles it is #706; until then the mismatch is
-        // reported here instead of being enforced.
         if !strategy.validate() {
-            warn!(
-                strategy = %StrategyType::CallButterfly,
-                issue = 706,
-                "get_strategy built legs that fail validate: short low / long middle / short high"
-            );
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullCallLadder,
+                "the positions passed to `get_strategy` fail validation",
+            ));
         }
         strategy.update_break_even_points()?;
 
@@ -384,7 +400,7 @@ impl StrategyConstructor for CallButterfly {
     }
 }
 
-impl BreakEvenable for CallButterfly {
+impl BreakEvenable for BullCallLadder {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
     }
@@ -402,12 +418,12 @@ impl BreakEvenable for CallButterfly {
         let long_per_contract = d_div(
             long_profit,
             long_qty,
-            "CallButterfly::update_break_even_points",
+            "BullCallLadder::update_break_even_points",
         )?;
         let candidate_low = d_sub(
             long_strike,
             long_per_contract,
-            "CallButterfly::update_break_even_points",
+            "BullCallLadder::update_break_even_points",
         )?;
         if let Ok(be) = Positive::new_decimal(candidate_low) {
             self.break_even_points.push(be.checked_round_to(2)?);
@@ -419,12 +435,12 @@ impl BreakEvenable for CallButterfly {
         let short_per_contract = d_div(
             short_profit,
             short_qty,
-            "CallButterfly::update_break_even_points",
+            "BullCallLadder::update_break_even_points",
         )?;
         let candidate_high = d_add(
             short_strike,
             short_per_contract,
-            "CallButterfly::update_break_even_points",
+            "BullCallLadder::update_break_even_points",
         )?;
         if let Ok(be) = Positive::new_decimal(candidate_high) {
             self.break_even_points.push(be.checked_round_to(2)?);
@@ -435,17 +451,26 @@ impl BreakEvenable for CallButterfly {
     }
 }
 
-impl Positionable for CallButterfly {
+impl Positionable for BullCallLadder {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
-                if position.option.strike_price >= self.long_call.option.strike_price {
-                    self.short_call_high = position.clone();
-                    Ok(())
-                } else {
+                // Both short calls sit above the long one, so comparing with
+                // the long strike cannot tell them apart (it did, as a
+                // butterfly, before #706). The first short fills the empty
+                // slot and the pair is kept ordered by strike.
+                if self.short_call_low.option.strike_price == Positive::ZERO {
                     self.short_call_low = position.clone();
-                    Ok(())
+                } else {
+                    self.short_call_high = position.clone();
                 }
+                if self.short_call_high.option.strike_price != Positive::ZERO
+                    && self.short_call_low.option.strike_price
+                        > self.short_call_high.option.strike_price
+                {
+                    std::mem::swap(&mut self.short_call_low, &mut self.short_call_high);
+                }
+                Ok(())
             }
             Side::Long => {
                 self.long_call = position.clone();
@@ -535,7 +560,7 @@ impl Positionable for CallButterfly {
         if position.option.option_style == OptionStyle::Put {
             return Err(PositionError::invalid_position_type(
                 position.option.side,
-                "Put is not valid for CallButterfly".to_string(),
+                "Put is not valid for BullCallLadder".to_string(),
             ));
         }
 
@@ -554,7 +579,7 @@ impl Positionable for CallButterfly {
     }
 }
 
-impl Strategable for CallButterfly {
+impl Strategable for BullCallLadder {
     fn info(&self) -> Result<StrategyBasics, StrategyError> {
         Ok(StrategyBasics {
             name: self.name.clone(),
@@ -564,7 +589,7 @@ impl Strategable for CallButterfly {
     }
 }
 
-impl BasicAble for CallButterfly {
+impl BasicAble for BullCallLadder {
     fn get_title(&self) -> String {
         let strategy_title = format!("{:?} Strategy: ", self.kind);
         let leg_titles: Vec<String> = [
@@ -732,7 +757,7 @@ impl BasicAble for CallButterfly {
     }
 }
 
-impl Strategies for CallButterfly {
+impl Strategies for BullCallLadder {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         let max_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
         if max_profit > Decimal::ZERO {
@@ -788,7 +813,7 @@ impl Strategies for CallButterfly {
     }
 }
 
-impl Validable for CallButterfly {
+impl Validable for BullCallLadder {
     fn validate(&self) -> bool {
         if self.name.is_empty() {
             error!("Symbol is required");
@@ -804,19 +829,19 @@ impl Validable for CallButterfly {
             return false;
         }
         if self.long_call.option.strike_price >= self.short_call_low.option.strike_price {
-            error!("Long call strike price must be less than short call strike price");
+            debug!("Long call strike price must be less than short call strike price");
             return false;
         }
         if self.short_call_low.option.strike_price >= self.short_call_high.option.strike_price {
-            error!("Short call low strike price must be less than short call high strike price");
+            debug!("Short call low strike price must be less than short call high strike price");
             return false;
         }
         true
     }
 }
 
-impl Optimizable for CallButterfly {
-    type Strategy = CallButterfly;
+impl Optimizable for BullCallLadder {
+    type Strategy = BullCallLadder;
 
     fn filter_combinations<'a>(
         &'a self,
@@ -922,7 +947,7 @@ impl Optimizable for CallButterfly {
         }
     }
 
-    /// Constructs a `CallButterfly` from the supplied chain and legs.
+    /// Constructs a `BullCallLadder` from the supplied chain and legs.
     ///
     /// # Errors
     ///
@@ -934,7 +959,7 @@ impl Optimizable for CallButterfly {
         &self,
         option_chain: &OptionChain,
         legs: &StrategyLegs,
-    ) -> Result<CallButterfly, StrategyError> {
+    ) -> Result<BullCallLadder, StrategyError> {
         let (long_call, short_call_low, short_call_high) = match legs {
             StrategyLegs::ThreeLegs {
                 first,
@@ -944,7 +969,7 @@ impl Optimizable for CallButterfly {
             _ => {
                 return Err(StrategyError::operation_not_supported(
                     "create_strategy",
-                    "CallButterfly requires exactly three legs (ThreeLegs)",
+                    "BullCallLadder requires exactly three legs (ThreeLegs)",
                 ));
             }
         };
@@ -982,7 +1007,7 @@ impl Optimizable for CallButterfly {
                 "missing call_bid for short_call_high leg",
             )
         })?;
-        CallButterfly::new(
+        BullCallLadder::new(
             option_chain.symbol.clone(),
             option_chain.underlying_price,
             long_call.strike_price,
@@ -1006,7 +1031,7 @@ impl Optimizable for CallButterfly {
     }
 }
 
-impl Profit for CallButterfly {
+impl Profit for BullCallLadder {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
         let price = Some(price);
         let long_call_itm_profit = self.long_call.pnl_at_expiration(&price)?;
@@ -1018,25 +1043,25 @@ impl Profit for CallButterfly {
                 long_call_otm_profit,
                 short_call_profit,
             ],
-            "strategies::call_butterfly::profit_at",
+            "strategies::bull_call_ladder::profit_at",
         )?)
     }
 }
 
-impl ProbabilityAnalysis for CallButterfly {
+impl ProbabilityAnalysis for BullCallLadder {
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
-        // A call butterfly whose wings never cross zero profit has fewer than
+        // A call ladder whose wings never cross zero profit has fewer than
         // two break-even points; the ranges below are bounded by both, so the
         // shortfall is reported rather than indexed past.
         let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
             ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
-                reason: "CallButterfly has no lower break-even point".to_string(),
+                reason: "BullCallLadder has no lower break-even point".to_string(),
             })
         })?;
         let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
             ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
-                reason: "CallButterfly has no upper break-even point".to_string(),
+                reason: "BullCallLadder has no upper break-even point".to_string(),
             })
         })?;
         let option = &self.long_call.option;
@@ -1071,17 +1096,17 @@ impl ProbabilityAnalysis for CallButterfly {
 
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
         let break_even_points = self.get_break_even_points()?;
-        // A call butterfly whose wings never cross zero profit has fewer than
+        // A call ladder whose wings never cross zero profit has fewer than
         // two break-even points; the ranges below are bounded by both, so the
         // shortfall is reported rather than indexed past.
         let lower_break_even_point = *break_even_points.first().ok_or_else(|| {
             ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
-                reason: "CallButterfly has no lower break-even point".to_string(),
+                reason: "BullCallLadder has no lower break-even point".to_string(),
             })
         })?;
         let upper_break_even_point = *break_even_points.get(1).ok_or_else(|| {
             ProbabilityError::RangeError(ProfitLossRangeErrorKind::InvalidBreakEvenPoints {
-                reason: "CallButterfly has no upper break-even point".to_string(),
+                reason: "BullCallLadder has no upper break-even point".to_string(),
             })
         })?;
         let option = &self.long_call.option;
@@ -1126,7 +1151,7 @@ impl ProbabilityAnalysis for CallButterfly {
     }
 }
 
-impl Greeks for CallButterfly {
+impl Greeks for BullCallLadder {
     fn get_options(&self) -> Result<Vec<&Options>, GreeksError> {
         Ok(vec![
             &self.long_call.option,
@@ -1136,26 +1161,9 @@ impl Greeks for CallButterfly {
     }
 }
 
-impl DeltaNeutrality for CallButterfly {}
+impl DeltaNeutrality for BullCallLadder {}
 
-impl ButterflyStrategy for CallButterfly {
-    fn wing_strikes(&self) -> (Positive, Positive) {
-        (
-            self.long_call.option.strike_price,
-            self.short_call_high.option.strike_price,
-        )
-    }
-
-    fn body_strike(&self) -> Positive {
-        self.short_call_low.option.strike_price
-    }
-
-    fn get_butterfly_positions(&self) -> Vec<&Position> {
-        vec![&self.long_call, &self.short_call_low, &self.short_call_high]
-    }
-}
-
-impl PnLCalculator for CallButterfly {
+impl PnLCalculator for BullCallLadder {
     fn calculate_pnl(
         &self,
         market_price: &Positive,
@@ -1206,31 +1214,31 @@ impl PnLCalculator for CallButterfly {
 }
 
 #[cfg(test)]
-crate::strategies::macros::test_strategy_traits!(CallButterfly, test_short_call_implementations);
+crate::strategies::macros::test_strategy_traits!(BullCallLadder, test_short_call_implementations);
 
 #[cfg(test)]
-mod tests_call_butterfly {
+mod tests_bull_call_ladder {
     use super::*;
 
     use approx::assert_relative_eq;
     use optionstratlib_core::pos_or_panic;
     use rust_decimal_macros::dec;
 
-    fn setup() -> CallButterfly {
-        CallButterfly::new(
+    fn setup() -> BullCallLadder {
+        BullCallLadder::new(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(155.0),
-            pos_or_panic!(160.0),
             pos_or_panic!(157.5),
+            pos_or_panic!(160.0),
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.01),
             pos_or_panic!(0.02),
             Positive::ONE,
             pos_or_panic!(45.0),
-            pos_or_panic!(30.0),
             pos_or_panic!(20.5),
+            pos_or_panic!(30.0),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
             pos_or_panic!(0.1),
@@ -1245,11 +1253,11 @@ mod tests_call_butterfly {
     fn test_new() {
         let strategy = setup();
         assert_eq!(strategy.name, "AAPL");
-        assert_eq!(strategy.kind, StrategyType::CallButterfly);
+        assert_eq!(strategy.kind, StrategyType::BullCallLadder);
         assert!(
             strategy
                 .description
-                .contains("A Ratio Call Spread involves")
+                .contains("A bull call ladder buys one call")
         );
     }
 
@@ -1294,14 +1302,14 @@ mod tests_call_butterfly {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_validation {
+mod tests_bull_call_ladder_validation {
     use super::*;
     use optionstratlib_core::pos_or_panic;
 
     use rust_decimal_macros::dec;
 
-    fn setup_basic_strategy() -> CallButterfly {
-        CallButterfly::new(
+    fn setup_basic_strategy() -> BullCallLadder {
+        BullCallLadder::new(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -1340,12 +1348,12 @@ mod tests_call_butterfly_validation {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_delta {
+mod tests_bull_call_ladder_delta {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
     use optionstratlib_core::pos_or_panic;
 
-    use crate::strategies::call_butterfly::CallButterfly;
+    use crate::strategies::bull_call_ladder::BullCallLadder;
     use crate::strategies::delta_neutral::DeltaNeutrality;
     use optionstratlib_analytics::pnl::DeltaAdjustment;
     use optionstratlib_core::assert_decimal_eq;
@@ -1353,26 +1361,26 @@ mod tests_call_butterfly_delta {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
-    fn get_strategy(underlying_price: Positive) -> CallButterfly {
-        CallButterfly::new(
+    fn get_strategy(underlying_price: Positive) -> BullCallLadder {
+        BullCallLadder::new(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
-            pos_or_panic!(5850.0), // long_strike_otm
-            pos_or_panic!(5800.0), // short_strike
+            pos_or_panic!(5800.0), // long_strike_otm
+            pos_or_panic!(5850.0), // short_strike
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
             Positive::ONE,        // long quantity
             pos_or_panic!(95.8),  // short_quantity
-            pos_or_panic!(85.04), // premium_long_itm
-            pos_or_panic!(31.65), // premium_long_otm
+            pos_or_panic!(31.65), // premium_long_itm
+            pos_or_panic!(85.04), // premium_long_otm
             pos_or_panic!(53.04), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
-            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),  // close_fee_short
         )
         .unwrap()
@@ -1431,9 +1439,15 @@ mod tests_call_butterfly_delta {
         let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(0.055904);
         let delta1 = pos_or_panic!(0.0833378661861126);
-        let delta2 = pos_or_panic!(0.2835618144021385);
+        // #706: the fixture used to put 5850 in `short_call_low` and 5800 in
+        // `short_call_high`, which its own `validate` rejects. Ordered, the
+        // first short leg the adjustment reaches is the 5800 call, so the
+        // buy-back quantity is the net delta over that call's delta (was
+        // 0.2835618144021385 on the 5850 call); the net-delta-zero check
+        // below holds either way.
+        let delta2 = pos_or_panic!(0.1338190182607754);
         let k1 = pos_or_panic!(5750.0);
-        let k2 = pos_or_panic!(5850.0);
+        let k2 = pos_or_panic!(5800.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1514,12 +1528,12 @@ mod tests_call_butterfly_delta {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_delta_size {
+mod tests_bull_call_ladder_delta_size {
     use super::*;
     use optionstratlib_core::assert_pos_relative_eq;
     use optionstratlib_core::pos_or_panic;
 
-    use crate::strategies::call_butterfly::CallButterfly;
+    use crate::strategies::bull_call_ladder::BullCallLadder;
     use crate::strategies::delta_neutral::DeltaNeutrality;
     use optionstratlib_analytics::pnl::DeltaAdjustment;
     use optionstratlib_core::assert_decimal_eq;
@@ -1527,26 +1541,26 @@ mod tests_call_butterfly_delta_size {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
-    fn get_strategy(underlying_price: Positive) -> CallButterfly {
-        CallButterfly::new(
+    fn get_strategy(underlying_price: Positive) -> BullCallLadder {
+        BullCallLadder::new(
             "SP500".to_string(),
             underlying_price,      // underlying_price
             pos_or_panic!(5750.0), // long_strike_itm
-            pos_or_panic!(5850.0), // long_strike_otm
-            pos_or_panic!(5800.0), // short_strike
+            pos_or_panic!(5800.0), // long_strike_otm
+            pos_or_panic!(5850.0), // short_strike
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
             Positive::ZERO,       // dividend_yield
             Positive::ONE,        // long quantity
             pos_or_panic!(97.8),  // short_quantity
-            pos_or_panic!(85.04), // premium_long_itm
-            pos_or_panic!(31.65), // premium_long_otm
+            pos_or_panic!(31.65), // premium_long_itm
+            pos_or_panic!(85.04), // premium_long_otm
             pos_or_panic!(53.04), // premium_short
             pos_or_panic!(0.78),  // open_fee_long
-            pos_or_panic!(0.78),  // close_fee_long
+            pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
-            pos_or_panic!(0.73),  // close_fee_short
+            pos_or_panic!(0.78),  // close_fee_short
             pos_or_panic!(0.73),
         )
         .unwrap()
@@ -1605,9 +1619,15 @@ mod tests_call_butterfly_delta_size {
         let strategy = get_strategy(pos_or_panic!(5781.88));
         let size = dec!(0.05590);
         let delta1 = pos_or_panic!(0.0833378661861126);
-        let delta2 = pos_or_panic!(0.2835618144021385);
+        // #706: the fixture used to put 5850 in `short_call_low` and 5800 in
+        // `short_call_high`, which its own `validate` rejects. Ordered, the
+        // first short leg the adjustment reaches is the 5800 call, so the
+        // buy-back quantity is the net delta over that call's delta (was
+        // 0.2835618144021385 on the 5850 call); the net-delta-zero check
+        // below holds either way.
+        let delta2 = pos_or_panic!(0.1338190182607754);
         let k1 = pos_or_panic!(5750.0);
-        let k2 = pos_or_panic!(5850.0);
+        let k2 = pos_or_panic!(5800.0);
         assert_decimal_eq!(
             strategy.delta_neutrality().unwrap().net_delta,
             size,
@@ -1689,7 +1709,7 @@ mod tests_call_butterfly_delta_size {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_optimizable {
+mod tests_bull_call_ladder_optimizable {
     use super::*;
 
     use approx::assert_relative_eq;
@@ -1754,8 +1774,8 @@ mod tests_call_butterfly_optimizable {
         chain
     }
 
-    fn setup_test_butterfly() -> CallButterfly {
-        CallButterfly::new(
+    fn setup_test_ladder() -> BullCallLadder {
+        BullCallLadder::new(
             "TEST".to_string(),
             Positive::HUNDRED,
             pos_or_panic!(95.0),
@@ -1781,51 +1801,45 @@ mod tests_call_butterfly_optimizable {
 
     #[test]
     fn test_find_optimal_ratio() {
-        let mut butterfly = setup_test_butterfly();
+        let mut ladder = setup_test_ladder();
         let chain = create_test_option_chain();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        ladder.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
 
         // Verify the optimization resulted in valid strikes
+        assert!(ladder.long_call.option.strike_price < ladder.short_call_low.option.strike_price);
         assert!(
-            butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price
-        );
-        assert!(
-            butterfly.short_call_low.option.strike_price
-                < butterfly.short_call_high.option.strike_price
+            ladder.short_call_low.option.strike_price < ladder.short_call_high.option.strike_price
         );
 
         // Verify the strategy is valid
-        assert!(butterfly.validate());
-        assert!(butterfly.get_max_profit().is_ok());
-        assert!(butterfly.get_max_loss().is_ok());
+        assert!(ladder.validate());
+        assert!(ladder.get_max_profit().is_ok());
+        assert!(ladder.get_max_loss().is_ok());
     }
 
     #[test]
     fn test_find_optimal_area() {
-        let mut butterfly = setup_test_butterfly();
+        let mut ladder = setup_test_ladder();
         let chain = create_test_option_chain();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        ladder.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
 
         // Verify the optimization resulted in valid strikes
+        assert!(ladder.long_call.option.strike_price < ladder.short_call_low.option.strike_price);
         assert!(
-            butterfly.long_call.option.strike_price < butterfly.short_call_low.option.strike_price
-        );
-        assert!(
-            butterfly.short_call_low.option.strike_price
-                < butterfly.short_call_high.option.strike_price
+            ladder.short_call_low.option.strike_price < ladder.short_call_high.option.strike_price
         );
 
         // Verify the strategy is valid
-        assert!(butterfly.validate());
-        assert!(butterfly.get_max_profit().is_ok());
-        assert!(butterfly.get_max_loss().is_ok());
+        assert!(ladder.validate());
+        assert!(ladder.get_max_profit().is_ok());
+        assert!(ladder.get_max_loss().is_ok());
     }
 
     #[test]
     fn test_create_strategy() {
-        let butterfly = setup_test_butterfly();
+        let ladder = setup_test_ladder();
         let chain = create_test_option_chain();
 
         let legs = StrategyLegs::ThreeLegs {
@@ -1834,7 +1848,7 @@ mod tests_call_butterfly_optimizable {
             third: chain.options.iter().nth(2).unwrap(),
         };
 
-        let new_strategy = butterfly.create_strategy(&chain, &legs).unwrap();
+        let new_strategy = ladder.create_strategy(&chain, &legs).unwrap();
 
         // Verify the new strategy has correct properties
         assert_relative_eq!(
@@ -1847,7 +1861,7 @@ mod tests_call_butterfly_optimizable {
 
     #[test]
     fn test_create_strategy_invalid_legs() {
-        let butterfly = setup_test_butterfly();
+        let ladder = setup_test_ladder();
         let chain = create_test_option_chain();
 
         let legs = StrategyLegs::TwoLegs {
@@ -1856,7 +1870,7 @@ mod tests_call_butterfly_optimizable {
         };
 
         // Wrong number of legs now returns a typed error (issue #323).
-        let result = butterfly.create_strategy(&chain, &legs);
+        let result = ladder.create_strategy(&chain, &legs);
         match result {
             Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
                 operation,
@@ -1868,7 +1882,7 @@ mod tests_call_butterfly_optimizable {
 
     #[test]
     fn test_filter_combinations_empty_chain() {
-        let butterfly = setup_test_butterfly();
+        let ladder = setup_test_ladder();
         let empty_chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
@@ -1877,7 +1891,7 @@ mod tests_call_butterfly_optimizable {
             None,
         );
 
-        let combinations: Vec<_> = butterfly
+        let combinations: Vec<_> = ladder
             .filter_combinations(&empty_chain, FindOptimalSide::All)
             .collect();
 
@@ -1889,7 +1903,7 @@ mod tests_call_butterfly_optimizable {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_probability {
+mod tests_bull_call_ladder_probability {
     use super::*;
 
     use num_traits::ToPrimitive;
@@ -1908,9 +1922,9 @@ mod tests_call_butterfly_probability {
         }
     }
 
-    /// Creates a test Call Butterfly with standard parameters based on SP500
-    fn create_test_butterfly() -> CallButterfly {
-        CallButterfly::new(
+    /// Creates a test Bull Call Ladder with standard parameters based on SP500
+    fn create_test_ladder() -> BullCallLadder {
+        BullCallLadder::new(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -1936,16 +1950,16 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_get_expiration() {
-        let butterfly = create_test_butterfly();
-        let expiration = *butterfly.get_expiration().values().next().unwrap();
+        let ladder = create_test_ladder();
+        let expiration = *ladder.get_expiration().values().next().unwrap();
         assert_eq!(expiration, &ExpirationDate::Days(Positive::TWO));
     }
 
     #[test]
     fn test_get_risk_free_rate() {
-        let butterfly = create_test_butterfly();
+        let ladder = create_test_ladder();
         assert_eq!(
-            butterfly
+            ladder
                 .get_risk_free_rate()
                 .values()
                 .next()
@@ -1958,8 +1972,8 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_get_profit_ranges() {
-        let butterfly = create_test_butterfly();
-        let result = butterfly.get_profit_ranges();
+        let ladder = create_test_ladder();
+        let result = ladder.get_profit_ranges();
 
         assert!(result.is_ok());
         let ranges = result.unwrap();
@@ -1974,14 +1988,14 @@ mod tests_call_butterfly_probability {
         assert!(range.probability <= Positive::ONE);
 
         // Verify bounds are within strike prices
-        assert!(range.lower_bound.unwrap() >= butterfly.long_call.option.strike_price);
-        assert!(range.upper_bound.unwrap() >= butterfly.short_call_high.option.strike_price);
+        assert!(range.lower_bound.unwrap() >= ladder.long_call.option.strike_price);
+        assert!(range.upper_bound.unwrap() >= ladder.short_call_high.option.strike_price);
     }
 
     #[test]
     fn test_get_loss_ranges() {
-        let butterfly = create_test_butterfly();
-        let result = butterfly.get_loss_ranges();
+        let ladder = create_test_ladder();
+        let result = ladder.get_loss_ranges();
 
         assert!(result.is_ok());
         let ranges = result.unwrap();
@@ -2003,10 +2017,10 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_probability_sum_to_one() {
-        let butterfly = create_test_butterfly();
+        let ladder = create_test_ladder();
 
-        let profit_ranges = butterfly.get_profit_ranges().unwrap();
-        let loss_ranges = butterfly.get_loss_ranges().unwrap();
+        let profit_ranges = ladder.get_profit_ranges().unwrap();
+        let loss_ranges = ladder.get_loss_ranges().unwrap();
 
         let total_profit_prob: Positive = profit_ranges.iter().map(|r| r.probability).sum();
 
@@ -2021,27 +2035,27 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_break_even_points_validity() {
-        let butterfly = create_test_butterfly();
-        let break_even_points = butterfly.get_break_even_points().unwrap();
+        let ladder = create_test_ladder();
+        let break_even_points = ladder.get_break_even_points().unwrap();
 
         assert_eq!(break_even_points.len(), 2);
         // Break-even points should be within strike prices
-        assert!(break_even_points[0] >= butterfly.long_call.option.strike_price);
-        assert!(break_even_points[1] >= butterfly.short_call_high.option.strike_price);
+        assert!(break_even_points[0] >= ladder.long_call.option.strike_price);
+        assert!(break_even_points[1] >= ladder.short_call_high.option.strike_price);
         // Break-even points should be between adjacent strikes
-        assert!(break_even_points[0] < butterfly.short_call_low.option.strike_price);
-        assert!(break_even_points[1] > butterfly.short_call_low.option.strike_price);
+        assert!(break_even_points[0] < ladder.short_call_low.option.strike_price);
+        assert!(break_even_points[1] > ladder.short_call_low.option.strike_price);
     }
 
     #[test]
     fn test_with_volatility_adjustment() {
-        let butterfly = create_test_butterfly();
+        let ladder = create_test_ladder();
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.25),
             std_dev_adjustment: pos_or_panic!(0.05),
         });
 
-        let prob = butterfly.probability_of_profit(vol_adj, None);
+        let prob = ladder.probability_of_profit(vol_adj, None);
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
@@ -2050,10 +2064,10 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_with_price_trend() {
-        let butterfly = create_test_butterfly();
+        let ladder = create_test_ladder();
         let trend = Some(price_trend(dec!(0.1), dec!(0.95)));
 
-        let prob = butterfly.probability_of_profit(None, trend);
+        let prob = ladder.probability_of_profit(None, trend);
         assert!(prob.is_ok());
         let probability = prob.unwrap();
         assert!(probability > Positive::ZERO);
@@ -2062,8 +2076,8 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_analyze_probabilities() {
-        let butterfly = create_test_butterfly();
-        let analysis = butterfly.analyze_probabilities(None, None).unwrap();
+        let ladder = create_test_ladder();
+        let analysis = ladder.analyze_probabilities(None, None).unwrap();
 
         assert!(analysis.probability_of_profit > Positive::ZERO);
         assert!(analysis.expected_value > Positive::ZERO);
@@ -2073,12 +2087,12 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_near_expiration() {
-        let mut butterfly = create_test_butterfly();
-        butterfly.long_call.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
-        butterfly.short_call_low.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
-        butterfly.short_call_high.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
+        let mut ladder = create_test_ladder();
+        ladder.long_call.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
+        ladder.short_call_low.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
+        ladder.short_call_high.option.expiration_date = ExpirationDate::Days(pos_or_panic!(0.5));
 
-        let prob = butterfly.probability_of_profit(None, None).unwrap();
+        let prob = ladder.probability_of_profit(None, None).unwrap();
         // Near expiration probabilities should be more extreme
         assert!(prob < pos_or_panic!(0.3) || prob > pos_or_panic!(0.7));
     }
@@ -2091,17 +2105,17 @@ mod tests_call_butterfly_probability {
         // strategy's own implied volatility, so raising the legs' IV from
         // 0.18 to 0.5 must lower it. (Before #619 `None` priced at a hidden
         // flat 0.2 and the 0.5 below never reached the model.)
-        let base = create_test_butterfly();
+        let base = create_test_ladder();
         let base_ev = match base.expected_value(None, None) {
             Ok(ev) => ev,
             Err(error) => panic!("expected value at the base volatility: {error}"),
         };
 
-        let mut butterfly = create_test_butterfly();
-        butterfly.long_call.option.implied_volatility = pos_or_panic!(0.5);
-        butterfly.short_call_low.option.implied_volatility = pos_or_panic!(0.5);
-        butterfly.short_call_high.option.implied_volatility = pos_or_panic!(0.5);
-        let high_ev = match butterfly.expected_value(None, None) {
+        let mut ladder = create_test_ladder();
+        ladder.long_call.option.implied_volatility = pos_or_panic!(0.5);
+        ladder.short_call_low.option.implied_volatility = pos_or_panic!(0.5);
+        ladder.short_call_high.option.implied_volatility = pos_or_panic!(0.5);
+        let high_ev = match ladder.expected_value(None, None) {
             Ok(ev) => ev,
             Err(error) => panic!("expected value at 0.5 volatility: {error}"),
         };
@@ -2115,8 +2129,8 @@ mod tests_call_butterfly_probability {
 
     #[test]
     fn test_extreme_probabilities() {
-        let butterfly = create_test_butterfly();
-        let result = butterfly.calculate_extreme_probabilities(None, None);
+        let ladder = create_test_ladder();
+        let result = ladder.calculate_extreme_probabilities(None, None);
 
         assert!(result.is_ok());
         let (max_profit_prob, max_loss_prob) = result.unwrap();
@@ -2128,7 +2142,7 @@ mod tests_call_butterfly_probability {
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_position_management {
+mod tests_bull_call_ladder_position_management {
     use super::*;
     use optionstratlib_core::pos_or_panic;
 
@@ -2137,8 +2151,8 @@ mod tests_call_butterfly_position_management {
 
     use rust_decimal_macros::dec;
 
-    fn create_test_call_butterfly() -> CallButterfly {
-        CallButterfly::new(
+    fn create_test_bull_call_ladder() -> BullCallLadder {
+        BullCallLadder::new(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2163,12 +2177,12 @@ mod tests_call_butterfly_position_management {
     }
 
     #[test]
-    fn test_short_call_butterfly_get_position() {
-        let mut call_butterfly = create_test_call_butterfly();
+    fn test_bull_call_ladder_short_get_position() {
+        let mut ladder = create_test_bull_call_ladder();
 
         // Test getting short call position
         let call_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5800.0));
+            ladder.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5800.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2178,7 +2192,7 @@ mod tests_call_butterfly_position_management {
 
         // Test getting short put position
         let put_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5850.0));
+            ladder.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(5850.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2188,7 +2202,7 @@ mod tests_call_butterfly_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2715.0));
+            ladder.get_position(&OptionStyle::Call, &Side::Short, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2207,12 +2221,12 @@ mod tests_call_butterfly_position_management {
     }
 
     #[test]
-    fn test_long_call_butterfly_get_position() {
-        let mut call_butterfly = create_test_call_butterfly();
+    fn test_bull_call_ladder_long_get_position() {
+        let mut ladder = create_test_bull_call_ladder();
 
         // Test getting short call position
         let call_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(5750.0));
+            ladder.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(5750.0));
         assert!(call_position.is_ok());
         let positions = call_position.unwrap();
         assert_eq!(positions.len(), 1);
@@ -2222,7 +2236,7 @@ mod tests_call_butterfly_position_management {
 
         // Test getting non-existent position
         let invalid_position =
-            call_butterfly.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(2715.0));
+            ladder.get_position(&OptionStyle::Call, &Side::Long, &pos_or_panic!(2715.0));
         assert!(invalid_position.is_err());
         match invalid_position {
             Err(PositionError::ValidationError(
@@ -2241,30 +2255,27 @@ mod tests_call_butterfly_position_management {
     }
 
     #[test]
-    fn test_short_call_butterfly_modify_position() {
-        let mut call_butterfly = create_test_call_butterfly();
+    fn test_bull_call_ladder_short_modify_position() {
+        let mut ladder = create_test_bull_call_ladder();
 
         // Modify short call position
-        let mut modified_call = call_butterfly.short_call_low.clone();
+        let mut modified_call = ladder.short_call_low.clone();
         modified_call.option.quantity = Positive::TWO;
-        let result = call_butterfly.modify_position(&modified_call);
+        let result = ladder.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(call_butterfly.short_call_low.option.quantity, Positive::TWO);
+        assert_eq!(ladder.short_call_low.option.quantity, Positive::TWO);
 
         // Modify short put position
-        let mut modified_put = call_butterfly.short_call_high.clone();
+        let mut modified_put = ladder.short_call_high.clone();
         modified_put.option.quantity = Positive::TWO;
-        let result = call_butterfly.modify_position(&modified_put);
+        let result = ladder.modify_position(&modified_put);
         assert!(result.is_ok());
-        assert_eq!(
-            call_butterfly.short_call_high.option.quantity,
-            Positive::TWO
-        );
+        assert_eq!(ladder.short_call_high.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
-        let mut invalid_position = call_butterfly.short_call_high.clone();
+        let mut invalid_position = ladder.short_call_high.clone();
         invalid_position.option.strike_price = pos_or_panic!(95.0);
-        let result = call_butterfly.modify_position(&invalid_position);
+        let result = ladder.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
@@ -2281,20 +2292,20 @@ mod tests_call_butterfly_position_management {
     }
 
     #[test]
-    fn test_long_call_butterfly_modify_position() {
-        let mut call_butterfly = create_test_call_butterfly();
+    fn test_bull_call_ladder_long_modify_position() {
+        let mut ladder = create_test_bull_call_ladder();
 
         // Modify long call position
-        let mut modified_call = call_butterfly.long_call.clone();
+        let mut modified_call = ladder.long_call.clone();
         modified_call.option.quantity = Positive::TWO;
-        let result = call_butterfly.modify_position(&modified_call);
+        let result = ladder.modify_position(&modified_call);
         assert!(result.is_ok());
-        assert_eq!(call_butterfly.long_call.option.quantity, Positive::TWO);
+        assert_eq!(ladder.long_call.option.quantity, Positive::TWO);
 
         // Test modifying with invalid position
-        let mut invalid_position = call_butterfly.long_call.clone();
+        let mut invalid_position = ladder.long_call.clone();
         invalid_position.option.strike_price = pos_or_panic!(95.0);
-        let result = call_butterfly.modify_position(&invalid_position);
+        let result = ladder.modify_position(&invalid_position);
         assert!(result.is_err());
         match result {
             Err(PositionError::ValidationError(kind)) => match kind {
@@ -2321,8 +2332,8 @@ mod tests_adjust_option_position {
     use rust_decimal_macros::dec;
 
     // Helper function to create a test strategy
-    fn create_test_strategy() -> CallButterfly {
-        CallButterfly::new(
+    fn create_test_strategy() -> BullCallLadder {
+        BullCallLadder::new(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
             pos_or_panic!(5750.0),  // long_call_strike
@@ -2443,196 +2454,184 @@ mod tests_strategy_constructor {
 
     use optionstratlib_core::model::utils::create_sample_position;
 
+    fn call(side: Side, strike: Positive) -> Position {
+        create_sample_position(
+            OptionStyle::Call,
+            side,
+            Positive::HUNDRED,
+            Positive::ONE,
+            strike,
+            pos_or_panic!(0.2),
+        )
+    }
+
     #[test]
     fn test_get_strategy_valid() {
-        let options = vec![
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(90.0),
-                Positive::ONE,
-                pos_or_panic!(95.0),
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                pos_or_panic!(90.0),
-                Positive::ONE,
-                Positive::HUNDRED,
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(90.0),
-                Positive::ONE,
-                pos_or_panic!(105.0),
-                pos_or_panic!(0.2),
-            ),
-        ];
+        // Long the lowest strike, short the middle and the highest (#706).
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Short, pos_or_panic!(105.0)),
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Short, Positive::HUNDRED),
+        ]);
+        let ladder = result.unwrap();
+        assert_eq!(ladder.long_call.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(ladder.short_call_low.option.strike_price, Positive::HUNDRED);
+        assert_eq!(
+            ladder.short_call_high.option.strike_price,
+            pos_or_panic!(105.0)
+        );
+        assert!(ladder.validate());
+    }
 
-        let result = CallButterfly::get_strategy(&options);
-        assert!(result.is_ok());
+    #[test]
+    fn test_bull_call_ladder_get_strategy_old_convention_rejected() {
+        // Short low / long middle / short high was what this builder took as
+        // `CallButterfly` before #706; it fails the ladder's own `validate`.
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Short, pos_or_panic!(95.0)),
+            call(Side::Long, Positive::HUNDRED),
+            call(Side::Short, pos_or_panic!(105.0)),
+        ]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bull Call Ladder get_strategy"
+                && reason == "Bull Call Ladder requires a long lowest-strike call and two short higher-strike calls"
+        ));
+    }
+
+    #[test]
+    fn test_bull_call_ladder_get_strategy_invalid_leg_rejected() {
+        let mut short_high = call(Side::Short, pos_or_panic!(105.0));
+        short_high.premium = Positive::ZERO;
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Short, Positive::HUNDRED),
+            short_high,
+        ]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullCallLadder,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_bull_call_ladder_get_strategy_equal_short_strikes_rejected() {
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Short, Positive::HUNDRED),
+            call(Side::Short, Positive::HUNDRED),
+        ]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullCallLadder,
+                ..
+            })
+        ));
     }
 
     #[test]
     fn test_get_strategy_wrong_number_of_options() {
-        let options = vec![
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(95.0),
-                Positive::ONE,
-                Positive::HUNDRED,
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                Positive::HUNDRED,
-                Positive::ONE,
-                pos_or_panic!(105.0),
-                pos_or_panic!(0.2),
-            ),
-        ];
-
-        let result = CallButterfly::get_strategy(&options);
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Short, Positive::HUNDRED),
+        ]);
         assert!(matches!(
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
-            if operation == "Call Butterfly get_strategy" && reason == "Must have exactly 3 options"
+            if operation == "Bull Call Ladder get_strategy" && reason == "Must have exactly 3 options"
         ));
     }
 
     #[test]
     fn test_get_strategy_wrong_option_style() {
-        let options = vec![
-            create_sample_position(
-                OptionStyle::Put,
-                Side::Short,
-                pos_or_panic!(95.0),
-                Positive::ONE,
-                Positive::HUNDRED,
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                Positive::HUNDRED,
-                Positive::ONE,
-                pos_or_panic!(105.0),
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(105.0),
-                Positive::ONE,
-                pos_or_panic!(110.0),
-                pos_or_panic!(0.2),
-            ),
-        ];
-
-        let result = CallButterfly::get_strategy(&options);
+        let mut put = call(Side::Long, pos_or_panic!(95.0));
+        put.option.option_style = OptionStyle::Put;
+        let result = BullCallLadder::get_strategy(&[
+            put,
+            call(Side::Short, Positive::HUNDRED),
+            call(Side::Short, pos_or_panic!(105.0)),
+        ]);
         assert!(matches!(
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
-            if operation == "Call Butterfly get_strategy" && reason == "Options must be calls"
+            if operation == "Bull Call Ladder get_strategy" && reason == "Options must be calls"
         ));
     }
 
     #[test]
     fn test_get_strategy_wrong_sides() {
-        let options = vec![
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                pos_or_panic!(95.0),
-                Positive::ONE,
-                Positive::HUNDRED,
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                Positive::HUNDRED,
-                Positive::ONE,
-                pos_or_panic!(105.0),
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(105.0),
-                Positive::ONE,
-                pos_or_panic!(110.0),
-                pos_or_panic!(0.2),
-            ),
-        ];
-
-        let result = CallButterfly::get_strategy(&options);
+        let result = BullCallLadder::get_strategy(&[
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Long, Positive::HUNDRED),
+            call(Side::Short, pos_or_panic!(105.0)),
+        ]);
         assert!(matches!(
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
-            if operation == "Call Butterfly get_strategy"
-                && reason == "Call Butterfly requires one long call and two short calls"
+            if operation == "Bull Call Ladder get_strategy"
+                && reason == "Bull Call Ladder requires a long lowest-strike call and two short higher-strike calls"
         ));
+    }
+
+    #[test]
+    fn test_bull_call_ladder_add_position_orders_the_short_calls() {
+        // Through `add_position` alone, in either order, the lower short
+        // strike lands in `short_call_low` (#706).
+        for shorts in [
+            [Positive::HUNDRED, pos_or_panic!(105.0)],
+            [pos_or_panic!(105.0), Positive::HUNDRED],
+        ] {
+            let mut ladder = BullCallLadder::default();
+            ladder
+                .add_position(&call(Side::Long, pos_or_panic!(95.0)))
+                .unwrap();
+            for strike in shorts {
+                ladder.add_position(&call(Side::Short, strike)).unwrap();
+            }
+            assert_eq!(ladder.long_call.option.strike_price, pos_or_panic!(95.0));
+            assert_eq!(ladder.short_call_low.option.strike_price, Positive::HUNDRED);
+            assert_eq!(
+                ladder.short_call_high.option.strike_price,
+                pos_or_panic!(105.0)
+            );
+            assert!(ladder.validate());
+        }
     }
 
     #[test]
     fn test_get_strategy_different_expiration_dates() {
         let mut options = vec![
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(95.0),
-                Positive::ONE,
-                Positive::HUNDRED,
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Long,
-                Positive::HUNDRED,
-                Positive::ONE,
-                pos_or_panic!(105.0),
-                pos_or_panic!(0.2),
-            ),
-            create_sample_position(
-                OptionStyle::Call,
-                Side::Short,
-                pos_or_panic!(105.0),
-                Positive::ONE,
-                pos_or_panic!(110.0),
-                pos_or_panic!(0.2),
-            ),
+            call(Side::Long, pos_or_panic!(95.0)),
+            call(Side::Short, Positive::HUNDRED),
+            call(Side::Short, pos_or_panic!(105.0)),
         ];
-
-        // Modify expiration date for second option
         options[1].option.expiration_date = ExpirationDate::Days(pos_or_panic!(60.0));
 
-        let result = CallButterfly::get_strategy(&options);
+        let result = BullCallLadder::get_strategy(&options);
         assert!(matches!(
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
-            if operation == "Call Butterfly get_strategy" && reason == "Options must have the same expiration date"
+            if operation == "Bull Call Ladder get_strategy" && reason == "Options must have the same expiration date"
         ));
     }
 }
 
 #[cfg(test)]
-mod tests_call_butterfly_pnl {
+mod tests_bull_call_ladder_pnl {
     use super::*;
-    use optionstratlib_core::assert_pos_relative_eq;
     use optionstratlib_core::pos_or_panic;
 
     use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
 
-    fn setup_test_strategy() -> CallButterfly {
-        CallButterfly::new(
+    fn setup_test_strategy() -> BullCallLadder {
+        BullCallLadder::new(
             "AAPL".to_string(),
             pos_or_panic!(150.0),
             pos_or_panic!(145.0),
@@ -2656,38 +2655,114 @@ mod tests_call_butterfly_pnl {
         .unwrap()
     }
 
-    fn create_test_call_butterfly() -> Result<CallButterfly, StrategyError> {
-        // Create short call at lower strike
-        let short_call_low = create_sample_position(
-            OptionStyle::Call,
-            Side::Short,
-            Positive::HUNDRED,   // Underlying price
-            Positive::ONE,       // Quantity
-            pos_or_panic!(95.0), // Lower short strike
-            pos_or_panic!(0.2),  // Implied volatility
-        );
+    // Long the 95 call for 7.50, short the 100 call for 4.50 and the 105 call
+    // for 2.40, no fees. Net debit 0.60, so the hand-computed expiry payoff is
+    // -0.60 up to 95, rises one for one to +4.40 at 100, holds it to 105 and
+    // falls one for one above: break-evens 95.60 and 105 + 4.40 = 109.40.
+    fn create_test_ladder() -> Result<BullCallLadder, StrategyError> {
+        let leg = |side: Side, strike: Positive, premium: Positive| {
+            let mut position = create_sample_position(
+                OptionStyle::Call,
+                side,
+                Positive::HUNDRED,
+                Positive::ONE,
+                strike,
+                pos_or_panic!(0.2),
+            );
+            position.premium = premium;
+            position.open_fee = Positive::ZERO;
+            position.close_fee = Positive::ZERO;
+            position
+        };
+        BullCallLadder::get_strategy(&[
+            leg(Side::Long, pos_or_panic!(95.0), pos_or_panic!(7.5)),
+            leg(Side::Short, Positive::HUNDRED, pos_or_panic!(4.5)),
+            leg(Side::Short, pos_or_panic!(105.0), pos_or_panic!(2.4)),
+        ])
+    }
 
-        // Create long call at middle strike
-        let long_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Long,
-            Positive::HUNDRED,  // Same underlying price
-            Positive::ONE,      // Quantity
-            Positive::HUNDRED,  // Middle (long) strike price
-            pos_or_panic!(0.2), // Implied volatility
+    #[test]
+    fn test_bull_call_ladder_hand_computed_break_evens() {
+        let ladder = create_test_ladder().unwrap();
+        assert_eq!(
+            ladder.get_break_even_points().unwrap(),
+            &vec![pos_or_panic!(95.6), pos_or_panic!(109.4)]
         );
+        assert_decimal_eq!(ladder.get_net_cost().unwrap(), dec!(0.6), dec!(1e-9));
+        assert_eq!(ladder.get_max_profit().unwrap(), pos_or_panic!(4.4));
+        // Net short one call above the top strike: the loss is unlimited.
+        assert_eq!(ladder.get_max_loss().unwrap(), Positive::MAX);
+    }
 
-        // Create short call at higher strike
-        let short_call_high = create_sample_position(
-            OptionStyle::Call,
-            Side::Short,
-            Positive::HUNDRED,    // Same underlying price
-            Positive::ONE,        // Quantity
-            pos_or_panic!(105.0), // Higher short strike
-            pos_or_panic!(0.2),   // Implied volatility
-        );
+    #[test]
+    fn test_calculate_pnl_at_expiration_below_strikes() {
+        let ladder = create_test_ladder().unwrap();
+        // Every call expires worthless: the debit is lost.
+        let pnl = ladder
+            .calculate_pnl_at_expiration(&pos_or_panic!(90.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-0.6), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos_or_panic!(6.9));
+        assert_eq!(pnl.initial_costs, pos_or_panic!(7.5));
+    }
 
-        CallButterfly::get_strategy(&[short_call_low, long_call, short_call_high])
+    #[test]
+    fn test_calculate_pnl_at_expiration_between_strikes() {
+        let ladder = create_test_ladder().unwrap();
+        // 97.5: the long 95 call pays 2.50, less the 0.60 debit.
+        let pnl = ladder
+            .calculate_pnl_at_expiration(&pos_or_panic!(97.5))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(1.9), dec!(1e-6));
+        // 95.6: the lower break-even.
+        let pnl = ladder
+            .calculate_pnl_at_expiration(&pos_or_panic!(95.6))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_max_profit() {
+        let ladder = create_test_ladder().unwrap();
+        // Anywhere from 100 to 105: 5.00 of spread, less the 0.60 debit.
+        for price in [
+            Positive::HUNDRED,
+            pos_or_panic!(102.5),
+            pos_or_panic!(105.0),
+        ] {
+            let pnl = ladder.calculate_pnl_at_expiration(&price).unwrap();
+            assert_decimal_eq!(pnl.realized.unwrap(), dec!(4.4), dec!(1e-6));
+        }
+    }
+
+    #[test]
+    fn test_calculate_pnl_at_expiration_above_strikes() {
+        let ladder = create_test_ladder().unwrap();
+        // 109.4: the upper break-even.
+        let pnl = ladder
+            .calculate_pnl_at_expiration(&pos_or_panic!(109.4))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
+        // 115: 4.40 - (115 - 105) = -5.60, and falling one for one.
+        let pnl = ladder
+            .calculate_pnl_at_expiration(&pos_or_panic!(115.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-5.6), dec!(1e-6));
+    }
+
+    #[test]
+    fn test_calculate_pnl_rally_from_entry() {
+        let ladder = create_test_ladder().unwrap();
+        // `unrealized` is the change in the legs' Black-Scholes value since
+        // entry at 100. Net short one call, the ladder loses on a sharp rally.
+        let pnl = ladder
+            .calculate_pnl(
+                &pos_or_panic!(120.0),
+                ExpirationDate::Days(pos_or_panic!(20.0)),
+                &pos_or_panic!(0.2),
+            )
+            .unwrap();
+        assert!(pnl.unrealized.unwrap() < Decimal::ZERO);
     }
 
     #[test]
@@ -2709,131 +2784,5 @@ mod tests_call_butterfly_pnl {
         let strategy = setup_test_strategy();
         let ratio = strategy.get_profit_ratio().unwrap();
         assert!(ratio > Decimal::ZERO);
-    }
-
-    #[test]
-    fn test_calculate_pnl_below_strikes() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos_or_panic!(90.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // All options OTM, should be close to max profit
-        // Initial income from short calls
-        // Initial costs: Premium for long call + total fees
-        assert_pos_relative_eq!(pnl.initial_income, pos_or_panic!(10.0), pos_or_panic!(1e-6)); // Premiums from two short calls
-        assert_pos_relative_eq!(pnl.initial_costs, pos_or_panic!(8.0), pos_or_panic!(1e-6)); // Premium for long call + fees
-        assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Should be near max profit
-    }
-
-    #[test]
-    fn test_calculate_pnl_between_strikes() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = Positive::HUNDRED; // At middle strike
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.1);
-
-        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // At-the-money, some loss expected
-        assert!(pnl.unrealized.unwrap() < dec!(0.0));
-        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // But not max loss
-    }
-
-    #[test]
-    fn test_calculate_pnl_above_strikes() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = pos_or_panic!(110.0); // Above all strikes
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // Both short calls ITM, long call ITM
-        // Expect significant loss, but capped
-        assert!(pnl.unrealized.unwrap() < dec!(-5.0));
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_max_profit() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = pos_or_panic!(95.0); // Below lower short strike
-
-        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos_or_panic!(10.0)); // Premiums from short calls
-        assert_eq!(pnl.initial_costs, pos_or_panic!(8.0)); // Premium for long call + fees
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_max_loss() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = pos_or_panic!(110.0); // Above highest short strike
-
-        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Max loss at expiration when price is above highest strike
-        // Loss = width of spread - net premium received
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-8.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos_or_panic!(10.0)); // Premiums from short calls
-        assert_eq!(pnl.initial_costs, pos_or_panic!(8.0)); // Premium for long call + fees
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_between_strikes() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let underlying_price = Positive::HUNDRED; // At middle strike
-
-        let result = butterfly.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // At middle strike, some loss due to fees and net premium
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
-    }
-
-    #[test]
-    fn test_calculate_pnl_with_higher_volatility() {
-        let butterfly = create_test_call_butterfly().unwrap();
-        let market_price = Positive::HUNDRED;
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.4); // Higher volatility
-
-        let result = butterfly.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // With higher volatility, option values change
-        // Net effect should be slightly negative
-        assert!(pnl.unrealized.unwrap() < dec!(0.0));
-        // But still capped by the butterfly spread
-        assert!(pnl.unrealized.unwrap() > dec!(-5.0));
     }
 }

@@ -3,9 +3,10 @@
    Email: jb@taunais.com
    Date: 24/12/25
 ******************************************************************************/
-//! Example demonstrating extended delta adjustment functionality for CallButterfly.
+//! Example demonstrating extended delta adjustment functionality for BullCallLadder.
 //!
-//! A Call Butterfly is a neutral strategy with limited risk and reward.
+//! A Bull Call Ladder is a moderately bullish strategy with limited reward and an
+//! unlimited loss above its upper break-even.
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::prelude::*;
@@ -16,7 +17,7 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let underlying_price = pos_or_panic!(5795.0);
 
-    let strategy = CallButterfly::new(
+    let strategy = BullCallLadder::new(
         "SP500".to_string(),
         underlying_price,
         pos_or_panic!(5700.0),
@@ -38,7 +39,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.73),
     )?;
 
-    info!("=== CallButterfly Extended Delta Analysis ===");
+    info!("=== BullCallLadder Extended Delta Analysis ===");
     info!("Title: {}", strategy.get_title());
 
     // Basic strategy info

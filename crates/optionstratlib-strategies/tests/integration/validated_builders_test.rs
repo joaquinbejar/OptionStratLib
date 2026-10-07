@@ -9,8 +9,7 @@
 //!
 //! Each builder gets a valid case, which still builds, and an invalid case,
 //! which used to come back as `Ok` with legs that fail the strategy's own
-//! validation. The butterfly builders that still only warn (#706) are not
-//! covered here. The put verticals are covered next to their code, in
+//! validation. The put verticals are covered next to their code, in
 //! `bull_put_spread.rs` and `bear_put_spread.rs`.
 
 use optionstratlib_core::model::types::{OptionStyle, Side};
@@ -21,7 +20,7 @@ use optionstratlib_strategies::error::strategies::StrategyError;
 use optionstratlib_strategies::strategies::base::{StrategyType, Validable};
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::{
-    BearCallSpread, BullCallSpread, Collar, CoveredCall, IronButterfly, IronCondor,
+    BearCallSpread, BullCallLadder, BullCallSpread, Collar, CoveredCall, IronButterfly, IronCondor,
     LongButterflySpread, LongCall, LongStraddle, LongStrangle, PoorMansCoveredCall, ProtectivePut,
     ShortButterflySpread, ShortPut, ShortStraddle, ShortStrangle, StrategyConstructor,
 };
@@ -866,5 +865,136 @@ fn test_invalid_strategy_error_message_names_strategy() {
         probability
             .to_string()
             .contains("invalid IronCondor strategy: reason")
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Butterflies and the call ladder (#706)
+// ---------------------------------------------------------------------------
+
+/// `leg` with `quantity` contracts: the body of a 1/2/1 butterfly.
+fn leg_of(side: Side, strike: Positive, quantity: Positive) -> Position {
+    let mut position = leg(side, OptionStyle::Call, strike);
+    position.option.quantity = quantity;
+    position
+}
+
+#[test]
+fn test_long_butterfly_spread_get_strategy_one_two_one_valid() {
+    assert_valid(LongButterflySpread::get_strategy(&[
+        leg_of(Side::Long, pos_or_panic!(95.0), Positive::ONE),
+        leg_of(Side::Short, Positive::HUNDRED, Positive::TWO),
+        leg_of(Side::Long, pos_or_panic!(105.0), Positive::ONE),
+    ]));
+}
+
+#[test]
+fn test_long_butterfly_spread_get_strategy_one_one_one_rejected() {
+    assert_rejected(
+        LongButterflySpread::get_strategy(&[
+            leg_of(Side::Long, pos_or_panic!(95.0), Positive::ONE),
+            leg_of(Side::Short, Positive::HUNDRED, Positive::ONE),
+            leg_of(Side::Long, pos_or_panic!(105.0), Positive::ONE),
+        ]),
+        StrategyType::LongButterflySpread,
+    );
+}
+
+#[test]
+fn test_short_butterfly_spread_get_strategy_one_two_one_valid() {
+    assert_valid(ShortButterflySpread::get_strategy(&[
+        leg_of(Side::Short, pos_or_panic!(95.0), Positive::ONE),
+        leg_of(Side::Long, Positive::HUNDRED, Positive::TWO),
+        leg_of(Side::Short, pos_or_panic!(105.0), Positive::ONE),
+    ]));
+}
+
+#[test]
+fn test_short_butterfly_spread_get_strategy_one_one_one_rejected() {
+    assert_rejected(
+        ShortButterflySpread::get_strategy(&[
+            leg_of(Side::Short, pos_or_panic!(95.0), Positive::ONE),
+            leg_of(Side::Long, Positive::HUNDRED, Positive::ONE),
+            leg_of(Side::Short, pos_or_panic!(105.0), Positive::ONE),
+        ]),
+        StrategyType::ShortButterflySpread,
+    );
+}
+
+/// The 1x1x1 ladder that was `CallButterfly` before #706 is not a butterfly:
+/// handed to the textbook builder, its legs are rejected.
+#[test]
+fn test_long_butterfly_spread_get_strategy_ladder_legs_rejected() {
+    let result = LongButterflySpread::get_strategy(&[
+        leg_of(Side::Long, pos_or_panic!(95.0), Positive::ONE),
+        leg_of(Side::Short, Positive::HUNDRED, Positive::ONE),
+        leg_of(Side::Short, pos_or_panic!(105.0), Positive::ONE),
+    ]);
+    assert!(matches!(result, Err(StrategyError::OperationError(_))));
+}
+
+fn bull_call_ladder(
+    long: Positive,
+    short_low: Positive,
+    short_high: Positive,
+) -> Result<BullCallLadder, StrategyError> {
+    BullCallLadder::new(
+        "TEST".to_string(),
+        Positive::HUNDRED,
+        long,
+        short_low,
+        short_high,
+        days(30.0),
+        pos_or_panic!(0.2),
+        dec!(0.05),
+        Positive::ZERO,
+        Positive::ONE,
+        pos_or_panic!(7.5),
+        pos_or_panic!(4.5),
+        pos_or_panic!(2.4),
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+        Positive::ZERO,
+    )
+}
+
+#[test]
+fn test_bull_call_ladder_new_ordered_strikes_valid() {
+    assert_valid(bull_call_ladder(
+        pos_or_panic!(95.0),
+        Positive::HUNDRED,
+        pos_or_panic!(105.0),
+    ));
+}
+
+#[test]
+fn test_bull_call_ladder_new_long_above_shorts_rejected() {
+    assert_rejected(
+        bull_call_ladder(pos_or_panic!(105.0), pos_or_panic!(95.0), Positive::HUNDRED),
+        StrategyType::BullCallLadder,
+    );
+}
+
+#[test]
+fn test_bull_call_ladder_get_strategy_valid() {
+    assert_valid(BullCallLadder::get_strategy(&[
+        leg(Side::Long, OptionStyle::Call, pos_or_panic!(95.0)),
+        leg(Side::Short, OptionStyle::Call, Positive::HUNDRED),
+        leg(Side::Short, OptionStyle::Call, pos_or_panic!(105.0)),
+    ]));
+}
+
+#[test]
+fn test_bull_call_ladder_get_strategy_short_leg_without_premium_rejected() {
+    assert_rejected(
+        BullCallLadder::get_strategy(&[
+            leg(Side::Long, OptionStyle::Call, pos_or_panic!(95.0)),
+            without_premium(leg(Side::Short, OptionStyle::Call, Positive::HUNDRED)),
+            leg(Side::Short, OptionStyle::Call, pos_or_panic!(105.0)),
+        ]),
+        StrategyType::BullCallLadder,
     );
 }
