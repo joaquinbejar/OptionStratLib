@@ -27,6 +27,7 @@ use super::shared::SpreadStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -618,6 +619,20 @@ impl BasicAble for BullCallSpread {
                 .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.long_call, &self.short_call],
+            "BullCallSpread::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.long_call, &mut self.short_call],
+            contract_size,
+            "BullCallSpread::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for BullCallSpread {
@@ -829,7 +844,7 @@ impl Optimizable for BullCallSpread {
                 "missing call_bid for short leg",
             )
         })?;
-        BullCallSpread::new(
+        let mut strategy = BullCallSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -845,7 +860,11 @@ impl Optimizable for BullCallSpread {
             self.long_call.close_fee,
             self.short_call.open_fee,
             self.short_call.close_fee,
-        )
+        )?;
+        // The rebuilt legs keep the contract size of the strategy they
+        // are rebuilt from.
+        strategy.set_contract_size(self.get_contract_size()?)?;
+        Ok(strategy)
     }
 }
 

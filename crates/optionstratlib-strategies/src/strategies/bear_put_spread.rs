@@ -4,6 +4,7 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use optionstratlib_core::model::Positive;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
@@ -612,6 +613,20 @@ impl BasicAble for BearPutSpread {
                 .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.long_put, &self.short_put],
+            "BearPutSpread::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.long_put, &mut self.short_put],
+            contract_size,
+            "BearPutSpread::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for BearPutSpread {
@@ -822,7 +837,7 @@ impl Optimizable for BearPutSpread {
                 "missing put_bid for short leg",
             )
         })?;
-        BearPutSpread::new(
+        let mut strategy = BearPutSpread::new(
             chain.symbol.clone(),
             chain.underlying_price,
             long.strike_price,
@@ -838,7 +853,11 @@ impl Optimizable for BearPutSpread {
             self.long_put.close_fee,
             self.short_put.open_fee,
             self.short_put.close_fee,
-        )
+        )?;
+        // The rebuilt legs keep the contract size of the strategy they
+        // are rebuilt from.
+        strategy.set_contract_size(self.get_contract_size()?)?;
+        Ok(strategy)
     }
 }
 

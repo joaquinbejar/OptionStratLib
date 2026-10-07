@@ -139,8 +139,16 @@ pub struct Trade {
     pub timestamp: i64,
     /// * `quantity` - The number of contracts traded, represented as a positive value.
     pub quantity: Positive, // contracts traded
-    /// * `premium` - The premium per contract, represented as a `Decimal` value.
-    pub premium: Positive, // premium per contract
+    /// * `premium` - The premium per unit of the underlying, as quoted. One
+    ///   contract pays `premium × contract_size`.
+    pub premium: Positive, // premium per unit of the underlying
+    /// * `contract_size` - The contract multiplier: units of the underlying
+    ///   covered by one contract (100 for a standard US equity option).
+    ///   Defaults to 1, so a trade recorded before the field existed
+    ///   deserializes unchanged. The trade carries its own multiplier so the
+    ///   record stays self-contained after the position it came from is gone.
+    #[serde(default = "default_contract_size")]
+    pub contract_size: Positive,
     /// * `underlying_price` - The price of the underlying asset, represented as a positive value.
     pub underlying_price: Positive,
     /// * `notes` - Optional free-form notes associated with the trade.
@@ -153,6 +161,14 @@ pub struct Trade {
     ///
     /// This field is essential for tracking and managing the lifecycle of a trade.
     pub status: TradeStatus,
+}
+
+/// Serde default for [`Trade::contract_size`]: one unit of the underlying per
+/// contract, the behaviour before the field existed.
+#[inline]
+#[must_use]
+fn default_contract_size() -> Positive {
+    Positive::ONE
 }
 
 impl Trade {
@@ -168,13 +184,14 @@ impl Trade {
     /// - `strike` (`Positive`): The strike price of the option. This must be a positive value.
     /// - `expiry` (`DateTime<Utc>`): The expiration date and time of the option in UTC.
     /// - `quantity` (`Positive`): The quantity involved in the transaction. This must be a positive value.
-    /// - `premium` (`Decimal`): The premium value associated with the transaction.
+    /// - `premium` (`Positive`): The premium per unit of the underlying.
     /// - `underlying_price` (`Positive`): The price of the underlying asset. This must be a positive value.
     /// - `notes` (`Option<String>`): Any additional notes or metadata for the transaction.
     ///
     /// # Returns
     /// An instance of the struct initialized with the provided parameters, along with a timestamp
-    /// (`i64`) in nanoseconds representing the moment of creation.
+    /// (`i64`) in nanoseconds representing the moment of creation. The contract size is 1; chain
+    /// [`Trade::with_contract_size`] to record a larger multiplier.
     ///
     /// # Panics
     /// The method will panic if obtaining the current timestamp (`Utc::now()`) in nanoseconds fails.
@@ -216,10 +233,24 @@ impl Trade {
             timestamp,
             quantity,
             premium,
+            contract_size: default_contract_size(),
             underlying_price,
             notes,
             status,
         }
+    }
+
+    /// Returns the trade with its contract multiplier set to `contract_size`.
+    ///
+    /// [`Trade::new`] records a contract that covers one unit of the
+    /// underlying; chain this to record market contracts, for example
+    /// `.with_contract_size(Positive::HUNDRED)` for a standard US equity
+    /// option.
+    #[must_use = "with_contract_size returns the updated trade and leaves the original untouched"]
+    #[inline]
+    pub fn with_contract_size(mut self, contract_size: Positive) -> Self {
+        self.contract_size = contract_size;
+        self
     }
 
     /// Convert back to `DateTime<Utc>` when you need it for pretty printing.
@@ -252,8 +283,9 @@ impl Trade {
     /// # Logic
     /// - The total cost is determined by the transaction's `action` (Buy/Sell),
     ///   `side` (Long/Short), `fee`, and `premium`, all adjusted by the `quantity`.
-    /// - The `fee` and `premium` are multiplied by the `quantity` to determine their
-    ///   respective costs.
+    /// - The `fee` is per contract and is multiplied by the `quantity`. The
+    ///   `premium` is per unit of the underlying and is multiplied by
+    ///   `contract_size × quantity`.
     /// - Depending on the combination of `action` and `side`, the following rules are applied:
     ///   - `(Action::Buy, Side::Long)` or `(Action::Sell, Side::Short)`:
     ///     The cost includes both `fees` and `premium`.
@@ -266,7 +298,7 @@ impl Trade {
     #[must_use]
     pub fn cost(&self) -> Positive {
         let fees = self.fee * self.quantity;
-        let premium = self.premium * self.quantity;
+        let premium = self.premium * self.contract_size * self.quantity;
         match (self.action, self.side) {
             (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => premium + fees,
             (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => fees,
@@ -278,7 +310,7 @@ impl Trade {
     ///
     /// # Description
     /// This function calculates the income by determining the premium associated
-    /// with the current object's `quantity` and `premium` values. The resulting
+    /// with the current object's `quantity`, `contract_size` and `premium` values. The resulting
     /// income depends on the combination of the `action` and `side` values:
     ///
     /// - If the action is `Buy` and the side is `Long`, or if the action is `Sell`
@@ -303,7 +335,7 @@ impl Trade {
     /// - `Positive` type for representing non-negative values.
     #[must_use]
     pub fn income(&self) -> Positive {
-        let premium = self.quantity * self.premium;
+        let premium = self.quantity * self.contract_size * self.premium;
         match (self.action, self.side) {
             (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => Positive::ZERO,
             (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => premium,
@@ -525,6 +557,7 @@ mod tests {
             timestamp: 1_700_000_000_000_000_000, // arbitrary nanos
             quantity: Positive::new_decimal(Decimal::from(3u32)).unwrap(),
             premium: pos_or_panic!(2.5), // 2.50
+            contract_size: Positive::ONE,
             underlying_price: Positive::new_decimal(Decimal::new(1850, 1)).unwrap(), // 185.0
             notes: Some("unit-test".to_string()),
             status: TradeStatus::Open,
@@ -544,6 +577,38 @@ mod tests {
         let json = serde_json::to_string(&trade).unwrap();
         let back: Trade = serde_json::from_str(&json).unwrap();
         assert_eq!(trade, back);
+    }
+
+    #[test]
+    fn test_trade_contract_size_missing_field_defaults_to_one() {
+        let trade = sample_trade().with_contract_size(Positive::HUNDRED);
+        let mut value = serde_json::to_value(&trade).unwrap();
+        value.as_object_mut().unwrap().remove("contract_size");
+        let legacy: Trade = serde_json::from_value(value).unwrap();
+        assert_eq!(legacy.contract_size, Positive::ONE);
+        assert_eq!(legacy, sample_trade());
+    }
+
+    #[test]
+    fn test_trade_contract_size_scales_premium_not_fees() {
+        let trade = sample_trade().with_contract_size(Positive::HUNDRED);
+        // (2.50 × 100 + 0.15) × 3
+        assert_eq!(trade.cost(), pos_or_panic!(750.45));
+        assert_eq!(trade.income(), Positive::ZERO);
+        assert_eq!(trade.net(), dec!(-750.45));
+
+        let mut sold = trade.clone();
+        sold.action = Action::Sell;
+        // 2.50 × 100 × 3 received, 0.15 × 3 in fees.
+        assert_eq!(sold.income(), pos_or_panic!(750.0));
+        assert_eq!(sold.cost(), pos_or_panic!(0.45));
+        assert_eq!(sold.net(), dec!(749.55));
+    }
+
+    #[test]
+    fn test_trade_new_contract_size_is_one() {
+        let trade = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+        assert_eq!(trade.contract_size, Positive::ONE);
     }
 
     #[test]

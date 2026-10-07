@@ -21,6 +21,7 @@ use super::base::{
 use super::shared::StraddleStrategy;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -643,6 +644,20 @@ impl BasicAble for LongStraddle {
                 .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.long_call, &self.long_put],
+            "LongStraddle::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.long_call, &mut self.long_put],
+            contract_size,
+            "LongStraddle::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for LongStraddle {
@@ -845,7 +860,7 @@ impl Optimizable for LongStraddle {
                 "missing put_ask for long put leg",
             )
         })?;
-        LongStraddle::new(
+        let mut strategy = LongStraddle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -860,7 +875,11 @@ impl Optimizable for LongStraddle {
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
-        )
+        )?;
+        // The rebuilt legs keep the contract size of the strategy they
+        // are rebuilt from.
+        strategy.set_contract_size(self.get_contract_size()?)?;
+        Ok(strategy)
     }
 }
 

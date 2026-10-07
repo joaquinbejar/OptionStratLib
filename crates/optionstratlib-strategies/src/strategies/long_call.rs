@@ -11,6 +11,7 @@ use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
 use chrono::Utc;
@@ -264,6 +265,17 @@ impl BasicAble for LongCall {
             Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
                 .unwrap_or(Positive::ZERO);
         Ok(())
+    }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(&[&self.long_call], "LongCall::get_contract_size")
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.long_call],
+            contract_size,
+            "LongCall::set_contract_size",
+        )?;
+        self.update_break_even_points()
     }
 }
 

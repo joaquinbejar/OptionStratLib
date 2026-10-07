@@ -21,6 +21,7 @@ use super::base::{
 use super::shared::CondorStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -837,6 +838,30 @@ impl BasicAble for IronCondor {
                 .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[
+                &self.short_call,
+                &self.short_put,
+                &self.long_call,
+                &self.long_put,
+            ],
+            "IronCondor::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [
+                &mut self.short_call,
+                &mut self.short_put,
+                &mut self.long_call,
+                &mut self.long_put,
+            ],
+            contract_size,
+            "IronCondor::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for IronCondor {
@@ -1078,7 +1103,7 @@ impl Optimizable for IronCondor {
                 })?;
 
                 let fee_per_leg = self.get_fees()? / 8.0;
-                IronCondor::new(
+                let mut strategy = IronCondor::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     short_call.strike_price,
@@ -1096,7 +1121,11 @@ impl Optimizable for IronCondor {
                     long_put_ask,
                     fee_per_leg,
                     fee_per_leg,
-                )
+                )?;
+                // The rebuilt legs keep the contract size of the strategy they
+                // are rebuilt from.
+                strategy.set_contract_size(self.get_contract_size()?)?;
+                Ok(strategy)
             }
             _ => Err(StrategyError::operation_not_supported(
                 "create_strategy",

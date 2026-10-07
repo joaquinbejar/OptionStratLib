@@ -6,6 +6,7 @@
 
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::strategies::base::lower_break_even;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use optionstratlib_core::model::decimal::d_div;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
@@ -267,6 +268,17 @@ impl BasicAble for ShortPut {
             Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
                 .unwrap_or(Positive::ZERO);
         Ok(())
+    }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(&[&self.short_put], "ShortPut::get_contract_size")
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.short_put],
+            contract_size,
+            "ShortPut::set_contract_size",
+        )?;
+        self.update_break_even_points()
     }
 }
 

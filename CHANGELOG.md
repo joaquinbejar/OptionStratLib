@@ -76,8 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the numerical fallback), SPAN margin and the strategies' break-evens,
   max profit/loss and premiums scale by `quantity × contract_size`.
   `Position` fees stay per contract (`fee × quantity`); `Position::premium`
-  is quoted per unit of the underlying, and `Position::trade()` reports
-  `premium × contract_size` as the per-contract `Trade::premium`. Prices
+  is quoted per unit of the underlying, and `Position::trade()` carries the
+  multiplier into the trade (`Trade::contract_size`, #760). Prices
   from the pricing models stay per unit. New API:
   `Options::with_contract_size(contract_size)` and
   `Options::position_size()` (`quantity × contract_size`, checked).
@@ -92,6 +92,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leg in market contracts, set `quantity` to the contract count and
   `contract_size` to the multiplier, and quote the premium per unit of the
   underlying; per-contract fees are unchanged.
+
+- **Trades, transactions and strategies carry the contract size** (#760),
+  closing the gaps #733 left.
+  - `Trade` and `pnl::Transaction` gain their own `contract_size: Positive`
+    (`#[serde(default)]` = 1), so a record stays self-contained once the
+    position it came from is gone. Their premium is quoted per unit of the
+    underlying and their fees stay per contract: `Trade::cost`, `income`,
+    `net` (and `PnL::from(Trade)`) and `Transaction::pnl` use
+    `premium × contract_size`. `Position::trade()` copies the option's
+    contract size and now records the per-unit `Position::premium` in
+    `Trade::premium` (with #733 alone it recorded `premium ×
+    contract_size`); the trade's cost, income and net are the same as
+    before. New API: `Trade::with_contract_size`,
+    `Transaction::with_contract_size` and `Transaction::contract_size()`.
+    `Trade::new` and `Transaction::new` keep their signatures and record a
+    one-unit contract.
+  - Strategies: `BasicAble` gains `get_contract_size()` (the size the
+    option legs share, an error when they differ) and
+    `set_contract_size(contract_size)` (sets every option leg and
+    recomputes the break-evens; zero is rejected). Both have
+    `NotSupported` defaults, and every built-in strategy and
+    `CustomStrategy` overrides them. The option quantities and fees stay
+    per contract, so the exposure scales with the multiplier. `CoveredCall`,
+    `Collar` and `ProtectivePut` instead re-express their option legs in
+    contracts of the new size, keeping the units covered and the fee per
+    share, so their payoff and fees are unchanged.
+    `Optimizable::create_strategy`, and so `find_optimal`, `get_best_area`
+    and `get_best_ratio`, keep the contract size of the strategy they
+    rebuild from; a strategy whose legs carry different sizes cannot be
+    rebuilt and returns an error. The delta-neutral optimizer sizes a new
+    leg like the positions it adjusts (1 when they differ).
+  - `ProtectivePut` break-evens are the zeros of the expiry P&L for any put
+    size: an under-hedged put (`quantity × contract_size` below the shares)
+    has one break-even, above or below the strike, and an over-hedged put
+    can have one below the strike as well. An exact hedge keeps the
+    previous single break-even.
+
+  With a contract size of 1 every result is unchanged. Migration: a struct
+  literal `Trade { .. }` must name the new field; add
+  `contract_size: Positive::ONE`, or build with `Trade::new(..)` and chain
+  `.with_contract_size(..)`. Code that read the per-contract premium from a
+  `Trade` built by `Position::trade()` multiplies `trade.premium` by
+  `trade.contract_size`. `Transaction` has private fields and no literal to
+  migrate.
 
 - **Stochastic pricing entry points take the generator from the caller**
   (#638). No public function of `optionstratlib-pricing` draws from the

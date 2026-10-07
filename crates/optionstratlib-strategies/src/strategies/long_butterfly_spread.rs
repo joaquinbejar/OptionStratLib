@@ -10,6 +10,7 @@ use super::base::{
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -791,6 +792,24 @@ impl BasicAble for LongButterflySpread {
         .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.short_call, &self.long_call_low, &self.long_call_high],
+            "LongButterflySpread::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [
+                &mut self.short_call,
+                &mut self.long_call_low,
+                &mut self.long_call_high,
+            ],
+            contract_size,
+            "LongButterflySpread::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for LongButterflySpread {
@@ -1032,7 +1051,7 @@ impl Optimizable for LongButterflySpread {
                     )
                 })?;
 
-                LongButterflySpread::new(
+                let mut strategy = LongButterflySpread::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
                     low_strike.strike_price,
@@ -1052,7 +1071,11 @@ impl Optimizable for LongButterflySpread {
                     self.long_call_low.close_fee,
                     self.long_call_high.open_fee,
                     self.long_call_high.close_fee,
-                )
+                )?;
+                // The rebuilt legs keep the contract size of the strategy they
+                // are rebuilt from.
+                strategy.set_contract_size(self.get_contract_size()?)?;
+                Ok(strategy)
             }
             _ => Err(StrategyError::operation_not_supported(
                 "create_strategy",

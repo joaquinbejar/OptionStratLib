@@ -326,3 +326,37 @@ fn test_custom_butterfly_contract_size_scales_profit() {
     assert_eq!(intrinsic(&one_unit), dec!(5));
     assert_eq!(intrinsic(&one_contract), dec!(500));
 }
+
+#[test]
+fn test_custom_butterfly_set_contract_size_matches_contract_legs() {
+    use optionstratlib_strategies::strategies::BasicAble;
+
+    let mut sized = butterfly(Positive::ONE, Positive::ONE);
+    sized
+        .set_contract_size(CONTRACT)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(sized.get_contract_size().ok(), Some(CONTRACT));
+
+    // The setter keeps the per-contract fees, so the reference is built in
+    // 100-unit contracts and given the one-unit legs' fees.
+    let mut reference = butterfly(Positive::ONE, CONTRACT);
+    for leg in &mut reference.positions {
+        leg.open_fee = pos_or_panic!(0.1);
+        leg.close_fee = pos_or_panic!(0.1);
+    }
+    reference
+        .update_break_even_points()
+        .unwrap_or_else(|e| panic!("{e}"));
+
+    for price in PRICES {
+        assert_eq!(
+            profit(&sized, price),
+            profit(&reference, price),
+            "S = {price}"
+        );
+    }
+    assert_eq!(
+        sized.get_break_even_points().ok(),
+        reference.get_break_even_points().ok()
+    );
+}
