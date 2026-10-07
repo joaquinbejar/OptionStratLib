@@ -301,6 +301,17 @@ fn baw_approximation(
         return Ok(european_price);
     }
 
+    // The put mirror (#709): at a negative rate, with `q >= 0`, early
+    // exercise of a put is never optimal. Holding is worth at least
+    // `K e^(-rT) - S e^(-qT) >= K - S`, so the American put is the European
+    // one. The quadratic approximation has no meaning there either: with
+    // `r < 0`, `M` and `K = 1 - e^(-rT)` are both negative and the critical
+    // price search runs off to a boundary whose moneyness power overflows.
+    // `r = 0` keeps the approximation, as before.
+    if matches!(option_style, OptionStyle::Put) && r < Decimal::ZERO {
+        return Ok(european_price);
+    }
+
     // Calculate BAW parameters
     let sigma_sq = d_mul(sigma, sigma, "pricing::american::sigma_sq")?;
     let m = d_div(
