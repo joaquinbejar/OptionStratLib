@@ -23,6 +23,13 @@ A call that provably never reaches a browser (for example a write to a path
 `// browser-test: allow -- <reason>` marker on the same line. A marker without
 a reason is itself reported.
 
+The scan is lexical: comments, string, raw-string and char literals are
+blanked first, and attributes may span lines or share the `fn` line. It
+does not follow calls, so a test that reaches a browser through a helper
+`fn`, or splits `render(` and `OutputType::Png(` across lines, is not seen;
+and `#[cfg_attr(.., ignore)]` does not count as ignored (reported, the safe
+side).
+
 Scanned: `src/`, `tests/`, `benches/`, and every `crates/*/src` and
 `crates/*/tests`.
 
@@ -48,68 +55,117 @@ BROWSER_CALL_RE = re.compile(
 )
 TEST_ATTR_RE = re.compile(r"#\[\s*(?:tokio::)?test\b")
 IGNORE_ATTR_RE = re.compile(r"#\[\s*ignore\b")
-FN_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+(\w+)")
+FN_RE = re.compile(
+    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:(?:async|const|unsafe)\s+)*fn\s+(\w+)"
+)
 MARKER = "browser-test: allow"
 MARKER_OK_RE = re.compile(r"browser-test: allow -- \S")
-LINE_COMMENT_RE = re.compile(r"//.*$")
-STRING_RE = re.compile(r'"(?:\\.|[^"\\])*"')
+LEXEME_RE = re.compile(
+    r"//[^\n]*"  # line comment
+    r"|/\*.*?\*/"  # block comment (not nested)
+    r"|b?r(#*)\"(?:.|\n)*?\"\1"  # raw string
+    r"|b?\"(?:\\.|[^\"\\])*\""  # string
+    r"|b?'(?:\\.|[^'\\\n])'",  # char literal (a lifetime never closes)
+    re.S,
+)
 
 
-def code_of(line: str) -> str:
-    """The line without string literals and its trailing `//` comment."""
-    return LINE_COMMENT_RE.sub("", STRING_RE.sub('""', line))
+def blank(text: str) -> str:
+    """`text` with comments and literals turned into spaces, newlines kept."""
+    return LEXEME_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+
+
+def split_attributes(lines: list[str], index: int, column: int) -> tuple[list[str], int, int]:
+    """Attributes starting at `lines[index][column:]`, which may span lines.
+
+    Returns them with the line and column right after the last one.
+    """
+    attrs: list[str] = []
+    while True:
+        rest = lines[index][column:]
+        lead = len(rest) - len(rest.lstrip())
+        if not rest.lstrip().startswith("#["):
+            return attrs, index, column
+        column += lead
+        depth = 0
+        text = ""
+        while index < len(lines):
+            line = lines[index]
+            while column < len(line):
+                char = line[column]
+                text += char
+                column += 1
+                if char == "[":
+                    depth += 1
+                elif char == "]":
+                    depth -= 1
+                    if depth == 0:
+                        break
+            if depth == 0:
+                break
+            text += " "
+            index += 1
+            column = 0
+        attrs.append(text)
+        if index >= len(lines):
+            return attrs, len(lines) - 1, 0
+        if not lines[index][column:].strip():
+            if index + 1 >= len(lines):
+                return attrs, index, column
+            index += 1
+            column = 0
+            while index < len(lines) - 1 and not lines[index].strip():
+                index += 1
 
 
 def scan_file(path: Path) -> list[str]:
     """Violations in one source file, as `path:line: message` strings."""
-    lines = path.read_text().splitlines()
+    raw_lines = path.read_text().splitlines()
+    lines = blank("\n".join(raw_lines)).split("\n")
     rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     problems: list[str] = []
 
-    for number, line in enumerate(lines, start=1):
+    for number, line in enumerate(raw_lines, start=1):
         if MARKER in line and not MARKER_OK_RE.search(line):
             problems.append(f"{rel}:{number}: '{MARKER}' marker without a reason")
 
-    attrs: list[str] = []
     index = 0
     while index < len(lines):
-        stripped = lines[index].strip()
-        if stripped.startswith("#["):
-            attrs.append(stripped)
+        if not lines[index].lstrip().startswith("#["):
             index += 1
             continue
-        fn = FN_RE.match(lines[index])
-        if fn and any(TEST_ATTR_RE.search(a) for a in attrs):
-            ignored = any(IGNORE_ATTR_RE.search(a) for a in attrs)
-            end = body_end(lines, index)
-            if not ignored:
-                for number in range(index, end + 1):
-                    raw = lines[number]
-                    if BROWSER_CALL_RE.search(code_of(raw)) and not MARKER_OK_RE.search(raw):
-                        problems.append(
-                            f"{rel}:{number + 1}: test `{fn.group(1)}` starts a browser "
-                            "but is not #[ignore]d"
-                        )
-            index = end + 1
-            attrs = []
+        attrs, index, column = split_attributes(lines, index, 0)
+        fn = FN_RE.match(lines[index][column:])
+        if not (fn and any(TEST_ATTR_RE.search(a) for a in attrs)):
             continue
-        if stripped and not stripped.startswith("//"):
-            attrs = []
-        index += 1
+        end = body_end(lines, index, column)
+        if not any(IGNORE_ATTR_RE.search(a) for a in attrs):
+            for number in range(index, end + 1):
+                if BROWSER_CALL_RE.search(lines[number]) and not MARKER_OK_RE.search(
+                    raw_lines[number]
+                ):
+                    problems.append(
+                        f"{rel}:{number + 1}: test `{fn.group(1)}` starts a browser "
+                        "but is not #[ignore]d"
+                    )
+        index = end + 1
     return problems
 
 
-def body_end(lines: list[str], start: int) -> int:
+def body_end(lines: list[str], start: int, column: int) -> int:
     """Index of the line that closes the function opened at `start`."""
     depth = 0
     opened = False
     for index in range(start, len(lines)):
-        code = code_of(lines[index])
-        depth += code.count("{") - code.count("}")
-        if "{" in code:
-            opened = True
-        if opened and depth <= 0:
-            return index
+        code = lines[index][column:] if index == start else lines[index]
+        for char in code:
+            if char == "{":
+                depth += 1
+                opened = True
+            elif char == "}":
+                depth -= 1
+                if opened and depth == 0:
+                    return index
     return len(lines) - 1
 
 
@@ -153,6 +209,20 @@ def self_test() -> int:
         ),
         "next_fn_not_leaked.rs": (
             "#[test]\n#[ignore]\nfn a() {\n}\n\n#[test]\nfn b() {\n    g.write_png(p);\n}\n",
+            1,
+        ),
+        "same_line_attr.rs": ("#[test] fn t() {\n    g.write_png(p);\n}\n", 1),
+        "multiline_attr.rs": (
+            "#[test]\n#[cfg_attr(\n    feature = \"x\",\n    allow(dead_code)\n)]\nfn t() {\n    g.write_svg(p);\n}\n",
+            1,
+        ),
+        "multiline_ignore.rs": (
+            "#[test]\n#[ignore = \"needs a\n browser\"]\nfn t() {\n    g.write_svg(p);\n}\n",
+            0,
+        ),
+        "unsafe_fn.rs": ("#[test]\nunsafe fn t() {\n    g.write_png(p);\n}\n", 1),
+        "block_comment_brace.rs": (
+            "#[test]\nfn t() {\n    /* } */\n    let c = '}';\n    let r = r#\"}\"#;\n    g.write_png(p);\n}\n",
             1,
         ),
     }

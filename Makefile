@@ -58,8 +58,8 @@ test-workspace-integration:
 # so `make test` never spawns a browser (`check-browser-tests` enforces it);
 # run this target explicitly, with WEBDRIVER_PATH pointing at a chromedriver
 # whose major version matches the installed Chrome. Exports run one at a time
-# (`STATIC_EXPORT_LOCK` in graph.rs), so parallel tests never share a
-# chromedriver and no headless Chrome outlives the run.
+# per process (`STATIC_EXPORT_LOCK` in graph.rs), so parallel tests in one
+# binary never share a chromedriver; do not run two of these targets at once.
 .PHONY: test-visual
 test-visual:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored
@@ -588,7 +588,7 @@ fix:
 	cargo fix --allow-staged --allow-dirty
 
 .PHONY: pre-push
-pre-push: fix fmt lint-fix test readme doc
+pre-push: fix fmt lint-fix check-browser-tests test readme doc
 
 # Builds the crate's documentation with every feature on. It used to run
 # `cargo clippy -- -W missing-docs`, which builds no documentation at all and
