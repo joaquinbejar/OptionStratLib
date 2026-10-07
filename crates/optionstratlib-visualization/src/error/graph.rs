@@ -1,5 +1,6 @@
 //! Target crate (ADR-0001 D6, roadmap M1-14): **visualization**. Owns `GraphError`.
 
+use optionstratlib_backtest::error::BacktestError;
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_math::error::{CurveError, SurfaceError};
 use thiserror::Error;
@@ -33,6 +34,20 @@ pub enum GraphError {
     /// representable `Decimal` range.
     #[error(transparent)]
     Decimal(Box<DecimalError>),
+
+    /// The backtest figures a report shows could not be computed, for
+    /// example when the statistics of a `SimulationStats` accumulator
+    /// overflow `Decimal`.
+    #[error(transparent)]
+    Backtest(Box<BacktestError>),
+}
+
+impl From<BacktestError> for GraphError {
+    #[cold]
+    #[inline(never)]
+    fn from(err: BacktestError) -> Self {
+        GraphError::Backtest(Box::new(err))
+    }
 }
 
 impl From<DecimalError> for GraphError {
