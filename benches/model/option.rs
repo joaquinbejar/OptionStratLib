@@ -9,6 +9,7 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::nz;
 use optionstratlib::pnl::utils::PnLCalculator;
 use optionstratlib::pricing::OptionPricing;
+use optionstratlib::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::{Positive, pos_or_panic};
 use rust_decimal_macros::dec;
@@ -44,7 +45,8 @@ pub(crate) fn benchmark_pricing(c: &mut Criterion) {
     });
 
     group.bench_function("telegraph_50_steps", |bencher| {
-        bencher.iter(|| black_box(option.calculate_price_telegraph(nz!(50))))
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        bencher.iter(|| black_box(option.calculate_price_telegraph(nz!(50), &mut rng)))
     });
 
     group.finish();

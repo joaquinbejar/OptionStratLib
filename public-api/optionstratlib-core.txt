@@ -1046,7 +1046,8 @@ pub mod optionstratlib_core::utils::rng
 pub const optionstratlib_core::utils::rng::DETERMINISTIC_RNG_DEFAULT_SEED: u64
 pub fn optionstratlib_core::utils::rng::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib_core::utils::rng::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
-pub fn optionstratlib_core::utils::rng::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::rng::get_random_element_with<'a, T, R: rand_core::Rng + ?core::marker::Sized>(&'a alloc::collections::btree::set::BTreeSet<T>, &mut R) -> core::option::Option<&'a T>
+pub fn optionstratlib_core::utils::rng::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
 pub mod optionstratlib_core::utils::time
 pub enum optionstratlib_core::utils::time::TimeFrame
 pub optionstratlib_core::utils::time::TimeFrame::Custom(positive::positive::Positive)
@@ -1105,7 +1106,8 @@ pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool
 pub fn optionstratlib_core::utils::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_core::utils::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib_core::utils::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
-pub fn optionstratlib_core::utils::random_decimal(&mut impl rand_core::Rng) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::get_random_element_with<'a, T, R: rand_core::Rng + ?core::marker::Sized>(&'a alloc::collections::btree::set::BTreeSet<T>, &mut R) -> core::option::Option<&'a T>
+pub fn optionstratlib_core::utils::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
 pub macro optionstratlib_core::assert_decimal_eq!
 pub macro optionstratlib_core::d2f!
 pub macro optionstratlib_core::d2fu!

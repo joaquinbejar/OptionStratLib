@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Stochastic pricing entry points take the generator from the caller**
+  (#638). No public function of `optionstratlib-pricing` draws from the
+  thread-local RNG implicitly any more, so a seeded generator reproduces
+  every result. Each entry point gains a trailing `rng` argument; there are
+  no unseeded convenience wrappers. Migration: append a generator, either
+  `&mut optionstratlib_core::utils::deterministic_rng(seed)` (re-exported as
+  `optionstratlib::utils::deterministic_rng`) for reproducible results or
+  `&mut rand::rng()` for the previous fresh-draw behaviour:
+  - `pricing::monte_carlo_option_pricing(option, steps, simulations)` →
+    `monte_carlo_option_pricing(option, steps, simulations, rng)`.
+  - `pricing::telegraph(option, no_steps, lambda_up, lambda_down)` →
+    `telegraph(option, no_steps, lambda_up, lambda_down, rng)`; the same
+    generator feeds the returns simulated to estimate a missing rate.
+  - `pricing::TelegraphProcess::new(lambda_up, lambda_down)` →
+    `new(lambda_up, lambda_down, rng)`, and `next_state(dt)` →
+    `next_state(dt, rng)`.
+  - `pricing::simulate_returns(mean, std_dev, length, time_step)` →
+    `simulate_returns(mean, std_dev, length, time_step, rng)`.
+  - `volatility::simulate_heston_volatility(kappa, theta, xi, v0, dt, steps)`
+    → `simulate_heston_volatility(kappa, theta, xi, v0, dt, steps, rng)`.
+  - `OptionPricing::calculate_price_telegraph(no_steps)` →
+    `calculate_price_telegraph(no_steps, rng)`, where `rng` is
+    `&mut dyn rand::Rng` so the trait stays dyn-compatible.
+
+  The free functions are generic over `R: rand::Rng + ?Sized`, as
+  `decimal_normal_sample_with` (#539) is. For a given generator state each
+  function makes the same draws, in the same order, that it made from the
+  thread RNG, so the distribution of every result is unchanged. In core,
+  `utils::get_random_element_with(set, rng)` is the new seeded form of
+  `get_random_element`, which remains as the documented thread-RNG
+  wrapper, and `utils::random_decimal` now accepts an unsized generator
+  (`R: Rng + ?Sized`), which no existing call site notices.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API

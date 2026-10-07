@@ -92,7 +92,7 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
 };
-use rand::random;
+use rand::{Rng, RngExt};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
@@ -135,13 +135,19 @@ impl TelegraphProcess {
     ///
     /// * `lambda_up` - Transition rate from state -1 to +1
     /// * `lambda_down` - Transition rate from state +1 to -1
+    /// * `rng` - The generator the initial state is drawn from (one uniform
+    ///   draw). A seeded generator such as
+    ///   [`optionstratlib_core::utils::deterministic_rng`] makes it
+    ///   reproducible; pass `&mut rand::rng()` to draw from the thread-local
+    ///   RNG.
     ///
     /// # Returns
     ///
-    /// A new TelegraphProcess with a randomly chosen initial state.
+    /// A new TelegraphProcess whose initial state is +1 or -1 with equal
+    /// probability.
     #[must_use]
-    pub fn new(lambda_up: Decimal, lambda_down: Decimal) -> Self {
-        let initial_state = if random::<f64>() < 0.5 { 1 } else { -1 };
+    pub fn new<R: Rng + ?Sized>(lambda_up: Decimal, lambda_down: Decimal, rng: &mut R) -> Self {
+        let initial_state = if rng.random::<f64>() < 0.5 { 1 } else { -1 };
         TelegraphProcess {
             lambda_up,
             lambda_down,
@@ -154,11 +160,13 @@ impl TelegraphProcess {
     /// # Arguments
     ///
     /// * `dt` - Time step
+    /// * `rng` - The generator the transition is drawn from (one uniform draw
+    ///   per call).
     ///
     /// # Returns
     ///
     /// The new state of the process (-1 or 1)
-    pub fn next_state(&mut self, dt: Decimal) -> i8 {
+    pub fn next_state<R: Rng + ?Sized>(&mut self, dt: Decimal, rng: &mut R) -> i8 {
         let lambda = if self.current_state == 1 {
             self.lambda_down
         } else {
@@ -194,7 +202,7 @@ impl TelegraphProcess {
             );
             0.0
         });
-        if random::<f64>() < p_f64 {
+        if rng.random::<f64>() < p_f64 {
             self.current_state *= -1;
         }
 
@@ -358,6 +366,11 @@ pub(crate) fn estimate_telegraph_parameters(
 /// * `no_steps` - Number of time steps for the simulation
 /// * `lambda_up` - Optional transition rate from down state (-1) to up state (+1)
 /// * `lambda_down` - Optional transition rate from up state (+1) to down state (-1)
+/// * `rng` - The generator every draw is taken from: the returns simulated to
+///   estimate a missing rate, the process's initial state and transitions,
+///   and the per-step price shock. A seeded generator such as
+///   [`optionstratlib_core::utils::deterministic_rng`] makes the price
+///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
 ///
 /// # Returns
 ///
@@ -376,11 +389,12 @@ pub(crate) fn estimate_telegraph_parameters(
 /// when the finite-difference recurrence fails to populate a node
 /// (e.g. parameter estimation produces degenerate rates) or when the
 /// terminal averaging yields a non-finite value.
-pub fn telegraph(
+pub fn telegraph<R: Rng + ?Sized>(
     option: &Options,
     no_steps: NonZeroUsize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
+    rng: &mut R,
 ) -> Result<Decimal, PricingError> {
     let no_steps_raw = no_steps.get();
     let price = option.underlying_price;
@@ -398,25 +412,40 @@ pub fn telegraph(
 
     let (lambda_up_temp, lambda_down_temp) = match (lambda_up, lambda_down) {
         (None, None) => {
-            let returns =
-                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(
+                Decimal::ZERO,
+                option.implied_volatility,
+                100,
+                one_over_252,
+                rng,
+            )?;
             estimate_telegraph_parameters(&returns, Decimal::ZERO)?
         }
         (Some(l_up), None) => {
-            let returns =
-                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(
+                Decimal::ZERO,
+                option.implied_volatility,
+                100,
+                one_over_252,
+                rng,
+            )?;
             let (_, l_down) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (None, Some(l_down)) => {
-            let returns =
-                simulate_returns(Decimal::ZERO, option.implied_volatility, 100, one_over_252)?;
+            let returns = simulate_returns(
+                Decimal::ZERO,
+                option.implied_volatility,
+                100,
+                one_over_252,
+                rng,
+            )?;
             let (l_up, _) = estimate_telegraph_parameters(&returns, Decimal::ZERO)?;
             (l_up, l_down)
         }
         (Some(l_up), Some(l_down)) => (l_up, l_down),
     };
-    let telegraph_process = TelegraphProcess::new(lambda_up_temp, lambda_down_temp);
+    let telegraph_process = TelegraphProcess::new(lambda_up_temp, lambda_down_temp, rng);
 
     let tp = telegraph_process;
     let mut telegraph_process = tp.clone();
@@ -442,7 +471,7 @@ pub fn telegraph(
     })?;
     let mut price = price.to_dec();
     for _ in 0..no_steps_raw {
-        let state = telegraph_process.next_state(dt);
+        let state = telegraph_process.next_state(dt, rng);
         let state_f64 = state as f64;
         let state_dec = finite_decimal(state_f64)
             .ok_or_else(|| PricingError::non_finite("pricing::telegraph::state_dec", state_f64))?;
@@ -452,7 +481,7 @@ pub fn telegraph(
             "pricing::telegraph::volatility",
         )?;
 
-        let rh_f64 = sqrt_dt_f64 * random::<f64>();
+        let rh_f64 = sqrt_dt_f64 * rng.random::<f64>();
         let rh = finite_decimal(rh_f64)
             .ok_or_else(|| PricingError::non_finite("pricing::telegraph::rh", rh_f64))?;
         let lhs = d_add(drift_dt, volatility, "pricing::telegraph::exponent_scale")?;
@@ -482,6 +511,7 @@ pub fn telegraph(
 #[cfg(test)]
 mod tests_telegraph_process_basis {
     use super::*;
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use optionstratlib_core::{model::Positive, pos_or_panic};
 
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -489,7 +519,8 @@ mod tests_telegraph_process_basis {
 
     #[test]
     fn test_telegraph_process_new() {
-        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3), &mut rng);
         assert_eq!(tp.lambda_up, dec!(0.5));
         assert_eq!(tp.lambda_down, dec!(0.3));
         assert!(tp.current_state == 1 || tp.current_state == -1);
@@ -497,15 +528,17 @@ mod tests_telegraph_process_basis {
 
     #[test]
     fn test_telegraph_process_next_state() {
-        let mut tp = TelegraphProcess::new(Decimal::ONE, Decimal::ONE);
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let mut tp = TelegraphProcess::new(Decimal::ONE, Decimal::ONE, &mut rng);
         let _initial_state = tp.get_current_state();
-        let new_state = tp.next_state(dec!(0.1));
+        let new_state = tp.next_state(dec!(0.1), &mut rng);
         assert!(new_state == 1 || new_state == -1);
         // There's a chance the state didn't change, so we can't assert inequality
     }
 
     #[test]
     fn test_next_state_empirical_flip_rate_matches_poisson() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         // Regression test for #351: prior code had an inverted underflow
         // guard that forced probability = 1.0 every step. Verify the
         // empirical flip rate now matches the Poisson transition
@@ -513,13 +546,13 @@ mod tests_telegraph_process_basis {
         // 5 σ Monte-Carlo bound.
         let lambda_f = 0.5_f64;
         let dt_f = 0.01_f64;
-        let mut tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
+        let mut tp = TelegraphProcess::new(dec!(0.5), dec!(0.5), &mut rng);
 
         let n = 100_000_u64;
         let mut prev = tp.get_current_state();
         let mut flips: u64 = 0;
         for _ in 0..n {
-            let next = tp.next_state(dec!(0.01));
+            let next = tp.next_state(dec!(0.01), &mut rng);
             if next != prev {
                 flips += 1;
             }
@@ -540,7 +573,8 @@ mod tests_telegraph_process_basis {
 
     #[test]
     fn test_telegraph_process_get_current_state() {
-        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5), &mut rng);
         let state = tp.get_current_state();
         assert!(state == 1 || state == -1);
     }
@@ -565,6 +599,7 @@ mod tests_telegraph_process_basis {
 
     #[test]
     fn test_telegraph() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         // Create a mock Options struct
         let option = Options {
             option_type: OptionType::European,
@@ -586,6 +621,7 @@ mod tests_telegraph_process_basis {
             optionstratlib_core::nz!(1000),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
+            &mut rng,
         );
         // price is stochastic
         // assert_relative_eq!(price, 0.0, epsilon = 0.0001);
@@ -595,6 +631,7 @@ mod tests_telegraph_process_basis {
 #[cfg(test)]
 mod tests_telegraph_process_extended {
     use super::*;
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use optionstratlib_core::{model::Positive, pos_or_panic};
 
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -621,7 +658,8 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_process_new() {
-        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3));
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.3), &mut rng);
         assert_eq!(tp.lambda_up, dec!(0.5));
         assert_eq!(tp.lambda_down, dec!(0.3));
         assert!(tp.get_current_state() == 1 || tp.get_current_state() == -1);
@@ -629,15 +667,17 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_process_next_state() {
-        let mut tp = TelegraphProcess::new(dec!(1000.0), dec!(1000.0)); // High rates to ensure state change
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let mut tp = TelegraphProcess::new(dec!(1000.0), dec!(1000.0), &mut rng); // High rates to ensure state change
         let initial_state = tp.get_current_state();
-        let new_state = tp.next_state(dec!(0.1));
+        let new_state = tp.next_state(dec!(0.1), &mut rng);
         assert_ne!(initial_state, new_state);
     }
 
     #[test]
     fn test_telegraph_process_get_current_state() {
-        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5));
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let tp = TelegraphProcess::new(dec!(0.5), dec!(0.5), &mut rng);
         let state = tp.get_current_state();
         assert!(state == 1 || state == -1);
     }
@@ -698,37 +738,43 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_with_provided_parameters() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
         let _price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         );
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_with_estimated_parameters() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
-        let _price = telegraph(&option, optionstratlib_core::nz!(100), None, None);
+        let _price = telegraph(&option, optionstratlib_core::nz!(100), None, None, &mut rng);
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_with_one_estimated_parameter() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
         let _price_up = telegraph(
             &option,
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             None,
+            &mut rng,
         );
         let _price_down = telegraph(
             &option,
             optionstratlib_core::nz!(100),
             None,
             Some(dec!(0.5)),
+            &mut rng,
         );
 
         // assert!(price_up > 0.0);
@@ -737,18 +783,21 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_different_no_steps() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
         let _price_100 = telegraph(
             &option,
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         );
         let _price_1000 = telegraph(
             &option,
             optionstratlib_core::nz!(1000),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         );
 
         // assert!(price_100 > 0.0);
@@ -758,6 +807,7 @@ mod tests_telegraph_process_extended {
 
     #[test]
     fn test_telegraph_zero_volatility() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let mut option = create_mock_option();
         option.implied_volatility = Positive::ZERO;
         let _price = telegraph(
@@ -765,12 +815,14 @@ mod tests_telegraph_process_extended {
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         );
         // assert_relative_eq!(price, 0.0, epsilon = 1e-6);
     }
 
     #[test]
     fn test_telegraph_zero_risk_free_rate() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let mut option = create_mock_option();
         option.risk_free_rate = Decimal::ZERO;
         let _price = telegraph(
@@ -778,23 +830,170 @@ mod tests_telegraph_process_extended {
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         );
         // assert!(price > 0.0);
     }
 
     #[test]
     fn test_telegraph_zero_time_to_expiration() {
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
         let price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
+            &mut rng,
         )
         .unwrap();
         assert_eq!(
             price,
             option.payoff_at_price(&option.underlying_price).unwrap()
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_telegraph_seeded {
+    use super::*;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
+    use rust_decimal_macros::dec;
+
+    /// `telegraph(&option_30d(), 100, Some(0.5), Some(0.5))` drawn from
+    /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`.
+    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(13.847827205510690706406628473);
+
+    fn option_30d() -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: Positive::HUNDRED,
+            strike_price: pos_or_panic!(60.0),
+            risk_free_rate: dec!(0.05),
+            option_style: OptionStyle::Call,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos_or_panic!(0.2),
+            underlying_symbol: "TEST".to_string(),
+            expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
+            quantity: Positive::ONE,
+            exotic_params: None,
+        }
+    }
+
+    fn state_path(seed: u64, steps: usize) -> Vec<i8> {
+        let mut rng = deterministic_rng(seed);
+        let mut tp = TelegraphProcess::new(dec!(1.0), dec!(2.0), &mut rng);
+        let mut path = vec![tp.get_current_state()];
+        path.extend((0..steps).map(|_| tp.next_state(dec!(0.1), &mut rng)));
+        path
+    }
+
+    #[test]
+    fn test_telegraph_process_same_seed_identical_state_path() {
+        assert_eq!(state_path(21, 500), state_path(21, 500));
+        assert_ne!(state_path(21, 500), state_path(22, 500));
+    }
+
+    #[test]
+    fn test_telegraph_process_new_seeded_initial_state_takes_both_values() {
+        let states: Vec<i8> = (0..64)
+            .map(|seed| {
+                TelegraphProcess::new(Decimal::ONE, Decimal::ONE, &mut deterministic_rng(seed))
+                    .get_current_state()
+            })
+            .collect();
+        assert!(states.contains(&1));
+        assert!(states.contains(&-1));
+    }
+
+    #[test]
+    fn test_telegraph_process_seeded_occupancy_matches_stationary_law() {
+        // Discrete chain with flip probabilities p_up = 1 - exp(-2 dt) and
+        // p_down = 1 - exp(-dt): the long-run share of time in +1 is
+        // p_up / (p_up + p_down) = 0.66556. The state correlation time is
+        // 1 / (lambda_up + lambda_down) = 1/3, so over T = 2000 the time
+        // average has a standard deviation of about 0.0086; the band is 5 of
+        // them.
+        let lambda_up = 2.0_f64;
+        let lambda_down = 1.0_f64;
+        let dt = 0.01_f64;
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let mut tp = TelegraphProcess::new(dec!(2.0), dec!(1.0), &mut rng);
+        let n = 200_000_u64;
+        let mut up: u64 = 0;
+        for _ in 0..n {
+            if tp.next_state(dec!(0.01), &mut rng) == 1 {
+                up += 1;
+            }
+        }
+        let p_up = 1.0 - (-lambda_up * dt).exp();
+        let p_down = 1.0 - (-lambda_down * dt).exp();
+        let expected = p_up / (p_up + p_down);
+        let share = up as f64 / n as f64;
+        assert!(
+            (share - expected).abs() < 0.043,
+            "share of time in +1 {share} differs from stationary {expected}"
+        );
+    }
+
+    #[test]
+    fn test_telegraph_same_seed_identical_price() {
+        let option = option_30d();
+        for lambdas in [
+            (Some(dec!(0.5)), Some(dec!(0.5))),
+            (Some(dec!(0.5)), None),
+            (None, Some(dec!(0.5))),
+            (None, None),
+        ] {
+            let price = |seed: u64| {
+                telegraph(
+                    &option,
+                    optionstratlib_core::nz!(100),
+                    lambdas.0,
+                    lambdas.1,
+                    &mut deterministic_rng(seed),
+                )
+                .unwrap()
+            };
+            assert_eq!(price(3), price(3), "lambdas {lambdas:?}");
+        }
+    }
+
+    #[test]
+    fn test_telegraph_seeded_regression_pinned() {
+        let price = telegraph(
+            &option_30d(),
+            optionstratlib_core::nz!(100),
+            Some(dec!(0.5)),
+            Some(dec!(0.5)),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        assert_eq!(price, PINNED_TELEGRAPH_PRICE);
+    }
+
+    #[test]
+    fn test_calculate_price_telegraph_matches_kernel_on_same_seed() {
+        use crate::pricing::OptionPricing;
+        let option = option_30d();
+        let via_trait = option
+            .calculate_price_telegraph(
+                optionstratlib_core::nz!(100),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+            )
+            .unwrap();
+        let via_kernel = telegraph(
+            &option,
+            optionstratlib_core::nz!(100),
+            None,
+            None,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        assert_eq!(via_trait, via_kernel);
     }
 }

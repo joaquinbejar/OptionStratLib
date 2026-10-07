@@ -40,12 +40,15 @@
 //!
 //! For fixed inputs, closed-form and lattice pricers are deterministic; an
 //! `ExpirationDate::DateTime` expiry is measured from the current clock, so
-//! use `ExpirationDate::Days` for reproducible results. Monte Carlo pricing
+//! use `ExpirationDate::Days` for reproducible results. No public function
+//! draws from the thread-local RNG implicitly (#638): Monte Carlo pricing
 //! (`pricing::monte_carlo_option_pricing`), the telegraph pricer
 //! (`pricing::telegraph`, `OptionPricing::calculate_price_telegraph`),
 //! `pricing::TelegraphProcess`, `pricing::simulate_returns` and
-//! `volatility::simulate_heston_volatility` sample the thread-local RNG and
-//! are not reproducible yet (#638).
+//! `volatility::simulate_heston_volatility` take the generator from the
+//! caller. Pass a seeded one such as
+//! `optionstratlib_core::utils::deterministic_rng(seed)` for reproducible
+//! results, or `&mut rand::rng()` for fresh draws on every call.
 //!
 //! ## Imports
 //!
