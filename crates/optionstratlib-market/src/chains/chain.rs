@@ -1581,50 +1581,45 @@ impl OptionChain {
     ///
     /// # Arguments
     ///
-    /// * `step` - The increment value between consecutive strike prices
+    /// * `step` - The increment between consecutive strike prices. It must be
+    ///   strictly positive; a zero step returns `None`.
     ///
     /// # Returns
     ///
-    /// * `Option<Vec<f64>>` - A vector containing the strike prices if the option chain
-    ///   is not empty, or None if there are no options in the chain.
+    /// * `Option<Vec<Positive>>` - The strike prices if the option chain is not
+    ///   empty and `step` is strictly positive, or `None` otherwise. `None` is
+    ///   also returned if advancing a strike by `step` overflows.
     ///
-    pub fn strike_price_range_vec(&self, step: f64) -> Option<Vec<f64>> {
-        let first = self.options.iter().next();
-        let last = self.options.iter().next_back();
-        // Reject step <= 0 and non-finite inputs: without a strictly
-        // positive increment the while loop below would spin forever
-        // (step == 0) or never enter (step NaN). `Positive::new` already
-        // rejects negative / NaN values; the extra `is_zero` check closes
-        // the infinite-loop gap.
-        let step = match Positive::new(step) {
-            Ok(s) if !s.is_zero() => s,
-            Ok(_) => {
-                tracing::warn!(
-                    step,
-                    "strike_price_range_vec: step must be strictly positive; returning None"
-                );
-                return None;
-            }
-            Err(e) => {
-                tracing::warn!(
-                    step,
-                    error = %e,
-                    "strike_price_range_vec: step must be non-negative and finite; returning None"
-                );
-                return None;
-            }
-        };
-        if let (Some(first), Some(last)) = (first, last) {
-            let mut range = Vec::new();
-            let mut current_price = first.strike_price;
-            while current_price <= last.strike_price {
-                range.push(current_price.to_f64());
-                current_price += step;
-            }
-            Some(range)
-        } else {
-            None
+    #[must_use]
+    pub fn strike_price_range_vec(&self, step: Positive) -> Option<Vec<Positive>> {
+        // Without a strictly positive increment the loop below would spin
+        // forever; `Positive` already rules out negative and non-finite steps.
+        if step.is_zero() {
+            tracing::warn!(
+                %step,
+                "strike_price_range_vec: step must be strictly positive; returning None"
+            );
+            return None;
         }
+        let first = self.options.iter().next()?;
+        let last = self.options.iter().next_back()?;
+        let mut range = Vec::new();
+        let mut current_price = first.strike_price;
+        while current_price <= last.strike_price {
+            range.push(current_price);
+            current_price = match current_price.checked_add(&step) {
+                Ok(next) => next,
+                Err(e) => {
+                    tracing::warn!(
+                        %step,
+                        error = %e,
+                        "strike_price_range_vec: strike overflowed while stepping; returning None"
+                    );
+                    return None;
+                }
+            };
+        }
+        Some(range)
     }
 
     /// Creates random positions based on specified quantities of puts and calls
@@ -4209,8 +4204,8 @@ mod tests_filter_option_data {
 
 #[cfg(test)]
 mod tests_strike_price_range_vec {
-    #![allow(clippy::indexing_slicing)]
     use super::*;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_empty_chain() {
@@ -4221,7 +4216,7 @@ mod tests_strike_price_range_vec {
             None,
             None,
         );
-        assert_eq!(chain.strike_price_range_vec(5.0), None);
+        assert_eq!(chain.strike_price_range_vec(pos_or_panic!(5.0)), None);
     }
 
     #[test]
@@ -4247,9 +4242,8 @@ mod tests_strike_price_range_vec {
             None,
             None,
         );
-        let range = chain.strike_price_range_vec(5.0).unwrap();
-        assert_eq!(range.len(), 1);
-        assert_eq!(range[0], 100.0);
+        let range = chain.strike_price_range_vec(pos_or_panic!(5.0)).unwrap();
+        assert_eq!(range, vec![Positive::HUNDRED]);
     }
 
     #[test]
@@ -4277,8 +4271,11 @@ mod tests_strike_price_range_vec {
                 None,
             );
         }
-        let range = chain.strike_price_range_vec(5.0).unwrap();
-        assert_eq!(range, vec![90.0, 95.0, 100.0]);
+        let range = chain.strike_price_range_vec(pos_or_panic!(5.0)).unwrap();
+        assert_eq!(
+            range,
+            vec![pos_or_panic!(90.0), pos_or_panic!(95.0), Positive::HUNDRED]
+        );
     }
 
     #[test]
@@ -4306,9 +4303,80 @@ mod tests_strike_price_range_vec {
                 None,
             );
         }
-        let range = chain.strike_price_range_vec(2.0).unwrap();
-        assert_eq!(range.len(), 6); // [90, 92, 94, 96, 98, 100]
-        assert_eq!(range[1] - range[0], 2.0);
+        let range = chain.strike_price_range_vec(Positive::TWO).unwrap();
+        let expected: Vec<Positive> = [90.0, 92.0, 94.0, 96.0, 98.0, 100.0]
+            .iter()
+            .map(|strike| pos_or_panic!(*strike))
+            .collect();
+        assert_eq!(range, expected);
+    }
+
+    #[test]
+    fn test_strike_price_range_vec_zero_step_returns_none() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        chain.add_option(
+            Positive::HUNDRED,
+            None,
+            None,
+            None,
+            None,
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert_eq!(chain.strike_price_range_vec(Positive::ZERO), None);
+    }
+
+    #[test]
+    fn test_strike_price_range_vec_fractional_step_pins_exact_strikes() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        for strike in [dec!(99.5), dec!(100.7)] {
+            chain.add_option(
+                Positive::new_decimal(strike).unwrap(),
+                None,
+                None,
+                None,
+                None,
+                pos_or_panic!(0.2),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+        }
+        // A decimal step accumulates without binary rounding drift, so the
+        // last strike lands exactly on 100.7 and is included.
+        let step = Positive::new_decimal(dec!(0.3)).unwrap();
+        let range = chain.strike_price_range_vec(step).unwrap();
+        let expected: Vec<Positive> = [
+            dec!(99.5),
+            dec!(99.8),
+            dec!(100.1),
+            dec!(100.4),
+            dec!(100.7),
+        ]
+        .into_iter()
+        .map(|strike| Positive::new_decimal(strike).unwrap())
+        .collect();
+        assert_eq!(range, expected);
     }
 }
 
@@ -7923,10 +7991,10 @@ mod chain_coverage_tests {
         let chain = create_test_chain();
 
         // Test with different step sizes
-        let range_1 = chain.strike_price_range_vec(1.0);
+        let range_1 = chain.strike_price_range_vec(Positive::ONE);
         assert!(range_1.is_some());
 
-        let range_5 = chain.strike_price_range_vec(5.0);
+        let range_5 = chain.strike_price_range_vec(pos_or_panic!(5.0));
         assert!(range_5.is_some());
 
         // Compare ranges
@@ -7942,7 +8010,7 @@ mod chain_coverage_tests {
             None,
             None,
         );
-        let range = empty_chain.strike_price_range_vec(5.0);
+        let range = empty_chain.strike_price_range_vec(pos_or_panic!(5.0));
         assert!(range.is_none());
     }
 
@@ -8207,10 +8275,10 @@ mod chain_coverage_tests_bis {
         let chain = create_test_chain();
 
         // Test with different step sizes
-        let range_1 = chain.strike_price_range_vec(1.0);
+        let range_1 = chain.strike_price_range_vec(Positive::ONE);
         assert!(range_1.is_some());
 
-        let range_5 = chain.strike_price_range_vec(5.0);
+        let range_5 = chain.strike_price_range_vec(pos_or_panic!(5.0));
         assert!(range_5.is_some());
 
         // Compare ranges
@@ -8226,7 +8294,7 @@ mod chain_coverage_tests_bis {
             None,
             None,
         );
-        let range = empty_chain.strike_price_range_vec(5.0);
+        let range = empty_chain.strike_price_range_vec(pos_or_panic!(5.0));
         assert!(range.is_none());
     }
 

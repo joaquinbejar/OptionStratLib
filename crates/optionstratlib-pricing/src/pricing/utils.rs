@@ -35,6 +35,10 @@ use rust_decimal_macros::dec;
 /// * `std_dev` - The standard deviation of returns (annualized)
 /// * `length` - The number of returns to simulate
 /// * `time_step` - The time step for each return (e.g., 1/252 for daily returns assuming 252 trading days)
+/// * `rng` - The generator every uniform draw of the Box-Muller transform is
+///   taken from. A seeded generator such as
+///   [`optionstratlib_core::utils::deterministic_rng`] makes the returns
+///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
 ///
 /// # Returns
 ///
@@ -48,14 +52,17 @@ use rust_decimal_macros::dec;
 /// variate cannot be represented as a `Decimal` (e.g. NaN or out-of-range
 /// float), and [`DecimalError::ArithmeticError`] when the
 /// `mean + std_dev * z` combination overflows the `Decimal` range.
-pub fn simulate_returns(
+pub fn simulate_returns<R: Rng + ?Sized>(
     mean: Decimal,
     std_dev: Positive,
     length: usize,
     time_step: Decimal,
+    rng: &mut R,
 ) -> Result<Vec<Decimal>, DecimalError> {
     /// Generates a pair of normally distributed random numbers using Box-Muller transform
-    fn generate_normal_pair<R: Rng>(rng: &mut R) -> Result<(Decimal, Decimal), DecimalError> {
+    fn generate_normal_pair<R: Rng + ?Sized>(
+        rng: &mut R,
+    ) -> Result<(Decimal, Decimal), DecimalError> {
         // Generate two uniform random numbers between 0 and 1
         let u1 = random_decimal(rng)?;
         let u2 = random_decimal(rng)?;
@@ -111,11 +118,10 @@ pub fn simulate_returns(
     }
 
     let mut returns = Vec::with_capacity(length);
-    let mut rng = rand::rng();
 
     // Generate pairs of normally distributed random numbers using Box-Muller transform
     for _ in 0..length.div_ceil(2) {
-        let (n1, n2) = generate_normal_pair(&mut rng)?;
+        let (n1, n2) = generate_normal_pair(rng)?;
 
         // Scale the random numbers by mean and std_dev
         let r1 = d_add(
@@ -499,6 +505,7 @@ pub(crate) fn calculate_discounted_payoff(
 /// # Arguments
 ///
 /// * `dt` - A small time step over which the Wiener increment is calculated.
+/// * `rng` - The generator the standard normal sample is drawn from.
 ///
 /// # Returns
 ///
@@ -513,12 +520,14 @@ pub(crate) fn calculate_discounted_payoff(
 /// - [`PricingError::NonFinite`] if the sampled normal value is non-finite,
 ///   tagged `"pricing::monte_carlo::wiener_increment::sample"`.
 ///
-pub(crate) fn wiener_increment(dt: Decimal) -> Result<Decimal, PricingError> {
+pub(crate) fn wiener_increment<R: Rng + ?Sized>(
+    dt: Decimal,
+    rng: &mut R,
+) -> Result<Decimal, PricingError> {
     let normal = Normal::new(0.0, 1.0)
         .map_err(|e| DecimalError::arithmetic_error("Normal::new(0.0, 1.0)", &e.to_string()))?;
-    let mut rng = rand::rng();
 
-    let sample_f64 = normal.sample(&mut rng);
+    let sample_f64 = normal.sample(rng);
     let sample = finite_decimal(sample_f64).ok_or_else(|| {
         PricingError::non_finite("pricing::monte_carlo::wiener_increment::sample", sample_f64)
     })?;
@@ -579,6 +588,7 @@ mod tests_simulate_returns {
     use super::*;
     use num_traits::FromPrimitive;
     use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
 
     use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::decimal::DecimalStats;
@@ -591,7 +601,14 @@ mod tests_simulate_returns {
         let length = 252; // One year of daily returns
         let time_step = Decimal::from_f64(1.0 / 252.0).unwrap(); // Daily time step
 
-        let returns = simulate_returns(mean, std_dev, length, time_step).unwrap();
+        let returns = simulate_returns(
+            mean,
+            std_dev,
+            length,
+            time_step,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         assert_eq!(returns.len(), length);
 
@@ -611,7 +628,16 @@ mod tests_simulate_returns {
 #[cfg(test)]
 mod tests_simulate_returns_bis {
     use super::*;
+
+    /// First three returns of `N(0, 0.2^2 * 0.004)` drawn from
+    /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`.
+    const PINNED_RETURNS: [Decimal; 3] = [
+        dec!(-0.0069930797843514744440741021),
+        dec!(0.0115367336920983749405395342),
+        dec!(-0.0018475187016137067853641022),
+    ];
     use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
 
     use num_traits::FromPrimitive;
     use optionstratlib_core::assert_decimal_eq;
@@ -626,6 +652,7 @@ mod tests_simulate_returns_bis {
             pos_or_panic!(0.2),
             length,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         assert_eq!(returns.len(), length);
@@ -638,6 +665,7 @@ mod tests_simulate_returns_bis {
             pos_or_panic!(0.2),
             1000,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         let mean = returns.mean().unwrap();
@@ -648,7 +676,14 @@ mod tests_simulate_returns_bis {
     fn test_simulate_returns_zero_volatility() {
         let mean = dec!(0.05);
         let time_step = Decimal::from_f64(1.0 / 252.0).unwrap();
-        let returns = simulate_returns(mean, Positive::ZERO, 100, time_step).unwrap();
+        let returns = simulate_returns(
+            mean,
+            Positive::ZERO,
+            100,
+            time_step,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         let expected = mean * time_step;
         for r in returns {
@@ -663,6 +698,7 @@ mod tests_simulate_returns_bis {
             pos_or_panic!(0.2),
             1,
             Decimal::from_f64(1.0 / 252.0).unwrap(),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         assert_eq!(returns.len(), 1);
@@ -670,7 +706,14 @@ mod tests_simulate_returns_bis {
 
     #[test]
     fn test_simulate_returns_yearly_step() {
-        let returns = simulate_returns(dec!(0.05), pos_or_panic!(0.2), 100, dec!(1.0)).unwrap();
+        let returns = simulate_returns(
+            dec!(0.05),
+            pos_or_panic!(0.2),
+            100,
+            dec!(1.0),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
         assert_eq!(returns.len(), 100);
         for r in returns {
             assert!(r > dec!(-1.0));
@@ -686,8 +729,63 @@ mod tests_simulate_returns_bis {
                 pos_or_panic!(-0.2),
                 100,
                 Decimal::from_f64(1.0 / 252.0).unwrap(),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn test_simulate_returns_same_seed_identical_returns() {
+        let draw = |seed: u64| {
+            simulate_returns(
+                dec!(0.05),
+                pos_or_panic!(0.2),
+                9,
+                dec!(0.004),
+                &mut deterministic_rng(seed),
+            )
+            .unwrap()
+        };
+        assert_eq!(draw(5), draw(5));
+        assert_ne!(draw(5), draw(6));
+    }
+
+    #[test]
+    fn test_simulate_returns_seeded_regression_pinned() {
+        let returns = simulate_returns(
+            Decimal::ZERO,
+            pos_or_panic!(0.2),
+            3,
+            dec!(0.004),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        assert_eq!(returns, PINNED_RETURNS.to_vec());
+    }
+
+    #[test]
+    fn test_simulate_returns_seeded_moments_match_parameters() {
+        // 20_000 N(mu dt, sigma^2 dt) draws: the sample mean has standard
+        // error sigma sqrt(dt / n) ~ 8.9e-5 and the sample standard deviation
+        // sigma sqrt(dt / (2 n)) ~ 6.3e-5; both bands are 5 of them.
+        let mean = dec!(0.05);
+        let time_step = dec!(0.004);
+        let returns = simulate_returns(
+            mean,
+            pos_or_panic!(0.2),
+            20_000,
+            time_step,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        let sample_mean = returns.clone().mean().unwrap();
+        let sample_std = returns.std_dev().unwrap();
+        assert_decimal_eq!(sample_mean, mean * time_step, dec!(0.000447));
+        assert_decimal_eq!(
+            sample_std,
+            dec!(0.2) * time_step.sqrt().unwrap(),
+            dec!(0.000317)
         );
     }
 }

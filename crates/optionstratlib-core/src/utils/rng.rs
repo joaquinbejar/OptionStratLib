@@ -46,10 +46,13 @@ pub fn deterministic_rng(seed: u64) -> StdRng {
     StdRng::seed_from_u64(seed)
 }
 
-/// Gets a random element from a BTreeSet.
+/// Gets a random element from a BTreeSet, drawing from the thread-local RNG.
 ///
-/// This function returns a random element from the provided BTreeSet using a uniform distribution.
-/// If the set is empty, it returns None.
+/// This is the unseeded path: every call reads [`rand::rng()`], so two runs
+/// pick different elements. Reproducible callers use
+/// [`get_random_element_with`] with a seeded generator such as
+/// [`deterministic_rng`]; this function is exactly that helper applied to the
+/// thread-local RNG.
 ///
 /// # Type Parameters
 ///
@@ -65,11 +68,44 @@ pub fn deterministic_rng(seed: u64) -> StdRng {
 ///
 #[must_use]
 pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
+    get_random_element_with(set, &mut rng())
+}
+
+/// Gets a uniformly chosen element from a BTreeSet, drawing from `rng`.
+///
+/// One index is drawn with [`RngExt::random_range`] over `0..set.len()`, so
+/// a seeded `rng` picks the same element on every run. An empty set draws
+/// nothing and returns `None`.
+///
+/// # Arguments
+///
+/// * `set` - The set to pick from.
+/// * `rng` - The generator the index is drawn from.
+///
+/// # Returns
+///
+/// A reference to the chosen element, or `None` if the set is empty.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib_core::utils::{deterministic_rng, get_random_element_with};
+/// use std::collections::BTreeSet;
+///
+/// let set: BTreeSet<u32> = (0..10).collect();
+/// let first = get_random_element_with(&set, &mut deterministic_rng(7));
+/// let second = get_random_element_with(&set, &mut deterministic_rng(7));
+/// assert_eq!(first, second);
+/// ```
+#[must_use]
+pub fn get_random_element_with<'a, T, R: Rng + ?Sized>(
+    set: &'a BTreeSet<T>,
+    rng: &mut R,
+) -> Option<&'a T> {
     if set.is_empty() {
         return None;
     }
-    let mut thread_rng = rng();
-    let random_index = thread_rng.random_range(0..set.len());
+    let random_index = rng.random_range(0..set.len());
     set.iter().nth(random_index)
 }
 
@@ -94,7 +130,7 @@ pub fn get_random_element<T>(set: &BTreeSet<T>) -> Option<&T> {
 /// number generator cannot be converted to a `Decimal`. This can occur if the `f64`
 /// value is NaN or infinite.
 ///
-pub fn random_decimal(rng: &mut impl Rng) -> Result<Decimal, DecimalError> {
+pub fn random_decimal<R: Rng + ?Sized>(rng: &mut R) -> Result<Decimal, DecimalError> {
     Decimal::from_f64(rng.random::<f64>()).ok_or(DecimalError::ConversionError {
         // The source type being converted from
         from_type: "f64".to_string(),
@@ -130,7 +166,7 @@ mod tests_get_random_element {
         for i in 0..5 {
             set.insert(i);
         }
-        let random_element = get_random_element(&set);
+        let random_element = get_random_element_with(&set, &mut deterministic_rng(3));
         assert!(random_element.is_some());
         assert!((0..5).contains(random_element.unwrap()));
     }
@@ -144,8 +180,9 @@ mod tests_get_random_element {
         }
 
         let mut counts = vec![0; 3];
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         for _ in 0..1000 {
-            if let Some(&value) = get_random_element(&set) {
+            if let Some(&value) = get_random_element_with(&set, &mut rng) {
                 counts[value as usize] += 1;
             }
         }
@@ -154,6 +191,50 @@ mod tests_get_random_element {
         // (allowing for some random variation)
         for count in counts {
             assert!(count > 200); // Should be around 333 for uniform distribution
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_get_random_element_with {
+    use super::*;
+
+    #[test]
+    fn test_get_random_element_with_empty_set_returns_none() {
+        let set: BTreeSet<i32> = BTreeSet::new();
+        assert!(get_random_element_with(&set, &mut deterministic_rng(1)).is_none());
+    }
+
+    #[test]
+    fn test_get_random_element_with_same_seed_same_sequence() {
+        let set: BTreeSet<u32> = (0..100).collect();
+        let mut a = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let mut b = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        for _ in 0..50 {
+            assert_eq!(
+                get_random_element_with(&set, &mut a),
+                get_random_element_with(&set, &mut b)
+            );
+        }
+    }
+
+    #[test]
+    fn test_get_random_element_with_seeded_distribution_is_uniform() {
+        let set: BTreeSet<usize> = (0..3).collect();
+        let mut rng = deterministic_rng(42);
+        let mut counts = [0_u32; 3];
+        let n = 30_000_u32;
+        for _ in 0..n {
+            let value = get_random_element_with(&set, &mut rng).copied();
+            assert!(value.is_some());
+            if let Some(v) = value {
+                counts[v] += 1;
+            }
+        }
+        // Each count is Binomial(n, 1/3): sd = sqrt(n * 1/3 * 2/3) ~ 81.6.
+        // A 5 sd band around n / 3 = 10_000.
+        for count in counts {
+            assert!((9_592..=10_408).contains(&count), "count {count}");
         }
     }
 }
