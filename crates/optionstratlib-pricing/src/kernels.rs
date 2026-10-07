@@ -43,7 +43,7 @@
 use crate::error::PricingError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
 use num_traits::ToPrimitive;
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{

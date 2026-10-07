@@ -14,10 +14,10 @@ pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<po
 pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool # float tolerance comparison
 pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool # float tolerance comparison (root re-export)
 pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)> # explicit export to f64 for plotting backends
-pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError> # checked Decimal -> nearest f64 (ties to even) for kernels, so a value written with the digits of an f64 literal gives back that literal (#670); fails rather than returning a non-finite value
-pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> # checked f64 -> Decimal conversion; rejects non-finite input
-pub fn optionstratlib_math::curves::Point2D::from_f64_tuple(f64, f64) -> core::result::Result<Self, optionstratlib_math::error::curves::CurveError> # checked construction from f64 coordinates
-pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result::Result<(f64, f64), optionstratlib_math::error::curves::CurveError> # checked export to f64 coordinates
+pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::DecimalError> # checked Decimal -> nearest f64 (ties to even) for kernels, so a value written with the digits of an f64 literal gives back that literal (#670); fails rather than returning a non-finite value
+pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError> # checked f64 -> Decimal conversion; rejects non-finite input
+pub fn optionstratlib_math::curves::Point2D::from_f64_tuple(f64, f64) -> core::result::Result<Self, optionstratlib_math::error::CurveError> # checked construction from f64 coordinates
+pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result::Result<(f64, f64), optionstratlib_math::error::CurveError> # checked export to f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::from_f64_tuple(f64, f64, f64) -> core::result::Result<Self, optionstratlib_math::error::SurfaceError> # checked construction from f64 coordinates
 pub fn optionstratlib_math::surfaces::Point3D::to_f64_tuple(&self) -> core::result::Result<(f64, f64, f64), optionstratlib_math::error::SurfaceError> # checked export to f64 coordinates
 pub optionstratlib_visualization::visualization::Series2D::line_width: core::option::Option<f64> # rendering geometry: line width in pixels, passed to Plotly as is; not a market value (#542)

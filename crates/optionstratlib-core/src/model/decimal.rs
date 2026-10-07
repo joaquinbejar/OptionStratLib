@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 25/12/24
 ******************************************************************************/
-use crate::error::decimal::DecimalError;
+use crate::error::DecimalError;
 use num_traits::FromPrimitive;
 use positive::{Positive, PositiveError};
 use rand::distr::Distribution;

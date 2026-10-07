@@ -70,24 +70,63 @@
 //! * `OptionsResult<T>` - Specialized result type for options operations
 //! * `DecimalResult<T>` - Specialized result type for decimal calculations
 //!
-//! ## Module Structure
+//! ## Canonical paths (0.22, #550)
 //!
-//! ```text
-//! error/
-//! ├── chains.rs       - Option chain errors
-//! ├── common.rs       - Shared error types
-//! ├── curves.rs       - Mathematical curve errors
-//! ├── decimal.rs      - Decimal computation errors
-//! ├── greeks.rs       - Greeks calculation errors
-//! ├── interpolation.rs - Interpolation errors
-//! ├── metrics.rs      - Performance metrics errors
-//! ├── options.rs      - Core options errors
-//! ├── position.rs     - Position management errors
-//! ├── probability.rs  - Statistical analysis errors
-//! ├── strategies.rs   - Trading strategy errors
-//! ├── surfaces.rs     - Surface construction errors
-//! ├── trade.rs        - Trade management errors
-//! └── volatility.rs   - Volatility calculation errors
+//! Every error type has one canonical facade path, flat in this module:
+//! `optionstratlib::error::PricingError`, `optionstratlib::error::ChainError`,
+//! the aggregate `optionstratlib::error::Error`, and so on. The defining
+//! component crate exposes the same type at `optionstratlib_<crate>::error::<Type>`.
+//!
+//! The five component error modules that hold detail enums (the `...Kind`
+//! types) are re-exported as modules, and the kinds are canonical there:
+//! `error::position` (core), `error::greeks` (pricing), `error::chains`
+//! (market), `error::probability` (analytics) and `error::strategies`
+//! (strategies). They are not flattened into this module because their
+//! names collide across crates: `StrategyErrorKind` is defined in both
+//! `error::position` and `error::chains`, `PriceErrorKind` in both
+//! `error::probability` and `error::strategies`.
+//!
+//! The 0.21 file modules that held nothing but a type already exported flat
+//! here are gone: `error::decimal`, `error::trade`, `error::curves`,
+//! `error::pricing`, `error::simulation`, and `error::unified` for
+//! `error::Error`. Their types keep their flat paths. (The error codes on the
+//! `compile_fail` examples below are checked by nightly rustdoc only; stable
+//! checks that the import fails.)
+//!
+//! ```rust
+//! use optionstratlib::error::{DecimalError, DecimalResult, TradeError};
+//! # #[cfg(feature = "math")]
+//! use optionstratlib::error::{CurveError, CurvesResult};
+//! # #[cfg(feature = "pricing")]
+//! use optionstratlib::error::{PricingError, PricingResult};
+//! # #[cfg(feature = "simulation")]
+//! use optionstratlib::error::{SimulationError, SimulationResult};
+//! # #[cfg(feature = "visualization")]
+//! use optionstratlib::error::Error;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use optionstratlib::error::decimal::DecimalError;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use optionstratlib::error::trade::TradeError;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use optionstratlib::error::curves::CurveError;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use optionstratlib::error::pricing::PricingError;
+//! ```
+//!
+//! ```compile_fail,E0432
+//! use optionstratlib::error::simulation::SimulationError;
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib::error::unified::Error;
 //! ```
 //!
 //! ## Ownership in the multi-crate workspace (ADR-0001 D6, roadmap M1-14)
@@ -123,33 +162,33 @@
 /// Provides a single error type for unified error handling across modules.
 /// It wraps `GraphError`, so it needs `visualization`.
 #[cfg(feature = "visualization")]
-pub mod unified;
+mod unified;
 
 /// Core errors (`optionstratlib-core`): decimal arithmetic, option
 /// contracts, positions and trades.
 pub use optionstratlib_core::error::{
     DecimalError, DecimalResult, OperationErrorKind, OptionsError, OptionsResult, PositionError,
-    TradeError, decimal, position, trade,
+    TradeError, position,
 };
 
 /// Math errors (`optionstratlib-math`): curves, surfaces, interpolation and
 /// the metrics extracted from them.
 #[cfg(feature = "math")]
 pub use optionstratlib_math::error::{
-    CurveError, CurvesResult, InterpolationError, MetricsError, SurfaceError, curves,
+    CurveError, CurvesResult, InterpolationError, MetricsError, SurfaceError,
 };
 
 /// Pricing errors (`optionstratlib-pricing`): pricing models, Greeks and
 /// volatility solvers.
 #[cfg(feature = "pricing")]
 pub use optionstratlib_pricing::error::{
-    GreeksError, PricingError, PricingResult, VolatilityError, greeks, pricing,
+    GreeksError, GreeksResult, PricingError, PricingResult, VolatilityError, greeks,
 };
 
 /// Simulation errors (`optionstratlib-simulation`): random walk generation,
 /// stochastic process parameters and step calculation.
 #[cfg(feature = "simulation")]
-pub use optionstratlib_simulation::error::{SimulationError, SimulationResult, simulation};
+pub use optionstratlib_simulation::error::{SimulationError, SimulationResult};
 
 /// Market errors (`optionstratlib-market`): option chains, series and
 /// OHLCV readers.
@@ -160,13 +199,13 @@ pub use optionstratlib_market::error::{ChainError, OhlcvError, chains};
 /// projections onto curves and surfaces, and transactions.
 #[cfg(feature = "analytics")]
 pub use optionstratlib_analytics::error::{
-    ProbabilityError, ProjectionError, TransactionError, probability,
+    ProbabilityError, ProbabilityResult, ProjectionError, TransactionError, probability,
 };
 
 /// Strategy errors (`optionstratlib-strategies`): building, validating,
 /// optimising and evaluating a strategy.
 #[cfg(feature = "strategies")]
-pub use optionstratlib_strategies::error::{StrategyError, strategies};
+pub use optionstratlib_strategies::error::{StrategyError, StrategyResult, strategies};
 
 /// Backtest errors (`optionstratlib-backtest`): a strategy driven through a
 /// simulation.

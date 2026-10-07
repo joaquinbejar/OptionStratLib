@@ -15,7 +15,7 @@ use crate::geometrics::{
 };
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter,
 };

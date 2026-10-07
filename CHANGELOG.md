@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Canonical 0.22 error paths: the duplicate error file modules are gone**
+  (#550). Each error type has one canonical path, flat in its crate's
+  `error` module and in the facade's `optionstratlib::error`. The file
+  modules that held nothing beyond a type already exported flat were public
+  only because 0.21 exposed them, and are now private. The modules that hold
+  detail enums (the `...Kind` types) stay public and are canonical for
+  them: `error::position` (core), `error::greeks` (pricing),
+  `error::chains` (market), `error::probability` (analytics) and
+  `error::strategies` (strategies). The kinds are not flattened because
+  their names collide once the facade gathers every crate's errors
+  (`StrategyErrorKind` in core `position` and market `chains`,
+  `PriceErrorKind` in analytics `probability` and strategies `strategies`).
+  No type, variant or behaviour changes.
+  Removed paths and their migration:
+
+  | Removed path | Use instead |
+  | --- | --- |
+  | `optionstratlib_core::error::decimal::{DecimalError, DecimalResult}` | `optionstratlib_core::error::{DecimalError, DecimalResult}` |
+  | `optionstratlib_core::error::trade::TradeError` | `optionstratlib_core::error::TradeError` |
+  | `optionstratlib_math::error::curves::{CurveError, CurvesResult}` | `optionstratlib_math::error::{CurveError, CurvesResult}` |
+  | `optionstratlib_pricing::error::pricing::{PricingError, PricingResult}` | `optionstratlib_pricing::error::{PricingError, PricingResult}` |
+  | `optionstratlib_simulation::error::simulation::{SimulationError, SimulationResult}` | `optionstratlib_simulation::error::{SimulationError, SimulationResult}` |
+  | `optionstratlib::error::decimal::*` | `optionstratlib::error::{DecimalError, DecimalResult}` |
+  | `optionstratlib::error::trade::*` | `optionstratlib::error::TradeError` |
+  | `optionstratlib::error::curves::*` | `optionstratlib::error::{CurveError, CurvesResult}` |
+  | `optionstratlib::error::pricing::*` | `optionstratlib::error::{PricingError, PricingResult}` |
+  | `optionstratlib::error::simulation::*` | `optionstratlib::error::{SimulationError, SimulationResult}` |
+  | `optionstratlib::error::unified::Error` | `optionstratlib::error::Error` (or `optionstratlib::prelude::Error`) |
+
+  Every `...Result` alias now has a flat path: `optionstratlib_pricing::error`
+  exports `GreeksResult` flat (it was reachable only as
+  `error::greeks::GreeksResult`, which still resolves), and the facade's
+  `error` module adds `GreeksResult`, `ProbabilityResult` and
+  `StrategyResult`.
+
+  Canonical-path policy for the rest of the API: an item defined in a
+  submodule and re-exported by its parent is canonical at the parent
+  (`optionstratlib::pricing::black_scholes`, not
+  `optionstratlib::pricing::black_scholes_model::black_scholes`). The
+  defining submodules (65 of them, such as `pricing::black_scholes_model`,
+  `strategies::long_call` and `backtesting::metrics`) stay public as
+  documentation anchors; nothing there is removed. The crate docs of
+  `optionstratlib` state the policy under "Canonical paths".
+
+  The facade module docs and each changed component's `error` module docs
+  list the canonical paths, with a `compile_fail` doctest per removed path
+  next to a compiling one for its replacement. A new facade test,
+  `tests/unit/canonical_paths_test.rs`, compares every canonical
+  facade path with its defining crate by `TypeId`: the root re-exports, one
+  type per facade module, and every flat error re-export, kind module and
+  the aggregate `Error`. Workspace call sites that used the long paths
+  (math curves and surfaces, pricing kernels, telegraph, pricing utils and
+  the Greeks error) now use the flat ones.
+
 - **Options carry a contract multiplier** (#733). `Options` gains
   `contract_size: Positive`, the units of the underlying one contract
   covers (100 for a standard US equity option). It defaults to 1 and is
@@ -71,6 +125,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `get_random_element`, which remains as the documented thread-RNG
   wrapper, and `utils::random_decimal` now accepts an unsized generator
   (`R: Rng + ?Sized`), which no existing call site notices.
+
+- **The telegraph pricer is a Monte-Carlo expectation driven by a normal
+  shock** (#743). `pricing::telegraph` used to return the discounted payoff
+  of a single path whose per-step shock was `sqrt(dt) * U`, `U` uniform on
+  `[0, 1)`, with the drift multiplied by that shock as well. Each step now
+  applies the log-Euler update `S *= exp((r - sigma^2 / 2) * dt + sigma *
+  state * sqrt(dt) * Z)` with `Z` standard normal, every path draws its own
+  initial regime, and the price is the discounted payoff averaged over
+  `no_paths` paths. The signature gains that count:
+  `telegraph(option, no_steps, lambda_up, lambda_down, rng)` →
+  `telegraph(option, no_steps, no_paths, lambda_up, lambda_down, rng)`,
+  with `no_paths: NonZeroUsize`, in the position `monte_carlo_option_pricing`
+  gives its `simulations`. The new `pricing::TELEGRAPH_PATHS` (10 000) is the
+  count `OptionPricing::calculate_price_telegraph` uses; that method's
+  signature is unchanged. Migration: insert a path count after `no_steps`,
+  `optionstratlib::pricing::TELEGRAPH_PATHS` for the trait's default.
+  Results change for every input and seed: prices now converge to the
+  risk-neutral expectation (the Black-Scholes price for a European option
+  without dividend yield) instead of being one biased draw, and a call
+  costs `no_paths` times as many steps as before.
 
 - **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
   signature changes from `strike_price_range_vec(&self, step: f64) ->
@@ -1133,6 +1207,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (1.88).
 
 ### Fixed
+
+- **Heston volatility simulation draws a normal Wiener increment** (#742).
+  `volatility::simulate_heston_volatility` drew `dW` as
+  `uniform[0, 1) * sqrt(dt)`, a strictly positive shock with mean
+  `sqrt(dt) / 2`, so the `xi * sqrt(v) * dW` term pushed the variance up on
+  every step and the path drifted far above `theta` instead of
+  mean-reverting to it. `dW` is now a standard normal from the caller's
+  `rng` scaled by `sqrt(dt)`, i.e. `N(0, dt)`. No signature changes, but
+  **simulated Heston paths change**: the same seed yields a different path,
+  and results pinned against the old draw must be re-baselined. Tests: a
+  seeded 100 000-draw check that the increment has zero mean and variance
+  `dt`; a 200-path seeded check that the long-run mean variance
+  (`kappa = 2`, `theta = 0.04`, `xi = 0.3`, Feller satisfied) lands within
+  0.004 of `theta` (0.0406), where the uniform draw gave 0.64.
 
 - **Visualization crate debt carried over from the monolith** (#690).
   `impl_graph_for_payoff_strategy!` now names every item it expands to
