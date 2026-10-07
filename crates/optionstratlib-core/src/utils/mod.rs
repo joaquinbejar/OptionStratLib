@@ -97,7 +97,8 @@ mod traits;
 
 pub use numeric::{approx_equal, calculate_log_returns};
 pub use rng::{
-    DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng, get_random_element, random_decimal,
+    DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng, get_random_element, get_random_element_with,
+    random_decimal,
 };
 pub use time::TimeFrame;
 pub use traits::Len;

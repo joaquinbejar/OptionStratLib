@@ -47,7 +47,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::save_to_json(&self, &s
 pub async fn optionstratlib_market::chains::chain::OptionChain::save_to_json_async(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::set_from_title(&mut self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::set_optiondata_extra_params(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>>
+pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, positive::positive::Positive) -> core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
 pub fn optionstratlib_market::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib_market::chains::utils::OptionChainBuildParams, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)
@@ -268,7 +268,7 @@ pub fn optionstratlib_market::chains::chain::OptionChain::save_to_json(&self, &s
 pub async fn optionstratlib_market::chains::chain::OptionChain::save_to_json_async(&self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::set_from_title(&mut self, &str) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::set_optiondata_extra_params(&mut self) -> core::result::Result<(), optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, f64) -> core::option::Option<alloc::vec::Vec<f64>>
+pub fn optionstratlib_market::chains::chain::OptionChain::strike_price_range_vec(&self, positive::positive::Positive) -> core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
 pub fn optionstratlib_market::chains::chain::OptionChain::theta_exposure(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::to_build_params(&self) -> core::result::Result<optionstratlib_market::chains::utils::OptionChainBuildParams, optionstratlib_market::error::chains::ChainError>
 pub fn optionstratlib_market::chains::chain::OptionChain::update_expiration_date(&mut self, alloc::string::String)

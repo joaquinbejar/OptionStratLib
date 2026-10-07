@@ -5,6 +5,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, finite_decimal};
+use rand::Rng;
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
@@ -16,6 +17,10 @@ use tracing::instrument;
 /// * `option` - An `Options` struct containing the option's parameters, such as underlying price, strike price, risk-free rate, implied volatility, and expiration date.
 /// * `steps` - An integer indicating the number of time steps in the simulation.
 /// * `simulations` - An integer indicating the number of Monte Carlo simulations to run.
+/// * `rng` - The generator every Wiener increment is drawn from, one standard
+///   normal sample per step per path. A seeded generator such as
+///   [`optionstratlib_core::utils::deterministic_rng`] makes the estimate
+///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
 ///
 /// # Returns
 ///
@@ -44,17 +49,18 @@ use tracing::instrument;
 /// encounters a non-finite value (e.g. volatility overflow) or when
 /// the terminal payoff averaging produces a non-representable
 /// `Decimal`.
-#[instrument(skip(option), fields(
+#[instrument(skip(option, rng), fields(
     steps = steps.get(),
     simulations = simulations.get(),
     strike = %option.strike_price,
     style = ?option.option_style,
     side = ?option.side,
 ))]
-pub fn monte_carlo_option_pricing(
+pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
     option: &Options,
     steps: NonZeroUsize,       // Number of time steps per path
     simulations: NonZeroUsize, // Number of Monte Carlo simulations
+    rng: &mut R,
 ) -> Result<Decimal, PricingError> {
     let steps_raw = steps.get();
     let simulations_raw = simulations.get();
@@ -70,7 +76,7 @@ pub fn monte_carlo_option_pricing(
     for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps_raw {
-            let w = wiener_increment(dt_dec)?;
+            let w = wiener_increment(dt_dec, rng)?;
             let diffusion = d_mul(
                 option.implied_volatility.to_dec(),
                 w,
@@ -240,10 +246,17 @@ mod tests {
     use optionstratlib_core::constants::ZERO;
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use optionstratlib_core::{assert_decimal_eq, f2du};
     use optionstratlib_core::{model::Positive, pos_or_panic};
     use rust_decimal::MathematicalOps;
     use rust_decimal_macros::dec;
+
+    /// Price of `create_test_option` over 12 steps and 500 paths drawn from
+    /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`.
+    /// The average is accumulated and discounted in `f64` (the platform `exp`
+    /// may differ in the last ulp), so it is compared to `1e-9`.
+    const PINNED_SEEDED_PRICE: Decimal = dec!(9.88846375599113);
 
     fn create_test_option() -> Options {
         Options {
@@ -269,6 +282,7 @@ mod tests {
             &option,
             optionstratlib_core::nz!(252),
             optionstratlib_core::nz!(1000),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         // The price should be close to the Black-Scholes price for these parameters
@@ -284,6 +298,7 @@ mod tests {
             &option,
             optionstratlib_core::nz!(25),
             optionstratlib_core::nz!(100),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         let expected_price = f64::max(
@@ -301,6 +316,7 @@ mod tests {
             &option,
             optionstratlib_core::nz!(252),
             optionstratlib_core::nz!(100),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         // The price should be higher with higher volatility
@@ -315,6 +331,7 @@ mod tests {
             &option,
             optionstratlib_core::nz!(30),
             optionstratlib_core::nz!(100),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         // The price should be lower for a shorter expiration
@@ -322,22 +339,49 @@ mod tests {
     }
 
     #[test]
-    fn test_monte_carlo_option_pricing_consistency() {
+    fn test_monte_carlo_option_pricing_same_seed_identical_price() {
         let option = create_test_option();
-        let _price1 = monte_carlo_option_pricing(
+        let price = |seed: u64| {
+            monte_carlo_option_pricing(
+                &option,
+                optionstratlib_core::nz!(50),
+                optionstratlib_core::nz!(200),
+                &mut deterministic_rng(seed),
+            )
+            .unwrap()
+        };
+        assert_eq!(price(7), price(7));
+        assert_ne!(price(7), price(8));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_seeded_regression_pinned() {
+        let option = create_test_option();
+        let price = monte_carlo_option_pricing(
             &option,
-            optionstratlib_core::nz!(100),
-            optionstratlib_core::nz!(100),
+            optionstratlib_core::nz!(12),
+            optionstratlib_core::nz!(500),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
-        let _price2 = monte_carlo_option_pricing(
+        assert_decimal_eq!(price, PINNED_SEEDED_PRICE, dec!(1e-9));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_seeded_converges_to_black_scholes() {
+        // Black-Scholes call, S = K = 100, r = 5%, sigma = 20%, T = 1:
+        // 10.4506. The ATM payoff standard deviation is about 14.7, so with
+        // 4000 paths the standard error is about 0.23; the band is 4 of
+        // them, wide enough to also absorb the Euler bias of 12 steps.
+        let option = create_test_option();
+        let price = monte_carlo_option_pricing(
             &option,
-            optionstratlib_core::nz!(100),
-            optionstratlib_core::nz!(100),
+            optionstratlib_core::nz!(12),
+            optionstratlib_core::nz!(4000),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
-        // Two runs should produce similar results
-        // assert_relative_eq!(price1, price2,  0.05);
+        assert_decimal_eq!(price, dec!(10.4506), dec!(0.92));
     }
 }
 

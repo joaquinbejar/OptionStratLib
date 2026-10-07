@@ -188,8 +188,6 @@ pub trait Graph {
     ///
     /// # Behavior
     ///
-    /// * Temporarily sets the `LC_ALL` and `LANG` environment variables to "en_US.UTF-8" to ensure
-    ///   compatibility when writing the PNG.
     /// * Prepares the target file path using the `prepare_file_path` function. If the preparation fails,
     ///   an error is returned.
     ///
@@ -207,17 +205,19 @@ pub trait Graph {
     /// * Issues with preparing the file path (e.g., invalid path, permissions issue).
     /// * Internal errors with the image writing process.
     ///
-    /// # Safety
-    ///
-    /// This function uses `unsafe` code to modify environment variables (`LC_ALL` and `LANG`).
-    /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior.
-    /// Ensure this function is used in a controlled environment where such changes are safe.
-    ///
     /// # Concurrency
     ///
     /// Static exports run one at a time per process: concurrent calls in the
     /// same process wait on a shared lock so they never share a chromedriver
     /// (#724). Separate processes are not coordinated.
+    ///
+    /// # Blocking
+    ///
+    /// This is a synchronous call. It blocks the calling thread while it waits
+    /// for the lock, while the WebDriver renders, and, after a failed attempt,
+    /// for a short pause before the next of up to three attempts. From async
+    /// code, run it on a blocking thread (for example
+    /// `tokio::task::spawn_blocking`) rather than on an executor thread.
     ///
     #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
@@ -334,6 +334,14 @@ pub trait Graph {
     /// Static exports run one at a time per process: concurrent calls in the
     /// same process wait on a shared lock so they never share a chromedriver
     /// (#724). Separate processes are not coordinated.
+    ///
+    /// # Blocking
+    ///
+    /// This is a synchronous call. It blocks the calling thread while it waits
+    /// for the lock, while the WebDriver renders, and, after a failed attempt,
+    /// for a short pause before the next of up to three attempts. From async
+    /// code, run it on a blocking thread (for example
+    /// `tokio::task::spawn_blocking`) rather than on an executor thread.
     ///
     #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {

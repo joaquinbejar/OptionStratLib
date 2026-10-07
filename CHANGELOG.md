@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Stochastic pricing entry points take the generator from the caller**
+  (#638). No public function of `optionstratlib-pricing` draws from the
+  thread-local RNG implicitly any more, so a seeded generator reproduces
+  every result. Each entry point gains a trailing `rng` argument; there are
+  no unseeded convenience wrappers. Migration: append a generator, either
+  `&mut optionstratlib_core::utils::deterministic_rng(seed)` (re-exported as
+  `optionstratlib::utils::deterministic_rng`) for reproducible results or
+  `&mut rand::rng()` for the previous fresh-draw behaviour:
+  - `pricing::monte_carlo_option_pricing(option, steps, simulations)` →
+    `monte_carlo_option_pricing(option, steps, simulations, rng)`.
+  - `pricing::telegraph(option, no_steps, lambda_up, lambda_down)` →
+    `telegraph(option, no_steps, lambda_up, lambda_down, rng)`; the same
+    generator feeds the returns simulated to estimate a missing rate.
+  - `pricing::TelegraphProcess::new(lambda_up, lambda_down)` →
+    `new(lambda_up, lambda_down, rng)`, and `next_state(dt)` →
+    `next_state(dt, rng)`.
+  - `pricing::simulate_returns(mean, std_dev, length, time_step)` →
+    `simulate_returns(mean, std_dev, length, time_step, rng)`.
+  - `volatility::simulate_heston_volatility(kappa, theta, xi, v0, dt, steps)`
+    → `simulate_heston_volatility(kappa, theta, xi, v0, dt, steps, rng)`.
+  - `OptionPricing::calculate_price_telegraph(no_steps)` →
+    `calculate_price_telegraph(no_steps, rng)`, where `rng` is
+    `&mut dyn rand::Rng` so the trait stays dyn-compatible.
+
+  The free functions are generic over `R: rand::Rng + ?Sized`, as
+  `decimal_normal_sample_with` (#539) is. For a given generator state each
+  function makes the same draws, in the same order, that it made from the
+  thread RNG, so the distribution of every result is unchanged. In core,
+  `utils::get_random_element_with(set, rng)` is the new seeded form of
+  `get_random_element`, which remains as the documented thread-RNG
+  wrapper, and `utils::random_decimal` now accepts an unsized generator
+  (`R: Rng + ?Sized`), which no existing call site notices.
+
+- **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
+  signature changes from `strike_price_range_vec(&self, step: f64) ->
+  Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->
+  Option<Vec<Positive>>`, so strikes no longer cross the public boundary as
+  `f64` and a decimal step such as `0.3` accumulates without binary rounding
+  drift. A zero step still returns `None`, and a strike that overflows while
+  stepping now returns `None` instead of panicking. Migration: pass the step
+  as `Positive` (`pos_or_panic!(5.0)`, `Positive::new_decimal(dec!(0.5))?`)
+  and read the strikes as `Positive`; call `.to_f64()` on an element only
+  where a non-monetary `f64` is genuinely needed, e.g. a plot axis.
+
 - **`OptionSeries` reads its expiry keys back as absolute dates** (#643).
   Each `chains` key is still written as `YYYY-MM-DD`, but deserialization
   now reads it as `ExpirationDate::DateTime` at 18:30 UTC on that date (the
@@ -911,6 +955,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (1.88).
 
 ### Fixed
+
+- **Visualization crate debt carried over from the monolith** (#690).
+  `impl_graph_for_payoff_strategy!` now names every item it expands to
+  (`Graph`, `GraphData`, `Series2D`, `Positive`, `Decimal`, the strategy
+  traits, `tracing`) through `$crate` paths, so callers no longer need to
+  import them; the hidden `optionstratlib_visualization::__private` module
+  carries the re-exports and is not public API. `write_png` and `write_svg`
+  document that they block the calling thread, and lose a stale `# Safety`
+  section and `LC_ALL` note that described code that does not exist. The
+  `GraphError` conversions from `CurveError` and `SurfaceError` are `#[cold]`,
+  an orphan comment block in `error/graph.rs` is gone, and the module docs
+  name the real `GraphSurface` variant and no longer suggest extending
+  `GraphData` from a downstream crate. Chart data is unchanged.
 
 - **`CoveredCall`, `ProtectivePut` and `Collar` mark to market in
   `calculate_pnl`** (#728). They returned `calculate_pnl_at_expiration`, the

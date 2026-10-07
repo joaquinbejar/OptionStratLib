@@ -68,6 +68,7 @@ mod inherent_without_trait_import {
 mod trait_form_from_owning_module {
     use super::*;
     use optionstratlib::pricing::OptionPricing;
+    use optionstratlib::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use std::num::NonZeroUsize;
 
     #[test]
@@ -77,7 +78,14 @@ mod trait_form_from_owning_module {
         assert!(option.calculate_price_black_scholes().is_ok());
         assert!(option.calculate_price_binomial(steps).is_ok());
         assert!(option.calculate_price_binomial_tree(steps).is_ok());
-        assert!(option.calculate_price_telegraph(steps).is_ok());
+        assert!(
+            option
+                .calculate_price_telegraph(
+                    steps,
+                    &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)
+                )
+                .is_ok()
+        );
         assert!(option.time_value().is_ok());
         assert!(option.calculate_implied_volatility(dec!(3.0)).is_ok());
     }

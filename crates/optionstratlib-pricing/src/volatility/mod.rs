@@ -116,6 +116,7 @@
 //! use rust_decimal_macros::dec;
 //! use optionstratlib_core::assert_decimal_eq;
 //! use optionstratlib_pricing::volatility::simulate_heston_volatility;
+//! use optionstratlib_core::utils::deterministic_rng;
 //!
 //! let kappa = dec!(2.0);      // Mean reversion speed
 //! let theta = dec!(0.04);     // Long-term variance
@@ -124,7 +125,9 @@
 //! let dt = Decimal::ONE / dec!(252.0);   // Daily time step
 //! let steps = 252;      // Number of steps
 //!
-//! let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps);
+//! // A seeded generator makes the path reproducible.
+//! let mut rng = deterministic_rng(42);
+//! let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps, &mut rng);
 //! ```
 //!
 //! ## Time Frame Handling

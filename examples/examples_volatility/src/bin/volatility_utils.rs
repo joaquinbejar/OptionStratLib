@@ -34,6 +34,9 @@ fn main() {
     let v0 = dec!(0.04);
     let dt = Decimal::ONE / dec!(252.0);
     let steps = 5;
-    let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+    // A seeded generator makes the simulated path reproducible; pass
+    // `&mut rand::rng()` for a fresh path on every run.
+    let mut rng = optionstratlib::utils::deterministic_rng(42);
+    let heston_vol = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps, &mut rng).unwrap();
     info!("Simulated Heston Volatility: {:?}", heston_vol);
 }
