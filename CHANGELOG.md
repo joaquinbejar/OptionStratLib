@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   | `GraphData, Series2D, Surface3D, TraceMode` | `optionstratlib::visualization::<Type>` |
   | `make_surface` (`plotly`) | `optionstratlib::visualization::make_surface` |
   | `Path` | `std::path::Path` |
-  | `ToPrimitive` | `rust_decimal::prelude::ToPrimitive (or num_traits::ToPrimitive)` |
+  | `ToPrimitive` | `rust_decimal::prelude::ToPrimitive` |
   | everything else the five globs exported (free functions such as `black_scholes`, `delta`, `implied_volatility`, `historical_volatility`; types such as `Greek`, `GreeksSnapshot`, `BinomialPricingParams`, `GenericPricingEngine`, `Priceable`, `DELTA_THRESHOLD`; the option-chain metric traits; the backtest results and metrics) and their module paths | the same name under `optionstratlib::pricing`, `optionstratlib::greeks`, `optionstratlib::volatility`, `optionstratlib::metrics` or `optionstratlib::backtesting` |
 
   - New executable checks: a facade test target, `tests/prelude/main.rs`,

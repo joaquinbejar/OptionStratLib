@@ -1706,11 +1706,8 @@ pub use optionstratlib_pricing::volatility;
 #[cfg(feature = "market")]
 pub use optionstratlib_market::series;
 
-/// * `prelude` - Convenient re-exports of commonly used types and traits.
-///
-/// The prelude module provides a single import point for the most frequently used
-/// types, traits, and functions from the OptionStratLib library. This reduces the
-/// amount of boilerplate imports needed when working with the library.
+/// Domain vocabulary, extension traits and the entry type of each capability;
+/// the module docs give the selection rule and the feature of each item.
 pub mod prelude;
 
 pub use optionstratlib_core::{assert_decimal_eq, d2f, d2fu, f2d, f2du, nz};

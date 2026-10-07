@@ -73,7 +73,8 @@
 //! Import from the canonical module instead of the prelude for anything
 //! else: free functions (`optionstratlib::pricing::black_scholes`,
 //! `optionstratlib::greeks::delta`, `optionstratlib::chains::generator_optionchain`),
-//! errors (`optionstratlib::error::{Error, PricingError, ..}`), the chart
+//! errors (`optionstratlib::error::{Error, PricingError, ..}`; the aggregate
+//! `Error` exists only with `visualization`), the chart
 //! models you build when implementing `Graph`
 //! (`optionstratlib::visualization::{GraphData, Series2D, ..}`), the
 //! option-chain metric traits (`optionstratlib::metrics::..`), the

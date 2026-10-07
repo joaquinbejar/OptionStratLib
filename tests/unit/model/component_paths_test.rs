@@ -149,7 +149,7 @@ fn market_series(
 }
 
 #[test]
-fn test_pricing_items_through_facade_modules_and_prelude() {
+fn test_pricing_items_through_facade_modules() {
     same_item(
         optionstratlib::pricing::black_scholes,
         optionstratlib_pricing::pricing::black_scholes,
@@ -489,7 +489,7 @@ fn test_simulation_items_through_facade_modules_and_prelude() {
 /// through the facade's `chains` / `series` modules and the prelude (#537).
 #[cfg(feature = "synthetic")]
 #[test]
-fn test_synthetic_generators_through_facade_modules_and_prelude() {
+fn test_synthetic_generators_through_facade_modules() {
     same_item(
         optionstratlib::chains::generator_optionchain,
         optionstratlib_market::chains::generator_optionchain,
@@ -510,7 +510,7 @@ fn test_synthetic_generators_through_facade_modules_and_prelude() {
 /// Backtest items are `optionstratlib-backtest`'s, reached through the
 /// facade's `backtesting` module, the prelude and `error` (#538).
 #[test]
-fn test_backtest_items_through_facade_modules_and_prelude() {
+fn test_backtest_items_through_facade_modules() {
     same_item(
         optionstratlib::backtesting::results::SimulationStatsResult::from_results,
         optionstratlib_backtest::backtesting::results::SimulationStatsResult::from_results,
