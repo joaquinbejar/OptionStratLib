@@ -695,6 +695,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-8.6574` short). Gap calls are unchanged. The side is no longer stripped
   and reapplied around the legs, which already carry it.
 
+- **The quanto pricer reads the foreign rate, and Kirk's spread
+  approximation the second dividend yield** (#650).
+  - `quanto_black_scholes` never read `ExoticParams::quanto_foreign_rate`
+    and grew the forward at `r_d - q - ρ σ_S σ_E`. It now uses
+    `r_f - q - ρ σ_S σ_E`, discounted at `r_d` (Haug, *The Complete Guide to
+    Option Pricing Formulas*, §5.16.1): the put at `S = 100, K = 95,
+    T = 0.5, r_d = 10 %, r_f = 3 %, q = 5 %, σ = 20 %, ρ = 0, E_p = 1` goes
+    from `2.4648` to `3.5165`. Prices change whenever `quanto_foreign_rate`
+    differs from the domestic rate; when it is `None` the pricer keeps
+    `r_f = r_d`, so those results are unchanged.
+  - `spread_black_scholes` (Kirk, `K ≠ 0`) took the adjusted strike as
+    `(S2 + K) e^(-rT)` and ignored `spread_second_asset_dividend`, which is
+    right only when `q2 = r`. It now works on present values,
+    `S2 e^(-q2 T) + K e^(-rT)`, for the adjusted strike and for the Kirk
+    weight `F2 / (F2 + K)` (Haug §5.4.2 on forwards), so it meets the
+    Margrabe branch as `K → 0` and satisfies spread put-call parity exactly.
+    Prices change whenever `q2 ≠ r`: `S1 = 100, S2 = 95, K = 1e-3,
+    T = 0.5, r = 5 %, q1 = 5 %, q2 = 0` moves by about `-1.24` onto
+    Margrabe. Futures-style inputs (`q1 = q2 = r`), Haug's Kirk example
+    (`2.1670`) included, are unchanged. A present value of `S2 + K` flushed
+    to zero by its discount factors now prices at its limit (the call worth
+    `S1 e^(-q1 T)`) instead of failing the logarithm.
+  - Re-baselined unit tests in `pricing::spread`: the zero-volatility
+    branch tests move from `r = 25 % / -10 %` to `r = 0` with `S1 = 130`
+    and `q1 ∈ {0, 10 %}` (the Kirk weight is exact only at `r = 0` now);
+    the underflow test sets `q2 = 100` alongside `r = 100`; and the spread
+    put-call parity bound tightens from `2.0` to `1e-9`, since the old gap
+    of `S2 (1 - e^(-rT)) ≈ 1.23` is gone.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an

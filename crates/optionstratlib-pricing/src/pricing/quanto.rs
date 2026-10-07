@@ -7,11 +7,14 @@
 //! # Quanto Adjustment
 //!
 //! The key insight is that the drift of the underlying asset must be adjusted
-//! for the correlation between the asset and the exchange rate:
+//! for the correlation between the asset and the exchange rate (Haug, *The
+//! Complete Guide to Option Pricing Formulas*, §5.16.1):
 //!
-//! Adjusted drift = r_d - q - ρ × σ_S × σ_FX
+//! Adjusted drift = r_f - q - ρ × σ_S × σ_FX, discounted at r_d
 //!
 //! Where:
+//! - r_f: Foreign risk-free rate (`ExoticParams::quanto_foreign_rate`; the
+//!   domestic rate when it is not set)
 //! - r_d: Domestic risk-free rate
 //! - q: Dividend yield of the underlying
 //! - ρ: Correlation between asset and FX rate
@@ -41,6 +44,22 @@ use rust_decimal_macros::dec;
 /// # Returns
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
+///
+/// # Formula
+///
+/// Haug §5.16.1, fixed exchange rate `E_p` (the `exchange_rate`), strike in
+/// the foreign currency:
+///
+/// ```text
+/// b  = r_f - q - ρ σ_S σ_E
+/// c  = E_p [S e^((b - r_d)T) N(d1) - K e^(-r_d T) N(d2)]
+/// p  = E_p [K e^(-r_d T) N(-d2) - S e^((b - r_d)T) N(-d1)]
+/// d1 = (ln(S/K) + (b + σ_S²/2)T) / (σ_S √T),  d2 = d1 - σ_S √T
+/// ```
+///
+/// `r_d` is `option.risk_free_rate`, `q` is `option.dividend_yield` and
+/// `r_f` is `ExoticParams::quanto_foreign_rate`; when that is `None` the
+/// pricer takes `r_f = r_d`.
 ///
 /// # Errors
 ///
@@ -74,6 +93,11 @@ pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         .quanto_fx_correlation
         .ok_or_else(|| PricingError::other("Missing quanto_fx_correlation"))?;
 
+    // The underlying is a foreign asset, so its risk-neutral drift starts from
+    // the foreign rate (#650). An unset foreign rate keeps the earlier
+    // single-currency reading `r_f = r_d`.
+    let r_f = params.quanto_foreign_rate.unwrap_or(option.risk_free_rate);
+
     if rho < dec!(-1.0) || rho > dec!(1.0) {
         return Err(PricingError::other("Correlation must be between -1 and 1"));
     }
@@ -104,6 +128,7 @@ pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         s,
         k,
         r_d,
+        r_f,
         q,
         sigma_s,
         Decimal::from(sigma_fx),
@@ -122,7 +147,8 @@ pub fn quanto_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
 ///
 /// * `s` - Spot price of the underlying asset (in foreign currency)
 /// * `k` - Strike price (in foreign currency)
-/// * `r_d` - Domestic risk-free interest rate
+/// * `r_d` - Domestic risk-free interest rate, the discount rate
+/// * `r_f` - Foreign risk-free interest rate, the base of the drift
 /// * `q` - Dividend yield of the underlying
 /// * `sigma_s` - Volatility of the underlying asset
 /// * `sigma_fx` - Volatility of the exchange rate
@@ -135,6 +161,7 @@ fn quanto_price(
     s: Decimal,
     k: Decimal,
     r_d: Decimal,
+    r_f: Decimal,
     q: Decimal,
     sigma_s: Decimal,
     sigma_fx: Decimal,
@@ -149,7 +176,7 @@ fn quanto_price(
         "pricing::quanto::adjustment",
     )?;
     let adjusted_drift = d_sub(
-        d_sub(r_d, q, "pricing::quanto::carry")?,
+        d_sub(r_f, q, "pricing::quanto::carry")?,
         quanto_adjustment,
         "pricing::quanto::adjusted_drift",
     )?;
