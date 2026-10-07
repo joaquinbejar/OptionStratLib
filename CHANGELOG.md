@@ -1794,6 +1794,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The facade's visualization routing is asserted, not just wired** (#548).
+  `make check-graph` fails unless the facade's `visualization`, `plotly` and
+  `static_export` features are exactly what ADR-0002 section 2 documents
+  (`visualization` = the crate plus `backtest`; `plotly` = `visualization`
+  plus the crate's `plotly`; `static_export` = `plotly`, `async` and the
+  crate's `static_export`), or when any other feature (a lower capability,
+  `synthetic`, `io`, `async`) enables the visualization crate or one of the
+  three; the self-tests cover each case, including `backtest` implying
+  `visualization`, which is the reverse of the documented direction.
+  `make check-feature-trees` pins the no-capability facade (`none`) and
+  asserts it resolves no visualization, Plotly or export package. The four
+  facade consumer fixtures (`facade-visualization`, `headless-full`,
+  `facade-plotly`, `facade-static-export`) now prove by `TypeId` and by
+  trait bounds in both directions that the facade paths, the prelude names
+  and the unified `Error::Graph` are the items `optionstratlib-visualization`
+  defines, and the Plotly fixtures do the same for `make_scatter` and
+  `make_surface`. The strategy-builder-to-chart workflow is the doctest in
+  the crate docs of `optionstratlib-visualization` (#543).
+
 - **Each visualization compilation surface is verified on its own** (#547).
   `make check-visualization-surface SURFACE=neutral|plotly|static_export`
   checks, lints, tests (doctests included) and documents with warnings denied

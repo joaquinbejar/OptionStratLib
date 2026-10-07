@@ -1369,6 +1369,52 @@ def plotly_gate_violations(packages: list[dict]) -> list[str]:
     return found
 
 
+# The facade's visualization routing, exactly (ADR-0002 section 2): visualization
+# implies backtest, the layer below it; `plotly` implies visualization and
+# forwards to the crate's `plotly`; `static_export` implies `plotly` and
+# `async` and forwards to the crate's `static_export`. Nothing implies them
+# the other way round.
+FACADE_ROUTING = {
+    "visualization": frozenset({"dep:optionstratlib-visualization", "backtest"}),
+    "plotly": frozenset({"visualization", "optionstratlib-visualization/plotly"}),
+    "static_export": frozenset({"plotly", "async", "optionstratlib-visualization/static_export"}),
+}
+
+
+def facade_routing_violations(packages: list[dict]) -> list[str]:
+    """The facade's `visualization`, `plotly` and `static_export` wiring, and what reaches it.
+
+    The three features must map to the documented direct-component surfaces,
+    and no other feature (a lower capability, `synthetic`, `io`, `async`,
+    `schema`...) may enable the visualization crate or one of the three.
+    Only `default` may name
+    `visualization`, and it names neither `plotly` nor `static_export`
+    (`plotly_gate_violations`).
+    """
+    facade = next((p for p in packages if p["name"] == "optionstratlib"), None)
+    if facade is None:
+        return []
+    features = facade.get("features", {})
+    found = []
+    for feature, expected in FACADE_ROUTING.items():
+        got = frozenset(features.get(feature, []))
+        if got != expected:
+            found.append(f"feature `{feature}` is {sorted(got)}, expected {sorted(expected)}")
+    gated = set(FACADE_ROUTING)
+
+    def reaches(value: str) -> bool:
+        base = value.removeprefix("dep:").split("/")[0].rstrip("?")
+        return base == PLOTLY_OWNER or base in gated
+
+    # A direct check is a transitive one: a chain of features that ends in
+    # visualization has a last link that names it, and that link is reported.
+    for feature in sorted(set(features) - gated - {"default"}):
+        for value in features[feature]:
+            if reaches(value):
+                found.append(f"feature `{feature}` enables `{value}`; a lower capability never enables visualization")
+    return found
+
+
 def file_layer(rel: str) -> str | None:
     """Target layer of a facade source file, as `scan` assigns it."""
     parts = rel.split("/")
@@ -2062,6 +2108,57 @@ def self_test() -> int:
         ),
         "visualization lost its plotly dependency": ([replaced(visualization_ok, dependencies=[])], 1),
     }
+    routing_ok = {
+        "visualization": ["dep:optionstratlib-visualization", "backtest"],
+        "plotly": ["visualization", "optionstratlib-visualization/plotly"],
+        "static_export": ["plotly", "async", "optionstratlib-visualization/static_export"],
+        "backtest": ["dep:optionstratlib-backtest", "strategies", "simulation"],
+        "strategies": ["dep:optionstratlib-strategies", "analytics"],
+        "analytics": ["dep:optionstratlib-analytics", "market"],
+        "market": ["dep:optionstratlib-market", "pricing"],
+        "pricing": ["dep:optionstratlib-pricing", "math"],
+        "simulation": ["dep:optionstratlib-simulation", "pricing"],
+        "synthetic": ["market", "simulation", "optionstratlib-market/synthetic"],
+        "io": ["market", "optionstratlib-market/io"],
+        "async": ["market", "io", "dep:tokio", "optionstratlib-market/async"],
+        "default": ["pricing", "backtest", "visualization", "synthetic", "io"],
+    }
+
+    def routed(**changes: list[str]) -> list[dict]:
+        return [gated("optionstratlib", features={**routing_ok, **changes})]
+
+    routing_cases = {
+        "the real routing": (routed(), 0),
+        "no facade in the metadata": ([gated("optionstratlib-core")], 0),
+        "backtest implies visualization": (routed(backtest=["strategies", "simulation", "visualization"]), 1),
+        "pricing implies plotly": (routed(pricing=["dep:optionstratlib-pricing", "plotly"]), 1),
+        "synthetic forwards to the visualization crate": (
+            routed(synthetic=["market", "optionstratlib-visualization/plotly"]),
+            1,
+        ),
+        "io enables the crate": (routed(io=["market", "dep:optionstratlib-visualization"]), 1),
+        "a feature reaches static_export through another feature": (
+            routed(market=["dep:optionstratlib-market", "pricing", "charts"], charts=["static_export"]),
+            1,
+        ),
+        "visualization drops backtest": (routed(visualization=["dep:optionstratlib-visualization"]), 1),
+        "plotly drops visualization": (routed(plotly=["optionstratlib-visualization/plotly"]), 1),
+        "static_export drops async": (
+            routed(static_export=["plotly", "optionstratlib-visualization/static_export"]),
+            1,
+        ),
+        "static_export forwards to the wrong feature": (
+            routed(static_export=["plotly", "async", "optionstratlib-visualization/plotly"]),
+            1,
+        ),
+    }
+    for name, (packages_case, expected) in routing_cases.items():
+        got = len(facade_routing_violations(packages_case))
+        ok = got == expected
+        if not ok:
+            failures += 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: facade routing, {name} (expected {expected}, got {got})")
+
     for name, (packages_case, expected) in plotly_cases.items():
         got = len(plotly_gate_violations(packages_case))
         ok = got == expected
@@ -2448,6 +2545,8 @@ def main() -> int:
         ("forbidden workspace crate dependencies (ADR-0001 D1/D9):", crate_graph_violations(packages)),
         ("Plotly and static export reachable outside the visualization gate (ADR-0002 section 3, #544):",
          plotly_gate_violations(packages)),
+        ("facade visualization features are mis-routed (ADR-0002 section 2, #548):",
+         facade_routing_violations(packages)),
         ("facade files in a layer that a workspace crate owns (one canonical definition):",
          facade_redefinitions(SRC, packages)),
     ]
@@ -2483,6 +2582,7 @@ def main() -> int:
     marks = ", ".join(f"{layer}={n}" for layer, n in sorted(marked_lines().items())) or "none"
     print(f"OK: no forbidden module edge ({deferred_count} deferred edges tolerated; facade-compat lines per layer: {marks})")
     print(f"OK: workspace crate graph acyclic and layered (components: {', '.join(crates) or 'none'})")
+    print("OK: facade visualization, plotly and static_export route as ADR-0002 documents, and no lower capability enables them")
     print(f"OK: only {PLOTLY_OWNER} declares Plotly, behind `plotly` and `static_export`, and no lower layer reaches it")
     print(f"OK: foundational crates resolve once ({', '.join(FOUNDATIONAL)})")
     print(f"OK: internal module edges acyclic in {', '.join(sorted(INTRA_CRATE_RULES))}")

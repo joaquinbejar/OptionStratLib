@@ -61,6 +61,9 @@ FIXTURES = ROOT / "tests" / "fixtures" / "feature-trees"
 # capability (ADR-0002), so the minimal market surface names it explicitly:
 # `--no-default-features` alone builds no market at all.
 SURFACES = {
+    # The facade with no capability at all (#548): headless, and nothing
+    # optional resolved.
+    "none": ["--no-default-features"],
     "minimal": ["--no-default-features", "--features", "market"],
     "synthetic": ["--no-default-features", "--features", "synthetic"],
     # `backtest` enables strategies and simulation and no market feature
@@ -90,6 +93,7 @@ EXPORT_STACK = {"plotly_static", "fantoccini", "webdriver"}
 RUNTIME = {"tokio", "reqwest"}
 VISUALIZATION_CRATE = {"optionstratlib-visualization"}
 BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
+    "none": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
     "minimal": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
     "synthetic": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
     "backtest": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
@@ -188,6 +192,7 @@ def self_test() -> int:
 
     cases = {
         "headless surface is clean": ("minimal", graph(), 0),
+        "no-capability surface resolves the visualization crate": ("none", graph("optionstratlib-visualization"), 1),
         "headless surface resolves plotly": ("minimal", graph("plotly"), 1),
         "headless surface resolves the visualization crate": ("backtest", graph("optionstratlib-visualization"), 1),
         "headless surface resolves tokio": ("synthetic", graph("tokio"), 1),
