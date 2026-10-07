@@ -8,7 +8,10 @@
 //! A Long Butterfly Spread is a neutral strategy with limited risk and reward.
 //! This example shows portfolio-level Greeks and adjustment planning.
 
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::strategies::AdjustmentConfig;
+use optionstratlib::strategies::AdjustmentTarget;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

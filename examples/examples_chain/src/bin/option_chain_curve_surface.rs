@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
+use optionstratlib::model::BasicAxisTypes;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use tracing::info;

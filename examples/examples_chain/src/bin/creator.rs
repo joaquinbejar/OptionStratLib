@@ -5,6 +5,7 @@ use positive::pos_or_panic;
    Email: jb@taunais.com
    Date: 12/6/25
 ******************************************************************************/
+use optionstratlib::model::types::Action;
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;

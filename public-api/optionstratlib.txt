@@ -92,20 +92,7 @@ pub optionstratlib::error::Error::Trade(optionstratlib_core::error::trade::Trade
 pub optionstratlib::error::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
 pub optionstratlib::error::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)
 pub mod optionstratlib::prelude
-pub use optionstratlib::prelude::<<crate::backtesting::*>>
-pub use optionstratlib::prelude::<<crate::greeks::*>>
-pub use optionstratlib::prelude::<<crate::metrics::*>>
-pub use optionstratlib::prelude::<<crate::pricing::*>>
-pub use optionstratlib::prelude::<<crate::volatility::*>>
-pub use optionstratlib::prelude::Action
-pub use optionstratlib::prelude::AdjustmentAction
-pub use optionstratlib::prelude::AdjustmentConfig
-pub use optionstratlib::prelude::AdjustmentError
-pub use optionstratlib::prelude::AdjustmentOptimizer
-pub use optionstratlib::prelude::AdjustmentPlan
-pub use optionstratlib::prelude::AdjustmentTarget
 pub use optionstratlib::prelude::BasicAble
-pub use optionstratlib::prelude::BasicAxisTypes
 pub use optionstratlib::prelude::BasicCurves
 pub use optionstratlib::prelude::BasicSurfaces
 pub use optionstratlib::prelude::BearCallSpread
@@ -114,27 +101,20 @@ pub use optionstratlib::prelude::BreakEvenable
 pub use optionstratlib::prelude::BullCallLadder
 pub use optionstratlib::prelude::BullCallSpread
 pub use optionstratlib::prelude::BullPutSpread
-pub use optionstratlib::prelude::ChainError
 pub use optionstratlib::prelude::Collar
 pub use optionstratlib::prelude::ConstructionMethod
 pub use optionstratlib::prelude::ConstructionParams
 pub use optionstratlib::prelude::CoveredCall
-pub use optionstratlib::prelude::Curvable
 pub use optionstratlib::prelude::Curve
-pub use optionstratlib::prelude::CurveError
 pub use optionstratlib::prelude::CustomStrategy
 pub use optionstratlib::prelude::Decimal
-pub use optionstratlib::prelude::DecimalError
 pub use optionstratlib::prelude::DeltaNeutrality
 pub use optionstratlib::prelude::ExitPolicy
 pub use optionstratlib::prelude::ExpirationDate
 pub use optionstratlib::prelude::FindOptimalSide
 pub use optionstratlib::prelude::GeometricObject
 pub use optionstratlib::prelude::Graph
-pub use optionstratlib::prelude::GraphData
-pub use optionstratlib::prelude::GraphError
-pub use optionstratlib::prelude::GreeksError
-pub use optionstratlib::prelude::InterpolationError
+pub use optionstratlib::prelude::Greeks
 pub use optionstratlib::prelude::IronButterfly
 pub use optionstratlib::prelude::IronCondor
 pub use optionstratlib::prelude::Len
@@ -143,42 +123,30 @@ pub use optionstratlib::prelude::LongCall
 pub use optionstratlib::prelude::LongPut
 pub use optionstratlib::prelude::LongStraddle
 pub use optionstratlib::prelude::LongStrangle
-pub use optionstratlib::prelude::MetricsError
-pub use optionstratlib::prelude::OhlcvCandle
-pub use optionstratlib::prelude::OhlcvError
-pub use optionstratlib::prelude::OperationErrorKind
 pub use optionstratlib::prelude::Optimizable
 pub use optionstratlib::prelude::OptionChain
 pub use optionstratlib::prelude::OptionChainBuildParams
-pub use optionstratlib::prelude::OptionChainParams
 pub use optionstratlib::prelude::OptionData
 pub use optionstratlib::prelude::OptionDataPriceParams
+pub use optionstratlib::prelude::OptionPricing
 pub use optionstratlib::prelude::OptionSeries
 pub use optionstratlib::prelude::OptionSeriesBuildParams
 pub use optionstratlib::prelude::OptionStyle
 pub use optionstratlib::prelude::OptionType
 pub use optionstratlib::prelude::Options
-pub use optionstratlib::prelude::OptionsError
-pub use optionstratlib::prelude::Path
-pub use optionstratlib::prelude::Payoff
-pub use optionstratlib::prelude::PayoffInfo
 pub use optionstratlib::prelude::Plottable
 pub use optionstratlib::prelude::PnL
 pub use optionstratlib::prelude::PnLCalculator
 pub use optionstratlib::prelude::Point2D
 pub use optionstratlib::prelude::Point3D
 pub use optionstratlib::prelude::PoorMansCoveredCall
-pub use optionstratlib::prelude::PortfolioGreeks
 pub use optionstratlib::prelude::Position
-pub use optionstratlib::prelude::PositionError
 pub use optionstratlib::prelude::Positionable
 pub use optionstratlib::prelude::Positive
-pub use optionstratlib::prelude::PricingError
 pub use optionstratlib::prelude::ProbabilityAnalysis
-pub use optionstratlib::prelude::ProbabilityError
+pub use optionstratlib::prelude::Profit
 pub use optionstratlib::prelude::ProtectivePut
 pub use optionstratlib::prelude::RandomWalk
-pub use optionstratlib::prelude::Series2D
 pub use optionstratlib::prelude::ShortButterflySpread
 pub use optionstratlib::prelude::ShortCall
 pub use optionstratlib::prelude::ShortPut
@@ -186,84 +154,29 @@ pub use optionstratlib::prelude::ShortStraddle
 pub use optionstratlib::prelude::ShortStrangle
 pub use optionstratlib::prelude::Side
 pub use optionstratlib::prelude::Simulate
-pub use optionstratlib::prelude::SimulationStats
 pub use optionstratlib::prelude::Simulator
-pub use optionstratlib::prelude::StatisticalCurve
 pub use optionstratlib::prelude::Step
 pub use optionstratlib::prelude::Strategable
 pub use optionstratlib::prelude::Strategies
 pub use optionstratlib::prelude::StrategyConstructor
-pub use optionstratlib::prelude::StrategyError
-pub use optionstratlib::prelude::StrategyLegs
-pub use optionstratlib::prelude::StrategyType
-pub use optionstratlib::prelude::Surfacable
 pub use optionstratlib::prelude::Surface
-pub use optionstratlib::prelude::Surface3D
-pub use optionstratlib::prelude::SurfaceError
 pub use optionstratlib::prelude::TimeFrame
-pub use optionstratlib::prelude::ToPrimitive
-pub use optionstratlib::prelude::ToRound
-pub use optionstratlib::prelude::TraceMode
-pub use optionstratlib::prelude::Trade
-pub use optionstratlib::prelude::TransactionError
 pub use optionstratlib::prelude::Utc
 pub use optionstratlib::prelude::Validable
-pub use optionstratlib::prelude::VolatilityError
+pub use optionstratlib::prelude::VolatilitySmile
 pub use optionstratlib::prelude::WalkParams
-pub use optionstratlib::prelude::WalkPath
 pub use optionstratlib::prelude::WalkType
 pub use optionstratlib::prelude::WalkTypeAble
-pub use optionstratlib::prelude::WalkTypeAbleClone
 pub use optionstratlib::prelude::Xstep
 pub use optionstratlib::prelude::Ystep
-pub use optionstratlib::prelude::adjust_volatility
 pub use optionstratlib::prelude::assert_pos_relative_eq
-pub use optionstratlib::prelude::calculate_log_returns
-pub use optionstratlib::prelude::check_exit_policy
-pub use optionstratlib::prelude::constant_volatility
-pub use optionstratlib::prelude::convert_time_frame
 pub use optionstratlib::prelude::debug
 pub use optionstratlib::prelude::dec
 pub use optionstratlib::prelude::error
-pub use optionstratlib::prelude::expanding_window_vols
-pub use optionstratlib::prelude::generator_optionchain
-pub use optionstratlib::prelude::generator_optionseries
-pub use optionstratlib::prelude::generator_positive
-pub use optionstratlib::prelude::get_tomorrow_formatted
-pub use optionstratlib::prelude::get_x_days_formatted
 pub use optionstratlib::prelude::info
-pub use optionstratlib::prelude::make_surface
 pub use optionstratlib::prelude::pos_or_panic
-pub use optionstratlib::prelude::read_ohlcv_from_zip
 pub use optionstratlib::prelude::spos
 pub use optionstratlib::prelude::trace
-pub use optionstratlib::prelude::walk_steps
-pub use optionstratlib::prelude::walk_steps_par
 pub use optionstratlib::prelude::warn
-pub enum optionstratlib::prelude::Error
-pub optionstratlib::prelude::Error::Backtest(optionstratlib_backtest::error::backtesting::BacktestError)
-pub optionstratlib::prelude::Error::Chain(optionstratlib_market::error::chains::ChainError)
-pub optionstratlib::prelude::Error::Curve(optionstratlib_math::error::curves::CurveError)
-pub optionstratlib::prelude::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
-pub optionstratlib::prelude::Error::EmptyCollection
-pub optionstratlib::prelude::Error::EmptyCollection::context: &'static str
-pub optionstratlib::prelude::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
-pub optionstratlib::prelude::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
-pub optionstratlib::prelude::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
-pub optionstratlib::prelude::Error::Io(core::io::error::Error)
-pub optionstratlib::prelude::Error::Metrics(optionstratlib_math::error::metrics::MetricsError)
-pub optionstratlib::prelude::Error::Ohlcv(optionstratlib_market::error::csv::OhlcvError)
-pub optionstratlib::prelude::Error::Options(optionstratlib_core::error::options::OptionsError)
-pub optionstratlib::prelude::Error::Position(optionstratlib_core::error::position::PositionError)
-pub optionstratlib::prelude::Error::Positive(positive::error::PositiveError)
-pub optionstratlib::prelude::Error::Pricing(optionstratlib_pricing::error::pricing::PricingError)
-pub optionstratlib::prelude::Error::Probability(optionstratlib_analytics::error::probability::ProbabilityError)
-pub optionstratlib::prelude::Error::Projection(optionstratlib_analytics::error::projections::ProjectionError)
-pub optionstratlib::prelude::Error::Simulation(optionstratlib_simulation::error::simulation::SimulationError)
-pub optionstratlib::prelude::Error::Strategy(optionstratlib_strategies::error::strategies::StrategyError)
-pub optionstratlib::prelude::Error::Surface(optionstratlib_math::error::surfaces::SurfaceError)
-pub optionstratlib::prelude::Error::Trade(optionstratlib_core::error::trade::TradeError)
-pub optionstratlib::prelude::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
-pub optionstratlib::prelude::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)
 pub const optionstratlib::VERSION: &str
 pub fn optionstratlib::version() -> &'static str

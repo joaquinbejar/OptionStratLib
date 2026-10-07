@@ -1,4 +1,7 @@
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::series::generator_optionseries;
+use optionstratlib::utils::time::convert_time_frame;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

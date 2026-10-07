@@ -4,6 +4,7 @@ use positive::pos_or_panic;
    Email: jb@taunais.com
    Date: 20/8/24
 ******************************************************************************/
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 
 fn create_sample_option() -> Options {

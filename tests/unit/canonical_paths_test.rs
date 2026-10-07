@@ -279,6 +279,6 @@ fn test_canonical_error_paths_are_component_errors() {
         facade::GraphError,
         optionstratlib_visualization::error::GraphError
     );
-    // The aggregate is facade-owned; the prelude re-exports it.
-    same!(facade::Error, optionstratlib::prelude::Error);
+    // The aggregate is facade-owned; it is not in the prelude (#551).
+    same!(facade::Error, optionstratlib::error::Error);
 }

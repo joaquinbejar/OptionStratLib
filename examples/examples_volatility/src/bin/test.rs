@@ -5,6 +5,7 @@ use positive::pos_or_panic;
    Date: 5/5/25
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use optionstratlib::pricing::black_scholes;
 use rand::{RngExt, rng};
 use rust_decimal::MathematicalOps;
 use rust_decimal::prelude::FromPrimitive;

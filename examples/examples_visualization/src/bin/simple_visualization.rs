@@ -1,4 +1,7 @@
 use optionstratlib::prelude::*;
+use optionstratlib::visualization::GraphData;
+use optionstratlib::visualization::Series2D;
+use optionstratlib::visualization::TraceMode;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let series = Series2D {

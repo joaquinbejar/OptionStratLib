@@ -2,8 +2,10 @@
 //! features (#544): the whole library, charts included, without a rendering
 //! backend. The chart data of a strategy comes through the `prelude`.
 
+use optionstratlib::error::{Error, GraphError};
 use optionstratlib::prelude::*;
 use optionstratlib::visualization::GraphConfig;
+use optionstratlib::visualization::{GraphData, Series2D, Surface3D, TraceMode};
 
 /// A chart a downstream crate defines: it supplies `graph_data` and keeps the
 /// default `graph_config`, which is all the contract asks on every surface.
@@ -139,7 +141,7 @@ fn test_the_facade_and_the_component_share_one_graph_contract() {
 }
 
 #[test]
-fn test_the_prelude_names_the_canonical_items() {
+fn test_the_chart_models_are_the_canonical_items() {
     assert!(same_type::<
         GraphData,
         optionstratlib::visualization::GraphData,

@@ -16,6 +16,7 @@
 
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::error::CurveError;
+use optionstratlib::metrics::ThetaCurve;
 use optionstratlib::metrics::ThetaSurface;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;

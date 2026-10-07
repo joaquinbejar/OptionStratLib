@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **The facade prelude is minimal, explicit and documented** (#551).
+  `optionstratlib::prelude` now holds the domain vocabulary, the extension
+  traits whose methods callers use on library types, and the entry type of
+  each capability: 86 named items, each re-exported from its canonical path
+  (#550; the flat parent path where the defining crate has one) and gated
+  by the feature of its capability. The module docs list every item, its
+  reason and its feature, and say when to import from a module instead.
+  The five globs (`pricing::*`, `greeks::*`, `volatility::*`, `metrics::*`,
+  `backtesting::*`), which admitted every new public item of those modules
+  and their submodule paths (`prelude::black_scholes_model`,
+  `prelude::composite::vanna_volga`, …), are gone, so are the aggregate
+  `Error` (which shadowed `std::error::Error` for glob importers), every
+  error type, every free function, the chart models, the `io`, `synthetic`
+  and `plotly` items, and the standard-library and `num-traits`
+  re-exports. `Decimal`, `dec!`, `Utc` and the `tracing` macros stay
+  (ADR-0001 D7), as do `Positive` and its macros (D8). No prelude item now
+  depends on `io`, `synthetic`, `plotly`, `static_export` or `async`.
+  - Kept through the globs as named items, because they are extension
+    traits: `OptionPricing`, `Greeks`, `Profit` (pricing) and
+    `VolatilitySmile` (`OptionChain::smile`).
+  - Removed, with the path to import instead:
+
+  | Removed from `optionstratlib::prelude` | Import from |
+  | --- | --- |
+  | `Error` | `optionstratlib::error::Error` |
+  | `ChainError, CurveError, DecimalError, GraphError, GreeksError, InterpolationError, MetricsError, OhlcvError, OperationErrorKind, OptionsError, PositionError, PricingError, ProbabilityError, StrategyError, SurfaceError, TransactionError, VolatilityError` | `optionstratlib::error::<Type>` |
+  | `Action` | `optionstratlib::model::types::Action` |
+  | `Trade` | `optionstratlib::model::Trade` |
+  | `BasicAxisTypes` | `optionstratlib::model::BasicAxisTypes` |
+  | `Payoff, PayoffInfo` | `optionstratlib::model::payoff::{Payoff, PayoffInfo}` |
+  | `ToRound` | `optionstratlib::model::utils::ToRound` |
+  | `calculate_log_returns` | `optionstratlib::utils::calculate_log_returns` |
+  | `convert_time_frame, get_tomorrow_formatted, get_x_days_formatted` | `optionstratlib::utils::time::<fn>` |
+  | `Curvable, StatisticalCurve` | `optionstratlib::curves::{Curvable, StatisticalCurve}` |
+  | `Surfacable` | `optionstratlib::surfaces::Surfacable` |
+  | `adjust_volatility, constant_volatility` | `optionstratlib::volatility::<fn>` |
+  | `OptionChainParams` | `optionstratlib::chains::utils::OptionChainParams` |
+  | `StrategyLegs` | `optionstratlib::chains::StrategyLegs` |
+  | `OhlcvCandle, read_ohlcv_from_zip` (`io`) | `optionstratlib::chains::csv::{OhlcvCandle, read_ohlcv_from_zip}` |
+  | `generator_optionchain` (`synthetic`) | `optionstratlib::chains::generator_optionchain` |
+  | `generator_optionseries` (`synthetic`) | `optionstratlib::series::generator_optionseries` |
+  | `StrategyType` | `optionstratlib::strategies::base::StrategyType` |
+  | `AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan, AdjustmentTarget, PortfolioGreeks` | `optionstratlib::strategies::<Type>` |
+  | `WalkPath, WalkTypeAbleClone, check_exit_policy, expanding_window_vols, generator_positive, walk_steps, walk_steps_par` | `optionstratlib::simulation::<item>` |
+  | `SimulationStats` | `optionstratlib::backtesting::SimulationStats` |
+  | `GraphData, Series2D, Surface3D, TraceMode` | `optionstratlib::visualization::<Type>` |
+  | `make_surface` (`plotly`) | `optionstratlib::visualization::make_surface` |
+  | `Path` | `std::path::Path` |
+  | `ToPrimitive` | `rust_decimal::prelude::ToPrimitive` |
+  | everything else the five globs exported (free functions such as `black_scholes`, `delta`, `implied_volatility`, `historical_volatility`; types such as `Greek`, `GreeksSnapshot`, `BinomialPricingParams`, `GenericPricingEngine`, `Priceable`, `DELTA_THRESHOLD`; the option-chain metric traits; the backtest results and metrics) and their module paths | the same name under `optionstratlib::pricing`, `optionstratlib::greeks`, `optionstratlib::volatility`, `optionstratlib::metrics` or `optionstratlib::backtesting` |
+
+  - New executable checks: a facade test target, `tests/prelude/main.rs`,
+    with no required features, so it runs with the defaults, with
+    `--all-features`, with `--no-default-features` and with each
+    capability alone (`make lint` runs the facade tests once per
+    `FACADE_FEATURE_SETS` entry). For every prelude item it imports the
+    item from the prelude and from its defining module and fails to compile
+    (`E0659`) if the two differ; it also prices Hull's call through the
+    prelude's `OptionPricing`. `compile_fail` doctests in the prelude docs
+    cover removed paths.
+  - Every example, test and consumer fixture that relied on a removed item
+    now imports it from its canonical module.
+
 - **Canonical 0.22 error paths: the duplicate error file modules are gone**
   (#550). Each error type has one canonical path, flat in its crate's
   `error` module and in the facade's `optionstratlib::error`. The file

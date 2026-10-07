@@ -5,6 +5,7 @@
 //! defines. No market, strategy, backtest or plotting code is compiled.
 
 use optionstratlib::prelude::*;
+use optionstratlib::simulation::generator_positive;
 use optionstratlib::simulation::{
     ExitPolicy, PathEvaluator, PathOutcome, PathStatistics, evaluate_paths,
 };

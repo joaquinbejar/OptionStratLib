@@ -12,6 +12,8 @@
 //! ## Output
 //! - PNG image: `./Draws/Metrics/volatility_skew_curve.png`
 //! - HTML interactive: `./Draws/Metrics/volatility_skew_curve.html`
+use optionstratlib::error::CurveError;
+use optionstratlib::metrics::VolatilitySkewCurve;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 

@@ -5,8 +5,10 @@
 //! async package is resolved. The figures are the ones the backtest crate's
 //! golden regression pins (`long_call/path0/exit0`, `long_call/path1/exit0`).
 
+use optionstratlib::backtesting::SimulationStatsResult;
 use optionstratlib::prelude::*;
 use optionstratlib::simulation::ExitPolicy;
+use optionstratlib::simulation::generator_positive;
 
 /// Compiles only when both arguments have the same type. Every function item
 /// has its own type, so this proves a facade path re-exports the component's

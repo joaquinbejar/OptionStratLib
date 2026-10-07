@@ -1,4 +1,8 @@
+use optionstratlib::chains::generator_optionchain;
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::utils::time::convert_time_frame;
+use optionstratlib::utils::time::get_x_days_formatted;
 use positive::pos_or_panic;
 
 #[warn(dead_code)]

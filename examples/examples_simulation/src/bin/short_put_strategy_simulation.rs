@@ -1,5 +1,4 @@
 /******************************************************************************
-use optionstratlib::error::Error;
    Author: Joaquín Béjar García
    Email: jb@taunais.com
    Date: 8/11/25
@@ -39,8 +38,12 @@ use optionstratlib::error::Error;
 //! - Distribution of exit reasons
 //! - PNG visualization of the last simulation in `Draws/Simulation/short_put_strategy_simulation.png`
 
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::simulation::generator_positive;
+use optionstratlib::utils::time::convert_time_frame;
 use optionstratlib::visualization::terminal::SimulationReport;
+use optionstratlib::volatility::volatility_for_dt;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
