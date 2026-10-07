@@ -51,6 +51,8 @@
 //! - Parameter estimation from historical data
 //! - Support for asymmetric transition rates
 //! - Applications in regime-switching scenarios
+//! - Monte-Carlo pricing: the discounted payoff averaged over a caller-chosen
+//!   number of log-Euler paths driven by a standard normal shock
 //!
 //! The Telegraph Process is particularly useful for:
 //! - Modeling regime changes in volatility
@@ -115,6 +117,7 @@
 //! let price = telegraph(
 //!     &option,
 //!     optionstratlib_core::nz!(1000),
+//!     optionstratlib_core::nz!(1000),
 //!     Some(dec!(0.5)),
 //!     Some(dec!(0.3)),
 //!     &mut rng,
@@ -160,6 +163,7 @@
 //! );
 //! let tp_price = telegraph(
 //!     &option,
+//!     optionstratlib_core::nz!(1000),
 //!     optionstratlib_core::nz!(1000),
 //!     Some(dec!(0.5)),
 //!     Some(dec!(0.3)),
@@ -388,7 +392,7 @@ pub use power::power_black_scholes;
 pub use quanto::quanto_black_scholes;
 pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
-pub use telegraph::{TelegraphProcess, telegraph};
+pub use telegraph::{TELEGRAPH_PATHS, TelegraphProcess, telegraph};
 pub use unified::{
     ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, Priceable,
     price_option_with,
