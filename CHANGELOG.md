@@ -71,6 +71,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   given and parses it only when used, so its round trip is already the
   identity.
 
+- **The payoff kernel speaks `Decimal` at its public boundary** (#637).
+  `Payoff::payoff` returns `OptionsResult<Decimal>` instead of `f64`, and
+  `PayoffInfo::spot_prices` / `spot_min` / `spot_max` are
+  `Option<Vec<Positive>>` / `Option<Positive>` / `Option<Positive>` instead
+  of `f64`. The evaluation stays in a private `f64` kernel; its result is
+  converted once with the checked `finite_decimal`, so every payoff the
+  former signature returned comes back as `Decimal::from_f64` of the same
+  `f64`, and a kernel value with no `Decimal` representation (non-finite,
+  or beyond the `Decimal` range) is `Err(OptionsError::PayoffError)`
+  instead of a raw `NaN` / `±∞`. Migration:
+  - Callers: replace `option_type.payoff(&info)` (an `f64`) with
+    `option_type.payoff(&info)?` (a `Decimal`); drop the `f2d!` /
+    `finite_decimal` step that used to follow it.
+  - `PayoffInfo` literals: wrap Asian fixings and lookback / barrier
+    extrema in `Positive` (`Some(vec![Positive::new(98.0)?, …])`,
+    `spot_min: Some(Positive::new(80.0)?)`).
+  - Implementors: return `OptionsResult<Decimal>`; report an
+    unrepresentable value as `OptionsError::PayoffError`.
+  - `Options::payoff`, `payoff_at_price` and `intrinsic_value` keep their
+    signatures but scale the payoff by the quantity with a checked `Decimal`
+    multiplication instead of an `f64` one, so a fractional quantity no
+    longer picks up `f64` rounding, and a zero payoff on a short position
+    is `0` rather than `-0` (equal as numbers; only the rendering changes,
+    as the visualization golden file shows).
+  - The binomial pricer (`price_binomial`, `generate_binomial_tree`) and
+    the compound pricer report an unrepresentable payoff as
+    `PricingError::Options(OptionsError::PayoffError)` instead of
+    `PricingError::Decimal` / `PricingError::NonFinite`.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API
