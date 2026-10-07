@@ -11,6 +11,17 @@ mod plotly_render_tests {
     use std::str::FromStr;
     use tempfile::tempdir;
 
+    /// A path `prepare_file_path` rejects before any export starts, even when
+    /// the tests run as root: its parent is a regular file, so removing or
+    /// creating anything under it fails with `NotADirectory`. A path under a
+    /// missing root directory would be created by root and the export would
+    /// then spawn a browser (#724).
+    fn unwritable_path(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("Cargo.toml")
+            .join(name)
+    }
+
     // Test implementation of the Graph trait
     struct TestGraph {
         data: GraphData,
@@ -142,14 +153,14 @@ mod plotly_render_tests {
             let graph = TestGraph::new(GraphData::Series(series), config);
 
             // Test with invalid paths for different output types
-            let invalid_path = std::path::PathBuf::from("/nonexistent/directory/file.png");
+            let invalid_path = unwritable_path("file.png");
 
             // Test render with PNG to invalid path
-            let png_result = graph.render(OutputType::Png(&invalid_path));
+            let png_result = graph.render(OutputType::Png(&invalid_path)); // browser-test: allow -- unwritable_path is rejected before export
             assert!(png_result.is_err());
 
             // Test render with SVG to invalid path
-            let svg_result = graph.render(OutputType::Svg(&invalid_path));
+            let svg_result = graph.render(OutputType::Svg(&invalid_path)); // browser-test: allow -- unwritable_path is rejected before export
             assert!(svg_result.is_err());
 
             // Test render with HTML to invalid path
@@ -294,18 +305,18 @@ mod plotly_render_tests {
         #[test]
         fn test_file_operation_error_handling() {
             // Create an invalid path that should cause an error
-            let invalid_path = PathBuf::from("/nonexistent/directory/test.png");
+            let invalid_path = unwritable_path("test.png");
 
             let series = create_sample_series();
             let config = create_sample_config();
             let graph = TestGraph::new(GraphData::Series(series), config);
 
             // Test PNG write error handling
-            let png_result = graph.write_png(&invalid_path);
+            let png_result = graph.write_png(&invalid_path); // browser-test: allow -- unwritable_path is rejected before export
             assert!(png_result.is_err(), "Write to invalid PNG path should fail");
 
             // Test SVG write error handling
-            let svg_result = graph.write_svg(&invalid_path);
+            let svg_result = graph.write_svg(&invalid_path); // browser-test: allow -- unwritable_path is rejected before export
             assert!(svg_result.is_err(), "Write to invalid SVG path should fail");
 
             // Test HTML write error handling

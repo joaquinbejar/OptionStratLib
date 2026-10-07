@@ -234,15 +234,6 @@ mod tests {
 
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-
-            #[cfg(feature = "static_export")]
-            {
-                let file_path_png = "single_curve_bis_test.png".as_ref();
-                // PNG rendering requires a headless browser, which may not be available in CI
-                if curve.write_png(file_path_png).is_ok() {
-                    cleanup_image(file_path_png);
-                }
-            }
         }
     }
 
@@ -277,15 +268,6 @@ mod tests {
             let file_path_html = "multiple_curves_test.html".as_ref();
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-
-            #[cfg(feature = "static_export")]
-            {
-                let file_path_png = "multiple_curves_test.png".as_ref();
-                // PNG rendering requires a headless browser, which may not be available in CI
-                if curve_vector.write_png(file_path_png).is_ok() {
-                    cleanup_image(file_path_png);
-                }
-            }
         }
     }
 
@@ -311,15 +293,6 @@ mod tests {
             let file_path_html = "single_curve_test.html".as_ref();
             curve.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-
-            #[cfg(feature = "static_export")]
-            {
-                let file_path_png = "single_curve_test.png".as_ref();
-                // PNG rendering requires a headless browser, which may not be available in CI
-                if curve.write_png(file_path_png).is_ok() {
-                    cleanup_image(file_path_png);
-                }
-            }
         }
     }
 
@@ -341,15 +314,6 @@ mod tests {
             let file_path_html = "multiple_curves_bis_test.html".as_ref();
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-
-            #[cfg(feature = "static_export")]
-            {
-                let file_path_png = "multiple_curves_bis_test.png".as_ref();
-                // PNG rendering requires a headless browser, which may not be available in CI
-                if curve_vector.write_png(file_path_png).is_ok() {
-                    cleanup_image(file_path_png);
-                }
-            }
         }
     }
 
@@ -369,15 +333,6 @@ mod tests {
             let file_path_html = "thick_line_curves_test.html".as_ref();
             curve_vector.write_html(file_path_html).unwrap();
             cleanup_image(file_path_html);
-
-            #[cfg(feature = "static_export")]
-            {
-                let file_path_png = "thick_line_curves_test.png".as_ref();
-                // PNG rendering requires a headless browser, which may not be available in CI
-                if curve_vector.write_png(file_path_png).is_ok() {
-                    cleanup_image(file_path_png);
-                }
-            }
         }
     }
 }
