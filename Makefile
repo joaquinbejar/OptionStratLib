@@ -77,9 +77,67 @@ test-visual:
 # mismatched driver fails all six tests), then:
 #
 #   WEBDRIVER_PATH=/path/to/chromedriver make test-export
+#
+# Platform requirements (ADR-0004 section 5, exhaustive tier): Linux or macOS
+# with Chrome, the matching chromedriver, a headless session and outbound
+# network access; Windows is untested. Retention: the workflow uploads no
+# artifact. The tests write their images to a temporary directory and assert
+# them in place (PNG signature, `<svg`), so a failure is read from the run log
+# (GitHub keeps run logs for the repository's retention setting).
 .PHONY: test-export
 test-export:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored png svg
+
+# The compilation surfaces of the visualization layer (#547, ADR-0004 section
+# 1 "Default-only tests" and section 2 "Plotly" / "Static export"). An
+# all-features run compiles only the `plotly` + `static_export` code and never
+# the backend-neutral `Graph`, so each surface is built on its own, for the
+# direct crate and for the facade route to it:
+#   neutral        no features         facade `visualization`
+#   plotly         `plotly`            facade `plotly`
+#   static_export  `static_export,plotly` facade `static_export,plotly`
+# `make check-visualization-surface SURFACE=<surface>` runs, for one surface:
+# check and Clippy (`-D warnings`) of both packages, their tests and doctests,
+# their docs with warnings denied, the consumer fixtures of that surface, and
+# the dependency assertions (`check-graph`, `check-feature-trees` and the
+# fixtures' `present`/`absent` lists), so headless surfaces provably exclude
+# Plotly and the export stack. The `#[ignore]`d export tests stay out: they
+# need a browser, see `test-export`. `visualization.yml` runs one job per
+# surface; `check-visualization` runs all three.
+VIS_CRATE_FLAGS_neutral := --no-default-features
+VIS_CRATE_FLAGS_plotly := --no-default-features --features plotly
+VIS_CRATE_FLAGS_static_export := --no-default-features --features static_export,plotly
+VIS_FACADE_FLAGS_neutral := --no-default-features --features visualization
+VIS_FACADE_FLAGS_plotly := --no-default-features --features plotly
+VIS_FACADE_FLAGS_static_export := --no-default-features --features static_export,plotly
+VIS_FIXTURES_neutral := facade-visualization headless-full
+VIS_FIXTURES_plotly := facade-plotly
+VIS_FIXTURES_static_export := facade-static-export
+VIS_SURFACES := neutral plotly static_export
+
+.PHONY: check-visualization-surface
+check-visualization-surface:
+	@test -n "$(VIS_CRATE_FLAGS_$(SURFACE))" || { echo "SURFACE must be one of: $(VIS_SURFACES)"; exit 1; }
+	cargo check -p optionstratlib-visualization --all-targets $(VIS_CRATE_FLAGS_$(SURFACE))
+	cargo clippy -p optionstratlib-visualization --all-targets $(VIS_CRATE_FLAGS_$(SURFACE)) -- -D warnings
+	LOGLEVEL=WARN cargo test -p optionstratlib-visualization $(VIS_CRATE_FLAGS_$(SURFACE))
+	RUSTDOCFLAGS="-D warnings" cargo doc -p optionstratlib-visualization --no-deps $(VIS_CRATE_FLAGS_$(SURFACE))
+	cargo check -p optionstratlib --all-targets $(VIS_FACADE_FLAGS_$(SURFACE))
+	cargo clippy -p optionstratlib --all-targets $(VIS_FACADE_FLAGS_$(SURFACE)) -- -D warnings
+	LOGLEVEL=WARN cargo test -p optionstratlib $(VIS_FACADE_FLAGS_$(SURFACE))
+	RUSTDOCFLAGS="-D warnings" cargo doc -p optionstratlib --no-deps $(VIS_FACADE_FLAGS_$(SURFACE))
+	@for fixture in $(VIS_FIXTURES_$(SURFACE)); do \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
+	done
+	@python3 scripts/check_fixtures.py $(VIS_FIXTURES_$(SURFACE))
+	@$(MAKE) --no-print-directory check-graph check-feature-trees
+
+.PHONY: check-visualization
+check-visualization:
+	@for surface in $(VIS_SURFACES); do \
+		echo "=== visualization surface $$surface"; \
+		$(MAKE) --no-print-directory check-visualization-surface SURFACE=$$surface || exit 1; \
+	done
 
 # Format the code
 .PHONY: fmt

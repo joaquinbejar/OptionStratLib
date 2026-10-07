@@ -1728,6 +1728,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Each visualization compilation surface is verified on its own** (#547).
+  `make check-visualization-surface SURFACE=neutral|plotly|static_export`
+  checks, lints, tests (doctests included) and documents with warnings denied
+  both `optionstratlib-visualization` and the facade feature that routes to it
+  (`--no-default-features`, `plotly`, `static_export,plotly`), runs the
+  consumer fixtures of the surface and the dependency assertions
+  (`check-graph`, `check-feature-trees`, the fixtures' `present`/`absent`
+  lists); `make check-visualization` runs all three. The new
+  `visualization.yml` workflow runs one job per surface on every push and
+  pull request, so the backend-neutral `Graph` is compiled and tested apart
+  from the all-features run and the headless surfaces provably exclude Plotly
+  and the export stack. The scheduled `static_export.yml` (#698) keeps running
+  the `#[ignore]`d PNG/SVG tests; the Makefile now records its platform
+  requirements and retention policy.
+
 - **`decimal_uniform_sample_with`, a `Decimal` uniform draw on `[0, 1)`**
   (#684), in `optionstratlib_core::model::decimal` next to
   `decimal_normal_sample_with`. It draws an integer `k` uniformly from
