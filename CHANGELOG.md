@@ -42,6 +42,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrapper, and `utils::random_decimal` now accepts an unsized generator
   (`R: Rng + ?Sized`), which no existing call site notices.
 
+- **The telegraph pricer is a Monte-Carlo expectation driven by a normal
+  shock** (#743). `pricing::telegraph` used to return the discounted payoff
+  of a single path whose per-step shock was `sqrt(dt) * U`, `U` uniform on
+  `[0, 1)`, with the drift multiplied by that shock as well. Each step now
+  applies the log-Euler update `S *= exp((r - sigma^2 / 2) * dt + sigma *
+  state * sqrt(dt) * Z)` with `Z` standard normal, every path draws its own
+  initial regime, and the price is the discounted payoff averaged over
+  `no_paths` paths. The signature gains that count:
+  `telegraph(option, no_steps, lambda_up, lambda_down, rng)` →
+  `telegraph(option, no_steps, no_paths, lambda_up, lambda_down, rng)`,
+  with `no_paths: NonZeroUsize`, in the position `monte_carlo_option_pricing`
+  gives its `simulations`. The new `pricing::TELEGRAPH_PATHS` (10 000) is the
+  count `OptionPricing::calculate_price_telegraph` uses; that method's
+  signature is unchanged. Migration: insert a path count after `no_steps`,
+  `optionstratlib::pricing::TELEGRAPH_PATHS` for the trait's default.
+  Results change for every input and seed: prices now converge to the
+  risk-neutral expectation (the Black-Scholes price for a European option
+  without dividend yield) instead of being one biased draw, and a call
+  costs `no_paths` times as many steps as before.
+
 - **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
   signature changes from `strike_price_range_vec(&self, step: f64) ->
   Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->

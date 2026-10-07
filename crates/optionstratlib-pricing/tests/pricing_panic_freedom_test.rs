@@ -392,8 +392,8 @@ proptest! {
         let _ = price_binomial(params.clone());
         let _ = generate_binomial_tree(&params);
         let _ = monte_carlo_option_pricing(&option, steps, simulations, &mut rng);
-        let _ = telegraph(&option, steps, Some(dec!(0.5)), Some(dec!(0.3)), &mut rng);
-        let _ = telegraph(&option, steps, None, None, &mut rng);
+        let _ = telegraph(&option, steps, simulations, Some(dec!(0.5)), Some(dec!(0.3)), &mut rng);
+        let _ = telegraph(&option, steps, simulations, None, None, &mut rng);
         let _ = probability_keep_under_strike(option, Some(strike));
         let _ = simulate_returns(rate, volatility, 8, days.to_dec(), &mut rng);
     }
