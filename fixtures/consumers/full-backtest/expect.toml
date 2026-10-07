@@ -6,8 +6,8 @@ present = [
     "optionstratlib-simulation", "optionstratlib-market", "optionstratlib-analytics",
     "optionstratlib-strategies", "optionstratlib-backtest",
 ]
-# `utoipa` is missing from this list until #628 is fixed.
 absent = [
+    "utoipa",
     "optionstratlib", "optionstratlib-visualization", "csv", "zip", "tokio", "reqwest",
     "futures", "async-trait", "plotly", "plotly_static", "fantoccini", "webdriver", "tracing-subscriber",
     "indicatif",

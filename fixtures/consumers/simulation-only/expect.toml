@@ -5,9 +5,8 @@ present = [
     "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
     "optionstratlib-simulation",
 ]
-# `utoipa` is missing only because `expiration_date` 0.4.0 forces
-# `positive/utoipa` on every build (#628); it joins this list once fixed.
 absent = [
+    "utoipa",
     "optionstratlib", "optionstratlib-market", "optionstratlib-analytics",
     "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",

@@ -5,12 +5,11 @@ present = [
     "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
     "optionstratlib-market", "optionstratlib-simulation",
 ]
-# `utoipa` is missing only because `expiration_date` 0.4.0 forces
-# `positive/utoipa` on every build (#628); it joins this list once fixed.
 # `optionstratlib-simulation` is also a direct dependency here, for the walk
 # types. `make check-graph` proves the market crate resolves it only under
 # `synthetic` (forbidden for its default, `io` and `async` trees).
 absent = [
+    "utoipa",
     "optionstratlib", "optionstratlib-analytics", "optionstratlib-strategies",
     "optionstratlib-backtest",
     "csv", "zip", "tokio", "reqwest", "plotly",

@@ -4,8 +4,10 @@
 present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "rayon", "statrs",
+    "utoipa",
 ]
-# `utoipa` is missing from this list until #628 is fixed.
+# `utoipa` resolves by design: the facade enables `schema` on every crate it
+# names (#628 only removed it from the component crates without `schema`).
 absent = [
     "optionstratlib-market", "optionstratlib-simulation", "optionstratlib-analytics",
     "optionstratlib-strategies", "optionstratlib-backtest", "optionstratlib-visualization",

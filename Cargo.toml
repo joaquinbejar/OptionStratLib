@@ -246,7 +246,7 @@ prettytable-rs = { version = "0.10", default-features = false }
 utoipa = { version = "6.0", features = ["chrono", "decimal"] }
 thiserror = "2.0"
 positive = { version = "0.7" }
-expiration_date = { version = "0.4" }
+expiration_date = { version = "0.4.1" }
 financial_types = { version = "0.3" }
 option_type = { version = "0.4" }
 tokio = { version = "1.53", features = ["full"] }
