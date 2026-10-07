@@ -1001,9 +1001,11 @@ FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
 # `optionstratlib-*` crates are excluded by `crate_graph_violations`, not
 # here. Checked with default features
 # and with `--all-features`, so neither an optional dependency nor a feature
-# can bring one in (#517). `utoipa` is missing from both lists only because
-# `expiration_date` 0.4.0 forces `positive/utoipa` on every build (#628); it
-# goes back in once that is fixed upstream.
+# can bring one in (#517). `utoipa` is on every component list except the
+# facade's (#628): only the `schema` feature brings it, and each crate's
+# `schema` FEATURE_SETS entry is what lets the all-features tree carry it. The
+# facade always enables `schema` on the crates it names, so it resolves
+# `utoipa` by design and has no entry.
 # Terminal presentation packages (M6-05, #546): progress bars, terminal
 # tables and the JSON `Debug` / `Display` derive crate. No crate below
 # visualization resolves any of them; terminal tables are
@@ -1015,16 +1017,19 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-core": frozenset({
         "statrs", "rayon", "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static",
         "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     "optionstratlib-math": frozenset({
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     # The "must be absent" column of ADR-0002's `osl-fixture-pricing-only`
     # row, plus the presentation crates math also excludes.
     "optionstratlib-pricing": frozenset({
         "csv", "zip", "tokio", "reqwest", "plotly", "plotly_static", "plotters",
         "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     # The "must be absent" column of ADR-0002's
     # `osl-fixture-simulation-only` row, plus the presentation crates pricing
@@ -1032,6 +1037,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-simulation": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     # ADR-0002 `osl-fixture-market-minimal` row (ADR-0003 section 2). The
     # simulation crate is on it too: only `synthetic` may bring it (#537).
@@ -1041,6 +1047,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
         "optionstratlib-simulation",
+        "utoipa",
     }),
     # ADR-0002 §3 backtest row: the plotting, I/O and async crates stay out,
     # and so do the presentation crates: the progress bar became `tracing`
@@ -1049,6 +1056,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-backtest": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     # ADR-0002 §3 visualization row: with no feature the leaf crate builds
     # chart data and terminal tables only, so no Plotly, image-export,
@@ -1059,6 +1067,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
         "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
         "pretty-simple-display",
+        "utoipa",
     }),
     # The facade (#544): by default, and with `visualization` or `plotly`, it
     # resolves no image-export, WebDriver, runtime or HTTP package. It may
@@ -1078,6 +1087,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-analytics": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
     # ADR-0002 §3 strategies row: the analytics set. Strategies need no market
     # I/O, no simulation, no plotting and no progress bars (`indicatif` left
@@ -1086,6 +1096,7 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-strategies": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "plotly", "plotly_static",
         "plotters", "fantoccini", "webdriver", "tracing-subscriber", *PRESENTATION_PACKAGES,
+        "utoipa",
     }),
 }
 
@@ -1094,7 +1105,16 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
 # all-features tree may add the union of its crate's sets (ADR-0003 section
 # 2, #525).
 FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
+    # `schema` is the only feature that brings `utoipa` (ADR-0002, #628).
+    "optionstratlib-core": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-math": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-pricing": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-simulation": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-analytics": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-strategies": {"schema": ("schema", frozenset({"utoipa"}))},
+    "optionstratlib-backtest": {"schema": ("schema", frozenset({"utoipa"}))},
     "optionstratlib-market": {
+        "schema": ("schema", frozenset({"utoipa"})),
         "io": ("io", frozenset({"csv", "zip"})),
         "async": ("async", frozenset({"csv", "zip", "tokio"})),
         # `synthetic` adds the simulation crate, whose own graph is already in

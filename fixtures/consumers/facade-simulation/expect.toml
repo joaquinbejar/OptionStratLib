@@ -4,9 +4,10 @@
 present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "optionstratlib-simulation",
+    "utoipa",
 ]
-# `utoipa` is missing only because `expiration_date` 0.4.0 forces
-# `positive/utoipa` on every build (#628); it joins this list once fixed.
+# `utoipa` resolves by design: the facade enables `schema` on every crate it
+# names (#628 only removed it from the component crates without `schema`).
 # The defining crate is also a direct dependency above, for the identity
 # checks; compiling the facade paths is what proves the facade enables it.
 absent = [

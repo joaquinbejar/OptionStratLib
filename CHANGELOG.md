@@ -1696,6 +1696,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`optionstratlib-core` builds without `utoipa` unless `schema` is on**
+  (#628). `expiration_date` 0.4.1 forwards `positive/utoipa` only from its own
+  `utoipa` feature, so the workspace now requires `expiration_date` 0.4.1 and
+  `cargo tree -p optionstratlib-core -e normal` no longer lists `utoipa`
+  (`--features schema` still does). `utoipa` joins the forbidden packages of
+  every component crate in `scripts/check_module_boundaries.py` (allowed only
+  through each crate's `schema` feature set) and the absent list of the
+  component consumer fixtures.
+
 - **The statistical simulation tests are seeded** (#685). Every test that
   drives a built-in stochastic walk now sets `WalkParams::seed`, the OU and
   normal-sample tests draw from `deterministic_rng`, and the chain
