@@ -2773,11 +2773,6 @@ mod tests_long_butterfly_spread_constructor {
 mod tests_long_butterfly_spread_pnl {
     use super::*;
 
-    // Only expiry P&L is pinned here. `Position::calculate_pnl` reports the
-    // change in one contract's Black-Scholes value whatever the leg's
-    // quantity, so its `unrealized` undercounts the doubled body and is not
-    // a reference for a 1/2/1 butterfly.
-
     use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
@@ -2900,6 +2895,105 @@ mod tests_long_butterfly_spread_pnl {
             .calculate_pnl_at_expiration(&pos_or_panic!(95.9))
             .unwrap();
         assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
+    }
+
+    /// Signed Black-Scholes value of the whole book, `sum(quantity * BS)`,
+    /// with every leg moved to `spot`, `days` and `volatility`;
+    /// `black_scholes` negates a short leg.
+    fn book_value(spread: &LongButterflySpread, moved: Option<(Positive, f64, f64)>) -> Decimal {
+        let mut total = Decimal::ZERO;
+        for position in spread.get_positions().unwrap() {
+            let mut option = position.option.clone();
+            if let Some((spot, days, volatility)) = moved {
+                option.underlying_price = spot;
+                option.expiration_date = ExpirationDate::Days(pos_or_panic!(days));
+                option.implied_volatility = pos_or_panic!(volatility);
+            }
+            total += option.calculate_price_black_scholes().unwrap() * option.quantity.to_dec();
+        }
+        total
+    }
+
+    /// Mark-to-market P&L at `spot`, `days` and `volatility`, checked
+    /// against the change in the book's value: every leg counts all of its
+    /// contracts, the doubled body included (#725; these tests were dropped
+    /// by #706 until the P&L scaled by quantity).
+    fn marked(spot: Positive, days: f64, volatility: f64) -> (Decimal, Decimal) {
+        let spread = create_test_long_butterfly_spread().unwrap();
+        let unrealized = spread
+            .calculate_pnl(
+                &spot,
+                ExpirationDate::Days(pos_or_panic!(days)),
+                &pos_or_panic!(volatility),
+            )
+            .unwrap()
+            .unrealized
+            .unwrap();
+        let entry_value = book_value(&spread, None);
+        assert!(entry_value > Decimal::ZERO, "a long butterfly is a debit");
+        let change = book_value(&spread, Some((spot, days, volatility))) - entry_value;
+        assert_decimal_eq!(unrealized, change, dec!(1e-20));
+        (unrealized, entry_value)
+    }
+
+    #[test]
+    fn test_calculate_pnl_below_strikes() {
+        let (unrealized, entry_value) = marked(pos_or_panic!(90.0), 20.0, 0.2);
+        // Away from the body a long butterfly loses value, but never more
+        // than it was worth.
+        assert!(unrealized < Decimal::ZERO, "{unrealized}");
+        assert!(
+            unrealized > -entry_value,
+            "{unrealized} vs entry {entry_value}"
+        );
+    }
+
+    #[test]
+    fn test_calculate_pnl_between_strikes() {
+        let (unrealized, _) = marked(Positive::HUNDRED, 20.0, 0.1);
+        // At the body, with less time and lower volatility, it gains.
+        assert!(unrealized > Decimal::ZERO, "{unrealized}");
+    }
+
+    #[test]
+    fn test_calculate_pnl_above_strikes() {
+        let (unrealized, entry_value) = marked(pos_or_panic!(110.0), 20.0, 0.2);
+        // Away from the body a long butterfly loses value, but never more
+        // than it was worth.
+        assert!(unrealized < Decimal::ZERO, "{unrealized}");
+        assert!(
+            unrealized > -entry_value,
+            "{unrealized} vs entry {entry_value}"
+        );
+    }
+
+    /// The body's two contracts count twice: its unrealized P&L is twice a
+    /// one-contract leg on the same strike.
+    #[test]
+    fn test_calculate_pnl_body_counts_both_contracts() {
+        let spread = create_test_long_butterfly_spread().unwrap();
+        let body = spread
+            .get_positions()
+            .unwrap()
+            .into_iter()
+            .find(|position| position.option.side == Side::Short)
+            .unwrap()
+            .clone();
+        assert_eq!(body.option.quantity, Positive::TWO);
+        let mut one = body.clone();
+        one.option.quantity = Positive::ONE;
+        let mark = |position: &Position| {
+            position
+                .calculate_pnl(
+                    &pos_or_panic!(103.0),
+                    ExpirationDate::Days(pos_or_panic!(20.0)),
+                    &pos_or_panic!(0.25),
+                )
+                .unwrap()
+                .unrealized
+                .unwrap()
+        };
+        assert_eq!(mark(&body), mark(&one) * dec!(2));
     }
 }
 

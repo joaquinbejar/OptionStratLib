@@ -64,10 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the adjustment reaches is the 5800 call, so the buy-back quantity moves
     from 0.2835618144021385 to 0.1338190182607754 and its strike from 5850
     to 5800. The net-delta-zero check after the adjustment holds either way.
-  - The butterfly P&L tests pin expiry P&L only, on hand-computed 1/2/1
-    fixtures. `Position::calculate_pnl` reports the change in one contract's
-    value whatever the leg's quantity, so its `unrealized` is not a
-    reference for a doubled body.
+  - The butterfly P&L tests pin expiry P&L on hand-computed 1/2/1
+    fixtures. The mark-to-market tests, dropped here because
+    `Position::calculate_pnl` ignored the quantity, are restored by #725.
   - The `strategy_call_butterfly*` examples demonstrated the ladder and are
     `strategy_bull_call_ladder*` now, with valid legs.
 
@@ -795,6 +794,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (1.88).
 
 ### Fixed
+
+- **Mark-to-market P&L counts every contract** (#725).
+  `Position::calculate_pnl` (`crates/optionstratlib-analytics/src/pnl/model_impls.rs`)
+  reported the unrealized P&L as `BS(now) - BS(entry)` for one contract and
+  ignored `option.quantity`, so every leg sized above one lot, a
+  butterfly's doubled body included, and every strategy summing those legs
+  (`calculate_pnl` of the single-leg strategies, verticals, straddles,
+  strangles, condors, butterflies, `PoorMansCoveredCall` and
+  `CustomStrategy`, and
+  `diff_position_pnl`) reported the wrong value. It is now
+  `quantity * (BS(now) - BS(entry))` through `d_sub` / `d_mul`; the side
+  is applied once, by `black_scholes`, which negates a short. Results
+  change for every leg with `quantity != 1`, by the factor `quantity`;
+  one-lot legs are unchanged.
+  - `Options::calculate_pnl_at_expiration` signed a short option's premium
+    twice (`initial_price * quantity` with the already negative short
+    price), so `Positive` rejected the income and the call failed for every
+    short option. It now records `-price * quantity` as income, like
+    `Options::calculate_pnl`, through a shared checked helper.
+  - Paths checked and already scaled: `Position::calculate_pnl` realized
+    (`premium_received - total_cost`, both per-quantity), and
+    `Position::calculate_pnl_at_expiration` (intrinsic value, cost and
+    income all carry the quantity); `Options::calculate_pnl` (unrealized and
+    premium already scaled, now through checked arithmetic) and
+    `Options::calculate_pnl_at_expiration` realized (`payoff_at_price`
+    scales). `CoveredCall`, `ProtectivePut` and `Collar` build their P&L
+    from `calculate_profit_at`, which sums quantity-scaled leg profits.
+  - No pinned value in the workspace moved: every test, example and
+    doctest that pins a P&L uses one-lot legs. The legs above one lot that
+    the suite reaches are in the panic-freedom properties, which assert no
+    value. New tests: an N-lot `Position` (N = 2, 3, 10, 2.5) reports N
+    times the one-lot unrealized and realized P&L, cost and income, for
+    long and short calls and puts; a short leg is the negated long one; the
+    expiry P&L scales the same way; a 1/2/1 call butterfly's legs add up to
+    the change in value of the book priced by `black_scholes`, and as a
+    `CustomStrategy` its P&L equals the sum of its legs and scales with
+    the lot count; a `BullCallSpread` of 3 reports three times the
+    one-lot P&L; `Options` scales and a short `Options` reports its expiry
+    income.
+  - The `LongButterflySpread` and `ShortButterflySpread` mark-to-market
+    tests that #706 dropped are restored on its 1/2/1 fixtures: below
+    (90), at (100, lower volatility) and above (110) the strikes, the
+    unrealized P&L equals the change in the book's Black-Scholes value with
+    the body counted twice, has the right sign (long loses away from the
+    body and gains at it, short the reverse), and stays within the entry
+    value; the doubled body reports twice a one-contract body.
 
 - **Pricing kernels report a failed numeric step instead of substituting a
   value** (#639). Every `unwrap_or(0)`-style fallback on a failed step in

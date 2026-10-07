@@ -17,7 +17,7 @@ use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
 use num_traits::ToPrimitive;
 use optionstratlib_core::error::PositionError;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
 use optionstratlib_core::model::types::Side;
 use optionstratlib_core::model::{ExpirationDate, Options, Position, resolve_expiration_date};
 use optionstratlib_pricing::error::PricingError;
@@ -44,13 +44,19 @@ impl PnLCalculator for Options {
         let initial_price = OptionPricing::calculate_price_black_scholes(self)?;
 
         // Calculate initial costs (premium paid/received)
-        let (initial_costs, initial_income) = match self.side {
-            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
-            Side::Short => (Decimal::ZERO, -initial_price * self.quantity),
-        };
+        let (initial_costs, initial_income) = initial_flows(self, initial_price)?;
 
-        // Calculate unrealized PnL adjusted for position side
-        let unrealized = Some((current_price - initial_price) * self.quantity);
+        // Both prices are per contract and already signed by the side, so
+        // the change is scaled by the contract count and not signed again.
+        let unrealized = Some(d_mul(
+            d_sub(
+                current_price,
+                initial_price,
+                "options::calculate_pnl::unrealized_per_contract",
+            )?,
+            self.quantity.to_dec(),
+            "options::calculate_pnl::unrealized",
+        )?);
 
         Ok(PnL::new(
             None, // No realized PnL yet
@@ -65,13 +71,14 @@ impl PnLCalculator for Options {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
+        // `payoff_at_price` is signed by the side and scaled by the quantity.
         let realized = Some(self.payoff_at_price(underlying_price)?);
         let initial_price = OptionPricing::calculate_price_black_scholes(self)?;
 
-        let (initial_costs, initial_income) = match self.side {
-            Side::Long => (initial_price * self.quantity, Decimal::ZERO),
-            Side::Short => (Decimal::ZERO, initial_price * self.quantity),
-        };
+        // The short income used to be `initial_price * quantity` with the
+        // already negative short price, a second sign that made the income
+        // negative and the call fail (#725).
+        let (initial_costs, initial_income) = initial_flows(self, initial_price)?;
 
         Ok(PnL::new(
             realized, // No realized PnL yet
@@ -81,6 +88,25 @@ impl PnLCalculator for Options {
             resolve_expiration_date(&self.expiration_date)?,
         ))
     }
+}
+
+/// Premium paid (long) or received (short) for the whole option, from the
+/// side-signed per-contract price `black_scholes` returns: a long pays
+/// `price * quantity`, a short receives `-price * quantity`, both
+/// non-negative.
+fn initial_flows(
+    option: &Options,
+    signed_price: Decimal,
+) -> Result<(Decimal, Decimal), PricingError> {
+    let total = d_mul(
+        signed_price,
+        option.quantity.to_dec(),
+        "options::pnl::initial_premium",
+    )?;
+    Ok(match option.side {
+        Side::Long => (total, Decimal::ZERO),
+        Side::Short => (Decimal::ZERO, -total),
+    })
 }
 
 /// # Position Profit and Loss (PnL) Calculator
@@ -126,11 +152,27 @@ impl PnLCalculator for Position {
         current_option.underlying_price = *underlying_price;
         current_option.implied_volatility = *implied_volatility;
         let price_at_sell = OptionPricing::calculate_price_black_scholes(&current_option)?;
-        let unrealized = price_at_sell - price_at_buy;
+        // Both prices are per contract and already signed by the side
+        // (`black_scholes` negates a short), so the side is applied once and
+        // the change is scaled by the contract count (#725).
+        let unrealized = d_mul(
+            d_sub(
+                price_at_sell,
+                price_at_buy,
+                "position::calculate_pnl::unrealized_per_contract",
+            )?,
+            self.option.quantity.to_dec(),
+            "position::calculate_pnl::unrealized",
+        )?;
+        // Cost and income are already scaled by the quantity.
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
 
-        let realized = initial_income.to_dec() - initial_cost.to_dec();
+        let realized = d_sub(
+            initial_income.to_dec(),
+            initial_cost.to_dec(),
+            "position::calculate_pnl::realized",
+        )?;
         Ok(PnL::new(
             Some(realized),
             Some(unrealized),
@@ -963,5 +1005,229 @@ mod tests_pnl_calculator {
         // For long positions: premium difference should be negative (paid more premium initially)
         // PnL = -(premium1 - premium2) = -(4.0 - 2.5) = -1.5
         assert_eq!(pnl.realized, Some(dec!(-1.5)));
+    }
+}
+
+/// The P&L of a leg scales with its contract count (#725):
+/// `Position::calculate_pnl` used to report the unrealized change of one
+/// contract whatever the quantity, and `Options::calculate_pnl_at_expiration`
+/// signed a short's income twice and failed.
+#[cfg(test)]
+mod tests_pnl_quantity {
+    use super::*;
+    use chrono::Utc;
+    use optionstratlib_core::model::OptionType;
+    use optionstratlib_core::model::types::OptionStyle;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_pricing::pricing::black_scholes;
+    use rust_decimal_macros::dec;
+
+    const SIDES: [Side; 2] = [Side::Long, Side::Short];
+    const STYLES: [OptionStyle; 2] = [OptionStyle::Call, OptionStyle::Put];
+
+    fn option(side: Side, style: OptionStyle, strike: Positive, quantity: Positive) -> Options {
+        Options::new(
+            OptionType::European,
+            side,
+            "AAPL".to_string(),
+            strike,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            quantity,
+            Positive::HUNDRED,
+            dec!(0.05),
+            style,
+            Positive::ZERO,
+            None,
+        )
+    }
+
+    fn position(side: Side, style: OptionStyle, strike: Positive, quantity: Positive) -> Position {
+        Position::new(
+            option(side, style, strike, quantity),
+            pos_or_panic!(5.0),
+            Utc::now(),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
+            None,
+            None,
+        )
+    }
+
+    /// A move in spot, time and volatility at once.
+    fn mark(position: &Position) -> PnL {
+        match position.calculate_pnl(
+            &pos_or_panic!(104.0),
+            ExpirationDate::Days(pos_or_panic!(20.0)),
+            &pos_or_panic!(0.25),
+        ) {
+            Ok(pnl) => pnl,
+            Err(e) => panic!("mark-to-market evaluates: {e}"),
+        }
+    }
+
+    fn unrealized(pnl: &PnL) -> Decimal {
+        match pnl.unrealized {
+            Some(value) => value,
+            None => panic!("calculate_pnl reports an unrealized P&L"),
+        }
+    }
+
+    fn realized(pnl: &PnL) -> Decimal {
+        match pnl.realized {
+            Some(value) => value,
+            None => panic!("the P&L reports a realized part"),
+        }
+    }
+
+    #[test]
+    fn test_position_calculate_pnl_n_lots_is_n_times_one_lot() {
+        for side in SIDES {
+            for style in STYLES {
+                let one = mark(&position(side, style, Positive::HUNDRED, Positive::ONE));
+                assert_ne!(unrealized(&one), Decimal::ZERO, "{side:?} {style:?}");
+                for n in [dec!(2), dec!(3), dec!(10), dec!(2.5)] {
+                    let lots = Positive::new_decimal(n).unwrap_or(Positive::ONE);
+                    let many = mark(&position(side, style, Positive::HUNDRED, lots));
+                    let context = format!("{side:?} {style:?} x{n}");
+                    assert_eq!(unrealized(&many), unrealized(&one) * n, "{context}");
+                    assert_eq!(realized(&many), realized(&one) * n, "{context}");
+                    assert_eq!(
+                        many.initial_costs.to_dec(),
+                        one.initial_costs.to_dec() * n,
+                        "{context}"
+                    );
+                    assert_eq!(
+                        many.initial_income.to_dec(),
+                        one.initial_income.to_dec() * n,
+                        "{context}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The side is applied once: a short leg's unrealized P&L is the
+    /// negation of the long leg's on the same contract and quantity.
+    #[test]
+    fn test_position_calculate_pnl_short_is_negated_long() {
+        for style in STYLES {
+            let lots = pos_or_panic!(3.0);
+            let long = mark(&position(Side::Long, style, Positive::HUNDRED, lots));
+            let short = mark(&position(Side::Short, style, Positive::HUNDRED, lots));
+            assert_eq!(unrealized(&short), -unrealized(&long), "{style:?}");
+        }
+    }
+
+    /// The expiry path already scaled: intrinsic, cost and income all carry
+    /// the quantity.
+    #[test]
+    fn test_position_calculate_pnl_at_expiration_n_lots_is_n_times_one_lot() {
+        for side in SIDES {
+            for style in STYLES {
+                for spot in [90.0, 100.0, 112.0] {
+                    let at = pos_or_panic!(spot);
+                    let pnl = |q: Positive| match position(side, style, Positive::HUNDRED, q)
+                        .calculate_pnl_at_expiration(&at)
+                    {
+                        Ok(pnl) => realized(&pnl),
+                        Err(e) => panic!("expiry P&L evaluates: {e}"),
+                    };
+                    assert_eq!(
+                        pnl(pos_or_panic!(4.0)),
+                        pnl(Positive::ONE) * dec!(4),
+                        "{side:?} {style:?} at {spot}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A 1/2/1 call butterfly marked to market: each leg's unrealized P&L is
+    /// `quantity * (BS(now) - BS(entry))` signed by its side, and the legs
+    /// add up to the change in value of the whole book, priced leg by leg
+    /// with `black_scholes`.
+    #[test]
+    fn test_position_calculate_pnl_butterfly_legs_sum_to_book_change() {
+        let legs = [
+            (Side::Long, pos_or_panic!(95.0), Positive::ONE),
+            (Side::Short, Positive::HUNDRED, Positive::TWO),
+            (Side::Long, pos_or_panic!(105.0), Positive::ONE),
+        ];
+        let mut sum = Decimal::ZERO;
+        let mut book_change = Decimal::ZERO;
+        for (side, strike, quantity) in legs {
+            let leg = position(side, OptionStyle::Call, strike, quantity);
+            sum += unrealized(&mark(&leg));
+
+            let entry = match black_scholes(&leg.option) {
+                Ok(price) => price,
+                Err(e) => panic!("entry price: {e}"),
+            };
+            let mut moved = leg.option.clone();
+            moved.underlying_price = pos_or_panic!(104.0);
+            moved.expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
+            moved.implied_volatility = pos_or_panic!(0.25);
+            let now = match black_scholes(&moved) {
+                Ok(price) => price,
+                Err(e) => panic!("current price: {e}"),
+            };
+            book_change += (now - entry) * quantity.to_dec();
+        }
+        assert_eq!(sum, book_change);
+        // With the body counted once the sum was off by one body leg.
+        let body_once = unrealized(&mark(&position(
+            Side::Short,
+            OptionStyle::Call,
+            Positive::HUNDRED,
+            Positive::ONE,
+        )));
+        assert_ne!(sum, book_change - body_once);
+    }
+
+    #[test]
+    fn test_options_calculate_pnl_n_lots_is_n_times_one_lot() {
+        for side in SIDES {
+            for style in STYLES {
+                let pnl = |q: Positive| match option(side, style, Positive::HUNDRED, q)
+                    .calculate_pnl(
+                        &pos_or_panic!(104.0),
+                        ExpirationDate::Days(pos_or_panic!(20.0)),
+                        &pos_or_panic!(0.25),
+                    ) {
+                    Ok(pnl) => pnl,
+                    Err(e) => panic!("Options mark-to-market evaluates: {e}"),
+                };
+                let one = pnl(Positive::ONE);
+                let five = pnl(pos_or_panic!(5.0));
+                let context = format!("{side:?} {style:?}");
+                assert_eq!(unrealized(&five), unrealized(&one) * dec!(5), "{context}");
+                assert_eq!(
+                    five.initial_costs.to_dec() + five.initial_income.to_dec(),
+                    (one.initial_costs.to_dec() + one.initial_income.to_dec()) * dec!(5),
+                    "{context}"
+                );
+            }
+        }
+    }
+
+    /// A short option's expiry P&L used to fail: the income was the already
+    /// negative short price times the quantity, which no `Positive` holds.
+    #[test]
+    fn test_options_calculate_pnl_at_expiration_short_reports_positive_income() {
+        for style in STYLES {
+            let short = option(Side::Short, style, Positive::HUNDRED, pos_or_panic!(3.0));
+            let pnl = match short.calculate_pnl_at_expiration(&pos_or_panic!(104.0)) {
+                Ok(pnl) => pnl,
+                Err(e) => panic!("short {style:?} expiry P&L evaluates: {e}"),
+            };
+            let price = match black_scholes(&short) {
+                Ok(price) => price,
+                Err(e) => panic!("short price: {e}"),
+            };
+            assert_eq!(pnl.initial_costs, Positive::ZERO, "{style:?}");
+            assert_eq!(pnl.initial_income.to_dec(), -price * dec!(3), "{style:?}");
+            assert!(pnl.initial_income > Positive::ZERO, "{style:?}");
+        }
     }
 }
