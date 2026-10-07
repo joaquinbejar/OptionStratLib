@@ -2475,6 +2475,7 @@ pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::max_pro
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_strategies::error::strategies::StrategyError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::total_fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::underlying_price(&self) -> positive::positive::Positive
 impl core::fmt::Display for optionstratlib_strategies::strategies::covered_call::CoveredCall
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -6299,6 +6300,7 @@ pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::max_pro
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::net_delta(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::greeks::GreeksError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_strategies::error::strategies::StrategyError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::quantity(&self) -> positive::positive::Positive
+pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::total_fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::underlying_price(&self) -> positive::positive::Positive
 impl core::fmt::Display for optionstratlib_strategies::strategies::covered_call::CoveredCall
 pub fn optionstratlib_strategies::strategies::covered_call::CoveredCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result

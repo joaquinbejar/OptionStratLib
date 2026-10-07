@@ -63,8 +63,10 @@ fn test_protective_put_break_even_points() {
     let pp = create_test_protective_put();
     let break_even_points = pp.get_break_even_points().unwrap();
     assert_eq!(break_even_points.len(), 1);
-    // Break-even = 150 + 3.5 + (1+1+0.65+0.65)/100 = 153.5 + 0.033 = 153.533
-    assert!((break_even_points[0].to_f64() - 153.53).abs() < 0.01);
+    // #731: the put fees are per share and no longer divided by 100, so the
+    // 0.65 + 0.65 put fees cost 1.30 x 100 = 130 (were 1.30 in total).
+    // Break-even = 150 + 3.5 + (1 + 1 + 130) / 100 = 154.82 (was 153.53).
+    assert!((break_even_points[0].to_f64() - 154.82).abs() < 0.01);
 }
 
 #[test]
@@ -81,8 +83,9 @@ fn test_protective_put_max_loss() {
     let result = pp.get_max_loss();
     assert!(result.is_ok());
     // Max loss when price <= strike (145)
-    // Loss = (150 - 145) * 100 + 3.5 * 100 + fees = 500 + 350 + 3.3 = 853.3
-    assert!((result.unwrap().to_f64() - 853.3).abs() < 0.1);
+    // Loss = (150 - 145) * 100 + 3.5 * 100 + fees = 500 + 350 + 132 = 982
+    // (#731: was 853.3 with the put fees divided by 100).
+    assert!((result.unwrap().to_f64() - 982.0).abs() < 0.1);
 }
 
 #[test]
@@ -93,18 +96,19 @@ fn test_protective_put_calculate_profit_at() {
     let price_100 = Positive::new(100.0).unwrap();
     let profit_100 = pp.calculate_profit_at(&price_100).unwrap();
     // Should be max loss
-    assert_relative_eq!(profit_100.to_f64().unwrap(), -853.3, epsilon = 0.1);
+    assert_relative_eq!(profit_100.to_f64().unwrap(), -982.0, epsilon = 0.1);
 
-    // Price at 153.53 (break-even)
-    let price_be = Positive::new(153.53).unwrap();
+    // Price at 154.82 (break-even)
+    let price_be = Positive::new(154.82).unwrap();
     let profit_be = pp.calculate_profit_at(&price_be).unwrap();
     assert!(profit_be.abs() < dec!(1.0));
 
     // Price at 200 (well above)
     let price_200 = Positive::new(200.0).unwrap();
     let profit_200 = pp.calculate_profit_at(&price_200).unwrap();
-    // Profit = (200 - 150) * 100 - 3.5 * 100 - fees = 5000 - 350 - 3.3 = 4646.7
-    assert_relative_eq!(profit_200.to_f64().unwrap(), 4646.7, epsilon = 0.1);
+    // Profit = (200 - 150) * 100 - 3.5 * 100 - fees = 5000 - 350 - 132 = 4518
+    // (#731: was 4646.7).
+    assert_relative_eq!(profit_200.to_f64().unwrap(), 4518.0, epsilon = 0.1);
 }
 
 #[test]

@@ -16,7 +16,10 @@
 //! structure (the short one also took a body premium whose credit covers its
 //! fees). The same issue removed `CallButterfly` and its
 //! `strategy_call_butterfly` entry, and added `strategy_bull_call_ladder` for
-//! the 1x1x1 ladder that type actually was.
+//! the 1x1x1 ladder that type actually was. `strategy_covered_call`,
+//! `strategy_collar` and `strategy_protective_put` were regenerated for #731,
+//! which sizes their option legs in shares with per-share option fees: the
+//! covered call is now capped and the collar capped and floored.
 //!
 //! The strategies that `StrategyRequest` can build are built that way, from
 //! their positions, then charted through the concrete type: the
