@@ -23,6 +23,7 @@ use crate::error::StrategyError;
 use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
+use crate::strategies::shared::spot_leg_mark_to_market;
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -572,13 +573,29 @@ impl Greeks for ProtectivePut {
 }
 
 impl PnLCalculator for ProtectivePut {
+    /// Marks the strategy to market at `underlying_price` (#728).
+    ///
+    /// Each option leg goes through `Position::calculate_pnl` with the given
+    /// expiration and volatility, and the share leg is valued at
+    /// `underlying_price`; the legs are summed with `PnL::try_add`.
+    /// `unrealized` is the change in the book's value since entry and
+    /// `realized` the entry cash flows. The payoff at expiry is
+    /// [`PnLCalculator::calculate_pnl_at_expiration`], a separate path.
     fn calculate_pnl(
         &self,
         underlying_price: &Positive,
-        _expiration_date: ExpirationDate,
-        _implied_volatility: &Positive,
+        expiration_date: ExpirationDate,
+        implied_volatility: &Positive,
     ) -> Result<optionstratlib_analytics::pnl::utils::PnL, PricingError> {
-        self.calculate_pnl_at_expiration(underlying_price)
+        // Until #728 this returned the expiry P&L and ignored the date and
+        // the volatility.
+        let mut total = spot_leg_mark_to_market(&self.spot_leg, underlying_price)?;
+        total = total.try_add(&self.long_put.calculate_pnl(
+            underlying_price,
+            expiration_date,
+            implied_volatility,
+        )?)?;
+        Ok(total)
     }
 
     fn calculate_pnl_at_expiration(
