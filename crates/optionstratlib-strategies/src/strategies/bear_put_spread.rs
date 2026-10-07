@@ -2346,7 +2346,7 @@ mod tests_bear_put_spread_probability {
         assert!(analysis.probability_of_profit > Positive::ZERO);
         assert!(analysis.probability_of_max_profit >= Positive::ZERO);
         assert!(analysis.probability_of_max_loss >= Positive::ZERO);
-        assert!(analysis.expected_value != Positive::ZERO);
+        assert!(analysis.expected_value != Decimal::ZERO);
         assert!(!analysis.break_even_points.is_empty());
         assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }

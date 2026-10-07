@@ -2014,7 +2014,13 @@ mod tests_poor_mans_covered_call_probability {
         let analysis = pmcc.analyze_probabilities(None, None).unwrap();
 
         assert!(analysis.probability_of_profit > Positive::ZERO);
-        assert!(analysis.expected_value >= Positive::ZERO);
+        // Floored to zero before #623; negative at the strategy's own
+        // volatility.
+        assert!(
+            analysis.expected_value < Decimal::ZERO,
+            "expected value {}",
+            analysis.expected_value
+        );
         assert_eq!(analysis.break_even_points.len(), 1);
         assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }
@@ -2043,7 +2049,13 @@ mod tests_poor_mans_covered_call_probability {
         });
 
         let analysis = pmcc.analyze_probabilities(vol_adj, None).unwrap();
-        assert!(analysis.expected_value == Positive::ZERO);
+        // Floored to zero before #623; at 0.7 volatility the structure loses
+        // money on average and the signed expected value says so.
+        assert!(
+            analysis.expected_value < Decimal::ZERO,
+            "expected value {}",
+            analysis.expected_value
+        );
     }
 
     #[test]

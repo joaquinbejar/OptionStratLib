@@ -100,6 +100,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `PricingError::Options(OptionsError::PayoffError)` instead of
     `PricingError::Decimal` / `PricingError::NonFinite`.
 
+- **`ProbabilityAnalysis::expected_value` is signed** (#623). It returns
+  `Result<Decimal, ProbabilityError>` instead of `Result<Positive, _>`, and
+  `StrategyProbabilityAnalysis::expected_value` is a `Decimal`. A strategy
+  whose probability-weighted payoff is negative used to report exactly zero,
+  so "loses money on average" could not be told from "breaks even": the
+  `BullCallLadder` test fixture (the former `CallButterfly`) read 0 at every
+  volatility from 0.3 up; at 0.5 it now reads `-52.98…`. The zero-volatility
+  shortcut returns the profit at the current price with its sign instead of
+  flooring it. Two related changes in the same function:
+  - The sum is computed in `Decimal` with checked arithmetic instead of in
+    `f64`; an overflow is a `ProbabilityCalculationErrorKind::ExpectedValueError`.
+    Results move in the last digits.
+  - The extra `1 / (1 + |drift|)` scaling applied after the sum, only when
+    the sum was positive, is removed. The trend's drift (weighted by its
+    confidence) already shapes the distribution the probabilities come
+    from, so the sum is the expectation under that trend; the scaling
+    counted the drift twice, ignored the confidence (a zero-confidence trend
+    still divided the value by `1 + |drift|`), and made the result
+    discontinuous at zero. Expected values computed with a trend are larger
+    in magnitude by that factor.
+
+  Migration: compare against `Decimal::ZERO` instead of `Positive::ZERO`, and
+  treat a negative value as a valid answer. Code that needs the old floor can
+  write `ev.max(Decimal::ZERO)`.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API

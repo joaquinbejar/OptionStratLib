@@ -3200,7 +3200,7 @@ mod tests_iron_condor_probability {
         let analysis = condor.analyze_probabilities(None, None).unwrap();
 
         assert!(analysis.probability_of_profit > Positive::ZERO);
-        assert!(analysis.expected_value >= Positive::ZERO);
+        assert!(analysis.expected_value >= Decimal::ZERO);
         assert_eq!(analysis.break_even_points.len(), 2);
         assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }
