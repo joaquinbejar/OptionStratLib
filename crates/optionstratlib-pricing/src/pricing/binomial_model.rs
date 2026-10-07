@@ -6,11 +6,11 @@
 
 use crate::error::PricingError;
 use crate::pricing::utils::*;
+use optionstratlib_core::f2d;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_div, d_mul, d_powd, d_sub};
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
-use optionstratlib_core::{d2f, f2d};
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
@@ -444,24 +444,14 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
         for (node, node_val) in step_vec.iter_mut().enumerate().take(step + 1) {
+            // `node` counts down moves. The spot is `lattice_spot`'s, so it
+            // is the same `Decimal` `price_binomial` values at this node and
+            // the root of the tree is `price_binomial` digit for digit (#716).
             let up_steps = step
                 .checked_sub(node)
                 .ok_or(PricingError::BinomialNodeMissing { node: "up_steps" })?;
-            let up_power = d_powd(
-                up_factor,
-                Decimal::from(up_steps as u64),
-                "pricing::binomial::tree::up_power",
-            )?;
-            let down_power = d_powd(
-                down_factor,
-                Decimal::from(node as u64),
-                "pricing::binomial::tree::down_power",
-            )?;
-            *node_val = d_mul(
-                d_mul(up_power, down_power, "pricing::binomial::tree::factor")?,
-                params.asset.to_dec(),
-                "pricing::binomial::tree::asset_price",
-            )?;
+            *node_val =
+                lattice_spot(params.asset, up_factor, down_factor, up_steps, step)?.to_dec();
         }
     }
 
@@ -515,11 +505,11 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                 OptionType::American => {
                     // The root is an exercise opportunity like every other
                     // node, as in `price_binomial`: a deep in-the-money put
-                    // is worth its intrinsic value today (#708).
+                    // is worth its intrinsic value today (#708). Compared in
+                    // `Decimal`, as `price_binomial` does (#716).
                     info.spot = node_asset()?;
-                    let intrinsic_value = params.option_type.payoff(&info);
-                    let dec_node_val = d2f!(node_value);
-                    *node_val = f2d!(intrinsic_value.max(dec_node_val));
+                    let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                    *node_val = node_value.max(intrinsic_value);
                 }
                 OptionType::Bermuda { exercise_dates } => {
                     // Calculate time at this step
@@ -541,11 +531,13 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                             break;
                         }
                     }
-                    if is_exercise_date && !((step == 0) & (node_idx == 0)) {
+                    // The root is an exercise opportunity when a date lies
+                    // within `dt / 2` of `t = 0`, as in `price_binomial`
+                    // (#716); compared in `Decimal`, as it does.
+                    if is_exercise_date {
                         info.spot = node_asset()?;
-                        let intrinsic_value = params.option_type.payoff(&info);
-                        let dec_node_val = d2f!(node_value);
-                        *node_val = f2d!(intrinsic_value.max(dec_node_val));
+                        let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                        *node_val = node_value.max(intrinsic_value);
                     } else {
                         *node_val = node_value;
                     }
@@ -968,13 +960,6 @@ mod tests_american_root_exercise {
     use super::*;
     use rust_decimal_macros::dec;
 
-    /// Largest gap allowed between the tree root and `price_binomial`. Both
-    /// walk the same lattice, but the tree compares each node with its
-    /// intrinsic value through an `f64` round trip and multiplies the spot
-    /// factors in a different order, which moves the last digits: the
-    /// largest gap over the cases below is `5.4e-14`.
-    const ROOT_TOLERANCE: Decimal = dec!(1e-12);
-
     fn params<'a>(
         asset: f64,
         strike: f64,
@@ -1045,6 +1030,10 @@ mod tests_american_root_exercise {
 
     /// The tree root and `price_binomial` agree for American calls and puts,
     /// long and short, out of, at and in the money, at several step counts.
+    /// They agree exactly: since #716 the tree builds each spot as
+    /// `lattice_spot` does and compares nodes in `Decimal`, so both walk the
+    /// same numbers. Before, an `f64` round trip and a different factor order
+    /// left gaps up to `5.4e-14`.
     #[test]
     fn test_generate_binomial_tree_american_root_matches_price_binomial() {
         for style in [OptionStyle::Call, OptionStyle::Put] {
@@ -1054,13 +1043,130 @@ mod tests_american_root_exercise {
                 {
                     for steps in [1, 2, 3, 10, 50] {
                         let p = params(asset, strike, steps, &style, &side);
-                        let root = tree_root(&p);
-                        let price = lattice_price(&p);
-                        assert!(
-                            (root - price).abs() <= ROOT_TOLERANCE,
-                            "{style:?} {side:?} S={asset} K={strike} steps={steps}: \
-                             tree root {root} vs price_binomial {price}"
+                        assert_eq!(
+                            tree_root(&p),
+                            lattice_price(&p),
+                            "{style:?} {side:?} S={asset} K={strike} steps={steps}"
                         );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The root of a Bermuda tree is an exercise opportunity when a date lies
+/// within `dt / 2` of `t = 0` (#716), as it is in `price_binomial`: the tree
+/// used to exempt its root, so a deep in-the-money put with an exercise date
+/// today rooted at its continuation value instead of its intrinsic value.
+#[cfg(test)]
+mod tests_bermuda_root_exercise {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    fn bermuda(dates: &[f64]) -> OptionType {
+        OptionType::Bermuda {
+            exercise_dates: dates.iter().map(|d| pos_or_panic!(*d)).collect(),
+        }
+    }
+
+    fn params<'a>(
+        asset: f64,
+        steps: usize,
+        option_type: &'a OptionType,
+        style: &'a OptionStyle,
+        side: &'a Side,
+    ) -> BinomialPricingParams<'a> {
+        BinomialPricingParams {
+            asset: pos_or_panic!(asset),
+            volatility: pos_or_panic!(0.2),
+            int_rate: dec!(0.05),
+            strike: Positive::HUNDRED,
+            expiry: Positive::ONE,
+            no_steps: match NonZeroUsize::new(steps) {
+                Some(n) => n,
+                None => panic!("step count {steps} is non-zero"),
+            },
+            option_type,
+            option_style: style,
+            side,
+        }
+    }
+
+    fn tree_root(params: &BinomialPricingParams) -> Decimal {
+        match generate_binomial_tree(params) {
+            Ok((_, option_tree)) => match option_tree.first().and_then(|step| step.first()) {
+                Some(root) => *root,
+                None => panic!("a tree has a root"),
+            },
+            Err(e) => panic!("tree builds: {e}"),
+        }
+    }
+
+    fn lattice_price(params: &BinomialPricingParams) -> Decimal {
+        match price_binomial(params.clone()) {
+            Ok(price) => price,
+            Err(e) => panic!("lattice prices: {e}"),
+        }
+    }
+
+    /// `S = 50`, `K = 100` with an exercise date today: exercising is worth
+    /// 50, more than holding, so the root is the intrinsic value and the
+    /// short root its negation. The tree rooted at the continuation value,
+    /// `45.1229424500713990` on one step.
+    #[test]
+    fn test_generate_binomial_tree_bermuda_put_exercisable_today_root_is_intrinsic() {
+        let option_type = bermuda(&[0.0, 0.5]);
+        for steps in [1, 2, 3, 10, 50] {
+            let long = params(50.0, steps, &option_type, &OptionStyle::Put, &Side::Long);
+            assert_eq!(tree_root(&long), dec!(50), "steps {steps}");
+            assert_eq!(lattice_price(&long), dec!(50), "steps {steps}");
+
+            let short = params(50.0, steps, &option_type, &OptionStyle::Put, &Side::Short);
+            assert_eq!(tree_root(&short), dec!(-50), "steps {steps}");
+        }
+    }
+
+    /// A date only near `t = 0` counts at the root while it lies within
+    /// `dt / 2`: `0.001` does on 50 steps (`dt / 2 = 0.01`), and `0.3` does
+    /// on one step (`dt / 2 = 0.5`) but not on ten (`dt / 2 = 0.05`).
+    #[test]
+    fn test_generate_binomial_tree_bermuda_root_exercise_follows_half_step_rule() {
+        let near = bermuda(&[0.001]);
+        let p = params(50.0, 50, &near, &OptionStyle::Put, &Side::Long);
+        assert_eq!(tree_root(&p), dec!(50));
+
+        let coarse = bermuda(&[0.3]);
+        let one_step = params(50.0, 1, &coarse, &OptionStyle::Put, &Side::Long);
+        assert_eq!(tree_root(&one_step), dec!(50));
+        let ten_steps = params(50.0, 10, &coarse, &OptionStyle::Put, &Side::Long);
+        assert!(tree_root(&ten_steps) < dec!(50));
+        assert_eq!(tree_root(&ten_steps), lattice_price(&ten_steps));
+    }
+
+    /// The tree root and `price_binomial` agree exactly for Bermuda calls and
+    /// puts, long and short, across moneyness, step counts and schedules
+    /// with and without a date at `t = 0`.
+    #[test]
+    fn test_generate_binomial_tree_bermuda_root_matches_price_binomial() {
+        let schedules = [
+            bermuda(&[0.0, 0.5]),
+            bermuda(&[0.25, 0.5, 0.75]),
+            bermuda(&[0.001]),
+            bermuda(&[0.5, 2.0]),
+        ];
+        for option_type in &schedules {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                for side in [Side::Long, Side::Short] {
+                    for asset in [50.0, 90.0, 100.0, 130.0] {
+                        for steps in [1, 2, 3, 10, 50] {
+                            let p = params(asset, steps, option_type, &style, &side);
+                            assert_eq!(
+                                tree_root(&p),
+                                lattice_price(&p),
+                                "{option_type:?} {style:?} {side:?} S={asset} steps={steps}"
+                            );
+                        }
                     }
                 }
             }
