@@ -11,6 +11,7 @@
 //! from `examples/Chains` at the workspace root; market's `io` is a
 //! dev-dependency of this crate, so they always run here.
 
+mod covered_mtm_test;
 mod custom_test;
 mod delta;
 mod long_call_test;

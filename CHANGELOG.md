@@ -795,6 +795,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`CoveredCall`, `ProtectivePut` and `Collar` mark to market in
+  `calculate_pnl`** (#728). They returned `calculate_pnl_at_expiration`, the
+  payoff at expiry, as the "unrealized" P&L and ignored the
+  `expiration_date` and `implied_volatility` arguments. Each option leg is
+  now marked through `Position::calculate_pnl` with the given date and
+  volatility, the share leg is valued at the current price, and the legs
+  are summed with `PnL::try_add`, as every other strategy does:
+  - `unrealized` is the change in the book's value since entry: the option
+    legs' `quantity * (BS(now) - BS(entry))` plus the shares'
+    `(price - cost basis) * quantity`;
+  - `realized` is the entry cash flow, income less costs. `initial_costs`
+    now also counts the option legs' fees (it held the share cost and the
+    put premium only); `initial_income` is the short call's premium as
+    before.
+
+  The values that move are those of `calculate_pnl` on the three types:
+  `unrealized` goes from the expiry payoff to the change in value, and
+  `realized` from `None` to the entry cash flow. No test or golden value
+  pinned them. `calculate_pnl_at_expiration` is unchanged. Tests: for each
+  type the P&L is the sum of its legs', it moves with the date and the
+  volatility, and with every leg entered at its Black-Scholes value and no
+  fees it converges to the expiry P&L as the time to expiry goes to zero
+  (the gap is 0.0146 at one day for the covered call and the collar and
+  zero from 0.01 days).
+
 - **Mark-to-market P&L counts every contract** (#725).
   `Position::calculate_pnl` (`crates/optionstratlib-analytics/src/pnl/model_impls.rs`)
   reported the unrealized P&L as `BS(now) - BS(entry)` for one contract and

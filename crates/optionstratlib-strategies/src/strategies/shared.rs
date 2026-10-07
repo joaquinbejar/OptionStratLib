@@ -22,9 +22,64 @@
 //! and reduce boilerplate code.
 
 use crate::error::strategies::StrategyError;
+use optionstratlib_analytics::pnl::utils::PnL;
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::{d_mul, d_sub};
+use optionstratlib_core::model::leg::SpotPosition;
+use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::position::Position;
+use optionstratlib_core::model::types::Side;
+use optionstratlib_pricing::error::PricingError;
 use rust_decimal::Decimal;
+
+/// Marks a spot leg to market at `price`, in the convention
+/// `Position::calculate_pnl` uses for an option leg (#728).
+///
+/// - `unrealized` is the change in the leg's value since entry,
+///   `(price - cost_basis) * quantity`, signed by the side. A share has no
+///   time value, so this is the same at any date and at expiry.
+/// - `realized` is the entry cash flow, `initial_income - initial_costs`.
+/// - `initial_costs` is [`LegAble::total_cost`]: the purchase and both fees
+///   for a long leg, the fees alone for a short one; `initial_income` is the
+///   short sale's proceeds, zero for a long leg.
+///
+/// # Errors
+///
+/// Returns [`PricingError`] when a cost, an income or the value change
+/// leaves the `Decimal` or `Positive` range.
+pub(crate) fn spot_leg_mark_to_market(
+    spot: &SpotPosition,
+    price: &Positive,
+) -> Result<PnL, PricingError> {
+    let change = d_mul(
+        d_sub(
+            price.to_dec(),
+            spot.cost_basis.to_dec(),
+            "shared::spot_leg_mark_to_market::price_change",
+        )?,
+        spot.quantity.to_dec(),
+        "shared::spot_leg_mark_to_market::value_change",
+    )?;
+    let (unrealized, initial_income) = match spot.side {
+        Side::Long => (change, Positive::ZERO),
+        // `Decimal` is symmetric, so negating a representable value is
+        // itself representable.
+        Side::Short => (-change, spot.quantity.checked_mul(&spot.cost_basis)?),
+    };
+    let initial_costs = spot.total_cost()?;
+    let realized = d_sub(
+        initial_income.to_dec(),
+        initial_costs.to_dec(),
+        "shared::spot_leg_mark_to_market::realized",
+    )?;
+    Ok(PnL::new(
+        Some(realized),
+        Some(unrealized),
+        initial_costs,
+        initial_income,
+        spot.date,
+    ))
+}
 
 /// Trait for vertical spread strategies (two legs with different strikes).
 ///
