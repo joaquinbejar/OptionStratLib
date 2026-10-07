@@ -1104,6 +1104,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Heston volatility simulation draws a normal Wiener increment** (#742).
+  `volatility::simulate_heston_volatility` drew `dW` as
+  `uniform[0, 1) * sqrt(dt)`, a strictly positive shock with mean
+  `sqrt(dt) / 2`, so the `xi * sqrt(v) * dW` term pushed the variance up on
+  every step and the path drifted far above `theta` instead of
+  mean-reverting to it. `dW` is now a standard normal from the caller's
+  `rng` scaled by `sqrt(dt)`, i.e. `N(0, dt)`. No signature changes, but
+  **simulated Heston paths change**: the same seed yields a different path,
+  and results pinned against the old draw must be re-baselined. Tests: a
+  seeded 100 000-draw check that the increment has zero mean and variance
+  `dt`; a 200-path seeded check that the long-run mean variance
+  (`kappa = 2`, `theta = 0.04`, `xi = 0.3`, Feller satisfied) lands within
+  0.004 of `theta` (0.0406), where the uniform draw gave 0.64.
+
 - **Visualization crate debt carried over from the monolith** (#690).
   `impl_graph_for_payoff_strategy!` now names every item it expands to
   (`Graph`, `GraphData`, `Series2D`, `Positive`, `Decimal`, the strategy
