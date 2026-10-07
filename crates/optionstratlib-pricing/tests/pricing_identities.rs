@@ -74,7 +74,7 @@
 //!
 //! Identities the library breaks today are not in this suite; each lives
 //! in its issue with the test code: barrier bounds and `Side` (#646),
-//! gap put sign (#649), quanto foreign rate and Kirk second dividend (#650).
+//! quanto foreign rate and Kirk second dividend (#650).
 
 use optionstratlib_core::model::option::ExoticParams;
 use optionstratlib_core::model::types::{
@@ -729,9 +729,11 @@ fn test_garman_kohlhagen_greek_identities_grid_hold() {
 
 /// Binary decompositions (Haug §4.19): asset-or-nothing call minus `K`
 /// unit cash-or-nothing calls is the vanilla call; the gap option the
-/// library defines with the same strike is that same difference; a binary
-/// call plus its put pays the payout for sure, so cash call + cash put =
-/// `e^(-rT)` and asset call + asset put = `S e^(-qT)`.
+/// library defines with the same strike is that same difference, and the gap
+/// put is `K` cash-or-nothing puts minus the asset-or-nothing put, the
+/// vanilla put (#649); a binary call plus its put pays the payout for sure,
+/// so cash call + cash put = `e^(-rT)` and asset call + asset put =
+/// `S e^(-qT)`.
 #[test]
 fn test_binary_decompositions_grid_hold() {
     let binary = |binary_type| OptionType::Binary { binary_type };
@@ -759,7 +761,9 @@ fn test_binary_decompositions_grid_hold() {
         let con_call = price(binary(BinaryType::CashOrNothing), OptionStyle::Call);
         let con_put = price(binary(BinaryType::CashOrNothing), OptionStyle::Put);
         let gap_call = price(binary(BinaryType::Gap), OptionStyle::Call);
+        let gap_put = price(binary(BinaryType::Gap), OptionStyle::Put);
         let vanilla_call = price(OptionType::European, OptionStyle::Call);
+        let vanilla_put = price(OptionType::European, OptionStyle::Put);
         let k_dec = pos_or_panic!(k).to_dec();
         let t = {
             let probe = european(OptionStyle::Call, Side::Long, s, k, days, vol, r, q);
@@ -773,6 +777,18 @@ fn test_binary_decompositions_grid_hold() {
         );
         assert_close(gap_call, vanilla_call, IDENTITY_TOL, &format!("gap {ctx}"));
         assert_close(
+            k_dec * con_put - aon_put,
+            vanilla_put,
+            IDENTITY_TOL,
+            &format!("K con - aon = put {ctx}"),
+        );
+        assert_close(
+            gap_put,
+            vanilla_put,
+            IDENTITY_TOL,
+            &format!("gap put {ctx}"),
+        );
+        assert_close(
             con_call + con_put,
             discount(r, t),
             IDENTITY_TOL,
@@ -785,6 +801,44 @@ fn test_binary_decompositions_grid_hold() {
             &format!("aon call + put {ctx}"),
         );
     });
+}
+
+/// A gap put struck at the gap level pays `K - S_T` below `K`, i.e. it is
+/// the vanilla put (Haug §4.19.3 with `X1 = X2`), on both sides (#649).
+/// `gap_binary_price` used to form `asset - K * cash` for both styles, the
+/// negated put: at `S = 100, K = 105, T = 0.5, σ = 25 %, r = 5 %, q = 1 %` a
+/// long gap put priced `-8.6574` against a vanilla put of `8.6574`.
+#[test]
+fn test_binary_gap_put_equals_vanilla_put() {
+    for side in [Side::Long, Side::Short] {
+        let gap = exotic_for_side(
+            OptionType::Binary {
+                binary_type: BinaryType::Gap,
+            },
+            OptionStyle::Put,
+            side,
+        );
+        let vanilla = exotic_for_side(OptionType::European, OptionStyle::Put, side);
+        assert_close(
+            ok(black_scholes(&gap), "gap put"),
+            ok(black_scholes(&vanilla), "vanilla put"),
+            IDENTITY_TOL,
+            &format!("gap put {side:?}"),
+        );
+    }
+    let long = exotic_for_side(
+        OptionType::Binary {
+            binary_type: BinaryType::Gap,
+        },
+        OptionStyle::Put,
+        Side::Long,
+    );
+    assert_close(
+        ok(black_scholes(&long), "gap put"),
+        dec!(8.6574),
+        dec!(0.0001),
+        "gap put reference",
+    );
 }
 
 fn barrier(barrier_type: BarrierType, level: f64) -> OptionType {
