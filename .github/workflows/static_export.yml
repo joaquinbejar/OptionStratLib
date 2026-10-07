@@ -65,6 +65,11 @@ jobs:
         run: |
           set -euo pipefail
           export WEBDRIVER_PATH="$CHROMEDRIVER_PATH"
-          "$CHROME_PATH" --version
+          # plotly_static passes BROWSER_PATH to chromedriver as the Chrome
+          # binary. Without it chromedriver launches the runner image's own
+          # google-chrome, whose version need not match the driver.
+          export BROWSER_PATH="$CHROME_PATH"
+          "$BROWSER_PATH" --version
           "$WEBDRIVER_PATH" --version
+          (command -v google-chrome && google-chrome --version) || true
           make test-export
