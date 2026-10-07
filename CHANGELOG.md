@@ -1208,6 +1208,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Path-based pricers include the dividend yield in the drift** (#756).
+  `pricing::telegraph` simulated the log price with drift
+  `r - sigma^2/2` and `pricing::monte_carlo_option_pricing` grew it by
+  `1 + r dt + sigma dW`; both ignored `option.dividend_yield`, so on a
+  dividend-paying underlying they priced as if `q = 0`, overpricing calls
+  and underpricing puts against Black-Scholes. The drifts are now
+  `r - q - sigma^2/2` and `(r - q) dt`. No signature changes, but **results
+  change for every option with `dividend_yield > 0`** (including
+  `OptionPricing::calculate_price_telegraph`, which calls the telegraph
+  kernel); options with `q = 0` price exactly as before on the same seed.
+  The other path-based code (`price_option_monte_carlo`, which takes
+  caller-supplied terminal prices, and the Heston variance simulation) has
+  no price drift and is unchanged. Tests: with `q = 3%` and a fixed seed,
+  the telegraph kernel with switching disabled (call and put, 40 000
+  paths) and `monte_carlo_option_pricing` (20 000 paths) land within
+  Monte-Carlo tolerance of Black-Scholes with the same `q` (call 8.6525),
+  where the old drift sat near the `q = 0` price 10.45.
+
 - **Heston volatility simulation draws a normal Wiener increment** (#742).
   `volatility::simulate_heston_volatility` drew `dW` as
   `uniform[0, 1) * sqrt(dt)`, a strictly positive shock with mean

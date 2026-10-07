@@ -384,8 +384,10 @@ pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
 /// current regime) and then updates the price as
 ///
 /// ```text
-/// S <- S * exp((r - sigma^2 / 2) * dt + sigma * state * sqrt(dt) * Z),  Z ~ N(0, 1)
+/// S <- S * exp((r - q - sigma^2 / 2) * dt + sigma * state * sqrt(dt) * Z),  Z ~ N(0, 1)
 /// ```
+///
+/// where `q` is the option's continuous dividend yield (#756).
 ///
 /// Every path draws its own initial regime (+1 or -1 with equal
 /// probability). The price is the average of the discounted payoff over
@@ -395,7 +397,7 @@ pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
 /// Because the shock is symmetric and independent of the regime path, the
 /// sign the regime puts on the diffusion leaves the terminal law that of
 /// geometric Brownian motion: the estimate converges to the Black-Scholes
-/// price (without dividend yield) whatever the transition rates.
+/// price with the same dividend yield whatever the transition rates.
 ///
 /// # Arguments
 ///
@@ -496,10 +498,17 @@ pub fn telegraph<R: Rng + ?Sized>(
     let flip_from_up = flip_probability(lambda_down_temp, dt);
     let flip_from_down = flip_probability(lambda_up_temp, dt);
 
-    // Loop-invariant risk-neutral drift `r - σ²/2`.
+    // Loop-invariant risk-neutral drift `r - q - σ²/2`. The dividend yield
+    // was missing until #756, which overpriced calls and underpriced puts on
+    // a dividend-paying underlying.
     let volatility = option.implied_volatility.to_dec();
-    let drift: Decimal = d_sub(
+    let carry = d_sub(
         option.risk_free_rate,
+        option.dividend_yield.to_dec(),
+        "pricing::telegraph::carry",
+    )?;
+    let drift: Decimal = d_sub(
+        carry,
         d_mul(
             dec!(0.5),
             d_powd(volatility, Decimal::TWO, "pricing::telegraph::variance")?,
@@ -1126,6 +1135,39 @@ mod tests_telegraph_seeded {
             (OptionStyle::Put, dec!(0.22)),
         ] {
             let option = option_1y_atm(style);
+            let price = telegraph(
+                &option,
+                optionstratlib_core::nz!(12),
+                optionstratlib_core::nz!(40_000),
+                Some(Decimal::ZERO),
+                Some(Decimal::ZERO),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+            )
+            .unwrap();
+            let reference = black_scholes(&option).unwrap();
+            assert!(
+                (price - reference).abs() < band,
+                "{style:?}: telegraph {price} vs Black-Scholes {reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_telegraph_dividend_yield_switching_disabled_converges_to_black_scholes() {
+        use crate::pricing::black_scholes_model::black_scholes;
+        // #756: with q = 3% the drift is r - q - sigma^2/2, so the estimate
+        // is unbiased for the Black-Scholes price with the same q (8.6525
+        // call, 5.7148 put). The payoff standard deviations are about 13.0
+        // (call) and 8.7 (put); over 40 000 paths the standard errors are
+        // 0.065 and 0.044, and the band is 5 of them. Before the fix the
+        // call came out near the q = 0 price 10.45, about 28 standard
+        // errors away.
+        for (style, band) in [
+            (OptionStyle::Call, dec!(0.33)),
+            (OptionStyle::Put, dec!(0.22)),
+        ] {
+            let mut option = option_1y_atm(style);
+            option.dividend_yield = pos_or_panic!(0.03);
             let price = telegraph(
                 &option,
                 optionstratlib_core::nz!(12),
