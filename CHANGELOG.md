@@ -648,6 +648,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `default` API-change report covers the real default surface**
+  (#688). `scripts/report_api_changes.py` still defined it as the 0.21
+  feature set, `synthetic` alone, which under `--only-explicit-features`
+  left out `analytics`, `strategies`, `backtest`, `visualization` and `io`,
+  so API changes there were reported only under `all`. `SURFACES["default"]`
+  now spells out the facade default (`pricing`, `market`, `analytics`,
+  `strategies`, `simulation`, `backtest`, `visualization`, `synthetic`,
+  `io`), and the self-test (`make check-api-report`, and the CI step before
+  every report) fails, naming both lists, when it differs from the root
+  `Cargo.toml` `[features] default`. It also fails when a surface names a
+  feature the facade does not declare. The `plotly`, `static_export` and
+  `async` surfaces stay each feature alone, as `default-features = false`
+  builds them; their comment now states what each resolves. On Python
+  before 3.11, which has no `tomllib`, a narrow `[features]` parser reads
+  the manifest, and the self-test checks it against `tomllib` where both
+  exist.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an
