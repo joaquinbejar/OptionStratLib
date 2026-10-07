@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrapper, and `utils::random_decimal` now accepts an unsized generator
   (`R: Rng + ?Sized`), which no existing call site notices.
 
+- **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
+  signature changes from `strike_price_range_vec(&self, step: f64) ->
+  Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->
+  Option<Vec<Positive>>`, so strikes no longer cross the public boundary as
+  `f64` and a decimal step such as `0.3` accumulates without binary rounding
+  drift. A zero step still returns `None`, and a strike that overflows while
+  stepping now returns `None` instead of panicking. Migration: pass the step
+  as `Positive` (`pos_or_panic!(5.0)`, `Positive::new_decimal(dec!(0.5))?`)
+  and read the strikes as `Positive`; call `.to_f64()` on an element only
+  where a non-monetary `f64` is genuinely needed, e.g. a plot axis.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API
