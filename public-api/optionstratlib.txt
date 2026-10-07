@@ -139,9 +139,9 @@ pub use optionstratlib::prelude::BasicSurfaces
 pub use optionstratlib::prelude::BearCallSpread
 pub use optionstratlib::prelude::BearPutSpread
 pub use optionstratlib::prelude::BreakEvenable
+pub use optionstratlib::prelude::BullCallLadder
 pub use optionstratlib::prelude::BullCallSpread
 pub use optionstratlib::prelude::BullPutSpread
-pub use optionstratlib::prelude::CallButterfly
 pub use optionstratlib::prelude::ChainError
 pub use optionstratlib::prelude::Collar
 pub use optionstratlib::prelude::ConstructionMethod

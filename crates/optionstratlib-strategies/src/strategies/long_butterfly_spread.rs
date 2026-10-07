@@ -44,7 +44,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// The default description for the Long Butterfly Spread strategy.
 pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -369,16 +369,13 @@ impl StrategyConstructor for LongButterflySpread {
             ),
         };
 
-        // The builder accepts the same quantity on every leg, while `new` and
-        // `validate` require a doubled body (1/2/1), so such a request fails
-        // `validate`. Settling the butterfly convention is #706; until then
-        // the mismatch is reported here instead of being enforced.
+        // A textbook butterfly carries twice the wing quantity in the body
+        // (1/2/1), the structure `new` builds and `validate` checks (#706).
         if !strategy.validate() {
-            warn!(
-                strategy = %StrategyType::LongButterflySpread,
-                issue = 706,
-                "get_strategy built legs that fail validate"
-            );
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongButterflySpread,
+                "the positions passed to `get_strategy` fail validation",
+            ));
         }
 
         // Every other constructor in this crate populates the break-even
@@ -2495,7 +2492,7 @@ mod tests_long_butterfly_spread_constructor {
                 OptionStyle::Call,
                 Side::Short,
                 pos_or_panic!(90.0),
-                Positive::ONE,
+                Positive::TWO,
                 Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
@@ -2720,7 +2717,7 @@ mod tests_long_butterfly_spread_constructor {
                 OptionStyle::Call,
                 Side::Short,
                 pos_or_panic!(90.0),
-                Positive::ONE,
+                Positive::TWO,
                 Positive::HUNDRED, // Middle strike price
                 pos_or_panic!(0.2),
             ),
@@ -2753,7 +2750,7 @@ mod tests_long_butterfly_spread_constructor {
                 OptionStyle::Call,
                 Side::Short,
                 Positive::HUNDRED,
-                Positive::ONE,
+                Positive::TWO,
                 Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
@@ -2776,147 +2773,133 @@ mod tests_long_butterfly_spread_constructor {
 mod tests_long_butterfly_spread_pnl {
     use super::*;
 
+    // Only expiry P&L is pinned here. `Position::calculate_pnl` reports the
+    // change in one contract's Black-Scholes value whatever the leg's
+    // quantity, so its `unrealized` undercounts the doubled body and is not
+    // a reference for a 1/2/1 butterfly.
+
     use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
 
+    // Textbook 1/2/1 long call butterfly (#706): long one 95 call for 7.50,
+    // short two 100 calls for 4.50 each, long one 105 call for 2.40, no fees.
+    // Net debit 7.50 + 2.40 - 9.00 = 0.90, so the hand-computed expiry payoff
+    // is -0.90 at or below 95 and at or above 105, peaks at 5 - 0.90 = 4.10
+    // at 100, and crosses zero at 95.90 and 104.10.
     fn create_test_long_butterfly_spread() -> Result<LongButterflySpread, StrategyError> {
-        // Create lower long call
-        let lower_short_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Long,
-            Positive::HUNDRED,   // Underlying price
-            Positive::ONE,       // Quantity
-            pos_or_panic!(95.0), // Lower strike price
-            pos_or_panic!(0.2),  // Implied volatility
-        );
-
-        // Create middle short call
-        let middle_short_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Short,
-            Positive::HUNDRED,  // Same underlying price
-            Positive::ONE,      // Quantity
-            Positive::HUNDRED,  // Middle strike price (ATM)
-            pos_or_panic!(0.2), // Implied volatility
-        );
-
-        // Create higher long call
-        let higher_short_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Long,
-            Positive::HUNDRED,    // Same underlying price
-            Positive::ONE,        // Quantity
-            pos_or_panic!(105.0), // Higher strike price
-            pos_or_panic!(0.2),   // Implied volatility
-        );
-
-        LongButterflySpread::get_strategy(&[lower_short_call, middle_short_call, higher_short_call])
+        let leg = |side: Side, quantity: Positive, strike: Positive, premium: Positive| {
+            let mut position = create_sample_position(
+                OptionStyle::Call,
+                side,
+                Positive::HUNDRED,
+                quantity,
+                strike,
+                pos_or_panic!(0.2),
+            );
+            position.premium = premium;
+            position.open_fee = Positive::ZERO;
+            position.close_fee = Positive::ZERO;
+            position
+        };
+        LongButterflySpread::get_strategy(&[
+            leg(
+                Side::Long,
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(7.5),
+            ),
+            leg(
+                Side::Short,
+                Positive::TWO,
+                Positive::HUNDRED,
+                pos_or_panic!(4.5),
+            ),
+            leg(
+                Side::Long,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(2.4),
+            ),
+        ])
     }
 
     #[test]
-    fn test_calculate_pnl_below_strikes() {
+    fn test_long_butterfly_spread_hand_computed_break_evens() {
         let spread = create_test_long_butterfly_spread().unwrap();
-        let market_price = pos_or_panic!(90.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // All options OTM, near max loss
-        // Max loss should be the net debit paid
-        assert!(pnl.unrealized.unwrap() < dec!(0.0));
-        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // Not worse than max loss
-    }
-
-    #[test]
-    fn test_calculate_pnl_between_strikes() {
-        let spread = create_test_long_butterfly_spread().unwrap();
-        let market_price = Positive::HUNDRED; // At middle strike
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.1);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // More flexible assertions
-        assert!(pnl.unrealized.is_some(), "Unrealized PnL should be present");
-
-        // Check if unrealized PnL is within a reasonable range
-        assert!(
-            pnl.unrealized.unwrap() >= dec!(-10.0) && pnl.unrealized.unwrap() <= dec!(10.0),
-            "Unrealized PnL should be within a reasonable range. Got: {}",
-            pnl.unrealized.unwrap()
+        assert_eq!(
+            spread.get_break_even_points().unwrap(),
+            &vec![pos_or_panic!(95.9), pos_or_panic!(104.1)]
         );
+        assert_decimal_eq!(spread.get_net_cost().unwrap(), dec!(0.9), dec!(1e-9));
+        assert_eq!(spread.get_max_profit().unwrap(), pos_or_panic!(4.1));
+        assert_eq!(spread.get_max_loss().unwrap(), pos_or_panic!(0.9));
     }
 
     #[test]
-    fn test_calculate_pnl_above_strikes() {
-        let spread = create_test_long_butterfly_spread().unwrap();
-        let market_price = pos_or_panic!(90.0);
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-        // All options ITM, near max loss
-        assert!(pnl.unrealized.unwrap() < dec!(0.0));
-        assert!(pnl.unrealized.unwrap() > dec!(-5.0)); // Not worse than max loss
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_max_profit() {
-        let spread = create_test_long_butterfly_spread().unwrap();
-        let underlying_price = pos_or_panic!(95.0); // At or below lowest strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Max loss should be the net debit paid
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-8.0), dec!(1e-6));
+    fn test_long_butterfly_spread_unequal_body_rejected() {
+        // One contract on every leg is not a butterfly: above the top strike
+        // it is net long a call. `get_strategy` rejects it since #706.
+        let leg = |side: Side, strike: Positive| {
+            create_sample_position(
+                OptionStyle::Call,
+                side,
+                Positive::HUNDRED,
+                Positive::ONE,
+                strike,
+                pos_or_panic!(0.2),
+            )
+        };
+        let result = LongButterflySpread::get_strategy(&[
+            leg(Side::Long, pos_or_panic!(95.0)),
+            leg(Side::Short, Positive::HUNDRED),
+            leg(Side::Long, pos_or_panic!(105.0)),
+        ]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::LongButterflySpread,
+                ..
+            })
+        ));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_max_loss() {
         let spread = create_test_long_butterfly_spread().unwrap();
-        let underlying_price = pos_or_panic!(110.0); // Above highest strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Max loss should be the net debit paid (including fees)
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
+        for price in [
+            pos_or_panic!(90.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+        ] {
+            let pnl = spread.calculate_pnl_at_expiration(&price).unwrap();
+            assert_decimal_eq!(pnl.realized.unwrap(), dec!(-0.9), dec!(1e-6));
+        }
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(110.0))
+            .unwrap();
+        assert_eq!(pnl.initial_income, pos_or_panic!(9.0));
+        assert_eq!(pnl.initial_costs, pos_or_panic!(9.9));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_at_middle_strike() {
         let spread = create_test_long_butterfly_spread().unwrap();
-        let underlying_price = Positive::HUNDRED; // At middle strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Near max loss
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
+        // At 100 the long 95 call pays 5, the rest expire: 5 - 0.90 = 4.10.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&Positive::HUNDRED)
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(4.1), dec!(1e-6));
+        // 97.5: 2.5 - 0.90 = 1.60; 95.9 is the lower break-even.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(97.5))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(1.6), dec!(1e-6));
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(95.9))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
     }
 }
 

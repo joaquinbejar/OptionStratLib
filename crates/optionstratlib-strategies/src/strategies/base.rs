@@ -184,8 +184,9 @@ pub enum StrategyType {
     ShortPut,
     /// Poor Man's Covered Call strategy.
     PoorMansCoveredCall,
-    /// Call Butterfly strategy.
-    CallButterfly,
+    /// Bull Call Ladder strategy: long one lower-strike call, short one
+    /// middle-strike and one higher-strike call (#706).
+    BullCallLadder,
     /// Custom strategy.
     Custom,
 }
@@ -215,7 +216,7 @@ impl FromStr for StrategyType {
             "ShortCall" => Ok(StrategyType::ShortCall),
             "ShortPut" => Ok(StrategyType::ShortPut),
             "PoorMansCoveredCall" => Ok(StrategyType::PoorMansCoveredCall),
-            "CallButterfly" => Ok(StrategyType::CallButterfly),
+            "BullCallLadder" => Ok(StrategyType::BullCallLadder),
             "Custom" => Ok(StrategyType::Custom),
             _ => Err(()),
         }

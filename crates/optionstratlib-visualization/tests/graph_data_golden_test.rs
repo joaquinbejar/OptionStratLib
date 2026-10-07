@@ -11,6 +11,12 @@
 //! and `strategy_bear_put_spread` (#696), whose builders used to take each
 //! other's legs. The golden pinned a bull put spread with a bear put spread's
 //! payoff and the reverse; both now chart the textbook legs.
+//! `strategy_long_butterfly_spread` and `strategy_short_butterfly_spread`
+//! were regenerated for #706, which makes every butterfly the textbook 1/2/1
+//! structure (the short one also took a body premium whose credit covers its
+//! fees). The same issue removed `CallButterfly` and its
+//! `strategy_call_butterfly` entry, and added `strategy_bull_call_ladder` for
+//! the 1x1x1 ladder that type actually was.
 //!
 //! The strategies that `StrategyRequest` can build are built that way, from
 //! their positions, then charted through the concrete type: the
@@ -44,7 +50,7 @@ use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::base::{Positionable, StrategyType};
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, Collar,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, Collar,
     CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle,
     LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortCall, ShortPut,
     ShortStraddle, ShortStrangle, StrategyConstructor, StrategyRequest,
@@ -127,6 +133,19 @@ fn leg(
     leg_expiring(side, style, strike, premium, EXPIRY_DAYS)
 }
 
+/// One leg of `quantity` contracts: the body of a 1/2/1 butterfly.
+fn leg_of(
+    side: Side,
+    style: OptionStyle,
+    strike: Decimal,
+    premium: Decimal,
+    quantity: Positive,
+) -> Result<Position, Box<dyn Error>> {
+    let mut position = leg(side, style, strike, premium)?;
+    position.option.quantity = quantity;
+    Ok(position)
+}
+
 fn leg_expiring(
     side: Side,
     style: OptionStyle,
@@ -179,7 +198,7 @@ fn chart_request(request: &StrategyRequest) -> Result<Value, Box<dyn Error>> {
         StrategyType::LongStrangle => build::<LongStrangle>(positions),
         StrategyType::ShortStrangle => build::<ShortStrangle>(positions),
         StrategyType::PoorMansCoveredCall => build::<PoorMansCoveredCall>(positions),
-        StrategyType::CallButterfly => build::<CallButterfly>(positions),
+        StrategyType::BullCallLadder => build::<BullCallLadder>(positions),
         StrategyType::Custom => build::<CustomStrategy>(positions),
         _ => Err(Box::new(StrategyError::NotImplemented)),
     }
@@ -224,21 +243,25 @@ fn requests() -> Result<Vec<(&'static str, StrategyRequest)>, Box<dyn Error>> {
                 leg(Long, Put, dec!(105), dec!(7.5))?,
             ],
         ),
+        // Textbook 1/2/1 butterflies since #706: the body carries twice the
+        // wing quantity.
         (
             "long_butterfly_spread",
             StrategyType::LongButterflySpread,
             vec![
                 leg(Long, Call, dec!(90), dec!(11.5))?,
-                leg(Short, Call, dec!(100), dec!(4.5))?,
+                leg_of(Short, Call, dec!(100), dec!(4.5), Positive::TWO)?,
                 leg(Long, Call, dec!(110), dec!(1.2))?,
             ],
         ),
         (
             "short_butterfly_spread",
             StrategyType::ShortButterflySpread,
+            // A body premium of 2.5 leaves a 7.70 credit, above the 4.00 of
+            // fees, so the chart has a profit zone in the wings.
             vec![
                 leg(Short, Call, dec!(90), dec!(11.5))?,
-                leg(Long, Call, dec!(100), dec!(4.5))?,
+                leg_of(Long, Call, dec!(100), dec!(2.5), Positive::TWO)?,
                 leg(Short, Call, dec!(110), dec!(1.2))?,
             ],
         ),
@@ -302,12 +325,13 @@ fn requests() -> Result<Vec<(&'static str, StrategyRequest)>, Box<dyn Error>> {
                 leg(Short, Call, dec!(105), dec!(2.4))?,
             ],
         ),
+        // The 1x1x1 call ladder that was `CallButterfly` before #706.
         (
-            "call_butterfly",
-            StrategyType::CallButterfly,
+            "bull_call_ladder",
+            StrategyType::BullCallLadder,
             vec![
-                leg(Short, Call, dec!(95), dec!(7.5))?,
-                leg(Long, Call, dec!(100), dec!(4.5))?,
+                leg(Long, Call, dec!(95), dec!(7.5))?,
+                leg(Short, Call, dec!(100), dec!(4.5))?,
                 leg(Short, Call, dec!(105), dec!(2.4))?,
             ],
         ),

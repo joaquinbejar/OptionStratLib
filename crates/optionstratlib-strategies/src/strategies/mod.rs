@@ -19,7 +19,7 @@
 //! - `bull_call_spread`: Implements the Bull Call Spread strategy.
 //! - `bull_put_spread`: Implements the Bull Put Spread strategy.
 //! - `butterfly_spread`: Implements the Butterfly Spread strategy.
-//! - `call_butterfly`: Implements the Call Butterfly strategy.
+//! - `bull_call_ladder`: Implements the Bull Call Ladder strategy.
 //! - `collar`: Implements the Collar strategy.
 //! - `covered_call`: Implements the Covered Call strategy.
 //! - `custom`: Provides utilities for creating custom strategies.
@@ -209,12 +209,12 @@ pub mod bear_call_spread;
 pub mod bear_put_spread;
 /// Internal module for strategy building utilities
 mod build;
+/// Bull Call Ladder strategy implementation
+pub mod bull_call_ladder;
 /// Bull Call Spread strategy implementation
 pub mod bull_call_spread;
 /// Bull Put Spread strategy implementation
 pub mod bull_put_spread;
-/// Call Butterfly strategy implementation  
-pub mod call_butterfly;
 /// Collar strategy implementation
 pub mod collar;
 /// Combination search shared by the strategy optimisers.
@@ -274,9 +274,9 @@ pub use bear_call_spread::BearCallSpread;
 pub use bear_put_spread::BearPutSpread;
 pub use build::model::StrategyRequest;
 pub use build::traits::StrategyConstructor;
+pub use bull_call_ladder::BullCallLadder;
 pub use bull_call_spread::BullCallSpread;
 pub use bull_put_spread::BullPutSpread;
-pub use call_butterfly::CallButterfly;
 pub use collar::Collar;
 pub use combinations::process_n_times_iter;
 pub use covered_call::CoveredCall;

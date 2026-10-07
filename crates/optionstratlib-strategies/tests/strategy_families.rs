@@ -8,7 +8,7 @@
 use optionstratlib_strategies::strategies::base::StrategyType;
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, Collar,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, Collar,
     CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle,
     LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortCall, ShortPut,
     ShortStraddle, ShortStrangle, Strategable,
@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 enum Family {
     SingleLeg,
     VerticalSpread,
+    Ladder,
     Butterfly,
     Condor,
     StraddleStrangle,
@@ -38,9 +39,9 @@ fn family_of(strategy: StrategyType) -> Family {
         | StrategyType::BullPutSpread
         | StrategyType::BearCallSpread
         | StrategyType::BearPutSpread => Family::VerticalSpread,
+        StrategyType::BullCallLadder => Family::Ladder,
         StrategyType::LongButterflySpread
         | StrategyType::ShortButterflySpread
-        | StrategyType::CallButterfly
         | StrategyType::IronButterfly => Family::Butterfly,
         StrategyType::IronCondor => Family::Condor,
         StrategyType::LongStraddle
@@ -64,9 +65,9 @@ const ALL: [StrategyType; 22] = [
     StrategyType::BullPutSpread,
     StrategyType::BearCallSpread,
     StrategyType::BearPutSpread,
+    StrategyType::BullCallLadder,
     StrategyType::LongButterflySpread,
     StrategyType::ShortButterflySpread,
-    StrategyType::CallButterfly,
     StrategyType::IronButterfly,
     StrategyType::IronCondor,
     StrategyType::LongStraddle,
@@ -89,9 +90,9 @@ assert_impl_all!(BullCallSpread: Strategable);
 assert_impl_all!(BullPutSpread: Strategable);
 assert_impl_all!(BearCallSpread: Strategable);
 assert_impl_all!(BearPutSpread: Strategable);
+assert_impl_all!(BullCallLadder: Strategable);
 assert_impl_all!(LongButterflySpread: Strategable);
 assert_impl_all!(ShortButterflySpread: Strategable);
-assert_impl_all!(CallButterfly: Strategable);
 assert_impl_all!(IronButterfly: Strategable);
 assert_impl_all!(IronCondor: Strategable);
 assert_impl_all!(LongStraddle: Strategable);
@@ -113,7 +114,8 @@ fn test_every_strategy_type_has_one_family_and_the_table_sizes_hold() {
     let expected = BTreeMap::from([
         (Family::SingleLeg, 4),
         (Family::VerticalSpread, 4),
-        (Family::Butterfly, 4),
+        (Family::Ladder, 1),
+        (Family::Butterfly, 3),
         (Family::Condor, 1),
         (Family::StraddleStrangle, 4),
         (Family::CoveredProtective, 4),

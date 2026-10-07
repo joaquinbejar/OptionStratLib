@@ -5,7 +5,7 @@ use crate::strategies::poor_mans_covered_call::PMCC_DESCRIPTION;
 use crate::strategies::short_call::SHORT_CALL_DESCRIPTION;
 use crate::strategies::short_put::SHORT_PUT_DESCRIPTION;
 use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallSpread, BullPutSpread, CallButterfly, IronButterfly,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
     IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
     PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
 };
@@ -179,12 +179,13 @@ impl Default for PoorMansCoveredCall {
         }
     }
 }
-impl Default for CallButterfly {
+impl Default for BullCallLadder {
     fn default() -> Self {
-        CallButterfly {
-            name: "Call Butterfly".to_string(),
-            kind: StrategyType::CallButterfly,
-            description: crate::strategies::call_butterfly::CALL_BUTTERFLY_DESCRIPTION.to_string(),
+        BullCallLadder {
+            name: "Bull Call Ladder".to_string(),
+            kind: StrategyType::BullCallLadder,
+            description: crate::strategies::bull_call_ladder::BULL_CALL_LADDER_DESCRIPTION
+                .to_string(),
             break_even_points: Vec::new(),
             short_call_low: Position::default(),
             long_call: Position::default(),

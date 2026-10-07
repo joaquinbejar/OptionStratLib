@@ -44,7 +44,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// The default description for the Short Butterfly Spread strategy.
 pub const SHORT_BUTTERFLY_DESCRIPTION: &str = "A short butterfly spread is created by selling one call at a lower strike price, \
@@ -361,16 +361,13 @@ impl StrategyConstructor for ShortButterflySpread {
             ),
         };
 
-        // The builder accepts the same quantity on every leg, while `new` and
-        // `validate` require a doubled body (1/2/1), so such a request fails
-        // `validate`. Settling the butterfly convention is #706; until then
-        // the mismatch is reported here instead of being enforced.
+        // A textbook butterfly carries twice the wing quantity in the body
+        // (1/2/1), the structure `new` builds and `validate` checks (#706).
         if !strategy.validate() {
-            warn!(
-                strategy = %StrategyType::ShortButterflySpread,
-                issue = 706,
-                "get_strategy built legs that fail validate"
-            );
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ShortButterflySpread,
+                "the positions passed to `get_strategy` fail validation",
+            ));
         }
 
         // Every other constructor in this crate populates the break-even
@@ -2424,7 +2421,7 @@ mod tests_short_butterfly_spread_constructor {
                 OptionStyle::Call,
                 Side::Long,
                 pos_or_panic!(90.0),
-                Positive::ONE,
+                Positive::TWO,
                 Positive::HUNDRED,
                 pos_or_panic!(0.2),
             ),
@@ -2639,141 +2636,133 @@ mod tests_short_butterfly_spread_constructor {
 mod tests_short_butterfly_spread_pnl {
     use super::*;
 
+    // Only expiry P&L is pinned here. `Position::calculate_pnl` reports the
+    // change in one contract's Black-Scholes value whatever the leg's
+    // quantity, so its `unrealized` undercounts the doubled body and is not
+    // a reference for a 1/2/1 butterfly.
+
     use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
 
+    // Textbook 1/2/1 short call butterfly (#706): short one 95 call for 7.50,
+    // long two 100 calls for 4.50 each, short one 105 call for 2.40, no fees.
+    // Net credit 7.50 + 2.40 - 9.00 = 0.90, so the hand-computed expiry
+    // payoff is +0.90 at or below 95 and at or above 105, bottoms at
+    // 0.90 - 5 = -4.10 at 100, and crosses zero at 95.90 and 104.10.
     fn create_test_short_butterfly_spread() -> Result<ShortButterflySpread, StrategyError> {
-        // Create lower short call
-        let lower_long_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Short,
-            Positive::HUNDRED,   // Underlying price
-            Positive::ONE,       // Quantity
-            pos_or_panic!(95.0), // Lower strike price
-            pos_or_panic!(0.2),  // Implied volatility
-        );
-
-        // Create middle short call
-        let middle_long_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Long,
-            Positive::HUNDRED,  // Same underlying price
-            Positive::ONE,      // Quantity
-            Positive::HUNDRED,  // Middle strike price (ATM)
-            pos_or_panic!(0.2), // Implied volatility
-        );
-
-        // Create higher short call
-        let higher_long_call = create_sample_position(
-            OptionStyle::Call,
-            Side::Short,
-            Positive::HUNDRED,    // Same underlying price
-            Positive::ONE,        // Quantity
-            pos_or_panic!(105.0), // Higher strike price
-            pos_or_panic!(0.2),   // Implied volatility
-        );
-
-        ShortButterflySpread::get_strategy(&[lower_long_call, middle_long_call, higher_long_call])
+        let leg = |side: Side, quantity: Positive, strike: Positive, premium: Positive| {
+            let mut position = create_sample_position(
+                OptionStyle::Call,
+                side,
+                Positive::HUNDRED,
+                quantity,
+                strike,
+                pos_or_panic!(0.2),
+            );
+            position.premium = premium;
+            position.open_fee = Positive::ZERO;
+            position.close_fee = Positive::ZERO;
+            position
+        };
+        ShortButterflySpread::get_strategy(&[
+            leg(
+                Side::Short,
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(7.5),
+            ),
+            leg(
+                Side::Long,
+                Positive::TWO,
+                Positive::HUNDRED,
+                pos_or_panic!(4.5),
+            ),
+            leg(
+                Side::Short,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(2.4),
+            ),
+        ])
     }
 
     #[test]
-    fn test_calculate_pnl_below_strikes() {
+    fn test_short_butterfly_spread_hand_computed_break_evens() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos_or_panic!(90.0); // Below all strikes
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // All options OTM, near max profit
-        assert!(pnl.unrealized.unwrap() > dec!(0.0));
-        assert!(pnl.unrealized.unwrap() < dec!(5.0)); // Not better than max profit
+        assert_eq!(
+            spread.get_break_even_points().unwrap(),
+            &vec![pos_or_panic!(95.9), pos_or_panic!(104.1)]
+        );
+        assert_decimal_eq!(spread.get_net_cost().unwrap(), dec!(-0.9), dec!(1e-9));
+        assert_eq!(spread.get_max_profit().unwrap(), pos_or_panic!(0.9));
+        assert_eq!(spread.get_max_loss().unwrap(), pos_or_panic!(4.1));
     }
 
     #[test]
-    fn test_calculate_pnl_between_strikes() {
-        let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos_or_panic!(99.0);
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.1);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // Near max profit, as at-the-money
-        assert!(pnl.unrealized.unwrap() > dec!(0.0));
-        assert!(pnl.unrealized.unwrap() < dec!(5.0));
-    }
-
-    #[test]
-    fn test_calculate_pnl_above_strikes() {
-        let spread = create_test_short_butterfly_spread().unwrap();
-        let market_price = pos_or_panic!(90.0);
-        let expiration_date = ExpirationDate::Days(pos_or_panic!(20.0));
-        let implied_volatility = pos_or_panic!(0.2);
-
-        let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // All options ITM, near max profit
-        assert!(pnl.unrealized.unwrap() > dec!(0.0));
-        assert!(pnl.unrealized.unwrap() < dec!(5.0)); // Not better than max profit
+    fn test_short_butterfly_spread_unequal_body_rejected() {
+        // One contract on every leg is not a butterfly: above the top strike
+        // it is net short a call. `get_strategy` rejects it since #706.
+        let leg = |side: Side, strike: Positive| {
+            create_sample_position(
+                OptionStyle::Call,
+                side,
+                Positive::HUNDRED,
+                Positive::ONE,
+                strike,
+                pos_or_panic!(0.2),
+            )
+        };
+        let result = ShortButterflySpread::get_strategy(&[
+            leg(Side::Short, pos_or_panic!(95.0)),
+            leg(Side::Long, Positive::HUNDRED),
+            leg(Side::Short, pos_or_panic!(105.0)),
+        ]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::ShortButterflySpread,
+                ..
+            })
+        ));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_max_profit() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = pos_or_panic!(95.0); // At or below lowest strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Max profit should be the net credit received
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
-    }
-
-    #[test]
-    fn test_calculate_pnl_at_expiration_max_loss() {
-        let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = pos_or_panic!(110.0); // Above highest strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Max loss should be the net credit received minus spread width
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-8.0), dec!(1e-6));
+        for price in [
+            pos_or_panic!(90.0),
+            pos_or_panic!(95.0),
+            pos_or_panic!(105.0),
+            pos_or_panic!(110.0),
+        ] {
+            let pnl = spread.calculate_pnl_at_expiration(&price).unwrap();
+            assert_decimal_eq!(pnl.realized.unwrap(), dec!(0.9), dec!(1e-6));
+        }
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(110.0))
+            .unwrap();
+        assert_eq!(pnl.initial_income, pos_or_panic!(9.9));
+        assert_eq!(pnl.initial_costs, pos_or_panic!(9.0));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_at_middle_strike() {
         let spread = create_test_short_butterfly_spread().unwrap();
-        let underlying_price = Positive::HUNDRED; // At middle strike
-
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-        assert!(pnl.realized.is_some());
-
-        // Near max profit
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
+        // At 100 the short 95 call owes 5, the rest expire: 0.90 - 5 = -4.10.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&Positive::HUNDRED)
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-4.1), dec!(1e-6));
+        // 97.5: 0.90 - 2.5 = -1.60; 95.9 is the lower break-even.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(97.5))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-1.6), dec!(1e-6));
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(95.9))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
     }
 }
 

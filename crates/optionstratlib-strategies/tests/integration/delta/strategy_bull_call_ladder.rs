@@ -4,17 +4,17 @@ use optionstratlib_core::{assert_decimal_eq, model::ExpirationDate};
 use optionstratlib_core::{assert_pos_relative_eq, model::Positive, pos_or_panic};
 use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
 use optionstratlib_pricing::greeks::Greeks;
-use optionstratlib_strategies::strategies::call_butterfly::CallButterfly;
+use optionstratlib_strategies::strategies::bull_call_ladder::BullCallLadder;
 use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    // Define inputs for the CallButterfly strategy
+fn test_bull_call_ladder_integration() -> Result<(), Box<dyn Error>> {
+    // Define inputs for the BullCallLadder strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = CallButterfly::new(
+    let strategy = BullCallLadder::new(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5750.0), // long_call_strike

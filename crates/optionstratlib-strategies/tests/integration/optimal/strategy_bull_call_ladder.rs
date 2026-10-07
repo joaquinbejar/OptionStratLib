@@ -1,21 +1,22 @@
 use optionstratlib_core::{model::Positive, pos_or_panic};
 use {
-    optionstratlib_core::model::ExpirationDate, optionstratlib_core::model::Side,
+    approx::assert_relative_eq,
+    num_traits::ToPrimitive,
+    optionstratlib_core::model::ExpirationDate,
     optionstratlib_market::chains::chain::OptionChain,
     optionstratlib_market::chains::utils::FindOptimalSide,
-    optionstratlib_strategies::strategies::CallButterfly,
     optionstratlib_strategies::strategies::base::Optimizable,
-    optionstratlib_strategies::strategies::base::Positionable, rust_decimal_macros::dec,
+    optionstratlib_strategies::strategies::{BullCallLadder, Strategies},
+    rust_decimal_macros::dec,
     std::error::Error,
 };
 
-// long 276.06, short 269.62 short 58.5
 #[test]
-fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    // Define inputs for the CallButterfly strategy
+fn test_bull_call_ladder_integration() -> Result<(), Box<dyn Error>> {
+    // Define inputs for the BullCallLadder strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let mut strategy = CallButterfly::new(
+    let mut strategy = BullCallLadder::new(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5750.0), // long_call_strike
@@ -41,13 +42,18 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
     ))?;
-    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
-    let positions = strategy.get_positions()?;
-    for position in positions {
-        if position.option.side == Side::Long {
-            assert!(position.option.strike_price <= underlying_price)
-        }
-    }
+    strategy.get_best_area(&option_chain, FindOptimalSide::All);
+    assert_relative_eq!(
+        strategy.get_profit_area().unwrap().to_f64().unwrap(),
+        75286.2704,
+        epsilon = 0.001
+    );
+    strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
+    assert_relative_eq!(
+        strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
+        19628.0,
+        epsilon = 0.001
+    );
 
     Ok(())
 }

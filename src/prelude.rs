@@ -37,9 +37,9 @@ pub use crate::strategies::{
     // Specific strategy implementations (commonly used)
     bear_call_spread::BearCallSpread,
     bear_put_spread::BearPutSpread,
+    bull_call_ladder::BullCallLadder,
     bull_call_spread::BullCallSpread,
     bull_put_spread::BullPutSpread,
-    call_butterfly::CallButterfly,
     collar::Collar,
     covered_call::CoveredCall,
     custom::CustomStrategy,

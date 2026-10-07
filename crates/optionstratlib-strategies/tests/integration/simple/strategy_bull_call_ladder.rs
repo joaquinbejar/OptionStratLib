@@ -4,17 +4,17 @@ use optionstratlib_core::constants::ZERO;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::{assert_pos_relative_eq, model::Positive, pos_or_panic};
 use optionstratlib_strategies::strategies::base::BreakEvenable;
-use optionstratlib_strategies::strategies::call_butterfly::CallButterfly;
+use optionstratlib_strategies::strategies::bull_call_ladder::BullCallLadder;
 use optionstratlib_strategies::strategies::{BasicAble, Strategies};
 use rust_decimal_macros::dec;
 use std::error::Error;
 
 #[test]
-fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
-    // Define inputs for the CallButterfly strategy
+fn test_bull_call_ladder_integration() -> Result<(), Box<dyn Error>> {
+    // Define inputs for the BullCallLadder strategy
     let underlying_price = pos_or_panic!(5781.88);
 
-    let strategy = CallButterfly::new(
+    let strategy = BullCallLadder::new(
         "SP500".to_string(),
         underlying_price,      // underlying_price
         pos_or_panic!(5750.0), // long_call_strike
@@ -39,7 +39,7 @@ fn test_call_butterfly_integration() -> Result<(), Box<dyn Error>> {
     // Assertions to validate strategy properties and computations
     assert_eq!(
         strategy.get_title(),
-        "CallButterfly Strategy: \n\tUnderlying: SP500 @ $5800 Short Call European Option\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5850 Short Call European Option"
+        "BullCallLadder Strategy: \n\tUnderlying: SP500 @ $5800 Short Call European Option\n\tUnderlying: SP500 @ $5750 Long Call European Option\n\tUnderlying: SP500 @ $5850 Short Call European Option"
     );
     assert_eq!(strategy.get_break_even_points()?.len(), 2);
     assert_relative_eq!(

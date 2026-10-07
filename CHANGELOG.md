@@ -9,6 +9,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Butterflies are textbook 1/2/1, `CallButterfly` is removed, and the
+  1x1x1 call ladder it was is `BullCallLadder`** (#706). This closes the
+  three butterfly exceptions #696 left.
+  - `LongButterflySpread::get_strategy` and
+    `ShortButterflySpread::get_strategy` enforce `validate()`, which requires
+    the body to carry twice the wing quantity, the structure `new` already
+    built. A request with one contract on every leg (net long or net short
+    one call above the top strike) now returns
+    `StrategyError::InvalidStrategy` instead of a `WARN`. Migration: give the
+    middle leg twice the quantity of each wing.
+  - `CallButterfly`, the `call_butterfly` module,
+    `CALL_BUTTERFLY_DESCRIPTION` and `StrategyType::CallButterfly` are
+    removed, with the prelude export and the `Graph` implementation. The
+    type never matched its name: it was long the lower strike and short the
+    middle and the upper ones, a ladder, while a textbook call butterfly is
+    long the outer strikes and short twice the middle one. Migration:
+    `CallButterfly` removed; the textbook long call butterfly is
+    `LongButterflySpread`; the former `CallButterfly` 1x1x1 ladder is
+    `BullCallLadder`. No alias is kept, so code that names the old type
+    fails to compile instead of silently building a different strategy.
+  - Serialized names: `StrategyType` serializes by variant name, so a
+    document with `"CallButterfly"` (a `kind` field, a `StrategyRequest`)
+    no longer deserializes and `"CallButterfly".parse::<StrategyType>()`
+    fails. Write `"BullCallLadder"` for the ladder or
+    `"LongButterflySpread"` for the butterfly.
+  - `BullCallLadder` (`StrategyType::BullCallLadder`, `bull_call_ladder`
+    module, `BULL_CALL_LADDER_DESCRIPTION`), in a new "Ladders" family,
+    keeps the fields, `new` and `validate` of the old type, and:
+    - `new` and `get_strategy` enforce `validate()`. `get_strategy` used to
+      take short low / long middle / short high, which its own `validate`
+      rejected; it now takes long low / short middle / short high, like
+      `new`.
+    - `add_position` used to tell the two short calls apart by comparing
+      with the long strike, as for a butterfly, so the second short call
+      overwrote the first. It now keeps them ordered by strike.
+    - It no longer implements `ButterflyStrategy`: a ladder has no body.
+  - `StrategyType` is exhaustive, so a `match` on it needs the new arm and
+    loses the old one.
+  - Golden chart data: `strategy_call_butterfly` is removed,
+    `strategy_bull_call_ladder` is added, and
+    `strategy_long_butterfly_spread` and `strategy_short_butterfly_spread`
+    are regenerated on purpose with a 1/2/1 body; the short butterfly's body
+    premium also drops from 4.50 to 2.50 so its credit covers its fees.
+    Every other entry is unchanged. On the golden legs (fees 0.50 open and
+    0.50 close per contract): the long butterfly 90/100/110 breaks even at
+    97.70 and 102.30 with a 2.30 maximum profit and 7.70 maximum loss; the
+    short butterfly at 93.70 and 106.30 with 3.70 and 6.30; the bull call
+    ladder 95/100/105 at 98.60 and 106.40 with a 1.40 maximum profit and an
+    unlimited loss.
+  - Pinned values: in the ladder's `create_test_increasing_adjustments`
+    (both delta modules) the fixture had its two short strikes in the wrong
+    fields, which its own `validate` rejects. Ordered, the first short leg
+    the adjustment reaches is the 5800 call, so the buy-back quantity moves
+    from 0.2835618144021385 to 0.1338190182607754 and its strike from 5850
+    to 5800. The net-delta-zero check after the adjustment holds either way.
+  - The butterfly P&L tests pin expiry P&L only, on hand-computed 1/2/1
+    fixtures. `Position::calculate_pnl` reports the change in one contract's
+    value whatever the leg's quantity, so its `unrealized` is not a
+    reference for a doubled body.
+  - The `strategy_call_butterfly*` examples demonstrated the ladder and are
+    `strategy_bull_call_ladder*` now, with valid legs.
+
 - **The put spread builders take textbook legs, and every strategy
   constructor and builder returns `StrategyError::InvalidStrategy` instead
   of a strategy that fails its own `validate()`, except the three butterfly
