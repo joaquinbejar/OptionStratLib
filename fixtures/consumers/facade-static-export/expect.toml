@@ -9,4 +9,4 @@ present = [
     "fantoccini", "webdriver", "tokio", "reqwest", "futures", "async-trait",
 ]
 # `async` brings market's I/O (`csv`, `zip`) with it.
-absent = ["tracing-subscriber", "indicatif"]
+absent = ["tracing-subscriber", "indicatif", "pretty-simple-display"]

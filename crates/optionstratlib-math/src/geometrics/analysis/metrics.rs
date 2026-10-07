@@ -1,7 +1,7 @@
 use crate::curves::Point2D;
 use crate::error::CurveError;
 use crate::geometrics::AnalysisResult;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::Serialize;
 
@@ -58,7 +58,7 @@ use serde::Serialize;
 /// ## Remarks
 /// The `CurveMetrics` struct is designed to be reusable across various analytical contexts,
 /// providing a versatile and standardized way to represent curve characteristics.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Metrics {
     /// - **Basic Metrics (`basic`)**:
@@ -86,6 +86,9 @@ pub struct Metrics {
     ///   the risk-return profile in financial contexts.
     pub risk: RiskMetrics,
 }
+
+impl_json_debug_pretty!(Metrics);
+impl_json_display!(Metrics);
 
 /// Represents a set of metrics associated with analyzing and interpreting a curve.
 ///
@@ -235,7 +238,7 @@ impl Metrics {
 /// - [`ShapeMetrics`]: Captures shape-related properties like skewness and kurtosis.
 /// - [`RiskMetrics`]: Measures risk characteristics of financial instruments.
 /// - [`TrendMetrics`]: Represents time-based trends in data series.
-#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BasicMetrics {
     /// The arithmetic mean (average) of the dataset.
@@ -262,6 +265,9 @@ pub struct BasicMetrics {
     /// while a high standard deviation indicates values are spread over a wider range.
     pub std_dev: Decimal,
 }
+
+impl_json_debug_pretty!(BasicMetrics);
+impl_json_display!(BasicMetrics);
 
 /// Represents shape-related analysis metrics for a given curve.
 ///
@@ -298,7 +304,7 @@ pub struct BasicMetrics {
 /// `ShapeMetrics` is typically part of the larger `AnalysisResult` structure
 /// that provides comprehensive curve analysis. It uses `Point2D` to represent
 /// all positional data with high-precision `Decimal` values.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ShapeMetrics {
     /// Describes the asymmetry of the curve's distribution.
@@ -328,6 +334,9 @@ pub struct ShapeMetrics {
     /// while changing sign.
     pub inflection_points: Vec<Point2D>,
 }
+
+impl_json_debug_pretty!(ShapeMetrics);
+impl_json_display!(ShapeMetrics);
 
 /// Represents statistical and range-related metrics for a dataset.
 ///
@@ -359,7 +368,7 @@ pub struct ShapeMetrics {
 ///
 /// This structure is part of the curves analysis module that provides comprehensive
 /// statistical and financial analysis tools for mathematical curves.
-#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct RangeMetrics {
     /// The minimum point in the dataset, containing the smallest x and y coordinates observed.
@@ -380,6 +389,9 @@ pub struct RangeMetrics {
     /// providing a measure of statistical dispersion that ignores extremes.
     pub interquartile_range: Decimal,
 }
+
+impl_json_debug_pretty!(RangeMetrics);
+impl_json_display!(RangeMetrics);
 
 /// Represents key metrics for analyzing trends within a dataset or curve.
 ///
@@ -408,7 +420,7 @@ pub struct RangeMetrics {
 ///
 /// This structure is a key component of the curve analysis module and works
 /// alongside other metric types to provide comprehensive statistical analysis.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct TrendMetrics {
     /// The slope coefficient of the linear regression line, indicating the
@@ -429,6 +441,9 @@ pub struct TrendMetrics {
     /// highlight the underlying trend.
     pub moving_average: Vec<Point2D>,
 }
+
+impl_json_debug_pretty!(TrendMetrics);
+impl_json_display!(TrendMetrics);
 
 /// Represents a collection of key financial risk metrics used in risk analysis
 /// and performance evaluation.
@@ -455,7 +470,7 @@ pub struct TrendMetrics {
 /// # Note
 /// For accuracy, ensure the data used to compute these metrics represents a
 /// sufficiently long time horizon and is free from anomalies.
-#[derive(DebugPretty, DisplaySimple, Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct RiskMetrics {
     /// Measures the degree of variation in returns over time.
@@ -482,6 +497,9 @@ pub struct RiskMetrics {
     /// Helps evaluate whether returns justify the associated risk profile.
     pub sharpe_ratio: Decimal,
 }
+
+impl_json_debug_pretty!(RiskMetrics);
+impl_json_display!(RiskMetrics);
 
 #[cfg(test)]
 mod tests {

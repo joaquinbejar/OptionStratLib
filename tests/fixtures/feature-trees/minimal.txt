@@ -21,11 +21,6 @@ cpufeatures -> libc
 crossbeam-deque -> crossbeam-epoch
 crossbeam-deque -> crossbeam-utils
 crossbeam-epoch -> crossbeam-utils
-dirs-next -> cfg-if
-dirs-next -> dirs-sys-next
-dirs-sys-next -> libc
-dirs-sys-next -> redox_users
-dirs-sys-next -> winapi
 expiration_date -> chrono
 expiration_date -> positive
 expiration_date -> rust_decimal
@@ -45,7 +40,6 @@ getrandom -> cfg-if
 getrandom -> libc
 getrandom -> r-efi
 getrandom -> rand_core
-getrandom -> wasi
 iana-time-zone -> android_system_properties
 iana-time-zone -> core-foundation-sys
 iana-time-zone -> iana-time-zone-haiku
@@ -58,14 +52,10 @@ indexmap -> equivalent
 indexmap -> hashbrown
 indexmap -> serde
 indexmap -> serde_core
-is-terminal -> hermit-abi
-is-terminal -> libc
-is-terminal -> windows-sys
 itertools -> either
 js-sys -> cfg-if
 js-sys -> futures-util
 js-sys -> wasm-bindgen
-libredox -> libc
 matrixmultiply -> autocfg
 matrixmultiply -> rawpointer
 nalgebra -> approx
@@ -98,7 +88,6 @@ optionstratlib -> optionstratlib-market
 optionstratlib -> optionstratlib-math
 optionstratlib -> optionstratlib-pricing
 optionstratlib -> positive
-optionstratlib -> pretty-simple-display
 optionstratlib -> rand
 optionstratlib -> rand_distr
 optionstratlib -> rayon
@@ -116,7 +105,6 @@ optionstratlib-core -> financial_types
 optionstratlib-core -> num-traits
 optionstratlib-core -> option_type
 optionstratlib-core -> positive
-optionstratlib-core -> pretty-simple-display
 optionstratlib-core -> rand
 optionstratlib-core -> rand_distr
 optionstratlib-core -> rust_decimal
@@ -132,8 +120,6 @@ optionstratlib-market -> num-traits
 optionstratlib-market -> optionstratlib-core
 optionstratlib-market -> optionstratlib-math
 optionstratlib-market -> optionstratlib-pricing
-optionstratlib-market -> pretty-simple-display
-optionstratlib-market -> prettytable-rs
 optionstratlib-market -> rust_decimal
 optionstratlib-market -> rust_decimal_macros
 optionstratlib-market -> serde
@@ -144,13 +130,11 @@ optionstratlib-market -> utoipa
 optionstratlib-math -> itertools
 optionstratlib-math -> num-traits
 optionstratlib-math -> optionstratlib-core
-optionstratlib-math -> pretty-simple-display
 optionstratlib-math -> rand
 optionstratlib-math -> rayon
 optionstratlib-math -> rust_decimal
 optionstratlib-math -> rust_decimal_macros
 optionstratlib-math -> serde
-optionstratlib-math -> serde_json
 optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
@@ -158,14 +142,12 @@ optionstratlib-math -> utoipa
 optionstratlib-pricing -> num-traits
 optionstratlib-pricing -> optionstratlib-core
 optionstratlib-pricing -> optionstratlib-math
-optionstratlib-pricing -> pretty-simple-display
 optionstratlib-pricing -> rand
 optionstratlib-pricing -> rand_distr
 optionstratlib-pricing -> rayon
 optionstratlib-pricing -> rust_decimal
 optionstratlib-pricing -> rust_decimal_macros
 optionstratlib-pricing -> serde
-optionstratlib-pricing -> serde_json
 optionstratlib-pricing -> statrs
 optionstratlib-pricing -> thiserror
 optionstratlib-pricing -> tracing
@@ -177,14 +159,6 @@ positive -> rust_decimal_macros
 positive -> serde
 positive -> thiserror
 positive -> utoipa
-pretty-simple-display -> proc-macro2
-pretty-simple-display -> quote
-pretty-simple-display -> syn
-prettytable-rs -> encode_unicode
-prettytable-rs -> is-terminal
-prettytable-rs -> lazy_static
-prettytable-rs -> term
-prettytable-rs -> unicode-width
 proc-macro2 -> unicode-ident
 quote -> proc-macro2
 rand -> chacha20
@@ -196,9 +170,6 @@ rayon -> either
 rayon -> rayon-core
 rayon-core -> crossbeam-deque
 rayon-core -> crossbeam-utils
-redox_users -> getrandom
-redox_users -> libredox
-redox_users -> thiserror
 regex -> aho-corasick
 regex -> memchr
 regex -> regex-automata
@@ -235,9 +206,6 @@ statrs -> thiserror
 syn -> proc-macro2
 syn -> quote
 syn -> unicode-ident
-term -> dirs-next
-term -> rustversion
-term -> winapi
 thiserror -> thiserror-impl
 thiserror-impl -> proc-macro2
 thiserror-impl -> quote
@@ -274,8 +242,6 @@ wasm-bindgen-macro-support -> wasm-bindgen-shared
 wasm-bindgen-shared -> unicode-ident
 wide -> bytemuck
 wide -> safe_arch
-winapi -> winapi-i686-pc-windows-gnu
-winapi -> winapi-x86_64-pc-windows-gnu
 windows-core -> windows-implement
 windows-core -> windows-interface
 windows-core -> windows-link
@@ -289,7 +255,6 @@ windows-interface -> quote
 windows-interface -> syn
 windows-result -> windows-link
 windows-strings -> windows-link
-windows-sys -> windows-link
 
 aho-corasick [perf-literal,std]
 android_system_properties []
@@ -307,10 +272,7 @@ cpufeatures []
 crossbeam-deque [default,std]
 crossbeam-epoch [alloc,std]
 crossbeam-utils [default,std]
-dirs-next []
-dirs-sys-next []
 either [std,use_std]
-encode_unicode [default,std]
 equivalent []
 expiration_date [default,utoipa]
 financial_types [default,std,utoipa]
@@ -320,18 +282,14 @@ futures-task [alloc,std]
 futures-util [alloc,slab,std]
 getrandom [std,sys_rng]
 hashbrown []
-hermit-abi [default]
 iana-time-zone [fallback]
 iana-time-zone-haiku []
 indexmap [default,serde,std]
-is-terminal []
 itertools [default,use_alloc,use_std]
 itoa []
 js-sys [default,std,unsafe-eval]
-lazy_static []
 libc [default,std]
 libm [arch,default]
-libredox [base,call,libc,std]
 log []
 matrixmultiply [avx512,default,std]
 memchr [alloc,std]
@@ -349,8 +307,6 @@ optionstratlib-math [default,schema]
 optionstratlib-pricing [default,schema]
 pin-project-lite []
 positive [default,utoipa]
-pretty-simple-display []
-prettytable-rs []
 proc-macro2 [default,proc-macro]
 quote [default,proc-macro]
 r-efi []
@@ -360,7 +316,6 @@ rand_distr [alloc,default,std]
 rawpointer []
 rayon []
 rayon-core []
-redox_users []
 regex [default,perf,perf-backtrack,perf-cache,perf-dfa,perf-inline,perf-literal,perf-onepass,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment]
 regex-automata [alloc,dfa-onepass,hybrid,meta,nfa-backtrack,nfa-pikevm,nfa-thompson,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary]
 regex-syntax [default,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment]
@@ -377,7 +332,6 @@ simba [std,wide]
 slab [std]
 statrs [default,nalgebra,rand,std]
 syn [clone-impls,default,derive,extra-traits,full,parsing,printing,proc-macro,visit,visit-mut]
-term [default]
 thiserror [default,std]
 thiserror-impl []
 tracing [attributes,default,std,tracing-attributes]
@@ -385,24 +339,18 @@ tracing-attributes []
 tracing-core [once_cell,std]
 typenum []
 unicode-ident []
-unicode-width [cjk,default]
 utoipa [axum_extras,chrono,decimal,default,macros]
 utoipa-gen [axum_extras,chrono,decimal,regex]
 uuid [default,rng,serde,std,v4]
-wasi []
 wasm-bindgen [default,std]
 wasm-bindgen-macro []
 wasm-bindgen-macro-support []
 wasm-bindgen-shared []
 wide [std]
-winapi [consoleapi,fileapi,handleapi,knownfolders,objbase,shlobj,winbase,wincon,winerror]
-winapi-i686-pc-windows-gnu []
-winapi-x86_64-pc-windows-gnu []
 windows-core [default,std]
 windows-implement []
 windows-interface []
 windows-link []
 windows-result [std]
 windows-strings [std]
-windows-sys [Win32,Win32_Foundation,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,default]
 zmij []

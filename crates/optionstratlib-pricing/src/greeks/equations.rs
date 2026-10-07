@@ -12,7 +12,7 @@ use optionstratlib_core::model::decimal::p_sqrt;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType};
 use optionstratlib_core::model::{Options, Side};
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::cell::OnceCell;
@@ -41,7 +41,7 @@ use std::cell::OnceCell;
 /// * `color`: Measures the rate of change of gamma in relation to changes in time
 ///
 /// These metrics help traders understand and manage the various dimensions of risk in option positions.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Greek {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
@@ -70,6 +70,9 @@ pub struct Greek {
     pub color: Decimal,
 }
 
+impl_json_debug_pretty!(Greek);
+impl_json_display!(Greek);
+
 /// A struct representing a snapshot of the Greeks, financial measures used to assess risk and
 /// sensitivity of derivative instruments such as options.
 ///
@@ -93,7 +96,7 @@ pub struct Greek {
 /// zero, and must not be defaulted to one. They serialize as an explicit
 /// `null` rather than being skipped, so that "not meaningful" stays
 /// distinguishable from "field absent" on the wire.
-#[derive(DebugPretty, DisplaySimple, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct GreeksSnapshot {
     /// Measures sensitivity to changes in the underlying asset's price (first derivative)
@@ -121,6 +124,9 @@ pub struct GreeksSnapshot {
     /// Measures the rate of change of gamma in relation to changes in time
     pub color: Decimal,
 }
+
+impl_json_debug_pretty!(GreeksSnapshot);
+impl_json_display!(GreeksSnapshot);
 
 impl From<Greek> for GreeksSnapshot {
     /// Widens a [`Greek`] into a [`GreeksSnapshot`].

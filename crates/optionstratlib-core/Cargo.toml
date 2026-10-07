@@ -31,7 +31,6 @@ financial_types = { workspace = true }
 num-traits = { workspace = true }
 option_type = { workspace = true }
 positive = { workspace = true }
-pretty-simple-display = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }
 rust_decimal = { workspace = true }

@@ -1,6 +1,6 @@
 use crate::chains::OptionChainBuildParams;
 use optionstratlib_core::model::Positive;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use serde::{Deserialize, Serialize};
 
 /// `OptionSeriesBuildParams` is a struct that represents the parameters required to
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// * `series` (`Vec<Positive>`) - A collection of positive values indicating the number
 ///   of option chains to build and their associated days to expiration. Each value in the vector
 ///   specifies a particular series to generate with its distinct expiration timeline.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct OptionSeriesBuildParams {
     /// Parameters for building option chains
     pub(crate) chain_params: OptionChainBuildParams,
@@ -24,6 +24,9 @@ pub struct OptionSeriesBuildParams {
     /// Number of options chain to build and its days to expiration
     pub(crate) series: Vec<Positive>,
 }
+
+impl_json_debug_pretty!(OptionSeriesBuildParams);
+impl_json_display!(OptionSeriesBuildParams);
 
 impl OptionSeriesBuildParams {
     /// The parameters every chain of the series is built from.

@@ -43,6 +43,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -50,7 +51,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -115,7 +115,7 @@ when expecting large price movements but uncertain about direction.";
 /// * Time decay (theta) works against this strategy, as both options lose value over time
 /// * Most effective when implemented with sufficient time to expiration
 /// * Consider closing the position if implied volatility increases significantly without price movement
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct LongStraddle {
     /// The name identifier for this strategy instance
@@ -131,6 +131,9 @@ pub struct LongStraddle {
     /// The purchased put option position component
     pub long_put: Position,
 }
+
+impl_json_debug_pretty!(LongStraddle);
+impl_json_display!(LongStraddle);
 
 impl LongStraddle {
     /// Creates a new Long Straddle strategy.

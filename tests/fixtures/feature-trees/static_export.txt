@@ -452,7 +452,6 @@ optionstratlib -> optionstratlib-simulation
 optionstratlib -> optionstratlib-strategies
 optionstratlib -> optionstratlib-visualization
 optionstratlib -> positive
-optionstratlib -> pretty-simple-display
 optionstratlib -> rand
 optionstratlib -> rand_distr
 optionstratlib -> rayon
@@ -473,7 +472,6 @@ optionstratlib-analytics -> optionstratlib-core
 optionstratlib-analytics -> optionstratlib-market
 optionstratlib-analytics -> optionstratlib-math
 optionstratlib-analytics -> optionstratlib-pricing
-optionstratlib-analytics -> pretty-simple-display
 optionstratlib-analytics -> rust_decimal
 optionstratlib-analytics -> rust_decimal_macros
 optionstratlib-analytics -> serde
@@ -487,12 +485,9 @@ optionstratlib-backtest -> optionstratlib-core
 optionstratlib-backtest -> optionstratlib-pricing
 optionstratlib-backtest -> optionstratlib-simulation
 optionstratlib-backtest -> optionstratlib-strategies
-optionstratlib-backtest -> pretty-simple-display
-optionstratlib-backtest -> prettytable-rs
 optionstratlib-backtest -> rust_decimal
 optionstratlib-backtest -> rust_decimal_macros
 optionstratlib-backtest -> serde
-optionstratlib-backtest -> serde_json
 optionstratlib-backtest -> thiserror
 optionstratlib-backtest -> tracing
 optionstratlib-backtest -> utoipa
@@ -503,7 +498,6 @@ optionstratlib-core -> financial_types
 optionstratlib-core -> num-traits
 optionstratlib-core -> option_type
 optionstratlib-core -> positive
-optionstratlib-core -> pretty-simple-display
 optionstratlib-core -> rand
 optionstratlib-core -> rand_distr
 optionstratlib-core -> rust_decimal
@@ -520,8 +514,6 @@ optionstratlib-market -> num-traits
 optionstratlib-market -> optionstratlib-core
 optionstratlib-market -> optionstratlib-math
 optionstratlib-market -> optionstratlib-pricing
-optionstratlib-market -> pretty-simple-display
-optionstratlib-market -> prettytable-rs
 optionstratlib-market -> rust_decimal
 optionstratlib-market -> rust_decimal_macros
 optionstratlib-market -> serde
@@ -534,13 +526,11 @@ optionstratlib-market -> zip
 optionstratlib-math -> itertools
 optionstratlib-math -> num-traits
 optionstratlib-math -> optionstratlib-core
-optionstratlib-math -> pretty-simple-display
 optionstratlib-math -> rand
 optionstratlib-math -> rayon
 optionstratlib-math -> rust_decimal
 optionstratlib-math -> rust_decimal_macros
 optionstratlib-math -> serde
-optionstratlib-math -> serde_json
 optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
@@ -548,14 +538,12 @@ optionstratlib-math -> utoipa
 optionstratlib-pricing -> num-traits
 optionstratlib-pricing -> optionstratlib-core
 optionstratlib-pricing -> optionstratlib-math
-optionstratlib-pricing -> pretty-simple-display
 optionstratlib-pricing -> rand
 optionstratlib-pricing -> rand_distr
 optionstratlib-pricing -> rayon
 optionstratlib-pricing -> rust_decimal
 optionstratlib-pricing -> rust_decimal_macros
 optionstratlib-pricing -> serde
-optionstratlib-pricing -> serde_json
 optionstratlib-pricing -> statrs
 optionstratlib-pricing -> thiserror
 optionstratlib-pricing -> tracing
@@ -578,16 +566,15 @@ optionstratlib-strategies -> optionstratlib-analytics
 optionstratlib-strategies -> optionstratlib-core
 optionstratlib-strategies -> optionstratlib-market
 optionstratlib-strategies -> optionstratlib-pricing
-optionstratlib-strategies -> pretty-simple-display
 optionstratlib-strategies -> rayon
 optionstratlib-strategies -> rust_decimal
 optionstratlib-strategies -> rust_decimal_macros
 optionstratlib-strategies -> serde
-optionstratlib-strategies -> serde_json
 optionstratlib-strategies -> thiserror
 optionstratlib-strategies -> tracing
 optionstratlib-strategies -> utoipa
 optionstratlib-visualization -> num-traits
+optionstratlib-visualization -> optionstratlib-backtest
 optionstratlib-visualization -> optionstratlib-core
 optionstratlib-visualization -> optionstratlib-market
 optionstratlib-visualization -> optionstratlib-math
@@ -595,6 +582,7 @@ optionstratlib-visualization -> optionstratlib-pricing
 optionstratlib-visualization -> optionstratlib-simulation
 optionstratlib-visualization -> optionstratlib-strategies
 optionstratlib-visualization -> plotly
+optionstratlib-visualization -> prettytable-rs
 optionstratlib-visualization -> rust_decimal
 optionstratlib-visualization -> serde
 optionstratlib-visualization -> thiserror
@@ -655,9 +643,6 @@ positive -> thiserror
 positive -> utoipa
 potential_utf -> zerovec
 ppv-lite86 -> zerocopy
-pretty-simple-display -> proc-macro2
-pretty-simple-display -> quote
-pretty-simple-display -> syn
 prettytable-rs -> encode_unicode
 prettytable-rs -> is-terminal
 prettytable-rs -> lazy_static
@@ -1282,7 +1267,6 @@ potential_utf [zerovec]
 powerfmt []
 ppmd-rust [default]
 ppv-lite86 [simd,std]
-pretty-simple-display []
 prettytable-rs []
 proc-macro2 [default,proc-macro]
 quote [default,proc-macro]

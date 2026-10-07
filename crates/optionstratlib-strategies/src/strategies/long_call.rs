@@ -30,13 +30,13 @@ use optionstratlib_core::model::{
     position::Position,
     types::{OptionBasicType, OptionStyle, OptionType, Side},
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -65,7 +65,7 @@ pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strate
 /// This structure leverages the `Clone`, `Debug`, `Serialize`, and `Deserialize` traits for ease of duplication,
 /// debugging, and storage/transfer as structured data.
 ///
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct LongCall {
     /// Name identifier for this specific strategy instance
@@ -79,6 +79,9 @@ pub struct LongCall {
     /// The long call position
     pub(super) long_call: Position,
 }
+
+impl_json_debug_pretty!(LongCall);
+impl_json_display!(LongCall);
 
 impl LongCall {
     /// Creates a new instance of a `LongCall` strategy with the provided parameters.

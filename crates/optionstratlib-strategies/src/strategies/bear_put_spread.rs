@@ -7,6 +7,7 @@
 use optionstratlib_core::model::Positive;
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 /*
 Bear Put Spread Strategy
 
@@ -56,7 +57,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -81,7 +81,7 @@ pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by b
 /// buying a single put outright due to premium received from the short put.
 ///
 /// # Attributes
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct BearPutSpread {
     /// The name identifier for this specific strategy instance.
@@ -97,6 +97,9 @@ pub struct BearPutSpread {
     /// The short put position with the lower strike price.
     pub short_put: Position,
 }
+
+impl_json_debug_pretty!(BearPutSpread);
+impl_json_display!(BearPutSpread);
 
 impl BearPutSpread {
     /// Creates a new Bear Put Spread options strategy.

@@ -1,6 +1,7 @@
 use optionstratlib::ExpirationDate;
 use optionstratlib::chains::chain::OptionChain;
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+use optionstratlib::visualization::terminal::ChainReport;
 use positive::Positive;
 use rust_decimal_macros::dec;
 
@@ -37,7 +38,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     tracing::info!("Other strikes (130, 135, 140, 145, 155, 160, 165, 170) should be normal color");
 
     // Show the chain with the new yellow highlighting
-    chain.show();
+    chain.print_table()?;
 
     Ok(())
 }

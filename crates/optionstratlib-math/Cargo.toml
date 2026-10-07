@@ -21,19 +21,17 @@ schema = ["dep:utoipa", "optionstratlib-core/schema"]
 optionstratlib-core = { workspace = true }
 itertools = { workspace = true }
 num-traits = { workspace = true }
-pretty-simple-display = { workspace = true }
 rand = { workspace = true }
 rayon = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
-# `DebugPretty` / `DisplaySimple` expand to `serde_json` calls.
-serde_json = { workspace = true }
 statrs = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]
+serde_json = { workspace = true }
 approx = { workspace = true }
 proptest = { workspace = true }

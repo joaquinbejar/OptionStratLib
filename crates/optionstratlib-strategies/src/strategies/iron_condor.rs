@@ -42,6 +42,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -49,7 +50,6 @@ use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use optionstratlib_pricing::pricing::Profit;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -108,7 +108,7 @@ pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options s
 /// - Selling an out-of-the-money call (short call)
 /// - Buying a further out-of-the-money call (long call)
 ///
-#[derive(Clone, DebugPretty, DisplaySimple, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct IronCondor {
     /// Name identifier for this specific strategy instance
@@ -128,6 +128,9 @@ pub struct IronCondor {
     /// The long put leg of the strategy (lowest strike)
     pub long_put: Position,
 }
+
+impl_json_debug_pretty!(IronCondor);
+impl_json_display!(IronCondor);
 
 impl IronCondor {
     /// # Creates a new Iron Condor options strategy

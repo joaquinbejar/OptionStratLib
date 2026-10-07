@@ -9,6 +9,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Terminal presentation lives in `optionstratlib-visualization` only**
+  (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
+  `indicatif` or `pretty-simple-display` any more, and no computational API
+  writes to stdout. Migration:
+  - `OptionChain::show()` is removed. Print the bordered, coloured tables
+    with `ChainReport::print_table()` (returns `Result<(), GraphError>`) or
+    get them as plain text with `ChainReport::render_table()`, from
+    `optionstratlib::visualization::terminal` (crate path
+    `optionstratlib_visualization::visualization::terminal`).
+  - `impl Display for OptionChain` writes a dependency-free plain-text table
+    instead of a box-drawn one: a `Symbol: … Underlying Price: …
+    Expiration Date: …` line, then the same 13 columns, left-aligned and
+    separated by two spaces. The columns and the cell formatting are now
+    data: `chains::OPTION_CHAIN_TABLE_HEADERS`,
+    `chains::OPTION_CHAIN_TABLE_COLUMNS` and `OptionData::table_cells()`. A
+    gamma whose ×100 display value leaves the `Decimal` range is an empty
+    cell instead of an abort.
+  - `SimulationStatsResult::print_summary` / `print_individual_results` and
+    `SimulationStats::print_summary` / `print_individual_results` are
+    removed. Import `optionstratlib::visualization::terminal::SimulationReport`
+    and call the same names, which now return `Result<(), GraphError>`, or
+    the `render_summary` / `render_individual_results` forms that return the
+    tables as a `String`. The section titles are part of the report (written
+    to stdout or the string) instead of separate `tracing` events. No
+    printed figure changes: counts, percentages (the same `f64` expression,
+    `NaN%` for zero runs included), money, the `SimulationStats` sentinel
+    best and worst values before a P&L arrives, and the average holding
+    period (rounded half-to-even from the exact `f64`, which is what its
+    `f64` `{:.2}` printed; a unit test sweeps running averages and ties)
+    all read as before; money is still `Decimal`'s `{:.2}`, which truncates
+    to two decimal places. Display-only differences: exit reasons are listed
+    in the order of their text instead of hash order; the trailing `=====`
+    banner line `SimulationStats::print_summary` logged after its tables is
+    dropped; headers are blue in both types (the `SimulationStats` headers
+    are a title row now), and the `SimulationStatsResult` P&L cells keep
+    their colour by sign while the `SimulationStats` summary keeps its fixed
+    colours (profitable closes and maximum profit green, loss closes and
+    maximum loss red); the final P&L of the individual results is now
+    coloured by sign for both types. The total and
+    average P&L of the summary use checked `Decimal` arithmetic with the
+    same results, and an overflow is the new `GraphError::Decimal` instead
+    of an abort. Each type still shows its own P&L: the total for
+    `SimulationStatsResult`, the realized leg for `SimulationStats`.
+  - `SimulationStats` gains read accessors (`total_simulations`,
+    `profitable_closes`, `loss_closes`, `expired_trades`, `total_pnl`,
+    `max_profit`, `max_loss`, `avg_holding_period`, `exit_reasons`,
+    `results`) so renderers outside the crate read what it accumulated.
+    `avg_holding_period` returns `Option<Decimal>` (steps), converted from
+    the internal running `f64` with `Decimal::from_f64_retain`.
+  - The `DebugPretty` / `DisplaySimple` / `DebugSimple` derives are replaced
+    by `optionstratlib_core::{impl_json_debug_pretty, impl_json_display,
+    impl_json_debug}` over `optionstratlib_core::utils::json_format::{write_json,
+    write_json_pretty}`. The output of every `Debug` and `Display` they
+    implement is unchanged, byte for byte, including the
+    `Error serializing to JSON: …` fallback.
+  `optionstratlib-visualization` now depends on `optionstratlib-backtest`
+  (allowed by the layer DAG; the facade `visualization` feature already
+  implied `backtest`) and on `prettytable-rs`. `make check-graph` forbids
+  the three packages in every crate below visualization, with self-tests,
+  and every consumer fixture that does not resolve visualization lists them
+  as absent (the visualization-resolving fixtures list
+  `pretty-simple-display`); the terminal reports are
+  pinned by snapshot tests (`cargo test -p optionstratlib-visualization
+  terminal`). With the derives gone, `serde_json` leaves the
+  normal dependencies of `optionstratlib-pricing` (unused) and of
+  `optionstratlib-math`, `optionstratlib-strategies` and
+  `optionstratlib-backtest` (test-only, now a dev-dependency).
+
 - **Butterflies are textbook 1/2/1, `CallButterfly` is removed, and the
   1x1x1 call ladder it was is `BullCallLadder`** (#706). This closes the
   three butterfly exceptions #696 left.

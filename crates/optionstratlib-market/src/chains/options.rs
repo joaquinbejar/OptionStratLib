@@ -5,8 +5,8 @@
 ******************************************************************************/
 use crate::error::ChainError;
 use optionstratlib_core::model::Options;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_pricing::greeks::Greeks;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 /// This struct is typically used in option strategy analysis, risk assessment,
 /// and for calculating combined payoff profiles of multiple option positions
 /// at the same strike price.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionsInStrike {
     /// A long (bought) call option position at this strike price
@@ -53,6 +53,9 @@ pub struct OptionsInStrike {
     /// A short (sold/written) put option position at this strike price
     pub short_put: Options,
 }
+
+impl_json_debug_pretty!(OptionsInStrike);
+impl_json_display!(OptionsInStrike);
 
 impl OptionsInStrike {
     /// Creates a new `OptionsInStrike` instance with the four basic option positions.
@@ -142,7 +145,7 @@ impl OptionsInStrike {
 ///
 /// Delta values are essential for understanding directional exposure and for implementing
 /// delta-neutral strategies in options trading.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct DeltasInStrike {
     /// Delta value for a long call option position
@@ -157,6 +160,9 @@ pub struct DeltasInStrike {
     /// Delta value for a short put option position
     pub short_put: Decimal,
 }
+
+impl_json_debug_pretty!(DeltasInStrike);
+impl_json_display!(DeltasInStrike);
 
 #[cfg(test)]
 mod tests_options_in_strike {

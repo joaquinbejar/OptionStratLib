@@ -31,15 +31,13 @@ optionstratlib-simulation = { workspace = true }
 optionstratlib-analytics = { workspace = true }
 optionstratlib-strategies = { workspace = true }
 chrono = { workspace = true }
-pretty-simple-display = { workspace = true }
-# The terminal table of `SimulationStatsResult::print_summary`; ADR-0002
-# section 6 removes it or moves it to an adapter in M6-05, as for market.
-prettytable-rs = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true, optional = true }
 uuid = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

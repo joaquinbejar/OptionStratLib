@@ -10,8 +10,8 @@ use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::Trade;
 use optionstratlib_core::model::decimal::d_add;
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_pricing::error::PricingError;
-use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::iter::Sum;
@@ -26,7 +26,7 @@ use std::ops::Add;
 /// PnL serves as a fundamental measurement of trading performance, providing a comprehensive view
 /// of the current financial status of positions. It is particularly useful for options trading,
 /// portfolio management, and financial reporting.
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct PnL {
     /// The realized profit or loss that has been crystallized through closed positions.
@@ -50,6 +50,9 @@ pub struct PnL {
     /// Useful for tracking performance over time and creating historical PnL reports.
     pub date_time: DateTime<Utc>,
 }
+
+impl_json_debug_pretty!(PnL);
+impl_json_display!(PnL);
 
 impl PnL {
     /// Creates a new Profit and Loss (PnL) instance.

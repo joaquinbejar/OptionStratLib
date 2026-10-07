@@ -4,7 +4,7 @@
    Date: 26/8/24
 ******************************************************************************/
 use crate::geometrics::{BasicMetrics, ShapeMetrics};
-use pretty_simple_display::{DebugPretty, DisplaySimple};
+use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use serde::Serialize;
 
 /// Contains comprehensive analysis results for a curve or dataset.
@@ -48,7 +48,7 @@ use serde::Serialize;
 ///   - Analyze curve properties for more accurate modeling and representation.
 ///   - Identify key points that define the geometric behavior of a curve.
 ///
-#[derive(DebugPretty, DisplaySimple, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct AnalysisResult {
     /// The fundamental statistical metrics of the dataset, including measures of
@@ -60,6 +60,9 @@ pub struct AnalysisResult {
     /// (peaks, valleys, inflection points).
     pub shape_metrics: ShapeMetrics,
 }
+
+impl_json_debug_pretty!(AnalysisResult);
+impl_json_display!(AnalysisResult);
 
 #[cfg(test)]
 mod tests {

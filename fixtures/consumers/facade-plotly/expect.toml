@@ -11,5 +11,5 @@ present = [
 ]
 absent = [
     "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures",
-    "async-trait", "tracing-subscriber", "indicatif",
+    "async-trait", "tracing-subscriber", "indicatif", "pretty-simple-display",
 ]
