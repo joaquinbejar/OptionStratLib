@@ -5,7 +5,7 @@
 # None of these is a monetary input or result that regressed from Decimal:
 # they predate the extraction and are dimensionless factors, tolerances,
 # checked f64 <-> Decimal conversions,
-# float conversion helpers, or the payoff kernel that #637 tracks.
+# or float conversion helpers.
 pub const optionstratlib_core::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f64 # dimensionless strike-range factor (0.98)
 pub const optionstratlib_core::constants::STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 # dimensionless strike-range factor (1.02)
 pub const optionstratlib_core::constants::ZERO: f64 # float zero for kernel comparisons
@@ -13,11 +13,6 @@ pub fn optionstratlib_core::model::decimal::finite_decimal(f64) -> core::option:
 pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> alloc::vec::Vec<f64> # explicit conversion helper for plotting and statistics inputs
 pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool # float tolerance comparison
 pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool # float tolerance comparison (root re-export)
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_max: core::option::Option<f64> # payoff kernel input; Decimal boundary is Options::payoff (#637)
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_min: core::option::Option<f64> # payoff kernel input; Decimal boundary is Options::payoff (#637)
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<f64>> # payoff kernel input; Decimal boundary is Options::payoff (#637)
-pub fn optionstratlib_core::model::payoff::Payoff::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64 # payoff kernel; Options::payoff converts through finite_decimal (#637)
-pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64 # impl of the payoff kernel above (#637)
 pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)> # explicit export to f64 for plotting backends
 pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError> # checked Decimal -> nearest f64 (ties to even) for kernels, so a value written with the digits of an f64 literal gives back that literal (#670); fails rather than returning a non-finite value
 pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> # checked f64 -> Decimal conversion; rejects non-finite input

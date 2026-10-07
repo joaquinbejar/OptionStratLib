@@ -6,6 +6,7 @@
 //! core model rather than by the pricing layer.
 
 use crate::constants::ZERO;
+use crate::error::{OptionsError, OptionsResult};
 use crate::model::decimal::finite_decimal;
 use crate::model::types::{
     AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
@@ -26,18 +27,25 @@ use tracing::{trace, warn};
 /// Implementing the trait for a standard call option:
 ///
 /// ```rust
-/// use num_traits::ToPrimitive;
+/// use optionstratlib_core::error::{OptionsError, OptionsResult};
 /// use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 /// use optionstratlib_core::model::Side;
+/// use rust_decimal::Decimal;
 /// struct CallOption;
 ///
 /// impl Payoff for CallOption {
-///     fn payoff(&self, info: &PayoffInfo) -> f64 {
-///         let spot = info.spot.value().to_f64().unwrap_or(0.0);
-///         let strike = info.strike.value().to_f64().unwrap_or(0.0);
+///     fn payoff(&self, info: &PayoffInfo) -> OptionsResult<Decimal> {
+///         let intrinsic = info
+///             .spot
+///             .to_dec()
+///             .checked_sub(info.strike.to_dec())
+///             .ok_or_else(|| OptionsError::PayoffError {
+///                 reason: "spot - strike overflowed".to_string(),
+///             })?
+///             .max(Decimal::ZERO);
 ///         match info.side {
-///             Side::Long => (spot - strike).max(0.0),
-///             Side::Short => -1.0 * (spot - strike).max(0.0),
+///             Side::Long => Ok(intrinsic),
+///             Side::Short => Ok(-intrinsic),
 ///         }
 ///     }
 /// }
@@ -60,8 +68,15 @@ pub trait Payoff {
     ///
     /// # Returns
     ///
-    /// Returns the calculated payoff value as a `f64`.
-    fn payoff(&self, info: &PayoffInfo) -> f64;
+    /// The payoff as a `Decimal`, signed by `info.side`: a short position's
+    /// payoff is the negated long payoff, so the result can be negative.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OptionsError::PayoffError`] when the payoff is not
+    /// representable as a `Decimal` (non-finite, or beyond the `Decimal`
+    /// range).
+    fn payoff(&self, info: &PayoffInfo) -> OptionsResult<Decimal>;
 }
 /// `PayoffInfo` is a struct that holds information about an option's payoff calculation parameters.
 ///
@@ -91,15 +106,15 @@ pub struct PayoffInfo {
     pub side: Side,
     /// * `spot_prices` - A collection of historical spot prices used specifically for Asian options.
     ///   Asian options base their payoff on the average price of the underlying asset over a specified period.
-    pub spot_prices: Option<Vec<f64>>, // Asian
+    pub spot_prices: Option<Vec<Positive>>, // Asian
     /// * `spot_min` - The minimum observed price of the underlying asset during the option's life.
     ///   This field is used specifically for Lookback options where the payoff depends on the
     ///   minimum price reached.
-    pub spot_min: Option<f64>, // Lookback
+    pub spot_min: Option<Positive>, // Lookback / down barriers
     /// * `spot_max` - The maximum observed price of the underlying asset during the option's life.
     ///   This field is used specifically for Lookback options where the payoff depends on the
     ///   maximum price reached.
-    pub spot_max: Option<f64>, // Lookback
+    pub spot_max: Option<Positive>, // Lookback / up barriers
 }
 
 impl Default for PayoffInfo {
@@ -141,7 +156,12 @@ impl PayoffInfo {
     ///     strike: Positive::new(105.0)?,
     ///     style: OptionStyle::Call,
     ///     side: Side::Long,
-    ///     spot_prices: Some(vec![98.0, 99.0, 101.0, 102.0]),
+    ///     spot_prices: Some(vec![
+    ///         Positive::new(98.0)?,
+    ///         Positive::new(99.0)?,
+    ///         Positive::new(101.0)?,
+    ///         Positive::new(102.0)?,
+    ///     ]),
     ///     spot_min: None,
     ///     spot_max: None,
     /// };
@@ -219,83 +239,107 @@ pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
 }
 
 impl Payoff for OptionType {
-    fn payoff(&self, info: &PayoffInfo) -> f64 {
-        match self {
-            OptionType::European | OptionType::American => standard_payoff(info),
-            OptionType::Bermuda { .. } => standard_payoff(info),
-            OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
-            OptionType::Barrier {
-                barrier_type,
-                barrier_level,
-                rebate,
-            } => calculate_barrier_payoff(barrier_type, barrier_level, rebate, info),
-            OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
-            OptionType::Lookback { lookback_type } => match lookback_type {
-                LookbackType::FixedStrike => standard_payoff(info),
-                LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
-                // `LookbackType` is `#[non_exhaustive]`.
-                _ => standard_payoff(info),
-            },
-            OptionType::Compound { underlying_option } => underlying_option.payoff(info),
-            OptionType::Chooser { .. } => {
-                // The chooser is worth the better of the two intrinsics at
-                // expiry. `Positive - Positive` aborts whenever the result
-                // would be negative, i.e. for every out-of-the-money chooser,
-                // so both legs are formed on `Decimal` — where the difference
-                // of two values in `[0, Decimal::MAX]` is always
-                // representable — and floored at zero before the comparison.
-                let call_intrinsic = info
-                    .spot
-                    .to_dec()
-                    .checked_sub(info.strike.to_dec())
-                    .unwrap_or(Decimal::ZERO)
-                    .max(Decimal::ZERO);
-                let put_intrinsic = info
-                    .strike
-                    .to_dec()
-                    .checked_sub(info.spot.to_dec())
-                    .unwrap_or(Decimal::ZERO)
-                    .max(Decimal::ZERO);
-                Positive::new_decimal(call_intrinsic.max(put_intrinsic))
-                    .unwrap_or(Positive::ZERO)
-                    .to_f64()
-            }
-            OptionType::Cliquet { .. } => standard_payoff(info),
-            OptionType::Rainbow { .. }
-            | OptionType::Spread { .. }
-            | OptionType::Exchange { .. } => standard_payoff(info),
-            OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate.to_f64(),
-            OptionType::Power { exponent } => match info.style {
-                OptionStyle::Call => {
-                    (info.spot.to_f64().powf(exponent.to_f64()) - info.strike).max(ZERO)
-                }
-                OptionStyle::Put => {
-                    // `Positive - f64` aborts whenever the result would be
-                    // negative, i.e. for every out-of-the-money power put, and
-                    // also when `S^n` has no `Decimal` representation. The
-                    // difference keeps the `Decimal` arithmetic the `Positive`
-                    // operator performed and is floored at zero; an `S^n` that
-                    // leaves the representable range is `+∞` in the limit,
-                    // where the put is worthless.
-                    let powered = info.spot.to_f64().powf(exponent.to_f64());
-                    match finite_decimal(powered) {
-                        Some(powered_dec) => Positive::new_decimal(
-                            info.strike
-                                .to_dec()
-                                .checked_sub(powered_dec)
-                                .unwrap_or(Decimal::ZERO)
-                                .max(Decimal::ZERO),
-                        )
-                        .unwrap_or(Positive::ZERO)
-                        .to_f64(),
-                        None => ZERO,
-                    }
-                }
-            },
-            // `OptionType` is `#[non_exhaustive]`: a variant added upstream falls
-            // back to the plain intrinsic value until it gets its own arm.
+    /// Evaluates the payoff in the private `f64` kernel and converts the
+    /// result through the checked [`finite_decimal`] at the boundary.
+    fn payoff(&self, info: &PayoffInfo) -> OptionsResult<Decimal> {
+        let value = option_type_payoff(self, info);
+        finite_decimal(value).ok_or_else(|| payoff_not_representable(value))
+    }
+}
+
+/// Error for a kernel payoff that has no `Decimal` representation.
+#[cold]
+#[inline(never)]
+fn payoff_not_representable(value: f64) -> OptionsError {
+    OptionsError::PayoffError {
+        reason: format!(
+            "payoff {value} is not representable as a Decimal (non-finite or out of range)"
+        ),
+    }
+}
+
+/// The `f64` payoff kernel behind [`Payoff`] for [`OptionType`].
+///
+/// Private: the public boundary is the `Decimal` returned by
+/// [`Payoff::payoff`]. The `Positive` spot inputs of [`PayoffInfo`] are
+/// widened to `f64` here, which is exact for every value an `f64` literal
+/// can spell.
+fn option_type_payoff(option_type: &OptionType, info: &PayoffInfo) -> f64 {
+    match option_type {
+        OptionType::European | OptionType::American => standard_payoff(info),
+        OptionType::Bermuda { .. } => standard_payoff(info),
+        OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
+        OptionType::Barrier {
+            barrier_type,
+            barrier_level,
+            rebate,
+        } => calculate_barrier_payoff(barrier_type, barrier_level, rebate, info),
+        OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
+        OptionType::Lookback { lookback_type } => match lookback_type {
+            LookbackType::FixedStrike => standard_payoff(info),
+            LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
+            // `LookbackType` is `#[non_exhaustive]`.
             _ => standard_payoff(info),
+        },
+        OptionType::Compound { underlying_option } => option_type_payoff(underlying_option, info),
+        OptionType::Chooser { .. } => {
+            // The chooser is worth the better of the two intrinsics at
+            // expiry. `Positive - Positive` aborts whenever the result
+            // would be negative, i.e. for every out-of-the-money chooser,
+            // so both legs are formed on `Decimal` — where the difference
+            // of two values in `[0, Decimal::MAX]` is always
+            // representable — and floored at zero before the comparison.
+            let call_intrinsic = info
+                .spot
+                .to_dec()
+                .checked_sub(info.strike.to_dec())
+                .unwrap_or(Decimal::ZERO)
+                .max(Decimal::ZERO);
+            let put_intrinsic = info
+                .strike
+                .to_dec()
+                .checked_sub(info.spot.to_dec())
+                .unwrap_or(Decimal::ZERO)
+                .max(Decimal::ZERO);
+            Positive::new_decimal(call_intrinsic.max(put_intrinsic))
+                .unwrap_or(Positive::ZERO)
+                .to_f64()
         }
+        OptionType::Cliquet { .. } => standard_payoff(info),
+        OptionType::Rainbow { .. } | OptionType::Spread { .. } | OptionType::Exchange { .. } => {
+            standard_payoff(info)
+        }
+        OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate.to_f64(),
+        OptionType::Power { exponent } => match info.style {
+            OptionStyle::Call => {
+                (info.spot.to_f64().powf(exponent.to_f64()) - info.strike).max(ZERO)
+            }
+            OptionStyle::Put => {
+                // `Positive - f64` aborts whenever the result would be
+                // negative, i.e. for every out-of-the-money power put, and
+                // also when `S^n` has no `Decimal` representation. The
+                // difference keeps the `Decimal` arithmetic the `Positive`
+                // operator performed and is floored at zero; an `S^n` that
+                // leaves the representable range is `+∞` in the limit,
+                // where the put is worthless.
+                let powered = info.spot.to_f64().powf(exponent.to_f64());
+                match finite_decimal(powered) {
+                    Some(powered_dec) => Positive::new_decimal(
+                        info.strike
+                            .to_dec()
+                            .checked_sub(powered_dec)
+                            .unwrap_or(Decimal::ZERO)
+                            .max(Decimal::ZERO),
+                    )
+                    .unwrap_or(Positive::ZERO)
+                    .to_f64(),
+                    None => ZERO,
+                }
+            }
+        },
+        // `OptionType` is `#[non_exhaustive]`: a variant added upstream falls
+        // back to the plain intrinsic value until it gets its own arm.
+        _ => standard_payoff(info),
     }
 }
 
@@ -330,14 +374,16 @@ impl Payoff for OptionType {
 fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> f64 {
     let average = match (&info.spot_prices, info.spot_prices_len()) {
         (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
-            AsianAveragingType::Arithmetic => spot_prices.iter().sum::<f64>() / len as f64,
+            AsianAveragingType::Arithmetic => {
+                spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64
+            }
             AsianAveragingType::Geometric => {
-                let product = spot_prices.iter().fold(1.0, |acc, &x| acc * x);
+                let product = spot_prices.iter().fold(1.0, |acc, x| acc * x.to_f64());
                 product.powf(1.0 / len as f64)
             }
             // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
             // arithmetic mean, the conventional default for Asian options.
-            _ => spot_prices.iter().sum::<f64>() / len as f64,
+            _ => spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64,
         },
         _ => return ZERO,
     };
@@ -387,11 +433,11 @@ fn calculate_barrier_payoff(
     let barrier_condition = match barrier_type {
         BarrierType::UpAndIn | BarrierType::UpAndOut => {
             // Use spot_max if available, otherwise just current spot
-            info.spot_max.unwrap_or(info.spot.to_f64()) >= level
+            info.spot_max.unwrap_or(info.spot).to_f64() >= level
         }
         BarrierType::DownAndIn | BarrierType::DownAndOut => {
             // Use spot_min if available, otherwise just current spot
-            info.spot_min.unwrap_or(info.spot.to_f64()) <= level
+            info.spot_min.unwrap_or(info.spot).to_f64() <= level
         }
         // `BarrierType` is `#[non_exhaustive]`: an unknown barrier is treated as
         // never triggered, so the "In" arms below pay nothing and the "Out" arms
@@ -530,8 +576,8 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
         OptionStyle::Put => info.spot_max,
     };
     match info.style {
-        OptionStyle::Call => info.spot.to_f64() - extremum.unwrap_or(ZERO),
-        OptionStyle::Put => extremum.unwrap_or(ZERO) - info.spot.to_f64(),
+        OptionStyle::Call => info.spot.to_f64() - extremum.map_or(ZERO, |e| e.to_f64()),
+        OptionStyle::Put => extremum.map_or(ZERO, |e| e.to_f64()) - info.spot.to_f64(),
     }
 }
 
@@ -539,6 +585,7 @@ fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
 mod tests_payoff {
     use super::*;
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_european_call() {
@@ -550,7 +597,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -563,7 +610,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -576,10 +623,14 @@ mod tests_payoff {
             strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
-            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            spot_prices: Some(vec![
+                pos_or_panic!(90.0),
+                pos_or_panic!(100.0),
+                pos_or_panic!(110.0),
+            ]),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), ZERO);
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
     }
 
     #[test]
@@ -596,7 +647,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 30.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(30));
     }
 
     #[test]
@@ -611,7 +662,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 1.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(1));
     }
 
     #[test]
@@ -626,7 +677,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -641,7 +692,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 15.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(15));
     }
 
     #[test]
@@ -656,7 +707,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     /// An out-of-the-money chooser used to abort with
@@ -676,7 +727,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -691,7 +742,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -706,7 +757,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), ZERO);
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
     }
 
     /// A power put with `S^n > K` used to abort with
@@ -724,7 +775,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), ZERO);
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
     }
 
     #[test]
@@ -740,7 +791,7 @@ mod tests_payoff {
             ..Default::default()
         };
         // 110 - 10² = 10
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -755,7 +806,7 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), ZERO);
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
     }
 
     /// `S^n` beyond the `Decimal` range is `+∞` in the limit, where the put is
@@ -772,13 +823,14 @@ mod tests_payoff {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), ZERO);
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
     }
 }
 
 #[cfg(test)]
 mod tests_calculate_floating_strike_payoff {
     use super::*;
+    use positive::pos_or_panic;
 
     #[test]
     fn test_call_option_with_spot_min() {
@@ -788,7 +840,7 @@ mod tests_calculate_floating_strike_payoff {
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
-            spot_min: Some(80.0),
+            spot_min: Some(pos_or_panic!(80.0)),
             spot_max: None,
         };
         assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
@@ -817,7 +869,7 @@ mod tests_calculate_floating_strike_payoff {
             side: Side::Long,
             spot_prices: None,
             spot_min: None,
-            spot_max: Some(120.0),
+            spot_max: Some(pos_or_panic!(120.0)),
         };
         assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
     }
@@ -844,7 +896,7 @@ mod tests_calculate_floating_strike_payoff {
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
-            spot_min: Some(100.0),
+            spot_min: Some(pos_or_panic!(100.0)),
             spot_max: None,
         };
         assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
@@ -859,7 +911,7 @@ mod tests_calculate_floating_strike_payoff {
             side: Side::Long,
             spot_prices: None,
             spot_min: None,
-            spot_max: Some(100.0),
+            spot_max: Some(pos_or_panic!(100.0)),
         };
         assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
     }
@@ -870,6 +922,7 @@ mod test_asian_options {
     use crate::model::types::AsianAveragingType;
     use crate::model::{OptionStyle, OptionType, Side};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
 
@@ -883,10 +936,14 @@ mod test_asian_options {
             strike: Positive::HUNDRED,
             style: OptionStyle::Put,
             side: Side::Long,
-            spot_prices: Some(vec![85.0, 90.0, 95.0]),
+            spot_prices: Some(vec![
+                pos_or_panic!(85.0),
+                pos_or_panic!(90.0),
+                pos_or_panic!(95.0),
+            ]),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -902,7 +959,7 @@ mod test_asian_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 0.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
     }
 }
 
@@ -911,6 +968,7 @@ mod test_barrier_options {
     use crate::model::types::BarrierType;
     use crate::model::{OptionStyle, OptionType, Side};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
 
@@ -929,7 +987,7 @@ mod test_barrier_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 0.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
     }
 
     #[test]
@@ -947,7 +1005,7 @@ mod test_barrier_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 0.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
     }
 }
 
@@ -955,6 +1013,7 @@ mod test_barrier_options {
 mod test_cliquet_options {
     use crate::model::{OptionStyle, OptionType, Side};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
 
@@ -975,7 +1034,7 @@ mod test_cliquet_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 20.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
     }
 }
 
@@ -983,6 +1042,7 @@ mod test_cliquet_options {
 mod test_rainbow_options {
     use crate::model::{OptionStyle, OptionType, RainbowType, Side};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
 
@@ -1000,7 +1060,7 @@ mod test_rainbow_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 20.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
     }
 
     #[test]
@@ -1017,7 +1077,7 @@ mod test_rainbow_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 20.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
     }
 }
 
@@ -1025,6 +1085,7 @@ mod test_rainbow_options {
 mod test_exchange_options {
     use crate::model::{OptionStyle, OptionType, Side};
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
 
@@ -1041,7 +1102,7 @@ mod test_exchange_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 20.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
     }
 
     #[test]
@@ -1057,7 +1118,7 @@ mod test_exchange_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 }
 
@@ -1065,6 +1126,7 @@ mod test_exchange_options {
 mod tests_option_type {
     use super::*;
     use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_asian_geometric_call() {
@@ -1076,11 +1138,15 @@ mod tests_option_type {
             strike: Positive::HUNDRED,
             style: OptionStyle::Call,
             side: Side::Long,
-            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            spot_prices: Some(vec![
+                pos_or_panic!(90.0),
+                pos_or_panic!(100.0),
+                pos_or_panic!(110.0),
+            ]),
             ..Default::default()
         };
 
-        assert_eq!(option.payoff(&info), 0.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
     }
 
     #[test]
@@ -1093,12 +1159,16 @@ mod tests_option_type {
             strike: pos_or_panic!(95.0),
             style: OptionStyle::Call,
             side: Side::Long,
-            spot_prices: Some(vec![90.0, 100.0, 110.0]),
+            spot_prices: Some(vec![
+                pos_or_panic!(90.0),
+                pos_or_panic!(100.0),
+                pos_or_panic!(110.0),
+            ]),
             ..Default::default()
         };
 
-        let expected_payoff = 4.67;
-        assert!((option.payoff(&info) - expected_payoff).abs() < 0.01);
+        let expected_payoff = dec!(4.67);
+        assert!((option.payoff(&info).unwrap() - expected_payoff).abs() < dec!(0.01));
     }
 
     #[test]
@@ -1115,7 +1185,7 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 5.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(5));
     }
 
     #[test]
@@ -1130,7 +1200,7 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 90.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(90));
     }
 
     #[test]
@@ -1146,7 +1216,7 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -1161,7 +1231,7 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 10.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -1176,7 +1246,7 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info), 36.0);
+        assert_eq!(option.payoff(&info).unwrap(), dec!(36));
     }
 }
 
@@ -1185,6 +1255,7 @@ mod tests_standard_payoff {
     use super::*;
     use crate::model::types::OptionType;
     use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_call_option_in_the_money() {
@@ -1198,7 +1269,7 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 10.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -1213,7 +1284,7 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 0.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
 
     #[test]
@@ -1228,7 +1299,7 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 0.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
 
     #[test]
@@ -1243,7 +1314,7 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 10.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(10));
     }
 
     #[test]
@@ -1258,7 +1329,7 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 0.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
 
     #[test]
@@ -1273,6 +1344,195 @@ mod tests_standard_payoff {
             spot_min: None,
             spot_max: None,
         };
-        assert_eq!(option_type.payoff(&info), 0.0);
+        assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
+    }
+}
+
+/// Pins the `Decimal` results of the `Payoff` boundary (#637) to the values
+/// the former `f64` signature returned, converted with `Decimal::from_f64`.
+#[cfg(test)]
+mod tests_decimal_boundary_equivalence {
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    fn info(spot: Positive, strike: Positive, style: OptionStyle, side: Side) -> PayoffInfo {
+        PayoffInfo {
+            spot,
+            strike,
+            style,
+            side,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_payoff_asian_geometric_call_pins_legacy_f64_digits() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        let info = PayoffInfo {
+            spot_prices: Some(vec![
+                pos_or_panic!(90.0),
+                pos_or_panic!(100.0),
+                pos_or_panic!(110.0),
+            ]),
+            ..info(
+                Positive::HUNDRED,
+                pos_or_panic!(95.0),
+                OptionStyle::Call,
+                Side::Long,
+            )
+        };
+        // (90 · 100 · 110)^(1/3) - 95 = 4.665549341259606 in `f64`.
+        assert_eq!(option.payoff(&info).unwrap(), dec!(4.66554934125961));
+    }
+
+    #[test]
+    fn test_payoff_short_side_negates_long_payoff() {
+        let option = OptionType::European;
+        let long = info(
+            pos_or_panic!(110.0),
+            Positive::HUNDRED,
+            OptionStyle::Call,
+            Side::Long,
+        );
+        let short = PayoffInfo {
+            side: Side::Short,
+            ..long.clone()
+        };
+        assert_eq!(option.payoff(&long).unwrap(), dec!(10));
+        assert_eq!(option.payoff(&short).unwrap(), dec!(-10));
+    }
+
+    #[test]
+    fn test_payoff_fractional_strike_is_exact() {
+        let option = OptionType::European;
+        let info = info(
+            pos_or_panic!(101.25),
+            pos_or_panic!(100.5),
+            OptionStyle::Call,
+            Side::Long,
+        );
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0.75));
+    }
+
+    #[test]
+    fn test_payoff_up_and_in_barrier_uses_spot_max() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::UpAndIn,
+            barrier_level: pos_or_panic!(120.0),
+            rebate: None,
+        };
+        let touched = PayoffInfo {
+            spot_max: Some(pos_or_panic!(125.0)),
+            ..info(
+                pos_or_panic!(110.0),
+                Positive::HUNDRED,
+                OptionStyle::Call,
+                Side::Long,
+            )
+        };
+        let untouched = PayoffInfo {
+            spot_max: Some(pos_or_panic!(115.0)),
+            ..touched.clone()
+        };
+        assert_eq!(option.payoff(&touched).unwrap(), dec!(10));
+        assert_eq!(option.payoff(&untouched).unwrap(), Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_payoff_down_and_out_barrier_uses_spot_min_and_pays_rebate() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::DownAndOut,
+            barrier_level: pos_or_panic!(90.0),
+            rebate: Some(pos_or_panic!(2.5)),
+        };
+        let knocked_out = PayoffInfo {
+            spot_min: Some(pos_or_panic!(85.0)),
+            ..info(
+                pos_or_panic!(95.0),
+                Positive::HUNDRED,
+                OptionStyle::Put,
+                Side::Long,
+            )
+        };
+        assert_eq!(option.payoff(&knocked_out).unwrap(), dec!(2.5));
+    }
+
+    #[test]
+    fn test_payoff_floating_strike_lookback_through_trait() {
+        let option = OptionType::Lookback {
+            lookback_type: LookbackType::FloatingStrike,
+        };
+        let call = PayoffInfo {
+            spot_min: Some(pos_or_panic!(80.0)),
+            ..info(
+                Positive::HUNDRED,
+                Positive::ZERO,
+                OptionStyle::Call,
+                Side::Long,
+            )
+        };
+        let put = PayoffInfo {
+            spot_max: Some(pos_or_panic!(120.0)),
+            ..info(
+                Positive::HUNDRED,
+                Positive::ZERO,
+                OptionStyle::Put,
+                Side::Long,
+            )
+        };
+        assert_eq!(option.payoff(&call).unwrap(), dec!(20));
+        assert_eq!(option.payoff(&put).unwrap(), dec!(20));
+    }
+
+    #[test]
+    fn test_payoff_binary_gap_and_asset_or_nothing() {
+        let gap = OptionType::Binary {
+            binary_type: BinaryType::Gap,
+        };
+        let asset = OptionType::Binary {
+            binary_type: BinaryType::AssetOrNothing,
+        };
+        let itm_call = info(
+            pos_or_panic!(112.5),
+            Positive::HUNDRED,
+            OptionStyle::Call,
+            Side::Long,
+        );
+        assert_eq!(gap.payoff(&itm_call).unwrap(), dec!(12.5));
+        assert_eq!(asset.payoff(&itm_call).unwrap(), dec!(112.5));
+    }
+
+    /// `S^n` overflows `f64` for a power call, so the kernel value is `+∞`:
+    /// the boundary reports it instead of returning a non-finite number.
+    #[test]
+    fn test_payoff_unrepresentable_power_call_is_error() {
+        let option = OptionType::Power {
+            exponent: Positive::MAX,
+        };
+        let info = info(
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            OptionStyle::Call,
+            Side::Long,
+        );
+        assert!(matches!(
+            option.payoff(&info),
+            Err(OptionsError::PayoffError { .. })
+        ));
+    }
+
+    /// The `f64` nearest to a call payoff at `Positive::MAX` rounds above
+    /// `Decimal::MAX`, so the payoff has no `Decimal` representation.
+    #[test]
+    fn test_payoff_beyond_decimal_range_is_error() {
+        let option = OptionType::European;
+        let info = info(Positive::MAX, Positive::ZERO, OptionStyle::Call, Side::Long);
+        assert!(matches!(
+            option.payoff(&info),
+            Err(OptionsError::PayoffError { .. })
+        ));
     }
 }

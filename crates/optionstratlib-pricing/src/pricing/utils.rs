@@ -358,13 +358,13 @@ pub(crate) fn option_node_value(
 /// # Returns
 ///
 /// `Result<Decimal, PricingError>` — the option price at the given step,
-/// or `PricingError::NonFinite` if the payoff `f64` is `NaN` / `±∞`.
+/// or `PricingError::Options` if the payoff is not representable.
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::NonFinite`] when `params.option_type.payoff(...)`
-/// produces a non-finite `f64` (NaN / ±Inf), tagged with
-/// `"pricing::binomial::option_price::payoff"`.
+/// Returns [`PricingError::Options`] wrapping
+/// [`OptionsError::PayoffError`](optionstratlib_core::error::OptionsError::PayoffError)
+/// when `params.option_type.payoff(...)` has no `Decimal` representation.
 ///
 pub(crate) fn calculate_option_price(
     params: BinomialPricingParams,
@@ -409,10 +409,7 @@ pub(crate) fn calculate_option_price(
         spot_min: None,
         spot_max: None,
     };
-    let payoff_f64 = params.option_type.payoff(&info);
-    let payoff = finite_decimal(payoff_f64).ok_or_else(|| {
-        PricingError::non_finite("pricing::binomial::option_price::payoff", payoff_f64)
-    })?;
+    let payoff = params.option_type.payoff(&info)?;
 
     Ok(payoff)
 }
@@ -426,8 +423,8 @@ pub(crate) fn calculate_option_price(
 /// # Returns
 ///
 /// `Result<Decimal, PricingError>` — the discounted payoff (sign-adjusted for
-/// `Side::Long` / `Side::Short`), or `PricingError::NonFinite` if the
-/// payoff `f64` is non-finite.
+/// `Side::Long` / `Side::Short`), or `PricingError::Options` if the
+/// payoff is not representable.
 ///
 /// The function takes into account the future asset price, the interest rate, the expiry time,
 /// the type of option (call or put), and the style of the option (European or American).
@@ -438,8 +435,9 @@ pub(crate) fn calculate_option_price(
 ///
 /// # Errors
 ///
-/// - [`PricingError::NonFinite`] when `params.option_type.payoff(...)` produces a
-///   non-finite `f64`, tagged `"pricing::binomial::discounted_payoff::payoff"`.
+/// - [`PricingError::Options`] wrapping
+///   [`OptionsError::PayoffError`](optionstratlib_core::error::OptionsError::PayoffError)
+///   when `params.option_type.payoff(...)` has no `Decimal` representation.
 /// - [`PricingError::Decimal`] (via `#[from]`) when the checked multiplications
 ///   `-rate * expiry` or `discount * payoff` overflow.
 ///
@@ -469,10 +467,7 @@ pub(crate) fn calculate_discounted_payoff(
         spot_max: None,
     };
 
-    let payoff_f64 = params.option_type.payoff(&info);
-    let payoff = finite_decimal(payoff_f64).ok_or_else(|| {
-        PricingError::non_finite("pricing::binomial::discounted_payoff::payoff", payoff_f64)
-    })?;
+    let payoff = params.option_type.payoff(&info)?;
     // Build the discount exponent through a checked multiplication so
     // that an overflow on `-rate * expiry` is tagged rather than
     // saturating silently before `.exp()` compresses it back into a

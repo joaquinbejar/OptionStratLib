@@ -710,9 +710,9 @@ pub mod optionstratlib_core::model::payoff
 pub struct optionstratlib_core::model::payoff::PayoffInfo
 pub optionstratlib_core::model::payoff::PayoffInfo::side: financial_types::Side
 pub optionstratlib_core::model::payoff::PayoffInfo::spot: positive::positive::Positive
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_max: core::option::Option<f64>
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_min: core::option::Option<f64>
-pub optionstratlib_core::model::payoff::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<f64>>
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_max: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_min: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::payoff::PayoffInfo::spot_prices: core::option::Option<alloc::vec::Vec<positive::positive::Positive>>
 pub optionstratlib_core::model::payoff::PayoffInfo::strike: positive::positive::Positive
 pub optionstratlib_core::model::payoff::PayoffInfo::style: financial_types::OptionStyle
 impl optionstratlib_core::model::payoff::PayoffInfo
@@ -720,9 +720,9 @@ pub fn optionstratlib_core::model::payoff::PayoffInfo::spot_prices_len(&self) ->
 impl core::default::Default for optionstratlib_core::model::payoff::PayoffInfo
 pub fn optionstratlib_core::model::payoff::PayoffInfo::default() -> Self
 pub trait optionstratlib_core::model::payoff::Payoff
-pub fn optionstratlib_core::model::payoff::Payoff::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64
+pub fn optionstratlib_core::model::payoff::Payoff::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib_core::model::payoff::Payoff for option_type::option_type::OptionType
-pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> f64
+pub fn option_type::option_type::OptionType::payoff(&self, &optionstratlib_core::model::payoff::PayoffInfo) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub mod optionstratlib_core::model::position
 pub struct optionstratlib_core::model::position::Position
 pub optionstratlib_core::model::position::Position::close_fee: positive::positive::Positive

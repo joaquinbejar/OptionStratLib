@@ -134,7 +134,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     };
 
     if params.expiry == Decimal::ZERO {
-        let intrinsic_value = f2d!(params.option_type.payoff(&info));
+        let intrinsic_value = params.option_type.payoff(&info)?;
         return Ok(intrinsic_value);
     }
     if params.volatility == Decimal::ZERO {
@@ -185,7 +185,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
             match params.option_type {
                 OptionType::American => {
                     info.spot = lattice_spot(params.asset, u, d, i, step)?;
-                    let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                    let intrinsic_value = params.option_type.payoff(&info)?;
                     *slot = option_value.max(intrinsic_value);
                 }
                 OptionType::Bermuda { exercise_dates } => {
@@ -212,7 +212,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
                         let spot = lattice_spot(params.asset, u, d, i, step)?;
                         let slot_value = option_value;
                         info.spot = spot;
-                        let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                        let intrinsic_value = params.option_type.payoff(&info)?;
                         let slot = prices
                             .get_mut(i)
                             .ok_or(PricingError::BinomialNodeMissing { node: "price_slot" })?;
@@ -474,7 +474,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
             .ok_or(PricingError::BinomialNodeMissing {
                 node: "terminal_node",
             })?;
-        *slot = f2d!(params.option_type.payoff(&info));
+        *slot = params.option_type.payoff(&info)?;
     }
 
     let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::tree::half_dt")?;
@@ -508,7 +508,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     // is worth its intrinsic value today (#708). Compared in
                     // `Decimal`, as `price_binomial` does (#716).
                     info.spot = node_asset()?;
-                    let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                    let intrinsic_value = params.option_type.payoff(&info)?;
                     *node_val = node_value.max(intrinsic_value);
                 }
                 OptionType::Bermuda { exercise_dates } => {
@@ -536,7 +536,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     // (#716); compared in `Decimal`, as it does.
                     if is_exercise_date {
                         info.spot = node_asset()?;
-                        let intrinsic_value = f2d!(params.option_type.payoff(&info));
+                        let intrinsic_value = params.option_type.payoff(&info)?;
                         *node_val = node_value.max(intrinsic_value);
                     } else {
                         *node_val = node_value;
