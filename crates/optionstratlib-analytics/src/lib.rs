@@ -41,6 +41,12 @@
 //! (`use optionstratlib_analytics::metrics::ImpliedVolatilityCurve;`) to
 //! call its methods on an `OptionChain`.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-analytics`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/analytics); `make tree-example-direct-analytics`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the analytics

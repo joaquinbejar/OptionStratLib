@@ -420,6 +420,11 @@
 //! `...Kind` enums, which are not flattened because their names collide
 //! across crates. Paths kept only for 0.21 have been removed (#550).
 //!
+//! Runnable programs that depend on the component crates directly, one per
+//! capability and with the smallest dependency set, are in
+//! [`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct),
+//! next to the facade equivalent of each.
+//!
 //! Every capability now lives in a component crate. The facade itself owns
 //! only the `prelude` and the unified `error::Error`, which wraps every
 //! component error including `GraphError` and therefore needs

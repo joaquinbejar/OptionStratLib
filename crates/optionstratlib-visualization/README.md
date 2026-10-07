@@ -17,6 +17,12 @@ OptionStratLib crate depends on it.
 | `visualization::terminal` | `ChainReport` and `SimulationReport`: option chains and simulation statistics as bordered terminal tables, rendered to a `String` or printed to stdout on request |
 | `error`         | `GraphError`                                                             |
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-visualization`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/visualization); `make tree-example-direct-visualization`
+asserts its resolved graph.
+
 ## Features
 
 | Feature         | Default | Effect                                                                 |

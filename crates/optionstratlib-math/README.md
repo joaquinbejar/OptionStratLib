@@ -16,6 +16,12 @@ numeric crates.
 
 Coordinates are `rust_decimal::Decimal`, and arithmetic on them is checked.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-math`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/math); `make tree-example-direct-math`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                              |

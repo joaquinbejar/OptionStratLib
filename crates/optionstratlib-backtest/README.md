@@ -14,6 +14,12 @@ code.
 | `backtesting` | `Simulate`, adapters from the engine's path results, statistics, reports, metrics |
 | `error`       | `BacktestError`                                                          |
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-backtest`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/backtest); `make tree-example-direct-backtest`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                                |

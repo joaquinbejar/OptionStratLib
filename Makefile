@@ -347,6 +347,41 @@ test-consumer-facade:
 		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
 	done
 
+# Direct-component examples (#555, ADR-0004 section 8): runnable programs under
+# `examples/direct/<scenario>/`, workspace members named
+# `osl-example-direct-<scenario>`, each depending on the component crates it
+# uses and on no facade feature. They show the smallest dependency set of each
+# capability (see examples/direct/README.md); the fixtures above prove the
+# same graphs without a program. `test-direct-component-examples` lints,
+# tests and runs every one; `tree-example-direct-<scenario>` prints the
+# resolved graph and asserts its `expect.toml` (`check-fixtures` asserts all).
+DIRECT_EXAMPLES := math pricing market analytics strategies simulation backtest visualization
+
+.PHONY: test-direct-component-examples
+test-direct-component-examples:
+	@set -e; for scenario in $(DIRECT_EXAMPLES); do \
+		package=osl-example-direct-$$scenario; \
+		echo "=== $$package"; \
+		cargo clippy -p $$package --all-targets -- -D warnings; \
+		LOGLEVEL=WARN cargo test -p $$package; \
+		cargo run -q -p $$package; \
+	done
+
+# Builds a copy of each example, outside the repository, against the packaged
+# component crates through `[patch.crates-io]` (#555): the "compile against
+# packaged crates" check that the path dependencies of the in-tree manifests
+# cannot give. It repackages the components itself; the Components workflow
+# runs it right after `check-components` with `OSL_REUSE_PACKAGES=1` to reuse
+# those archives.
+.PHONY: check-direct-examples-packaged
+check-direct-examples-packaged:
+	scripts/check_packaged_examples.sh
+
+.PHONY: $(addprefix tree-example-direct-,$(DIRECT_EXAMPLES))
+$(addprefix tree-example-direct-,$(DIRECT_EXAMPLES)): tree-example-direct-%:
+	cargo tree --manifest-path examples/direct/$*/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py direct-$*
+
 # Measures what a per-family feature split of optionstratlib-strategies could
 # save: packages, the crate's own check and build time, rlib sizes (#532).
 # Informational, not run in CI; the crate docs record the numbers.

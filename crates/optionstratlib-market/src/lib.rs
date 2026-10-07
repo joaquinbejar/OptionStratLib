@@ -25,6 +25,12 @@
 //! analytics, in `optionstratlib-analytics`. The chain and series generators
 //! driven by a random walk are here, behind `synthetic`.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-market`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/market); `make tree-example-direct-market`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `io` (off by default): the filesystem entry points, which are

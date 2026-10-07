@@ -17,6 +17,12 @@ strategy, backtesting or plotting code.
 Analyses over a chain (risk-neutral density, projections, metrics) are
 analytics, in `optionstratlib-analytics`.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-market`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/market); `make tree-example-direct-market`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                               |

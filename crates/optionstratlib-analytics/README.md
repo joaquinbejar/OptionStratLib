@@ -18,6 +18,12 @@ and on no strategy, simulation, backtesting or plotting code.
 The probability analysis of a concrete strategy builds on these kernels and
 lives with the strategies; the `optionstratlib` facade provides it.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-analytics`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/analytics); `make tree-example-direct-analytics`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                                         |
