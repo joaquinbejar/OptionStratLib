@@ -46,9 +46,9 @@ use optionstratlib_core::pos_or_panic;
 /// final `variance.sqrt()` fails (overflow).
 ///
 /// When `returns.len() < 2` the function returns `Ok(Positive::ZERO)`
-/// rather than an error. Conversion of the final std-dev into
-/// `Positive` is clamped to `Positive::ZERO`, so `PositiveError` is
-/// never surfaced.
+/// rather than an error. The count and the final square root are never
+/// negative, so the [`VolatilityError::PositiveError`] their `Positive`
+/// conversions could report does not occur in practice.
 pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityError> {
     let n_dec =
         Decimal::from_usize(returns.len()).ok_or_else(|| VolatilityError::NumericalFailure {
@@ -57,7 +57,8 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
                 returns.len()
             ),
         })?;
-    let n = Positive::new_decimal(n_dec).unwrap_or(Positive::ZERO);
+    // A length is never negative: the `?` cannot fire.
+    let n = Positive::new_decimal(n_dec)?;
 
     if n < Decimal::TWO {
         return Ok(Positive::ZERO);
@@ -90,7 +91,8 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
             reason: "constant_volatility: sqrt(variance) failed (overflow)".to_string(),
         }
     })?;
-    Ok(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO))
+    // A square root is never negative: the `?` cannot fire.
+    Ok(Positive::new_decimal(std_dev)?)
 }
 
 /// Calculates historical volatility using a moving window approach.
@@ -148,10 +150,10 @@ pub fn historical_volatility(
 /// empty or when any `variance.sqrt()` call fails (negative operand
 /// reported as a generic overflow failure).
 ///
-/// Each running std-dev is converted via
-/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so
-/// `PositiveError` is never surfaced — negative intermediates are
-/// already caught by the `sqrt` check above.
+/// Each running std-dev is a square root, never negative, so the
+/// [`VolatilityError::PositiveError`] its `Positive` conversion could
+/// report does not occur in practice; a negative variance is already
+/// caught by the `sqrt` check above.
 pub fn ewma_volatility(
     returns: &[Decimal],
     lambda: Decimal,
@@ -173,7 +175,9 @@ pub fn ewma_volatility(
             reason: "ewma_volatility: sqrt(initial variance) failed (overflow)".to_string(),
         }
     })?;
-    let mut volatilities = vec![Positive::new_decimal(initial_std_dev).unwrap_or(Positive::ZERO)];
+    // Square roots are never negative: this `?` and the one in the loop
+    // cannot fire.
+    let mut volatilities = vec![Positive::new_decimal(initial_std_dev)?];
 
     for &return_value in &returns[1..] {
         // EWMA variance recursion: v' = λ·v + (1 - λ) · r².
@@ -190,7 +194,7 @@ pub fn ewma_volatility(
                 reason: "ewma_volatility: sqrt(variance) failed (overflow)".to_string(),
             }
         })?;
-        volatilities.push(Positive::new_decimal(std_dev).unwrap_or(Positive::ZERO));
+        volatilities.push(Positive::new_decimal(std_dev)?);
     }
 
     Ok(volatilities)
@@ -260,22 +264,32 @@ pub fn implied_volatility(
             })?;
     let result = (1..iterations)
         .into_par_iter()
-        .map(|i| {
-            let mut option = base_option.clone();
-            option.side = Side::Long; // Ensure the option is long
-            let iv = Positive::new(i as f64 / iterations as f64).unwrap_or(Positive::ZERO);
-            option.implied_volatility = iv;
+        .map(
+            |i| -> Result<Option<(Positive, Decimal)>, VolatilityError> {
+                let mut option = base_option.clone();
+                option.side = Side::Long; // Ensure the option is long
+                // `1 <= i < iterations`, so `i / iterations` lies in `(0, 1)`:
+                // the `?` cannot fire.
+                let iv = Positive::new(i as f64 / iterations as f64)?;
+                option.implied_volatility = iv;
 
-            match option.calculate_price_black_scholes() {
-                Ok(price) => {
-                    let diff = (price - market_price.to_dec()).abs();
-                    Some((iv, diff))
-                }
-                Err(_) => None,
-            }
+                // A candidate Black–Scholes rejects is dropped, as documented.
+                Ok(option
+                    .calculate_price_black_scholes()
+                    .ok()
+                    .map(|price| (iv, (price - market_price.to_dec()).abs())))
+            },
+        )
+        .filter_map(Result::transpose)
+        // `min_by` with `Ord::cmp`, made fallible: the first of equally
+        // close candidates wins, as `min_by` keeps it.
+        .try_reduce_with(|best, candidate| {
+            Ok(match candidate.1.cmp(&best.1) {
+                std::cmp::Ordering::Less => candidate,
+                _ => best,
+            })
         })
-        .filter_map(|x| x) // Remove errors
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        .transpose()?;
 
     let Some((best_iv, _)) = result else {
         return Err(VolatilityError::NoValidVolatility);
@@ -467,10 +481,9 @@ pub fn garch_volatility(
 /// because the variance is the state being simulated and a step that
 /// cannot be represented ends the path.
 ///
-/// Variance is clamped to zero on each step
-/// (`v = v.max(Decimal::ZERO)`) and converted via
-/// `Positive::new_decimal(...).unwrap_or(Positive::ZERO)`, so a
-/// negative intermediate is silently recovered.
+/// Variance is floored at zero on each step (`v = v.max(Decimal::ZERO)`),
+/// the documented full-truncation floor of the Euler scheme, so its
+/// `Positive` conversion cannot fail.
 pub fn simulate_heston_volatility(
     kappa: Decimal,
     theta: Decimal,
@@ -480,7 +493,8 @@ pub fn simulate_heston_volatility(
     steps: usize,
 ) -> Result<Vec<Positive>, VolatilityError> {
     let mut v = v0.max(Decimal::ZERO);
-    let mut v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
+    // `v` is floored at zero here and on every step: the `?` cannot fire.
+    let mut v_pos = Positive::new_decimal(v)?;
     let mut volatilities = vec![p_sqrt(
         &v_pos,
         "volatility::utils::simulate_heston_volatility",
@@ -518,7 +532,7 @@ pub fn simulate_heston_volatility(
             "volatility::heston::variance",
         )?;
         v = v.max(Decimal::ZERO); // Ensure variance doesn't become negative
-        v_pos = Positive::new_decimal(v).unwrap_or(Positive::ZERO);
+        v_pos = Positive::new_decimal(v)?;
         volatilities.push(p_sqrt(
             &v_pos,
             "volatility::utils::simulate_heston_volatility",
@@ -537,7 +551,13 @@ pub fn simulate_heston_volatility(
 ///
 /// # Returns
 ///
-/// A tuple of (lower_bound, upper_bound) for the option price.
+/// A tuple `(lower_bound, upper_bound)` of Black–Scholes values of the
+/// position, signed by `option.side` like every other price (#646, #648):
+/// a short position's bounds are the long bounds negated and swapped,
+/// `(-long_upper, -long_lower)`, so both are non-positive and still
+/// ordered. The long bounds are the long prices at `min_volatility` and
+/// `max_volatility`, in that order; a vanilla price rises with volatility,
+/// so with `min_volatility <= max_volatility` they are ordered too.
 ///
 /// # Errors
 ///
@@ -550,24 +570,23 @@ pub fn uncertain_volatility_bounds(
     option: &Options,
     min_volatility: Positive,
     max_volatility: Positive,
-) -> Result<(Positive, Positive), VolatilityError> {
-    // Create a clone of the option for lower bound calculation
-    let mut lower_bound_option = option.clone();
-    lower_bound_option.implied_volatility = min_volatility;
+) -> Result<(Decimal, Decimal), VolatilityError> {
+    // Both bounds are priced long and the side is applied once (#715). A
+    // short Black–Scholes price is negative, and the `Positive` bounds this
+    // returned clamped it to zero.
+    let long_price = |volatility: Positive| -> Result<Decimal, VolatilityError> {
+        let mut long = option.clone();
+        long.side = Side::Long;
+        long.implied_volatility = volatility;
+        Ok(long.calculate_price_black_scholes()?)
+    };
+    let lower = long_price(min_volatility)?;
+    let upper = long_price(max_volatility)?;
 
-    // Create a clone of the option for upper bound calculation
-    let mut upper_bound_option = option.clone();
-    upper_bound_option.implied_volatility = max_volatility;
-
-    // Calculate the option price with minimum volatility
-    let lower_bound = Positive::new_decimal(lower_bound_option.calculate_price_black_scholes()?)
-        .unwrap_or(Positive::ZERO);
-
-    // Calculate the option price with maximum volatility
-    let upper_bound = Positive::new_decimal(upper_bound_option.calculate_price_black_scholes()?)
-        .unwrap_or(Positive::ZERO);
-
-    Ok((lower_bound, upper_bound))
+    Ok(match option.side {
+        Side::Long => (lower, upper),
+        Side::Short => (-upper, -lower),
+    })
 }
 
 /// Annualizes a volatility value from a specific timeframe.
@@ -1904,7 +1923,7 @@ mod tests_heston_volatility {
 #[cfg(test)]
 mod tests_uncertain_volatility_bounds {
     use super::*;
-    use optionstratlib_core::assert_pos_relative_eq;
+    use optionstratlib_core::assert_decimal_eq;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 
     use optionstratlib_core::model::ExpirationDate;
@@ -1937,8 +1956,8 @@ mod tests_uncertain_volatility_bounds {
         // Lower bound should be less than upper bound for a call
         assert!(lower < upper);
         // Both bounds should be positive
-        assert!(lower > Positive::ZERO);
-        assert!(upper > Positive::ZERO);
+        assert!(lower > Decimal::ZERO);
+        assert!(upper > Decimal::ZERO);
     }
 
     #[test]
@@ -1950,8 +1969,8 @@ mod tests_uncertain_volatility_bounds {
         // Lower bound should be less than upper bound for a put
         assert!(lower < upper);
         // Both bounds should be positive
-        assert!(lower > Positive::ZERO);
-        assert!(upper > Positive::ZERO);
+        assert!(lower > Decimal::ZERO);
+        assert!(upper > Decimal::ZERO);
     }
 
     #[test]
@@ -1961,7 +1980,7 @@ mod tests_uncertain_volatility_bounds {
         let (lower, upper) = uncertain_volatility_bounds(&option, vol, vol).unwrap();
 
         // Bounds should be equal when min and max volatilities are the same
-        assert_pos_relative_eq!(lower, upper, pos_or_panic!(1e-10));
+        assert_decimal_eq!(lower, upper, dec!(1e-10));
     }
 
     #[test]
@@ -1972,7 +1991,7 @@ mod tests_uncertain_volatility_bounds {
                 .unwrap();
 
         // For ITM call, bounds should be above intrinsic value
-        let intrinsic = pos_or_panic!(10.0); // 100 - 90
+        let intrinsic = dec!(10.0); // 100 - 90
         assert!(lower > intrinsic);
         assert!(upper > intrinsic);
     }
@@ -1985,8 +2004,8 @@ mod tests_uncertain_volatility_bounds {
                 .unwrap();
 
         // For OTM call, both bounds should be positive but lower than strike price
-        assert!(lower > Positive::ZERO);
-        assert!(upper < pos_or_panic!(110.0));
+        assert!(lower > Decimal::ZERO);
+        assert!(upper < dec!(110.0));
     }
 
     #[test]
@@ -1997,8 +2016,8 @@ mod tests_uncertain_volatility_bounds {
                 .unwrap();
 
         // For OTM put, both bounds should be positive but lower than strike price
-        assert!(lower > Positive::ZERO);
-        assert!(upper < pos_or_panic!(90.0));
+        assert!(lower > Decimal::ZERO);
+        assert!(upper < dec!(90.0));
     }
 
     #[test]
@@ -2008,8 +2027,48 @@ mod tests_uncertain_volatility_bounds {
             uncertain_volatility_bounds(&option, pos_or_panic!(0.01), Positive::ONE).unwrap();
 
         assert!(lower < upper);
-        assert!(lower > Positive::ZERO);
-        assert!(upper < option.underlying_price);
+        assert!(lower > Decimal::ZERO);
+        assert!(upper < option.underlying_price.to_dec());
+    }
+
+    /// A short position's bounds are the long bounds negated and swapped
+    /// (#715), the `short == -long` convention of #646 and #648: both are
+    /// negative and still ordered. They used to clamp to zero.
+    #[test]
+    fn test_bounds_short_are_negated_long_bounds() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            for strike in [90.0, 100.0, 110.0] {
+                let long = create_test_option(style, Side::Long, pos_or_panic!(strike));
+                let short = create_test_option(style, Side::Short, pos_or_panic!(strike));
+                let (long_lower, long_upper) =
+                    uncertain_volatility_bounds(&long, pos_or_panic!(0.1), pos_or_panic!(0.3))
+                        .unwrap();
+                let (short_lower, short_upper) =
+                    uncertain_volatility_bounds(&short, pos_or_panic!(0.1), pos_or_panic!(0.3))
+                        .unwrap();
+                assert_eq!(short_lower, -long_upper, "{style:?} K={strike}");
+                assert_eq!(short_upper, -long_lower, "{style:?} K={strike}");
+                assert!(short_lower < short_upper, "{style:?} K={strike}");
+                assert!(short_upper < Decimal::ZERO, "{style:?} K={strike}");
+            }
+        }
+    }
+
+    /// Each short bound is the Black–Scholes price of the short position
+    /// at the volatility that bounds it: the most negative at the highest
+    /// volatility.
+    #[test]
+    fn test_bounds_short_match_short_black_scholes_prices() {
+        let short = create_test_option(OptionStyle::Call, Side::Short, Positive::HUNDRED);
+        let at = |volatility: f64| {
+            let mut option = short.clone();
+            option.implied_volatility = pos_or_panic!(volatility);
+            option.calculate_price_black_scholes().unwrap()
+        };
+        let (lower, upper) =
+            uncertain_volatility_bounds(&short, pos_or_panic!(0.1), pos_or_panic!(0.3)).unwrap();
+        assert_eq!(lower, at(0.3));
+        assert_eq!(upper, at(0.1));
     }
 }
 

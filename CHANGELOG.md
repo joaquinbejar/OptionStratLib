@@ -79,6 +79,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the visualization golden file are regenerated on purpose; every other
     entry is unchanged.
 
+- **`uncertain_volatility_bounds` returns signed `Decimal` bounds, and a
+  short position's are the negated long bounds** (#715). It returned
+  `(Positive, Positive)` and built each bound with
+  `Positive::new_decimal(..).unwrap_or(ZERO)`, so a short option, whose
+  Black–Scholes price is negative, came back as `(0, 0)`. It now returns
+  `Result<(Decimal, Decimal), VolatilityError>` on the `short == -long`
+  convention of #646 and #648: both bounds are priced long, a long position
+  gets `(price at min_volatility, price at max_volatility)` exactly as
+  before, and a short one `(-long_upper, -long_lower)`, negative and still
+  ordered. A short ATM call (`S = K = 100`, 30 days, `r = 5%`, vols 0.1 and
+  0.3) now bounds at the short Black–Scholes prices at 0.3 and 0.1 instead
+  of `(0, 0)`. Migration: a caller of a long option takes `.to_dec()` off
+  its comparisons or wraps the bounds with `Positive::new_decimal(..)?`; a
+  caller of a short option gets the signed values it previously could not
+  see.
+
 - **`Plottable` has no `Error` type, and the chart data of every graph
   adapter is pinned** (#543). Graph behaviour has left the lower layers
   (#542, #658); this finishes M6-02.
@@ -774,6 +790,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     payoff on the starting spot instead of the lower forward (and the put,
     symmetrically, with a positive carry). Other zero-volatility prices are
     unchanged.
+
+- **`volatility/utils.rs` drops its impossible zero fallbacks** (#715).
+  `constant_volatility`, `ewma_volatility`, `simulate_heston_volatility`
+  and the `implied_volatility` grid built `Positive` values from a count, a
+  square root, a variance floored at zero and a grid point in `(0, 1)` with
+  `.unwrap_or(Positive::ZERO)`. None of them can be negative, so each now
+  uses `?` with a comment saying why it cannot fire; a failure, if one ever
+  occurred, would surface as `VolatilityError::PositiveError` instead of a
+  silent zero. The grid's `min_by` compared `Decimal` differences with
+  `partial_cmp(..).unwrap_or(Equal)` and now uses `Ord::cmp`, through a
+  fallible reduction that keeps the first of equally close candidates as
+  `min_by` did. No returned value changes. The `uncertain_volatility_bounds`
+  part of #715 is under Changed — breaking.
 
 - **The `default` API-change report covers the real default surface**
   (#688). `scripts/report_api_changes.py` still defined it as the 0.21
