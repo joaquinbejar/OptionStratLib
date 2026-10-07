@@ -68,3 +68,98 @@ fn test_a_strategy_is_charted_through_the_prelude() {
         GraphData::GraphSurface(_) => panic!("a payoff chart is not a surface"),
     }
 }
+
+/// Whether two paths name one type: every path of the facade must be the item
+/// `optionstratlib-visualization` defines, never a copy of it.
+fn same_type<A: 'static, B: 'static>() -> bool {
+    std::any::TypeId::of::<A>() == std::any::TypeId::of::<B>()
+}
+
+/// Implemented through the component crate's `Graph` and passed where the
+/// facade's `Graph` is required: the reverse of `component_series`.
+struct ComponentProbe;
+
+impl optionstratlib_visualization::visualization::Graph for ComponentProbe {
+    fn graph_data(&self) -> optionstratlib_visualization::visualization::GraphData {
+        Probe.graph_data()
+    }
+}
+
+fn facade_series<G: optionstratlib::visualization::Graph>(graph: &G) -> usize {
+    match graph.graph_data() {
+        GraphData::Series(series) => series.x.len(),
+        GraphData::MultiSeries(series) => series.len(),
+        GraphData::GraphSurface(_) => 0,
+    }
+}
+
+#[test]
+fn test_the_facade_and_the_component_share_one_graph_contract() {
+    // One trait: an implementor of either is accepted by a bound on the other.
+    assert_eq!(facade_series(&ComponentProbe), 3);
+    assert_eq!(component_series(&Probe), 3);
+    // One definition of the chart data, the styles and the error.
+    use optionstratlib_visualization as direct;
+    assert!(same_type::<
+        optionstratlib::visualization::GraphData,
+        direct::visualization::GraphData,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::Series2D,
+        direct::visualization::Series2D,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::Surface3D,
+        direct::visualization::Surface3D,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::GraphConfig,
+        direct::visualization::GraphConfig,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::OutputType<'static>,
+        direct::visualization::OutputType<'static>,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::TraceMode,
+        direct::visualization::TraceMode,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::LineStyle,
+        direct::visualization::LineStyle,
+    >());
+    assert!(same_type::<
+        optionstratlib::visualization::ColorScheme,
+        direct::visualization::ColorScheme,
+    >());
+    assert!(same_type::<
+        optionstratlib::error::GraphError,
+        direct::error::GraphError,
+    >());
+}
+
+#[test]
+fn test_the_prelude_names_the_canonical_items() {
+    assert!(same_type::<
+        GraphData,
+        optionstratlib::visualization::GraphData,
+    >());
+    assert!(same_type::<Series2D, optionstratlib::visualization::Series2D>());
+    assert!(same_type::<
+        Surface3D,
+        optionstratlib::visualization::Surface3D,
+    >());
+    assert!(same_type::<
+        TraceMode,
+        optionstratlib::visualization::TraceMode,
+    >());
+    assert!(same_type::<GraphError, optionstratlib::error::GraphError>());
+    // The unified error wraps the one `GraphError`, with no conversion layer.
+    let wrapped = Error::from(optionstratlib_visualization::error::GraphError::Render(
+        "probe".to_string(),
+    ));
+    assert!(matches!(
+        wrapped,
+        Error::Graph(optionstratlib::error::GraphError::Render(_))
+    ));
+}
