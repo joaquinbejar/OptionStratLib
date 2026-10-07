@@ -191,7 +191,7 @@ pub trait OptionPricing {
     ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type
     ///   level. Higher values increase precision but also computational cost.
     /// * `rng` - The generator every draw of the telegraph simulation is
-    ///   taken from (see [`crate::pricing::telegraph`]). A seeded generator
+    ///   taken from (see [`crate::pricing::telegraph()`]). A seeded generator
     ///   such as [`optionstratlib_core::utils::deterministic_rng`] makes the
     ///   price reproducible; pass `&mut rand::rng()` to draw from the
     ///   thread-local RNG. It is a trait object so the trait stays
