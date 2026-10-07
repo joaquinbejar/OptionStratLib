@@ -5,6 +5,7 @@
 //! define. No market, I/O, async or charting code is compiled.
 
 use optionstratlib::prelude::*;
+use optionstratlib::pricing::black_scholes;
 
 /// Compiles only when both arguments have the same type. Every function item
 /// has its own type, so this proves a facade path re-exports the component's

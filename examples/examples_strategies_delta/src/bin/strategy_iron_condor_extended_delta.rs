@@ -8,7 +8,10 @@
 //! Iron Condor is a 4-leg strategy that benefits from low volatility.
 //! This example shows portfolio-level Greeks and adjustment planning.
 
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::strategies::AdjustmentConfig;
+use optionstratlib::strategies::AdjustmentTarget;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

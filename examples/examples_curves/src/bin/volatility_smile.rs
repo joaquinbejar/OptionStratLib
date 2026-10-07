@@ -1,3 +1,4 @@
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 

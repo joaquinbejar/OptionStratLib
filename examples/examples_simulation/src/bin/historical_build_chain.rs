@@ -1,6 +1,14 @@
+use optionstratlib::chains::csv::read_ohlcv_from_zip;
+use optionstratlib::chains::generator_optionchain;
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::utils::calculate_log_returns;
+use optionstratlib::utils::time::get_x_days_formatted;
+use optionstratlib::volatility::adjust_volatility;
+use optionstratlib::volatility::constant_volatility;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
+use std::path::Path;
 
 #[warn(dead_code)]
 #[derive(Clone)]

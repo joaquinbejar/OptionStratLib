@@ -6,9 +6,12 @@
 //! assume; `make test-visual` runs the real export, and this fixture proves
 //! the surface compiles and routes to it.
 
+use optionstratlib::error::Error;
 use optionstratlib::error::GraphError;
 use optionstratlib::prelude::*;
+use optionstratlib::visualization::make_surface;
 use optionstratlib::visualization::{GraphConfig, OutputType};
+use optionstratlib::visualization::{GraphData, Series2D, Surface3D, TraceMode};
 use std::path::{Path, PathBuf};
 
 /// A chart a downstream crate defines: it supplies `graph_data` and keeps the
@@ -171,7 +174,7 @@ fn test_the_facade_and_the_component_share_one_graph_contract() {
 }
 
 #[test]
-fn test_the_prelude_names_the_canonical_items() {
+fn test_the_chart_models_are_the_canonical_items() {
     assert!(same_type::<
         GraphData,
         optionstratlib::visualization::GraphData,

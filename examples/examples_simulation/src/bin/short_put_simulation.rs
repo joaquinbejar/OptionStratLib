@@ -36,8 +36,15 @@ use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
 use indicatif::{ProgressBar, ProgressStyle};
+use optionstratlib::backtesting::SimulationResult;
+use optionstratlib::backtesting::SimulationStats;
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::simulation::check_exit_policy;
+use optionstratlib::simulation::generator_positive;
+use optionstratlib::utils::time::convert_time_frame;
 use optionstratlib::visualization::terminal::SimulationReport;
+use optionstratlib::volatility::volatility_for_dt;
 use std::collections::HashMap;
 
 /// Walker implementation for the simulation.

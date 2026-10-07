@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;

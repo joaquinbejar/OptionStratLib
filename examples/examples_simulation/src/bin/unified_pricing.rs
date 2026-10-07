@@ -19,6 +19,10 @@
 //! - Using the Priceable trait for clean API
 
 use optionstratlib::prelude::*;
+use optionstratlib::pricing::ClosedFormEngine;
+use optionstratlib::pricing::GenericPricingEngine;
+use optionstratlib::pricing::Priceable;
+use optionstratlib::pricing::price_option_with;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 use std::convert::Infallible;

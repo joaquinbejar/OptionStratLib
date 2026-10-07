@@ -1,4 +1,8 @@
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::simulation::generator_positive;
+use optionstratlib::utils::time::convert_time_frame;
+use optionstratlib::volatility::volatility_for_dt;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

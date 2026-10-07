@@ -5,6 +5,7 @@
 //! No strategy, simulation, I/O, async or charting code is compiled.
 
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+use optionstratlib::metrics::ImpliedVolatilityCurve;
 use optionstratlib::model::Position;
 use optionstratlib::prelude::*;
 

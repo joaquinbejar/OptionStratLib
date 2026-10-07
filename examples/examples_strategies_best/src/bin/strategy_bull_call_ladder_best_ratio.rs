@@ -5,6 +5,7 @@ use positive::pos_or_panic;
    Email: jb@taunais.com
    Date: 25/9/24
 ******************************************************************************/
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {

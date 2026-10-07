@@ -8,7 +8,10 @@
 //! A Long Strangle profits from large price movements in either direction.
 //! This example shows portfolio-level Greeks and adjustment planning.
 
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::strategies::AdjustmentConfig;
+use optionstratlib::strategies::AdjustmentTarget;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

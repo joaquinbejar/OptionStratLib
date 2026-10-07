@@ -8,7 +8,10 @@
 //! This example shows how to use the new portfolio-level Greeks and
 //! optimized adjustment planning features.
 
+use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
+use optionstratlib::strategies::AdjustmentConfig;
+use optionstratlib::strategies::AdjustmentTarget;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 

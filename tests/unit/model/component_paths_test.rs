@@ -155,10 +155,6 @@ fn test_pricing_items_through_facade_modules_and_prelude() {
         optionstratlib_pricing::pricing::black_scholes,
     );
     same_item(
-        optionstratlib::prelude::black_scholes,
-        optionstratlib_pricing::pricing::black_scholes,
-    );
-    same_item(
         optionstratlib::greeks::delta,
         optionstratlib_pricing::greeks::delta,
     );
@@ -184,7 +180,7 @@ fn test_pricing_items_through_facade_modules_and_prelude() {
     let _: optionstratlib_pricing::error::PricingError =
         optionstratlib::error::PricingError::other("probe");
     let _: optionstratlib_pricing::error::GreeksError =
-        optionstratlib::prelude::GreeksError::delta_error("probe");
+        optionstratlib::error::GreeksError::delta_error("probe");
 }
 
 #[test]
@@ -238,7 +234,7 @@ fn test_analytics_items_through_facade_modules_and_prelude() {
     let _: optionstratlib_analytics::error::TransactionError =
         optionstratlib::error::TransactionError::other("probe");
     let _: optionstratlib_analytics::error::ProbabilityError =
-        optionstratlib::prelude::ProbabilityError::invalid_probability(1.5, "probe");
+        optionstratlib::error::ProbabilityError::invalid_probability(1.5, "probe");
     let _: optionstratlib_analytics::error::probability::ProbabilityResult<()> =
         optionstratlib::error::probability::ProbabilityResult::<()>::Ok(());
 }
@@ -335,7 +331,6 @@ fn test_delta_adjustment_types_through_facade_pnl_and_greeks() {
         *through_facade,
         optionstratlib_pricing::greeks::DELTA_THRESHOLD
     );
-    assert_eq!(*through_facade, optionstratlib::prelude::DELTA_THRESHOLD);
 }
 
 /// Strategy adjustment P&L stays on the upper layer: the strategy's
@@ -421,7 +416,7 @@ fn test_strategies_items_through_facade_modules_and_prelude() {
     ));
     assert_eq!(
         strategies_type(request.strategy_type),
-        optionstratlib::prelude::StrategyType::BullCallSpread
+        optionstratlib::strategies::base::StrategyType::BullCallSpread
     );
 
     // Both paths name the same trait, so they resolve to the same method item.
@@ -435,7 +430,7 @@ fn test_strategies_items_through_facade_modules_and_prelude() {
     );
 
     let _: optionstratlib_strategies::error::StrategyError =
-        optionstratlib::prelude::StrategyError::operation_not_supported("probe", "probe");
+        optionstratlib::error::StrategyError::operation_not_supported("probe", "probe");
     let _: optionstratlib_strategies::error::strategies::StrategyResult<()> =
         optionstratlib::error::strategies::StrategyResult::<()>::Ok(());
 
@@ -500,15 +495,7 @@ fn test_synthetic_generators_through_facade_modules_and_prelude() {
         optionstratlib_market::chains::generator_optionchain,
     );
     same_item(
-        optionstratlib::prelude::generator_optionchain,
-        optionstratlib_market::chains::generator_optionchain,
-    );
-    same_item(
         optionstratlib::series::generator_optionseries,
-        optionstratlib_market::series::generator_optionseries,
-    );
-    same_item(
-        optionstratlib::prelude::generator_optionseries,
         optionstratlib_market::series::generator_optionseries,
     );
     let error: optionstratlib_market::error::ChainError = optionstratlib::error::ChainError::from(
@@ -529,7 +516,7 @@ fn test_backtest_items_through_facade_modules_and_prelude() {
         optionstratlib_backtest::backtesting::results::SimulationStatsResult::from_results,
     );
     let stats: optionstratlib_backtest::backtesting::SimulationStatsResult =
-        optionstratlib::prelude::SimulationStatsResult::default();
+        optionstratlib::backtesting::SimulationStatsResult::default();
     assert_eq!(stats.total_simulations, 0);
     let error: optionstratlib_backtest::error::BacktestError =
         optionstratlib::error::BacktestError::from(
@@ -550,9 +537,9 @@ fn test_visualization_items_through_facade_modules_and_prelude() {
         optionstratlib_visualization::visualization::prepare_file_path,
     );
     let series: optionstratlib_visualization::visualization::Series2D =
-        optionstratlib::prelude::Series2D::default();
+        optionstratlib::visualization::Series2D::default();
     let data: optionstratlib_visualization::visualization::GraphData =
-        optionstratlib::prelude::GraphData::Series(series);
+        optionstratlib::visualization::GraphData::Series(series);
     assert!(matches!(
         data,
         optionstratlib::visualization::GraphData::Series(_)

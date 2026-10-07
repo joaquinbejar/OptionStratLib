@@ -12,6 +12,8 @@
 //! ## Output
 //! - PNG image: `./Draws/Metrics/put_call_ratio_premium_weighted_curve.png`
 //! - HTML interactive: `./Draws/Metrics/put_call_ratio_premium_weighted_curve.html`
+use optionstratlib::error::CurveError;
+use optionstratlib::metrics::PutCallRatioCurve;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 

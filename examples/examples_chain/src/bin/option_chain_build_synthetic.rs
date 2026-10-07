@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
+use optionstratlib::model::BasicAxisTypes;
 use optionstratlib::prelude::*;
+use optionstratlib::utils::time::get_x_days_formatted;
 use optionstratlib::visualization::terminal::ChainReport;
 use osl_example_support::setup_logger;
 use tracing::info;

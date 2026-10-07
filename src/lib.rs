@@ -1213,6 +1213,7 @@
 //! # #[cfg(feature = "pricing")]
 //! # mod example {
 //! use optionstratlib::prelude::*;
+//! use optionstratlib::volatility::implied_volatility;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create an option for implied volatility calculation

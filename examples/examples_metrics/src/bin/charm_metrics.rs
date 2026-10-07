@@ -16,6 +16,7 @@
 
 use optionstratlib::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
 use optionstratlib::error::CurveError;
+use optionstratlib::metrics::CharmCurve;
 use optionstratlib::metrics::CharmSurface;
 use optionstratlib::model::ExpirationDate;
 use optionstratlib::prelude::*;

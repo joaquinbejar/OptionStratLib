@@ -4,6 +4,11 @@
    Date: 16/8/24
 ******************************************************************************/
 use optionstratlib::prelude::*;
+use optionstratlib::volatility::constant_volatility;
+use optionstratlib::volatility::ewma_volatility;
+use optionstratlib::volatility::garch_volatility;
+use optionstratlib::volatility::historical_volatility;
+use optionstratlib::volatility::simulate_heston_volatility;
 
 fn main() {
     let returns = vec![dec!(0.01), dec!(0.02), dec!(0.01), dec!(0.03), dec!(0.00)];
