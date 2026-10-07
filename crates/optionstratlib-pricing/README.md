@@ -16,6 +16,12 @@ engine, strategy, plotting, I/O or async runtime.
 Prices, premia and Greeks cross the public boundary as `rust_decimal::Decimal`
 or `Positive`; `f64` stays inside the numerical kernels.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-pricing`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/pricing); `make tree-example-direct-pricing`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                              |

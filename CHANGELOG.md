@@ -2078,6 +2078,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Direct-component examples** (#555). `examples/direct/<scenario>/` holds
+  eight runnable programs that depend on the component crates directly and
+  on no facade feature: `math` (a volatility-smile `Curve` interpolated
+  linearly, cubically and by spline), `pricing` (core, pricing), `market`,
+  `analytics`, `strategies`, `simulation`, `backtest` (simulation,
+  strategies, backtest) and `visualization` (strategies, visualization with
+  `plotly`). Each is a workspace member named `osl-example-direct-<scenario>`
+  (ADR-0004 section 8) with a self-contained `Cargo.toml` (explicit versions,
+  nothing inherited from the workspace, the OptionStratLib crates by path
+  plus version, the facade equivalent in a comment), a `src/main.rs` that
+  installs `tracing-subscriber` and logs its workflow, tests for its key
+  figures, and an `expect.toml` of the packages its resolved graph must and
+  must not contain. `make test-direct-component-examples` lints, tests and
+  runs all of them, `make tree-example-direct-<scenario>` prints and asserts
+  one graph, `make check-fixtures` (now also discovering `examples/direct`)
+  asserts them with the consumer fixtures, and `make
+  check-direct-examples-packaged` copies each example out of the repository
+  and builds, tests and runs the copy against the packaged component crates
+  through `[patch.crates-io]`, which is what a consumer gets once they are
+  published (`scripts/check_packaged_examples.sh`); the Components workflow
+  runs them. The README in `examples/direct` maps each scenario to its facade
+  equivalent and to the fixture that proves the same graph, and states the
+  trade-off. The component READMEs and crate docs, and the facade docs, link
+  to them. Moving from a facade import to a direct one is
+  `optionstratlib::model::X` to `optionstratlib_core::model::X` (and likewise
+  per layer): they are the same types.
+
 - **The facade's feature model is reconciled and pinned** (#549).
   The facade declared twelve dependencies it never imports (`approx`,
   `statrs`, `rand`, `rand_distr`, `num-traits`, `serde`, `serde_json`,
@@ -2528,6 +2555,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   converging control. `d_sqrt`'s signature, results and errors are
   unchanged.
 ### Migration notes for 0.22
+
+- **Depending on a component instead of the facade** (#555). Each capability
+  has a runnable example under `examples/direct/<scenario>/` with a minimal
+  manifest and the facade dependency that replaces it
+  (`examples/direct/README.md`): the imports change from
+  `optionstratlib::<module>::X` to `optionstratlib_<crate>::<module>::X` and
+  name the same types.
 
 - **Compatibility with 0.21.3 is not a requirement of 0.22.0** (#606). The
   machinery built to preserve it is retired: the cumulative comparison

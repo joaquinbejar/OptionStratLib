@@ -65,6 +65,12 @@
 //! Rendering failures are `GraphError`s of the visualization layer; the math
 //! errors carry no rendering variant.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-math`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/math); `make tree-example-direct-math`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the math types

@@ -17,6 +17,12 @@ strategy over simulated paths, the charts of a walk and the chain and series
 generators built on these walks stay with the backtesting, visualization and
 `synthetic` layers; the `optionstratlib` facade provides them.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-simulation`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/simulation); `make tree-example-direct-simulation`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                                     |

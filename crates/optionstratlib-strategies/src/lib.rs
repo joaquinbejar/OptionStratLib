@@ -100,6 +100,12 @@
 //! `make measure-strategies`; `tests/strategy_families.rs` keeps the family
 //! assignment of `StrategyType` exhaustive.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-strategies`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/strategies); `make tree-example-direct-strategies`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the strategy

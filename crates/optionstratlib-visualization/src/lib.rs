@@ -154,6 +154,12 @@
 //! module roots re-export each capability, and the `optionstratlib` facade
 //! prelude serves broad imports.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-visualization`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/visualization); `make tree-example-direct-visualization`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `plotly` (off by default): Plotly rendering and the trace builders

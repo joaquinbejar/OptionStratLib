@@ -48,6 +48,12 @@
 //! [`simulation`] module root re-exports the capability, and the
 //! `optionstratlib` facade prelude serves broad imports.
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-simulation`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/simulation); `make tree-example-direct-simulation`
+//! asserts its resolved graph.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the simulation

@@ -19,6 +19,12 @@ and the simulation of a strategy over a price path stay with the
 visualization and backtesting layers (`optionstratlib-visualization`,
 `optionstratlib-backtest`); the `optionstratlib` facade re-exports them.
 
+## Example
+
+A runnable program that depends on this crate directly, with the smallest
+dependency set and no facade, is [`osl-example-direct-strategies`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/strategies); `make tree-example-direct-strategies`
+asserts its resolved graph.
+
 ## Features
 
 | Feature  | Default | Effect                                                                    |

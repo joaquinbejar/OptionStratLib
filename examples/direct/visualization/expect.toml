@@ -1,0 +1,20 @@
+# The resolved normal graph of `osl-example-direct-visualization`: packages it must
+# contain and packages it must not, checked by `make check-fixtures`
+# (scripts/check_fixtures.py) and, for one example, by
+# `make tree-example-direct-visualization`. The example is a workspace member, and
+# `cargo tree` on its manifest resolves that package alone, so what the other
+# members enable cannot widen the graph. `tracing-subscriber` is in the tree
+# on purpose: the example installs it as its application logger, and no
+# component crate resolves it.
+present = [
+    "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
+    "optionstratlib-market", "optionstratlib-simulation",
+    "optionstratlib-analytics", "optionstratlib-strategies",
+    "optionstratlib-backtest", "optionstratlib-visualization", "plotly",
+    "prettytable-rs",
+]
+absent = [
+    "optionstratlib", "csv", "zip", "tokio", "reqwest", "futures",
+    "async-trait", "plotly_static", "fantoccini", "webdriver", "indicatif",
+    "utoipa",
+]

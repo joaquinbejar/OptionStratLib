@@ -76,6 +76,12 @@
 //! use optionstratlib_core::pos_or_panic;
 //! ```
 //!
+//! ## Example
+//!
+//! A runnable program that depends on this crate directly, with the smallest
+//! dependency set and no facade, is [`osl-example-direct-pricing`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/pricing); `make tree-example-direct-pricing`
+//! asserts its resolved graph. Core is in every example's graph; this is the smallest program that uses it.
+//!
 //! ## Features
 //!
 //! - `schema` (off by default): derives `utoipa::ToSchema` on the core types
