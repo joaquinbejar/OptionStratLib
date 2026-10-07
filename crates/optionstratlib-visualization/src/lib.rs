@@ -168,5 +168,17 @@ pub mod visualization;
 /// Errors raised by the visualization layer.
 pub mod error;
 
+/// Items `impl_graph_for_payoff_strategy!` names through `$crate`, so a caller
+/// needs no imports of its own. Not part of the public API.
+#[doc(hidden)]
+pub mod __private {
+    pub use optionstratlib_core::model::Positive;
+    pub use optionstratlib_pricing::pricing::Profit;
+    pub use optionstratlib_strategies::strategies::base::BreakEvenable;
+    pub use optionstratlib_strategies::strategies::{BasicAble, Strategies};
+    pub use rust_decimal::Decimal;
+    pub use tracing;
+}
+
 /// Version of the `optionstratlib-visualization` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

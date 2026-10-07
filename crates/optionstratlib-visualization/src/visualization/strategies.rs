@@ -15,19 +15,11 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::visualization::{
-    ColorScheme, Graph, GraphConfig, GraphData, Label2D, LineStyle, Series2D, TraceMode, VisPoint2D,
-};
-use optionstratlib_core::model::Positive;
-use optionstratlib_pricing::pricing::Profit;
-use optionstratlib_strategies::strategies::base::BreakEvenable;
 use optionstratlib_strategies::strategies::{
-    BasicAble, BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread,
-    IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
+    IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
     PoorMansCoveredCall, ShortButterflySpread, ShortCall, ShortPut, ShortStraddle, ShortStrangle,
-    Strategies,
 };
-use rust_decimal::Decimal;
 
 /// Macro `impl_graph_for_payoff_strategy` generates implementations of the `Graph` trait
 /// for one or more given types. This is specifically designed for types that represent
@@ -78,17 +70,22 @@ use rust_decimal::Decimal;
 /// - The macro assumes that the types implemented provide specific methods (`get_best_range_to_show`,
 ///   `calculate_profit_at`, and `get_title`) necessary for the `Graph` trait.
 /// - Predefined values like colors, line widths, and dimensions can be adjusted within the macro if needed.
-/// - The expansion names its items unqualified, so the calling module imports
-///   `Graph`, `GraphConfig`, `GraphData`, `Series2D`, `Label2D`, `VisPoint2D`,
-///   `TraceMode`, `LineStyle`, `ColorScheme`, `Positive`, `Decimal` and the
-///   strategy traits it calls, as this module does.
+/// - The expansion reaches every item it names through `$crate` paths, so the
+///   calling module needs no imports beyond the types it lists.
 ///
 #[macro_export]
 macro_rules! impl_graph_for_payoff_strategy {
     ($($t:ty),*) => {
         $(
-            impl Graph for $t {
-                fn graph_data(&self) -> GraphData {
+            impl $crate::visualization::Graph for $t {
+                fn graph_data(&self) -> $crate::visualization::GraphData {
+                    use $crate::__private::{
+                        BasicAble, BreakEvenable, Decimal, Positive, Profit, Strategies,
+                    };
+                    use $crate::visualization::{
+                        GraphData, Label2D, Series2D, TraceMode, VisPoint2D,
+                    };
+
                     let break_even_points = match self.get_break_even_points() {
                         Ok(points) => points,
                         Err(_) => return GraphData::Series(Series2D::default()),
@@ -266,7 +263,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                         let profit = match self.calculate_profit_at(&price) {
                             Ok(p) => p,
                             Err(e) => {
-                                ::tracing::warn!(
+                                $crate::__private::tracing::warn!(
                                     error = %e,
                                     "skipping price point with unscorable profit"
                                 );
@@ -369,7 +366,10 @@ macro_rules! impl_graph_for_payoff_strategy {
                     GraphData::MultiSeries(series_list)
                 }
 
-                fn graph_config(&self) -> GraphConfig {
+                fn graph_config(&self) -> $crate::visualization::GraphConfig {
+                    use $crate::__private::BasicAble;
+                    use $crate::visualization::{ColorScheme, GraphConfig, LineStyle};
+
                     let title = self.get_title();
                     let legend = Some(vec![title.clone()]);
                     GraphConfig {
