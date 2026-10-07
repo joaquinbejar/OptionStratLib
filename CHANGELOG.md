@@ -807,6 +807,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the formulas outside their domain.
   - Down-barrier calls without a rebate are unchanged.
 
+- **A negative risk-free rate is a valid input** (#709). `Options::validate`
+  rejected `risk_free_rate < 0`, so an option, a `Position` holding it and
+  every strategy validated through its positions refused rates that EUR, CHF
+  and JPY markets quoted for years, although the pricers handle them. The
+  check is removed; the empty-symbol, zero-quantity, zero-strike,
+  zero-underlying and negative-volatility checks stay. The rest of the
+  workspace was swept for the same rule and has none: every rate is a
+  `Decimal` (`Options::risk_free_rate`, `BinomialPricingParams::int_rate`,
+  `RNDParameters::risk_free_rate`, the chain, series and option-data
+  `risk_free_rate`, the probability kernels' `risk_free_rate`), and no
+  constructor, builder, chain or simulation parameter compares one with
+  zero; `Position::validate`, the strategies' `validate` and
+  `StrategyRequest::get_strategy` reach the rate only through
+  `Options::validate`. New tests: an option at r = -1 % (and 0, -0.75 %,
+  -25 %) validates while the other checks still reject; a `Position` at
+  -1 % validates; a `BullCallSpread` at -1 % builds and validates through
+  `new`, `get_strategy` and `StrategyRequest`, with the same expiry profile
+  as at 5 %; Black-Scholes at r = -0.5 %, -1 %, -2 % and -5 % matches the
+  closed form and put-call parity. One limit remains by type, not by a
+  check: `garman_kohlhagen` maps the foreign rate onto
+  `Options::dividend_yield`, a `Positive`, so a negative foreign rate still
+  cannot be expressed (documented there since it was added).
+  - A probe of the vanilla pricers at r = -1 % and -5 % found one that
+    failed: `barone_adesi_whaley` for a put returned
+    `PricingError::Decimal(Overflow)` from the critical-price power
+    (`(S / S*)^q1` with `S / S* = 10000`). At `r < 0` with `q >= 0` early
+    exercise of a put is never optimal, since holding is worth at least
+    `K e^(-rT) - S e^(-qT) >= K - S`, so it now returns the European put,
+    the mirror of the existing `q = 0` call rule (at `S = K = 100`,
+    `sigma = 0.2`, `T = 0.5`: 5.905478 at -1 %, 7.063118 at -5 %). `r = 0`
+    keeps the quadratic approximation. A new test holds it to Black-Scholes
+    within `1e-9` for three negative rates and four `(S, q)` points, and to
+    the 500-step binomial American put within `0.01`, which at `q = 0`
+    equals the binomial European put exactly.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an

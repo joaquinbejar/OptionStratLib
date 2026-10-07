@@ -1581,6 +1581,21 @@ mod tests_valid_position {
         assert!(!position.validate());
     }
 
+    /// A position on an option priced at a negative rate is valid (#709).
+    #[test]
+    fn test_position_validate_negative_risk_free_rate_is_valid() {
+        let mut position = create_sample_position(
+            OptionStyle::Call,
+            Side::Short,
+            pos_or_panic!(90.0),
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+        );
+        position.option.risk_free_rate = rust_decimal_macros::dec!(-0.01);
+        assert!(position.validate());
+    }
+
     #[test]
     fn test_zero_fees() {
         let mut position = create_sample_position(

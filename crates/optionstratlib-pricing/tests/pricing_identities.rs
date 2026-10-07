@@ -237,6 +237,59 @@ fn test_black_scholes_put_call_parity_with_dividend_grid_holds() {
     });
 }
 
+/// Black-Scholes at negative rates (#709): put-call parity holds, and each
+/// leg matches the closed form at `S = K = 100`, `sigma = 0.2`, `T = 0.5`,
+/// `q = 0` (references from `N(x) = erfc(-x / sqrt(2)) / 2` in double
+/// precision outside the library). At `r < 0` the put is worth more than the
+/// call at the money, since `K e^(-rT) > S`.
+#[test]
+fn test_black_scholes_negative_rate_put_call_parity_and_reference_hold() {
+    // `(r, call, put)`.
+    let cases = [
+        (dec!(-0.005), dec!(5.519977134270), dec!(5.770289894849)),
+        (dec!(-0.01), dec!(5.404225841930), dec!(5.905477927870)),
+        (dec!(-0.02), dec!(5.177151001544), dec!(6.182167709960)),
+        (dec!(-0.05), dec!(4.531605519442), dec!(7.063117571885)),
+    ];
+    // The normal CDF behind the kernel is accurate to about `2e-11`, which
+    // the spot of 100 scales to `2e-9`.
+    let reference_tol = dec!(0.00000001);
+    for (r, call_ref, put_ref) in cases {
+        let call = european(
+            OptionStyle::Call,
+            Side::Long,
+            100.0,
+            100.0,
+            182.5,
+            0.2,
+            r,
+            0.0,
+        );
+        let put = european(
+            OptionStyle::Put,
+            Side::Long,
+            100.0,
+            100.0,
+            182.5,
+            0.2,
+            r,
+            0.0,
+        );
+        let c = ok(black_scholes(&call), "bs call");
+        let p = ok(black_scholes(&put), "bs put");
+        let t = years(&call);
+        assert_close(c, call_ref, reference_tol, &format!("bs call r={r}"));
+        assert_close(p, put_ref, reference_tol, &format!("bs put r={r}"));
+        assert_close(
+            c - p,
+            dec!(100) - dec!(100) * discount(r, t),
+            IDENTITY_TOL,
+            &format!("bs parity r={r}"),
+        );
+        assert!(p > c, "r={r}: at the money the put exceeds the call");
+    }
+}
+
 /// Black-76 parity on the forward: `C - P = e^(-rT) (F - K)` (Black 1976;
 /// Haug §1.1.4).
 #[test]
@@ -1754,6 +1807,67 @@ fn test_barone_adesi_whaley_negative_rate_call_is_floored_at_intrinsic() {
         "baw negative-rate call",
     );
     assert_eq!(call, dec!(50));
+}
+
+/// At a negative rate an American put is never exercised early (with
+/// `q >= 0`, holding is worth at least `K e^(-rT) - S e^(-qT) >= K - S`), so
+/// Barone-Adesi-Whaley returns the European put (#709). It used to fail with
+/// a `Decimal` overflow in the critical-price power. The binomial American
+/// put on 500 steps agrees with it to its discretisation error, and equals
+/// the binomial European put on the same lattice, which confirms that no
+/// node exercises.
+#[test]
+fn test_barone_adesi_whaley_negative_rate_put_is_european() {
+    for r in [dec!(-0.005), dec!(-0.01), dec!(-0.05)] {
+        for (spot, q) in [(100.0, 0.0), (80.0, 0.0), (100.0, 0.02), (60.0, 0.03)] {
+            let context = format!("r={r} S={spot} q={q}");
+            let american = ok(
+                barone_adesi_whaley(
+                    pos_or_panic!(spot),
+                    Positive::HUNDRED,
+                    pos_or_panic!(0.5),
+                    r,
+                    pos_or_panic!(q),
+                    pos_or_panic!(0.2),
+                    &OptionStyle::Put,
+                ),
+                &context,
+            );
+            let put = european(OptionStyle::Put, Side::Long, spot, 100.0, 182.5, 0.2, r, q);
+            let european_value = ok(black_scholes(&put), &context);
+            assert_close(american, european_value, IDENTITY_TOL, &context);
+            assert!(
+                american >= dec!(100) - pos_or_panic!(spot).to_dec(),
+                "{context}"
+            );
+
+            let lattice = |option_type: &OptionType| {
+                ok(
+                    price_binomial(BinomialPricingParams {
+                        asset: pos_or_panic!(spot),
+                        volatility: pos_or_panic!(0.2),
+                        int_rate: r,
+                        strike: Positive::HUNDRED,
+                        expiry: pos_or_panic!(0.5),
+                        no_steps: step_count(500),
+                        option_type,
+                        option_style: &OptionStyle::Put,
+                        side: &Side::Long,
+                    }),
+                    &context,
+                )
+            };
+            if q == 0.0 {
+                let binomial_american = lattice(&OptionType::American);
+                assert_eq!(
+                    binomial_american,
+                    lattice(&OptionType::European),
+                    "{context}"
+                );
+                assert_close(binomial_american, american, dec!(0.01), &context);
+            }
+        }
+    }
 }
 
 /// Binary options define both limits: at `T = 0` the payout if in the money

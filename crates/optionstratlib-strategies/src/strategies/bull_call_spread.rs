@@ -1403,6 +1403,112 @@ mod tests_bull_call_spread_validation {
     }
 }
 
+/// A vertical spread priced at a negative risk-free rate builds and validates
+/// (#709): `Options::validate` no longer rejects `r < 0`, so neither the
+/// constructor nor the position-based builders do.
+#[cfg(test)]
+mod tests_bull_call_spread_negative_rate {
+    use super::*;
+    use crate::strategies::StrategyRequest;
+    use chrono::Utc;
+    use optionstratlib_core::model::ExpirationDate;
+    use rust_decimal_macros::dec;
+
+    const NEGATIVE_RATE: Decimal = dec!(-0.01);
+
+    fn spread_via_new(rate: Decimal) -> BullCallSpread {
+        match BullCallSpread::new(
+            "SX5E".to_string(),
+            Positive::HUNDRED,
+            pos_or_panic!(95.0),
+            pos_or_panic!(105.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            rate,
+            Positive::ZERO,
+            Positive::ONE,
+            pos_or_panic!(6.5),
+            pos_or_panic!(1.5),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+        ) {
+            Ok(spread) => spread,
+            Err(e) => panic!("a spread at r = {rate} builds: {e}"),
+        }
+    }
+
+    fn position(side: Side, strike: f64, premium: f64) -> Position {
+        Position::new(
+            Options::new(
+                OptionType::European,
+                side,
+                "SX5E".to_string(),
+                pos_or_panic!(strike),
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+                pos_or_panic!(0.2),
+                Positive::ONE,
+                Positive::HUNDRED,
+                NEGATIVE_RATE,
+                OptionStyle::Call,
+                Positive::ZERO,
+                None,
+            ),
+            pos_or_panic!(premium),
+            Utc::now(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_bull_call_spread_new_negative_rate_builds_and_validates() {
+        let spread = spread_via_new(NEGATIVE_RATE);
+        assert!(spread.validate());
+        assert_eq!(spread.long_call.option.risk_free_rate, NEGATIVE_RATE);
+        assert_eq!(spread.short_call.option.risk_free_rate, NEGATIVE_RATE);
+        assert_eq!(spread.break_even_points.len(), 1);
+    }
+
+    /// The rate does not enter the expiry payoff, so the break-even and the
+    /// profit at expiry are the same at r = -1 % as at r = 5 %.
+    #[test]
+    fn test_bull_call_spread_negative_rate_expiry_profile_matches_positive_rate() {
+        let negative = spread_via_new(NEGATIVE_RATE);
+        let positive = spread_via_new(dec!(0.05));
+        assert_eq!(negative.break_even_points, positive.break_even_points);
+        for price in [90.0, 100.0, 110.0] {
+            let at = pos_or_panic!(price);
+            match (
+                negative.calculate_profit_at(&at),
+                positive.calculate_profit_at(&at),
+            ) {
+                (Ok(n), Ok(p)) => assert_eq!(n, p, "profit at {price}"),
+                other => panic!("profit at {price} evaluates: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_bull_call_spread_get_strategy_negative_rate_builds_and_validates() {
+        let positions = vec![
+            position(Side::Long, 95.0, 6.5),
+            position(Side::Short, 105.0, 1.5),
+        ];
+        match BullCallSpread::get_strategy(&positions) {
+            Ok(spread) => assert!(spread.validate()),
+            Err(e) => panic!("get_strategy at r = -1 % builds: {e}"),
+        }
+        match StrategyRequest::new(StrategyType::BullCallSpread, positions).get_strategy() {
+            Ok(spread) => assert!(spread.validate()),
+            Err(e) => panic!("StrategyRequest at r = -1 % builds: {e}"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests_bull_call_spread_optimization {
     use super::*;

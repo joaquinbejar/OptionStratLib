@@ -154,7 +154,8 @@ pub struct Options {
     pub underlying_price: Positive,
 
     /// The current risk-free interest rate used in option pricing models,
-    /// typically based on treasury yields of similar duration.
+    /// typically based on treasury yields of similar duration. Annual, as a
+    /// fraction; may be negative (#709).
     pub risk_free_rate: Decimal,
 
     /// The option is a Call or Put option, determining the fundamental right
@@ -414,9 +415,12 @@ impl Options {
     /// - Underlying symbol is not empty
     /// - Implied volatility is non-negative
     /// - Quantity is non-zero
-    /// - Risk-free rate is non-negative
     /// - Strike price is positive and non-zero
     /// - Underlying price is positive and non-zero
+    ///
+    /// The risk-free rate is not checked: a negative rate is a legitimate
+    /// market input (EUR, CHF and JPY rates were negative for years) and the
+    /// pricers handle it (#709).
     ///
     /// # Returns
     /// `true` if all parameters are valid, `false` if any validation fails
@@ -431,10 +435,6 @@ impl Options {
         }
         if self.quantity == ZERO {
             error!("Quantity is equal to zero");
-            return false;
-        }
-        if self.risk_free_rate < Decimal::ZERO {
-            error!("Risk free rate is less than zero");
             return false;
         }
         if self.strike_price == Positive::ZERO {
@@ -616,6 +616,37 @@ mod tests_valid_option {
     #[test]
     fn test_zero_underlying_price() {
         let mut option = create_valid_option();
+        option.underlying_price = Positive::ZERO;
+        assert!(!option.validate());
+    }
+
+    /// A negative risk-free rate is a market input, not an invalid option
+    /// (#709): r = -1 % validates, and so do a zero rate and a deeply
+    /// negative one.
+    #[test]
+    fn test_options_validate_negative_risk_free_rate_is_valid() {
+        for rate in [dec!(-0.01), Decimal::ZERO, dec!(-0.0075), dec!(-0.25)] {
+            let mut option = create_valid_option();
+            option.risk_free_rate = rate;
+            assert!(option.validate(), "r = {rate}");
+        }
+    }
+
+    /// The other checks still reject at a negative rate.
+    #[test]
+    fn test_options_validate_negative_rate_keeps_other_checks() {
+        let mut option = create_valid_option();
+        option.risk_free_rate = dec!(-0.01);
+        option.quantity = Positive::ZERO;
+        assert!(!option.validate());
+
+        let mut option = create_valid_option();
+        option.risk_free_rate = dec!(-0.01);
+        option.underlying_symbol = String::new();
+        assert!(!option.validate());
+
+        let mut option = create_valid_option();
+        option.risk_free_rate = dec!(-0.01);
         option.underlying_price = Positive::ZERO;
         assert!(!option.validate());
     }
