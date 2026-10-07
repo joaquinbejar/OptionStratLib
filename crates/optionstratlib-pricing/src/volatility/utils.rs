@@ -18,7 +18,8 @@ use optionstratlib_core::model::decimal::{
 };
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use optionstratlib_core::utils::time::TimeFrame;
-use rand::{Rng, RngExt};
+use rand::Rng;
+use rand_distr::{Distribution, StandardNormal};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
@@ -452,6 +453,18 @@ pub fn garch_volatility(
     Ok(volatilities)
 }
 
+/// Draws one Wiener increment `dW ~ N(0, dt)` for the Heston Euler step: a
+/// standard normal from `rng` scaled by `dt_sqrt = sqrt(dt)` (#742).
+#[inline]
+fn heston_wiener_increment<R: Rng + ?Sized>(
+    rng: &mut R,
+    dt_sqrt: f64,
+) -> Result<Decimal, VolatilityError> {
+    let z: f64 = StandardNormal.sample(rng);
+    let dw = z * dt_sqrt;
+    finite_decimal(dw).ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw))
+}
+
 /// Simulates stochastic volatility using the Heston model (simplified).
 ///
 /// # Arguments
@@ -462,8 +475,9 @@ pub fn garch_volatility(
 /// * `v0` - Initial variance.
 /// * `dt` - Time step.
 /// * `steps` - Number of simulation steps.
-/// * `rng` - The generator every variance shock is drawn from, one draw per
-///   step after the first. A seeded generator such as
+/// * `rng` - The generator every variance shock is drawn from, one
+///   standard-normal draw per step after the first, scaled by `sqrt(dt)` to
+///   the Wiener increment `dW ~ N(0, dt)`. A seeded generator such as
 ///   [`optionstratlib_core::utils::deterministic_rng`] makes the path
 ///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
 ///
@@ -513,9 +527,7 @@ pub fn simulate_heston_volatility<R: Rng + ?Sized>(
             reason: "simulate_heston_volatility: sqrt(dt) not representable as f64".to_string(),
         })?;
     for _ in 1..steps {
-        let dw_f64 = rng.random::<f64>() * dt_sqrt_f64;
-        let dw = finite_decimal(dw_f64)
-            .ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw_f64))?;
+        let dw = heston_wiener_increment(rng, dt_sqrt_f64)?;
         let sqrt_v = p_sqrt(&v_pos, "volatility::utils::simulate_heston_volatility")?.to_dec();
         // Euler step of dv = κ(θ − v)dt + ξ√v dW, every factor checked:
         // the raw operator form aborted with `Multiplication overflowed`
@@ -1771,7 +1783,10 @@ mod tests_heston_volatility {
     use super::*;
 
     /// Last volatility of `seeded_path(DETERMINISTIC_RNG_DEFAULT_SEED)`.
-    const PINNED_HESTON_LAST: Decimal = dec!(0.4720671070320042200460741098);
+    /// Re-baselined by #742, when `dW` became a normal draw; the uniform
+    /// draw it replaced pinned 0.4720671070320042200460741098, a variance
+    /// of 0.22 against a long-run `theta` of 0.04.
+    const PINNED_HESTON_LAST: Decimal = dec!(0.2326994513761414494617655821);
     use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use rust_decimal_macros::dec;
 
@@ -2036,8 +2051,68 @@ mod tests_heston_volatility {
     }
 
     #[test]
+    fn test_heston_wiener_increment_seeded_moments_match_n0_dt() {
+        // #742: dW must be N(0, dt). The uniform draw it replaced had mean
+        // sqrt(dt) / 2 = 0.05 and variance dt / 12.
+        const DRAWS: u32 = 100_000;
+        let dt = 0.01_f64;
+        let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
+        let (mut sum, mut sum_sq) = (0.0_f64, 0.0_f64);
+        for _ in 0..DRAWS {
+            let dw = heston_wiener_increment(&mut rng, dt.sqrt())
+                .unwrap()
+                .to_f64()
+                .unwrap();
+            sum += dw;
+            sum_sq += dw * dw;
+        }
+        let n = f64::from(DRAWS);
+        let mean = sum / n;
+        let variance = sum_sq / n - mean * mean;
+        // Standard error of the mean is sqrt(dt / n) ~ 3.2e-4; of the
+        // variance, dt * sqrt(2 / n) ~ 4.5e-5. Both bounds are ~5 sigma.
+        assert!(mean.abs() < 1.6e-3, "sample mean {mean}");
+        assert!((variance - dt).abs() < 2.5e-4, "sample variance {variance}");
+    }
+
+    #[test]
+    fn test_simulate_heston_volatility_long_run_mean_reverts_to_theta() {
+        // #742: with a symmetric dW the variance mean-reverts to theta. The
+        // uniform draw biased every shock upward and settled near 0.64.
+        // Feller: 2 * kappa * theta = 0.16 > xi^2 = 0.09. The normal draw
+        // gives 0.0406 over these seeds.
+        const PATHS: u64 = 200;
+        const STEPS: usize = 1_000;
+        const BURN_IN: usize = 500;
+        let theta = dec!(0.04);
+        let mut total = Decimal::ZERO;
+        let mut count = Decimal::ZERO;
+        for seed in 0..PATHS {
+            let path = simulate_heston_volatility(
+                dec!(2.0),
+                theta,
+                dec!(0.3),
+                dec!(0.04),
+                dec!(0.01),
+                STEPS,
+                &mut deterministic_rng(seed),
+            )
+            .unwrap();
+            for vol in path.iter().skip(BURN_IN) {
+                total += vol.to_dec() * vol.to_dec();
+                count += Decimal::ONE;
+            }
+        }
+        let long_run_mean = total / count;
+        assert!(
+            (long_run_mean - theta).abs() < dec!(0.004),
+            "long-run mean variance {long_run_mean}, theta {theta}"
+        );
+    }
+
+    #[test]
     fn test_simulate_heston_volatility_zero_dt_ignores_rng_draws() {
-        // With dt = 0 the shock sqrt(dt) * u and the drift are zero, so the
+        // With dt = 0 the shock sqrt(dt) * z and the drift are zero, so the
         // path stays at sqrt(v0) whatever the generator yields.
         let path = simulate_heston_volatility(
             dec!(2.0),
