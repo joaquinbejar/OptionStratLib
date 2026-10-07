@@ -149,6 +149,11 @@ impl BullPutSpread {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the long strike is not below the short
+    /// strike, or a leg fails `Position::validate` (for example a short put
+    /// with no premium).
+    ///
     /// Returns `StrategyError` if either freshly-constructed leg cannot be
     /// added to the strategy or if the break-even calculation fails. In
     /// practice these branches are unreachable for a freshly-built bull
@@ -239,7 +244,12 @@ impl BullPutSpread {
         );
         strategy.add_position(&short_put)?;
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullPutSpread,
+                "the legs built by `new` fail validation",
+            ));
+        }
 
         strategy.update_break_even_points()?;
 
@@ -284,13 +294,13 @@ impl StrategyConstructor for BullPutSpread {
             ));
         }
 
-        // Validate option sides - long higher strike put, short lower strike put
-        if lower_strike_option.option.side != Side::Short
-            || higher_strike_option.option.side != Side::Long
+        // Validate option sides - long lower strike put, short higher strike put
+        if lower_strike_option.option.side != Side::Long
+            || higher_strike_option.option.side != Side::Short
         {
             return Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                 operation: "Bull Put Spread get_strategy".to_string(),
-                reason: "Bull Put Spread requires a short lower strike put and a long higher strike put".to_string(),
+                reason: "Bull Put Spread requires a long lower strike put and a short higher strike put".to_string(),
             }));
         }
 
@@ -306,7 +316,7 @@ impl StrategyConstructor for BullPutSpread {
         }
 
         // Create positions
-        let short_put = Position::new(
+        let long_put = Position::new(
             lower_strike_option.option.clone(),
             lower_strike_option.premium,
             Utc::now(),
@@ -316,7 +326,7 @@ impl StrategyConstructor for BullPutSpread {
             lower_strike_option.extra_fields.clone(),
         );
 
-        let long_put = Position::new(
+        let short_put = Position::new(
             higher_strike_option.option.clone(),
             higher_strike_option.premium,
             Utc::now(),
@@ -337,7 +347,12 @@ impl StrategyConstructor for BullPutSpread {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullPutSpread,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
@@ -1239,13 +1254,15 @@ mod tests_bull_put_spread_strategy {
         assert_relative_eq!(ratio, 73.0984, epsilon = 0.0001);
     }
 
-    #[test]
-    fn test_default_strikes() {
-        let spread = BullPutSpread::new(
+    fn new_spread(
+        long_strike: Positive,
+        short_strike: Positive,
+    ) -> Result<BullPutSpread, StrategyError> {
+        BullPutSpread::new(
             "TEST".to_string(),
             Positive::HUNDRED,
-            Positive::ZERO, // long_strike = default
-            Positive::ZERO, // short_strike = default
+            long_strike,
+            short_strike,
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
@@ -1258,34 +1275,43 @@ mod tests_bull_put_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
         )
-        .unwrap();
+    }
 
+    #[test]
+    fn test_default_strikes() {
+        // A zero long strike defaults to the underlying price.
+        let spread = new_spread(Positive::ZERO, pos_or_panic!(105.0)).unwrap();
         assert_eq!(spread.long_put.option.strike_price, Positive::HUNDRED);
+        assert_eq!(spread.short_put.option.strike_price, pos_or_panic!(105.0));
+
+        // A zero short strike defaults to the underlying price.
+        let spread = new_spread(pos_or_panic!(95.0), Positive::ZERO).unwrap();
+        assert_eq!(spread.long_put.option.strike_price, pos_or_panic!(95.0));
         assert_eq!(spread.short_put.option.strike_price, Positive::HUNDRED);
     }
 
     #[test]
-    fn test_invalid_strikes() {
-        let spread = BullPutSpread::new(
-            "TEST".to_string(),
-            Positive::HUNDRED,
-            pos_or_panic!(95.0),
-            pos_or_panic!(90.0),
-            ExpirationDate::Days(pos_or_panic!(30.0)),
-            pos_or_panic!(0.2),
-            dec!(0.05),
-            Positive::ZERO,
-            Positive::ONE,
-            Positive::ONE,
-            Positive::TWO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-            Positive::ZERO,
-        )
-        .unwrap();
+    fn test_bull_put_spread_both_default_strikes_rejected() {
+        // Both strikes default to the underlying price, which is no vertical (#696).
+        assert!(matches!(
+            new_spread(Positive::ZERO, Positive::ZERO),
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullPutSpread,
+                ..
+            })
+        ));
+    }
 
-        assert!(!spread.validate());
+    #[test]
+    fn test_invalid_strikes() {
+        // The long put above the short put is a bear put spread (#696).
+        assert!(matches!(
+            new_spread(pos_or_panic!(95.0), pos_or_panic!(90.0)),
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullPutSpread,
+                ..
+            })
+        ));
     }
 }
 
@@ -2128,13 +2154,17 @@ mod tests_delta {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos_or_panic!(5801.88);
-        BullPutSpread::new(
+        let mut strategy = BullPutSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // long_strike placeholder
+            Positive::TWO,    // short_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2147,7 +2177,11 @@ mod tests_delta {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.long_put.option.strike_price = long_strike;
+        strategy.short_put.option.strike_price = short_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]
@@ -2273,13 +2307,17 @@ mod tests_delta_size {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use rust_decimal_macros::dec;
 
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullPutSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        BullPutSpread::new(
+        let mut strategy = BullPutSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // long_strike placeholder
+            Positive::TWO,    // short_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2292,7 +2330,11 @@ mod tests_delta_size {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.long_put.option.strike_price = long_strike;
+        strategy.short_put.option.strike_price = short_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]
@@ -2419,8 +2461,9 @@ mod tests_bear_call_spread_position_management {
         BullPutSpread::new(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
-            pos_or_panic!(5850.0),  // long_strike
-            pos_or_panic!(5720.0),  // short_strike
+            // Textbook legs: long the lower strike, short the higher (#696).
+            pos_or_panic!(5720.0), // long_strike
+            pos_or_panic!(5850.0), // short_strike
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2442,21 +2485,21 @@ mod tests_bear_call_spread_position_management {
 
         // Test getting short put position
         let put_position =
-            bull_put_spread.get_position(&OptionStyle::Put, &Side::Long, &pos_or_panic!(5850.0));
+            bull_put_spread.get_position(&OptionStyle::Put, &Side::Long, &pos_or_panic!(5720.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5850.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5720.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Put);
         assert_eq!(positions[0].option.side, Side::Long);
 
         // Test getting short put position
         let put_position =
-            bull_put_spread.get_position(&OptionStyle::Put, &Side::Short, &pos_or_panic!(5720.0));
+            bull_put_spread.get_position(&OptionStyle::Put, &Side::Short, &pos_or_panic!(5850.0));
         assert!(put_position.is_ok());
         let positions = put_position.unwrap();
         assert_eq!(positions.len(), 1);
-        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5720.0));
+        assert_eq!(positions[0].option.strike_price, pos_or_panic!(5850.0));
         assert_eq!(positions[0].option.option_style, OptionStyle::Put);
         assert_eq!(positions[0].option.side, Side::Short);
 
@@ -2531,8 +2574,9 @@ mod tests_adjust_option_position {
         BullPutSpread::new(
             "SP500".to_string(),
             pos_or_panic!(5781.88), // underlying_price
-            pos_or_panic!(5850.0),  // long_strike
-            pos_or_panic!(5720.0),  // short_strike
+            // Textbook legs: long the lower strike, short the higher (#696).
+            pos_or_panic!(5720.0), // long_strike
+            pos_or_panic!(5850.0), // short_strike
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2556,7 +2600,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos_or_panic!(5720.0),
+            &pos_or_panic!(5850.0),
             &OptionStyle::Put,
             &Side::Short,
         );
@@ -2576,7 +2620,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             adjustment.to_dec(),
-            &pos_or_panic!(5850.0),
+            &pos_or_panic!(5720.0),
             &OptionStyle::Put,
             &Side::Long,
         );
@@ -2595,7 +2639,7 @@ mod tests_adjust_option_position {
         // Try to adjust a non-existent long call position
         let result = strategy.adjust_option_position(
             Decimal::ONE,
-            &pos_or_panic!(5850.0),
+            &pos_or_panic!(5720.0),
             &OptionStyle::Call,
             &Side::Long,
         );
@@ -2631,7 +2675,7 @@ mod tests_adjust_option_position {
 
         let result = strategy.adjust_option_position(
             Decimal::ZERO,
-            &pos_or_panic!(5720.0),
+            &pos_or_panic!(5850.0),
             &OptionStyle::Put,
             &Side::Short,
         );
@@ -2650,6 +2694,65 @@ mod tests_strategy_constructor {
 
     #[test]
     fn test_get_strategy_valid() {
+        // Textbook legs: long the lower-strike put, short the higher (#696).
+        let options = vec![
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Long,
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(95.0),
+                pos_or_panic!(0.2),
+            ),
+            create_sample_position(
+                OptionStyle::Put,
+                Side::Short,
+                Positive::HUNDRED,
+                Positive::ONE,
+                pos_or_panic!(105.0),
+                pos_or_panic!(0.2),
+            ),
+        ];
+
+        let result = BullPutSpread::get_strategy(&options);
+        assert!(result.is_ok());
+
+        let strategy = result.unwrap();
+        assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(strategy.short_put.option.strike_price, pos_or_panic!(105.0));
+        assert!(strategy.validate());
+    }
+
+    #[test]
+    fn test_bull_put_spread_get_strategy_textbook_legs_accepted_in_any_order() {
+        // The builder sorts by strike, so the input order does not matter.
+        let short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(105.0),
+            pos_or_panic!(0.2),
+        );
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+        );
+
+        let strategy = BullPutSpread::get_strategy(&[short_put, long_put]).unwrap();
+        assert_eq!(strategy.long_put.option.side, Side::Long);
+        assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(95.0));
+        assert_eq!(strategy.short_put.option.side, Side::Short);
+        assert_eq!(strategy.short_put.option.strike_price, pos_or_panic!(105.0));
+    }
+
+    #[test]
+    fn test_bull_put_spread_get_strategy_inverted_legs_rejected() {
+        // Short the lower strike and long the higher is a bear put spread (#696).
         let options = vec![
             create_sample_position(
                 OptionStyle::Put,
@@ -2670,11 +2773,44 @@ mod tests_strategy_constructor {
         ];
 
         let result = BullPutSpread::get_strategy(&options);
-        assert!(result.is_ok());
+        assert!(matches!(
+            result,
+            Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
+            if operation == "Bull Put Spread get_strategy"
+                && reason == "Bull Put Spread requires a long lower strike put and a short higher strike put"
+        ));
+    }
 
-        let strategy = result.unwrap();
-        assert_eq!(strategy.short_put.option.strike_price, pos_or_panic!(95.0));
-        assert_eq!(strategy.long_put.option.strike_price, pos_or_panic!(105.0));
+    #[test]
+    fn test_bull_put_spread_get_strategy_invalid_leg_rejected() {
+        // Sides and strikes are right, but a short leg with no premium fails
+        // `validate`, which `get_strategy` no longer ignores (#696).
+        let long_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Long,
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(95.0),
+            pos_or_panic!(0.2),
+        );
+        let mut short_put = create_sample_position(
+            OptionStyle::Put,
+            Side::Short,
+            Positive::HUNDRED,
+            Positive::ONE,
+            pos_or_panic!(105.0),
+            pos_or_panic!(0.2),
+        );
+        short_put.premium = Positive::ZERO;
+
+        let result = BullPutSpread::get_strategy(&[long_put, short_put]);
+        assert!(matches!(
+            result,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullPutSpread,
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -2730,7 +2866,7 @@ mod tests_strategy_constructor {
         let options = vec![
             create_sample_position(
                 OptionStyle::Put,
-                Side::Short,
+                Side::Long,
                 Positive::HUNDRED,
                 Positive::ONE,
                 pos_or_panic!(115.0),
@@ -2750,7 +2886,7 @@ mod tests_strategy_constructor {
             result,
             Err(StrategyError::OperationError(OperationErrorKind::InvalidParameters { operation, reason }))
             if operation == "Bull Put Spread get_strategy"
-                && reason == "Bull Put Spread requires a short lower strike put and a long higher strike put"
+                && reason == "Bull Put Spread requires a long lower strike put and a short higher strike put"
         ));
     }
 
@@ -2758,7 +2894,7 @@ mod tests_strategy_constructor {
     fn test_get_strategy_different_expiration_dates() {
         let mut option1 = create_sample_position(
             OptionStyle::Put,
-            Side::Short,
+            Side::Long,
             Positive::HUNDRED,
             Positive::ONE,
             pos_or_panic!(95.0),
@@ -2766,7 +2902,7 @@ mod tests_strategy_constructor {
         );
         let mut option2 = create_sample_position(
             OptionStyle::Put,
-            Side::Long,
+            Side::Short,
             Positive::HUNDRED,
             Positive::ONE,
             pos_or_panic!(105.0),
@@ -2794,28 +2930,54 @@ mod tests_bull_put_spread_pnl {
     use optionstratlib_core::model::utils::create_sample_position;
     use rust_decimal_macros::dec;
 
+    // Textbook bull put spread (#696): long the 95 put for 1.00, short the
+    // 100 put for 3.00, no fees. Net credit 2.00, spread width 5.00, so the
+    // hand-computed expiry payoff is +2.00 above 100, -3.00 below 95 and
+    // crosses zero at 100 - 2 = 98.
     fn create_test_bull_put_spread() -> Result<BullPutSpread, StrategyError> {
-        // Create short put with lower strike
-        let short_put = create_sample_position(
+        let mut long_put = create_sample_position(
             OptionStyle::Put,
-            Side::Short,
+            Side::Long,
             Positive::HUNDRED,   // Underlying price
             Positive::ONE,       // Quantity
             pos_or_panic!(95.0), // Lower strike price
             pos_or_panic!(0.2),  // Implied volatility
         );
+        long_put.premium = Positive::ONE;
+        long_put.open_fee = Positive::ZERO;
+        long_put.close_fee = Positive::ZERO;
 
-        // Create long put with higher strike
-        let long_put = create_sample_position(
+        let mut short_put = create_sample_position(
             OptionStyle::Put,
-            Side::Long,
+            Side::Short,
             Positive::HUNDRED,  // Same underlying price
             Positive::ONE,      // Quantity
             Positive::HUNDRED,  // Higher strike price
             pos_or_panic!(0.2), // Implied volatility
         );
+        short_put.premium = pos_or_panic!(3.0);
+        short_put.open_fee = Positive::ZERO;
+        short_put.close_fee = Positive::ZERO;
 
         BullPutSpread::get_strategy(&[short_put, long_put])
+    }
+
+    #[test]
+    fn test_bull_put_spread_is_credit_spread_with_hand_computed_break_even() {
+        let spread = create_test_bull_put_spread().unwrap();
+
+        // A credit spread: the short leg's premium exceeds the long leg's.
+        assert_eq!(spread.get_net_premium_received().unwrap(), Positive::TWO);
+        assert_decimal_eq!(spread.get_net_cost().unwrap(), dec!(-2.0), dec!(1e-9));
+
+        // Break-even = short strike - net credit = 100 - 2 = 98.
+        assert_eq!(
+            spread.get_break_even_points().unwrap(),
+            &vec![pos_or_panic!(98.0)]
+        );
+        // Max profit is the credit, max loss the width minus the credit.
+        assert_eq!(spread.get_max_profit().unwrap(), Positive::TWO);
+        assert_eq!(spread.get_max_loss().unwrap(), pos_or_panic!(3.0));
     }
 
     #[test]
@@ -2829,12 +2991,14 @@ mod tests_bull_put_spread_pnl {
         assert!(result.is_ok());
 
         let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // Both puts OTM, profit should be close to net premium received minus costs
-        let net_credit = pnl.initial_income.to_dec() - pnl.initial_costs.to_dec();
-        assert!(pnl.unrealized.unwrap() > dec!(-2.0)); // Should be near max profit
-        assert_eq!(net_credit, dec!(-2.0)); // 5.0 - 7.0
+        // `unrealized` is the change in the legs' Black-Scholes value since
+        // entry at 100. The spread is long delta, so a rally gains, and no
+        // move can exceed the 5.00 width.
+        let unrealized = pnl.unrealized.unwrap();
+        assert!(unrealized > Decimal::ZERO);
+        assert!(unrealized < dec!(5.0));
+        assert_eq!(pnl.initial_income, pos_or_panic!(3.0));
+        assert_eq!(pnl.initial_costs, Positive::ONE);
     }
 
     #[test]
@@ -2847,19 +3011,15 @@ mod tests_bull_put_spread_pnl {
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
 
+        // A fall from the 100 entry hurts a long-delta spread, within the width.
         let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // At 97.5:
-        // - Long put at 100 is ITM by 2.5
-        // - Short put at 95 is OTM by 2.5
         let unrealized = pnl.unrealized.unwrap();
-        assert!(unrealized > dec!(0.0)); // Position should show profit due to ITM long put
-        assert!(unrealized < dec!(5.0)); // But less than max width of spread
+        assert!(unrealized < Decimal::ZERO);
+        assert!(unrealized > dec!(-5.0));
 
-        // Verify initial values
-        assert_eq!(pnl.initial_income, pos_or_panic!(5.0));
-        assert_eq!(pnl.initial_costs, pos_or_panic!(7.0));
+        // Initial values: the 3.00 short premium in, the 1.00 long premium out.
+        assert_eq!(pnl.initial_income, pos_or_panic!(3.0));
+        assert_eq!(pnl.initial_costs, Positive::ONE);
     }
 
     #[test]
@@ -2872,84 +3032,65 @@ mod tests_bull_put_spread_pnl {
         let result = spread.calculate_pnl(&market_price, expiration_date, &implied_volatility);
         assert!(result.is_ok());
 
+        // Both puts ITM: the position is losing, within the width.
         let pnl = result.unwrap();
-        assert!(pnl.unrealized.is_some());
-
-        // At 90.0:
-        // Long put at 100 is ITM by 10.0
-        // Short put at 95 is ITM by 5.0
-        // Net ITM position is 5.0 (width of spread)
         let unrealized = pnl.unrealized.unwrap();
-        assert!(unrealized > dec!(0.0)); // Position should show profit
-        assert!(unrealized < dec!(5.0)); // Limited by spread width
+        assert!(unrealized < Decimal::ZERO);
+        assert!(unrealized > dec!(-5.0));
 
-        // Verify initial values
-        assert_eq!(pnl.initial_income, pos_or_panic!(5.0));
-        assert_eq!(pnl.initial_costs, pos_or_panic!(7.0));
+        // Initial values: the 3.00 short premium in, the 1.00 long premium out.
+        assert_eq!(pnl.initial_income, pos_or_panic!(3.0));
+        assert_eq!(pnl.initial_costs, Positive::ONE);
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_maximum_profit() {
         let spread = create_test_bull_put_spread().unwrap();
-        let underlying_price = pos_or_panic!(105.0); // Above both strikes
 
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-
-        // At expiration above strikes, both puts expire worthless
-        // Max profit = net premium received - costs
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-2.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos_or_panic!(5.0));
-        assert_eq!(pnl.initial_costs, pos_or_panic!(7.0));
+        // Above 100 both puts expire worthless and the credit is kept.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(105.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
+        let pnl = spread
+            .calculate_pnl_at_expiration(&Positive::HUNDRED)
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(2.0), dec!(1e-6));
+        assert_eq!(pnl.initial_income, pos_or_panic!(3.0));
+        assert_eq!(pnl.initial_costs, Positive::ONE);
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_maximum_loss() {
         let spread = create_test_bull_put_spread().unwrap();
-        let underlying_price = pos_or_panic!(90.0); // Below both strikes
 
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
-
-        let pnl = result.unwrap();
-
-        // At expiration with price at 90:
-        // Long put 100 payoff = 100 - 90 = 10
-        // Short put 95 payoff = -(95 - 90) = -5
-        // Spread payoff = 5
-        // Plus initial income (5) minus costs (7)
-        // Total = 5 + 5 - 7 = 3
-        assert_decimal_eq!(pnl.realized.unwrap(), dec!(3.0), dec!(1e-6));
-        assert_eq!(pnl.initial_income, pos_or_panic!(5.0));
-        assert_eq!(pnl.initial_costs, pos_or_panic!(7.0));
+        // At 90: long 95 put pays 5, short 100 put owes 10, plus the 2 credit.
+        // Total = 5 - 10 + 2 = -3, the max loss; the same at the 95 strike.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(90.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(95.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-3.0), dec!(1e-6));
     }
 
     #[test]
     fn test_calculate_pnl_at_expiration_breakeven() {
         let spread = create_test_bull_put_spread().unwrap();
-        // For bull put spread:
-        // Long put at 100, Short put at 95
-        // Initial income = 5, costs = 7
-        // Net credit = -2
-        // Break-even point should be where payoff = 2
-        let underlying_price = pos_or_panic!(98.0); // Adjusted to find true break-even
 
-        let result = spread.calculate_pnl_at_expiration(&underlying_price);
-        assert!(result.is_ok());
+        // At 98: short 100 put owes 2, which the 2 credit offsets exactly.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(98.0))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), Decimal::ZERO, dec!(1e-6));
 
-        let pnl = result.unwrap();
-
-        // At 98:
-        // Long put payoff = 100 - 98 = 2
-        // Short put payoff = -(95 - 98) = 3
-        // Net payoff = 2 + 3 = 5
-        // Plus initial income (5) minus costs (7)
-        // Total should be close to 0
-        assert!(pnl.realized.unwrap().abs() < dec!(0.5));
-        assert_eq!(pnl.initial_income, pos_or_panic!(5.0));
-        assert_eq!(pnl.initial_costs, pos_or_panic!(7.0));
+        // At 97.5, between the strikes: 2 - 2.5 = -0.5.
+        let pnl = spread
+            .calculate_pnl_at_expiration(&pos_or_panic!(97.5))
+            .unwrap();
+        assert_decimal_eq!(pnl.realized.unwrap(), dec!(-0.5), dec!(1e-6));
     }
 
     #[test]
@@ -2958,7 +3099,6 @@ mod tests_bull_put_spread_pnl {
         let market_price = pos_or_panic!(97.5); // Between strikes
         let expiration_date = ExpirationDate::Days(pos_or_panic!(30.0));
 
-        // Test with different volatilities
         let low_vol_result = spread
             .calculate_pnl(&market_price, expiration_date, &pos_or_panic!(0.1))
             .unwrap();
@@ -2966,19 +3106,14 @@ mod tests_bull_put_spread_pnl {
             .calculate_pnl(&market_price, expiration_date, &pos_or_panic!(0.3))
             .unwrap();
 
-        // At 97.5:
-        // Long put 100 is ITM by 2.5
-        // Short put 95 is OTM by 2.5
-        // With higher volatility:
-        // - ITM long put gains more value
-        // - OTM short put loses less value
-        // Net result is higher profit
-        assert!(high_vol_result.unrealized.unwrap() > low_vol_result.unrealized.unwrap());
+        // Near the money the short 100 put carries more vega than the long
+        // 95 put, so the spread is short vega and loses as volatility rises.
+        assert!(high_vol_result.unrealized.unwrap() < low_vol_result.unrealized.unwrap());
 
-        // Verify initial values remain constant
-        assert_eq!(high_vol_result.initial_income, pos_or_panic!(5.0));
-        assert_eq!(high_vol_result.initial_costs, pos_or_panic!(7.0));
-        assert_eq!(low_vol_result.initial_income, pos_or_panic!(5.0));
-        assert_eq!(low_vol_result.initial_costs, pos_or_panic!(7.0));
+        // Initial values do not depend on the pricing volatility.
+        assert_eq!(high_vol_result.initial_income, pos_or_panic!(3.0));
+        assert_eq!(high_vol_result.initial_costs, Positive::ONE);
+        assert_eq!(low_vol_result.initial_income, pos_or_panic!(3.0));
+        assert_eq!(low_vol_result.initial_costs, Positive::ONE);
     }
 }

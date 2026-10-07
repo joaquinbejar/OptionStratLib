@@ -105,6 +105,10 @@ impl LongPut {
     /// A new instance of the `LongPut` strategy initialized with the provided parameters.
     ///
     /// # Errors
+    ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the leg fails `Position::validate`.
+    ///
     /// Returns `StrategyError` if the freshly-constructed long put leg
     /// cannot be added to the strategy. In practice this branch is
     /// unreachable for a freshly-built single-leg strategy and is surfaced
@@ -151,6 +155,12 @@ impl LongPut {
         );
         strategy.add_position(&long_put)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongPut,
+                "the legs built by `new` fail validation",
+            ));
+        }
         Ok(strategy)
     }
 }

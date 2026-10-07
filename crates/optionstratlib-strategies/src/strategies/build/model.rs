@@ -567,20 +567,23 @@ mod tests_strategies_build_model {
 
     #[test]
     fn test_strategy_bear_put_spread() {
+        // Textbook legs since #696: long the 910 put, short the 900 put. The
+        // request used to carry the inverted legs, so every pinned Greek is
+        // the old value negated (same two options with their sides flipped).
         let strategy_request = StrategyRequest::new(
             StrategyType::BearPutSpread,
             vec![
                 Position::new(
                     create_sample_option_with_date(
                         OptionStyle::Put,
-                        Side::Long,
+                        Side::Short,
                         pos_or_panic!(920.0),
                         Positive::ONE,
                         pos_or_panic!(900.0),
                         pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos_or_panic!(4.5),
+                    pos_or_panic!(3.5),
                     Utc::now(),
                     Positive::ONE,
                     pos_or_panic!(1.2),
@@ -590,14 +593,14 @@ mod tests_strategies_build_model {
                 Position::new(
                     create_sample_option_with_date(
                         OptionStyle::Put,
-                        Side::Short,
+                        Side::Long,
                         pos_or_panic!(920.0),
                         Positive::ONE,
                         pos_or_panic!(910.0),
                         pos_or_panic!(0.35),
                         sample_date(),
                     ),
-                    pos_or_panic!(3.5),
+                    pos_or_panic!(4.5),
                     Utc::now(),
                     Positive::ONE,
                     pos_or_panic!(1.2),
@@ -611,100 +614,6 @@ mod tests_strategies_build_model {
         let greeks_result = strategy.greeks();
         assert!(greeks_result.is_ok());
         let greeks = greeks_result.unwrap();
-        assert_decimal_eq!(
-            greeks.delta,
-            dec!(0.1581527925803475549715372372),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.gamma,
-            dec!(-0.0083145207388161162095837985),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.theta,
-            dec!(1.1647309721540014524854918129),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.vega,
-            dec!(-0.0674820170867640005374723859),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(greeks.rho, dec!(0.0040381287656075429636946826), dec!(1e-4));
-        assert_decimal_eq!(
-            greeks.vanna,
-            dec!(-0.0910934609396018233276697490),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.vomma,
-            dec!(0.2162187229901720187343681980),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.veta,
-            dec!(0.0000581489888845782729032393),
-            dec!(1e-4)
-        );
-        assert_decimal_eq!(
-            greeks.charm,
-            dec!(0.0167839745441953523341827428),
-            dec!(1e-5)
-        );
-        assert_decimal_eq!(
-            greeks.color,
-            dec!(0.0088091718729949492796589761),
-            dec!(1e-6)
-        );
-    }
-
-    #[test]
-    fn test_strategy_bull_put_spread() {
-        let strategy_request = StrategyRequest::new(
-            StrategyType::BullPutSpread,
-            vec![
-                Position::new(
-                    create_sample_option_with_date(
-                        OptionStyle::Put,
-                        Side::Short,
-                        pos_or_panic!(920.0),
-                        Positive::ONE,
-                        pos_or_panic!(900.0),
-                        pos_or_panic!(0.35),
-                        sample_date(),
-                    ),
-                    pos_or_panic!(4.5),
-                    Utc::now(),
-                    Positive::ONE,
-                    pos_or_panic!(1.2),
-                    None,
-                    None,
-                ),
-                Position::new(
-                    create_sample_option_with_date(
-                        OptionStyle::Put,
-                        Side::Long,
-                        pos_or_panic!(920.0),
-                        Positive::ONE,
-                        pos_or_panic!(910.0),
-                        pos_or_panic!(0.35),
-                        sample_date(),
-                    ),
-                    pos_or_panic!(3.5),
-                    Utc::now(),
-                    Positive::ONE,
-                    pos_or_panic!(1.2),
-                    None,
-                    None,
-                ),
-            ],
-        );
-
-        let strategy = strategy_request.get_strategy().unwrap();
-        let greeks = strategy
-            .greeks()
-            .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
         assert_decimal_eq!(
             greeks.delta,
             dec!(-0.1581527925803475549715372372),
@@ -753,6 +662,103 @@ mod tests_strategies_build_model {
         assert_decimal_eq!(
             greeks.color,
             dec!(-0.0088091718729949492796589761),
+            dec!(1e-6)
+        );
+    }
+
+    #[test]
+    fn test_strategy_bull_put_spread() {
+        // Textbook legs since #696: long the 900 put, short the 910 put. The
+        // request used to carry the inverted legs, so every pinned Greek is
+        // the old value negated (same two options with their sides flipped).
+        let strategy_request = StrategyRequest::new(
+            StrategyType::BullPutSpread,
+            vec![
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Long,
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(900.0),
+                        pos_or_panic!(0.35),
+                        sample_date(),
+                    ),
+                    pos_or_panic!(3.5),
+                    Utc::now(),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
+                    None,
+                    None,
+                ),
+                Position::new(
+                    create_sample_option_with_date(
+                        OptionStyle::Put,
+                        Side::Short,
+                        pos_or_panic!(920.0),
+                        Positive::ONE,
+                        pos_or_panic!(910.0),
+                        pos_or_panic!(0.35),
+                        sample_date(),
+                    ),
+                    pos_or_panic!(4.5),
+                    Utc::now(),
+                    Positive::ONE,
+                    pos_or_panic!(1.2),
+                    None,
+                    None,
+                ),
+            ],
+        );
+
+        let strategy = strategy_request.get_strategy().unwrap();
+        let greeks = strategy
+            .greeks()
+            .unwrap_or_else(|e| panic!("greeks err: {e:?}"));
+        assert_decimal_eq!(
+            greeks.delta,
+            dec!(0.1581527925803475549715372372),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.gamma,
+            dec!(-0.0083145207388161162095837985),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.theta,
+            dec!(1.1647309721540014524854918129),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.vega,
+            dec!(-0.0674820170867640005374723859),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(greeks.rho, dec!(0.0040381287656075429636946826), dec!(1e-4));
+        assert_decimal_eq!(
+            greeks.vanna,
+            dec!(-0.0910934609396018233276697490),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.vomma,
+            dec!(0.2162187229901720187343681980),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.veta,
+            dec!(0.0000581489888845782729032393),
+            dec!(1e-4)
+        );
+        assert_decimal_eq!(
+            greeks.charm,
+            dec!(0.0167839745441953523341827428),
+            dec!(1e-5)
+        );
+        assert_decimal_eq!(
+            greeks.color,
+            dec!(0.0088091718729949492796589761),
             dec!(1e-5)
         );
     }

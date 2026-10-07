@@ -8,18 +8,20 @@ fn main() -> Result<(), Error> {
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
     let mut strategy = PoorMansCoveredCall::new(
-        "SP500".to_string(),                        // underlying_symbol
-        underlying_price,                           // underlying_price
-        Positive::ZERO,                             // long_call_strike
-        Positive::ZERO,                             // short_call_strike OTM
+        "SP500".to_string(), // underlying_symbol
+        underlying_price,    // underlying_price
+        // Seed legs: `new` validates them since #696, so they must form the
+        // strategy; the optimizer below replaces them with the chain's best.
+        pos_or_panic!(5750.0),                      // long_call_strike
+        pos_or_panic!(5850.0),                      // short_call_strike OTM
         ExpirationDate::Days(pos_or_panic!(120.0)), // long_call_expiration
         ExpirationDate::Days(pos_or_panic!(30.0)), // short_call_expiration 30-45 days delta 0.30 or less
         Positive::ZERO,                            // implied_volatility
         Decimal::ZERO,                             // risk_free_rate
         Positive::ZERO,                            // dividend_yield
         Positive::TWO,                             // quantity
-        Positive::ZERO,                            // premium_short_call
-        Positive::ZERO,                            // premium_short_put
+        Positive::ONE,                             // premium_long_call
+        Positive::ONE,                             // premium_short_call
         pos_or_panic!(1.74),                       // open_fee_short_call
         pos_or_panic!(1.74),                       // close_fee_short_call
         pos_or_panic!(0.85),                       // open_fee_short_put

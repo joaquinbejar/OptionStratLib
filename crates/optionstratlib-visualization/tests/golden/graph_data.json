@@ -1042,11 +1042,11 @@
       "color_scheme": "default",
       "height": 900,
       "legend": [
-        "BearPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option"
+        "BearPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option"
       ],
       "line_style": "solid",
       "show_legend": false,
-      "title": "BearPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option",
+      "title": "BearPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option",
       "width": 1600,
       "x_label": "Underlying Price",
       "y_label": "Profit/Loss",
@@ -1055,7 +1055,7 @@
     "data": {
       "MultiSeries": [
         {
-          "line_color": "#FF0000",
+          "line_color": "#2ca02c",
           "line_width": 2.0,
           "mode": "lines",
           "name": "Segment 1",
@@ -1064,30 +1064,26 @@
             "94.10",
             "95.10",
             "96.10",
-            "97.10",
-            "98.10",
-            "99.10",
-            "100.10",
-            "101.10"
+            "97.10"
           ],
           "y": [
-            "-7.0",
-            "-7.0",
-            "-6.9",
-            "-5.9",
-            "-4.9",
-            "-3.9",
-            "-2.9",
-            "-1.9",
-            "-0.9"
+            "3.0",
+            "3.0",
+            "2.9",
+            "1.9",
+            "0.9"
           ]
         },
         {
-          "line_color": "#2ca02c",
+          "line_color": "#FF0000",
           "line_width": 2.0,
           "mode": "lines",
           "name": "Segment 2",
           "x": [
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10",
             "102.10",
             "103.10",
             "104.10",
@@ -1097,13 +1093,17 @@
             "108.10"
           ],
           "y": [
-            "0.1",
-            "1.1",
-            "2.1",
-            "3.0",
-            "3.0",
-            "3.0",
-            "3.0"
+            "-0.1",
+            "-1.1",
+            "-2.1",
+            "-3.1",
+            "-4.1",
+            "-5.1",
+            "-6.1",
+            "-7.0",
+            "-7.0",
+            "-7.0",
+            "-7.0"
           ]
         },
         {
@@ -1314,11 +1314,11 @@
       "color_scheme": "default",
       "height": 900,
       "legend": [
-        "BullPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option"
+        "BullPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option"
       ],
       "line_style": "solid",
       "show_legend": false,
-      "title": "BullPutSpread Strategy: \n\tUnderlying: TEST @ $105 Long Put European Option\n\tUnderlying: TEST @ $95 Short Put European Option",
+      "title": "BullPutSpread Strategy: \n\tUnderlying: TEST @ $95 Long Put European Option\n\tUnderlying: TEST @ $105 Short Put European Option",
       "width": 1600,
       "x_label": "Underlying Price",
       "y_label": "Profit/Loss",
@@ -1327,7 +1327,7 @@
     "data": {
       "MultiSeries": [
         {
-          "line_color": "#2ca02c",
+          "line_color": "#FF0000",
           "line_width": 2.0,
           "mode": "lines",
           "name": "Segment 1",
@@ -1336,26 +1336,30 @@
             "94.10",
             "95.10",
             "96.10",
-            "97.10"
+            "97.10",
+            "98.10",
+            "99.10",
+            "100.10",
+            "101.10"
           ],
           "y": [
-            "3.0",
-            "3.0",
-            "2.9",
-            "1.9",
-            "0.9"
+            "-7.0",
+            "-7.0",
+            "-6.9",
+            "-5.9",
+            "-4.9",
+            "-3.9",
+            "-2.9",
+            "-1.9",
+            "-0.9"
           ]
         },
         {
-          "line_color": "#FF0000",
+          "line_color": "#2ca02c",
           "line_width": 2.0,
           "mode": "lines",
           "name": "Segment 2",
           "x": [
-            "98.10",
-            "99.10",
-            "100.10",
-            "101.10",
             "102.10",
             "103.10",
             "104.10",
@@ -1365,17 +1369,13 @@
             "108.10"
           ],
           "y": [
-            "-0.1",
-            "-1.1",
-            "-2.1",
-            "-3.1",
-            "-4.1",
-            "-5.1",
-            "-6.1",
-            "-7.0",
-            "-7.0",
-            "-7.0",
-            "-7.0"
+            "0.1",
+            "1.1",
+            "2.1",
+            "3.0",
+            "3.0",
+            "3.0",
+            "3.0"
           ]
         },
         {

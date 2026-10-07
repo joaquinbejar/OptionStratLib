@@ -19,15 +19,16 @@ fn main() -> Result<(), Error> {
     let strategy = BullPutSpread::new(
         "SP500".to_string(),
         underlying_price,
-        pos_or_panic!(5750.0),
-        pos_or_panic!(5700.0),
+        // Textbook legs (#696): long the lower-strike put, short the higher.
+        pos_or_panic!(5700.0), // long_strike
+        pos_or_panic!(5750.0), // short_strike
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.18),
         dec!(0.05),
         Positive::ZERO,
         Positive::TWO,
-        pos_or_panic!(55.04),
-        pos_or_panic!(35.04),
+        pos_or_panic!(35.04), // premium_long_put
+        pos_or_panic!(55.04), // premium_short_put
         pos_or_panic!(0.78),
         pos_or_panic!(0.78),
         pos_or_panic!(0.73),

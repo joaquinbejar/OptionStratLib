@@ -10,17 +10,19 @@ fn main() -> Result<(), Error> {
     let mut strategy = ShortButterflySpread::new(
         "SP500".to_string(),
         underlying_price,
-        Positive::ZERO,
-        Positive::ZERO,
-        Positive::ZERO,
+        // Seed legs: `new` validates them since #696, so they must form the
+        // strategy; the optimizer below replaces them with the chain's best.
+        pos_or_panic!(5750.0), // low_strike
+        pos_or_panic!(5800.0), // middle_strike
+        pos_or_panic!(5850.0), // high_strike
         ExpirationDate::Days(pos_or_panic!(5.0)),
         Positive::ZERO,
         Decimal::ZERO,
         Positive::ZERO,
         Positive::ONE,
-        Positive::ZERO,
-        Positive::ZERO,
-        Positive::ZERO,
+        Positive::ONE, // premium_low
+        Positive::ONE, // premium_middle
+        Positive::ONE, // premium_high
         pos_or_panic!(4.0),
         Positive::ZERO,
         Positive::ZERO,

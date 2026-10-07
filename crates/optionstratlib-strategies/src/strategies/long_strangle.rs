@@ -173,6 +173,10 @@ impl LongStrangle {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the call strike is not above the put
+    /// strike, or a leg fails `Position::validate`.
+    ///
     /// Returns `StrategyError` if either freshly-constructed leg cannot be
     /// added to the strategy or if the break-even calculation fails. In
     /// practice these branches are unreachable for a freshly-built
@@ -264,6 +268,12 @@ impl LongStrangle {
         );
         strategy.add_position(&long_put)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongStrangle,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
@@ -369,7 +379,12 @@ impl StrategyConstructor for LongStrangle {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongStrangle,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)

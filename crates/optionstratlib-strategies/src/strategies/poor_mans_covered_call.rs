@@ -183,6 +183,10 @@ impl PoorMansCoveredCall {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): a leg fails `Position::validate` (for
+    /// example a short call with no premium).
+    ///
     /// Returns `StrategyError` if either freshly-constructed leg cannot be
     /// added to the strategy or if the break-even calculation fails. In
     /// practice these branches are unreachable for a freshly-built PMCC and
@@ -261,6 +265,12 @@ impl PoorMansCoveredCall {
         );
         strategy.add_position(&short_call)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::PoorMansCoveredCall,
+                "the legs built by `new` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
         Ok(strategy)
     }
@@ -345,7 +355,12 @@ impl StrategyConstructor for PoorMansCoveredCall {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::PoorMansCoveredCall,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)

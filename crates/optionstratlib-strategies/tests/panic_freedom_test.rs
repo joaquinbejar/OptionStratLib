@@ -26,14 +26,16 @@
 //! (`tests/strategies_panic_freedom_test.rs`) beside `Graph`.
 
 use optionstratlib_analytics::pnl::PnLCalculator;
+use optionstratlib_core::model::leg::SpotPosition;
 use optionstratlib_core::model::types::Action;
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Positive, Side,
 };
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::Profit;
+use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::base::{
-    BasicAble, BreakEvenable, Positionable, Strategies, Validable,
+    BasicAble, BreakEvenable, Positionable, Strategies, StrategyType, Validable,
 };
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
@@ -172,6 +174,46 @@ fn extreme_expiration() -> impl Strategy<Value = ExpirationDate> {
     ]
 }
 
+/// Whether `error` is one a strategy constructor returns for a degenerate
+/// input: the strategy's own validation (`InvalidStrategy`, #696), a rejected
+/// parameter or a checked-arithmetic overflow (both `OperationError`), or a
+/// `Positive` range error. Anything else is a constructor reporting a failure
+/// it should not have.
+fn is_constructor_error(error: &StrategyError) -> bool {
+    matches!(
+        error,
+        StrategyError::InvalidStrategy { .. }
+            | StrategyError::OperationError(_)
+            | StrategyError::PositiveError(_)
+    )
+}
+
+/// `strike`, or the spot when `strike` is zero: the default the vertical
+/// spreads and the straddles apply in `new`.
+fn or_spot(strike: Positive, underlying: Positive) -> Positive {
+    if strike == Positive::ZERO {
+        underlying
+    } else {
+        strike
+    }
+}
+
+/// Places `legs` on a default strategy through `add_position`, in order.
+///
+/// Since #696 `new` rejects the legs that fail the strategy's own
+/// `validate`, which is most of the structural axis of these properties: a
+/// zero quantity, a short leg with no premium, inverted or equal strikes.
+/// Those legs still reach the post-construction code through the public
+/// fields and `Deserialize`, so a rejected case is rebuilt here and driven
+/// all the same.
+fn assembled<S: Default + Positionable>(legs: &[Position]) -> S {
+    let mut strategy = S::default();
+    for leg in legs {
+        let _ = strategy.add_position(leg);
+    }
+    strategy
+}
+
 /// Everything the trait defaults and the payoff surface expose, minus the
 /// calls that walk a price range; those are driven separately with bounded
 /// magnitudes so the property stays a property and not a benchmark.
@@ -248,18 +290,36 @@ proptest! {
         expiration in extreme_expiration(),
         probe in extreme_positive(),
     ) {
-        if let Ok(mut strategy) = BullCallSpread::new(
+        let leg = |side: Side, strike: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(),
+                    or_spot(strike, underlying), expiration, volatility, quantity,
+                    underlying, rate, OptionStyle::Call, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+        let mut strategy = match BullCallSpread::new(
             "PROP".to_string(), underlying, long_strike, short_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.update_break_even_points();
-            let _ = strategy.get_volume();
-            let _ = strategy.set_underlying_price(&underlying);
-            let _ = strategy.set_implied_volatility(&volatility);
-            let _ = strategy.apply_delta_adjustments(Some(Action::Buy));
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<BullCallSpread>(&[
+                    leg(Side::Long, long_strike),
+                    leg(Side::Short, short_strike),
+                ])
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.update_break_even_points();
+        let _ = strategy.get_volume();
+        let _ = strategy.set_underlying_price(&underlying);
+        let _ = strategy.set_implied_volatility(&volatility);
+        let _ = strategy.apply_delta_adjustments(Some(Action::Buy));
     }
 
     /// The four single-leg strategies. Their break-even divides the net cost
@@ -277,20 +337,39 @@ proptest! {
         expiration in extreme_expiration(),
         probe in extreme_positive(),
     ) {
-        if let Ok(mut strategy) = LongCall::new(
+        let leg = |style: OptionStyle, side: Side| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, quantity, underlying, rate, style, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+        let mut strategy = match LongCall::new(
             "PROP".to_string(), strike, expiration, volatility, quantity,
             underlying, rate, Positive::ZERO, premium, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.update_break_even_points();
-        }
-        if let Ok(mut strategy) = ShortPut::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<LongCall>(&[leg(OptionStyle::Call, Side::Long)])
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.update_break_even_points();
+        let mut strategy = match ShortPut::new(
             "PROP".to_string(), strike, expiration, volatility, quantity,
             underlying, rate, Positive::ZERO, premium, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.update_break_even_points();
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<ShortPut>(&[leg(OptionStyle::Put, Side::Short)])
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.update_break_even_points();
 
         // `ShortCall` and `LongPut` are deliberately absent from this
         // property. Their `new` is private and their
@@ -327,35 +406,93 @@ proptest! {
         expiration in extreme_expiration(),
         probe in extreme_money(),
     ) {
-        if let Ok(mut strategy) = Collar::new(
+        // The legs `new` builds, for the rejected cases: the spot leg in
+        // shares and the option legs in contracts of a hundred shares.
+        let spot_leg = || {
+            SpotPosition::new(
+                "PROP".to_string(), quantity, underlying, Side::Long,
+                chrono::Utc::now(), fee, fee,
+            )
+        };
+        let leg = |style: OptionStyle, side: Side, strike: Positive, contracts: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, contracts, underlying, rate, style, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+        let contracts = quantity / Positive::HUNDRED;
+
+        let mut strategy = match Collar::new(
             "PROP".to_string(), underlying, put_strike, call_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.collar_width();
-            let _ = strategy.max_profit_potential();
-            let _ = strategy.max_loss_potential();
-            let _ = strategy.update_break_even_points();
-        }
-        if let Ok(mut strategy) = CoveredCall::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                Collar {
+                    name: "Collar".to_string(),
+                    kind: StrategyType::Collar,
+                    description: String::new(),
+                    break_even_points: Vec::new(),
+                    spot_leg: spot_leg(),
+                    long_put: leg(OptionStyle::Put, Side::Long, put_strike, contracts),
+                    short_call: leg(OptionStyle::Call, Side::Short, call_strike, contracts),
+                }
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.collar_width();
+        let _ = strategy.max_profit_potential();
+        let _ = strategy.max_loss_potential();
+        let _ = strategy.update_break_even_points();
+
+        let mut strategy = match CoveredCall::new(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, fee, fee, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.max_profit_potential();
-            let _ = strategy.max_loss_potential();
-            let _ = strategy.assignment_probability(probe);
-            let _ = strategy.update_break_even_points();
-        }
-        if let Ok(mut strategy) = ProtectivePut::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                CoveredCall {
+                    name: "Covered Call".to_string(),
+                    kind: StrategyType::CoveredCall,
+                    description: String::new(),
+                    break_even_points: Vec::new(),
+                    spot_leg: spot_leg(),
+                    short_call: leg(OptionStyle::Call, Side::Short, call_strike, contracts),
+                }
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.max_profit_potential();
+        let _ = strategy.max_loss_potential();
+        let _ = strategy.assignment_probability(probe);
+        let _ = strategy.update_break_even_points();
+
+        let mut strategy = match ProtectivePut::new(
             "PROP".to_string(), underlying, put_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, fee, fee, fee, fee,
         ) {
-            exercise(&strategy, probe);
-            let _ = strategy.max_loss_potential();
-            let _ = strategy.update_break_even_points();
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                ProtectivePut {
+                    name: "ProtectivePut_PROP".to_string(),
+                    kind: StrategyType::ProtectivePut,
+                    description: String::new(),
+                    break_even_points: Vec::new(),
+                    spot_leg: spot_leg(),
+                    long_put: leg(OptionStyle::Put, Side::Long, put_strike, quantity),
+                }
+            }
+        };
+        exercise(&strategy, probe);
+        let _ = strategy.max_loss_potential();
+        let _ = strategy.update_break_even_points();
     }
 }
 
@@ -400,13 +537,21 @@ proptest! {
                 leg(OptionStyle::Put, Side::Short, low_strike),
             ],
         };
-        if let Ok(mut strategy) = CustomStrategy::new(
+        // `CustomStrategy` keeps its numeric settings private, so a leg set
+        // that `new` rejects cannot be assembled around it; the rejection
+        // itself is what is checked.
+        match CustomStrategy::new(
             "prop".to_string(), "PROP".to_string(), "property".to_string(),
             underlying, positions, pos(dec!(0.01)), 100, Positive::ONE,
         ) {
-            exercise(&strategy, underlying);
-            let _ = strategy.get_best_range_to_show(Positive::HUNDRED);
-            let _ = strategy.update_break_even_points();
+            Ok(mut strategy) => {
+                exercise(&strategy, underlying);
+                let _ = strategy.get_best_range_to_show(Positive::HUNDRED);
+                let _ = strategy.update_break_even_points();
+            }
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+            }
         }
     }
 }
@@ -456,34 +601,80 @@ proptest! {
         expiration in extreme_expiration(),
         probe in extreme_positive(),
     ) {
-        if let Ok(strategy) = BearCallSpread::new(
+        let leg = |style: OptionStyle, side: Side, strike: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, quantity, underlying, rate, style, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+        let (low, high) = (or_spot(low_strike, underlying), or_spot(high_strike, underlying));
+
+        let strategy = match BearCallSpread::new(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = BullPutSpread::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<BearCallSpread>(&[
+                    leg(OptionStyle::Call, Side::Short, low),
+                    leg(OptionStyle::Call, Side::Long, high),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match BullPutSpread::new(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = BearPutSpread::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<BullPutSpread>(&[
+                    leg(OptionStyle::Put, Side::Long, low),
+                    leg(OptionStyle::Put, Side::Short, high),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match BearPutSpread::new(
             "PROP".to_string(), underlying, high_strike, low_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = PoorMansCoveredCall::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<BearPutSpread>(&[
+                    leg(OptionStyle::Put, Side::Long, high),
+                    leg(OptionStyle::Put, Side::Short, low),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match PoorMansCoveredCall::new(
             "PROP".to_string(), underlying, low_strike, high_strike, expiration,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<PoorMansCoveredCall>(&[
+                    leg(OptionStyle::Call, Side::Long, low_strike),
+                    leg(OptionStyle::Call, Side::Short, high_strike),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
     }
 
     /// The straddles and the strangles. They carry two break-even points and
@@ -504,32 +695,78 @@ proptest! {
         expiration in extreme_expiration(),
         probe in extreme_positive(),
     ) {
-        if let Ok(strategy) = LongStraddle::new(
+        let leg = |style: OptionStyle, side: Side, strike: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, quantity, underlying, rate, style, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+        let straddle_strike = or_spot(call_strike, underlying);
+
+        let strategy = match LongStraddle::new(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = ShortStraddle::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<LongStraddle>(&[
+                    leg(OptionStyle::Call, Side::Long, straddle_strike),
+                    leg(OptionStyle::Put, Side::Long, straddle_strike),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match ShortStraddle::new(
             "PROP".to_string(), underlying, call_strike, expiration, volatility,
             rate, Positive::ZERO, quantity, premium, premium, fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = LongStrangle::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<ShortStraddle>(&[
+                    leg(OptionStyle::Call, Side::Short, straddle_strike),
+                    leg(OptionStyle::Put, Side::Short, straddle_strike),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match LongStrangle::new(
             "PROP".to_string(), underlying, call_strike, put_strike, expiration,
             volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = ShortStrangle::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<LongStrangle>(&[
+                    leg(OptionStyle::Call, Side::Long, call_strike),
+                    leg(OptionStyle::Put, Side::Long, put_strike),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match ShortStrangle::new(
             "PROP".to_string(), underlying, call_strike, put_strike, expiration,
             volatility, volatility, rate, Positive::ZERO, quantity, premium, premium,
             fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<ShortStrangle>(&[
+                    leg(OptionStyle::Call, Side::Short, call_strike),
+                    leg(OptionStyle::Put, Side::Short, put_strike),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
     }
 
     /// The four-leg structures and the butterflies. The butterflies push a
@@ -551,34 +788,87 @@ proptest! {
         probe in extreme_positive(),
     ) {
         let middle_strike = low_strike.checked_add(&high_strike).unwrap_or(high_strike);
-        if let Ok(strategy) = IronCondor::new(
+        let body = quantity.checked_add(&quantity).unwrap_or(quantity);
+        let leg = |style: OptionStyle, side: Side, strike: Positive, quantity: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike, expiration,
+                    volatility, quantity, underlying, rate, style, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), fee, fee, None, None,
+            )
+        };
+
+        let strategy = match IronCondor::new(
             "PROP".to_string(), underlying, high_strike, low_strike, high_strike, low_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, premium, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = IronButterfly::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<IronCondor>(&[
+                    leg(OptionStyle::Call, Side::Short, high_strike, quantity),
+                    leg(OptionStyle::Put, Side::Short, low_strike, quantity),
+                    leg(OptionStyle::Call, Side::Long, high_strike, quantity),
+                    leg(OptionStyle::Put, Side::Long, low_strike, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match IronButterfly::new(
             "PROP".to_string(), underlying, middle_strike, high_strike, low_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, premium, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = LongButterflySpread::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<IronButterfly>(&[
+                    leg(OptionStyle::Call, Side::Short, middle_strike, quantity),
+                    leg(OptionStyle::Put, Side::Short, middle_strike, quantity),
+                    leg(OptionStyle::Call, Side::Long, high_strike, quantity),
+                    leg(OptionStyle::Put, Side::Long, low_strike, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        // The body goes in first: `add_position` places each wing against it.
+        let strategy = match LongButterflySpread::new(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = ShortButterflySpread::new(
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<LongButterflySpread>(&[
+                    leg(OptionStyle::Call, Side::Short, middle_strike, body),
+                    leg(OptionStyle::Call, Side::Long, low_strike, quantity),
+                    leg(OptionStyle::Call, Side::Long, high_strike, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+
+        let strategy = match ShortButterflySpread::new(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
             premium, fee, fee, fee, fee, fee, fee,
         ) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<ShortButterflySpread>(&[
+                    leg(OptionStyle::Call, Side::Long, middle_strike, body),
+                    leg(OptionStyle::Call, Side::Short, low_strike, quantity),
+                    leg(OptionStyle::Call, Side::Short, high_strike, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
         if let Ok(strategy) = CallButterfly::new(
             "PROP".to_string(), underlying, low_strike, middle_strike, high_strike,
             expiration, volatility, rate, Positive::ZERO, quantity, premium, premium,
@@ -617,19 +907,39 @@ proptest! {
                 premium, chrono::Utc::now(), premium, premium, None, None,
             )
         };
-        if let Ok(strategy) = LongButterflySpread::get_strategy(&[
+        // A rejected leg set is assembled body first, so that `add_position`
+        // places each wing against it, and driven all the same.
+        let strategy = match LongButterflySpread::get_strategy(&[
             leg(Side::Long, strike, quantity),
             leg(Side::Short, middle, body),
             leg(Side::Long, high, quantity),
         ]) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
-        if let Ok(strategy) = ShortButterflySpread::get_strategy(&[
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<LongButterflySpread>(&[
+                    leg(Side::Short, middle, body),
+                    leg(Side::Long, strike, quantity),
+                    leg(Side::Long, high, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
+        let strategy = match ShortButterflySpread::get_strategy(&[
             leg(Side::Short, strike, quantity),
             leg(Side::Long, middle, body),
             leg(Side::Short, high, quantity),
         ]) {
-            exercise_with_and_without_break_evens!(strategy, probe);
-        }
+            Ok(strategy) => strategy,
+            Err(error) => {
+                prop_assert!(is_constructor_error(&error), "unexpected error: {error}");
+                assembled::<ShortButterflySpread>(&[
+                    leg(Side::Long, middle, body),
+                    leg(Side::Short, strike, quantity),
+                    leg(Side::Short, high, quantity),
+                ])
+            }
+        };
+        exercise_with_and_without_break_evens!(strategy, probe);
     }
 }

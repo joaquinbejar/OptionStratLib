@@ -44,7 +44,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// The default description for the Long Butterfly Spread strategy.
 pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -125,6 +125,10 @@ impl LongButterflySpread {
     /// A fully configured Long Butterfly Spread strategy with positions and break-even points calculated
     ///
     /// # Errors
+    ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the strikes are not strictly ordered
+    /// low < middle < high, or a leg fails `Position::validate`.
     ///
     /// Returns `StrategyError` if the break-even calculation fails. In
     /// practice this branch is unreachable for a freshly-built long
@@ -238,7 +242,12 @@ impl LongButterflySpread {
             None,
         );
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongButterflySpread,
+                "the legs built by `new` fail validation",
+            ));
+        }
 
         strategy.update_break_even_points()?;
 
@@ -359,6 +368,18 @@ impl StrategyConstructor for LongButterflySpread {
                 higher_strike_position.extra_fields.clone(),
             ),
         };
+
+        // The builder accepts the same quantity on every leg, while `new` and
+        // `validate` require a doubled body (1/2/1), so such a request fails
+        // `validate`. Settling the butterfly convention is #706; until then
+        // the mismatch is reported here instead of being enforced.
+        if !strategy.validate() {
+            warn!(
+                strategy = %StrategyType::LongButterflySpread,
+                issue = 706,
+                "get_strategy built legs that fail validate"
+            );
+        }
 
         // Every other constructor in this crate populates the break-even
         // points before handing the strategy back; this one did not, so a
@@ -1602,9 +1623,15 @@ mod tests_long_butterfly_validation {
             pos_or_panic!(0.05), // close_fee_long_call_low
             pos_or_panic!(0.05), // open_fee_long_call_high
             pos_or_panic!(0.05), // close_fee_long_call_high
-        )
-        .unwrap();
-        assert!(!butterfly.validate());
+        );
+        // `new` rejects the legs since #696 instead of returning them unvalidated.
+        assert!(matches!(
+            butterfly,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::LongButterflySpread,
+                ..
+            })
+        ));
     }
 
     #[test]

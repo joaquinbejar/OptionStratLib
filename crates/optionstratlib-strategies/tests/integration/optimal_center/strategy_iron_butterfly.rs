@@ -18,10 +18,12 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
 
     let mut strategy = IronButterfly::new(
         "SP500".to_string(),
-        underlying_price,      // underlying_price
+        underlying_price, // underlying_price
+        // Seed legs, replaced by the optimizer; `new` validates them since
+        // #696, so the wings sit outside the body.
         pos_or_panic!(5672.0), // short_call_strike
-        pos_or_panic!(5672.0), // long_call_strike
-        pos_or_panic!(5672.0), // long_put_strike
+        pos_or_panic!(5722.0), // long_call_strike
+        pos_or_panic!(5622.0), // long_put_strike
         ExpirationDate::Days(pos_or_panic!(30.0)),
         pos_or_panic!(0.1548), // implied_volatility
         dec!(0.05),            // risk_free_rate

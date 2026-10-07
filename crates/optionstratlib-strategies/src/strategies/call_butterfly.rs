@@ -43,7 +43,7 @@ use pretty_simple_display::{DebugPretty, DisplaySimple};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// The default description for the Call Butterfly (Ratio Call Spread) strategy.
 pub const CALL_BUTTERFLY_DESCRIPTION: &str = "A Ratio Call Spread involves buying one call option and selling multiple call options \
@@ -365,8 +365,19 @@ impl StrategyConstructor for CallButterfly {
             short_call_high,
         };
 
-        // Validate and update break-even points
-        strategy.validate();
+        // The side check above takes short low / long middle / short high,
+        // while `validate` and `new` use long low / short middle / short high.
+        // Every input this builder accepts therefore fails `validate`, so
+        // rejecting it here would make the builder unusable. The textbook
+        // convention that settles it is #706; until then the mismatch is
+        // reported here instead of being enforced.
+        if !strategy.validate() {
+            warn!(
+                strategy = %StrategyType::CallButterfly,
+                issue = 706,
+                "get_strategy built legs that fail validate: short low / long middle / short high"
+            );
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)

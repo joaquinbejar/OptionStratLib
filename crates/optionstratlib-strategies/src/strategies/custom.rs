@@ -136,6 +136,9 @@ impl CustomStrategy {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): a position fails `Position::validate`.
+    ///
     /// Returns `StrategyError::OperationError` when `positions` is empty, and
     /// propagates any error from `update_break_even_points`.
     #[allow(clippy::too_many_arguments)]
@@ -169,6 +172,12 @@ impl CustomStrategy {
             return Err(StrategyError::invalid_parameters(
                 "CustomStrategy::new",
                 "positions cannot be empty",
+            ));
+        }
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::Custom,
+                "the legs built by `new` fail validation",
             ));
         }
         strategy.update_break_even_points()?;

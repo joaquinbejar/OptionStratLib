@@ -107,6 +107,11 @@ impl ShortCall {
     /// option position with the specified parameters.
     ///
     /// # Errors
+    ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the leg fails `Position::validate` (for
+    /// example no premium).
+    ///
     /// Returns `StrategyError` if the freshly-constructed short call leg
     /// cannot be added to the strategy. In practice this branch is
     /// unreachable for a freshly-built single-leg strategy and is surfaced
@@ -153,6 +158,12 @@ impl ShortCall {
         );
         strategy.add_position(&short_call)?;
 
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ShortCall,
+                "the legs built by `new` fail validation",
+            ));
+        }
         Ok(strategy)
     }
 }

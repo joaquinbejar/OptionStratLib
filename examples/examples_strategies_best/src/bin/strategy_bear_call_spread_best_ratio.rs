@@ -10,15 +10,17 @@ fn main() -> Result<(), Error> {
     let mut strategy = BearCallSpread::new(
         "SP500".to_string(),
         underlying_price, // underlying_price
-        Positive::ZERO,   // short_strike
-        Positive::ZERO,   // long_strike
+        // Seed legs: `new` validates them since #696, so they must form the
+        // strategy; the optimizer below replaces them with the chain's best.
+        pos_or_panic!(5750.0), // short_strike
+        pos_or_panic!(5800.0), // long_strike
         ExpirationDate::Days(pos_or_panic!(5.0)),
         Positive::ZERO,      // implied_volatility
         Decimal::ZERO,       // risk_free_rate
         Positive::ZERO,      // dividend_yield
         Positive::ONE,       // quantity
-        Positive::ZERO,      // premium_short_call
-        Positive::ZERO,      // premium_short_put
+        Positive::ONE,       // premium_short_call
+        Positive::ONE,       // premium_long_call
         pos_or_panic!(0.82), // open_fee_short_call
         pos_or_panic!(0.82), // close_fee_short_call
         pos_or_panic!(0.82), // open_fee_short_put

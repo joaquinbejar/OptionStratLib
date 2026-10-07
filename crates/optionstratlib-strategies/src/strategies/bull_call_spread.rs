@@ -140,6 +140,11 @@ impl BullCallSpread {
     ///
     /// # Errors
     ///
+    /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
+    /// fails its own `validate` (#696): the long strike is not below the short
+    /// strike, or a leg fails `Position::validate` (for example a short call
+    /// with no premium).
+    ///
     /// Returns `StrategyError` if either freshly-constructed leg cannot be
     /// added to the strategy or if the break-even calculation fails. In
     /// practice these branches are unreachable for a freshly-built bull
@@ -230,7 +235,12 @@ impl BullCallSpread {
         );
         strategy.add_position(&short_call)?;
 
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullCallSpread,
+                "the legs built by `new` fail validation",
+            ));
+        }
 
         strategy.update_break_even_points()?;
         Ok(strategy)
@@ -327,7 +337,12 @@ impl StrategyConstructor for BullCallSpread {
         };
 
         // Validate and update break-even points
-        strategy.validate();
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullCallSpread,
+                "the positions passed to `get_strategy` fail validation",
+            ));
+        }
         strategy.update_break_even_points()?;
 
         Ok(strategy)
@@ -1142,13 +1157,15 @@ mod tests_bull_call_spread_strategy {
         assert_relative_eq!(ratio, 20.25425, epsilon = 0.0001);
     }
 
-    #[test]
-    fn test_default_strikes() {
-        let spread = BullCallSpread::new(
+    fn new_spread(
+        long_strike: Positive,
+        short_strike: Positive,
+    ) -> Result<BullCallSpread, StrategyError> {
+        BullCallSpread::new(
             "TEST".to_string(),
             Positive::HUNDRED,
-            Positive::ZERO, // long_strike = default
-            Positive::ZERO, // short_strike = default
+            long_strike,
+            short_strike,
             ExpirationDate::Days(pos_or_panic!(30.0)),
             pos_or_panic!(0.2),
             dec!(0.05),
@@ -1161,10 +1178,31 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
         )
-        .unwrap();
+    }
 
+    #[test]
+    fn test_default_strikes() {
+        // A zero long strike defaults to the underlying price.
+        let spread = new_spread(Positive::ZERO, pos_or_panic!(105.0)).unwrap();
         assert_eq!(spread.long_call.option.strike_price, Positive::HUNDRED);
+        assert_eq!(spread.short_call.option.strike_price, pos_or_panic!(105.0));
+
+        // A zero short strike defaults to the underlying price.
+        let spread = new_spread(pos_or_panic!(95.0), Positive::ZERO).unwrap();
+        assert_eq!(spread.long_call.option.strike_price, pos_or_panic!(95.0));
         assert_eq!(spread.short_call.option.strike_price, Positive::HUNDRED);
+    }
+
+    #[test]
+    fn test_bull_call_spread_both_default_strikes_rejected() {
+        // Both strikes default to the underlying price, which is no vertical (#696).
+        assert!(matches!(
+            new_spread(Positive::ZERO, Positive::ZERO),
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullCallSpread,
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -1185,10 +1223,15 @@ mod tests_bull_call_spread_strategy {
             Positive::ZERO,
             Positive::ZERO,
             Positive::ZERO,
-        )
-        .unwrap();
-
-        assert!(!spread.validate());
+        );
+        // `new` rejects the legs since #696 instead of returning them unvalidated.
+        assert!(matches!(
+            spread,
+            Err(StrategyError::InvalidStrategy {
+                strategy: StrategyType::BullCallSpread,
+                ..
+            })
+        ));
     }
 }
 
@@ -2317,6 +2360,7 @@ mod tests_bull_call_spread_probability {
 
 #[cfg(test)]
 mod tests_delta {
+    use crate::strategies::base::BreakEvenable;
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DeltaNeutrality;
     use optionstratlib_analytics::pnl::DeltaAdjustment;
@@ -2332,13 +2376,17 @@ mod tests_delta {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        BullCallSpread::new(
+        let mut strategy = BullCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // long_strike placeholder
+            Positive::TWO,    // short_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2351,7 +2399,11 @@ mod tests_delta {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.long_call.option.strike_price = long_strike;
+        strategy.short_call.option.strike_price = short_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]
@@ -2468,6 +2520,7 @@ mod tests_delta {
 
 #[cfg(test)]
 mod tests_delta_size {
+    use crate::strategies::base::BreakEvenable;
     use crate::strategies::bull_call_spread::BullCallSpread;
     use crate::strategies::delta_neutral::DeltaNeutrality;
     use optionstratlib_analytics::pnl::DeltaAdjustment;
@@ -2483,13 +2536,17 @@ mod tests_delta_size {
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
 
+    // The delta tests drive the adjustment engine through both signs of net
+    // delta and through zero, which takes inverted and equal strikes. `new`
+    // rejects such legs since #696, so the strategy is built on valid
+    // placeholder strikes and the requested strikes are set on the legs.
     fn get_strategy(long_strike: Positive, short_strike: Positive) -> BullCallSpread {
         let underlying_price = pos_or_panic!(5781.88);
-        BullCallSpread::new(
+        let mut strategy = BullCallSpread::new(
             "SP500".to_string(),
             underlying_price, // underlying_price
-            long_strike,      // long_strike
-            short_strike,     // short_strike
+            Positive::ONE,    // long_strike placeholder
+            Positive::TWO,    // short_strike placeholder
             ExpirationDate::Days(Positive::TWO),
             pos_or_panic!(0.18),  // implied_volatility
             dec!(0.05),           // risk_free_rate
@@ -2502,7 +2559,11 @@ mod tests_delta_size {
             pos_or_panic!(0.73),  // close_fee_long
             pos_or_panic!(0.73),  // close_fee_short
         )
-        .unwrap()
+        .unwrap();
+        strategy.long_call.option.strike_price = long_strike;
+        strategy.short_call.option.strike_price = short_strike;
+        strategy.update_break_even_points().unwrap();
+        strategy
     }
 
     #[test]
