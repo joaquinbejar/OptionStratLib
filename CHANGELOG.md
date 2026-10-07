@@ -77,6 +77,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `optionstratlib-math`, `optionstratlib-strategies` and
   `optionstratlib-backtest` (test-only, now a dev-dependency).
 
+- **Garman–Kohlhagen takes a signed foreign rate,
+  `ExoticParams::foreign_rate: Option<Decimal>`** (#720). The FX pricer and
+  its Greeks read the foreign rate `r_f` from `Options::dividend_yield`,
+  a `Positive`, so a negative foreign rate (CHF, JPY or EUR in parts of
+  2015–2022) could not be priced. `r_f` is now `exotic_params.foreign_rate`
+  when that is set, which may be negative, and falls back to
+  `dividend_yield` otherwise, so every option built without the field keeps
+  its price and Greeks bit for bit. When both are set, `foreign_rate` wins
+  and Garman–Kohlhagen ignores `dividend_yield`. `Options::dividend_yield`
+  stays `Positive`, and no other model reads the new field (Quanto keeps
+  `quanto_foreign_rate`). `garman_kohlhagen` and `delta_gk`, `gamma_gk`,
+  `vega_gk`, `theta_gk`, `rho_domestic_gk` and `rho_foreign_gk` resolve the
+  rate in one place, so prices and Greeks always use the same `r_f`. The
+  European Black–Scholes–Merton kernel takes the yield as a signed
+  parameter internally; `black_scholes` passes `dividend_yield` to it, so
+  its results are unchanged. Breaking: `ExoticParams` gains a public field,
+  so a struct literal that lists every field (rather than ending in
+  `..ExoticParams::default()`) or an exhaustive destructuring pattern no
+  longer compiles. Migration: add `foreign_rate: None` to such literals, or
+  end them with `..ExoticParams::default()`. Serialized `ExoticParams` gain
+  a `foreign_rate` key (`null` when unset); input without it still
+  deserializes, as `None`. New tests price `S = 1.00`, `K = 0.98`,
+  `r_d = 2%`, `r_f = -0.75%`, `sigma = 10%`, `T = 0.5` against the closed
+  form evaluated independently (call 0.047738205471098, put
+  0.014230002497975, both within `5.1e-16`), check FX put-call parity
+  `C - P = S e^(-r_f T) - K e^(-r_d T)` at `r_f` in -1%, 0 and 3% within
+  `1e-12`, the fallback and the precedence bit for bit, delta parity
+  `Delta_call - Delta_put = e^(-r_f T)` at the same rates, and delta and
+  the foreign rho against central differences of the price at `r_f = -1%`.
+  The Garman–Kohlhagen example prices the negative-rate case.
+
 - **Butterflies are textbook 1/2/1, `CallButterfly` is removed, and the
   1x1x1 call ladder it was is `BullCallLadder`** (#706). This closes the
   three butterfly exceptions #696 left.

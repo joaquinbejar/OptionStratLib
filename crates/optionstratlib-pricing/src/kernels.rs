@@ -420,13 +420,26 @@ pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
 /// [`d2`] rejects the inputs.
 #[inline]
 pub(crate) fn calculate_d_values(option: &Options) -> Result<(Decimal, Decimal), GreeksError> {
+    calculate_d_values_with_yield(option, option.dividend_yield.to_dec())
+}
+
+/// [`calculate_d_values`] with the continuous yield `q` given explicitly
+/// and signed, instead of read from `Options::dividend_yield`: the
+/// Garman–Kohlhagen pricer passes its foreign rate `r_f`, which may be
+/// negative (#720). `calculate_d_values` is this function at
+/// `q = dividend_yield`, so both produce the same digits for the same `q`.
+///
+/// # Errors
+///
+/// Same as [`calculate_d_values`].
+#[inline]
+pub(crate) fn calculate_d_values_with_yield(
+    option: &Options,
+    q: Decimal,
+) -> Result<(Decimal, Decimal), GreeksError> {
     // `Decimal`'s `-` panics on overflow, which a rate at the edge of the
     // range reaches (`Decimal::MIN` minus any positive yield).
-    let b = d_sub(
-        option.risk_free_rate,
-        option.dividend_yield.to_dec(),
-        "greeks::carry_rate",
-    )?;
+    let b = d_sub(option.risk_free_rate, q, "greeks::carry_rate")?;
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,

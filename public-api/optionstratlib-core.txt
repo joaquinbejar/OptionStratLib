@@ -653,6 +653,7 @@ pub optionstratlib_core::model::option::ExoticParams::cliquet_local_floor: core:
 pub optionstratlib_core::model::option::ExoticParams::exchange_correlation: core::option::Option<rust_decimal::decimal::Decimal>
 pub optionstratlib_core::model::option::ExoticParams::exchange_second_asset_dividend: core::option::Option<positive::positive::Positive>
 pub optionstratlib_core::model::option::ExoticParams::exchange_second_asset_volatility: core::option::Option<positive::positive::Positive>
+pub optionstratlib_core::model::option::ExoticParams::foreign_rate: core::option::Option<rust_decimal::decimal::Decimal>
 pub optionstratlib_core::model::option::ExoticParams::quanto_foreign_rate: core::option::Option<rust_decimal::decimal::Decimal>
 pub optionstratlib_core::model::option::ExoticParams::quanto_fx_correlation: core::option::Option<rust_decimal::decimal::Decimal>
 pub optionstratlib_core::model::option::ExoticParams::quanto_fx_volatility: core::option::Option<positive::positive::Positive>

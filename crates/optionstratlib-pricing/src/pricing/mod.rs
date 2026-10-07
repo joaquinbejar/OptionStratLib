@@ -35,7 +35,8 @@
 //! Black–Scholes–Merton with `q = r_f`, so the implementation delegates to the BSM
 //! kernel after type validation. Field mapping in `Options`:
 //! - `risk_free_rate`  -> `r_d` (domestic)
-//! - `dividend_yield`  -> `r_f` (foreign)
+//! - `exotic_params.foreign_rate` -> `r_f` (foreign, signed, may be negative);
+//!   when unset, `dividend_yield` -> `r_f` (non-negative)
 //! - `underlying_price` -> `S` (spot FX)
 //!
 //! ### Monte Carlo Simulations (`monte_carlo`)

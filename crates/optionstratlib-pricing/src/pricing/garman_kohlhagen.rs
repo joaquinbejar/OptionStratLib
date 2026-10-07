@@ -14,33 +14,25 @@
 //!
 //! ## Field mapping
 //!
-//! `Options` carries a single risk-free rate plus a `dividend_yield`. For
-//! Garman–Kohlhagen we reuse those fields with the FX interpretation:
+//! `Options` carries the FX inputs as follows:
 //!
 //! - `Options::risk_free_rate`  — domestic risk-free rate `r_d`
 //!   (signed `Decimal`, may be negative).
-//! - `Options::dividend_yield`  — foreign risk-free rate `r_f`
-//!   (`Positive`, must be ≥ 0 — see *Limitations* below).
+//! - `ExoticParams::foreign_rate` — foreign risk-free rate `r_f` (signed
+//!   `Decimal`, may be negative, #720). When `exotic_params` or its
+//!   `foreign_rate` is `None`, `r_f` falls back to
+//!   `Options::dividend_yield`, which is `Positive` and so cannot carry a
+//!   negative rate; when it is set, it takes precedence and
+//!   `dividend_yield` is ignored.
 //! - `Options::underlying_price` — spot FX rate `S`.
 //!
-//! No schema change is required. The mapping is intentional: GK is the
-//! standard textbook reduction of BSM under the FX interpretation, and
-//! delegating to [`crate::pricing::black_scholes_model::black_scholes`]
-//! guarantees a bit-exact equivalence to the BSM kernel.
-//!
-//! ## Limitations
-//!
-//! Because `Options::dividend_yield` is a [`optionstratlib_core::model::Positive`],
-//! reusing it as `r_f` constrains the foreign rate to be non-negative.
-//! Negative-rate FX regimes (e.g. CHF, JPY, EUR for parts of the
-//! 2015–2022 cycle) cannot be priced through this entry point with the
-//! current `Options` schema. Lifting that limitation requires either a
-//! dedicated signed `foreign_rate` field on `Options` (a schema change,
-//! deliberately out of scope for this addition) or a follow-up issue
-//! tracking a relaxed FX-specific input struct.
+//! GK is the standard textbook reduction of BSM under the FX
+//! interpretation: the price is the European Black–Scholes–Merton kernel
+//! evaluated at `q = r_f`, so with `r_f = dividend_yield` it is bit-exact
+//! with [`crate::pricing::black_scholes_model::black_scholes`].
 
 use crate::error::PricingError;
-use crate::pricing::black_scholes_model::black_scholes;
+use crate::pricing::black_scholes_model::black_scholes_european_with_yield;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::types::OptionType;
 use rust_decimal::Decimal;
@@ -53,8 +45,9 @@ use tracing::instrument;
 ///
 /// * `option` — `Options` with the FX field interpretation. The
 ///   `underlying_price` field carries the spot FX rate `S`,
-///   `risk_free_rate` carries the domestic rate `r_d`, and
-///   `dividend_yield` carries the foreign rate `r_f`.
+///   `risk_free_rate` carries the domestic rate `r_d`, and the foreign rate
+///   `r_f` is `ExoticParams::foreign_rate`, falling back to
+///   `dividend_yield` when that is not set.
 ///
 /// # Returns
 ///
@@ -82,9 +75,9 @@ use tracing::instrument;
 /// ```
 ///
 /// This is structurally identical to Black–Scholes–Merton with
-/// `q = r_f`, and the implementation delegates to the existing BSM
-/// kernel after validating the option type. The FX put-call parity
-/// reduces to:
+/// `q = r_f`, and the implementation delegates to the European BSM
+/// kernel at that signed `q` after validating the option type. The FX
+/// put-call parity reduces to:
 ///
 /// ```text
 /// C - P = S * e^(-r_f T) - K * e^(-r_d T)
@@ -97,28 +90,39 @@ use tracing::instrument;
 /// expiration cannot be converted to a positive year fraction, and
 /// [`PricingError::MethodError`] when the underlying BSM kernel hits a
 /// numerical wall (e.g. zero volatility, non-finite intermediate value).
-///
-/// # Limitations
-///
-/// `Options::dividend_yield` is a [`optionstratlib_core::model::Positive`], so the foreign
-/// rate `r_f` mapped onto it must be ≥ 0. Negative-rate FX regimes
-/// cannot be expressed through this entry point with the current schema;
-/// see the module-level *Limitations* section.
 #[instrument(skip(option), fields(
     strike = %option.strike_price,
     style = ?option.option_style,
     side = ?option.side,
     r_d = %option.risk_free_rate,
-    r_f = %option.dividend_yield,
+    r_f = %foreign_rate(option),
 ))]
 pub fn garman_kohlhagen(option: &Options) -> Result<Decimal, PricingError> {
     match option.option_type {
-        OptionType::European => black_scholes(option),
+        OptionType::European => black_scholes_european_with_yield(option, foreign_rate(option)),
         _ => Err(PricingError::unsupported_option_type(
             "Non-European",
             "Garman-Kohlhagen",
         )),
     }
+}
+
+/// The foreign risk-free rate `r_f` Garman–Kohlhagen prices `option` with,
+/// per year, continuously compounded.
+///
+/// `ExoticParams::foreign_rate` when it is set, which may be negative
+/// (#720); otherwise `Options::dividend_yield`, the mapping this model used
+/// before that field existed, which keeps every option built without it on
+/// the same price. The pricer and the Garman–Kohlhagen Greeks both read the
+/// rate here, so they always agree on it.
+#[must_use]
+#[inline]
+pub(crate) fn foreign_rate(option: &Options) -> Decimal {
+    option
+        .exotic_params
+        .as_ref()
+        .and_then(|params| params.foreign_rate)
+        .unwrap_or_else(|| option.dividend_yield.to_dec())
 }
 
 /// Trait for types that can be priced using the Garman–Kohlhagen model.
@@ -151,6 +155,7 @@ pub trait GarmanKohlhagen {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pricing::black_scholes;
     use crate::pricing::{ClosedFormEngine, price_option_with};
     use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::types::{OptionStyle, Side};
@@ -542,5 +547,189 @@ mod tests {
         let direct = garman_kohlhagen(&option).unwrap();
         let via_engine = price_option_with(&option, &ClosedFormEngine::ClosedFormGK).unwrap();
         assert_eq!(via_engine.to_dec(), direct.abs());
+    }
+}
+
+/// The signed foreign rate of #720: `ExoticParams::foreign_rate` prices FX
+/// options at a negative `r_f`, which `Options::dividend_yield` (a
+/// `Positive`) cannot carry, and falls back to `dividend_yield` when unset.
+#[cfg(test)]
+mod tests_foreign_rate {
+    use super::*;
+    use crate::pricing::black_scholes;
+    use optionstratlib_core::model::option::ExoticParams;
+    use optionstratlib_core::model::types::{OptionStyle, Side};
+    use optionstratlib_core::model::{ExpirationDate, Positive};
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal::MathematicalOps;
+    use rust_decimal_macros::dec;
+
+    /// Largest gap allowed against a closed form evaluated in `f64` and
+    /// against parity: the kernel's normal CDF runs in `f64`, so agreement
+    /// is to about `1e-15`; the bound leaves three orders of headroom.
+    const CLOSED_FORM_TOLERANCE: Decimal = dec!(1e-12);
+
+    /// Spot, strike, domestic rate, days to expiry and volatility of a case.
+    struct Market {
+        s: Decimal,
+        k: Decimal,
+        r_d: Decimal,
+        t_days: Decimal,
+        sigma: Decimal,
+    }
+
+    /// The `S = 1.2`, `K = 1.15`, `r_d = 5%`, 180-day, `σ = 15%` case.
+    const EURUSD: Market = Market {
+        s: dec!(1.2),
+        k: dec!(1.15),
+        r_d: dec!(0.05),
+        t_days: dec!(180),
+        sigma: dec!(0.15),
+    };
+
+    fn fx_option(
+        market: &Market,
+        dividend_yield: Positive,
+        foreign_rate: Option<Decimal>,
+        style: OptionStyle,
+    ) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "USDCHF".to_string(),
+            Positive::new_decimal(market.k).unwrap(),
+            ExpirationDate::Days(Positive::new_decimal(market.t_days).unwrap()),
+            Positive::new_decimal(market.sigma).unwrap(),
+            Positive::ONE,
+            Positive::new_decimal(market.s).unwrap(),
+            market.r_d,
+            style,
+            dividend_yield,
+            foreign_rate.map(|rate| ExoticParams {
+                foreign_rate: Some(rate),
+                ..ExoticParams::default()
+            }),
+        )
+    }
+
+    fn signed_rate_option(s: Decimal, r_f: Decimal, style: OptionStyle) -> Options {
+        let market = Market {
+            s,
+            k: dec!(0.98),
+            r_d: dec!(0.02),
+            t_days: dec!(182.5),
+            sigma: dec!(0.10),
+        };
+        fx_option(&market, Positive::ZERO, Some(r_f), style)
+    }
+
+    /// `S = 1.00`, `K = 0.98`, `r_d = 2%`, `r_f = -0.75%` (the SNB policy
+    /// rate of 2015–2022), `σ = 10%`, `T = 0.5`. Reference values from the
+    /// Garman–Kohlhagen formula evaluated independently in `f64` with
+    /// Python's `statistics.NormalDist`:
+    /// `d1 = [ln(S/K) + (r_d - r_f + σ²/2) T] / (σ √T)`, `d2 = d1 - σ √T`,
+    /// `C = S e^(-r_f T) N(d1) - K e^(-r_d T) N(d2) = 0.047738205471098`,
+    /// `P = K e^(-r_d T) N(-d2) - S e^(-r_f T) N(-d1) = 0.014230002497975`.
+    #[test]
+    fn test_garman_kohlhagen_negative_foreign_rate_matches_closed_form() {
+        let call = signed_rate_option(dec!(1.00), dec!(-0.0075), OptionStyle::Call);
+        let put = signed_rate_option(dec!(1.00), dec!(-0.0075), OptionStyle::Put);
+        let call_price = garman_kohlhagen(&call).unwrap();
+        let put_price = garman_kohlhagen(&put).unwrap();
+        assert!(
+            (call_price - dec!(0.047738205471098)).abs() < CLOSED_FORM_TOLERANCE,
+            "call {call_price}"
+        );
+        assert!(
+            (put_price - dec!(0.014230002497975)).abs() < CLOSED_FORM_TOLERANCE,
+            "put {put_price}"
+        );
+    }
+
+    /// FX put-call parity `C - P = S e^(-r_f T) - K e^(-r_d T)` at a
+    /// negative, a zero and a positive foreign rate, in and out of the money.
+    #[test]
+    fn test_garman_kohlhagen_fx_parity_holds_at_signed_foreign_rates() {
+        for r_f in [dec!(-0.01), Decimal::ZERO, dec!(0.03)] {
+            for s in [dec!(0.90), dec!(1.00), dec!(1.10)] {
+                let call = signed_rate_option(s, r_f, OptionStyle::Call);
+                let put = signed_rate_option(s, r_f, OptionStyle::Put);
+                let years = call.expiration_date.get_years().unwrap().to_dec();
+                let parity = s * (-r_f * years).exp()
+                    - call.strike_price.to_dec() * (-call.risk_free_rate * years).exp();
+                let actual = garman_kohlhagen(&call).unwrap() - garman_kohlhagen(&put).unwrap();
+                assert!(
+                    (actual - parity).abs() < CLOSED_FORM_TOLERANCE,
+                    "r_f={r_f} S={s}: C-P={actual}, parity={parity}"
+                );
+            }
+        }
+    }
+
+    /// A lower foreign rate makes the foreign currency cheaper to hold, so
+    /// the call rises and the put falls as `r_f` goes from 3% to -1%.
+    #[test]
+    fn test_garman_kohlhagen_call_rises_and_put_falls_as_foreign_rate_drops() {
+        let price = |r_f: Decimal, style| {
+            garman_kohlhagen(&signed_rate_option(dec!(1.00), r_f, style)).unwrap()
+        };
+        let rates = [dec!(0.03), Decimal::ZERO, dec!(-0.01)];
+        for pair in rates.windows(2) {
+            assert!(price(pair[1], OptionStyle::Call) > price(pair[0], OptionStyle::Call));
+            assert!(price(pair[1], OptionStyle::Put) < price(pair[0], OptionStyle::Put));
+        }
+    }
+
+    /// Unset, `foreign_rate` falls back to `dividend_yield`: no exotic
+    /// params, exotic params without a foreign rate, and a foreign rate
+    /// equal to the yield all price bit for bit as Black–Scholes–Merton
+    /// with `q = dividend_yield`, as before #720.
+    #[test]
+    fn test_garman_kohlhagen_unset_foreign_rate_falls_back_to_dividend_yield() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let base = fx_option(&EURUSD, pos_or_panic!(0.03), None, style);
+            let reference = black_scholes(&base).unwrap();
+            assert_eq!(garman_kohlhagen(&base).unwrap(), reference);
+
+            let mut empty = base.clone();
+            empty.exotic_params = Some(ExoticParams::default());
+            assert_eq!(garman_kohlhagen(&empty).unwrap(), reference);
+
+            let mut same = base.clone();
+            same.exotic_params = Some(ExoticParams {
+                foreign_rate: Some(dec!(0.03)),
+                ..ExoticParams::default()
+            });
+            assert_eq!(garman_kohlhagen(&same).unwrap(), reference);
+        }
+    }
+
+    /// A set `foreign_rate` takes precedence: with `dividend_yield = 5%` and
+    /// `foreign_rate = 3%` the price is the one at `r_f = 3%`.
+    #[test]
+    fn test_garman_kohlhagen_foreign_rate_takes_precedence_over_dividend_yield() {
+        let both = fx_option(
+            &EURUSD,
+            pos_or_panic!(0.05),
+            Some(dec!(0.03)),
+            OptionStyle::Call,
+        );
+        let yield_only = fx_option(&EURUSD, pos_or_panic!(0.03), None, OptionStyle::Call);
+        assert_eq!(
+            garman_kohlhagen(&both).unwrap(),
+            garman_kohlhagen(&yield_only).unwrap()
+        );
+    }
+
+    /// The short side of a negative-rate option is the negated long price.
+    #[test]
+    fn test_garman_kohlhagen_negative_foreign_rate_short_is_negated_long() {
+        let long = signed_rate_option(dec!(1.00), dec!(-0.0075), OptionStyle::Call);
+        let mut short = long.clone();
+        short.side = Side::Short;
+        assert_eq!(
+            garman_kohlhagen(&short).unwrap(),
+            -garman_kohlhagen(&long).unwrap()
+        );
     }
 }
