@@ -17,7 +17,36 @@ strategy, backtesting or plotting code.
 Analyses over a chain (risk-neutral density, projections, metrics) are
 analytics, in `optionstratlib-analytics`.
 
-## Example
+## Place in the workspace
+
+- **Depends on** `optionstratlib-core`, `optionstratlib-math` and
+  `optionstratlib-pricing`; `optionstratlib-simulation` only under
+  `synthetic`.
+- **Must not depend on** `optionstratlib-analytics`, `-strategies`,
+  `-backtest` and `-visualization`, and `optionstratlib-simulation` without
+  `synthetic`; `make check-graph` enforces the layering (ADR-0001 D9).
+- **In the facade:** `optionstratlib::{chains, series}` and the market errors
+  in `optionstratlib::error`, under the facade feature `market`; the facade's
+  `io`, `async` and `synthetic` forward to the features below. The facade
+  paths are the same types as the paths here; the [ownership
+  map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+  lists every one with its feature.
+
+<!-- #553: link the 0.21 to 0.22 migration guide here -->
+
+## Minimal example
+
+```rust
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_market::chains::OptionChain;
+
+fn main() {
+    let chain = OptionChain::new("XYZ", pos_or_panic!(100.0), "2030-01-18".to_string(), None, None);
+    assert_eq!(chain.symbol, "XYZ");
+}
+```
+
+## Runnable example
 
 A runnable program that depends on this crate directly, with the smallest
 dependency set and no facade, is [`osl-example-direct-market`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/market); `make tree-example-direct-market`

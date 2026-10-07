@@ -41,7 +41,47 @@
 //! (`use optionstratlib_analytics::metrics::ImpliedVolatilityCurve;`) to
 //! call its methods on an `OptionChain`.
 //!
-//! ## Example
+//! ## Place in the workspace
+//!
+//! - **Depends on** `optionstratlib-core`, `optionstratlib-math`,
+//!   `optionstratlib-pricing` and `optionstratlib-market`.
+//! - **Must not depend on** `optionstratlib-simulation`, `-strategies`,
+//!   `-backtest` and `-visualization`; `make check-graph` enforces the layering
+//!   (ADR-0001 D9).
+//! - **In the facade:** `optionstratlib::{analytics, pnl, risk, metrics}` and the
+//!   analytics errors in `optionstratlib::error`, under the facade feature
+//!   `analytics`. The facade paths are the same types as the paths here; the
+//!   [ownership
+//!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//!   lists every one with its feature.
+//!
+//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//!
+//! ## Minimal example
+//!
+//! ```rust
+//! use optionstratlib_analytics::analytics::{VolatilityAdjustment, calculate_single_point_probability};
+//! use optionstratlib_core::model::{ExpirationDate, Positive};
+//! use optionstratlib_core::pos_or_panic;
+//! use rust_decimal_macros::dec;
+//!
+//! // Probability of finishing below and above 105 in 30 days from 100.
+//! let (below, above) = calculate_single_point_probability(
+//!     &Positive::HUNDRED,
+//!     &pos_or_panic!(105.0),
+//!     VolatilityAdjustment {
+//!         base_volatility: pos_or_panic!(0.2),
+//!         std_dev_adjustment: Positive::ZERO,
+//!     },
+//!     None,
+//!     &ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     Some(dec!(0.05)),
+//! )?;
+//! assert!((below.to_dec() + above.to_dec() - dec!(1)).abs() < dec!(1e-9));
+//! # Ok::<(), optionstratlib_analytics::error::ProbabilityError>(())
+//! ```
+//!
+//! ## Runnable example
 //!
 //! A runnable program that depends on this crate directly, with the smallest
 //! dependency set and no facade, is [`osl-example-direct-analytics`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/analytics); `make tree-example-direct-analytics`
@@ -73,3 +113,9 @@ pub mod error;
 
 /// Version of the `optionstratlib-analytics` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles the Rust examples of this crate's `README.md` as doctests, so the
+/// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

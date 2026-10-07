@@ -34,7 +34,33 @@
 //! module roots re-export each capability, and the `optionstratlib` facade
 //! prelude serves broad imports.
 //!
-//! ## Example
+//! ## Place in the workspace
+//!
+//! - **Depends on** `optionstratlib-core`, `optionstratlib-pricing`,
+//!   `optionstratlib-simulation`, `optionstratlib-analytics` and
+//!   `optionstratlib-strategies`.
+//! - **Must not depend on** `optionstratlib-visualization`; `make check-graph`
+//!   enforces the layering (ADR-0001 D9).
+//! - **In the facade:** `optionstratlib::backtesting` and `BacktestError` in
+//!   `optionstratlib::error`, under the facade feature `backtest`. The facade
+//!   paths are the same types as the paths here; the [ownership
+//!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//!   lists every one with its feature.
+//!
+//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//!
+//! ## Minimal example
+//!
+//! ```rust
+//! use optionstratlib_backtest::backtesting::SimulationStatsResult;
+//!
+//! // A run's statistics start empty; `Simulate::simulate` fills them from a
+//! // `Simulator`'s paths (see the runnable example below).
+//! let stats = SimulationStatsResult::default();
+//! assert_eq!(stats.total_simulations, 0);
+//! ```
+//!
+//! ## Runnable example
 //!
 //! A runnable program that depends on this crate directly, with the smallest
 //! dependency set and no facade, is [`osl-example-direct-backtest`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/backtest); `make tree-example-direct-backtest`
@@ -55,3 +81,9 @@ pub mod error;
 
 /// Version of the `optionstratlib-backtest` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles the Rust examples of this crate's `README.md` as doctests, so the
+/// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

@@ -2,7 +2,7 @@
 <img src="https://raw.githubusercontent.com/joaquinbejar/OptionStratLib/refs/heads/main/doc/images/logo.png" alt="OptionStratLib" style="width: 100%; height: 100%;">
 </div>
 
-[![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](./LICENSE)
+[![Dual License](https://img.shields.io/badge/license-MIT%20and%20Apache%202.0-blue)](https://github.com/joaquinbejar/OptionStratLib/blob/main/LICENSE)
 [![Crates.io](https://img.shields.io/crates/v/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
 [![Downloads](https://img.shields.io/crates/d/optionstratlib.svg)](https://crates.io/crates/optionstratlib)
 [![Stars](https://img.shields.io/github/stars/joaquinbejar/OptionStratLib.svg)](https://github.com/joaquinbejar/OptionStratLib/stargazers)
@@ -379,34 +379,60 @@ Robust error management:
 
 ### Workspace Crates
 
-The library is being split into focused crates. Each one can be used on
-its own, and this crate (the `optionstratlib` facade) re-exports them, so
-the paths below are the same types whichever crate you import them from.
+OptionStratLib 0.22 is nine component crates and this facade. Each
+component owns one layer, and the facade (`optionstratlib`) re-exports
+them, so a path through the facade and the same path through the
+component name the same type.
 
-| Crate | Facade feature | Facade paths | Contents |
-| --- | --- | --- | --- |
-| `optionstratlib-core` | always | `model`, `utils`, `constants`; the core errors in `error` (`DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` | domain model, foundational re-exports, checked `Decimal` helpers |
-| `optionstratlib-math` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) | generic curves, surfaces, interpolation |
-| `optionstratlib-pricing` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError` and the `error::greeks` module) | pricing models, Greeks, implied and historical volatility |
-| `optionstratlib-simulation` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics |
-| `optionstratlib-market` | `market` (implies `pricing`) | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) | option chains, option series, OHLCV candles; file I/O behind `io` |
-| `optionstratlib-analytics` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `TransactionError` and the `error::probability` module) | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections |
-| `optionstratlib-strategies` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult` and the `error::strategies` module in `error` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis |
-| `optionstratlib-backtest` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics |
-| `optionstratlib-visualization` | `visualization` (implies `backtest`); `plotly` and `static_export` forward to its backend features | `visualization`; `GraphError` and the aggregate `Error` in `error`; the `impl_graph_for_payoff_strategy!` macro at the root | chart data, the `Graph` contract and its implementations, Plotly rendering and PNG/SVG export |
+**Facade or components.** Depend on the facade for the whole library
+behind one version and one prelude, choosing capabilities with its
+features; its default enables every capability plus `io`, `synthetic`
+and `schema`. Depend on component crates directly when you want the
+smallest dependency graph or only one layer (a pricing service needs
+neither market data nor charts): each has empty default features, so you
+opt into `io`, `async`, `synthetic`, `schema`, `plotly` or
+`static_export` explicitly. Both routes give identical types, so they mix
+freely. Runnable direct-component programs, one per capability with the
+facade equivalent of each, are in
+[`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct),
+and the [ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+gives the defining crate, direct import, facade path and feature of every
+public concept.
 
-Each facade path is an explicit module or item re-export (`pub use
-optionstratlib_core::model;`, `pub use
+<!-- #553: link the 0.21 to 0.22 migration guide here -->
+
+| Crate | Owns | Own features | Facade feature | Facade paths |
+| --- | --- | --- | --- | --- |
+| `optionstratlib-core` | domain model, foundational re-exports, checked `Decimal` helpers | `schema` | always | `model`, `utils`, `constants`; the core errors in `error` (`DecimalError`, `DecimalResult`, `OptionsError`, `OptionsResult`, `PositionError`, `TradeError`, `OperationErrorKind` and the `error::position` module); `ExpirationDate`, `Options`, `OptionStyle`, `OptionType`, `RainbowType`, `Side` at the root; the `nz!`, `f2d!`, `f2du!`, `d2f!`, `d2fu!` and `assert_decimal_eq!` macros; `Positive`, `pos_or_panic!`, `spos!` and `assert_pos_relative_eq!` in `prelude` |
+| `optionstratlib-math` | generic curves, surfaces, interpolation | `schema` | `math` | `curves`, `surfaces`, `geometrics`; the math errors in `error` (`CurveError`, `CurvesResult`, `SurfaceError`, `InterpolationError`, `MetricsError`) |
+| `optionstratlib-pricing` | pricing models, Greeks, implied and historical volatility | `schema` | `pricing` (implies `math`) | `pricing`, `greeks`, `volatility`; the pricing errors in `error` (`PricingError`, `PricingResult`, `GreeksError`, `GreeksResult`, `VolatilityError` and the `error::greeks` module) |
+| `optionstratlib-simulation` | random walks, stochastic processes, simulators, exit policies, generic path evaluation and statistics | `schema` | `simulation` (implies `pricing`) | `simulation`; `SimulationError` and `SimulationResult` in `error` |
+| `optionstratlib-market` | option chains, option series, OHLCV candles | `io`, `async`, `synthetic`, `schema` | `market` (implies `pricing`); `io`, `async` and `synthetic` forward to the market features | `chains`, `series`; the market errors in `error` (`ChainError`, `OhlcvError` and the `error::chains` module) |
+| `optionstratlib-analytics` | P&L, SPAN margin, price-probability kernels, risk-neutral densities, option-chain metrics and projections | `schema` | `analytics` (implies `market`) | `analytics`, `pnl`, `risk`, `metrics`; the analytics errors in `error` (`ProbabilityError`, `ProbabilityResult`, `ProjectionError`, `TransactionError` and the `error::probability` module) |
+| `optionstratlib-strategies` | spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality, strategy probability analysis | `schema` | `strategies` (implies `analytics`) | `strategies`; `StrategyError`, `StrategyResult`, `AdjustmentError` and the `error::strategies` module in `error` |
+| `optionstratlib-backtest` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics | `schema` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` |
+| `optionstratlib-visualization` | chart data, the `Graph` contract and its implementations, terminal reports, Plotly rendering and PNG/SVG export | `plotly`, `static_export` | `visualization` (implies `backtest`); `plotly` and `static_export` forward to its features | `visualization`; `GraphError` and the aggregate `Error` in `error`; the `impl_graph_for_payoff_strategy!` macro at the root |
+
+The facade also has `schema` (forwarded to every enabled component) and
+the reserved, empty `parallel`. Each facade path is an explicit module or
+item re-export (`pub use optionstratlib_core::model;`, `pub use
 optionstratlib_core::error::DecimalError`), never a glob over a
-component's root, so
-`optionstratlib::model::Options` *is* `optionstratlib_core::model::Options`.
-Depend on a component directly when you need only that layer; its own
-docs list its entry points, or enable only its facade feature:
+component's root, so `optionstratlib::model::Options` *is*
+`optionstratlib_core::model::Options`. To keep the facade but only one
+layer, enable only its facade feature:
 
 ```toml
 [dependencies]
 # pricing, greeks and volatility, without market data, I/O or charts
 optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+```
+
+or depend on the component itself:
+
+```toml
+[dependencies]
+optionstratlib-core = "0.22.0"
+optionstratlib-pricing = "0.22.0"
 ```
 
 ### Canonical paths
@@ -425,16 +451,9 @@ examples, docs and new code use the flat one. The error kind modules
 `...Kind` enums, which are not flattened because their names collide
 across crates. Paths kept only for 0.21 have been removed (#550).
 
-The [public concept ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
-(`docs/ownership.md`) lists, for every concept group, error and root
-item, its defining crate and module, the direct import, the facade path
-and the feature it needs. `make check-graph` checks it against the
-public API, the identity tests and the manifests, so it cannot go stale.
-
-Runnable programs that depend on the component crates directly, one per
-capability and with the smallest dependency set, are in
-[`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct),
-next to the facade equivalent of each.
+The ownership map (`docs/ownership.md`, linked above) records every
+canonical path, and `make check-graph` checks it against the public API,
+the identity tests and the manifests, so it cannot go stale.
 
 Every capability now lives in a component crate. The facade itself owns
 only the `prelude` and the unified `error::Error`, which wraps every
@@ -930,7 +949,8 @@ All strategies implement a comprehensive trait system:
 
 #### Prerequisites
 
-- Rust 1.85 or higher (Rust 2024 edition)
+- Rust 1.88 or higher (Rust 2024 edition; `utoipa` 6, behind the default
+  `schema` feature, needs 1.88)
 - Cargo package manager
 
 #### Installation
