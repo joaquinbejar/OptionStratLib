@@ -513,14 +513,13 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
                     *node_val = node_value;
                 }
                 OptionType::American => {
-                    if (step == 0) & (node_idx == 0) {
-                        *node_val = node_value;
-                    } else {
-                        info.spot = node_asset()?;
-                        let intrinsic_value = params.option_type.payoff(&info);
-                        let dec_node_val = d2f!(node_value);
-                        *node_val = f2d!(intrinsic_value.max(dec_node_val));
-                    }
+                    // The root is an exercise opportunity like every other
+                    // node, as in `price_binomial`: a deep in-the-money put
+                    // is worth its intrinsic value today (#708).
+                    info.spot = node_asset()?;
+                    let intrinsic_value = params.option_type.payoff(&info);
+                    let dec_node_val = d2f!(node_value);
+                    *node_val = f2d!(intrinsic_value.max(dec_node_val));
                 }
                 OptionType::Bermuda { exercise_dates } => {
                     // Calculate time at this step
@@ -957,6 +956,115 @@ mod tests_generate_binomial_tree {
 
         assert_decimal_eq!(option_tree[1][1], params.strike - asset_tree[1][1], EPSILON);
         assert_decimal_eq!(option_tree[0][0], dec!(4.887966), EPSILON);
+    }
+}
+
+/// The root of an American tree is an exercise opportunity (#708):
+/// `generate_binomial_tree` used to take the continuation value there, so a
+/// deep in-the-money put rooted below its intrinsic value and away from
+/// `price_binomial` on the same lattice.
+#[cfg(test)]
+mod tests_american_root_exercise {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// Largest gap allowed between the tree root and `price_binomial`. Both
+    /// walk the same lattice, but the tree compares each node with its
+    /// intrinsic value through an `f64` round trip and multiplies the spot
+    /// factors in a different order, which moves the last digits: the
+    /// largest gap over the cases below is `5.4e-14`.
+    const ROOT_TOLERANCE: Decimal = dec!(1e-12);
+
+    fn params<'a>(
+        asset: f64,
+        strike: f64,
+        steps: usize,
+        style: &'a OptionStyle,
+        side: &'a Side,
+    ) -> BinomialPricingParams<'a> {
+        BinomialPricingParams {
+            asset: pos_or_panic!(asset),
+            volatility: pos_or_panic!(0.2),
+            int_rate: dec!(0.05),
+            strike: pos_or_panic!(strike),
+            expiry: Positive::ONE,
+            no_steps: match NonZeroUsize::new(steps) {
+                Some(n) => n,
+                None => panic!("step count {steps} is non-zero"),
+            },
+            option_type: &OptionType::American,
+            option_style: style,
+            side,
+        }
+    }
+
+    fn tree_root(params: &BinomialPricingParams) -> Decimal {
+        match generate_binomial_tree(params) {
+            Ok((_, option_tree)) => match option_tree.first().and_then(|step| step.first()) {
+                Some(root) => *root,
+                None => panic!("a tree has a root"),
+            },
+            Err(e) => panic!("tree builds: {e}"),
+        }
+    }
+
+    fn lattice_price(params: &BinomialPricingParams) -> Decimal {
+        match price_binomial(params.clone()) {
+            Ok(price) => price,
+            Err(e) => panic!("lattice prices: {e}"),
+        }
+    }
+
+    /// `S = 50`, `K = 100`: exercising today is worth 50, more than holding
+    /// (the put cannot pay more than `K = 100` minus a positive spot, and
+    /// holding forgoes the interest on `K`). The root is the intrinsic
+    /// value, and the short root its negation.
+    #[test]
+    fn test_generate_binomial_tree_deep_itm_american_put_root_is_intrinsic() {
+        for steps in [1, 2, 10, 50] {
+            let long = params(50.0, 100.0, steps, &OptionStyle::Put, &Side::Long);
+            assert_eq!(tree_root(&long), dec!(50), "steps {steps}");
+            assert_eq!(lattice_price(&long), dec!(50), "steps {steps}");
+
+            let short = params(50.0, 100.0, steps, &OptionStyle::Put, &Side::Short);
+            assert_eq!(tree_root(&short), dec!(-50), "steps {steps}");
+        }
+    }
+
+    /// The continuation value at the root is below intrinsic for the deep
+    /// in-the-money put: the European on the same lattice is worth less than
+    /// 50, so the root equals intrinsic only through early exercise.
+    #[test]
+    fn test_generate_binomial_tree_deep_itm_put_continuation_is_below_intrinsic() {
+        let european = BinomialPricingParams {
+            option_type: &OptionType::European,
+            ..params(50.0, 100.0, 50, &OptionStyle::Put, &Side::Long)
+        };
+        assert!(tree_root(&european) < dec!(50));
+    }
+
+    /// The tree root and `price_binomial` agree for American calls and puts,
+    /// long and short, out of, at and in the money, at several step counts.
+    #[test]
+    fn test_generate_binomial_tree_american_root_matches_price_binomial() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            for side in [Side::Long, Side::Short] {
+                for (asset, strike) in
+                    [(50.0, 100.0), (90.0, 100.0), (100.0, 100.0), (130.0, 100.0)]
+                {
+                    for steps in [1, 2, 3, 10, 50] {
+                        let p = params(asset, strike, steps, &style, &side);
+                        let root = tree_root(&p);
+                        let price = lattice_price(&p);
+                        assert!(
+                            (root - price).abs() <= ROOT_TOLERANCE,
+                            "{style:?} {side:?} S={asset} K={strike} steps={steps}: \
+                             tree root {root} vs price_binomial {price}"
+                        );
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -665,6 +665,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the manifest, and the self-test checks it against `tomllib` where both
   exist.
 
+- **`generate_binomial_tree` exercises at the American root** (#708). The
+  root node took the continuation value without comparing it with the
+  intrinsic value, unlike every other American node and unlike
+  `price_binomial`. A deep in-the-money American put therefore rooted below
+  its intrinsic value: `S = 50`, `K = 100`, `sigma = 0.2`, `r = 5%`, `T = 1`
+  gave 45.122942450071399 at 1 step, 47.530991202833290 at 2, 49.501247919268228
+  at 10 and 49.900049983337489 at 50, where `price_binomial` gives 50. The
+  tree root, and with it `Options::calculate_price_binomial_tree`, now
+  returns 50 (the short tree -50). Where holding beats exercising, the root
+  keeps the continuation value but now goes through the same `f64`
+  comparison as every other node, so it carries 16 significant digits:
+  `S = 90`, `K = 100` put at 1 step, 10.575713710003807657116643569 ->
+  10.57571371000381. New tests pin the deep in-the-money root to intrinsic
+  for 1, 2, 10 and 50 steps, check that the European continuation is below
+  it, and hold the tree root to `price_binomial` within `1e-12` for American
+  calls and puts, long and short, out of, at and in the money, at 1, 2, 3,
+  10 and 50 steps (largest gap `5.4e-14`). No existing pinned value moved.
+
 - **The American pricers honour early exercise and `Side`** (#648).
   - `barone_adesi_whaley` at `σ = 0` returned the European value
     `max(K e^(-rT) - S e^(-qT), 0)`, below the intrinsic value of an
