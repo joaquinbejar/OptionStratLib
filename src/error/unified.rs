@@ -56,6 +56,10 @@ pub enum Error {
     #[error(transparent)]
     Strategy(#[from] crate::error::StrategyError),
 
+    /// Delta-neutral adjustment errors.
+    #[error(transparent)]
+    Adjustment(#[from] crate::error::AdjustmentError),
+
     /// Probability calculation errors.
     #[error(transparent)]
     Probability(#[from] crate::error::ProbabilityError),
@@ -110,7 +114,7 @@ pub enum Error {
 
     /// Positive value errors.
     #[error(transparent)]
-    Positive(#[from] positive::error::PositiveError),
+    Positive(#[from] optionstratlib_core::model::PositiveError),
 
     /// Trade errors.
     #[error(transparent)]

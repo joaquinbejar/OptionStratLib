@@ -37,8 +37,9 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use tracing::{debug, trace};
 
-use super::adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentPlan};
+use super::adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentPlan};
 use super::portfolio::{AdjustmentTarget, PortfolioGreeks};
+use crate::error::AdjustmentError;
 use optionstratlib_pricing::pricing::OptionPricing;
 
 /// Portfolio-level adjustment optimizer.

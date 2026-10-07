@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **`AdjustmentError` moved to `optionstratlib_strategies::error`, as a
+  `thiserror` error** (#556). The delta-neutral optimiser's error was the
+  one public error outside a crate's `error` module, and the one with a
+  hand-written `Display`. Same variants, same messages, same `From`
+  conversions (now `#[cold]`). Migration:
+  `optionstratlib_strategies::strategies::AdjustmentError` and
+  `strategies::delta_neutral::AdjustmentError` (facade:
+  `optionstratlib::strategies::AdjustmentError`) become
+  `optionstratlib_strategies::error::AdjustmentError`, exported by the
+  facade as `optionstratlib::error::AdjustmentError`. The aggregate
+  `optionstratlib::error::Error` gains an `Adjustment` variant with a
+  `From<AdjustmentError>`.
+- **The facade no longer depends on `positive`** (#556, ADR-0001 D8).
+  `error::Error::Positive` wraps `optionstratlib_core::model::PositiveError`,
+  the same type through core, so the variant is unchanged; `positive` stays
+  a dev-dependency of the facade's tests and benches. The feature-tree pins
+  lose the `optionstratlib -> positive` edge on every surface.
+
 - **The facade prelude is minimal, explicit and documented** (#551).
   `optionstratlib::prelude` now holds the domain vocabulary, the extension
   traits whose methods callers use on library types, and the entry type of
@@ -2077,6 +2095,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **A published, checked ownership map of the public API** (#556).
+  `docs/ownership.md` records, for every concept group (domain model,
+  utilities, constants, curves, surfaces, geometry, pricing models, Greeks,
+  volatility, simulation, option chains and series, analytics, P&L, risk,
+  chain metrics, strategies, backtesting, visualization), every
+  feature-gated capability inside a module (`io`, `async`, `synthetic`,
+  `plotly`, `static_export`, `schema`), every concrete error (21 component
+  errors and the facade aggregate, each with one owner and its kind module),
+  every facade root item and macro, and the four externally owned
+  foundational crates, the defining package and module, the direct import,
+  the facade path, the feature and the 0.22 status, with the canonical-path
+  policy of #550/#752. `scripts/check_ownership_map.py`, run by
+  `make check-graph` (and so by CI on every pull request), parses the map
+  and fails when a path is missing from the public-API snapshots, when a
+  facade path has no compiled identity check in
+  `tests/unit/canonical_paths_test.rs`, when a feature differs from the
+  `#[cfg]` gate in `src/lib.rs` / `src/error/mod.rs` or from the forwards
+  in the manifests, when a facade module, root item, concrete error or
+  foundational crate has no row, when a public `...Error` enum lives
+  outside its crate's `error` module, when a feature-gated item is not
+  declared under its component feature (`#[cfg(feature = ..)]` on the item,
+  its `pub use` or its `pub mod`), when a root macro row names a different
+  macro or src/lib.rs re-exports it from another crate, when a public error
+  module is no row's kind module, or when a crate other than core, the
+  facade included, depends on a foundational crate. The facade crate docs,
+  the README and its contribution steps link to the map.
 
 - **Direct-component examples** (#555). `examples/direct/<scenario>/` holds
   eight runnable programs that depend on the component crates directly and

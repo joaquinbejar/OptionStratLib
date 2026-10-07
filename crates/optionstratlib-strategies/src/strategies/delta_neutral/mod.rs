@@ -48,7 +48,7 @@ mod model;
 pub mod optimizer;
 pub mod portfolio;
 
-pub use adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentPlan};
+pub use adjustment::{AdjustmentAction, AdjustmentConfig, AdjustmentPlan};
 pub use model::{DeltaInfo, DeltaNeutralResponse, DeltaNeutrality, DeltaPositionInfo};
 pub use optimizer::AdjustmentOptimizer;
 pub use portfolio::{AdjustmentTarget, PortfolioGreeks};

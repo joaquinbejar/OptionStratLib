@@ -281,8 +281,8 @@ pub use collar::Collar;
 pub use combinations::process_n_times_iter;
 pub use covered_call::CoveredCall;
 pub use delta_neutral::{
-    AdjustmentAction, AdjustmentConfig, AdjustmentError, AdjustmentOptimizer, AdjustmentPlan,
-    AdjustmentTarget, DeltaInfo, DeltaNeutrality, PortfolioGreeks,
+    AdjustmentAction, AdjustmentConfig, AdjustmentOptimizer, AdjustmentPlan, AdjustmentTarget,
+    DeltaInfo, DeltaNeutrality, PortfolioGreeks,
 };
 pub use iron_butterfly::IronButterfly;
 pub use iron_condor::IronCondor;

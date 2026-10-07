@@ -32,6 +32,7 @@ pub use optionstratlib::utils
 pub use optionstratlib::visualization
 pub use optionstratlib::volatility
 pub mod optionstratlib::error
+pub use optionstratlib::error::AdjustmentError
 pub use optionstratlib::error::BacktestError
 pub use optionstratlib::error::ChainError
 pub use optionstratlib::error::CurveError
@@ -67,6 +68,7 @@ pub use optionstratlib::error::position
 pub use optionstratlib::error::probability
 pub use optionstratlib::error::strategies
 pub enum optionstratlib::error::Error
+pub optionstratlib::error::Error::Adjustment(optionstratlib_strategies::error::adjustment::AdjustmentError)
 pub optionstratlib::error::Error::Backtest(optionstratlib_backtest::error::backtesting::BacktestError)
 pub optionstratlib::error::Error::Chain(optionstratlib_market::error::chains::ChainError)
 pub optionstratlib::error::Error::Curve(optionstratlib_math::error::curves::CurveError)

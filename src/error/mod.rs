@@ -205,7 +205,9 @@ pub use optionstratlib_analytics::error::{
 /// Strategy errors (`optionstratlib-strategies`): building, validating,
 /// optimising and evaluating a strategy.
 #[cfg(feature = "strategies")]
-pub use optionstratlib_strategies::error::{StrategyError, StrategyResult, strategies};
+pub use optionstratlib_strategies::error::{
+    AdjustmentError, StrategyError, StrategyResult, strategies,
+};
 
 /// Backtest errors (`optionstratlib-backtest`): a strategy driven through a
 /// simulation.
