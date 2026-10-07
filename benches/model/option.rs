@@ -8,7 +8,7 @@ use criterion::Criterion;
 use optionstratlib::greeks::Greeks;
 use optionstratlib::nz;
 use optionstratlib::pnl::utils::PnLCalculator;
-use optionstratlib::pricing::OptionPricing;
+use optionstratlib::pricing::{OptionPricing, RegimeVolatility};
 use optionstratlib::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
 use optionstratlib::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use positive::{Positive, pos_or_panic};
@@ -46,7 +46,9 @@ pub(crate) fn benchmark_pricing(c: &mut Criterion) {
 
     group.bench_function("telegraph_50_steps", |bencher| {
         let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
-        bencher.iter(|| black_box(option.calculate_price_telegraph(nz!(50), &mut rng)))
+        let regimes = RegimeVolatility::new(pos_or_panic!(0.3), pos_or_panic!(0.1))
+            .expect("strictly positive regime volatilities");
+        bencher.iter(|| black_box(option.calculate_price_telegraph(nz!(50), regimes, &mut rng)))
     });
 
     group.finish();

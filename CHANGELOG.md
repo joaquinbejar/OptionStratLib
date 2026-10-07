@@ -146,6 +146,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without dividend yield) instead of being one biased draw, and a call
   costs `no_paths` times as many steps as before.
 
+- **The telegraph regime switches the volatility** (#755). The telegraph
+  regime used to enter only as the sign of the diffusion term; since the
+  normal shock is symmetric, the price was Black-Scholes whatever
+  `lambda_up` / `lambda_down` were. The regime now selects one of two
+  volatility levels: each step applies `S *= exp((r - q - sigma_s^2 / 2) *
+  dt + sigma_s * sqrt(dt) * Z)` with `sigma_s` = `sigma_plus` in the +1 regime and
+  `sigma_minus` in the -1 regime. Every step carries the risk-neutral drift
+  of its regime, so discounted prices stay martingales and put-call parity
+  holds; a European price lies between the Black-Scholes prices at the two
+  levels and rises with the time the rates keep the path in the
+  higher-volatility regime. New API: `pricing::RegimeVolatility`
+  (`new(sigma_plus, sigma_minus)`, `constant(sigma)`, both rejecting a zero
+  level, and the `sigma_plus()` / `sigma_minus()` accessors) and
+  `PricingError::InvalidParameter { parameter, value, reason }`, also
+  returned when a supplied transition rate is negative. Signatures:
+  - `telegraph(option, no_steps, no_paths, lambda_up, lambda_down, rng)` →
+    `telegraph(option, no_steps, no_paths, lambda_up, lambda_down,
+    volatility, rng)`, with `volatility: RegimeVolatility`; the option's
+    `implied_volatility` no longer diffuses the price (it still feeds the
+    estimate of a missing rate).
+  - `OptionPricing::calculate_price_telegraph(no_steps, rng)` →
+    `calculate_price_telegraph(no_steps, volatility, rng)`. One implied
+    volatility does not identify two levels, so the caller states them
+    rather than the trait inventing a split.
+
+  Migration: pass `RegimeVolatility::constant(option.implied_volatility)?`
+  to keep the previous law (it converges to the same Black-Scholes price),
+  or `RegimeVolatility::new(sigma_plus, sigma_minus)?` for two regimes. A
+  negative `lambda_up` / `lambda_down`, which used to be read as a rate that
+  never or always flips, is now an error. Seeded prices change even at equal
+  levels, because the shock is no longer signed by the regime.
+
 - **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
   signature changes from `strike_price_range_vec(&self, step: f64) ->
   Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->

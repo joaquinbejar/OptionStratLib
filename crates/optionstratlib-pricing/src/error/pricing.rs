@@ -116,6 +116,20 @@ pub enum PricingError {
         /// The offending `f64` value (`NaN`, `+∞`, or `-∞`).
         value: f64,
     },
+
+    /// A model parameter passed to a pricing kernel lies outside its
+    /// admissible domain, for example a regime volatility that is not
+    /// strictly positive or a negative transition rate of the telegraph
+    /// pricer.
+    #[error("invalid pricing parameter `{parameter}` = {value}: {reason}")]
+    InvalidParameter {
+        /// Name of the offending parameter (for example `"sigma_plus"`).
+        parameter: &'static str,
+        /// The rejected value.
+        value: Decimal,
+        /// Why the value is rejected.
+        reason: &'static str,
+    },
 }
 
 impl PricingError {
@@ -200,6 +214,23 @@ impl PricingError {
     pub fn non_finite(context: &'static str, value: f64) -> Self {
         PricingError::NonFinite { context, value }
     }
+
+    /// Creates a [`PricingError::InvalidParameter`] naming the rejected
+    /// parameter, its value and the domain it violates.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn invalid_parameter(
+        parameter: &'static str,
+        value: Decimal,
+        reason: &'static str,
+    ) -> Self {
+        PricingError::InvalidParameter {
+            parameter,
+            value,
+            reason,
+        }
+    }
 }
 
 /// Type alias for Results that may return a `PricingError`.
@@ -251,6 +282,18 @@ mod tests_pricing_non_finite {
         let msg = err.to_string();
         assert!(msg.contains("pricing::mc::payoff"));
         assert!(msg.contains("inf"));
+    }
+
+    #[test]
+    fn test_invalid_parameter_display_names_parameter_and_value() {
+        let err = PricingError::invalid_parameter(
+            "sigma_plus",
+            Decimal::ZERO,
+            "must be strictly positive",
+        );
+        let msg = err.to_string();
+        assert!(msg.contains("sigma_plus"));
+        assert!(msg.contains("must be strictly positive"));
     }
 
     #[test]

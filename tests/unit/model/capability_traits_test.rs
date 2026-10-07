@@ -67,7 +67,7 @@ mod inherent_without_trait_import {
 /// leave the facade without depending on `pricing` (#499).
 mod trait_form_from_owning_module {
     use super::*;
-    use optionstratlib::pricing::OptionPricing;
+    use optionstratlib::pricing::{OptionPricing, RegimeVolatility};
     use optionstratlib::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use std::num::NonZeroUsize;
 
@@ -82,6 +82,8 @@ mod trait_form_from_owning_module {
             option
                 .calculate_price_telegraph(
                     steps,
+                    RegimeVolatility::constant(option.implied_volatility)
+                        .expect("non-zero implied volatility"),
                     &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)
                 )
                 .is_ok()

@@ -51,8 +51,10 @@
 //! - Parameter estimation from historical data
 //! - Support for asymmetric transition rates
 //! - Applications in regime-switching scenarios
-//! - Monte-Carlo pricing: the discounted payoff averaged over a caller-chosen
-//!   number of log-Euler paths driven by a standard normal shock
+//! - Monte-Carlo pricing under regime-switching volatility: the discounted
+//!   payoff averaged over a caller-chosen number of log-Euler paths whose
+//!   volatility is `sigma_plus` in the +1 regime and `sigma_minus` in the -1
+//!   regime, each step carrying its regime's risk-neutral drift
 //!
 //! The Telegraph Process is particularly useful for:
 //! - Modeling regime changes in volatility
@@ -85,7 +87,7 @@
 //!
 //! ```rust
 //! use rust_decimal_macros::dec;
-//! use optionstratlib_pricing::pricing::telegraph::{TelegraphProcess, telegraph};
+//! use optionstratlib_pricing::pricing::telegraph::{RegimeVolatility, TelegraphProcess, telegraph};
 //! use optionstratlib_core::model::{ExpirationDate, Options};
 //! use optionstratlib_core::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib_core::model::Positive;
@@ -99,7 +101,8 @@
 //! // Create a Telegraph Process with transition rates
 //! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3), &mut rng);
 //!
-//! // Price an option using the Telegraph Process
+//! // Price an option whose volatility switches between 30% and 10%
+//! let regimes = RegimeVolatility::new(pos_or_panic!(0.3), pos_or_panic!(0.1)).unwrap();
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
@@ -121,6 +124,7 @@
 //!     optionstratlib_core::nz!(1000),
 //!     Some(dec!(0.5)),
 //!     Some(dec!(0.3)),
+//!     regimes,
 //!     &mut rng,
 //! );
 //! ```
@@ -136,7 +140,7 @@
 //! use optionstratlib_pricing::pricing::{
 //!     black_scholes_model::black_scholes,
 //!     monte_carlo::monte_carlo_option_pricing,
-//!     telegraph::telegraph
+//!     telegraph::{RegimeVolatility, telegraph}
 //! };
 //! use optionstratlib_core::utils::deterministic_rng;
 //! let option = Options {
@@ -163,12 +167,14 @@
 //!     optionstratlib_core::nz!(2),
 //!     &mut rng,
 //! );
+//! let regimes = RegimeVolatility::constant(option.implied_volatility).unwrap();
 //! let tp_price = telegraph(
 //!     &option,
 //!     optionstratlib_core::nz!(1000),
 //!     optionstratlib_core::nz!(1000),
 //!     Some(dec!(0.5)),
 //!     Some(dec!(0.3)),
+//!     regimes,
 //!     &mut rng,
 //! );
 //! ```
@@ -395,7 +401,7 @@ pub use power::power_black_scholes;
 pub use quanto::quanto_black_scholes;
 pub use rainbow::rainbow_black_scholes;
 pub use spread::spread_black_scholes;
-pub use telegraph::{TELEGRAPH_PATHS, TelegraphProcess, telegraph};
+pub use telegraph::{RegimeVolatility, TELEGRAPH_PATHS, TelegraphProcess, telegraph};
 pub use unified::{
     ClosedFormEngine, GenericPricingEngine, MonteCarloPricer, NoMonteCarlo, Priceable,
     price_option_with,

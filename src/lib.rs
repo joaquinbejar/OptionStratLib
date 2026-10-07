@@ -38,7 +38,7 @@
 //! - **Black-Scholes Model**: European options pricing with full Greeks support
 //! - **Binomial Tree Model**: American and European options with early exercise capability
 //! - **Monte Carlo Simulations**: Complex pricing scenarios and path-dependent options
-//! - **Telegraph Process Model**: Advanced stochastic modeling for jump-diffusion processes
+//! - **Telegraph Process Model**: Monte-Carlo pricing under two-state regime-switching volatility
 //! - **American Options**: Barone-Adesi-Whaley approximation for early exercise
 //! - **Exotic Options**: Complete support for 14 exotic option types (see below)
 //!
@@ -250,7 +250,7 @@
 //! - `garman_kohlhagen.rs`: European FX options (Garman-Kohlhagen 1983)
 //! - `binomial_model.rs`: American/European options with early exercise
 //! - `monte_carlo.rs`: Path-dependent and exotic options pricing
-//! - `telegraph.rs`: Jump-diffusion process modeling
+//! - `telegraph.rs`: Regime-switching volatility pricing
 //! - `payoff.rs`: Payoff function implementations
 //! - `american.rs`: Barone-Adesi-Whaley approximation
 //! - **Exotic Options**:
