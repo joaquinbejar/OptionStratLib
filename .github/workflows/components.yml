@@ -51,7 +51,9 @@ jobs:
         run: make check-components
 
       # The direct-component examples built outside the repository against the
-      # archives `check-components` just produced (#555).
+      # packaged crates (#555). `check-components` leaves no facade archive, so
+      # this step packages all ten crates (the facade and the nine components)
+      # again; OSL_REUSE_PACKAGES=1 keeps those for the consumer step below.
       - name: Direct-component examples against the packaged crates
         run: OSL_REUSE_PACKAGES=1 make check-direct-examples-packaged
 
@@ -59,24 +61,15 @@ jobs:
       - name: Workspace integration tests
         run: make test-workspace-integration
 
-      # Consumer fixtures build from a fresh target dir of their own, so the
-      # cached workspace target cannot hide a missing dependency (#527).
-      - name: Consumer fixtures
+      # The 0.22 consumers build from a fresh target dir of their own each,
+      # so the cached workspace target cannot hide a missing dependency
+      # (#527); every fixture under fixtures/consumers/ is asserted, linted,
+      # tested, and tested again against the packaged crates, reusing the ten
+      # archives the direct-examples step packaged (#552).
+      - name: 0.22 consumer fixtures
         run: |
           rm -rf target/fixtures
-          make check-fixtures
-          make check-consumer-core-pricing
-          make check-consumer-core-pricing-minimal
-          make test-consumer-core-pricing
-          make check-consumer-analytics-only
-          make check-consumer-analytics-only-minimal
-          make test-consumer-analytics-only
-          make test-consumer-simulation-only
-          make test-consumer-full-backtest
-          make check-consumer-market
-          make test-consumer-market
-          make check-consumer-facade
-          make test-consumer-facade
+          OSL_REUSE_PACKAGES=1 make test-022-consumers
 
       # Direct-component examples: lint, test, run and assert the resolved
       # graph of each (#555).

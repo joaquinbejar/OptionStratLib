@@ -1,0 +1,15 @@
+# ADR-0002 section 5, `osl-fixture-market-io`: packages the resolved normal
+# graph must contain, and packages it must not. `io` brings the CSV and ZIP
+# readers and writers and nothing else: no simulation engine, no async
+# runtime. Checked by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib-core", "optionstratlib-math", "optionstratlib-pricing",
+    "optionstratlib-market", "csv", "zip",
+]
+absent = [
+    "utoipa",
+    "optionstratlib", "optionstratlib-simulation", "optionstratlib-analytics",
+    "optionstratlib-strategies", "optionstratlib-backtest",
+    "optionstratlib-visualization", "tokio", "reqwest", "futures", "plotly",
+    "tracing-subscriber", "indicatif", "prettytable-rs", "pretty-simple-display",
+]

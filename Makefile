@@ -227,8 +227,6 @@ check: test fmt-check lint scan-banned check-graph check-api-report
 # their own manifest and a target dir of their own, so nothing the workspace
 # enables can widen their graph. `check-fixtures` asserts every fixture's
 # expect.toml (present / absent packages) and prints its package count.
-FIXTURE_PRICING_ONLY := fixtures/consumers/pricing-only/Cargo.toml
-FIXTURE_ANALYTICS_ONLY := fixtures/consumers/analytics-only/Cargo.toml
 FIXTURE_TARGET_DIR := target/fixtures
 
 .PHONY: check-fixtures
@@ -236,116 +234,46 @@ check-fixtures:
 	@python3 scripts/check_fixtures.py --self-test > /dev/null || (python3 scripts/check_fixtures.py --self-test; exit 1)
 	@python3 scripts/check_fixtures.py
 
-# The core-plus-pricing consumer (#527).
-.PHONY: check-consumer-core-pricing
-check-consumer-core-pricing:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo check --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo clippy --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets -- -D warnings
+# The 0.22 executable consumers (#552): every fixture under
+# fixtures/consumers/ is a downstream crate with the manifest a 0.22 user
+# writes, on the facade (one capability each, the defaults, `async`,
+# `plotly`, `static_export`, `schema` off) or on component crates directly
+# (pricing, market minimal / `io` / `synthetic`, analytics, simulation, a
+# full backtest). `test-022-consumers` asserts every fixture's graph
+# (`check-fixtures`), then lints (`-D warnings`) and tests each one with a
+# target dir of its own, under its defaults and, when it declares features of
+# its own, with none and with all (scripts/test_consumers.py), and finally
+# tests a copy of each, outside the repository, against the packaged facade
+# and component archives (`check-022-consumers-packaged`). A new fixture
+# directory is picked up without editing this file. It replaces the
+# per-fixture `check-consumer-*` / `test-consumer-*` targets.
+.PHONY: test-022-consumers
+test-022-consumers: check-fixtures
+	@python3 scripts/test_consumers.py --self-test > /dev/null || (python3 scripts/test_consumers.py --self-test; exit 1)
+	@python3 scripts/test_consumers.py
+	@$(MAKE) --no-print-directory check-022-consumers-packaged
 
-.PHONY: check-consumer-core-pricing-minimal
-check-consumer-core-pricing-minimal:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo check --manifest-path $(FIXTURE_PRICING_ONLY) --all-targets --no-default-features
+# The consumer fixtures built outside the repository against the packaged
+# crates, through the `[patch.crates-io]` mechanism of the direct-component
+# examples (#555), with the facade packaged alongside the components. With
+# OSL_REUSE_PACKAGES=1 the ten archives in `<target>/package/` are reused when
+# all are there, and all ten are packaged again otherwise.
+.PHONY: check-022-consumers-packaged
+check-022-consumers-packaged:
+	OSL_PACKAGED_SOURCE=fixtures/consumers scripts/check_packaged_examples.sh
 
-.PHONY: test-consumer-core-pricing
-test-consumer-core-pricing:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/pricing-only cargo test --manifest-path $(FIXTURE_PRICING_ONLY)
-
-.PHONY: tree-consumer-core-pricing
-tree-consumer-core-pricing:
-	cargo tree --manifest-path $(FIXTURE_PRICING_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
-	@python3 scripts/check_fixtures.py pricing-only
-
-# The analytics consumer without strategies or the facade (#533): `check`
-# builds and lints it with every analytics feature, `-minimal` with none.
-.PHONY: check-consumer-analytics-only
-check-consumer-analytics-only:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo check --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --all-features
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo clippy --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --all-features -- -D warnings
-
-.PHONY: check-consumer-analytics-only-minimal
-check-consumer-analytics-only-minimal:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo check --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-targets --no-default-features
-
-.PHONY: test-consumer-analytics-only
-test-consumer-analytics-only:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo test --manifest-path $(FIXTURE_ANALYTICS_ONLY) --no-default-features
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/analytics-only cargo test --manifest-path $(FIXTURE_ANALYTICS_ONLY) --all-features
-
-.PHONY: tree-consumer-analytics-only
-tree-consumer-analytics-only:
-	cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
-	@python3 scripts/check_fixtures.py analytics-only
-	@echo "all features: $$(cargo tree --manifest-path $(FIXTURE_ANALYTICS_ONLY) -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
-
-# The simulation-only and full-backtest consumers (#540): simulation with no
-# market, strategy or backtest crate, and a strategy backtest on the
-# component crates without the facade. `test-*` runs each with no features
-# and with all, `tree-*` prints and asserts its graph.
-.PHONY: test-consumer-simulation-only
-test-consumer-simulation-only:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo clippy --manifest-path fixtures/consumers/simulation-only/Cargo.toml --all-targets --all-features -- -D warnings
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo test --manifest-path fixtures/consumers/simulation-only/Cargo.toml --no-default-features
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/simulation-only cargo test --manifest-path fixtures/consumers/simulation-only/Cargo.toml --all-features
-
-.PHONY: tree-consumer-simulation-only
-tree-consumer-simulation-only:
-	cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
-	@python3 scripts/check_fixtures.py simulation-only
-	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/simulation-only/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
-
-.PHONY: test-consumer-full-backtest
-test-consumer-full-backtest:
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo clippy --manifest-path fixtures/consumers/full-backtest/Cargo.toml --all-targets --all-features -- -D warnings
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo test --manifest-path fixtures/consumers/full-backtest/Cargo.toml --no-default-features
-	CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/full-backtest cargo test --manifest-path fixtures/consumers/full-backtest/Cargo.toml --all-features
-
-.PHONY: tree-consumer-full-backtest
-tree-consumer-full-backtest:
-	cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
-	@python3 scripts/check_fixtures.py full-backtest
-	@echo "all features: $$(cargo tree --manifest-path fixtures/consumers/full-backtest/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"
-
-# The market crate with no features and with only `synthetic` (#537,
-# ADR-0003): minimal market resolves no simulation crate, and `synthetic`
-# adds exactly that one.
-MARKET_FIXTURES := market-minimal market-synthetic
-
-.PHONY: check-consumer-market
-check-consumer-market:
-	@for fixture in $(MARKET_FIXTURES); do \
-		manifest=fixtures/consumers/$$fixture/Cargo.toml; \
-		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo clippy --manifest-path $$manifest --all-targets -- -D warnings || exit 1; \
-	done
-
-.PHONY: test-consumer-market
-test-consumer-market:
-	@for fixture in $(MARKET_FIXTURES); do \
-		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
-	done
-
-# The facade built with one capability each: `pricing` and `market` alone
-# (#528), `analytics` alone, which must not resolve strategies, and
-# `strategies` alone (#535), and `simulation` alone, which must not resolve
-# market, strategies or backtest, and `backtest` alone (#541), each consumed
-# through the prelude and the canonical paths. The chart surfaces (#544):
-# `visualization` alone resolves no Plotly package, `plotly` alone no
-# image-export package, `static_export` alone the whole export stack, and
-# `headless-full` (the facade defaults) none of them; each one also asserts
-# with a `compile_fail` doctest which `Graph` methods it does not have.
-FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest facade-visualization facade-plotly facade-static-export headless-full facade-schema-off
-
-.PHONY: check-consumer-facade
-check-consumer-facade:
-	@for fixture in $(FACADE_FIXTURES); do \
-		manifest=fixtures/consumers/$$fixture/Cargo.toml; \
-		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo clippy --manifest-path $$manifest --all-targets -- -D warnings || exit 1; \
-	done
-
-.PHONY: test-consumer-facade
-test-consumer-facade:
-	@for fixture in $(FACADE_FIXTURES); do \
-		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
-	done
+# `make tree-consumer FIXTURE=<scenario>` prints one fixture's resolved
+# normal graph and asserts its expect.toml, and for a fixture with features of
+# its own also counts the all-features graph; it replaces the per-fixture
+# `tree-consumer-*` targets.
+.PHONY: tree-consumer
+tree-consumer:
+	@test -n "$(FIXTURE)" || { echo "FIXTURE must name a directory under fixtures/consumers"; exit 1; }
+	cargo tree --manifest-path fixtures/consumers/$(FIXTURE)/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
+	@python3 scripts/check_fixtures.py $(FIXTURE)
+	@if grep -q '^\[features\]' fixtures/consumers/$(FIXTURE)/Cargo.toml; then \
+		echo "all features: $$(cargo tree --manifest-path fixtures/consumers/$(FIXTURE)/Cargo.toml -e normal --prefix none --all-features | sed 's/ (\*)$$//' | sort -u | wc -l | tr -d ' ') resolved package entries"; \
+	fi
 
 # Direct-component examples (#555, ADR-0004 section 8): runnable programs under
 # `examples/direct/<scenario>/`, workspace members named
@@ -368,11 +296,12 @@ test-direct-component-examples:
 	done
 
 # Builds a copy of each example, outside the repository, against the packaged
-# component crates through `[patch.crates-io]` (#555): the "compile against
+# facade and component crates through `[patch.crates-io]` (#555): the "compile against
 # packaged crates" check that the path dependencies of the in-tree manifests
-# cannot give. It repackages the components itself; the Components workflow
-# runs it right after `check-components` with `OSL_REUSE_PACKAGES=1` to reuse
-# those archives.
+# cannot give. It packages the facade and the components itself; with
+# `OSL_REUSE_PACKAGES=1` it reuses the ten archives in `<target>/package/` when
+# all are there. `check-components` leaves no facade archive, so the
+# Components workflow's run right after it packages all ten again.
 .PHONY: check-direct-examples-packaged
 check-direct-examples-packaged:
 	scripts/check_packaged_examples.sh
