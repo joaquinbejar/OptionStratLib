@@ -1,11 +1,14 @@
 pub mod optionstratlib_visualization
 pub mod optionstratlib_visualization::error
 pub enum optionstratlib_visualization::error::GraphError
+pub optionstratlib_visualization::error::GraphError::Backtest(alloc::boxed::Box<optionstratlib_backtest::error::backtesting::BacktestError>)
 pub optionstratlib_visualization::error::GraphError::Curve(optionstratlib_math::error::curves::CurveError)
 pub optionstratlib_visualization::error::GraphError::Decimal(alloc::boxed::Box<optionstratlib_core::error::decimal::DecimalError>)
 pub optionstratlib_visualization::error::GraphError::Io(core::io::error::Error)
 pub optionstratlib_visualization::error::GraphError::Render(alloc::string::String)
 pub optionstratlib_visualization::error::GraphError::Surface(optionstratlib_math::error::surfaces::SurfaceError)
+impl core::convert::From<optionstratlib_backtest::error::backtesting::BacktestError> for optionstratlib_visualization::error::GraphError
+pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_backtest::error::backtesting::BacktestError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_visualization::error::GraphError
 pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
 impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_visualization::error::GraphError

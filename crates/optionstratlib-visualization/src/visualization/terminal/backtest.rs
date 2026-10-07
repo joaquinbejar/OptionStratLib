@@ -5,7 +5,7 @@ use crate::error::GraphError;
 use optionstratlib_backtest::backtesting::{
     SimulationResult, SimulationStats, SimulationStatsResult,
 };
-use optionstratlib_core::model::decimal::{d_div, d_sum_iter};
+use optionstratlib_core::model::decimal::d_sum_iter;
 use prettytable::{Attr, Cell, Row, Table, color};
 use rust_decimal::{Decimal, RoundingStrategy};
 
@@ -27,8 +27,6 @@ const INDIVIDUAL_RESULTS_HEADERS: [&str; 7] = [
 const DISPLAY_DECIMALS: u32 = 2;
 /// A count is shown as this many percent of the runs.
 const PERCENT: f64 = 100.0;
-/// Text of an average that cannot be represented as a `Decimal`.
-const NO_VALUE: &str = "n/a";
 
 /// Terminal tables for simulation statistics.
 ///
@@ -40,9 +38,11 @@ const NO_VALUE: &str = "n/a";
 /// outcomes, the P&L figures, the average holding period and the exit
 /// reasons; the individual results show one row per run. Money is written
 /// with a `$` sign and `Decimal`'s `{:.2}`, which truncates to two decimal
-/// places (as the tables always have); the average holding period is
-/// rounded half-to-even, as its `f64` was. Exit reasons are listed in the
-/// order of their text, so the output is deterministic.
+/// places (as the tables always have). The average holding period of a
+/// [`SimulationStats`] summary is rounded half-up to two decimal places
+/// (#691); a [`SimulationStatsResult`] summary writes its own with `{:.2}`.
+/// Exit reasons are listed in the order of their text, so the output is
+/// deterministic.
 ///
 /// In colour, headers are blue, and:
 ///
@@ -55,9 +55,12 @@ const NO_VALUE: &str = "n/a";
 /// - in the individual results of both, the final P&L is green when
 ///   positive and red when negative.
 ///
-/// The P&L of a [`SimulationStatsResult`] run is its total P&L (realized
-/// plus unrealized, `PnL::total_pnl`) and the P&L of a [`SimulationStats`]
-/// run its realized leg, the figures each type accumulates.
+/// The P&L of a run is its total P&L (realized plus unrealized,
+/// `PnL::total_pnl`) for both types, the figure each accumulates (#691).
+/// The [`SimulationStats`] summary takes its average P&L, extremes and
+/// average holding period from `SimulationStats::statistics`, so a run
+/// without a P&L counts as zero there, as in the [`SimulationStatsResult`]
+/// summary.
 ///
 /// This replaces the inherent `print_summary` and `print_individual_results`
 /// methods those types had: import the trait and call the same names, now
@@ -68,7 +71,10 @@ pub trait SimulationReport {
     /// # Errors
     ///
     /// Returns [`GraphError::Decimal`] when a derived figure (the total or
-    /// the average P&L) leaves the representable `Decimal` range.
+    /// the average P&L) leaves the representable `Decimal` range, and
+    /// [`GraphError::Backtest`] when the statistics of a [`SimulationStats`]
+    /// accumulator cannot be computed (its P&L total or variance leaves the
+    /// `Decimal` range).
     fn render_summary(&self) -> Result<String, GraphError>;
 
     /// Writes the summary tables to stdout, coloured when stdout is a
@@ -76,7 +82,7 @@ pub trait SimulationReport {
     ///
     /// # Errors
     ///
-    /// Returns [`GraphError::Decimal`] as [`Self::render_summary`] does, and
+    /// Returns the errors of [`Self::render_summary`], and
     /// [`GraphError::Io`] when stdout cannot be written.
     fn print_summary(&self) -> Result<(), GraphError>;
 
@@ -121,34 +127,20 @@ impl SimulationReport for SimulationStats {
     }
 
     fn render_individual_results(&self) -> String {
-        render(&individual_results_sections(
-            self.results(),
-            realized_pnl_of,
-        ))
+        render(&individual_results_sections(self.results(), total_pnl_of))
     }
 
     fn print_individual_results(&self) -> Result<(), GraphError> {
-        print(&individual_results_sections(
-            self.results(),
-            realized_pnl_of,
-        ))
+        print(&individual_results_sections(self.results(), total_pnl_of))
     }
 }
 
-/// The P&L a [`SimulationStatsResult`] reports for a run: realized plus
-/// unrealized, zero when neither is known.
+/// The P&L both report types show for a run: realized plus unrealized,
+/// zero when neither is known.
 #[must_use]
 #[inline]
 fn total_pnl_of(result: &SimulationResult) -> Decimal {
     result.pnl.total_pnl().unwrap_or_default()
-}
-
-/// The P&L a [`SimulationStats`] accumulates for a run: the realized leg,
-/// zero when unknown.
-#[must_use]
-#[inline]
-fn realized_pnl_of(result: &SimulationResult) -> Decimal {
-    result.pnl.realized.unwrap_or_default()
 }
 
 /// `count` as a percentage of `total`, with two decimal places.
@@ -160,17 +152,16 @@ fn percentage(count: usize, total: usize) -> String {
     format!("{:.2}%", (count as f64 / total as f64) * PERCENT)
 }
 
-/// `value` with two decimal places, rounded half-to-even.
+/// `value` with two decimal places, rounded half-up (#691 decision 2).
 ///
-/// `Decimal`'s own `{:.2}` truncates; an `f64` written with `{:.2}` rounds
-/// its exact binary value half-to-even. Rounding first keeps a figure that
-/// was an `f64` printing exactly as it did, given a value converted with
-/// `Decimal::from_f64_retain`.
+/// `Decimal`'s own `{:.2}` truncates, so the value is rounded first: a tie
+/// goes away from zero, which for the non-negative holding periods this
+/// formats is up.
 #[must_use]
 fn two_decimals(value: Decimal) -> String {
     format!(
         "{:.2}",
-        value.round_dp_with_strategy(DISPLAY_DECIMALS, RoundingStrategy::MidpointNearestEven)
+        value.round_dp_with_strategy(DISPLAY_DECIMALS, RoundingStrategy::MidpointAwayFromZero)
     )
 }
 
@@ -321,20 +312,25 @@ fn result_summary_sections(stats: &SimulationStatsResult) -> Result<Vec<Section>
 }
 
 /// The summary of a [`SimulationStats`] accumulator.
+///
+/// Every P&L and holding-period figure comes from
+/// `SimulationStats::statistics` (#691 decision 2) and the total from
+/// `SimulationStats::total_pnl`, both over the same outcomes.
 fn stats_summary_sections(stats: &SimulationStats) -> Result<Vec<Section>, GraphError> {
     let total = stats.total_simulations();
+    let statistics = stats.statistics()?;
 
     let mut outcomes = titled_table(&["Outcome", "Count", "Percentage"]);
     if total > 0 {
         outcomes.add_row(Row::new(vec![
-            Cell::new("Profitable Closes (50% reduction)"),
+            Cell::new("Take-Profit Closes"),
             Cell::new(&stats.profitable_closes().to_string())
                 .with_style(Attr::ForegroundColor(color::GREEN)),
             Cell::new(&percentage(stats.profitable_closes(), total))
                 .with_style(Attr::ForegroundColor(color::GREEN)),
         ]));
         outcomes.add_row(Row::new(vec![
-            Cell::new("Loss Closes (100% increase)"),
+            Cell::new("Stop-Loss Closes"),
             Cell::new(&stats.loss_closes().to_string())
                 .with_style(Attr::ForegroundColor(color::RED)),
             Cell::new(&percentage(stats.loss_closes(), total))
@@ -350,26 +346,21 @@ fn stats_summary_sections(stats: &SimulationStats) -> Result<Vec<Section>, Graph
     let mut pnl = titled_table(&["Metric", "Amount"]);
     pnl.add_row(Row::new(vec![
         Cell::new("Total P&L"),
-        Cell::new(&money(stats.total_pnl())),
+        Cell::new(&money(stats.total_pnl()?)),
     ]));
     if total > 0 {
-        let average = d_div(
-            stats.total_pnl(),
-            Decimal::from(total),
-            "visualization::terminal::average_pnl",
-        )?;
         pnl.add_row(Row::new(vec![
             Cell::new("Average P&L per Trade"),
-            Cell::new(&money(average)),
+            Cell::new(&money(statistics.average_pnl)),
         ]));
     }
     pnl.add_row(Row::new(vec![
         Cell::new("Maximum Profit"),
-        Cell::new(&money(stats.max_profit())).with_style(Attr::ForegroundColor(color::GREEN)),
+        Cell::new(&money(statistics.best_pnl)).with_style(Attr::ForegroundColor(color::GREEN)),
     ]));
     pnl.add_row(Row::new(vec![
         Cell::new("Maximum Loss"),
-        Cell::new(&money(stats.max_loss())).with_style(Attr::ForegroundColor(color::RED)),
+        Cell::new(&money(statistics.worst_pnl)).with_style(Attr::ForegroundColor(color::RED)),
     ]));
 
     let reasons = stats
@@ -384,11 +375,7 @@ fn stats_summary_sections(stats: &SimulationStats) -> Result<Vec<Section>, Graph
         Section::titled("--- Profit/Loss Statistics ---", pnl),
         Section::titled(
             "--- Holding Period ---",
-            holding_period_table(
-                stats
-                    .avg_holding_period()
-                    .map_or_else(|| NO_VALUE.to_string(), two_decimals),
-            ),
+            holding_period_table(two_decimals(statistics.average_holding_period)),
         ),
         Section::titled("--- Exit Reasons ---", exit_reasons_table(reasons, total)),
     ])
@@ -563,10 +550,11 @@ mod tests {
         assert!(expiration < profit && profit < stop);
     }
 
-    /// Each type shows the P&L it accumulates: the total for
-    /// `SimulationStatsResult`, the realized leg for `SimulationStats`.
+    /// Both types show the total P&L of a run. #691 decision 1 re-baselines
+    /// the `SimulationStats` side, which showed the realized leg alone
+    /// (`$10.00`) and now shows the total, as it accumulates it.
     #[test]
-    fn test_terminal_individual_results_show_each_type_pnl() {
+    fn test_terminal_individual_results_show_total_pnl() {
         let mut run = result(1, dec!(10.0), 5, false, ExitPolicy::Expiration);
         run.pnl.unrealized = Some(dec!(2.5));
 
@@ -577,8 +565,78 @@ mod tests {
         let mut stats = SimulationStats::new();
         stats.update(run).unwrap();
         let rendered = stats.render_individual_results();
-        assert!(rendered.contains("$10.00"));
-        assert!(!rendered.contains("$12.50"));
+        assert!(rendered.contains("$12.50"));
+        assert!(!rendered.contains("$10.00"));
+        let summary = stats.render_summary().unwrap();
+        assert!(summary.contains("$12.50"));
+        assert!(!summary.contains("$10.00"));
+    }
+
+    /// #691 decision 2: the extremes come from `PathStatistics`, which reads a
+    /// run without a P&L as zero. The running extremes used to skip it and
+    /// print the `Decimal::MIN` / `Decimal::MAX` sentinels.
+    #[test]
+    fn test_terminal_simulation_summary_reads_missing_pnl_as_zero() {
+        let mut run = result(1, dec!(10.0), 5, false, ExitPolicy::Expiration);
+        run.pnl.realized = None;
+        let mut stats = SimulationStats::new();
+        stats.update(run).unwrap();
+
+        let rendered = stats.render_summary().unwrap();
+        let maximum_profit = rendered
+            .lines()
+            .find(|line| line.contains("Maximum Profit"))
+            .unwrap();
+        let maximum_loss = rendered
+            .lines()
+            .find(|line| line.contains("Maximum Loss"))
+            .unwrap();
+        assert!(maximum_profit.contains("$0.00"), "{maximum_profit}");
+        assert!(maximum_loss.contains("$0.00"), "{maximum_loss}");
+        assert!(!rendered.contains(&Decimal::MAX.to_string()));
+    }
+
+    /// An accumulator whose statistics cannot be computed is reported, not
+    /// printed with made-up figures.
+    #[test]
+    fn test_terminal_simulation_summary_statistics_overflow_is_backtest_error() {
+        let mut stats = SimulationStats::new();
+        stats
+            .update(result(1, Decimal::MAX, 1, false, ExitPolicy::Expiration))
+            .unwrap();
+        stats
+            .update(result(2, Decimal::MAX, 1, false, ExitPolicy::Expiration))
+            .unwrap();
+        assert!(matches!(
+            stats.render_summary(),
+            Err(GraphError::Backtest(_))
+        ));
+        assert!(matches!(
+            stats.print_summary(),
+            Err(GraphError::Backtest(_))
+        ));
+    }
+
+    /// The average holding period of a `SimulationStats` summary is the
+    /// `PathStatistics` mean rounded half-up to two places: 157 steps over 3
+    /// runs is 52.333…, 313 over 6 is 52.1666… and prints 52.17, where
+    /// `Decimal`'s own `{:.2}` would truncate it to 52.16.
+    #[test]
+    fn test_terminal_simulation_summary_rounds_holding_period_half_up() {
+        let mut stats = SimulationStats::new();
+        for (sim, holding) in [50, 50, 50, 50, 50, 63].into_iter().enumerate() {
+            stats
+                .update(result(
+                    sim,
+                    dec!(1.0),
+                    holding,
+                    false,
+                    ExitPolicy::Expiration,
+                ))
+                .unwrap();
+        }
+        let rendered = stats.render_summary().unwrap();
+        assert!(rendered.contains("52.17 steps"), "{rendered}");
     }
 
     #[test]
@@ -618,38 +676,15 @@ mod tests {
         assert_eq!(percentage(0, 0), "NaN%");
     }
 
-    /// `two_decimals` over `Decimal::from_f64_retain` prints exactly what
-    /// `{:.2}` prints for the `f64`, so the average holding period reads as
-    /// it did when the table formatted the `f64` field: the running averages
-    /// of up to 400 runs of up to 60 steps, exact binary ties (`x.125`,
-    /// `x.375`, ...) and values just either side of a decimal tie.
+    /// `two_decimals` rounds half-up, ties included, instead of truncating
+    /// or rounding half-to-even.
     #[test]
-    fn test_terminal_two_decimals_matches_f64_formatting() {
-        let check = |value: f64| {
-            let decimal = Decimal::from_f64_retain(value).unwrap();
-            assert_eq!(two_decimals(decimal), format!("{value:.2}"), "{value:?}");
-        };
-        for runs in 1..=400_u32 {
-            for total in (0..=runs * 60).step_by(7) {
-                check(f64::from(total) / f64::from(runs));
-            }
-        }
-        let mut average = 0.0_f64;
-        for run in 1..=400_u32 {
-            let holding = f64::from((run * 37) % 61);
-            average = (average * f64::from(run - 1) + holding) / f64::from(run);
-            check(average);
-        }
-        for whole in 0..200_u32 {
-            for eighth in 0..8_u32 {
-                check(f64::from(whole) + f64::from(eighth) / 8.0);
-            }
-            for cents in 0..100_u32 {
-                let tie = f64::from(whole) + (f64::from(cents) + 0.5) / 100.0;
-                check(tie);
-                check(f64::from_bits(tie.to_bits() + 1));
-                check(f64::from_bits(tie.to_bits() - 1));
-            }
-        }
+    fn test_terminal_two_decimals_rounds_half_up() {
+        assert_eq!(two_decimals(dec!(52.1666)), "52.17");
+        assert_eq!(two_decimals(dec!(52.164)), "52.16");
+        assert_eq!(two_decimals(dec!(2.125)), "2.13");
+        assert_eq!(two_decimals(dec!(2.135)), "2.14");
+        assert_eq!(two_decimals(dec!(15)), "15.00");
+        assert_eq!(two_decimals(Decimal::ZERO), "0.00");
     }
 }
