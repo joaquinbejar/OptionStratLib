@@ -1,7 +1,6 @@
 use crate::constants::ZERO;
 use crate::error::{OptionsError, OptionsResult};
 use crate::model::ExpirationDate;
-use crate::model::decimal::finite_decimal;
 use crate::model::payoff::{Payoff, PayoffInfo};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use positive::Positive;
@@ -11,26 +10,27 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-/// Projects a quantity-scaled `f64` payoff back onto `Decimal`, reporting the
-/// rejection instead of substituting zero.
+/// Error for a quantity-scaled payoff that leaves the `Decimal` range.
 ///
 /// The three payoff entry points below (`payoff`, `payoff_at_price`,
-/// `intrinsic_value`) evaluate `OptionType::payoff` in `f64` and scale it by
-/// the position quantity. Both factors can be as large as `Positive::MAX`
-/// (`≈ 7.92e28`), so the product routinely leaves the `Decimal` range — and a
-/// deep in-the-money call on an underlying at `Positive::MAX` leaves it even
-/// at quantity one, because the `f64` nearest to `Decimal::MAX` rounds above
-/// it. Those cases used to come back as `Ok(Decimal::ZERO)`: a worthless
-/// payoff for an option that is worth more than the type can express.
+/// `intrinsic_value`) take the `Decimal` payoff of [`Payoff::payoff`] and
+/// scale it by the position quantity with a checked multiplication. Both
+/// factors can be as large as `Positive::MAX` (`≈ 7.92e28`), so the product
+/// can leave the `Decimal` range; a payoff that is itself unrepresentable
+/// (a deep in-the-money call on an underlying at `Positive::MAX`, whose `f64`
+/// kernel value rounds above `Decimal::MAX`) is already rejected by
+/// [`Payoff::payoff`]. Those cases used to come back as `Ok(Decimal::ZERO)`:
+/// a worthless payoff for an option that is worth more than the type can
+/// express.
 ///
 /// The returned error is [`OptionsError::PayoffError`], carrying the entry
-/// point and the offending value.
+/// point and the offending factors.
 #[cold]
 #[inline(never)]
-fn payoff_out_of_range(context: &'static str, value: f64) -> OptionsError {
+fn payoff_out_of_range(context: &'static str, payoff: Decimal, quantity: Positive) -> OptionsError {
     OptionsError::PayoffError {
         reason: format!(
-            "{context}: payoff {value} is not representable as a Decimal (non-finite or out of range)"
+            "{context}: payoff {payoff} times quantity {quantity} is not representable as a Decimal (out of range)"
         ),
     }
 }
@@ -324,8 +324,10 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        let payoff = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        finite_decimal(payoff).ok_or_else(|| payoff_out_of_range("Options::payoff", payoff))
+        let payoff = self.option_type.payoff(&payoff_info)?;
+        payoff
+            .checked_mul(self.quantity.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::payoff", payoff, self.quantity))
     }
 
     /// Calculates the financial payoff value of the option at a specific underlying price.
@@ -359,8 +361,10 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        let price = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        finite_decimal(price).ok_or_else(|| payoff_out_of_range("Options::payoff_at_price", price))
+        let payoff = self.option_type.payoff(&payoff_info)?;
+        payoff
+            .checked_mul(self.quantity.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::payoff_at_price", payoff, self.quantity))
     }
 
     /// Calculates the intrinsic value of the option.
@@ -393,8 +397,10 @@ impl Options {
             spot_min: None,
             spot_max: None,
         };
-        let iv = self.option_type.payoff(&payoff_info) * self.quantity.to_f64();
-        finite_decimal(iv).ok_or_else(|| payoff_out_of_range("Options::intrinsic_value", iv))
+        let payoff = self.option_type.payoff(&payoff_info)?;
+        payoff
+            .checked_mul(self.quantity.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::intrinsic_value", payoff, self.quantity))
     }
 
     /// Determines whether an option is "in-the-money" based on its current price relative to strike price.

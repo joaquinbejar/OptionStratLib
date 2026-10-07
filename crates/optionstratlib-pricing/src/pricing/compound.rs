@@ -688,13 +688,13 @@ fn value_underlying_option(
 ///
 /// # Errors
 ///
-/// Returns [`PricingError::NonFinite`] when the payoff is not representable
+/// Returns [`PricingError::Options`] when the payoff is not representable
 /// as a `Decimal`.
 fn underlying_payoff_at_expiry(
     compound: &Options,
     underlying_type: &OptionType,
 ) -> Result<Decimal, PricingError> {
-    let payoff = underlying_type.payoff(&PayoffInfo {
+    Ok(underlying_type.payoff(&PayoffInfo {
         spot: compound.underlying_price,
         strike: compound.strike_price,
         style: compound.option_style,
@@ -702,10 +702,7 @@ fn underlying_payoff_at_expiry(
         spot_prices: None,
         spot_min: None,
         spot_max: None,
-    });
-    finite_decimal(payoff).ok_or_else(|| {
-        PricingError::non_finite("pricing::compound::underlying_payoff_at_expiry", payoff)
-    })
+    })?)
 }
 
 /// Applies the side (long/short) multiplier to the price.

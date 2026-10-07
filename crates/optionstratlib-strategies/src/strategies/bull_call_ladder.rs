@@ -2083,7 +2083,7 @@ mod tests_bull_call_ladder_probability {
         let analysis = ladder.analyze_probabilities(None, None).unwrap();
 
         assert!(analysis.probability_of_profit > Positive::ZERO);
-        assert!(analysis.expected_value > Positive::ZERO);
+        assert!(analysis.expected_value > Decimal::ZERO);
         assert_eq!(analysis.break_even_points.len(), 2);
         assert!(analysis.risk_reward_ratio > Positive::ZERO);
     }
@@ -2123,11 +2123,31 @@ mod tests_bull_call_ladder_probability {
             Err(error) => panic!("expected value at 0.5 volatility: {error}"),
         };
 
-        assert!(base_ev > Positive::ZERO, "base expected value {base_ev}");
+        assert!(base_ev > Decimal::ZERO, "base expected value {base_ev}");
         assert!(
             high_ev < base_ev,
             "a short-volatility structure must lose expected value as volatility rises: {high_ev} vs {base_ev}"
         );
+    }
+
+    /// The case that surfaced #623 (then filed against `CallButterfly`, the
+    /// name this ladder carried before #706). At 0.5 volatility the ladder
+    /// loses money on average; the expected value used to floor that to
+    /// zero, indistinguishable from a break-even structure. It is signed now.
+    #[test]
+    fn test_expected_value_negative_at_high_volatility() {
+        let ladder = create_test_ladder();
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: pos_or_panic!(0.5),
+            std_dev_adjustment: Positive::ZERO,
+        });
+        match ladder.expected_value(vol_adj, None) {
+            Ok(ev) => {
+                assert!(ev < Decimal::ZERO, "expected value {ev}");
+                assert_eq!(ev, dec!(-52.98441360311891782860));
+            }
+            Err(error) => panic!("expected value at 0.5 volatility: {error}"),
+        }
     }
 
     #[test]

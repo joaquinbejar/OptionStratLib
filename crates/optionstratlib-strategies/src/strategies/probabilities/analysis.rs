@@ -5,6 +5,7 @@
 ******************************************************************************/
 
 use optionstratlib_core::model::Positive;
+use rust_decimal::Decimal;
 
 /// # StrategyProbabilityAnalysis
 ///
@@ -25,8 +26,9 @@ use optionstratlib_core::model::Positive;
 ///   Understanding this risk metric is crucial for proper position sizing and risk management.
 ///
 /// * `expected_value`: The mathematical expectation of the strategy's outcome, calculated by multiplying
-///   possible profits and losses by their respective probabilities. A positive expected value suggests
-///   the strategy is favorable in the long run.
+///   possible profits and losses by their respective probabilities. It is signed: a positive expected
+///   value suggests the strategy is favorable in the long run, a negative one that it loses money on
+///   average.
 ///
 /// * `break_even_points`: The price levels at which the strategy neither makes a profit nor incurs a loss.
 ///   These are important reference points for monitoring strategy performance.
@@ -46,8 +48,9 @@ pub struct StrategyProbabilityAnalysis {
     pub probability_of_max_profit: Positive,
     /// The probability of maximum loss
     pub probability_of_max_loss: Positive,
-    /// Expected value of the strategy
-    pub expected_value: Positive,
+    /// Expected value of the strategy; signed, negative when the strategy
+    /// loses money on average
+    pub expected_value: Decimal,
     /// Break-even points
     pub break_even_points: Vec<Positive>,
     /// Risk-reward ratio
@@ -68,7 +71,7 @@ mod tests {
             probability_of_profit: pos_or_panic!(0.65),
             probability_of_max_profit: pos_or_panic!(0.30),
             probability_of_max_loss: pos_or_panic!(0.20),
-            expected_value: pos_or_panic!(250.00),
+            expected_value: dec!(250.00),
             break_even_points: vec![pos_or_panic!(45.50), pos_or_panic!(55.50)],
             risk_reward_ratio: pos_or_panic!(0.75),
         };
@@ -77,7 +80,7 @@ mod tests {
         assert_eq!(analysis.probability_of_profit.to_dec(), dec!(0.65));
         assert_eq!(analysis.probability_of_max_profit.to_dec(), dec!(0.30));
         assert_eq!(analysis.probability_of_max_loss.to_dec(), dec!(0.20));
-        assert_eq!(analysis.expected_value.to_dec(), dec!(250.00));
+        assert_eq!(analysis.expected_value, dec!(250.00));
         assert_eq!(analysis.break_even_points.len(), 2);
         assert_eq!(analysis.break_even_points[0].to_dec(), dec!(45.50));
         assert_eq!(analysis.break_even_points[1].to_dec(), dec!(55.50));
@@ -91,7 +94,7 @@ mod tests {
             probability_of_profit: pos_or_panic!(0.60),
             probability_of_max_profit: pos_or_panic!(0.25),
             probability_of_max_loss: pos_or_panic!(0.15),
-            expected_value: pos_or_panic!(100.00),
+            expected_value: dec!(100.00),
             break_even_points: vec![pos_or_panic!(50.00)],
             risk_reward_ratio: pos_or_panic!(1.00),
         };
@@ -109,7 +112,7 @@ mod tests {
             probability_of_profit: pos_or_panic!(0.70),
             probability_of_max_profit: pos_or_panic!(0.40),
             probability_of_max_loss: pos_or_panic!(0.10),
-            expected_value: pos_or_panic!(350.00),
+            expected_value: dec!(350.00),
             break_even_points: vec![],
             risk_reward_ratio: pos_or_panic!(0.50),
         };
@@ -125,7 +128,7 @@ mod tests {
             probability_of_profit: pos_or_panic!(0.55),
             probability_of_max_profit: pos_or_panic!(0.20),
             probability_of_max_loss: pos_or_panic!(0.25),
-            expected_value: pos_or_panic!(150.00),
+            expected_value: dec!(150.00),
             break_even_points: vec![
                 pos_or_panic!(40.00),
                 pos_or_panic!(50.00),
@@ -148,7 +151,7 @@ mod tests {
             probability_of_profit: pos_or_panic!(0.65),
             probability_of_max_profit: pos_or_panic!(0.30),
             probability_of_max_loss: pos_or_panic!(0.20),
-            expected_value: pos_or_panic!(250.00),
+            expected_value: dec!(250.00),
             break_even_points: vec![pos_or_panic!(45.50), pos_or_panic!(55.50)],
             risk_reward_ratio: pos_or_panic!(0.75),
         };

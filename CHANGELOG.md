@@ -71,6 +71,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   given and parses it only when used, so its round trip is already the
   identity.
 
+- **The payoff kernel speaks `Decimal` at its public boundary** (#637).
+  `Payoff::payoff` returns `OptionsResult<Decimal>` instead of `f64`, and
+  `PayoffInfo::spot_prices` / `spot_min` / `spot_max` are
+  `Option<Vec<Positive>>` / `Option<Positive>` / `Option<Positive>` instead
+  of `f64`. The evaluation stays in a private `f64` kernel; its result is
+  converted once with the checked `finite_decimal`, so every payoff the
+  former signature returned comes back as `Decimal::from_f64` of the same
+  `f64`, and a kernel value with no `Decimal` representation (non-finite,
+  or beyond the `Decimal` range) is `Err(OptionsError::PayoffError)`
+  instead of a raw `NaN` / `±∞`. Migration:
+  - Callers: replace `option_type.payoff(&info)` (an `f64`) with
+    `option_type.payoff(&info)?` (a `Decimal`); drop the `f2d!` /
+    `finite_decimal` step that used to follow it.
+  - `PayoffInfo` literals: wrap Asian fixings and lookback / barrier
+    extrema in `Positive` (`Some(vec![Positive::new(98.0)?, …])`,
+    `spot_min: Some(Positive::new(80.0)?)`).
+  - Implementors: return `OptionsResult<Decimal>`; report an
+    unrepresentable value as `OptionsError::PayoffError`.
+  - `Options::payoff`, `payoff_at_price` and `intrinsic_value` keep their
+    signatures but scale the payoff by the quantity with a checked `Decimal`
+    multiplication instead of an `f64` one, so a fractional quantity no
+    longer picks up `f64` rounding, and a zero payoff on a short position
+    is `0` rather than `-0` (equal as numbers; only the rendering changes,
+    as the visualization golden file shows).
+  - The binomial pricer (`price_binomial`, `generate_binomial_tree`) and
+    the compound pricer report an unrepresentable payoff as
+    `PricingError::Options(OptionsError::PayoffError)` instead of
+    `PricingError::Decimal` / `PricingError::NonFinite`.
+
+- **`ProbabilityAnalysis::expected_value` is signed** (#623). It returns
+  `Result<Decimal, ProbabilityError>` instead of `Result<Positive, _>`, and
+  `StrategyProbabilityAnalysis::expected_value` is a `Decimal`. A strategy
+  whose probability-weighted payoff is negative used to report exactly zero,
+  so "loses money on average" could not be told from "breaks even": the
+  `BullCallLadder` test fixture (the former `CallButterfly`) read 0 at every
+  volatility from 0.3 up; at 0.5 it now reads `-52.98…`. The zero-volatility
+  shortcut returns the profit at the current price with its sign instead of
+  flooring it. Two related changes in the same function:
+  - The sum is computed in `Decimal` with checked arithmetic instead of in
+    `f64`; an overflow is a `ProbabilityCalculationErrorKind::ExpectedValueError`.
+    Results move in the last digits.
+  - The extra `1 / (1 + |drift|)` scaling applied after the sum, only when
+    the sum was positive, is removed. The trend's drift (weighted by its
+    confidence) already shapes the distribution the probabilities come
+    from, so the sum is the expectation under that trend; the scaling
+    counted the drift twice, ignored the confidence (a zero-confidence trend
+    still divided the value by `1 + |drift|`), and made the result
+    discontinuous at zero. Expected values computed with a trend are larger
+    in magnitude by that factor.
+
+  Migration: compare against `Decimal::ZERO` instead of `Positive::ZERO`, and
+  treat a negative value as a valid answer. Code that needs the old floor can
+  write `ev.max(Decimal::ZERO)`.
+
 - **`SimulationStats` sums `PnL::total_pnl` and its summary prints from
   `statistics()`** (#691, owner decisions on the two behaviours #677 kept).
   - Decision 1: `SimulationStats::update` folds the backtest adapter's
@@ -1739,6 +1793,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **Each visualization compilation surface is verified on its own** (#547).
+  `make check-visualization-surface SURFACE=neutral|plotly|static_export`
+  checks, lints, tests (doctests included) and documents with warnings denied
+  both `optionstratlib-visualization` and the facade feature that routes to it
+  (`--no-default-features`, `plotly`, `static_export,plotly`), runs the
+  consumer fixtures of the surface and the dependency assertions
+  (`check-graph`, `check-feature-trees`, the fixtures' `present`/`absent`
+  lists); `make check-visualization` runs all three. The new
+  `visualization.yml` workflow runs one job per surface on every push and
+  pull request, so the backend-neutral `Graph` is compiled and tested apart
+  from the all-features run and the headless surfaces provably exclude Plotly
+  and the export stack. The scheduled `static_export.yml` (#698) keeps running
+  the `#[ignore]`d PNG/SVG tests; the Makefile now records its platform
+  requirements and retention policy.
 
 - **`decimal_uniform_sample_with`, a `Decimal` uniform draw on `[0, 1)`**
   (#684), in `optionstratlib_core::model::decimal` next to
