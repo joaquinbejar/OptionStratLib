@@ -15,12 +15,16 @@
 //!
 //! ## FX field mapping
 //!
-//! | Field on `Options`  | FX interpretation              |
-//! |---------------------|--------------------------------|
-//! | `underlying_price`  | spot rate `S`                  |
-//! | `strike_price`      | strike `K`                     |
-//! | `risk_free_rate`    | domestic rate `r_d`            |
-//! | `dividend_yield`    | foreign rate `r_f`             |
+//! | Field on `Options`                    | FX interpretation             |
+//! |---------------------------------------|-------------------------------|
+//! | `underlying_price`                    | spot rate `S`                 |
+//! | `strike_price`                        | strike `K`                    |
+//! | `risk_free_rate`                      | domestic rate `r_d`           |
+//! | `exotic_params.foreign_rate`          | foreign rate `r_f` (signed)   |
+//! | `dividend_yield`, if the above is unset | foreign rate `r_f` (`>= 0`) |
+//!
+//! The foreign rate is resolved exactly as the Garman–Kohlhagen pricer
+//! resolves it (#720), so prices and Greeks always use the same `r_f`.
 //!
 //! ## Greek units
 //!
@@ -60,6 +64,7 @@ use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
 use crate::greeks::utils::n;
 use crate::kernels::{big_n, d1, d2, discount_factor};
+use crate::pricing::garman_kohlhagen::foreign_rate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::p_sqrt;
@@ -110,7 +115,7 @@ fn side_sign(option: &Options) -> Decimal {
 fn cost_of_carry(option: &Options) -> Result<Decimal, GreeksError> {
     Ok(d_sub(
         option.risk_free_rate,
-        option.dividend_yield.to_dec(),
+        foreign_rate(option),
         "greeks::gk::cost_of_carry",
     )?)
 }
@@ -199,7 +204,7 @@ fn calculate_d_values_gk(option: &Options) -> Result<(Decimal, Decimal), GreeksE
     style = ?option.option_style,
     side = ?option.side,
     r_d = %option.risk_free_rate,
-    r_f = %option.dividend_yield,
+    r_f = %foreign_rate(option),
 ))]
 pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     ensure_european(option)?;
@@ -211,7 +216,7 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let t = t_pos.to_dec();
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
-    let r_f = option.dividend_yield.to_dec();
+    let r_f = foreign_rate(option);
     let exp_neg_rf_t = discount_factor(
         r_f,
         t,
@@ -263,7 +268,7 @@ pub fn gamma_gk(option: &Options) -> Result<Decimal, GreeksError> {
     };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
-    let r_f = option.dividend_yield.to_dec();
+    let r_f = foreign_rate(option);
     let exp_neg_rf_t = discount_factor(
         r_f,
         t.to_dec(),
@@ -319,7 +324,7 @@ pub fn vega_gk(option: &Options) -> Result<Decimal, GreeksError> {
     };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
-    let r_f = option.dividend_yield.to_dec();
+    let r_f = foreign_rate(option);
     let exp_neg_rf_t = discount_factor(
         r_f,
         t.to_dec(),
@@ -374,7 +379,7 @@ pub fn theta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let (d1_v, d2_v) = calculate_d_values_gk(option)?;
 
     let r_d = option.risk_free_rate;
-    let r_f = option.dividend_yield.to_dec();
+    let r_f = foreign_rate(option);
     let s = option.underlying_price.to_dec();
     let k = option.strike_price.to_dec();
     let sigma = option.implied_volatility.to_dec();
@@ -524,7 +529,7 @@ pub fn rho_foreign_gk(option: &Options) -> Result<Decimal, GreeksError> {
     };
     let (d1_v, _d2) = calculate_d_values_gk(option)?;
 
-    let r_f = option.dividend_yield.to_dec();
+    let r_f = foreign_rate(option);
     let s = option.underlying_price.to_dec();
     let exp_neg_rf_t = discount_factor(
         r_f,
@@ -1094,5 +1099,81 @@ mod tests_gk_extreme_rates {
         assert!(theta_gk(&option).is_ok());
         assert!(rho_domestic_gk(&option).is_ok());
         assert!(rho_foreign_gk(&option).is_ok());
+    }
+}
+
+/// The Greeks read the same signed foreign rate as the pricer (#720), so at
+/// a negative `r_f` they match the finite differences of its prices.
+#[cfg(test)]
+mod tests_gk_signed_foreign_rate {
+    use super::*;
+    use crate::pricing::garman_kohlhagen;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::option::ExoticParams;
+    use rust_decimal_macros::dec;
+
+    fn option(s: Decimal, r_f: Decimal, style: OptionStyle) -> Options {
+        Options::new(
+            OptionType::European,
+            Side::Long,
+            "USDCHF".to_string(),
+            Positive::new_decimal(dec!(0.98)).unwrap(),
+            ExpirationDate::Days(Positive::new_decimal(dec!(182.5)).unwrap()),
+            Positive::new_decimal(dec!(0.10)).unwrap(),
+            Positive::ONE,
+            Positive::new_decimal(s).unwrap(),
+            dec!(0.02),
+            style,
+            Positive::ZERO,
+            Some(ExoticParams {
+                foreign_rate: Some(r_f),
+                ..ExoticParams::default()
+            }),
+        )
+    }
+
+    /// Spot delta parity `Δ_call - Δ_put = e^(-r_f T)`, above one at a
+    /// negative foreign rate; the bound is the `f64` normal CDF's accuracy
+    /// with headroom.
+    #[test]
+    fn test_delta_parity_at_negative_foreign_rate() {
+        for r_f in [dec!(-0.01), Decimal::ZERO, dec!(0.03)] {
+            let call = delta_gk(&option(dec!(1.00), r_f, OptionStyle::Call)).unwrap();
+            let put = delta_gk(&option(dec!(1.00), r_f, OptionStyle::Put)).unwrap();
+            let expected = (-r_f * dec!(0.5)).exp();
+            assert!(
+                (call - put - expected).abs() < dec!(1e-12),
+                "r_f={r_f}: {call} - {put} vs {expected}"
+            );
+        }
+    }
+
+    /// Delta and the foreign rho at `r_f = -1%` against central differences
+    /// of the price: `h = 1e-5` in spot and in `r_f`, truncation error of
+    /// order `h²`, so `1e-7` is a tight bound. Rho is per 1% of `r_f`.
+    #[test]
+    fn test_delta_and_foreign_rho_match_price_differences_at_negative_rate() {
+        let h = dec!(0.00001);
+        let r_f = dec!(-0.01);
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let price =
+                |s: Decimal, r_f: Decimal| garman_kohlhagen(&option(s, r_f, style)).unwrap();
+            let fd_delta =
+                (price(dec!(1.00) + h, r_f) - price(dec!(1.00) - h, r_f)) / (h * dec!(2));
+            let delta = delta_gk(&option(dec!(1.00), r_f, style)).unwrap();
+            assert!(
+                (delta - fd_delta).abs() < dec!(1e-7),
+                "{style:?} delta {delta} vs {fd_delta}"
+            );
+
+            let fd_rho = (price(dec!(1.00), r_f + h) - price(dec!(1.00), r_f - h))
+                / (h * dec!(2))
+                / dec!(100);
+            let rho = rho_foreign_gk(&option(dec!(1.00), r_f, style)).unwrap();
+            assert!(
+                (rho - fd_rho).abs() < dec!(1e-7),
+                "{style:?} rho_f {rho} vs {fd_rho}"
+            );
+        }
     }
 }

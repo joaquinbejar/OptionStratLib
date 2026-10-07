@@ -21,6 +21,7 @@ use optionstratlib_core::model::types::{
     AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType,
     RainbowType, Side,
 };
+use optionstratlib_core::utils::deterministic_rng;
 use optionstratlib_pricing::pricing::{
     BinomialPricingParams, asian_black_scholes, barone_adesi_whaley, barrier_black_scholes,
     binary_black_scholes, chooser_black_scholes, cliquet_black_scholes, compound_black_scholes,
@@ -233,6 +234,7 @@ fn exotic_params() -> impl Strategy<Value = Option<ExoticParams>> {
             quanto_fx_volatility: Some(Positive::ZERO),
             quanto_fx_correlation: Some(Decimal::ZERO),
             quanto_foreign_rate: Some(Decimal::ZERO),
+            foreign_rate: Some(Decimal::ZERO),
             exchange_second_asset_volatility: Some(Positive::ZERO),
             exchange_second_asset_dividend: Some(Positive::ZERO),
             exchange_correlation: Some(Decimal::ZERO),
@@ -255,6 +257,7 @@ fn exotic_params() -> impl Strategy<Value = Option<ExoticParams>> {
             quanto_fx_volatility: Some(Positive::MAX),
             quanto_fx_correlation: Some(dec!(9)),
             quanto_foreign_rate: Some(Decimal::MAX),
+            foreign_rate: Some(Decimal::MIN),
             exchange_second_asset_volatility: Some(Positive::ZERO),
             exchange_second_asset_dividend: Some(Positive::MAX),
             exchange_correlation: Some(dec!(-3)),
@@ -365,7 +368,9 @@ proptest! {
         rate in extreme_rate(),
         style in option_style(),
         side in side(),
+        seed in any::<u64>(),
     ) {
+        let mut rng = deterministic_rng(seed);
         let option = build_option(
             option_type.clone(), spot, strike, volatility, days, quantity, dividend_yield,
             rate, style, side, None,
@@ -386,10 +391,10 @@ proptest! {
 
         let _ = price_binomial(params.clone());
         let _ = generate_binomial_tree(&params);
-        let _ = monte_carlo_option_pricing(&option, steps, simulations);
-        let _ = telegraph(&option, steps, Some(dec!(0.5)), Some(dec!(0.3)));
-        let _ = telegraph(&option, steps, None, None);
+        let _ = monte_carlo_option_pricing(&option, steps, simulations, &mut rng);
+        let _ = telegraph(&option, steps, Some(dec!(0.5)), Some(dec!(0.3)), &mut rng);
+        let _ = telegraph(&option, steps, None, None, &mut rng);
         let _ = probability_keep_under_strike(option, Some(strike));
-        let _ = simulate_returns(rate, volatility, 8, days.to_dec());
+        let _ = simulate_returns(rate, volatility, 8, days.to_dec(), &mut rng);
     }
 }

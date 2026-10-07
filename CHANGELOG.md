@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Stochastic pricing entry points take the generator from the caller**
+  (#638). No public function of `optionstratlib-pricing` draws from the
+  thread-local RNG implicitly any more, so a seeded generator reproduces
+  every result. Each entry point gains a trailing `rng` argument; there are
+  no unseeded convenience wrappers. Migration: append a generator, either
+  `&mut optionstratlib_core::utils::deterministic_rng(seed)` (re-exported as
+  `optionstratlib::utils::deterministic_rng`) for reproducible results or
+  `&mut rand::rng()` for the previous fresh-draw behaviour:
+  - `pricing::monte_carlo_option_pricing(option, steps, simulations)` →
+    `monte_carlo_option_pricing(option, steps, simulations, rng)`.
+  - `pricing::telegraph(option, no_steps, lambda_up, lambda_down)` →
+    `telegraph(option, no_steps, lambda_up, lambda_down, rng)`; the same
+    generator feeds the returns simulated to estimate a missing rate.
+  - `pricing::TelegraphProcess::new(lambda_up, lambda_down)` →
+    `new(lambda_up, lambda_down, rng)`, and `next_state(dt)` →
+    `next_state(dt, rng)`.
+  - `pricing::simulate_returns(mean, std_dev, length, time_step)` →
+    `simulate_returns(mean, std_dev, length, time_step, rng)`.
+  - `volatility::simulate_heston_volatility(kappa, theta, xi, v0, dt, steps)`
+    → `simulate_heston_volatility(kappa, theta, xi, v0, dt, steps, rng)`.
+  - `OptionPricing::calculate_price_telegraph(no_steps)` →
+    `calculate_price_telegraph(no_steps, rng)`, where `rng` is
+    `&mut dyn rand::Rng` so the trait stays dyn-compatible.
+
+  The free functions are generic over `R: rand::Rng + ?Sized`, as
+  `decimal_normal_sample_with` (#539) is. For a given generator state each
+  function makes the same draws, in the same order, that it made from the
+  thread RNG, so the distribution of every result is unchanged. In core,
+  `utils::get_random_element_with(set, rng)` is the new seeded form of
+  `get_random_element`, which remains as the documented thread-RNG
+  wrapper, and `utils::random_decimal` now accepts an unsized generator
+  (`R: Rng + ?Sized`), which no existing call site notices.
+
 - **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
   signature changes from `strike_price_range_vec(&self, step: f64) ->
   Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->
@@ -87,6 +120,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   normal dependencies of `optionstratlib-pricing` (unused) and of
   `optionstratlib-math`, `optionstratlib-strategies` and
   `optionstratlib-backtest` (test-only, now a dev-dependency).
+
+- **Garman–Kohlhagen takes a signed foreign rate,
+  `ExoticParams::foreign_rate: Option<Decimal>`** (#720). The FX pricer and
+  its Greeks read the foreign rate `r_f` from `Options::dividend_yield`,
+  a `Positive`, so a negative foreign rate (CHF, JPY or EUR in parts of
+  2015–2022) could not be priced. `r_f` is now `exotic_params.foreign_rate`
+  when that is set, which may be negative, and falls back to
+  `dividend_yield` otherwise, so every option built without the field keeps
+  its price and Greeks bit for bit. When both are set, `foreign_rate` wins
+  and Garman–Kohlhagen ignores `dividend_yield`. `Options::dividend_yield`
+  stays `Positive`, and no other model reads the new field (Quanto keeps
+  `quanto_foreign_rate`). `garman_kohlhagen` and `delta_gk`, `gamma_gk`,
+  `vega_gk`, `theta_gk`, `rho_domestic_gk` and `rho_foreign_gk` resolve the
+  rate in one place, so prices and Greeks always use the same `r_f`. The
+  European Black–Scholes–Merton kernel takes the yield as a signed
+  parameter internally; `black_scholes` passes `dividend_yield` to it, so
+  its results are unchanged. Breaking: `ExoticParams` gains a public field,
+  so a struct literal that lists every field (rather than ending in
+  `..ExoticParams::default()`) or an exhaustive destructuring pattern no
+  longer compiles. Migration: add `foreign_rate: None` to such literals, or
+  end them with `..ExoticParams::default()`. Serialized `ExoticParams` gain
+  a `foreign_rate` key (`null` when unset); input without it still
+  deserializes, as `None`. New tests price `S = 1.00`, `K = 0.98`,
+  `r_d = 2%`, `r_f = -0.75%`, `sigma = 10%`, `T = 0.5` against the closed
+  form evaluated independently (call 0.047738205471098, put
+  0.014230002497975, both within `5.1e-16`), check FX put-call parity
+  `C - P = S e^(-r_f T) - K e^(-r_d T)` at `r_f` in -1%, 0 and 3% within
+  `1e-12`, the fallback and the precedence bit for bit, delta parity
+  `Delta_call - Delta_put = e^(-r_f T)` at the same rates, and delta and
+  the foreign rho against central differences of the price at `r_f = -1%`.
+  The Garman–Kohlhagen example prices the negative-rate case.
 
 - **Butterflies are textbook 1/2/1, `CallButterfly` is removed, and the
   1x1x1 call ladder it was is `BullCallLadder`** (#706). This closes the
@@ -873,6 +937,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (1.88).
 
 ### Fixed
+
+- **Visualization crate debt carried over from the monolith** (#690).
+  `impl_graph_for_payoff_strategy!` now names every item it expands to
+  (`Graph`, `GraphData`, `Series2D`, `Positive`, `Decimal`, the strategy
+  traits, `tracing`) through `$crate` paths, so callers no longer need to
+  import them; the hidden `optionstratlib_visualization::__private` module
+  carries the re-exports and is not public API. `write_png` and `write_svg`
+  document that they block the calling thread, and lose a stale `# Safety`
+  section and `LC_ALL` note that described code that does not exist. The
+  `GraphError` conversions from `CurveError` and `SurfaceError` are `#[cold]`,
+  an orphan comment block in `error/graph.rs` is gone, and the module docs
+  name the real `GraphSurface` variant and no longer suggest extending
+  `GraphData` from a downstream crate. Chart data is unchanged.
 
 - **`CoveredCall`, `ProtectivePut` and `Collar` mark to market in
   `calculate_pnl`** (#728). They returned `calculate_pnl_at_expiration`, the

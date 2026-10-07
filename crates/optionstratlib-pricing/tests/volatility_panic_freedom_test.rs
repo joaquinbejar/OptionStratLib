@@ -26,6 +26,7 @@
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use optionstratlib_core::utils::time::TimeFrame;
+use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
 use optionstratlib_pricing::volatility::{
     adjust_volatility, annualized_volatility, calculate_iv, constant_volatility,
     de_annualized_volatility, ewma_volatility, garch_volatility, historical_volatility,
@@ -176,9 +177,19 @@ proptest! {
         param in extreme_return(),
         dt in extreme_return(),
         steps in 0usize..6,
+        seed in any::<u64>(),
     ) {
-        let _ = simulate_heston_volatility(param, param, param, param, dt, steps);
-        let _ = simulate_heston_volatility(param, dec!(0.04), dec!(0.3), dec!(0.04), dt, steps);
+        let mut rng = deterministic_rng(seed);
+        let _ = simulate_heston_volatility(param, param, param, param, dt, steps, &mut rng);
+        let _ = simulate_heston_volatility(
+            param,
+            dec!(0.04),
+            dec!(0.3),
+            dec!(0.04),
+            dt,
+            steps,
+            &mut rng,
+        );
     }
 
     /// Every square-root-of-time rescaling returns for every timeframe pair,
@@ -300,6 +311,7 @@ mod documented_error_paths {
             Decimal::MAX,
             Decimal::MAX,
             4,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         );
         assert!(result.is_err(), "an overflowing Euler step must report");
     }

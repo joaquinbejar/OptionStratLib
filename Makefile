@@ -67,7 +67,16 @@ test-visual:
 # The PNG and SVG half of `test-visual`: the `static_export` acceptance run of
 # #544, without the test that opens the default browser. It writes real image
 # files through `plotly_static`, so it needs the same matching chromedriver
-# (`WEBDRIVER_PATH`) and runs outside `make test` and CI for that reason.
+# (`WEBDRIVER_PATH`) and runs outside `make test` and the PR CI for that
+# reason. The scheduled `static_export.yml` workflow (weekly, plus manual
+# dispatch; it never blocks a PR) runs it with a Chrome and chromedriver pair
+# installed together.
+#
+# Locally, install Chrome and a chromedriver of the same major version
+# (`google-chrome --version` and `chromedriver --version` must agree; a
+# mismatched driver fails all six tests), then:
+#
+#   WEBDRIVER_PATH=/path/to/chromedriver make test-export
 .PHONY: test-export
 test-export:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored png svg

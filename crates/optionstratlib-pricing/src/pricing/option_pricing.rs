@@ -53,6 +53,7 @@ use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::types::OptionType;
+use rand::Rng;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
@@ -189,6 +190,12 @@ pub trait OptionPricing {
     /// * `no_steps` - The number of discrete time steps to use in the model,
     ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type
     ///   level. Higher values increase precision but also computational cost.
+    /// * `rng` - The generator every draw of the telegraph simulation is
+    ///   taken from (see [`crate::pricing::telegraph`]). A seeded generator
+    ///   such as [`optionstratlib_core::utils::deterministic_rng`] makes the
+    ///   price reproducible; pass `&mut rand::rng()` to draw from the
+    ///   thread-local RNG. It is a trait object so the trait stays
+    ///   dyn-compatible.
     ///
     /// # Returns
     ///
@@ -201,7 +208,11 @@ pub trait OptionPricing {
     /// kernel (wrapped as `OptionsError::PricingError`), typically
     /// `PricingError::ExpirationDate` or `PricingError::MethodError`
     /// when the finite-difference kernel fails to converge.
-    fn calculate_price_telegraph(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal>;
+    fn calculate_price_telegraph(
+        &self,
+        no_steps: NonZeroUsize,
+        rng: &mut dyn Rng,
+    ) -> OptionsResult<Decimal>;
 
     /// Calculates the time value component of an option's price.
     ///
@@ -339,8 +350,12 @@ impl OptionPricing for Options {
         Ok(price_option_monte_carlo(self, prices)?)
     }
 
-    fn calculate_price_telegraph(&self, no_steps: NonZeroUsize) -> OptionsResult<Decimal> {
-        Ok(telegraph(self, no_steps, None, None)?)
+    fn calculate_price_telegraph(
+        &self,
+        no_steps: NonZeroUsize,
+        rng: &mut dyn Rng,
+    ) -> OptionsResult<Decimal> {
+        Ok(telegraph(self, no_steps, None, None, rng)?)
     }
 
     fn time_value(&self) -> OptionsResult<Decimal> {

@@ -18,7 +18,7 @@ use optionstratlib_core::model::decimal::{
 };
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use optionstratlib_core::utils::time::TimeFrame;
-use rand::random;
+use rand::{Rng, RngExt};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
@@ -462,6 +462,10 @@ pub fn garch_volatility(
 /// * `v0` - Initial variance.
 /// * `dt` - Time step.
 /// * `steps` - Number of simulation steps.
+/// * `rng` - The generator every variance shock is drawn from, one draw per
+///   step after the first. A seeded generator such as
+///   [`optionstratlib_core::utils::deterministic_rng`] makes the path
+///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
 ///
 /// # Returns
 ///
@@ -484,13 +488,14 @@ pub fn garch_volatility(
 /// Variance is floored at zero on each step (`v = v.max(Decimal::ZERO)`),
 /// the documented full-truncation floor of the Euler scheme, so its
 /// `Positive` conversion cannot fail.
-pub fn simulate_heston_volatility(
+pub fn simulate_heston_volatility<R: Rng + ?Sized>(
     kappa: Decimal,
     theta: Decimal,
     xi: Decimal,
     v0: Decimal,
     dt: Decimal,
     steps: usize,
+    rng: &mut R,
 ) -> Result<Vec<Positive>, VolatilityError> {
     let mut v = v0.max(Decimal::ZERO);
     // `v` is floored at zero here and on every step: the `?` cannot fire.
@@ -508,7 +513,7 @@ pub fn simulate_heston_volatility(
             reason: "simulate_heston_volatility: sqrt(dt) not representable as f64".to_string(),
         })?;
     for _ in 1..steps {
-        let dw_f64 = random::<f64>() * dt_sqrt_f64;
+        let dw_f64 = rng.random::<f64>() * dt_sqrt_f64;
         let dw = finite_decimal(dw_f64)
             .ok_or_else(|| VolatilityError::non_finite("volatility::heston::dw", dw_f64))?;
         let sqrt_v = p_sqrt(&v_pos, "volatility::utils::simulate_heston_volatility")?.to_dec();
@@ -1764,6 +1769,10 @@ mod tests_garch_volatility {
 #[cfg(test)]
 mod tests_heston_volatility {
     use super::*;
+
+    /// Last volatility of `seeded_path(DETERMINISTIC_RNG_DEFAULT_SEED)`.
+    const PINNED_HESTON_LAST: Decimal = dec!(0.4720671070320042200460741098);
+    use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use rust_decimal_macros::dec;
 
     #[test]
@@ -1775,7 +1784,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01); // Time step
         let steps = 100; // Number of steps
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Check basic properties
         assert_eq!(result.len(), steps);
@@ -1792,7 +1810,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 50;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // With no volatility of volatility, values should move deterministically towards theta
         for i in 1..steps {
@@ -1813,7 +1840,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 200;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // With high mean reversion, later values should be closer to sqrt(theta)
         let theta_vol = Positive::new_decimal(theta).unwrap().sqrt();
@@ -1831,7 +1867,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 100;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // With high volatility, we should see more variation
         let variations: Vec<_> = result
@@ -1850,7 +1895,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 100;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Should start at zero and then increase
         assert_eq!(result[0], Positive::ZERO);
@@ -1866,7 +1920,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.001); // Very small time step
         let steps = 1000;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Check that values remain finite and positive
         assert!(result.iter().all(|&x| x < Positive::HUNDRED));
@@ -1882,7 +1945,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.1); // Large time step
         let steps = 10;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Should still produce valid results with large steps
         assert!(result.iter().all(|&x| x >= Positive::ZERO));
@@ -1897,7 +1969,16 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 100;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Even with extreme parameters, results should be finite and non-negative
         assert!(result.iter().all(|&x| x >= Positive::ZERO));
@@ -1912,11 +1993,63 @@ mod tests_heston_volatility {
         let dt = dec!(0.01);
         let steps = 1;
 
-        let result = simulate_heston_volatility(kappa, theta, xi, v0, dt, steps).unwrap();
+        let result = simulate_heston_volatility(
+            kappa,
+            theta,
+            xi,
+            v0,
+            dt,
+            steps,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
 
         // Should work with minimum number of steps
         assert_eq!(result.len(), steps);
         assert_eq!(result[0], Positive::new_decimal(v0).unwrap().sqrt());
+    }
+
+    fn seeded_path(seed: u64) -> Vec<Positive> {
+        simulate_heston_volatility(
+            dec!(2.0),
+            dec!(0.04),
+            dec!(0.3),
+            dec!(0.04),
+            dec!(0.01),
+            50,
+            &mut deterministic_rng(seed),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_simulate_heston_volatility_same_seed_identical_path() {
+        assert_eq!(seeded_path(11), seeded_path(11));
+        assert_ne!(seeded_path(11), seeded_path(12));
+    }
+
+    #[test]
+    fn test_simulate_heston_volatility_seeded_regression_pinned() {
+        let path = seeded_path(DETERMINISTIC_RNG_DEFAULT_SEED);
+        assert_eq!(path.len(), 50);
+        assert_eq!(path.last().map(Positive::to_dec), Some(PINNED_HESTON_LAST));
+    }
+
+    #[test]
+    fn test_simulate_heston_volatility_zero_dt_ignores_rng_draws() {
+        // With dt = 0 the shock sqrt(dt) * u and the drift are zero, so the
+        // path stays at sqrt(v0) whatever the generator yields.
+        let path = simulate_heston_volatility(
+            dec!(2.0),
+            dec!(0.04),
+            dec!(0.3),
+            dec!(0.09),
+            Decimal::ZERO,
+            20,
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        assert!(path.iter().all(|v| *v == pos_or_panic!(0.3)));
     }
 }
 
@@ -2230,6 +2363,9 @@ mod tests_non_finite_guards {
             dec!(0.04), // v0
             dec!(0.01), // dt
             10,         // steps
+            &mut optionstratlib_core::utils::deterministic_rng(
+                optionstratlib_core::utils::DETERMINISTIC_RNG_DEFAULT_SEED,
+            ),
         );
         assert!(res.is_ok(), "finite inputs unexpectedly failed: {res:?}");
     }

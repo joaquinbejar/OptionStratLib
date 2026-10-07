@@ -102,6 +102,16 @@ pub struct ExoticParams {
     /// Foreign risk-free interest rate for Quanto options.
     pub quanto_foreign_rate: Option<Decimal>, // Quanto
 
+    /// Foreign risk-free interest rate `r_f` of a Garman–Kohlhagen FX
+    /// option, per year, continuously compounded. Signed, so a negative
+    /// foreign rate (CHF, JPY, EUR in parts of 2015–2022) is expressible,
+    /// which `Options::dividend_yield` (a `Positive`) is not. When `None`,
+    /// Garman–Kohlhagen falls back to `Options::dividend_yield`; when set, it
+    /// takes precedence and `dividend_yield` is ignored by that model. Only
+    /// the Garman–Kohlhagen pricer and Greeks read it; Quanto reads
+    /// `quanto_foreign_rate`.
+    pub foreign_rate: Option<Decimal>, // Garman–Kohlhagen
+
     /// Volatility of the second underlying asset for Exchange options.
     pub exchange_second_asset_volatility: Option<Positive>, // Exchange
 

@@ -4,7 +4,9 @@
    Date: 11/8/24
 ******************************************************************************/
 use crate::error::PricingError;
-use crate::kernels::{big_n, calculate_d_values, d_values_and_time, discount_factor};
+use crate::kernels::{
+    big_n, calculate_d_values, calculate_d_values_with_yield, d_values_and_time, discount_factor,
+};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
@@ -74,7 +76,13 @@ use tracing::{instrument, trace};
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (d1, d2, expiry_time) = d_values_and_time(option, calculate_d_values)?;
     match option.option_type {
-        OptionType::European => calculate_european_option_price(option, d1, d2, expiry_time),
+        OptionType::European => calculate_european_option_price(
+            option,
+            option.dividend_yield.to_dec(),
+            d1,
+            d2,
+            expiry_time,
+        ),
         OptionType::American => Err(PricingError::unsupported_option_type(
             "American",
             "Black-Scholes",
@@ -102,6 +110,27 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
             "Black-Scholes",
         )),
     }
+}
+
+/// European Black–Scholes–Merton price with the continuous yield `q` given
+/// explicitly and signed, instead of read from `Options::dividend_yield`.
+///
+/// This is the European arm of [`black_scholes`] with `q` as a parameter:
+/// the same `d1`/`d2`, discount factors and legs, in the same order, so at
+/// `q = dividend_yield` it returns the same digits. The Garman–Kohlhagen
+/// pricer calls it with the foreign rate `r_f`, which may be negative
+/// (#720). The option type is not inspected; the caller has checked it.
+///
+/// # Errors
+///
+/// Same as the European arm of [`black_scholes`].
+pub(crate) fn black_scholes_european_with_yield(
+    option: &Options,
+    q: Decimal,
+) -> Result<Decimal, PricingError> {
+    let (d1, d2, expiry_time) =
+        d_values_and_time(option, |option| calculate_d_values_with_yield(option, q))?;
+    calculate_european_option_price(option, q, d1, d2, expiry_time)
 }
 
 /// No-arbitrage band of a long European vanilla's Black-Scholes price,
@@ -185,13 +214,14 @@ pub(crate) fn european_price_band(option: &Options) -> Result<(Decimal, Decimal)
 /// Note: This example uses placeholder values and the `Options` and `Side` structs should be defined accordingly in your codebase.
 fn calculate_european_option_price(
     option: &Options,
+    q: Decimal,
     d1: Decimal,
     d2: Decimal,
     expiry_time: Decimal,
 ) -> Result<Decimal, PricingError> {
     match option.side {
-        Side::Long => calculate_long_position(option, d1, d2, expiry_time),
-        Side::Short => Ok(-calculate_long_position(option, d1, d2, expiry_time)?),
+        Side::Long => calculate_long_position(option, q, d1, d2, expiry_time),
+        Side::Short => Ok(-calculate_long_position(option, q, d1, d2, expiry_time)?),
     }
 }
 
@@ -211,13 +241,14 @@ fn calculate_european_option_price(
 /// The function matches on the style of the option (Call or Put) and calls the respective price calculation function.
 fn calculate_long_position(
     option: &Options,
+    q: Decimal,
     d1: Decimal,
     d2: Decimal,
     expiry_time: Decimal,
 ) -> Result<Decimal, PricingError> {
     match option.option_style {
-        OptionStyle::Call => calculate_call_option_price(option, d1, d2, expiry_time),
-        OptionStyle::Put => calculate_put_option_price(option, d1, d2, expiry_time),
+        OptionStyle::Call => calculate_call_option_price(option, q, d1, d2, expiry_time),
+        OptionStyle::Put => calculate_put_option_price(option, q, d1, d2, expiry_time),
     }
 }
 
@@ -234,6 +265,7 @@ fn calculate_long_position(
 ///
 fn calculate_call_option_price(
     option: &Options,
+    q: Decimal,
     d1: Decimal,
     d2: Decimal,
     t: Decimal,
@@ -242,11 +274,7 @@ fn calculate_call_option_price(
     let big_n_d2 = big_n(d2)?;
 
     // e^(−qT) * S * N(d1) − e^(−rT) * K * N(d2)
-    let qt = d_mul(
-        -option.dividend_yield.to_dec(),
-        t,
-        "pricing::black_scholes::call::qt",
-    )?;
+    let qt = d_mul(-q, t, "pricing::black_scholes::call::qt")?;
     let rt = d_mul(
         -option.risk_free_rate,
         t,
@@ -319,6 +347,7 @@ fn calculate_call_option_price(
 ///
 fn calculate_put_option_price(
     option: &Options,
+    q: Decimal,
     d1: Decimal,
     d2: Decimal,
     t: Decimal,
@@ -328,11 +357,7 @@ fn calculate_put_option_price(
     let big_n_neg_d2 = big_n(-d2)?;
 
     // Discount factors
-    let qt = d_mul(
-        -option.dividend_yield.to_dec(),
-        t,
-        "pricing::black_scholes::put::qt",
-    )?;
+    let qt = d_mul(-q, t, "pricing::black_scholes::put::qt")?;
     let rt = d_mul(-option.risk_free_rate, t, "pricing::black_scholes::put::rt")?;
     // Not `kernels::discount_factor`: both exponents are formed before either
     // `exp`, so the shared two-step kernel would reorder the checked steps.

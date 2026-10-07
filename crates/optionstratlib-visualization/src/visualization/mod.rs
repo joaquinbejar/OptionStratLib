@@ -60,7 +60,7 @@
 //! pub enum GraphData {
 //!     Series(Series2D),              // Line or scatter 2D
 //!     MultiSeries(MultiSeries2D),    // Multiple 2D series
-//!     Surface(Surface3D),            // 3D surface
+//!     GraphSurface(Surface3D),       // 3D surface
 //! }
 //! ```
 //!
@@ -296,11 +296,11 @@
 //!
 //! ## Adaptation to Your Needs
 //!
-//! The library is designed to be extensible. If you need additional chart types, you can:
-//!
-//! 1. Extend the `GraphData` enum with new types
-//! 2. Implement conversion functions in the `utils.rs` module
-//! 3. Update the `to_plot` method in the `Graph` trait to handle the new types
+//! `GraphData` is a closed enum, so a downstream crate cannot add variants to
+//! it. To chart a new type, implement `Graph` for it: build one of the
+//! existing `GraphData` variants in `graph_data()` and style it through
+//! `graph_config()`. A new kind of chart (a variant, or a change to `to_plot`)
+//! is a change to this crate.
 //!
 //! Enjoy visualizing your financial data!
 

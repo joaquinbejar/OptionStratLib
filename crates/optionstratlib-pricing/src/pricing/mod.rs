@@ -35,7 +35,8 @@
 //! Black–Scholes–Merton with `q = r_f`, so the implementation delegates to the BSM
 //! kernel after type validation. Field mapping in `Options`:
 //! - `risk_free_rate`  -> `r_d` (domestic)
-//! - `dividend_yield`  -> `r_f` (foreign)
+//! - `exotic_params.foreign_rate` -> `r_f` (foreign, signed, may be negative);
+//!   when unset, `dividend_yield` -> `r_f` (non-negative)
 //! - `underlying_price` -> `S` (spot FX)
 //!
 //! ### Monte Carlo Simulations (`monte_carlo`)
@@ -87,9 +88,14 @@
 //! use optionstratlib_core::model::types::{ OptionStyle, OptionType, Side};
 //! use optionstratlib_core::model::Positive;
 //! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_core::utils::deterministic_rng;
+//!
+//! // Every draw comes from the caller's generator: a seeded one makes the
+//! // result reproducible, `&mut rand::rng()` draws from the thread RNG.
+//! let mut rng = deterministic_rng(42);
 //!
 //! // Create a Telegraph Process with transition rates
-//! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3));
+//! let process = TelegraphProcess::new(dec!(0.5), dec!(0.3), &mut rng);
 //!
 //! // Price an option using the Telegraph Process
 //! let option = Options {
@@ -106,7 +112,13 @@
 //!             dividend_yield: pos_or_panic!(0.01),
 //!             exotic_params: None,
 //!         };
-//! let price = telegraph(&option, optionstratlib_core::nz!(1000), Some(dec!(0.5)), Some(dec!(0.3)));
+//! let price = telegraph(
+//!     &option,
+//!     optionstratlib_core::nz!(1000),
+//!     Some(dec!(0.5)),
+//!     Some(dec!(0.3)),
+//!     &mut rng,
+//! );
 //! ```
 //!
 //! ### Combined Model Analysis
@@ -122,6 +134,7 @@
 //!     monte_carlo::monte_carlo_option_pricing,
 //!     telegraph::telegraph
 //! };
+//! use optionstratlib_core::utils::deterministic_rng;
 //! let option = Options {
 //!             option_type: OptionType::European,
 //!             side: Side::Long,
@@ -138,8 +151,20 @@
 //!         };
 //! // Compare prices across different models
 //! let bs_price = black_scholes(&option);
-//! let mc_price = monte_carlo_option_pricing(&option, optionstratlib_core::nz!(2), optionstratlib_core::nz!(2));
-//! let tp_price = telegraph(&option, optionstratlib_core::nz!(1000), Some(dec!(0.5)), Some(dec!(0.3)));
+//! let mut rng = deterministic_rng(42);
+//! let mc_price = monte_carlo_option_pricing(
+//!     &option,
+//!     optionstratlib_core::nz!(2),
+//!     optionstratlib_core::nz!(2),
+//!     &mut rng,
+//! );
+//! let tp_price = telegraph(
+//!     &option,
+//!     optionstratlib_core::nz!(1000),
+//!     Some(dec!(0.5)),
+//!     Some(dec!(0.3)),
+//!     &mut rng,
+//! );
 //! ```
 //!
 //! ## Implementation Notes
