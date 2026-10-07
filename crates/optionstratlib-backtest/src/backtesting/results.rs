@@ -127,10 +127,10 @@ pub struct SimulationResult {
     /// Average premium value during the simulation
     pub avg_premium: Decimal,
 
-    /// Whether the take profit target was hit (50% premium reduction)
+    /// Whether the exit policy's take-profit condition closed the run
     pub hit_take_profit: bool,
 
-    /// Whether the stop loss was hit (100% premium increase)
+    /// Whether the exit policy's stop-loss condition closed the run
     pub hit_stop_loss: bool,
 
     /// Whether the option expired without hitting take profit or stop loss

@@ -76,7 +76,7 @@ where
     ///
     /// # Returns
     ///
-    /// A `SimulationStats` struct containing:
+    /// A `SimulationStatsResult` containing:
     /// - Individual `SimulationResult` for each run (with P&L, exit reason, holding period, etc.)
     /// - Aggregate statistics (average P&L, win rate, std deviation, etc.)
     ///

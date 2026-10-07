@@ -71,6 +71,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   given and parses it only when used, so its round trip is already the
   identity.
 
+- **`SimulationStats` sums `PnL::total_pnl` and its summary prints from
+  `statistics()`** (#691, owner decisions on the two behaviours #677 kept).
+  - Decision 1: `SimulationStats::update` folds the backtest adapter's
+    projection unchanged, so a run's P&L is `PnL::total_pnl` (realized plus
+    unrealized), as in `SimulationStatsResult`. The two used to differ for a
+    result whose PnL reports a non-zero unrealized leg (or a realized `None`
+    with an unrealized `Some`); such a run now counts with its unrealized
+    leg, in the statistics, the summary and the individual-results table of
+    `SimulationReport for SimulationStats`.
+  - Decision 2: the duplicated running aggregates are gone. `SimulationStats`
+    keeps only its close and exit-reason counters plus the stored outcomes
+    and results; mean, median, standard deviation, best, worst and average
+    holding period come from `SimulationStats::statistics()`
+    (`PathStatistics`). The `SimulationReport` summary of a `SimulationStats`
+    prints from it: the average holding period is the `PathStatistics` mean
+    rounded half-up to two places (313 steps over 6 runs prints `52.17`; a
+    tie such as `2.125` prints `2.13`, where the former `f64` half-to-even
+    printed `2.12`), the average P&L is `PathStatistics::average_pnl`, and the
+    maximum profit and loss are `best_pnl` / `worst_pnl`, which count a run
+    without a P&L as zero (an empty or all-`None` set prints `$0.00` instead
+    of the `Decimal::MIN` / `Decimal::MAX` sentinels). When the statistics
+    cannot be computed (P&L sum or variance outside the `Decimal` range)
+    `render_summary` / `print_summary` return the new
+    `GraphError::Backtest(Box<BacktestError>)`.
+  - The outcome rows read `Take-Profit Closes` and `Stop-Loss Closes`
+    instead of `Profitable Closes (50% reduction)` and
+    `Loss Closes (100% increase)`, wording left from the short-put origin of
+    the type; the same wording is gone from the field docs.
+
+  Migration: `SimulationStats::max_profit()`, `max_loss()` and
+  `avg_holding_period()` are removed; read `best_pnl`, `worst_pnl` and
+  `average_holding_period` from `statistics()?`. `total_pnl()` returns
+  `Result<Decimal, BacktestError>`, summed over the stored outcomes when
+  called. `update` and `update_outcome` no longer fail on a P&L total
+  overflow (there is no running total); the overflow is reported by
+  `total_pnl()` and `statistics()`, and the accumulator only rejects a run
+  whose counter overflows. Every outcome and every result is stored, so
+  memory grows linearly with the number of runs.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API
@@ -471,8 +510,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only `pnl` with `result.pnl.realized`. That P&L is the documented
   difference from `SimulationStatsResult`, which sums `PnL::total_pnl`. The
   two are equal for every result the library builds: an early exit has no
-  unrealized leg, an expiry has a zero one. They differ only for a
-  caller-built result with a non-zero unrealized leg. Unit tests pin both
+  unrealized leg, an expiry has a zero one. They differ only for a result
+  whose PnL reports a non-zero unrealized leg (a caller-built result, or a
+  downstream `SingleLegSimulation` whose `calculate_pnl_at_expiration`
+  returns `realized: None, unrealized: Some(x)`). Unit tests pin both
   sides of that difference and the agreement on library-shaped results.
   `print_summary` now prints the header `SIMULATION SUMMARY` instead of
   `SHORT PUT SIMULATION SUMMARY`. The new `SimulationStats::statistics()`
