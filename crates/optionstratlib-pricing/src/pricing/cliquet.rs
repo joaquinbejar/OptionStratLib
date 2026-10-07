@@ -48,6 +48,9 @@ use rust_decimal_macros::dec;
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
 ///
+/// The local cap and floor come from `ExoticParams::cliquet_local_cap` and
+/// `cliquet_local_floor`; unset, they default to `10 %` and `0 %`.
+///
 /// # Errors
 ///
 /// - [`PricingError::MethodError`] when `option` is not an
@@ -56,8 +59,9 @@ use rust_decimal_macros::dec;
 /// - [`PricingError::NonFinite`] when a reset offset is not representable as
 ///   a `Decimal`.
 /// - [`PricingError::Decimal`] when an intermediate step leaves the
-///   representable `Decimal` range: the per-period discount factors, the
-///   capped/floored strikes, the unit-call `d1` / `d2`, or the running total.
+///   representable `Decimal` range or a normal CDF cannot be evaluated: the
+///   per-period discount factors, the capped/floored strikes, the unit-call
+///   `d1` / `d2`, or the running total.
 pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Cliquet { reset_dates } => {
@@ -72,6 +76,8 @@ pub fn cliquet_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
 
 fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, PricingError> {
     // Retrieve caps/floors from exotic_params
+    // Parameter defaults documented above, not fallbacks on a failed step
+    // (#639): an unset local cap is 10 % and an unset local floor 0 %.
     let (local_cap, local_floor) = if let Some(ref params) = option.exotic_params {
         (
             params.cliquet_local_cap.unwrap_or(dec!(0.1)), // Default 10% cap
@@ -90,7 +96,9 @@ fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, Prici
         ));
     }
     let mut dates = reset_dates.to_vec();
-    dates.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    // NaN was rejected above, so the IEEE total order agrees with `<` here and
+    // needs no fallback for an incomparable pair.
+    dates.sort_by(f64::total_cmp);
 
     // Total expiration in years
     let t_total = option
@@ -317,8 +325,8 @@ fn call_price_on_unit(
     )?;
     let d2 = d_sub(d1, denominator, "pricing::cliquet::unit_call::d2")?;
 
-    let n1 = big_n(d1).unwrap_or(dec!(0.0));
-    let n2 = big_n(d2).unwrap_or(dec!(0.0));
+    let n1 = big_n(d1)?;
+    let n2 = big_n(d2)?;
 
     // `s_leg` is a unit-forward so its monetary boundary starts at `exp(-qt)`.
     let s_leg = d_mul(dividend_discount, n1, "pricing::cliquet::unit_call::s_leg")?;

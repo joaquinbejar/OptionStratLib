@@ -38,26 +38,35 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, finite_decimal,
 };
-use optionstratlib_core::model::types::{OptionStyle, OptionType};
+use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
+use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
+use statrs::function::erf::erfc;
 use std::f64::consts::PI;
 
 /// Bivariate normal CDF approximation using Drezner-Wesolowsky (1990) algorithm.
 ///
 /// Computes P(X <= a, Y <= b) where X and Y are standard normal with correlation rho.
 fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal, PricingError> {
-    // Convert to f64 for computation
-    let a_f = a.to_f64().unwrap_or(0.0);
-    let b_f = b.to_f64().unwrap_or(0.0);
-    let rho_f = rho.to_f64().unwrap_or(0.0);
+    // Convert to f64 for computation. A failed conversion is an error
+    // (#639); it used to become `0.0`, i.e. `N2(0, 0; 0) = 0.25`.
+    let to_f64 = |value: Decimal, context: &'static str| -> Result<f64, PricingError> {
+        value
+            .to_f64()
+            .filter(|converted| converted.is_finite())
+            .ok_or_else(|| PricingError::non_finite(context, f64::NAN))
+    };
+    let a_f = to_f64(a, "pricing::compound::bivariate::a")?;
+    let b_f = to_f64(b, "pricing::compound::bivariate::b")?;
+    let rho_f = to_f64(rho, "pricing::compound::bivariate::rho")?;
 
     // Handle special cases
     if rho_f.abs() < 1e-10 {
         // Independent case: P(X <= a, Y <= b) = N(a) * N(b)
-        let n_a = big_n(a).unwrap_or(Decimal::ZERO);
-        let n_b = big_n(b).unwrap_or(Decimal::ZERO);
+        let n_a = big_n(a)?;
+        let n_b = big_n(b)?;
         return Ok(d_mul(
             n_a,
             n_b,
@@ -68,14 +77,14 @@ fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal,
     if rho_f >= 1.0 - 1e-10 {
         // Perfect correlation: P(X <= a, Y <= b) = N(min(a, b))
         let min_ab = a.min(b);
-        return Ok(big_n(min_ab).unwrap_or(Decimal::ZERO));
+        return Ok(big_n(min_ab)?);
     }
 
     if rho_f <= -1.0 + 1e-10 {
         // Perfect negative correlation. `a` and `b` are raw `d` values, so
         // their sum is checked before the comparison.
         if d_add(a, b, "pricing::compound::bivariate::perfect_negative")? >= Decimal::ZERO {
-            return Ok(big_n(a).unwrap_or(Decimal::ZERO));
+            return Ok(big_n(a)?);
         } else {
             return Ok(Decimal::ZERO);
         }
@@ -209,11 +218,14 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
 }
 
 /// Standard normal CDF (for internal use in bivariate calculation).
+///
+/// `N(x) = erfc(-x / √2) / 2`, the expression `statrs` evaluates behind
+/// `big_n`, kept in `f64` inside this `f64` kernel. It is total: there is no
+/// `Decimal` round trip left to fail (#639), where a failed one used to turn
+/// into `N(x) = 0` or `0.5`.
+#[inline]
 fn standard_normal_cdf(x: f64) -> f64 {
-    big_n(Decimal::from_f64(x).unwrap_or(Decimal::ZERO))
-        .unwrap_or(Decimal::ZERO)
-        .to_f64()
-        .unwrap_or(0.5)
+    0.5 * erfc(-x / std::f64::consts::SQRT_2)
 }
 
 /// Prices a Compound option using Geske (1979) framework.
@@ -266,10 +278,12 @@ fn price_compound(
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     if t1 == Positive::ZERO {
-        // At expiration of compound, intrinsic value is immediate
-        // If underlying is also at zero time, return simple intrinsic
-        let underlying_value =
-            value_underlying_option(compound, underlying_type).unwrap_or(Decimal::ZERO);
+        // At expiration of the compound the underlying, which expires at
+        // `T2 = 2 T1 = 0` here, is worth its own payoff at the spot. Its
+        // Black-Scholes value is undefined at `T = 0`; that failure used to
+        // be read as a worthless underlying (#639), which priced every
+        // compound put at its full strike.
+        let underlying_value = underlying_payoff_at_expiry(compound, underlying_type)?;
         let intrinsic = match compound.option_style {
             OptionStyle::Call => d_sub(
                 underlying_value,
@@ -347,8 +361,7 @@ fn price_compound(
     let rho = d_sqrt(
         d_div(t1_dec, t2_dec, "pricing::compound::rho_ratio")?,
         "pricing::compound::rho",
-    )
-    .unwrap_or(dec!(0.5));
+    )?;
 
     // Calculate critical price S* where underlying option value = K1
     // For simplicity, use an approximation
@@ -436,7 +449,7 @@ fn price_compound(
         // Call-on-Call
         let m1 = bivariate_normal_cdf(d1_t1, d1_t2, rho)?;
         let m2 = bivariate_normal_cdf(d2_t1, d2_t2, rho)?;
-        let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
+        let n_d2_t1 = big_n(d2_t1)?;
 
         let leg_s = build_leg(
             s.to_dec(),
@@ -465,7 +478,7 @@ fn price_compound(
         // Call-on-Put
         let m1 = bivariate_normal_cdf(-d1_t1, -d1_t2, rho)?;
         let m2 = bivariate_normal_cdf(-d2_t1, -d2_t2, rho)?;
-        let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
+        let n_neg_d2_t1 = big_n(-d2_t1)?;
 
         let leg_k2 = build_leg(
             k2.to_dec(),
@@ -494,7 +507,7 @@ fn price_compound(
         // Put-on-Call
         let m1 = bivariate_normal_cdf(-d1_t1, d1_t2, -rho)?;
         let m2 = bivariate_normal_cdf(-d2_t1, d2_t2, -rho)?;
-        let n_neg_d2_t1 = big_n(-d2_t1).unwrap_or(Decimal::ZERO);
+        let n_neg_d2_t1 = big_n(-d2_t1)?;
 
         let leg_k1 = build_leg(
             k1.to_dec(),
@@ -523,7 +536,7 @@ fn price_compound(
         // Put-on-Put
         let m1 = bivariate_normal_cdf(d1_t1, -d1_t2, -rho)?;
         let m2 = bivariate_normal_cdf(d2_t1, -d2_t2, -rho)?;
-        let n_d2_t1 = big_n(d2_t1).unwrap_or(Decimal::ZERO);
+        let n_d2_t1 = big_n(d2_t1)?;
 
         let leg_k1 = build_leg(
             k1.to_dec(),
@@ -670,6 +683,31 @@ fn value_underlying_option(
     crate::pricing::black_scholes_model::black_scholes(&underlying)
 }
 
+/// Long payoff of the underlying option at the compound's spot, its value at
+/// its own expiry.
+///
+/// # Errors
+///
+/// Returns [`PricingError::NonFinite`] when the payoff is not representable
+/// as a `Decimal`.
+fn underlying_payoff_at_expiry(
+    compound: &Options,
+    underlying_type: &OptionType,
+) -> Result<Decimal, PricingError> {
+    let payoff = underlying_type.payoff(&PayoffInfo {
+        spot: compound.underlying_price,
+        strike: compound.strike_price,
+        style: compound.option_style,
+        side: Side::Long,
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    });
+    finite_decimal(payoff).ok_or_else(|| {
+        PricingError::non_finite("pricing::compound::underlying_payoff_at_expiry", payoff)
+    })
+}
+
 /// Applies the side (long/short) multiplier to the price.
 fn apply_side(price: Decimal, option: &Options) -> Decimal {
     match option.side {
@@ -704,6 +742,42 @@ mod tests {
             Positive::ZERO, // dividend yield
             None,
         )
+    }
+
+    /// At the compound's expiry the underlying, which expires with it in this
+    /// approximation and takes the compound's style and strike, is worth its
+    /// payoff. `S = 100, K = 5`: the underlying call is worth `95`, so the
+    /// call-on-call is `90`; the underlying put is worth `0`, so the
+    /// put-on-put is `5`. The failed Black-Scholes valuation of the expired
+    /// underlying used to be read as zero, pricing the call-on-call at `0`
+    /// (#639).
+    #[test]
+    fn test_compound_at_expiry_uses_the_underlying_payoff() {
+        let mut call_on_call = create_compound_option(OptionStyle::Call, OptionType::European);
+        call_on_call.expiration_date = ExpirationDate::Days(Positive::ZERO);
+        let mut put_on_put = create_compound_option(OptionStyle::Put, OptionType::European);
+        put_on_put.expiration_date = ExpirationDate::Days(Positive::ZERO);
+        assert_eq!(compound_black_scholes(&call_on_call).unwrap(), dec!(90));
+        assert_eq!(compound_black_scholes(&put_on_put).unwrap(), dec!(5));
+    }
+
+    /// The bivariate kernel's normal CDF is total in `f64`: there is no
+    /// `Decimal` round trip left to fail and fall back to `0` or `0.5`
+    /// (#639).
+    #[test]
+    fn test_standard_normal_cdf_is_total() {
+        assert_eq!(standard_normal_cdf(0.0), 0.5);
+        // `statrs`'s `erfc` is accurate to about `1e-12` here (it returns
+        // `0.975000000001123`), the same kernel `big_n` evaluates.
+        let p = standard_normal_cdf(1.959963984540054);
+        assert!((p - 0.975).abs() < 1e-11, "{p}");
+        assert_eq!(
+            Decimal::from_f64(p).unwrap(),
+            big_n(dec!(1.959963984540054)).unwrap()
+        );
+        assert_eq!(standard_normal_cdf(f64::INFINITY), 1.0);
+        assert_eq!(standard_normal_cdf(f64::NEG_INFINITY), 0.0);
+        assert!((standard_normal_cdf(-40.0)).abs() < 1e-300);
     }
 
     #[test]

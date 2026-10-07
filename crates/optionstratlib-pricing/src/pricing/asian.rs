@@ -244,8 +244,8 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
 
     let price = match option.option_style {
         OptionStyle::Call => {
-            let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-            let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
+            let n_d1 = big_n(d1_val)?;
+            let n_d2 = big_n(d2_val)?;
             d_sub(
                 d_mul(s_leg, n_d1, "pricing::asian::geometric::call::spot")?,
                 d_mul(k_leg, n_d2, "pricing::asian::geometric::call::strike")?,
@@ -253,8 +253,8 @@ fn geometric_asian_price(option: &Options) -> Result<Decimal, PricingError> {
             )?
         }
         OptionStyle::Put => {
-            let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
-            let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
+            let n_neg_d1 = big_n(-d1_val)?;
+            let n_neg_d2 = big_n(-d2_val)?;
             d_sub(
                 d_mul(k_leg, n_neg_d2, "pricing::asian::geometric::put::strike")?,
                 d_mul(s_leg, n_neg_d1, "pricing::asian::geometric::put::spot")?,
@@ -388,11 +388,18 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
         )?
     } else {
         // `M2 / M1²` collapsed below the representable scale: the matched
-        // lognormal has no spread left, which the `sqrt` fallback below maps
-        // back onto the input volatility.
+        // lognormal has no spread left.
         Decimal::ZERO
     };
-    let sigma_adj = d_sqrt(variance, "pricing::asian::arithmetic::sigma_adj").unwrap_or(sigma_dec);
+    // Domain floor (#639): `M2 ≥ M1²` by Jensen's inequality, so the matched
+    // variance `ln(M2 / M1²) / T` is non-negative and a negative value is
+    // round-off in the two moments. It is floored at zero, the deterministic
+    // limit. A failed `sqrt` used to fall back to the input volatility,
+    // which priced a near-deterministic average with the full `σ`.
+    let sigma_adj = d_sqrt(
+        variance.max(Decimal::ZERO),
+        "pricing::asian::arithmetic::sigma_adj",
+    )?;
 
     // Use Black-Scholes with adjusted parameters
     let sqrt_t = d_sqrt(t_dec, "pricing::asian::arithmetic::sqrt_t")?;
@@ -438,8 +445,8 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
 
     let price = match option.option_style {
         OptionStyle::Call => {
-            let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-            let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
+            let n_d1 = big_n(d1_val)?;
+            let n_d2 = big_n(d2_val)?;
             d_mul(
                 discount,
                 d_sub(
@@ -451,8 +458,8 @@ fn arithmetic_asian_price(option: &Options) -> Result<Decimal, PricingError> {
             )?
         }
         OptionStyle::Put => {
-            let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
-            let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
+            let n_neg_d1 = big_n(-d1_val)?;
+            let n_neg_d2 = big_n(-d2_val)?;
             d_mul(
                 discount,
                 d_sub(

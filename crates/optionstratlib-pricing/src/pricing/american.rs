@@ -54,8 +54,10 @@ use rust_decimal_macros::dec;
 /// Maximum iterations for Newton-Raphson method to find critical price.
 const MAX_ITERATIONS: usize = 100;
 
-/// Convergence tolerance for critical price calculation.
-const TOLERANCE: f64 = 1e-6;
+/// Convergence tolerance for critical price calculation, in price units.
+/// A `Decimal` constant, so no `f64` conversion (and no fallback for a
+/// failed one) sits in front of the iteration (#639).
+const TOLERANCE: Decimal = dec!(0.000001);
 
 /// Prices an American option using the Barone-Adesi-Whaley (BAW) approximation.
 ///
@@ -595,7 +597,7 @@ fn find_critical_price_call(
         "pricing::american::call::neg_qt_seed",
         "pricing::american::call::dividend_discount_seed",
     )?;
-    let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));
+    let tolerance = TOLERANCE;
 
     // `C_euro(S) + (S / q2)(1 - e^(-qT) N(d1(S)))`: the right-hand side of the
     // BAW boundary condition, evaluated at `S` and at the bumped `S + ΔS`.
@@ -688,7 +690,7 @@ fn find_critical_price_put(
         "pricing::american::put::neg_qt_seed",
         "pricing::american::put::dividend_discount_seed",
     )?;
-    let tolerance = Decimal::from_f64_retain(TOLERANCE).unwrap_or(dec!(1e-6));
+    let tolerance = TOLERANCE;
 
     // `P_euro(S) - (S / q1)(1 - e^(-qT) N(-d1(S)))`: the right-hand side of the
     // BAW boundary condition, evaluated at `S` and at the bumped `S + ΔS`.

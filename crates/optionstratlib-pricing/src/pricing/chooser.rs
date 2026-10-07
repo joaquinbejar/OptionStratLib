@@ -73,8 +73,11 @@ use rust_decimal_macros::dec;
 ///   [`OptionType::Chooser`] variant, when the expiration cannot be converted
 ///   to a year fraction, or when the `d1` / `d2` kernels reject the inputs.
 /// - [`PricingError::Decimal`] when an intermediate step leaves the
-///   representable `Decimal` range: the discount factors, the zero-volatility
-///   forward, `y1` / `y2`, or the four price legs.
+///   representable `Decimal` range or a normal CDF cannot be evaluated: the
+///   discount factors, the zero-volatility forward, `y1` / `y2`, or the four
+///   price legs.
+/// - [`PricingError::Positive`] when the choice date in years is not a valid
+///   `Positive`.
 pub fn chooser_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
         OptionType::Chooser { choice_date } => simple_chooser_price(option, choice_date.to_f64()),
@@ -99,8 +102,10 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         .get_years()
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
-    // Convert choice_date from days to years
-    let t_choice = Positive::new(choice_date_days / 365.0).unwrap_or(Positive::ZERO);
+    // Convert choice_date from days to years. A year fraction that is not a
+    // valid `Positive` is an error (#639): it used to become `t_choice = 0`,
+    // which priced the chooser as if the choice were made today.
+    let t_choice = Positive::new(choice_date_days / 365.0)?;
 
     // Validation: choice date must be before expiration
     if t_choice >= t_big {
@@ -240,16 +245,13 @@ fn simple_chooser_price(option: &Options, choice_date_days: f64) -> Result<Decim
         (Some(numerator), false) => {
             let y1 = d_div(numerator, sigma_sqrt_t_choice, "pricing::chooser::y1")?;
             let y2 = d_sub(y1, sigma_sqrt_t_choice, "pricing::chooser::y2")?;
-            (
-                big_n(-y1).unwrap_or(Decimal::ZERO),
-                big_n(-y2).unwrap_or(Decimal::ZERO),
-            )
+            (big_n(-y1)?, big_n(-y2)?)
         }
     };
 
     // Get cumulative normal values
-    let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-    let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
+    let n_d1 = big_n(d1_val)?;
+    let n_d2 = big_n(d2_val)?;
 
     // Discount factors. Every leg settles at T, the `y` legs included: the
     // choice date only fixes which branch survives, not when it pays.
@@ -326,10 +328,10 @@ fn price_at_choice_equals_expiry(option: &Options) -> Result<Decimal, PricingErr
     let d2_val = d2(s, k, b, t, sigma)
         .map_err(|e: crate::error::GreeksError| PricingError::other(&e.to_string()))?;
 
-    let n_d1 = big_n(d1_val).unwrap_or(Decimal::ZERO);
-    let n_d2 = big_n(d2_val).unwrap_or(Decimal::ZERO);
-    let n_neg_d1 = big_n(-d1_val).unwrap_or(Decimal::ZERO);
-    let n_neg_d2 = big_n(-d2_val).unwrap_or(Decimal::ZERO);
+    let n_d1 = big_n(d1_val)?;
+    let n_d2 = big_n(d2_val)?;
+    let n_neg_d1 = big_n(-d1_val)?;
+    let n_neg_d2 = big_n(-d2_val)?;
 
     let t_dec = t.to_dec();
     let dividend_discount = discount_factor(

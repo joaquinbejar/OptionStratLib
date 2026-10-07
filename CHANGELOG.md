@@ -648,6 +648,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Pricing kernels report a failed numeric step instead of substituting a
+  value** (#639). Every `unwrap_or(0)`-style fallback on a failed step in
+  `optionstratlib-pricing` now propagates a typed `PricingError`;
+  legitimate domain floors and parameter defaults stay, each with a comment.
+  - A failed normal CDF (`big_n(..).unwrap_or(0)`) is an error in the
+    Asian, binary, chooser, cliquet, compound and floating-strike lookback
+    kernels. `big_n` fails only when a `Decimal` cannot reach `f64`, which
+    no `Decimal` input does today, so no price changes.
+  - `price_option_monte_carlo` returns `PricingError::Options` when a path's
+    payoff is out of the `Decimal` range; that path used to count as a zero
+    payoff.
+  - The compound bivariate normal reports an unconvertible argument
+    (`PricingError::NonFinite`) instead of reading it as `0`, and its
+    internal `f64` normal CDF is now the total `erfc(-x/√2)/2` (the
+    expression `big_n` evaluates), with no `Decimal` round trip to fall
+    back to `0` or `0.5`.
+  - A compound at its own expiry values the underlying at its payoff. Its
+    Black-Scholes valuation is undefined at `T = 0`, and that failure was
+    read as a worthless underlying: every compound call priced `0` and every
+    compound put its full strike `K1`. At `S = 100, K = 5` a call-on-call
+    goes from `0` to `90`; a put-on-put stays `5` because its underlying put
+    expires worthless.
+  - The chooser reports a choice date that is not a valid year fraction
+    (`PricingError::Positive`) instead of choosing today.
+  - The arithmetic Asian floors its moment-matched variance at zero (Jensen:
+    `M2 ≥ M1²`, so a negative value is round-off) instead of falling back to
+    the input volatility when the square root failed.
+  - Barone-Adesi-Whaley's convergence tolerance is a `Decimal` constant
+    (`1e-6`), removing an `f64` conversion and its fallback.
+  - Kept, now commented: the barrier's unset rebate (zero), the exchange and
+    spread second dividend yield (zero), the rainbow second dividend yield
+    (the first asset's) and correlation (`0.5`), and the cliquet local cap and
+    floor (`10 %`, `0 %`); these are parameter defaults, documented on each
+    pricer. The cliquet reset-date sort uses `f64::total_cmp` (NaN is
+    rejected before it). The telegraph process keeps its documented limits
+    inside the infallible `next_state` and its diagnostic fields.
+
 - **The fixed-strike lookback follows Conze-Viswanathan** (#647).
   `lookback_black_scholes` priced a fixed-strike lookback as a vanilla plus
   an ad hoc premium `S σ√T (N(λ) - ½) / 2`. It now uses the closed form of

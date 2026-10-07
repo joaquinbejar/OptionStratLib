@@ -197,8 +197,8 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                     dec!(2),
                     "pricing::lookback::floating::call::flat::a1",
                 )?;
-                let n_a1 = big_n(a1).unwrap_or(Decimal::ZERO);
-                let n_neg_a1 = big_n(-a1).unwrap_or(Decimal::ZERO);
+                let n_a1 = big_n(a1)?;
+                let n_neg_a1 = big_n(-a1)?;
 
                 // Simplified formula for b = 0
                 let centred = d_sub(
@@ -253,9 +253,9 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                 let a1 = a1_general()?;
                 let a2 = d_sub(a1, sigma_sqrt_t, "pricing::lookback::floating::call::a2")?;
 
-                let n_a1 = big_n(a1).unwrap_or(Decimal::ZERO);
-                let n_a2 = big_n(a2).unwrap_or(Decimal::ZERO);
-                let n_neg_a1 = big_n(-a1).unwrap_or(Decimal::ZERO);
+                let n_a1 = big_n(a1)?;
+                let n_a2 = big_n(a2)?;
+                let n_neg_a1 = big_n(-a1)?;
 
                 let term1 = d_mul(
                     d_mul(
@@ -311,7 +311,7 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                     dec!(2),
                     "pricing::lookback::floating::put::flat::a1",
                 )?;
-                let n_neg_a1 = big_n(-a1).unwrap_or(Decimal::ZERO);
+                let n_neg_a1 = big_n(-a1)?;
 
                 // Simplified for b = 0
                 d_add(
@@ -343,10 +343,10 @@ fn floating_strike_lookback(option: &Options) -> Result<Decimal, PricingError> {
                 let a1 = a1_general()?;
                 let a2 = d_sub(a1, sigma_sqrt_t, "pricing::lookback::floating::put::a2")?;
 
-                let n_neg_a1 = big_n(-a1).unwrap_or(Decimal::ZERO);
-                let n_neg_a2 = big_n(-a2).unwrap_or(Decimal::ZERO);
-                let n_a1 = big_n(a1).unwrap_or(Decimal::ZERO);
-                let n_a2 = big_n(a2).unwrap_or(Decimal::ZERO);
+                let n_neg_a1 = big_n(-a1)?;
+                let n_neg_a2 = big_n(-a2)?;
+                let n_a1 = big_n(a1)?;
+                let n_a2 = big_n(a2)?;
 
                 let s_discounted = d_mul(
                     s_dec,

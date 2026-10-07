@@ -41,6 +41,8 @@ use rust_decimal_macros::dec;
 ///
 /// The option price as a `Decimal`, or a `PricingError` if pricing fails.
 ///
+/// `ExoticParams::exchange_second_asset_dividend` defaults to zero when unset.
+///
 /// # Errors
 ///
 /// - [`PricingError::MethodError`] when the option type is not `Exchange`,
@@ -70,6 +72,8 @@ pub fn exchange_black_scholes(option: &Options) -> Result<Decimal, PricingError>
         .exchange_second_asset_volatility
         .ok_or_else(|| PricingError::other("Missing exchange_second_asset_volatility"))?;
 
+    // An unset second dividend yield is zero: a parameter default, not a
+    // fallback on a failed step (#639).
     let q2 = params
         .exchange_second_asset_dividend
         .unwrap_or(optionstratlib_core::model::Positive::ZERO);
