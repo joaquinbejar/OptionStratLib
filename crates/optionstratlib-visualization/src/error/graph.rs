@@ -44,21 +44,17 @@ impl From<DecimalError> for GraphError {
 }
 
 impl From<CurveError> for GraphError {
+    #[cold]
+    #[inline(never)]
     fn from(err: CurveError) -> Self {
         GraphError::Curve(err)
     }
 }
 
 impl From<SurfaceError> for GraphError {
+    #[cold]
+    #[inline(never)]
     fn from(err: SurfaceError) -> Self {
         GraphError::Surface(err)
     }
 }
-
-// Conversions whose SOURCE error is owned by this layer and whose target
-// sits in a lower layer. They live here (ADR-0001 D6, M1-14) so that the
-// lower layer's error file never names a higher one.
-
-// A rendering failure is not a curve or surface failure: visualization
-// reports it, and the math layer no longer carries a variant for it
-// (#511). `GraphError::{Curve, Surface}` keep the downward direction.

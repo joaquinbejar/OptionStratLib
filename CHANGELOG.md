@@ -863,6 +863,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Visualization crate debt carried over from the monolith** (#690).
+  `impl_graph_for_payoff_strategy!` now names every item it expands to
+  (`Graph`, `GraphData`, `Series2D`, `Positive`, `Decimal`, the strategy
+  traits, `tracing`) through `$crate` paths, so callers no longer need to
+  import them; the hidden `optionstratlib_visualization::__private` module
+  carries the re-exports and is not public API. `write_png` and `write_svg`
+  document that they block the calling thread, and lose a stale `# Safety`
+  section and `LC_ALL` note that described code that does not exist. The
+  `GraphError` conversions from `CurveError` and `SurfaceError` are `#[cold]`,
+  an orphan comment block in `error/graph.rs` is gone, and the module docs
+  name the real `GraphSurface` variant and no longer suggest extending
+  `GraphData` from a downstream crate. Chart data is unchanged.
+
 - **`CoveredCall`, `ProtectivePut` and `Collar` mark to market in
   `calculate_pnl`** (#728). They returned `calculate_pnl_at_expiration`, the
   payoff at expiry, as the "unrealized" P&L and ignored the
