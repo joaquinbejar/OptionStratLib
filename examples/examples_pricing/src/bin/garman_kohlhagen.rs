@@ -9,8 +9,10 @@
 //! Demonstrates pricing European FX options using the Garman–Kohlhagen
 //! (1983) model: the Hull canonical example (USD/GBP, 4-month ATM), an
 //! ITM EUR/USD scenario with FX put-call-parity check, dispatch through
-//! the generic pricing engine, and the symmetric-rate degenerate case.
+//! the generic pricing engine, the symmetric-rate degenerate case, and a
+//! negative foreign rate set through `ExoticParams::foreign_rate`.
 
+use optionstratlib::model::option::ExoticParams;
 use optionstratlib::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib::pricing::{ClosedFormEngine, garman_kohlhagen, price_option_with};
 use optionstratlib::{ExpirationDate, Options};
@@ -135,6 +137,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collapsed = df * (option4.underlying_price.to_dec() - option4.strike_price.to_dec());
     info!("  C - P                = {}", call4 - put4_price);
     info!("  e^(-r T) (S - K)     = {}", collapsed);
+
+    // ---- Example 5: Negative foreign rate --------------------------------
+    // `dividend_yield` is non-negative, so a negative `r_f` goes in
+    // `ExoticParams::foreign_rate`, which takes precedence over it.
+    info!("");
+    info!("Example 5: Negative foreign rate (r_f = -0.75%) via ExoticParams::foreign_rate");
+    let option5 = Options::new(
+        OptionType::European,
+        Side::Long,
+        "USDCHF".to_string(),
+        pos_or_panic!(0.98),
+        ExpirationDate::Days(pos_or_panic!(182.5)),
+        pos_or_panic!(0.10),
+        pos_or_panic!(1.0),
+        pos_or_panic!(1.00),
+        dec!(0.02),
+        OptionStyle::Call,
+        pos_or_panic!(0.0),
+        Some(ExoticParams {
+            foreign_rate: Some(dec!(-0.0075)),
+            ..ExoticParams::default()
+        }),
+    );
+    let call5 = garman_kohlhagen(&option5)?;
+    let mut put5 = option5.clone();
+    put5.option_style = OptionStyle::Put;
+    let put5_price = garman_kohlhagen(&put5)?;
+    let years5 = option5.expiration_date.get_years()?.to_dec();
+    let parity5 = option5.underlying_price.to_dec() * (dec!(0.0075) * years5).exp()
+        - option5.strike_price.to_dec() * (-option5.risk_free_rate * years5).exp();
+    info!("  Call                       = {}", call5);
+    info!("  Put                        = {}", put5_price);
+    info!("  C - P                      = {}", call5 - put5_price);
+    info!("  S e^(-r_f T) - K e^(-r_d T) = {}", parity5);
 
     Ok(())
 }
