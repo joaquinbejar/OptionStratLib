@@ -834,12 +834,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     one-lot P&L; `Options` scales and a short `Options` reports its expiry
     income.
   - The `LongButterflySpread` and `ShortButterflySpread` mark-to-market
-    tests that #706 dropped are restored on its 1/2/1 fixtures: below
-    (90), at (100, lower volatility) and above (110) the strikes, the
-    unrealized P&L equals the change in the book's Black-Scholes value with
-    the body counted twice, has the right sign (long loses away from the
-    body and gains at it, short the reverse), and stays within the entry
-    value; the doubled body reports twice a one-contract body.
+    tests that #706 dropped are restored on its 1/2/1 fixtures (spot 100,
+    30 days, `sigma = 0.2`, `r = 5 %`, `q = 1 %`, entry book value 1.629777
+    per lot), pinned to hand-computed changes in the book's Black-Scholes
+    value (`erfc`-based, outside the library) for one lot and three times
+    that for three lots: -1.380131 at spot 90 (20 days, `sigma = 0.2`),
+    +1.513339 at 100 (20 days, `sigma = 0.1`) and -1.308170 at 110 for the
+    long butterfly, the negations for the short, within `1e-8` per lot. They
+    also equal the change the library's `black_scholes` gives with the body
+    counted twice, and the doubled body reports twice a one-contract body.
 
 - **Pricing kernels report a failed numeric step instead of substituting a
   value** (#639). Every `unwrap_or(0)`-style fallback on a failed step in
