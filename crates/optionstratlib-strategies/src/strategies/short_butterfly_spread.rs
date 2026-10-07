@@ -397,13 +397,13 @@ impl BreakEvenable for ShortButterflySpread {
         // per-contract value at all, which is reported rather than divided.
         let left_net_value = d_div(
             self.calculate_profit_at(&self.short_call_low.option.strike_price)?,
-            self.short_call_low.option.quantity.to_dec(),
+            self.short_call_low.option.position_size()?.to_dec(),
             "ShortButterflySpread::update_break_even_points",
         )?;
 
         let right_net_value = d_div(
             self.calculate_profit_at(&self.short_call_high.option.strike_price)?,
-            self.short_call_high.option.quantity.to_dec(),
+            self.short_call_high.option.position_size()?.to_dec(),
             "ShortButterflySpread::update_break_even_points",
         )?;
 

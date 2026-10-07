@@ -471,7 +471,17 @@ impl<'a> AdjustmentOptimizer<'a> {
                     let price = option
                         .calculate_price_black_scholes()
                         .map_err(|e| AdjustmentError::GreeksError(e.to_string()))?;
-                    cost = add_cost(cost, d_mul(price, quantity.to_dec(), "estimate_cost::leg")?)?;
+                    // The price is per unit of the underlying; one contract
+                    // covers `contract_size` units.
+                    let per_contract = d_mul(
+                        price,
+                        option.contract_size.to_dec(),
+                        "estimate_cost::leg_per_contract",
+                    )?;
+                    cost = add_cost(
+                        cost,
+                        d_mul(per_contract, quantity.to_dec(), "estimate_cost::leg")?,
+                    )?;
                 }
                 AdjustmentAction::AddUnderlying { quantity } => {
                     let spot = self
@@ -518,8 +528,11 @@ impl<'a> AdjustmentOptimizer<'a> {
                             d_add(dec!(1), relative_move, "estimate_cost::roll_factor")?,
                             "estimate_cost::rolled_price",
                         )?;
-                        let delta_price =
-                            d_sub(new_price, old_price, "estimate_cost::roll_price_delta")?.abs();
+                        let delta_price = d_mul(
+                            d_sub(new_price, old_price, "estimate_cost::roll_price_delta")?.abs(),
+                            pos.option.contract_size.to_dec(),
+                            "estimate_cost::roll_price_delta_per_contract",
+                        )?;
                         cost = add_cost(
                             cost,
                             d_mul(delta_price, quantity.to_dec(), "estimate_cost::roll")?,

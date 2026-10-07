@@ -302,7 +302,7 @@ impl BreakEvenable for ShortCall {
         // sentinel for "no lower break-even" rather than an abort.
         let per_contract = d_div(
             self.short_call.net_cost()?,
-            self.short_call.option.quantity.to_dec(),
+            self.short_call.option.position_size()?.to_dec(),
             "ShortCall::update_break_even_points",
         )?;
         self.break_even_points.push(

@@ -376,7 +376,7 @@ impl BreakEvenable for BullPutSpread {
         // a credit above the strike leaves no attainable losing price.
         let per_contract = d_div(
             self.get_net_cost()?,
-            self.short_put.option.quantity.to_dec(),
+            self.short_put.option.position_size()?.to_dec(),
             "BullPutSpread::update_break_even_points",
         )?;
         self.break_even_points.push(
@@ -647,7 +647,7 @@ impl Strategies for BullPutSpread {
                 },
             ));
         }
-        let qty = self.short_put.option.quantity.to_dec();
+        let qty = self.short_put.option.position_size()?.to_dec();
         let net_prem = self.get_net_premium_received()?.to_dec();
         let exposure = d_mul(width, qty, "BullPutSpread::get_max_loss")?;
         let max_loss_dec = d_sub(exposure, net_prem, "BullPutSpread::get_max_loss")?;

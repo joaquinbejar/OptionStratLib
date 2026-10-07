@@ -411,12 +411,12 @@ impl BreakEvenable for LongStrangle {
         // break-even below zero says the same on the other side.
         let put_cost = d_div(
             total_premium,
-            self.long_put.option.quantity.to_dec(),
+            self.long_put.option.position_size()?.to_dec(),
             "LongStrangle::update_break_even_points",
         )?;
         let call_cost = d_div(
             total_premium,
-            self.long_call.option.quantity.to_dec(),
+            self.long_call.option.position_size()?.to_dec(),
             "LongStrangle::update_break_even_points",
         )?;
 

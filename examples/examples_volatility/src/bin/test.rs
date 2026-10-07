@@ -30,6 +30,7 @@ fn calculate_error(
         expiration_date: ExpirationDate::Days(days),
         implied_volatility,
         quantity: Positive::ONE,
+        contract_size: Positive::ONE,
         underlying_price,
         risk_free_rate,
         option_style,

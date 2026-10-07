@@ -298,6 +298,18 @@ impl LegAble for Leg {
             Self::Perpetual(pos) => pos.fees(),
         }
     }
+
+    /// Notional value at `price`. An option leg covers
+    /// `quantity × contract_size` units of the underlying, so its notional is
+    /// that size times `price`; the other legs keep `quantity × price`.
+    fn notional_value(&self, price: Positive) -> Positive {
+        match self {
+            Self::Option(pos) => pos.option.quantity * pos.option.contract_size * price,
+            Self::Spot(pos) => pos.notional_value(price),
+            Self::Future(pos) => pos.notional_value(price),
+            Self::Perpetual(pos) => pos.notional_value(price),
+        }
+    }
 }
 
 impl std::fmt::Display for Leg {

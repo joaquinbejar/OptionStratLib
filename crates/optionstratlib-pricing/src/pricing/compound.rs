@@ -677,7 +677,8 @@ fn value_underlying_option(
         compound.option_style, // Use same style for underlying
         compound.dividend_yield,
         compound.exotic_params.clone(),
-    );
+    )
+    .with_contract_size(compound.contract_size);
 
     // Use Black-Scholes to value the underlying
     crate::pricing::black_scholes_model::black_scholes(&underlying)

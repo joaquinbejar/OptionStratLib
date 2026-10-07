@@ -5,6 +5,7 @@
 ******************************************************************************/
 use crate::model::option::ExoticParams;
 use crate::model::{Options, Position};
+use positive::Positive;
 use rust_decimal_macros::dec;
 use std::fmt;
 
@@ -28,6 +29,11 @@ impl fmt::Display for Options {
             self.implied_volatility * 100.0
         )?;
         writeln!(f, "Quantity: {}", self.quantity)?;
+        // Shown only when it departs from the default of one unit per
+        // contract, so the rendering of every pre-existing option is unchanged.
+        if self.contract_size != Positive::ONE {
+            writeln!(f, "Contract Size: {}", self.contract_size)?;
+        }
         writeln!(
             f,
             "Risk-free Rate: {:.2}%",
@@ -43,14 +49,21 @@ impl fmt::Display for Options {
 
 impl fmt::Debug for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Options")
+        let mut debug = f.debug_struct("Options");
+        debug
             .field("option_type", &self.option_type)
             .field("side", &self.side)
             .field("underlying_symbol", &self.underlying_symbol)
             .field("strike_price", &self.strike_price)
             .field("expiration_date", &self.expiration_date)
             .field("implied_volatility", &self.implied_volatility)
-            .field("quantity", &self.quantity)
+            .field("quantity", &self.quantity);
+        // Shown only when it departs from the default of one unit per
+        // contract, so the rendering of every pre-existing option is unchanged.
+        if self.contract_size != Positive::ONE {
+            debug.field("contract_size", &self.contract_size);
+        }
+        debug
             .field("underlying_price", &self.underlying_price)
             .field("risk_free_rate", &self.risk_free_rate)
             .field("option_style", &self.option_style)
@@ -182,7 +195,7 @@ mod tests_options {
 
     use chrono::{NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;
-    use positive::pos_or_panic;
+    use positive::{Positive, pos_or_panic};
 
     #[test]
     fn test_debug_options() {
@@ -199,6 +212,7 @@ mod tests_options {
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: pos_or_panic!(0.25),
             quantity: pos_or_panic!(10.0),
+            contract_size: Positive::ONE,
             underlying_price: pos_or_panic!(155.0),
             risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
@@ -240,6 +254,7 @@ mod tests_options {
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: pos_or_panic!(0.25),
             quantity: pos_or_panic!(10.0),
+            contract_size: Positive::ONE,
             underlying_price: pos_or_panic!(155.0),
             risk_free_rate: dec!(0.01),
             option_style: OptionStyle::Call,
@@ -312,6 +327,7 @@ mod tests_options {
             expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
             implied_volatility: pos_or_panic!(0.30),
             quantity: pos_or_panic!(5.0),
+            contract_size: Positive::ONE,
             underlying_price: pos_or_panic!(1900.0),
             risk_free_rate: dec!(0.015),
             option_style: OptionStyle::Call,
@@ -406,7 +422,7 @@ mod tests_position_type_display_debug {
 
     use chrono::{DateTime, NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;
-    use positive::pos_or_panic;
+    use positive::{Positive, pos_or_panic};
 
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
@@ -423,6 +439,7 @@ mod tests_position_type_display_debug {
                 expiration_date: ExpirationDate::DateTime(Utc.from_utc_datetime(&naive_date)),
                 implied_volatility: pos_or_panic!(0.25),
                 quantity: pos_or_panic!(10.0),
+                contract_size: Positive::ONE,
                 underlying_price: pos_or_panic!(155.0),
                 risk_free_rate: dec!(0.01),
                 option_style: OptionStyle::Call,

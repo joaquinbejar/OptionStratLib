@@ -168,6 +168,7 @@ impl TryFrom<&OptionData> for Options {
             expiration_date,
             implied_volatility: option_data.implied_volatility,
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             underlying_price,
             risk_free_rate: option_data.risk_free_rate.unwrap_or(Decimal::ZERO),
             option_style: OptionStyle::Call,

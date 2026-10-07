@@ -294,7 +294,7 @@ impl BreakEvenable for ShortPut {
         // sentinel for "no lower break-even" rather than an abort.
         let per_contract = d_div(
             self.get_net_cost()?,
-            self.short_put.option.quantity.to_dec(),
+            self.short_put.option.position_size()?.to_dec(),
             "ShortPut::update_break_even_points",
         )?;
         self.break_even_points.push(

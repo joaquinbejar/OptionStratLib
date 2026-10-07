@@ -514,6 +514,7 @@ mod tests {
             expiration_date: ExpirationDate::Days(pos_or_panic!(182.5)), // ~0.5 year
             implied_volatility: pos_or_panic!(0.25),
             quantity: pos_or_panic!(1.0),
+            contract_size: Positive::ONE,
             underlying_price: pos_or_panic!(100.0),
             risk_free_rate: dec!(0.08),
             option_style: style,

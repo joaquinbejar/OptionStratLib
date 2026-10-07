@@ -387,16 +387,19 @@ impl Collar {
     /// # Errors
     ///
     /// Returns [`PricingError::Positive`] when either leg's `premium ×
-    /// quantity` leaves the `Positive` range, and [`PricingError::Decimal`]
+    /// contract_size × quantity` leaves the `Positive` range, and
+    /// [`PricingError::Decimal`]
     /// when their difference leaves the representable `Decimal` range.
     pub fn net_premium(&self) -> Result<Decimal, PricingError> {
         let call_premium = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?;
         let put_premium = self
             .long_put
             .premium
+            .checked_mul(&self.long_put.option.contract_size)?
             .checked_mul(&self.long_put.option.quantity)?;
         Ok(d_sub(
             call_premium.to_dec(),
@@ -913,10 +916,12 @@ impl PnLCalculator for Collar {
         let put_cost = self
             .long_put
             .premium
+            .checked_mul(&self.long_put.option.contract_size)?
             .checked_mul(&self.long_put.option.quantity)?;
         let call_income = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?;
 
         Ok(optionstratlib_analytics::pnl::utils::PnL {

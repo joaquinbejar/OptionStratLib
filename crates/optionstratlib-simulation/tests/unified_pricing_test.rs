@@ -61,6 +61,7 @@ fn create_test_option() -> Options {
         expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
         implied_volatility: pos_or_panic!(0.2),
         quantity: Positive::ONE,
+        contract_size: Positive::ONE,
         underlying_price: pos_or_panic!(105.0),
         risk_free_rate: dec!(0.05),
         option_style: OptionStyle::Call,

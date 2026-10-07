@@ -620,7 +620,8 @@ impl DeltaGammaProfileSurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(delta) = modified_option.delta() {
                     points.insert(Point3D::new(price, days.to_dec(), delta));
@@ -1003,7 +1004,8 @@ impl VolatilitySensitivitySurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(option_price) = modified_option.calculate_price_black_scholes() {
                     points.insert(Point3D::new(price, vol, option_price));
@@ -1113,7 +1115,8 @@ impl TimeDecaySurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(option_price) = modified_option.calculate_price_black_scholes() {
                     points.insert(Point3D::new(price, days.to_dec(), option_price));
@@ -1290,7 +1293,8 @@ impl ThetaSurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(theta) = modified_option.theta() {
                     points.insert(Point3D::new(price, days.to_dec(), theta));
@@ -1397,7 +1401,8 @@ impl CharmSurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(charm) = modified_option.charm() {
                     points.insert(Point3D::new(price, days.to_dec(), charm));
@@ -1504,7 +1509,8 @@ impl ColorSurface for OptionChain {
                     template.option_style,
                     template.dividend_yield,
                     template.exotic_params.clone(),
-                );
+                )
+                .with_contract_size(template.contract_size);
 
                 if let Ok(color) = modified_option.color() {
                     points.insert(Point3D::new(price, days.to_dec(), color));

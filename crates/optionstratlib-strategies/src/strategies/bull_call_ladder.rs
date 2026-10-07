@@ -416,7 +416,7 @@ impl BreakEvenable for BullCallLadder {
         // cannot reach, so the wing has none. A leg with no contracts has no
         // per-contract profit at all, which is reported rather than divided.
         let long_strike = self.long_call.option.strike_price.to_dec();
-        let long_qty = self.long_call.option.quantity.to_dec();
+        let long_qty = self.long_call.option.position_size()?.to_dec();
         let long_profit = self.calculate_profit_at(&self.long_call.option.strike_price)?;
         let long_per_contract = d_div(
             long_profit,
@@ -433,7 +433,7 @@ impl BreakEvenable for BullCallLadder {
         }
 
         let short_strike = self.short_call_high.option.strike_price.to_dec();
-        let short_qty = self.short_call_high.option.quantity.to_dec();
+        let short_qty = self.short_call_high.option.position_size()?.to_dec();
         let short_profit = self.calculate_profit_at(&self.short_call_high.option.strike_price)?;
         let short_per_contract = d_div(
             short_profit,

@@ -367,7 +367,7 @@ impl BreakEvenable for BearPutSpread {
         // leaves the position losing at every attainable price.
         let per_contract = d_div(
             self.get_net_cost()?,
-            self.long_put.option.quantity.to_dec(),
+            self.long_put.option.position_size()?.to_dec(),
             "BearPutSpread::update_break_even_points",
         )?;
         self.break_even_points.push(

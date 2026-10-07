@@ -628,6 +628,7 @@ pub fn optionstratlib_core::model::option::ExoticParams::schemas(&mut alloc::vec
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::option::ExoticParams
 pub fn optionstratlib_core::model::option::ExoticParams::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::option::Options
+pub optionstratlib_core::model::option::Options::contract_size: positive::positive::Positive
 pub optionstratlib_core::model::option::Options::dividend_yield: positive::positive::Positive
 pub optionstratlib_core::model::option::Options::exotic_params: core::option::Option<optionstratlib_core::model::option::ExoticParams>
 pub optionstratlib_core::model::option::Options::expiration_date: expiration_date::ExpirationDate
@@ -648,7 +649,9 @@ pub fn optionstratlib_core::model::option::Options::is_short(&self) -> bool
 pub fn optionstratlib_core::model::option::Options::new(option_type::option_type::OptionType, financial_types::Side, alloc::string::String, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<optionstratlib_core::model::option::ExoticParams>) -> Self
 pub fn optionstratlib_core::model::option::Options::payoff(&self) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::payoff_at_price(&self, &positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::position_size(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
 pub fn optionstratlib_core::model::option::Options::time_to_expiration(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_core::model::option::Options::with_contract_size(self, positive::positive::Positive) -> Self
 impl core::default::Default for optionstratlib_core::model::option::Options
 pub fn optionstratlib_core::model::option::Options::default() -> Self
 impl core::fmt::Debug for optionstratlib_core::model::option::Options
@@ -823,6 +826,7 @@ pub fn optionstratlib_core::model::MarginInfo::schemas(&mut alloc::vec::Vec<(all
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::MarginInfo
 pub fn optionstratlib_core::model::MarginInfo::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::Options
+pub optionstratlib_core::model::Options::contract_size: positive::positive::Positive
 pub optionstratlib_core::model::Options::dividend_yield: positive::positive::Positive
 pub optionstratlib_core::model::Options::exotic_params: core::option::Option<optionstratlib_core::model::option::ExoticParams>
 pub optionstratlib_core::model::Options::expiration_date: expiration_date::ExpirationDate
@@ -843,7 +847,9 @@ pub fn optionstratlib_core::model::option::Options::is_short(&self) -> bool
 pub fn optionstratlib_core::model::option::Options::new(option_type::option_type::OptionType, financial_types::Side, alloc::string::String, positive::positive::Positive, expiration_date::ExpirationDate, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, rust_decimal::decimal::Decimal, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<optionstratlib_core::model::option::ExoticParams>) -> Self
 pub fn optionstratlib_core::model::option::Options::payoff(&self) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::payoff_at_price(&self, &positive::positive::Positive) -> optionstratlib_core::error::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::position_size(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
 pub fn optionstratlib_core::model::option::Options::time_to_expiration(&self) -> optionstratlib_core::error::OptionsResult<positive::positive::Positive>
+pub fn optionstratlib_core::model::option::Options::with_contract_size(self, positive::positive::Positive) -> Self
 impl core::default::Default for optionstratlib_core::model::option::Options
 pub fn optionstratlib_core::model::option::Options::default() -> Self
 impl core::fmt::Debug for optionstratlib_core::model::option::Options

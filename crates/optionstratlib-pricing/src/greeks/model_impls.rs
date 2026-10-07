@@ -372,3 +372,145 @@ mod tests_greek_trait {
         assert_decimal_eq!(call_greeks.vega, put_greeks.vega, EPSILON);
     }
 }
+
+#[cfg(test)]
+mod tests_greeks_contract_size {
+    use super::*;
+    use optionstratlib_core::model::types::{BinaryType, OptionStyle, OptionType, Side};
+    use optionstratlib_core::model::utils::create_sample_option_simplest;
+    use optionstratlib_core::model::{ExpirationDate, Positive};
+    use rust_decimal::Decimal;
+    use rust_decimal_macros::dec;
+
+    type Calculator = fn(&Options) -> Result<Decimal, GreeksError>;
+
+    /// Every per-position greek, which must scale by `quantity × contract_size`.
+    const SCALED: [(&str, Calculator); 11] = [
+        ("delta", |o| o.delta()),
+        ("gamma", |o| o.gamma()),
+        ("theta", |o| o.theta()),
+        ("vega", |o| o.vega()),
+        ("rho", |o| o.rho()),
+        ("rho_d", |o| o.rho_d()),
+        ("vanna", |o| o.vanna()),
+        ("vomma", |o| o.vomma()),
+        ("veta", |o| o.veta()),
+        ("charm", |o| o.charm()),
+        ("color", |o| o.color()),
+    ];
+
+    fn value(label: &str, result: Result<Decimal, GreeksError>) -> Decimal {
+        match result {
+            Ok(value) => value,
+            Err(e) => panic!("{label} failed: {e}"),
+        }
+    }
+
+    fn assert_scales(one: &Options) {
+        let sized = one.clone().with_contract_size(Positive::HUNDRED);
+        let mut hundred_contracts = one.clone();
+        hundred_contracts.quantity = Positive::HUNDRED;
+        for (label, calculate) in SCALED {
+            let one_value = value(label, calculate(one));
+            let sized_value = value(label, calculate(&sized));
+            // One contract of 100 units is the same position as 100 of one.
+            assert_eq!(
+                sized_value,
+                value(label, calculate(&hundred_contracts)),
+                "{label}: contract size and quantity disagree"
+            );
+            let expected = one_value * Decimal::ONE_HUNDRED;
+            assert!(
+                (sized_value - expected).abs() <= dec!(1e-12),
+                "{label}: {sized_value} is not 100 × {one_value}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_greeks_contract_size_scales_every_greek_long_and_short() {
+        for side in [Side::Long, Side::Short] {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                assert_scales(&create_sample_option_simplest(style, side));
+            }
+        }
+    }
+
+    #[test]
+    fn test_greeks_contract_size_scales_degenerate_branches() {
+        // At expiry and at zero volatility each greek runs its own branch.
+        let mut at_expiry = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        at_expiry.underlying_price = Positive::new(110.0).unwrap_or(Positive::HUNDRED);
+        at_expiry.expiration_date = ExpirationDate::Days(Positive::ZERO);
+        let sized = at_expiry.clone().with_contract_size(Positive::HUNDRED);
+        assert_eq!(value("delta", sized.delta()), dec!(100));
+
+        let mut zero_vol = create_sample_option_simplest(OptionStyle::Put, Side::Short);
+        zero_vol.implied_volatility = Positive::ZERO;
+        let sized = zero_vol.clone().with_contract_size(Positive::HUNDRED);
+        assert_eq!(
+            value("delta", sized.delta()),
+            value("delta", zero_vol.delta()) * Decimal::ONE_HUNDRED
+        );
+    }
+
+    #[test]
+    fn test_greeks_contract_size_scales_numerical_fallback() {
+        // A non-European contract prices its delta and gamma numerically.
+        let mut binary = create_sample_option_simplest(OptionStyle::Call, Side::Short);
+        binary.option_type = OptionType::Binary {
+            binary_type: BinaryType::CashOrNothing,
+        };
+        let sized = binary.clone().with_contract_size(Positive::HUNDRED);
+        let mut hundred_contracts = binary.clone();
+        hundred_contracts.quantity = Positive::HUNDRED;
+        for (label, calculate) in [("delta", SCALED[0].1), ("gamma", SCALED[1].1)] {
+            let sized_value = value(label, calculate(&sized));
+            assert_eq!(sized_value, value(label, calculate(&hundred_contracts)));
+            assert_ne!(sized_value, value(label, calculate(&binary)));
+        }
+    }
+
+    #[test]
+    fn test_greeks_contract_size_aggregate_and_alpha() {
+        let one = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let sized = one.clone().with_contract_size(Positive::HUNDRED);
+        let (Ok(one_greeks), Ok(sized_greeks)) = (one.greeks(), sized.greeks()) else {
+            panic!("greeks compute");
+        };
+        assert_eq!(sized_greeks.delta, value("delta", sized.delta()));
+        assert_eq!(sized_greeks.vega, value("vega", sized.vega()));
+        assert!(
+            (sized_greeks.gamma - one_greeks.gamma * Decimal::ONE_HUNDRED).abs() <= dec!(1e-12)
+        );
+        // Alpha is a gamma / theta ratio: the size cancels.
+        assert!((sized_greeks.alpha - one_greeks.alpha).abs() <= dec!(1e-12));
+    }
+
+    #[test]
+    fn test_greeks_contract_size_on_position_matches_option() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long)
+            .with_contract_size(Positive::HUNDRED);
+        let position = Position::new(
+            option.clone(),
+            Positive::ONE,
+            chrono::Utc::now(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        );
+        assert_eq!(
+            value("delta", position.delta()),
+            value("delta", option.delta())
+        );
+    }
+
+    #[test]
+    fn test_greeks_contract_size_overflow_is_an_error() {
+        let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        let mut huge = option.with_contract_size(Positive::MAX);
+        huge.quantity = Positive::MAX;
+        assert!(matches!(huge.delta(), Err(GreeksError::PositiveError(_))));
+    }
+}

@@ -179,6 +179,7 @@ pub fn create_sample_position(
             expiration_date: ExpirationDate::Days(pos_lit(dec!(30.0))),
             implied_volatility,
             quantity,
+            contract_size: Positive::ONE,
             underlying_price,
             risk_free_rate: dec!(0.05),
             option_style,
