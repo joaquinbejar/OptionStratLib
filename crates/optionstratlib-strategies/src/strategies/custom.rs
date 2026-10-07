@@ -14,6 +14,7 @@ use super::base::{
 };
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::utils::calculate_price_range_bounded;
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, combinations::process_n_times_iter,
@@ -647,6 +648,19 @@ impl BasicAble for CustomStrategy {
             position.option.implied_volatility = *volatility;
         }
         Ok(())
+    }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        let legs: Vec<&Position> = self.positions.iter().collect();
+        common_contract_size(&legs, "CustomStrategy::get_contract_size")
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        let mut legs: Vec<&mut Position> = self.positions.iter_mut().collect();
+        apply_contract_size(
+            &mut legs,
+            contract_size,
+            "CustomStrategy::set_contract_size",
+        )?;
+        self.update_break_even_points()
     }
 }
 

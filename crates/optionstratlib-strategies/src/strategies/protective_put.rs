@@ -24,6 +24,7 @@ use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::shared::spot_leg_mark_to_market;
+use crate::strategies::shared::{apply_hedge_contract_size, common_contract_size};
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -77,9 +78,12 @@ impl ProtectivePut {
     /// Creates a new Protective Put strategy.
     ///
     /// `quantity` is the number of shares, and the put covers them one for
-    /// one: it is sized in shares, like the option legs of `CoveredCall`
-    /// and `Collar`, because an option here carries no contract multiplier.
-    /// The put fees are per share and are not divided by 100 (#731).
+    /// one: it is built as one-unit contracts, one per share, like the
+    /// option legs of `CoveredCall` and `Collar`. The put fees are per share
+    /// and are not divided by 100 (#731). Call
+    /// `BasicAble::set_contract_size` to re-express the put in market
+    /// contracts (for example 1 contract of 100 units for 100 shares) with
+    /// the same payoff and fees.
     ///
     /// # Errors
     ///
@@ -397,22 +401,83 @@ impl BreakEvenable for ProtectivePut {
         Ok(&self.break_even_points)
     }
 
+    /// The zeros of the expiry P&L. With `N` shares bought at `C`, a put of
+    /// `U = quantity × contract_size` units struck at `K` bought at `p` per
+    /// unit, and total fees `F`:
+    ///
+    /// - above the strike, `N (S - C) - U p - F`, zero at
+    ///   `S = C + (U p + F) / N`;
+    /// - below it, `(N - U) S - N C + U K - U p - F`, zero at
+    ///   `S = (N C - U K + U p + F) / (N - U)` when the put does not cover
+    ///   the shares exactly.
+    ///
+    /// An exact hedge (`U == N`) keeps the single break-even
+    /// `C + p + F / N`, recorded whether or not it is above the strike. An
+    /// under-hedged put (`U < N`) has one break-even, on whichever side of
+    /// the strike the P&L crosses zero. An over-hedged put (`U > N`) profits
+    /// on a deep fall too and can have one below the strike as well.
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points.clear();
         let entry_price = self.spot_leg.cost_basis.to_dec();
         let put_premium = self.long_put.premium.to_dec();
-        let quantity = self.spot_leg.quantity.to_dec();
-        let total_fees = self.total_fees()?;
-        let break_even = d_add(
-            d_add(entry_price, put_premium, "ProtectivePut::break_even")?,
-            d_div(
-                total_fees.to_dec(),
-                quantity,
-                "ProtectivePut::break_even/fees_per_share",
-            )?,
-            "ProtectivePut::break_even",
+        let shares = self.spot_leg.quantity.to_dec();
+        let put_units = self.long_put.option.position_size()?.to_dec();
+        let strike = self.long_put.option.strike_price.to_dec();
+        let total_fees = self.total_fees()?.to_dec();
+
+        if put_units == shares {
+            let break_even = d_add(
+                d_add(entry_price, put_premium, "ProtectivePut::break_even")?,
+                d_div(
+                    total_fees,
+                    shares,
+                    "ProtectivePut::break_even/fees_per_share",
+                )?,
+                "ProtectivePut::break_even",
+            )?;
+            if let Ok(be) = Positive::new_decimal(break_even) {
+                self.break_even_points.push(be.checked_round_to(2)?);
+            }
+            return Ok(());
+        }
+
+        // U p + F: the premium of the whole put plus every fee.
+        let outlay = d_add(
+            d_mul(put_units, put_premium, "ProtectivePut::break_even/premium")?,
+            total_fees,
+            "ProtectivePut::break_even/outlay",
         )?;
-        if let Ok(be) = Positive::new_decimal(break_even) {
+
+        // Below the strike: (N C - U K + U p + F) / (N - U).
+        let below = d_div(
+            d_add(
+                d_sub(
+                    d_mul(shares, entry_price, "ProtectivePut::break_even/basis")?,
+                    d_mul(put_units, strike, "ProtectivePut::break_even/floor")?,
+                    "ProtectivePut::break_even/below_constant",
+                )?,
+                outlay,
+                "ProtectivePut::break_even/below_numerator",
+            )?,
+            d_sub(shares, put_units, "ProtectivePut::break_even/slope")?,
+            "ProtectivePut::break_even/below",
+        )?;
+        if below >= Decimal::ZERO
+            && below < strike
+            && let Ok(be) = Positive::new_decimal(below)
+        {
+            self.break_even_points.push(be.checked_round_to(2)?);
+        }
+
+        // Above the strike: C + (U p + F) / N.
+        let above = d_add(
+            entry_price,
+            d_div(outlay, shares, "ProtectivePut::break_even/outlay_per_share")?,
+            "ProtectivePut::break_even/above",
+        )?;
+        if above >= strike
+            && let Ok(be) = Positive::new_decimal(above)
+        {
             self.break_even_points.push(be.checked_round_to(2)?);
         }
         Ok(())
@@ -543,6 +608,17 @@ impl BasicAble for ProtectivePut {
             &long_put.quantity,
         );
         map
+    }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(&[&self.long_put], "ProtectivePut::get_contract_size")
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_hedge_contract_size(
+            &mut [&mut self.long_put],
+            contract_size,
+            "ProtectivePut::set_contract_size",
+        )?;
+        self.update_break_even_points()
     }
 }
 

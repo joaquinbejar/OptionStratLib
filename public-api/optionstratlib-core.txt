@@ -936,6 +936,7 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::position::Posi
 pub fn optionstratlib_core::model::position::Position::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::Trade
 pub optionstratlib_core::model::Trade::action: financial_types::Action
+pub optionstratlib_core::model::Trade::contract_size: positive::positive::Positive
 pub optionstratlib_core::model::Trade::expiry: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib_core::model::Trade::fee: positive::positive::Positive
 pub optionstratlib_core::model::Trade::id: uuid::Uuid
@@ -959,6 +960,7 @@ pub fn optionstratlib_core::model::Trade::is_open(&self) -> bool
 pub fn optionstratlib_core::model::Trade::net(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> Self
 pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>)
+pub fn optionstratlib_core::model::Trade::with_contract_size(self, positive::positive::Positive) -> Self
 impl core::fmt::Display for optionstratlib_core::model::Trade
 pub fn optionstratlib_core::model::Trade::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade

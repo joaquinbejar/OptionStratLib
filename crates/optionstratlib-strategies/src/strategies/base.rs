@@ -852,6 +852,55 @@ pub trait BasicAble {
             std::any::type_name::<Self>(),
         ))
     }
+    /// Returns the contract multiplier of the strategy's option legs: the
+    /// units of the underlying one contract covers (see
+    /// `Options::contract_size`).
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError(InvalidParameters { .. })` when
+    /// the option legs do not share one contract size, so no single value
+    /// describes the strategy.
+    ///
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// own option legs override this method.
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "get_contract_size",
+            std::any::type_name::<Self>(),
+        ))
+    }
+    /// Sets the contract multiplier of every option leg and recomputes the
+    /// break-even points, which divide the strategy's cost by its size in
+    /// units.
+    ///
+    /// The option quantities and fees stay per contract, so the strategy's
+    /// exposure scales with the multiplier. The covered strategies
+    /// (`CoveredCall`, `Collar`, `ProtectivePut`) are the exception: their
+    /// option legs hedge the shares of the spot leg and their option fees
+    /// are per share, so they keep the units covered and the fee per unit,
+    /// and re-express the option quantity and fees in contracts of the new
+    /// size. Their payoff, premium and fees are unchanged.
+    ///
+    /// Strategy rebuilds (`Optimizable::create_strategy`) use this to keep
+    /// the contract size of the strategy they rebuild from.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError(InvalidParameters { .. })` when
+    /// `contract_size` is zero, and the break-even error of the strategy when
+    /// the recomputation fails.
+    ///
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`. Strategies that
+    /// own option legs override this method.
+    fn set_contract_size(&mut self, _contract_size: Positive) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "set_contract_size",
+            std::any::type_name::<Self>(),
+        ))
+    }
 }
 
 /// Defines a set of strategies for options trading.  Provides methods for calculating key metrics

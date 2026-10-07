@@ -831,9 +831,11 @@ impl TradeAble for Position {
                     "open and close fees overflow the Positive range: {error}"
                 ))
             })?;
-        // `Trade::premium` is per contract, so it carries the contract size;
-        // `Trade::fee` is per contract already.
-        let premium = self.premium_per_contract().map_err(|error| {
+        // The trade records the per-unit premium and its own contract size, so
+        // it stays self-contained once the position is gone; `Trade::fee` is
+        // per contract already. The per-contract premium the trade derives
+        // must be representable.
+        self.premium_per_contract().map_err(|error| {
             TradeError::invalid_trade(&format!(
                 "premium times contract size overflows the Positive range: {error}"
             ))
@@ -853,7 +855,8 @@ impl TradeAble for Position {
                 expiry,
                 timestamp,
                 quantity: self.option.quantity,
-                premium,
+                premium: self.premium,
+                contract_size: self.option.contract_size,
                 underlying_price: self.option.underlying_price,
                 notes: None,
                 status: TradeStatus::Other("Not yet initialized".to_string()),
@@ -2632,14 +2635,58 @@ mod tests_position_contract_size {
     }
 
     #[test]
-    fn test_position_contract_size_trade_premium_is_per_contract() {
+    fn test_position_contract_size_trade_carries_contract_size() {
         let long = sized_call(Side::Long, Positive::HUNDRED);
         let Ok(trade) = long.trade() else {
             panic!("trade builds");
         };
-        assert_eq!(trade.premium, pos_or_panic!(500.0));
+        // The trade keeps the per-unit premium and its own multiplier, and
+        // the per-contract premium it derives is the one the position pays.
+        assert_eq!(trade.premium, pos_or_panic!(5.0));
+        assert_eq!(trade.contract_size, Positive::HUNDRED);
         assert_eq!(trade.fee, Positive::ONE);
         assert_eq!(trade.quantity, Positive::TWO);
+        // Bought long: (5 × 100 + 1) × 2.
+        assert_eq!(trade.cost(), pos_or_panic!(1002.0));
+        assert_eq!(trade.income(), Positive::ZERO);
+        assert_eq!(trade.net(), dec!(-1002));
+        let Ok(sold) = sized_call(Side::Short, Positive::HUNDRED).trade() else {
+            panic!("trade builds");
+        };
+        let mut sold = sold;
+        sold.action = Action::Sell;
+        // Sold short: the cost carries the premium and the fees.
+        assert_eq!(sold.cost(), pos_or_panic!(1002.0));
+    }
+
+    #[test]
+    fn test_position_contract_size_trade_matches_unit_lots() {
+        // One trade of 2 contracts × 100 units derives the same totals as a
+        // trade of 200 one-unit contracts with the same per-contract fees.
+        let Ok(sized) = sized_call(Side::Long, Positive::HUNDRED).trade() else {
+            panic!("trade builds");
+        };
+        let mut lots = sized.clone();
+        lots.contract_size = Positive::ONE;
+        lots.quantity = pos_or_panic!(200.0);
+        lots.fee = pos_or_panic!(0.01);
+        assert_eq!(sized.cost(), lots.cost());
+        assert_eq!(sized.net(), lots.net());
+    }
+
+    #[test]
+    fn test_position_contract_size_trade_serde_round_trip() {
+        let Ok(trade) = sized_call(Side::Long, Positive::HUNDRED).trade() else {
+            panic!("trade builds");
+        };
+        let Ok(json) = serde_json::to_string(&trade) else {
+            panic!("trade serializes");
+        };
+        let Ok(back) = serde_json::from_str::<Trade>(&json) else {
+            panic!("trade deserializes");
+        };
+        assert_eq!(back.contract_size, Positive::HUNDRED);
+        assert_eq!(back, trade);
     }
 
     #[test]

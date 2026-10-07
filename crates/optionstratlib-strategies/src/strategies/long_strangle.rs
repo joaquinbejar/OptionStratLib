@@ -22,6 +22,7 @@ use super::shared::StrangleStrategy;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::{apply_contract_size, common_contract_size};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor,
     delta_neutral::DeltaNeutrality,
@@ -664,6 +665,20 @@ impl BasicAble for LongStrangle {
                 .unwrap_or(Positive::ZERO);
         Ok(())
     }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.long_call, &self.long_put],
+            "LongStrangle::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_contract_size(
+            &mut [&mut self.long_call, &mut self.long_put],
+            contract_size,
+            "LongStrangle::set_contract_size",
+        )?;
+        self.update_break_even_points()
+    }
 }
 
 impl Strategies for LongStrangle {
@@ -936,7 +951,7 @@ impl Optimizable for LongStrangle {
                 "missing put_ask for long put leg",
             )
         })?;
-        LongStrangle::new(
+        let mut strategy = LongStrangle::new(
             chain.symbol.clone(),
             chain.underlying_price,
             call.strike_price,
@@ -952,7 +967,11 @@ impl Optimizable for LongStrangle {
             self.long_call.close_fee,
             self.long_put.open_fee,
             self.long_put.close_fee,
-        )
+        )?;
+        // The rebuilt legs keep the contract size of the strategy they
+        // are rebuilt from.
+        strategy.set_contract_size(self.get_contract_size()?)?;
+        Ok(strategy)
     }
 }
 

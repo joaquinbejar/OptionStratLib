@@ -350,6 +350,17 @@ impl<'a> AdjustmentOptimizer<'a> {
         self.build_plan(actions, Decimal::ZERO)
     }
 
+    /// The contract size a new leg takes: the one every current position
+    /// shares, or 1 (the chain's per-unit quote) when the positions are
+    /// empty or carry different sizes.
+    fn portfolio_contract_size(&self) -> Positive {
+        let mut sizes = self.positions.iter().map(|p| p.option.contract_size);
+        match sizes.next() {
+            Some(first) if sizes.all(|size| size == first) => first,
+            _ => Positive::ONE,
+        }
+    }
+
     /// Finds candidate options for delta adjustment.
     fn find_candidate_options(
         &self,
@@ -359,6 +370,7 @@ impl<'a> AdjustmentOptimizer<'a> {
     {
         let mut candidates = Vec::new();
         let target_delta_sign = delta_gap.signum();
+        let contract_size = self.portfolio_contract_size();
 
         for opt_data in chain.get_single_iter() {
             // Filter by liquidity
@@ -380,7 +392,9 @@ impl<'a> AdjustmentOptimizer<'a> {
                 if let Ok(position) =
                     opt_data.get_position(Side::Long, *option_style, None, None, None)
                 {
-                    let option = position.option;
+                    // Size the new leg like the legs it adjusts, so its
+                    // delta and quantity are per contract of that size.
+                    let option = position.option.with_contract_size(contract_size);
                     if let Ok(option_delta) = option.delta() {
                         // Check if this option helps reduce the gap
                         if option_delta.signum() == target_delta_sign {
@@ -730,5 +744,138 @@ mod tests_optimizer {
 
         // Should either succeed or fail gracefully
         assert!(result.is_ok() || matches!(result, Err(AdjustmentError::NoViablePlan)));
+    }
+}
+
+#[cfg(test)]
+mod tests_optimizer_contract_size {
+    use super::*;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::types::{OptionStyle, OptionType};
+    use optionstratlib_core::{pos_or_panic, spos};
+
+    fn sized_position(side: Side, contract_size: Positive) -> Position {
+        let option = optionstratlib_core::model::Options::new(
+            OptionType::European,
+            side,
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            OptionStyle::Call,
+            Positive::ZERO,
+            None,
+        )
+        .with_contract_size(contract_size);
+        Position::new(
+            option,
+            Positive::TWO,
+            chrono::Utc::now(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        )
+    }
+
+    fn chain() -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-12-31".to_string(),
+            Some(dec!(0.05)),
+            Some(Positive::ZERO),
+        );
+        for (strike, delta) in [(95.0, dec!(0.65)), (100.0, dec!(0.5)), (105.0, dec!(0.35))] {
+            chain.add_option(
+                pos_or_panic!(strike),
+                spos!(4.0),
+                spos!(4.2),
+                spos!(3.8),
+                spos!(4.0),
+                pos_or_panic!(0.2),
+                Some(delta),
+                Some(delta - dec!(1)),
+                Some(dec!(0.02)),
+                spos!(100.0),
+                Some(100),
+                None,
+            );
+        }
+        chain
+    }
+
+    #[test]
+    fn test_optimizer_contract_size_shared_size_is_used() {
+        let positions = vec![
+            sized_position(Side::Long, Positive::HUNDRED),
+            sized_position(Side::Short, Positive::HUNDRED),
+        ];
+        let optimizer = AdjustmentOptimizer::new(
+            &positions,
+            AdjustmentConfig::default(),
+            AdjustmentTarget::delta_neutral(),
+        );
+        assert_eq!(optimizer.portfolio_contract_size(), Positive::HUNDRED);
+    }
+
+    #[test]
+    fn test_optimizer_contract_size_mixed_or_empty_falls_back_to_one() {
+        let mixed = vec![
+            sized_position(Side::Long, Positive::HUNDRED),
+            sized_position(Side::Short, Positive::ONE),
+        ];
+        let optimizer = AdjustmentOptimizer::new(
+            &mixed,
+            AdjustmentConfig::default(),
+            AdjustmentTarget::delta_neutral(),
+        );
+        assert_eq!(optimizer.portfolio_contract_size(), Positive::ONE);
+
+        let empty: Vec<Position> = vec![];
+        let optimizer = AdjustmentOptimizer::new(
+            &empty,
+            AdjustmentConfig::default(),
+            AdjustmentTarget::delta_neutral(),
+        );
+        assert_eq!(optimizer.portfolio_contract_size(), Positive::ONE);
+    }
+
+    #[test]
+    fn test_optimizer_contract_size_new_legs_take_the_portfolio_size() {
+        let chain = chain();
+        let unit = vec![sized_position(Side::Long, Positive::ONE)];
+        let contracts = vec![sized_position(Side::Long, Positive::HUNDRED)];
+        let config = AdjustmentConfig::default();
+        let target = AdjustmentTarget::delta_neutral();
+        let unit_optimizer =
+            AdjustmentOptimizer::with_chain(&unit, &chain, config.clone(), target.clone());
+        let contract_optimizer =
+            AdjustmentOptimizer::with_chain(&contracts, &chain, config, target);
+
+        // Both portfolios are short the same delta per contract; the
+        // contract-sized one needs 100 times the units to close it.
+        let Ok(unit_candidates) = unit_optimizer.find_candidate_options(&chain, dec!(-0.5)) else {
+            panic!("candidates");
+        };
+        let Ok(contract_candidates) = contract_optimizer.find_candidate_options(&chain, dec!(-50))
+        else {
+            panic!("candidates");
+        };
+        assert!(!contract_candidates.is_empty());
+        assert_eq!(unit_candidates.len(), contract_candidates.len());
+        for ((u_opt, u_qty, u_delta), (c_opt, c_qty, c_delta)) in
+            unit_candidates.iter().zip(contract_candidates.iter())
+        {
+            assert_eq!(u_opt.contract_size, Positive::ONE);
+            assert_eq!(c_opt.contract_size, Positive::HUNDRED);
+            // A contract carries 100 times the delta, so the same number
+            // of contracts closes a gap 100 times larger.
+            assert_eq!(*c_delta, *u_delta * dec!(100));
+            assert_eq!(c_qty, u_qty);
+        }
     }
 }

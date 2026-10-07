@@ -30,8 +30,16 @@ pub struct Transaction {
     option_style: OptionStyle,
     /// * `quantity` - The number of contracts involved in the transaction
     quantity: Positive,
-    /// * `premium` - The premium paid or received in this transaction
+    /// * `premium` - The premium paid or received in this transaction, per unit
+    ///   of the underlying. One contract pays or receives
+    ///   `premium × contract_size`.
     premium: Positive,
+    /// * `contract_size` - The contract multiplier: units of the underlying
+    ///   covered by one contract. Defaults to 1, so payloads written before
+    ///   the field existed deserialize unchanged. The transaction carries its
+    ///   own multiplier so the record stays self-contained.
+    #[serde(default = "default_contract_size")]
+    contract_size: Positive,
     /// * `fees` - Commissions and fees paid for this transaction
     fees: Positive,
     /// * `underlying_price` - The price of the underlying asset at the time of the transaction
@@ -40,6 +48,14 @@ pub struct Transaction {
     days_to_expiration: Option<Positive>,
     /// * `implied_volatility` - The implied volatility at the time of the transaction
     implied_volatility: Option<Positive>,
+}
+
+/// Serde default for [`Transaction`]'s contract size: one unit of the
+/// underlying per contract, the behaviour before the field existed.
+#[inline]
+#[must_use]
+fn default_contract_size() -> Positive {
+    Positive::ONE
 }
 
 impl Transaction {
@@ -53,15 +69,17 @@ impl Transaction {
     /// * `option_style` - The exercise style of the option (e.g., Put, Call)
     /// * `price` - The execution price of the transaction
     /// * `quantity` - The number of contracts involved in the transaction
-    /// * `premium` - The premium paid or received in this transaction
-    /// * `fees` - Commissions and fees paid for this transaction
+    /// * `premium` - The premium paid or received in this transaction, per unit
+    ///   of the underlying
+    /// * `fees` - Commissions and fees paid for this transaction, per contract
     /// * `underlying_price` - The price of the underlying asset at the time of the transaction
     /// * `days_to_expiration` - The number of days remaining until the option expires
     /// * `implied_volatility` - The implied volatility at the time of the transaction
     ///
     /// # Returns
     ///
-    /// A new `Transaction` instance
+    /// A new `Transaction` instance with a contract size of 1; chain
+    /// [`Transaction::with_contract_size`] to record a larger multiplier.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub fn new(
@@ -85,11 +103,26 @@ impl Transaction {
             option_style,
             quantity,
             premium,
+            contract_size: default_contract_size(),
             fees,
             underlying_price,
             days_to_expiration,
             implied_volatility,
         }
+    }
+
+    /// Returns the transaction with its contract multiplier set to
+    /// `contract_size`.
+    ///
+    /// [`Transaction::new`] records a contract that covers one unit of the
+    /// underlying; chain this to record market contracts, for example
+    /// `.with_contract_size(Positive::HUNDRED)` for a standard US equity
+    /// option. The premium is then paid per unit and the fees per contract.
+    #[must_use = "with_contract_size returns the updated transaction and leaves the original untouched"]
+    #[inline]
+    pub fn with_contract_size(mut self, contract_size: Positive) -> Self {
+        self.contract_size = contract_size;
+        self
     }
 }
 
@@ -136,6 +169,13 @@ impl Transaction {
     #[must_use]
     pub fn premium(&self) -> Positive {
         self.premium
+    }
+
+    /// Gets the contract multiplier: units of the underlying per contract.
+    #[inline]
+    #[must_use]
+    pub fn contract_size(&self) -> Positive {
+        self.contract_size
     }
 
     /// Gets the fees.
@@ -249,10 +289,22 @@ impl Transaction {
         Ok(PnL::new(
             Some(realized),
             None,
-            self.premium,
+            self.premium_per_contract()?,
             self.fees,
             Utc::now(),
         ))
+    }
+
+    /// The premium of one contract: `premium × contract_size`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransactionError::Other`] when the product leaves the
+    /// `Positive` range.
+    fn premium_per_contract(&self) -> Result<Positive, TransactionError> {
+        self.premium
+            .checked_mul(&self.contract_size)
+            .map_err(|e| TransactionError::other(e.to_string()))
     }
 
     /// The signed cash flow of the transaction.
@@ -261,23 +313,26 @@ impl Transaction {
     /// collects it net of fees. Fees larger than the premium make that
     /// collection negative, which is a real cash flow on a sub-tick quote and
     /// not something the `Positive` operator can hold — hence the `Decimal`
-    /// arithmetic here.
+    /// arithmetic here. The premium is per unit, so one contract moves
+    /// `premium × contract_size`; the fees are per contract. Both are then
+    /// scaled by `quantity`.
     ///
     /// # Errors
     ///
-    /// Returns [`TransactionError::Other`] when combining premium, fees and
-    /// quantity leaves the `Decimal` range.
+    /// Returns [`TransactionError::Other`] when combining premium, contract
+    /// size, fees and quantity leaves the `Decimal` range.
     fn realized_cash_flow(&self, paying_side: Side) -> Result<Decimal, TransactionError> {
+        let premium = self.premium_per_contract()?;
         let per_contract = if self.side == paying_side {
             -d_add(
-                self.premium.to_dec(),
+                premium.to_dec(),
                 self.fees.to_dec(),
                 "Transaction::realized_cash_flow/outlay",
             )
             .map_err(|e| TransactionError::other(e.to_string()))?
         } else {
             d_sub(
-                self.premium.to_dec(),
+                premium.to_dec(),
                 self.fees.to_dec(),
                 "Transaction::realized_cash_flow/net_credit",
             )
@@ -312,7 +367,7 @@ impl Transaction {
         Ok(PnL::new(
             Some(realized),
             None,
-            self.premium,
+            self.premium_per_contract()?,
             self.fees,
             Utc::now(),
         ))
@@ -1060,5 +1115,143 @@ mod tests_transaction_status_pnl {
             }
             other => panic!("expected UnsupportedOptionType, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_transaction_contract_size {
+    use super::*;
+
+    use chrono::Utc;
+    use optionstratlib_core::{model::Positive, pos_or_panic, spos};
+    use rust_decimal_macros::dec;
+
+    /// Two contracts on a European call, premium 5 per unit, fee 1 per
+    /// contract.
+    fn sized(status: TradeStatus, side: Side, contract_size: Positive) -> Transaction {
+        Transaction::new(
+            status,
+            Some(Utc::now()),
+            OptionType::European,
+            side,
+            OptionStyle::Call,
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
+        )
+        .with_contract_size(contract_size)
+    }
+
+    #[test]
+    fn test_transaction_contract_size_defaults_to_one() {
+        let transaction = sized(TradeStatus::Open, Side::Long, Positive::ONE);
+        let legacy = Transaction::new(
+            TradeStatus::Open,
+            transaction.date_time(),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            Positive::TWO,
+            pos_or_panic!(5.0),
+            Positive::ONE,
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
+        );
+        assert_eq!(legacy.contract_size(), Positive::ONE);
+        assert_eq!(legacy, transaction);
+    }
+
+    #[test]
+    fn test_transaction_contract_size_open_long_scales_premium_not_fees() {
+        let transaction = sized(TradeStatus::Open, Side::Long, Positive::HUNDRED);
+        let Ok(pnl) = transaction.pnl() else {
+            panic!("pnl computes");
+        };
+        // -(5 × 100 + 1) × 2
+        assert_eq!(pnl.realized, Some(dec!(-1002)));
+        assert_eq!(pnl.initial_costs, pos_or_panic!(500.0));
+        assert_eq!(pnl.initial_income, Positive::ONE);
+    }
+
+    #[test]
+    fn test_transaction_contract_size_closed_long_scales_premium_not_fees() {
+        let transaction = sized(TradeStatus::Closed, Side::Long, Positive::HUNDRED);
+        let Ok(pnl) = transaction.pnl() else {
+            panic!("pnl computes");
+        };
+        // (5 × 100 - 1) × 2
+        assert_eq!(pnl.realized, Some(dec!(998)));
+    }
+
+    #[test]
+    fn test_transaction_contract_size_open_short_collects_the_contract_premium() {
+        let transaction = sized(TradeStatus::Open, Side::Short, Positive::HUNDRED);
+        let Ok(pnl) = transaction.pnl() else {
+            panic!("pnl computes");
+        };
+        // (5 × 100 - 1) × 2
+        assert_eq!(pnl.realized, Some(dec!(998)));
+    }
+
+    #[test]
+    fn test_transaction_contract_size_matches_unit_lots() {
+        // 2 contracts of 100 units match 200 one-unit contracts whose fee is
+        // the per-contract fee spread over the units.
+        let contracts = sized(TradeStatus::Open, Side::Long, Positive::HUNDRED);
+        let lots = Transaction::new(
+            TradeStatus::Open,
+            Some(Utc::now()),
+            OptionType::European,
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(200.0),
+            pos_or_panic!(5.0),
+            pos_or_panic!(0.01),
+            spos!(100.0),
+            spos!(30.0),
+            spos!(0.2),
+        );
+        let (Ok(a), Ok(b)) = (contracts.pnl(), lots.pnl()) else {
+            panic!("pnl computes");
+        };
+        assert_eq!(a.realized, b.realized);
+    }
+
+    #[test]
+    fn test_transaction_contract_size_serde_round_trip_and_default() {
+        let transaction = sized(TradeStatus::Open, Side::Long, Positive::HUNDRED);
+        let Ok(json) = serde_json::to_string(&transaction) else {
+            panic!("transaction serializes");
+        };
+        let Ok(back) = serde_json::from_str::<Transaction>(&json) else {
+            panic!("transaction deserializes");
+        };
+        assert_eq!(back.contract_size(), Positive::HUNDRED);
+        assert_eq!(back, transaction);
+
+        // A payload written before the field existed reads as one unit.
+        let Ok(mut value) = serde_json::to_value(&transaction) else {
+            panic!("transaction serializes");
+        };
+        if let Some(object) = value.as_object_mut() {
+            object.remove("contract_size");
+        }
+        let Ok(legacy) = serde_json::from_value::<Transaction>(value) else {
+            panic!("legacy payload deserializes");
+        };
+        assert_eq!(legacy.contract_size(), Positive::ONE);
+    }
+
+    #[test]
+    fn test_transaction_contract_size_overflow_is_an_error() {
+        let transaction = sized(TradeStatus::Open, Side::Long, Positive::MAX);
+        assert!(matches!(
+            transaction.pnl(),
+            Err(TransactionError::Other { .. })
+        ));
     }
 }

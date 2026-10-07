@@ -75,6 +75,7 @@ use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::shared::spot_leg_mark_to_market;
+use crate::strategies::shared::{apply_hedge_contract_size, common_contract_size};
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -172,9 +173,9 @@ impl Collar {
     /// * `risk_free_rate` - The risk-free interest rate
     /// * `dividend_yield` - The dividend yield of the underlying asset
     /// * `quantity` - The number of shares. The option leg covers the same
-    ///   shares one for one: it is sized in shares, not in 100-share
-    ///   contracts, because an option here carries no contract multiplier
-    ///   (#731).
+    ///   shares one for one: it is built as one-unit contracts, one per
+    ///   share (#731). `BasicAble::set_contract_size` re-expresses it in
+    ///   market contracts with the same payoff and fees.
     /// * `premium_long_put` - The premium paid for buying the put
     /// * `premium_short_call` - The premium received for selling the call
     /// * `spot_open_fee` - Fee to open the spot position
@@ -832,6 +833,20 @@ impl BasicAble for Collar {
         );
 
         map
+    }
+    fn get_contract_size(&self) -> Result<Positive, StrategyError> {
+        common_contract_size(
+            &[&self.long_put, &self.short_call],
+            "Collar::get_contract_size",
+        )
+    }
+    fn set_contract_size(&mut self, contract_size: Positive) -> Result<(), StrategyError> {
+        apply_hedge_contract_size(
+            &mut [&mut self.long_put, &mut self.short_call],
+            contract_size,
+            "Collar::set_contract_size",
+        )?;
+        self.update_break_even_points()
     }
 }
 

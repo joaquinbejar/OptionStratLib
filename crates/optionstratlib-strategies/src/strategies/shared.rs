@@ -355,6 +355,109 @@ pub fn aggregate_premiums(positions: &[&Position]) -> Positive {
         .fold(Positive::ZERO, |acc, premium| acc + premium)
 }
 
+/// The contract size the option legs of a strategy share.
+///
+/// # Errors
+///
+/// Returns `StrategyError::OperationError(InvalidParameters { .. })` when
+/// `legs` is empty or the legs carry different contract sizes.
+pub(crate) fn common_contract_size(
+    legs: &[&Position],
+    operation: &str,
+) -> Result<Positive, StrategyError> {
+    let mut sizes = legs.iter().map(|leg| leg.option.contract_size);
+    let Some(first) = sizes.next() else {
+        return Err(StrategyError::invalid_parameters(
+            operation,
+            "the strategy has no option legs",
+        ));
+    };
+    if sizes.any(|size| size != first) {
+        return Err(StrategyError::invalid_parameters(
+            operation,
+            "the option legs carry different contract sizes",
+        ));
+    }
+    Ok(first)
+}
+
+/// Sets the contract size of every leg in `legs`, keeping the quantities in
+/// contracts.
+///
+/// # Errors
+///
+/// Returns `StrategyError::OperationError(InvalidParameters { .. })` when
+/// `contract_size` is zero; no leg is changed then.
+pub(crate) fn apply_contract_size(
+    legs: &mut [&mut Position],
+    contract_size: Positive,
+    operation: &str,
+) -> Result<(), StrategyError> {
+    if contract_size == Positive::ZERO {
+        return Err(StrategyError::invalid_parameters(
+            operation,
+            "contract size must be strictly positive",
+        ));
+    }
+    for leg in legs.iter_mut() {
+        leg.option.contract_size = contract_size;
+    }
+    Ok(())
+}
+
+/// Re-expresses the option legs of a covered strategy in contracts of
+/// `contract_size` units, keeping the units of the underlying each leg covers
+/// and its fee per unit.
+///
+/// Covered strategies (`CoveredCall`, `Collar`, `ProtectivePut`) size their
+/// option legs against the shares of the spot leg and take their option fees
+/// per share (#731). A leg of `quantity` contracts of `old` units becomes
+/// `quantity × old / contract_size` contracts of `contract_size` units, and
+/// its per-contract fees scale by `contract_size / old`, so the payoff, the
+/// premium and the fees of the strategy are unchanged.
+///
+/// The new legs are computed before any leg changes, so an error leaves the
+/// legs untouched.
+///
+/// # Errors
+///
+/// Returns `StrategyError::OperationError(InvalidParameters { .. })` when
+/// `contract_size` is zero, and a `PositiveError` when a quantity or a fee
+/// leaves the `Positive` range.
+pub(crate) fn apply_hedge_contract_size(
+    legs: &mut [&mut Position],
+    contract_size: Positive,
+    operation: &str,
+) -> Result<(), StrategyError> {
+    if contract_size == Positive::ZERO {
+        return Err(StrategyError::invalid_parameters(
+            operation,
+            "contract size must be strictly positive",
+        ));
+    }
+    let mut resized = Vec::with_capacity(legs.len());
+    for leg in legs.iter() {
+        let old = leg.option.contract_size;
+        let quantity = leg.option.position_size()?.checked_div(&contract_size)?;
+        let open_fee = leg
+            .open_fee
+            .checked_mul(&contract_size)?
+            .checked_div(&old)?;
+        let close_fee = leg
+            .close_fee
+            .checked_mul(&contract_size)?
+            .checked_div(&old)?;
+        resized.push((quantity, open_fee, close_fee));
+    }
+    for (leg, (quantity, open_fee, close_fee)) in legs.iter_mut().zip(resized) {
+        leg.option.quantity = quantity;
+        leg.option.contract_size = contract_size;
+        leg.open_fee = open_fee;
+        leg.close_fee = close_fee;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests_shared {
     use super::*;

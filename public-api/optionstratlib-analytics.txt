@@ -917,6 +917,7 @@ impl core::fmt::Display for optionstratlib_analytics::pnl::PnLMetricsStep
 pub fn optionstratlib_analytics::pnl::PnLMetricsStep::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct optionstratlib_analytics::pnl::Transaction
 impl optionstratlib_analytics::pnl::Transaction
+pub fn optionstratlib_analytics::pnl::Transaction::contract_size(&self) -> positive::positive::Positive
 pub fn optionstratlib_analytics::pnl::Transaction::date_time(&self) -> core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
 pub fn optionstratlib_analytics::pnl::Transaction::days_to_expiration(&self) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_analytics::pnl::Transaction::fees(&self) -> positive::positive::Positive
@@ -929,6 +930,7 @@ pub fn optionstratlib_analytics::pnl::Transaction::side(&self) -> financial_type
 pub fn optionstratlib_analytics::pnl::Transaction::underlying_price(&self) -> core::option::Option<positive::positive::Positive>
 impl optionstratlib_analytics::pnl::Transaction
 pub fn optionstratlib_analytics::pnl::Transaction::new(optionstratlib_core::model::trade::TradeStatus, core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>, option_type::option_type::OptionType, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>, core::option::Option<positive::positive::Positive>) -> Self
+pub fn optionstratlib_analytics::pnl::Transaction::with_contract_size(self, positive::positive::Positive) -> Self
 impl optionstratlib_analytics::pnl::Transaction
 pub fn optionstratlib_analytics::pnl::Transaction::pnl(&self) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_analytics::error::TransactionError>
 impl optionstratlib_analytics::pnl::Transaction
