@@ -15,12 +15,13 @@
 //!
 //! ```rust
 //! use optionstratlib_core::model::Positive;
+//! use rust_decimal::Decimal;
 //!
 //! pub struct StrategyProbabilityAnalysis {
 //!     pub probability_of_profit: Positive,
 //!     pub probability_of_max_profit: Positive,
 //!     pub probability_of_max_loss: Positive,
-//!     pub expected_value: Positive,
+//!     pub expected_value: Decimal,
 //!     pub break_even_points: Vec<Positive>,
 //!     pub risk_reward_ratio: Positive,
 //! }
@@ -29,8 +30,8 @@
 //! ### Probability Analysis Trait
 //!
 //! ```rust
-//! use optionstratlib_core::model::Positive;
 //! use optionstratlib_pricing::pricing::Profit;
+//! use rust_decimal::Decimal;
 //! use optionstratlib_strategies::strategies::Strategies;
 //! use optionstratlib_analytics::error::ProbabilityError;
 //!
@@ -48,7 +49,7 @@
 //!         &self,
 //!         volatility_adj: Option<VolatilityAdjustment>,
 //!         trend: Option<PriceTrend>
-//!     ) -> Result<Positive, ProbabilityError>;
+//!     ) -> Result<Decimal, ProbabilityError>;
 //! }
 //! ```
 //!

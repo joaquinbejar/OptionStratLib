@@ -1346,10 +1346,10 @@ mod tests_long_strangle_probability {
 
         assert!(result.is_ok());
         let ev = result.unwrap();
-        assert!(
-            ev >= Positive::ZERO,
-            "Expected value should be non-negative"
-        );
+        // Paying 4 for a 90/110 strangle on a 100 spot at 20% volatility with
+        // 30 days left loses money on average. The expected value is signed
+        // and reports that instead of a floored zero (#623).
+        assert!(ev < Decimal::ZERO, "expected value {ev}");
 
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.25),
@@ -1357,7 +1357,9 @@ mod tests_long_strangle_probability {
         });
         let result_with_vol = strangle.expected_value(vol_adj, None);
         assert!(result_with_vol.is_ok());
-        assert!(result_with_vol.unwrap() >= Positive::ZERO);
+        // A long strangle is long volatility: a wider distribution raises it.
+        let ev_with_vol = result_with_vol.unwrap();
+        assert!(ev_with_vol > ev, "{ev_with_vol} vs {ev}");
     }
 
     #[test]

@@ -2158,7 +2158,6 @@ mod tests_bull_call_spread_graph {
 #[cfg(test)]
 mod tests_bull_call_spread_probability {
     use super::*;
-    use optionstratlib_core::assert_pos_relative_eq;
 
     use optionstratlib_analytics::analytics::probability::PriceTrend;
     use rust_decimal_macros::dec;
@@ -2282,10 +2281,12 @@ mod tests_bull_call_spread_probability {
         assert!(analysis.probability_of_profit > Positive::ZERO);
         assert!(analysis.probability_of_max_profit >= Positive::ZERO);
         assert!(analysis.probability_of_max_loss >= Positive::ZERO);
-        assert_pos_relative_eq!(
-            analysis.expected_value,
-            Positive::ZERO,
-            pos_or_panic!(0.000001)
+        // Floored to zero before #623; the probability-weighted payoff of
+        // this spread is negative and is now reported as such.
+        assert!(
+            analysis.expected_value < Decimal::ZERO,
+            "expected value {}",
+            analysis.expected_value
         );
         assert!(!analysis.break_even_points.is_empty());
         assert!(analysis.risk_reward_ratio > Positive::ZERO);

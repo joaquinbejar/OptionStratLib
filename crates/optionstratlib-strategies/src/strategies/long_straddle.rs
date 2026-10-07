@@ -1167,10 +1167,7 @@ mod tests_long_straddle_probability {
 
         assert!(result.is_ok());
         let ev = result.unwrap();
-        assert!(
-            ev >= Positive::ZERO,
-            "Expected value should be non-negative"
-        );
+        assert!(ev >= Decimal::ZERO, "Expected value should be non-negative");
 
         let vol_adj = Some(VolatilityAdjustment {
             base_volatility: pos_or_panic!(0.25),
@@ -1178,7 +1175,7 @@ mod tests_long_straddle_probability {
         });
         let result_with_vol = straddle.expected_value(vol_adj, None);
         assert!(result_with_vol.is_ok());
-        assert!(result_with_vol.unwrap() >= Positive::ZERO);
+        assert!(result_with_vol.unwrap() >= Decimal::ZERO);
     }
 
     #[test]

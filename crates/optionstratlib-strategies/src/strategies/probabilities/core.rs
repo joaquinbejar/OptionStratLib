@@ -8,7 +8,7 @@
 //! comprehensive probability analysis capabilities for option strategies.
 
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::decimal_to_f64;
+use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
@@ -187,8 +187,16 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     ///   annual drift rate and the confidence level for the trend.
     ///
     /// # Returns
-    /// - `Result<Positive, ProbabilityError>`: On success, returns a `Positive` representing
-    ///   the expected value. On failure, returns an error message as a `String`.
+    /// - `Result<Decimal, ProbabilityError>`: On success, the probability-weighted
+    ///   profit at expiration. It is signed: a negative value means the strategy
+    ///   loses money on average under the given volatility and trend, and is
+    ///   reported as such rather than floored to zero (#623). With a zero
+    ///   volatility and no widening it is the profit at the current underlying
+    ///   price, of either sign.
+    ///
+    /// The `trend` drift enters through the distribution the probabilities are
+    /// taken from; the sum is the expectation under that distribution and is
+    /// not scaled again afterwards.
     ///
     /// The function performs the following operations:
     /// - Determines the pricing range using the underlying asset's price and steps based
@@ -221,23 +229,20 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// expected value by a distribution that does not sum to one.
     ///
     /// Returns [`ProbabilityCalculationErrorKind::TrendError`] when the trend
-    /// drift has no `f64` form.
+    /// drift has no `f64` form, and
+    /// [`ProbabilityCalculationErrorKind::ExpectedValueError`] when the
+    /// probability-weighted sum overflows `Decimal`.
     fn expected_value(
         &self,
         volatility_adj: Option<VolatilityAdjustment>,
         trend: Option<PriceTrend>,
-    ) -> Result<Positive, ProbabilityError> {
+    ) -> Result<Decimal, ProbabilityError> {
         // Special case: when volatility is zero, return the current value
         if let Some(ref vol_adj) = volatility_adj
             && vol_adj.base_volatility == Positive::ZERO
             && vol_adj.std_dev_adjustment == Positive::ZERO
         {
-            let current_profit = self.calculate_profit_at(self.get_underlying_price())?;
-            return if current_profit <= Decimal::ZERO {
-                Ok(Positive::ZERO)
-            } else {
-                Ok(Positive::new_decimal(current_profit)?)
-            };
+            return Ok(self.calculate_profit_at(self.get_underlying_price())?);
         }
 
         let volatility = resolve_volatility(self, volatility_adj)?;
@@ -293,45 +298,37 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             last_prob = prob.0.to_dec();
         }
 
-        let mut expected_value = 0.0_f64;
+        // Summed in `Decimal` with checked arithmetic: the expected value is a
+        // signed monetary quantity, and a negative one is a valid answer
+        // ("this strategy loses money on average"), not a floor to zero
+        // (#623). The drift of `trend` already shapes the distribution the
+        // probabilities come from, so the sum is the expectation under that
+        // trend and takes no further adjustment.
+        let mut expected_value = Decimal::ZERO;
+        let mut total_prob = Decimal::ZERO;
         for (price, prob) in range.iter().zip(probabilities.iter()) {
-            let profit_dec = self.calculate_profit_at(price)?;
-            let profit = profit_dec
-                .to_f64()
-                .ok_or_else(|| StrategyError::numeric_conversion(0.0))?;
-            expected_value += profit * prob.to_f64();
+            let profit = self.calculate_profit_at(price)?;
+            let weighted = d_mul(
+                profit,
+                prob.to_dec(),
+                "expected_value: profit * probability",
+            )?;
+            expected_value = d_add(expected_value, weighted, "expected_value: sum")?;
+            total_prob = d_add(total_prob, prob.to_dec(), "expected_value: probability sum")?;
         }
 
-        let total_prob: f64 = probabilities.iter().map(|p| p.to_f64()).sum();
-        if (total_prob - 1.0).abs() > 0.05 {
+        let deviation = d_sub(
+            total_prob,
+            Decimal::ONE,
+            "expected_value: probability deviation",
+        )?;
+        if deviation.abs() > Decimal::new(5, 2) {
             warn!(
                 "Sum of probabilities ({}) deviates significantly from 1.0",
                 total_prob
             );
         }
-        if expected_value <= 0.0 {
-            Ok(Positive::ZERO)
-        } else {
-            let trend_adjustment = match trend {
-                Some(t) => {
-                    // The nearest `f64`, so a drift written with the digits
-                    // of the former `f64` field gives the same adjustment.
-                    let drift = t.drift_rate();
-                    let drift = decimal_to_f64(drift).map_err(|e| {
-                        ProbabilityError::CalculationError(
-                            ProbabilityCalculationErrorKind::TrendError {
-                                reason: format!(
-                                    "expected_value: trend drift_rate {drift} has no f64 form: {e}"
-                                ),
-                            },
-                        )
-                    })?;
-                    1.0 / (1.0 + drift.abs())
-                }
-                None => 1.0,
-            };
-            Positive::new(expected_value * trend_adjustment).map_err(ProbabilityError::from)
-        }
+        Ok(expected_value)
     }
 
     /// Calculate probability of profit
@@ -631,7 +628,7 @@ mod tests_probability_analysis {
         let result = strategy.expected_value(None, None);
 
         assert!(result.is_ok());
-        assert!(result.unwrap() > Positive::ZERO);
+        assert!(result.unwrap() > Decimal::ZERO);
     }
 
     #[test]
@@ -642,7 +639,7 @@ mod tests_probability_analysis {
         let result = strategy.expected_value(None, trend);
 
         assert!(result.is_ok());
-        assert!(result.unwrap() > Positive::ZERO);
+        assert!(result.unwrap() > Decimal::ZERO);
     }
 
     #[test]
@@ -755,13 +752,17 @@ mod tests_expected_value {
     /// code fed `drift_rate: 2.999789999999902, confidence: 0.95` (#656), then
     /// re-baselined when the probability threshold gained the lognormal
     /// `-sigma^2 / 2` term (#664: `0.002802439458791824` ->
-    /// `0.003104587227155649`).
+    /// `0.003104587227155649`). Re-baselined again by #623, which sums in
+    /// `Decimal` and drops the extra `1 / (1 + |drift|)` scaling applied
+    /// after the sum: the drift already shapes the distribution, so the old
+    /// value was the expectation divided by `3.999789999999902`
+    /// (`0.003104587227155649` -> `0.012417696945304589008056`).
     #[test]
     fn test_expected_value_many_decimal_places_drift_matches_f64_field() {
         let strategy = create_test_strategy();
         let trend = Some(price_trend(dec!(2.999789999999902), dec!(0.95)));
         match strategy.expected_value(None, trend) {
-            Ok(ev) => assert_eq!(ev.to_dec(), dec!(0.003104587227155649)),
+            Ok(ev) => assert_eq!(ev, dec!(0.012417696945304589008056)),
             Err(e) => panic!("expected value evaluates: {e}"),
         }
     }
@@ -773,10 +774,7 @@ mod tests_expected_value {
 
         assert!(result.is_ok(), "Expected value calculation should succeed");
         let ev = result.unwrap();
-        assert!(
-            ev >= Positive::ZERO,
-            "Expected value should be non-negative"
-        );
+        assert!(ev > Decimal::ZERO, "expected value {ev}");
     }
 
     #[test]
@@ -789,7 +787,10 @@ mod tests_expected_value {
 
         let result = strategy.expected_value(vol_adj, None);
         assert!(result.is_ok());
-        assert!(result.unwrap() >= Positive::ZERO);
+        // Floored to zero before #623: the spread loses money on average
+        // here, and the signed expected value reports it.
+        let ev = result.unwrap();
+        assert!(ev < Decimal::ZERO, "expected value {ev}");
     }
 
     #[test]
@@ -799,7 +800,66 @@ mod tests_expected_value {
 
         let result = strategy.expected_value(None, trend);
         assert!(result.is_ok());
-        assert!(result.unwrap() >= Positive::ZERO);
+        assert!(result.unwrap() > Decimal::ZERO);
+    }
+
+    /// A trend held with zero confidence is ignored by the distribution, so
+    /// it leaves the expected value unchanged. Before #623 the sum was also
+    /// divided by `1 + |drift|` whatever the confidence, which made this
+    /// expected value a fifth of the untrended one.
+    #[test]
+    fn test_expected_value_zero_confidence_trend_matches_no_trend() {
+        let strategy = create_test_strategy();
+        let trend = Some(price_trend(dec!(4.0), Decimal::ZERO));
+        let with_trend = match strategy.expected_value(None, trend) {
+            Ok(ev) => ev,
+            Err(e) => panic!("expected value with trend: {e}"),
+        };
+        let without = match strategy.expected_value(None, None) {
+            Ok(ev) => ev,
+            Err(e) => panic!("expected value without trend: {e}"),
+        };
+        assert_eq!(with_trend, without);
+    }
+
+    /// With zero volatility the expected value is the profit at the current
+    /// price, of either sign. With the spot below both strikes the debit
+    /// spread is worthless, so the answer is minus the net debit, not zero.
+    #[test]
+    fn test_expected_value_zero_volatility_reports_current_loss() {
+        let strategy = match BullCallSpread::new(
+            "GOLD".to_string(),
+            pos_or_panic!(2400.0), // underlying_price, below both strikes
+            pos_or_panic!(2460.0),
+            pos_or_panic!(2515.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            Positive::ONE,
+            pos_or_panic!(27.26),
+            pos_or_panic!(5.33),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.58),
+            pos_or_panic!(0.55),
+            pos_or_panic!(0.54),
+        ) {
+            Ok(strategy) => strategy,
+            Err(e) => panic!("spread constructs: {e}"),
+        };
+        let vol_adj = Some(VolatilityAdjustment {
+            base_volatility: Positive::ZERO,
+            std_dev_adjustment: Positive::ZERO,
+        });
+        let current = match strategy.calculate_profit_at(&pos_or_panic!(2400.0)) {
+            Ok(profit) => profit,
+            Err(e) => panic!("profit at the spot: {e}"),
+        };
+        assert!(current < Decimal::ZERO, "profit at the spot {current}");
+        match strategy.expected_value(vol_adj, None) {
+            Ok(ev) => assert_eq!(ev, current),
+            Err(e) => panic!("expected value at zero volatility: {e}"),
+        }
     }
 
     #[test]
@@ -813,7 +873,10 @@ mod tests_expected_value {
 
         let result = strategy.expected_value(vol_adj, trend);
         assert!(result.is_ok());
-        assert!(result.unwrap() >= Positive::ZERO);
+        // Floored to zero before #623: the spread loses money on average
+        // here, and the signed expected value reports it.
+        let ev = result.unwrap();
+        assert!(ev < Decimal::ZERO, "expected value {ev}");
     }
 
     #[test]
@@ -826,7 +889,10 @@ mod tests_expected_value {
 
         let result = strategy.expected_value(vol_adj, None);
         assert!(result.is_ok());
-        assert!(result.unwrap() >= Positive::ZERO);
+        // Floored to zero before #623: the spread loses money on average
+        // here, and the signed expected value reports it.
+        let ev = result.unwrap();
+        assert!(ev < Decimal::ZERO, "expected value {ev}");
     }
 
     #[test]
@@ -836,7 +902,10 @@ mod tests_expected_value {
 
         let result = strategy.expected_value(None, trend);
         assert!(result.is_ok());
-        assert!(result.unwrap() >= Positive::ZERO);
+        // Floored to zero before #623: the spread loses money on average
+        // here, and the signed expected value reports it.
+        let ev = result.unwrap();
+        assert!(ev < Decimal::ZERO, "expected value {ev}");
     }
 
     #[test]
@@ -863,10 +932,8 @@ mod tests_expected_value {
             result.is_ok(),
             "Expected value calculation should succeed with minimal volatility"
         );
-        assert!(
-            result.unwrap() >= Positive::ZERO,
-            "Expected value should be non-negative"
-        );
+        let ev = result.unwrap();
+        assert!(ev > Decimal::ZERO, "expected value {ev}");
     }
 }
 
