@@ -53,6 +53,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and read the strikes as `Positive`; call `.to_f64()` on an element only
   where a non-monetary `f64` is genuinely needed, e.g. a plot axis.
 
+- **`OptionSeries` reads its expiry keys back as absolute dates** (#643).
+  Each `chains` key is still written as `YYYY-MM-DD`, but deserialization
+  now reads it as `ExpirationDate::DateTime` at 18:30 UTC on that date (the
+  time the `expiration_date` crate gives a date-only expiry) instead of
+  `ExpirationDate::from_string_to_days`, which turned it into a day count
+  from the moment of reading and moved every key one day earlier. Write
+  then read now returns the same `YYYY-MM-DD` keys whenever it runs, and
+  reading no longer overwrites the thread-local `ExpirationDate` reference
+  datetime. Keys must be `YYYY-MM-DD`: a day count (`"30"`) or another
+  date format (`"20300115"`, `"15-01-2030"`) is rejected with `Invalid date
+  format`. Migration: match on `ExpirationDate::DateTime` (or call
+  `get_days()` / `get_date()`, which work for both variants) where code
+  expected a deserialized key to be `ExpirationDate::Days`, and rewrite any
+  hand-written key in another format as `YYYY-MM-DD`. `OptionChain` is not
+  affected: it stores and serializes `expiration_date` as the string it was
+  given and parses it only when used, so its round trip is already the
+  identity.
+
 - **Terminal presentation lives in `optionstratlib-visualization` only**
   (M6-05, #546). No crate below visualization resolves `prettytable-rs`,
   `indicatif` or `pretty-simple-display` any more, and no computational API
@@ -764,7 +782,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     RNDResult}` is removed; use `optionstratlib::analytics::rnd`.
   - `OptionChain` and `OptionSeries` document their 0.22 serialization
     contract, with new round-trip and invalid-key tests. An `OptionSeries`
-    round trip can move each expiry key one day earlier today (#643).
+    round trip returns the same expiry keys; see the #643 entry above.
   - New market API the facade needs: `OptionChain::set_expiration_date` (a
     `#[doc(hidden)]` test seam), `OptionChainBuildParams::set_expiration_date`,
     `OptionSeriesBuildParams::{chain_params, series, set_series}`, and the

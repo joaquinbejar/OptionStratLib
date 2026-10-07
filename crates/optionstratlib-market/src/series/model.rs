@@ -1,6 +1,7 @@
 use crate::chains::OptionChain;
 use crate::error::ChainError;
 use crate::series::params::OptionSeriesBuildParams;
+use chrono::NaiveDate;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::utils::Len;
@@ -21,12 +22,13 @@ use std::fmt;
 /// `symbol`, `underlying_price`, `chains`, and the optional
 /// `risk_free_rate` and `dividend_yield`, which are omitted when `None`.
 /// `chains` is a map from an expiration date written as `YYYY-MM-DD` to the
-/// [`OptionChain`] for that date, ordered by date. Deserialization parses
-/// each key back with `ExpirationDate::from_string_to_days`, so an expiry
-/// stored as an absolute date comes back as a day count from the moment of
-/// reading, so the variant does not round-trip, and today each date can come
-/// back one day earlier (#643). A key that is not a date is an error, not a
-/// skipped chain.
+/// [`OptionChain`] for that date, ordered by date. The dates are canonical:
+/// deserialization reads each key back as an absolute
+/// `ExpirationDate::DateTime` at 18:30 UTC on that date, the time the
+/// `expiration_date` crate gives a date-only expiry, so write-then-read
+/// returns the same `YYYY-MM-DD` keys whenever it is read. An expiry written
+/// as `ExpirationDate::Days` therefore comes back as a `DateTime`. A key that
+/// is not a `YYYY-MM-DD` date is an error, not a skipped chain.
 #[derive(Clone)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct OptionSeries {
@@ -313,6 +315,20 @@ impl Serialize for OptionSeries {
     }
 }
 
+/// Reads a `chains` key written by `ExpirationDate::get_date_string` back as
+/// an absolute expiration at 18:30 UTC on that date, so formatting it again
+/// gives the same key. The key is parsed here rather than through
+/// `ExpirationDate::from_string`, which also overwrites the thread-local
+/// reference datetime that `ExpirationDate::Days` resolves against.
+fn expiration_from_key(key: &str) -> Result<ExpirationDate, String> {
+    let date = NaiveDate::parse_from_str(key, "%Y-%m-%d")
+        .map_err(|e| format!("Invalid date format: {key:?} is not YYYY-MM-DD: {e}"))?;
+    let expiry = date
+        .and_hms_opt(18, 30, 0)
+        .ok_or_else(|| format!("Invalid date format: no 18:30 UTC on {key:?}"))?;
+    Ok(ExpirationDate::DateTime(expiry.and_utc()))
+}
+
 // Custom deserialization implementation
 impl<'de> Deserialize<'de> for OptionSeries {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -391,11 +407,11 @@ impl<'de> Deserialize<'de> for OptionSeries {
                 let string_chains =
                     string_chains.ok_or_else(|| de::Error::missing_field("chains"))?;
 
-                // Convert string dates back to ExpirationDate objects
+                // Read the `YYYY-MM-DD` keys back as absolute expirations.
                 let mut chains = BTreeMap::new();
                 for (date_str, chain) in string_chains {
-                    let expiration_date = ExpirationDate::from_string_to_days(&date_str)
-                        .map_err(|e| de::Error::custom(format!("Invalid date format: {e}")))?;
+                    let expiration_date =
+                        expiration_from_key(&date_str).map_err(de::Error::custom)?;
                     chains.insert(expiration_date, chain);
                 }
 
@@ -791,32 +807,86 @@ mod tests_option_series {
             assert_eq!(back.risk_free_rate, original.risk_free_rate);
             assert_eq!(back.dividend_yield, None);
             assert_eq!(back.chains.len(), 2);
-            let dates = |series: &OptionSeries| -> Vec<String> {
-                series
-                    .chains
-                    .keys()
-                    .map(|date| match date.get_date_string() {
-                        Ok(date) => date,
-                        Err(error) => panic!("date string: {error}"),
-                    })
-                    .collect()
+            // Compare against the keys actually written rather than
+            // re-deriving them from `original`, which would race a midnight
+            // between serializing and asserting.
+            let value: serde_json::Value = match serde_json::from_str(&json) {
+                Ok(value) => value,
+                Err(error) => panic!("parse: {error}"),
             };
-            // Each key may come back one day earlier (#643); pin that bound
-            // until the conversion is fixed, then tighten to equality.
-            for (read, written) in dates(&back).iter().zip(dates(&original).iter()) {
-                let parse = |date: &str| match chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") {
+            let written: Vec<String> = match value.get("chains").and_then(|c| c.as_object()) {
+                Some(chains) => chains.keys().cloned().collect(),
+                None => panic!("no chains object in {json}"),
+            };
+            let read: Vec<String> = back
+                .chains
+                .keys()
+                .map(|date| match date.get_date_string() {
                     Ok(date) => date,
-                    Err(error) => panic!("date {date}: {error}"),
-                };
-                let shift = (parse(written) - parse(read)).num_days();
-                assert!((0..=1).contains(&shift), "{written} read back as {read}");
-            }
+                    Err(error) => panic!("date string: {error}"),
+                })
+                .collect();
+            assert_eq!(written.len(), 2);
+            assert_eq!(read, written);
+            assert!(
+                back.chains
+                    .keys()
+                    .all(|date| matches!(date, ExpirationDate::DateTime(_)))
+            );
             let expirations: Vec<String> = back
                 .chains
                 .values()
                 .map(OptionChain::get_expiration_date)
                 .collect();
             assert_eq!(expirations, vec!["2030-01-15", "2030-02-14"]);
+        }
+
+        #[test]
+        fn test_round_trip_keeps_absolute_dates_exactly() {
+            let expiry = match NaiveDate::from_ymd_opt(2030, 1, 15)
+                .and_then(|date| date.and_hms_opt(18, 30, 0))
+            {
+                Some(expiry) => expiry.and_utc(),
+                None => panic!("valid fixture date"),
+            };
+            let mut original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
+            original.chains.insert(
+                ExpirationDate::DateTime(expiry),
+                chain("TEST", "2030-01-15"),
+            );
+
+            let json = match serde_json::to_string(&original) {
+                Ok(json) => json,
+                Err(error) => panic!("serialize: {error}"),
+            };
+            assert!(json.contains("\"2030-01-15\":"), "{json}");
+            let back: OptionSeries = match serde_json::from_str(&json) {
+                Ok(series) => series,
+                Err(error) => panic!("deserialize: {error}"),
+            };
+            let keys: Vec<&ExpirationDate> = back.chains.keys().collect();
+            assert!(matches!(keys.as_slice(), [ExpirationDate::DateTime(read)] if *read == expiry));
+            match serde_json::to_string(&back) {
+                Ok(again) => assert_eq!(again, json),
+                Err(error) => panic!("serialize again: {error}"),
+            }
+        }
+
+        #[test]
+        fn test_deserialize_rejects_a_key_in_another_date_format() {
+            let chain_json = match serde_json::to_string(&chain("TEST", "2030-01-15")) {
+                Ok(json) => json,
+                Err(error) => panic!("serialize chain: {error}"),
+            };
+            for key in ["30", "20300115", "15-01-2030"] {
+                let json = format!(
+                    r#"{{"symbol":"TEST","underlying_price":"100","chains":{{"{key}":{chain_json}}}}}"#
+                );
+                match serde_json::from_str::<OptionSeries>(&json) {
+                    Err(error) => assert!(error.to_string().contains("Invalid date format")),
+                    Ok(_) => panic!("key {key} must be rejected"),
+                }
+            }
         }
 
         #[test]
