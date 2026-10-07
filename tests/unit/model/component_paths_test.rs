@@ -486,8 +486,6 @@ fn test_simulation_items_through_facade_modules_and_prelude() {
 
     let _: optionstratlib_simulation::error::SimulationError =
         optionstratlib::error::SimulationError::invalid_parameters("probe");
-    let _: optionstratlib_simulation::error::simulation::SimulationResult<()> =
-        optionstratlib::error::simulation::SimulationResult::<()>::Ok(());
     let _: optionstratlib_simulation::error::SimulationResult<()> =
         optionstratlib::error::SimulationResult::<()>::Ok(());
 }

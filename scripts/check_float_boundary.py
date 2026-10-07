@@ -82,7 +82,7 @@ def self_test() -> int:
             ["pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> Result<Decimal, optionstratlib_core::error::DecimalError>"],
             1,
         ),
-        "error constructor": (["pub fn optionstratlib_pricing::error::pricing::PricingError::non_finite(&'static str, f64) -> Self"], 0),
+        "error constructor": (["pub fn optionstratlib_pricing::error::PricingError::non_finite(&'static str, f64) -> Self"], 0),
     }
     failures = 0
     import tempfile

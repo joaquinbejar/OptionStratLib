@@ -22,43 +22,9 @@ pub static optionstratlib_core::constants::TRADING_DAYS: std::sync::lazy_lock::L
 pub static optionstratlib_core::constants::TRADING_HOURS: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
 pub static optionstratlib_core::constants::WEEKS_PER_YEAR: std::sync::lazy_lock::LazyLock<positive::positive::Positive>
 pub mod optionstratlib_core::error
-pub mod optionstratlib_core::error::decimal
-pub enum optionstratlib_core::error::decimal::DecimalError
-pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError
-pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError::operation: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::ArithmeticError::reason: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::ConversionError
-pub optionstratlib_core::error::decimal::DecimalError::ConversionError::from_type: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::ConversionError::reason: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::ConversionError::to_type: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::ExpirationDate(expiration_date::error::ExpirationDateError)
-pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision
-pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision::precision: i32
-pub optionstratlib_core::error::decimal::DecimalError::InvalidPrecision::reason: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::InvalidValue
-pub optionstratlib_core::error::decimal::DecimalError::InvalidValue::reason: alloc::string::String
-pub optionstratlib_core::error::decimal::DecimalError::InvalidValue::value: f64
-pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds
-pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::max: f64
-pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::min: f64
-pub optionstratlib_core::error::decimal::DecimalError::OutOfBounds::value: f64
-pub optionstratlib_core::error::decimal::DecimalError::Overflow
-pub optionstratlib_core::error::decimal::DecimalError::Overflow::lhs: rust_decimal::decimal::Decimal
-pub optionstratlib_core::error::decimal::DecimalError::Overflow::operation: &'static str
-pub optionstratlib_core::error::decimal::DecimalError::Overflow::rhs: rust_decimal::decimal::Decimal
-impl optionstratlib_core::error::decimal::DecimalError
-pub fn optionstratlib_core::error::decimal::DecimalError::arithmetic_error(&str, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::conversion_error(&str, &str, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::invalid_precision(i32, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::invalid_value(f64, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::out_of_bounds(f64, f64, f64) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::overflow(&'static str, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
-impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_core::error::decimal::DecimalError
-pub fn optionstratlib_core::error::decimal::DecimalError::from(expiration_date::error::ExpirationDateError) -> Self
-pub type optionstratlib_core::error::decimal::DecimalResult<T> = core::result::Result<T, optionstratlib_core::error::decimal::DecimalError>
 pub mod optionstratlib_core::error::position
 pub enum optionstratlib_core::error::position::PositionError
-pub optionstratlib_core::error::position::PositionError::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::position::PositionError::DecimalError(optionstratlib_core::error::DecimalError)
 pub optionstratlib_core::error::position::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
 pub optionstratlib_core::error::position::PositionError::Options(optionstratlib_core::error::OptionsError)
 pub optionstratlib_core::error::position::PositionError::PositiveError(positive::error::PositiveError)
@@ -107,19 +73,6 @@ pub optionstratlib_core::error::position::StrategyErrorKind::StrategyFull::strat
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::operation: alloc::string::String
 pub optionstratlib_core::error::position::StrategyErrorKind::UnsupportedOperation::strategy_type: alloc::string::String
-pub mod optionstratlib_core::error::trade
-pub enum optionstratlib_core::error::trade::TradeError
-pub optionstratlib_core::error::trade::TradeError::InvalidTrade
-pub optionstratlib_core::error::trade::TradeError::InvalidTrade::reason: alloc::string::String
-pub optionstratlib_core::error::trade::TradeError::InvalidTradeStatus
-pub optionstratlib_core::error::trade::TradeError::InvalidTradeStatus::reason: alloc::string::String
-impl optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::invalid_trade(&str) -> Self
-pub fn optionstratlib_core::error::trade::TradeError::invalid_trade_status(&str) -> Self
-impl core::convert::From<&str> for optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::from(&str) -> Self
-impl core::convert::From<alloc::string::String> for optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::from(alloc::string::String) -> Self
 pub enum optionstratlib_core::error::DecimalError
 pub optionstratlib_core::error::DecimalError::ArithmeticError
 pub optionstratlib_core::error::DecimalError::ArithmeticError::operation: alloc::string::String
@@ -143,15 +96,15 @@ pub optionstratlib_core::error::DecimalError::Overflow
 pub optionstratlib_core::error::DecimalError::Overflow::lhs: rust_decimal::decimal::Decimal
 pub optionstratlib_core::error::DecimalError::Overflow::operation: &'static str
 pub optionstratlib_core::error::DecimalError::Overflow::rhs: rust_decimal::decimal::Decimal
-impl optionstratlib_core::error::decimal::DecimalError
-pub fn optionstratlib_core::error::decimal::DecimalError::arithmetic_error(&str, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::conversion_error(&str, &str, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::invalid_precision(i32, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::invalid_value(f64, &str) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::out_of_bounds(f64, f64, f64) -> Self
-pub fn optionstratlib_core::error::decimal::DecimalError::overflow(&'static str, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
-impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_core::error::decimal::DecimalError
-pub fn optionstratlib_core::error::decimal::DecimalError::from(expiration_date::error::ExpirationDateError) -> Self
+impl optionstratlib_core::error::DecimalError
+pub fn optionstratlib_core::error::DecimalError::arithmetic_error(&str, &str) -> Self
+pub fn optionstratlib_core::error::DecimalError::conversion_error(&str, &str, &str) -> Self
+pub fn optionstratlib_core::error::DecimalError::invalid_precision(i32, &str) -> Self
+pub fn optionstratlib_core::error::DecimalError::invalid_value(f64, &str) -> Self
+pub fn optionstratlib_core::error::DecimalError::out_of_bounds(f64, f64, f64) -> Self
+pub fn optionstratlib_core::error::DecimalError::overflow(&'static str, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> Self
+impl core::convert::From<expiration_date::error::ExpirationDateError> for optionstratlib_core::error::DecimalError
+pub fn optionstratlib_core::error::DecimalError::from(expiration_date::error::ExpirationDateError) -> Self
 pub enum optionstratlib_core::error::OperationErrorKind
 pub optionstratlib_core::error::OperationErrorKind::InvalidParameters
 pub optionstratlib_core::error::OperationErrorKind::InvalidParameters::operation: alloc::string::String
@@ -160,7 +113,7 @@ pub optionstratlib_core::error::OperationErrorKind::NotSupported
 pub optionstratlib_core::error::OperationErrorKind::NotSupported::operation: alloc::string::String
 pub optionstratlib_core::error::OperationErrorKind::NotSupported::reason: alloc::string::String
 pub enum optionstratlib_core::error::OptionsError
-pub optionstratlib_core::error::OptionsError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::OptionsError::Decimal(optionstratlib_core::error::DecimalError)
 pub optionstratlib_core::error::OptionsError::ExpirationDate(expiration_date::error::ExpirationDateError)
 pub optionstratlib_core::error::OptionsError::GreeksCalculationError
 pub optionstratlib_core::error::OptionsError::GreeksCalculationError::greek: alloc::string::String
@@ -191,7 +144,7 @@ pub fn optionstratlib_core::error::OptionsError::time_error(&str, &str) -> Self
 pub fn optionstratlib_core::error::OptionsError::update_error(&str, &str) -> Self
 pub fn optionstratlib_core::error::OptionsError::validation_error(&str, &str) -> Self
 pub enum optionstratlib_core::error::PositionError
-pub optionstratlib_core::error::PositionError::DecimalError(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_core::error::PositionError::DecimalError(optionstratlib_core::error::DecimalError)
 pub optionstratlib_core::error::PositionError::LimitError(optionstratlib_core::error::position::PositionLimitErrorKind)
 pub optionstratlib_core::error::PositionError::Options(optionstratlib_core::error::OptionsError)
 pub optionstratlib_core::error::PositionError::PositiveError(positive::error::PositiveError)
@@ -211,14 +164,14 @@ pub optionstratlib_core::error::TradeError::InvalidTrade
 pub optionstratlib_core::error::TradeError::InvalidTrade::reason: alloc::string::String
 pub optionstratlib_core::error::TradeError::InvalidTradeStatus
 pub optionstratlib_core::error::TradeError::InvalidTradeStatus::reason: alloc::string::String
-impl optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::invalid_trade(&str) -> Self
-pub fn optionstratlib_core::error::trade::TradeError::invalid_trade_status(&str) -> Self
-impl core::convert::From<&str> for optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::from(&str) -> Self
-impl core::convert::From<alloc::string::String> for optionstratlib_core::error::trade::TradeError
-pub fn optionstratlib_core::error::trade::TradeError::from(alloc::string::String) -> Self
-pub type optionstratlib_core::error::DecimalResult<T> = core::result::Result<T, optionstratlib_core::error::decimal::DecimalError>
+impl optionstratlib_core::error::TradeError
+pub fn optionstratlib_core::error::TradeError::invalid_trade(&str) -> Self
+pub fn optionstratlib_core::error::TradeError::invalid_trade_status(&str) -> Self
+impl core::convert::From<&str> for optionstratlib_core::error::TradeError
+pub fn optionstratlib_core::error::TradeError::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for optionstratlib_core::error::TradeError
+pub fn optionstratlib_core::error::TradeError::from(alloc::string::String) -> Self
+pub type optionstratlib_core::error::DecimalResult<T> = core::result::Result<T, optionstratlib_core::error::DecimalError>
 pub type optionstratlib_core::error::OptionsResult<T> = core::result::Result<T, optionstratlib_core::error::OptionsError>
 pub mod optionstratlib_core::model
 pub use optionstratlib_core::model::ExpirationDate
@@ -234,27 +187,27 @@ pub mod optionstratlib_core::model::decimal
 pub const optionstratlib_core::model::decimal::DIV_DEFAULT_SCALE: u32
 pub const optionstratlib_core::model::decimal::ONE_DAY: rust_decimal::decimal::Decimal
 pub trait optionstratlib_core::model::decimal::DecimalStats
-pub fn optionstratlib_core::model::decimal::DecimalStats::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::DecimalStats::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::DecimalStats::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::DecimalStats::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
 impl optionstratlib_core::model::decimal::DecimalStats for alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_add(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_div(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_exp(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_ln(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_mul(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_powd(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_product_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
-pub fn optionstratlib_core::model::decimal::d_sqrt(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_sub(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_sum(&[rust_decimal::decimal::Decimal], &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
-pub fn optionstratlib_core::model::decimal::d_sum_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::mean(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn alloc::vec::Vec<rust_decimal::decimal::Decimal>::std_dev(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_add(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_div(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_exp(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_ln(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_mul(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_powd(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_product_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::decimal::d_sqrt(rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sub(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sum(&[rust_decimal::decimal::Decimal], &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::decimal::d_sum_iter<I>(I, &'static str) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError> where I: core::iter::traits::collect::IntoIterator<Item = rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::decimal::decimal_normal_sample() -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::decimal::decimal_normal_sample_with<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> rust_decimal::decimal::Decimal
-pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::decimal_to_f64(rust_decimal::decimal::Decimal) -> core::result::Result<f64, optionstratlib_core::error::DecimalError>
 pub fn optionstratlib_core::model::decimal::decimal_uniform_sample_with<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> rust_decimal::decimal::Decimal
-pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::model::decimal::f64_to_decimal(f64) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
 pub fn optionstratlib_core::model::decimal::finite_decimal(f64) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::decimal::p_sqrt(&positive::positive::Positive, &'static str) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub mod optionstratlib_core::model::leg
@@ -757,16 +710,16 @@ pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt
 impl core::fmt::Display for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl utoipa::ToSchema for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::name() -> alloc::borrow::Cow<'static, str>
 pub fn optionstratlib_core::model::position::Position::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
@@ -960,16 +913,16 @@ pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt
 impl core::fmt::Display for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl utoipa::ToSchema for optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::position::Position::name() -> alloc::borrow::Cow<'static, str>
 pub fn optionstratlib_core::model::position::Position::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
@@ -1003,35 +956,35 @@ pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datet
 impl core::fmt::Display for optionstratlib_core::model::Trade
 pub fn optionstratlib_core::model::Trade::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade
-pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub trait optionstratlib_core::model::TradeAble
-pub fn optionstratlib_core::model::TradeAble::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeAble::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeAble::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeAble::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeAble::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeAble::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade
-pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub trait optionstratlib_core::model::TradeStatusAble
-pub fn optionstratlib_core::model::TradeStatusAble::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeStatusAble::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeStatusAble::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeStatusAble::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeStatusAble::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::TradeStatusAble::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::TradeStatusAble::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 impl optionstratlib_core::model::TradeStatusAble for optionstratlib_core::model::position::Position
-pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
-pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::trade::TradeError>
+pub fn optionstratlib_core::model::position::Position::assigned(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::close(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::exercised(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::expired(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::open(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::position::Position::status_other(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::reject_unrepresentable_expiration(&expiration_date::ExpirationDate) -> core::result::Result<(), expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::save_trades(&[optionstratlib_core::model::Trade], &str) -> core::io::error::Result<()>
@@ -1041,13 +994,13 @@ pub fn optionstratlib_core::utils::json_format::write_json<T: serde_core::ser::S
 pub fn optionstratlib_core::utils::json_format::write_json_pretty<T: serde_core::ser::Serialize + ?core::marker::Sized>(&T, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub mod optionstratlib_core::utils::numeric
 pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool
-pub fn optionstratlib_core::utils::numeric::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::numeric::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::DecimalError>
 pub mod optionstratlib_core::utils::rng
 pub const optionstratlib_core::utils::rng::DETERMINISTIC_RNG_DEFAULT_SEED: u64
 pub fn optionstratlib_core::utils::rng::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib_core::utils::rng::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
 pub fn optionstratlib_core::utils::rng::get_random_element_with<'a, T, R: rand_core::Rng + ?core::marker::Sized>(&'a alloc::collections::btree::set::BTreeSet<T>, &mut R) -> core::option::Option<&'a T>
-pub fn optionstratlib_core::utils::rng::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::rng::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
 pub mod optionstratlib_core::utils::time
 pub enum optionstratlib_core::utils::time::TimeFrame
 pub optionstratlib_core::utils::time::TimeFrame::Custom(positive::positive::Positive)
@@ -1103,11 +1056,11 @@ pub trait optionstratlib_core::utils::Len
 pub fn optionstratlib_core::utils::Len::is_empty(&self) -> bool
 pub fn optionstratlib_core::utils::Len::len(&self) -> usize
 pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool
-pub fn optionstratlib_core::utils::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::calculate_log_returns(&[positive::positive::Positive]) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::DecimalError>
 pub fn optionstratlib_core::utils::deterministic_rng(u64) -> rand::rngs::std::StdRng
 pub fn optionstratlib_core::utils::get_random_element<T>(&alloc::collections::btree::set::BTreeSet<T>) -> core::option::Option<&T>
 pub fn optionstratlib_core::utils::get_random_element_with<'a, T, R: rand_core::Rng + ?core::marker::Sized>(&'a alloc::collections::btree::set::BTreeSet<T>, &mut R) -> core::option::Option<&'a T>
-pub fn optionstratlib_core::utils::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::decimal::DecimalError>
+pub fn optionstratlib_core::utils::random_decimal<R: rand_core::Rng + ?core::marker::Sized>(&mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
 pub macro optionstratlib_core::assert_decimal_eq!
 pub macro optionstratlib_core::d2f!
 pub macro optionstratlib_core::d2fu!

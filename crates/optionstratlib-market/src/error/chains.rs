@@ -59,6 +59,14 @@
 //! error handling and formatting.
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **market**. Owns `ChainError`, `OptionDataErrorKind`. A chain generator's own failure travels in `Generator` as a boxed, typed source, so market names no simulation type (ADR-0003, M1-15, #524).
+//!
+//! The `...Kind` enums are canonical in this module (`optionstratlib_market::error::chains`) and are not
+//! flattened into `optionstratlib_market::error`: the facade gathers every crate's errors
+//! in one `optionstratlib::error` module, where flat kind names would collide
+//! (`StrategyErrorKind` is defined in both core `error::position` and market
+//! `error::chains`, `PriceErrorKind` in both analytics `error::probability`
+//! and strategies `error::strategies`), so each crate keeps its kinds in its
+//! kind module and the facade re-exports that module (#550).
 
 use optionstratlib_core::error::{DecimalError, OptionsError};
 use optionstratlib_core::model::Positive;

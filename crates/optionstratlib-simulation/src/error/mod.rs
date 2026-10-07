@@ -5,6 +5,25 @@
 //! (`DecimalError`, `OptionsError`, `PricingError`, `VolatilityError`, …)
 //! stay with core and pricing, and the variants below that wrap them carry
 //! those types unchanged.
+//!
+//! # Canonical paths (#550)
+//!
+//! Every error type is exported flat from this module, for example
+//! `optionstratlib_simulation::error::SimulationError`. The file module
+//! `simulation` is private: it held nothing the flat paths do not, and was
+//! public only because 0.21 exposed it.
+//!
+//! ```rust
+//! use optionstratlib_simulation::error::{SimulationError, SimulationResult};
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib_simulation::error::simulation::SimulationError;
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib_simulation::error::simulation::SimulationResult;
+//! ```
 
 /// ### Simulation Errors (`SimulationError`)
 /// Handles:
@@ -12,6 +31,6 @@
 /// * Monte Carlo simulation errors
 /// * Stochastic process parameter validation
 /// * Step calculation issues
-pub mod simulation;
+mod simulation;
 
 pub use simulation::{SimulationError, SimulationResult};

@@ -86,7 +86,7 @@ use crate::error::PricingError;
 use crate::kernels::discount_factor;
 use crate::pricing::utils::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
