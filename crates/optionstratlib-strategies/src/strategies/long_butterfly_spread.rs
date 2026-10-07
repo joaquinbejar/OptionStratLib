@@ -2914,57 +2914,85 @@ mod tests_long_butterfly_spread_pnl {
         total
     }
 
-    /// Mark-to-market P&L at `spot`, `days` and `volatility`, checked
-    /// against the change in the book's value: every leg counts all of its
-    /// contracts, the doubled body included (#725; these tests were dropped
-    /// by #706 until the P&L scaled by quantity).
-    fn marked(spot: Positive, days: f64, volatility: f64) -> (Decimal, Decimal) {
-        let spread = create_test_long_butterfly_spread().unwrap();
-        let unrealized = spread
-            .calculate_pnl(
-                &spot,
-                ExpirationDate::Days(pos_or_panic!(days)),
-                &pos_or_panic!(volatility),
-            )
+    /// Hand-computed references for the fixture (spot 100, 30 days,
+    /// `sigma = 0.2`, `r = 5 %`, `q = 1 %`): the book's Black-Scholes value
+    /// `sum(quantity * BS)`, evaluated leg by leg with
+    /// `N(x) = erfc(-x / sqrt(2)) / 2` in double precision outside the
+    /// library. One lot is worth 1.629777483296 at entry.
+    const ENTRY_VALUE: Decimal = dec!(1.629777483296);
+    /// The library's normal CDF is accurate to about `2e-11`; over four
+    /// contracts on a spot of 100 that leaves at most `1e-8` per lot.
+    const REFERENCE_TOLERANCE: Decimal = dec!(1e-8);
+
+    /// The fixture with every leg's quantity multiplied by `lots`.
+    fn spread_with_lots(lots: Decimal) -> LongButterflySpread {
+        let positions: Vec<Position> = create_test_long_butterfly_spread()
             .unwrap()
-            .unrealized
-            .unwrap();
-        let entry_value = book_value(&spread, None);
-        assert!(entry_value > Decimal::ZERO, "a long butterfly is a debit");
-        let change = book_value(&spread, Some((spot, days, volatility))) - entry_value;
-        assert_decimal_eq!(unrealized, change, dec!(1e-20));
-        (unrealized, entry_value)
+            .get_positions()
+            .unwrap()
+            .into_iter()
+            .map(|position| {
+                let mut scaled = position.clone();
+                scaled.option.quantity =
+                    Positive::new_decimal(position.option.quantity.to_dec() * lots).unwrap();
+                scaled
+            })
+            .collect();
+        LongButterflySpread::get_strategy(&positions).unwrap()
+    }
+
+    /// Mark-to-market P&L at `spot`, `days` and `volatility` for one and for
+    /// three lots (#725; these tests were dropped by #706 until the P&L
+    /// scaled by quantity). One lot is pinned to the hand-computed change in
+    /// the book's value `expected`, three lots to three times it, and both
+    /// equal the change the library's own `black_scholes` gives with the
+    /// body counted twice.
+    fn marked(spot: Positive, days: f64, volatility: f64, expected: Decimal) -> Decimal {
+        let mut one_lot = Decimal::ZERO;
+        for lots in [Decimal::ONE, dec!(3)] {
+            let spread = spread_with_lots(lots);
+            let unrealized = spread
+                .calculate_pnl(
+                    &spot,
+                    ExpirationDate::Days(pos_or_panic!(days)),
+                    &pos_or_panic!(volatility),
+                )
+                .unwrap()
+                .unrealized
+                .unwrap();
+            assert_decimal_eq!(unrealized, expected * lots, REFERENCE_TOLERANCE * lots);
+            let entry_value = book_value(&spread, None);
+            assert_decimal_eq!(entry_value, ENTRY_VALUE * lots, REFERENCE_TOLERANCE * lots);
+            let change = book_value(&spread, Some((spot, days, volatility))) - entry_value;
+            assert_decimal_eq!(unrealized, change, dec!(1e-20));
+            if lots == Decimal::ONE {
+                one_lot = unrealized;
+            } else {
+                assert_decimal_eq!(unrealized, one_lot * lots, dec!(1e-20));
+            }
+        }
+        one_lot
     }
 
     #[test]
     fn test_calculate_pnl_below_strikes() {
-        let (unrealized, entry_value) = marked(pos_or_panic!(90.0), 20.0, 0.2);
-        // Away from the body a long butterfly loses value, but never more
-        // than it was worth.
-        assert!(unrealized < Decimal::ZERO, "{unrealized}");
-        assert!(
-            unrealized > -entry_value,
-            "{unrealized} vs entry {entry_value}"
-        );
+        // Away from the body the butterfly's value moves toward zero, by
+        // less than it was worth.
+        let unrealized = marked(pos_or_panic!(90.0), 20.0, 0.2, dec!(-1.380131383108));
+        assert!(unrealized.abs() < ENTRY_VALUE.abs());
     }
 
     #[test]
     fn test_calculate_pnl_between_strikes() {
-        let (unrealized, _) = marked(Positive::HUNDRED, 20.0, 0.1);
-        // At the body, with less time and lower volatility, it gains.
-        assert!(unrealized > Decimal::ZERO, "{unrealized}");
+        // At the body, with less time and lower volatility, the butterfly is
+        // worth more.
+        marked(Positive::HUNDRED, 20.0, 0.1, dec!(1.513339318300));
     }
 
     #[test]
     fn test_calculate_pnl_above_strikes() {
-        let (unrealized, entry_value) = marked(pos_or_panic!(110.0), 20.0, 0.2);
-        // Away from the body a long butterfly loses value, but never more
-        // than it was worth.
-        assert!(unrealized < Decimal::ZERO, "{unrealized}");
-        assert!(
-            unrealized > -entry_value,
-            "{unrealized} vs entry {entry_value}"
-        );
+        let unrealized = marked(pos_or_panic!(110.0), 20.0, 0.2, dec!(-1.308170252386));
+        assert!(unrealized.abs() < ENTRY_VALUE.abs());
     }
 
     /// The body's two contracts count twice: its unrealized P&L is twice a
