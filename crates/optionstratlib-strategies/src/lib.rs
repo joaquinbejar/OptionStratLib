@@ -100,7 +100,54 @@
 //! `make measure-strategies`; `tests/strategy_families.rs` keeps the family
 //! assignment of `StrategyType` exhaustive.
 //!
-//! ## Example
+//! ## Place in the workspace
+//!
+//! - **Depends on** `optionstratlib-core`, `optionstratlib-pricing`,
+//!   `optionstratlib-market` and `optionstratlib-analytics`.
+//! - **Must not depend on** `optionstratlib-simulation`, `-backtest` and
+//!   `-visualization`; `make check-graph` enforces the layering (ADR-0001 D9).
+//! - **In the facade:** `optionstratlib::strategies` and `StrategyError` /
+//!   `StrategyResult` / `AdjustmentError` in `optionstratlib::error`, under the
+//!   facade feature `strategies`. The facade paths are the same types as the
+//!   paths here; the [ownership
+//!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//!   lists every one with its feature.
+//!
+//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//!
+//! ## Minimal example
+//!
+//! ```rust
+//! use optionstratlib_core::model::{ExpirationDate, Positive};
+//! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_strategies::strategies::base::BreakEvenable;
+//! use optionstratlib_strategies::strategies::{BullCallSpread, Validable};
+//! use rust_decimal_macros::dec;
+//!
+//! // Long the 95 call for 6.50, short the 105 call for 1.50: a debit of 5.
+//! let spread = BullCallSpread::new(
+//!     "XYZ".to_string(),
+//!     Positive::HUNDRED,
+//!     pos_or_panic!(95.0),
+//!     pos_or_panic!(105.0),
+//!     ExpirationDate::Days(pos_or_panic!(30.0)),
+//!     pos_or_panic!(0.2),
+//!     dec!(0.05),
+//!     Positive::ZERO,
+//!     Positive::ONE,
+//!     pos_or_panic!(6.5),
+//!     pos_or_panic!(1.5),
+//!     Positive::ZERO,
+//!     Positive::ZERO,
+//!     Positive::ZERO,
+//!     Positive::ZERO,
+//! )?;
+//! assert!(spread.validate());
+//! assert_eq!(spread.get_break_even_points()?, &vec![pos_or_panic!(100.0)]);
+//! # Ok::<(), optionstratlib_strategies::error::StrategyError>(())
+//! ```
+//!
+//! ## Runnable example
 //!
 //! A runnable program that depends on this crate directly, with the smallest
 //! dependency set and no facade, is [`osl-example-direct-strategies`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/strategies); `make tree-example-direct-strategies`
@@ -120,3 +167,9 @@ pub mod error;
 
 /// Version of the `optionstratlib-strategies` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles the Rust examples of this crate's `README.md` as doctests, so the
+/// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

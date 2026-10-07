@@ -1989,6 +1989,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Root and crate-level documentation for the 0.22 workspace** (#554).
+  The facade docs (and so the generated `README.md`) explain when to depend
+  on the facade and when on component crates, with a crate-selection table
+  giving each of the nine component crates its responsibility, its own
+  features (from the manifests), its facade feature and its facade paths,
+  and link `docs/ownership.md` and `examples/direct`. Every component's
+  crate root and `README.md` now share a "Place in the workspace" section
+  (what the crate depends on, which crates it must not depend on, enforced
+  by `make check-graph`, and how the facade re-exports it) and, except
+  visualization (whose crate docs already chart a strategy), a minimal
+  example that compiles as a doctest against the crate's default features.
+  Each crate root also includes its `README.md` under `cfg(doctest)`
+  (`ReadmeDoctests`, absent from every build and from the public API), so
+  `cargo test --doc` compiles the README's Rust blocks too; the facade does
+  the same for the generated `README.md` when `visualization` is on, since
+  `cargo-readme` drops the hidden feature gates of those examples.
+  Links that leave the crate are absolute, so they work on crates.io and
+  docs.rs (the README's license badge was relative). The prerequisites now
+  say Rust 1.88, which utoipa 6 needs. Each README and crate doc carries one
+  `<!-- #553 ... -->` marker where #553 links the migration guide. No
+  ignore rule changes: planning material stays under the locally excluded
+  `doc/`, user-facing documents live in the tracked `docs/` (#556).
+
 - **`optionstratlib-core` builds without `utoipa` unless `schema` is on**
   (#628). `expiration_date` 0.4.1 forwards `positive/utoipa` only from its own
   `utoipa` feature, so the workspace now requires `expiration_date` 0.4.1 and

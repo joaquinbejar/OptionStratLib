@@ -56,7 +56,50 @@
 //! module roots re-export each capability, and the `optionstratlib` facade
 //! prelude serves broad imports.
 //!
-//! ## Example
+//! ## Place in the workspace
+//!
+//! - **Depends on** `optionstratlib-core` and `optionstratlib-math`.
+//! - **Must not depend on** `optionstratlib-simulation`, `-market`, `-analytics`,
+//!   `-strategies`, `-backtest` and `-visualization`; `make check-graph` enforces
+//!   the layering (ADR-0001 D9).
+//! - **In the facade:** `optionstratlib::{pricing, greeks, volatility}` and the
+//!   pricing errors in `optionstratlib::error`, under the facade feature
+//!   `pricing`. The facade paths are the same types as the paths here; the
+//!   [ownership
+//!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//!   lists every one with its feature.
+//!
+//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//!
+//! ## Minimal example
+//!
+//! ```rust
+//! use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Positive, Side};
+//! use optionstratlib_core::pos_or_panic;
+//! use optionstratlib_pricing::pricing::black_scholes;
+//! use rust_decimal_macros::dec;
+//!
+//! // Hull's worked example: S = 42, K = 40, r = 10%, sigma = 20%, T = 0.5.
+//! let call = Options::new(
+//!     OptionType::European,
+//!     Side::Long,
+//!     "XYZ".to_string(),
+//!     pos_or_panic!(40.0),
+//!     ExpirationDate::Days(pos_or_panic!(182.5)),
+//!     pos_or_panic!(0.2),
+//!     Positive::ONE,
+//!     pos_or_panic!(42.0),
+//!     dec!(0.10),
+//!     OptionStyle::Call,
+//!     Positive::ZERO,
+//!     None,
+//! );
+//! let price = black_scholes(&call)?;
+//! assert!((price - dec!(4.76)).abs() < dec!(0.01));
+//! # Ok::<(), optionstratlib_pricing::error::PricingError>(())
+//! ```
+//!
+//! ## Runnable example
 //!
 //! A runnable program that depends on this crate directly, with the smallest
 //! dependency set and no facade, is [`osl-example-direct-pricing`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/pricing); `make tree-example-direct-pricing`
@@ -89,3 +132,9 @@ mod kernels;
 
 /// Version of the `optionstratlib-pricing` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles the Rust examples of this crate's `README.md` as doctests, so the
+/// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;

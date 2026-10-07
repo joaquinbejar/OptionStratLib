@@ -17,7 +17,44 @@ strategy over simulated paths, the charts of a walk and the chain and series
 generators built on these walks stay with the backtesting, visualization and
 `synthetic` layers; the `optionstratlib` facade provides them.
 
-## Example
+## Place in the workspace
+
+- **Depends on** `optionstratlib-core` and `optionstratlib-pricing`.
+- **Must not depend on** `optionstratlib-market`, `-analytics`, `-strategies`,
+  `-backtest` and `-visualization`; `make check-graph` enforces the layering
+  (ADR-0001 D9).
+- **In the facade:** `optionstratlib::simulation` and `SimulationError` /
+  `SimulationResult` in `optionstratlib::error`, under the facade feature
+  `simulation`. The facade paths are the same types as the paths here; the
+  [ownership
+  map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+  lists every one with its feature.
+
+<!-- #553: link the 0.21 to 0.22 migration guide here -->
+
+## Minimal example
+
+```rust
+use optionstratlib_simulation::error::SimulationError;
+use optionstratlib_core::pos_or_panic;
+use optionstratlib_simulation::simulation::generate_ou_process;
+
+fn main() -> Result<(), SimulationError> {
+    // An Ornstein-Uhlenbeck path of 50 steps mean-reverting to 100.
+    let path = generate_ou_process(
+        pos_or_panic!(100.0),
+        pos_or_panic!(100.0),
+        pos_or_panic!(0.5),
+        pos_or_panic!(0.2),
+        pos_or_panic!(0.01),
+        50,
+    )?;
+    assert_eq!(path.len(), 50);
+    Ok(())
+}
+```
+
+## Runnable example
 
 A runnable program that depends on this crate directly, with the smallest
 dependency set and no facade, is [`osl-example-direct-simulation`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct/simulation); `make tree-example-direct-simulation`

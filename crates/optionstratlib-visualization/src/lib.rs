@@ -154,6 +154,23 @@
 //! module roots re-export each capability, and the `optionstratlib` facade
 //! prelude serves broad imports.
 //!
+//! ## Place in the workspace
+//!
+//! - **Depends on** `optionstratlib-core`, `-math`, `-pricing`, `-simulation`,
+//!   `-market`, `-strategies` and `-backtest`.
+//! - **Must not be a dependency** of any other OptionStratLib crate: it is the
+//!   leaf of the layering, and only the `optionstratlib` facade depends on it;
+//!   `make check-graph` enforces the layering (ADR-0001 D9).
+//! - **In the facade:** `optionstratlib::visualization`, `GraphError` and the
+//!   aggregate `Error` in `optionstratlib::error` and the root
+//!   `impl_graph_for_payoff_strategy!`, under the facade feature `visualization`;
+//!   the facade's `plotly` and `static_export` forward to the features below. The
+//!   facade paths are the same types as the paths here; the [ownership
+//!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//!   lists every one with its feature.
+//!
+//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//!
 //! ## Example
 //!
 //! A runnable program that depends on this crate directly, with the smallest
@@ -188,3 +205,9 @@ pub mod __private {
 
 /// Version of the `optionstratlib-visualization` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles the Rust examples of this crate's `README.md` as doctests, so the
+/// README cannot drift from the API (#554). Exists only under `cfg(doctest)`.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;
