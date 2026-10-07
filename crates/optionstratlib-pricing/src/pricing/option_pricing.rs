@@ -46,7 +46,8 @@ use crate::pricing::black_scholes_model::european_price_band;
 use crate::pricing::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
-    BinomialPricingParams, black_scholes, generate_binomial_tree, price_binomial, telegraph,
+    BinomialPricingParams, TELEGRAPH_PATHS, black_scholes, generate_binomial_tree, price_binomial,
+    telegraph,
 };
 use optionstratlib_core::error::{OptionsError, OptionsResult};
 use optionstratlib_core::model::Options;
@@ -179,11 +180,14 @@ pub trait OptionPricing {
     /// Monte Carlo price computation fails during the execution of `price_option_monte_carlo`.
     fn calculate_price_montecarlo(&self, prices: &[Positive]) -> OptionsResult<Positive>;
 
-    /// Calculates option price using the Telegraph equation approach.
+    /// Calculates option price with the telegraph process Monte-Carlo pricer.
     ///
-    /// This method implements a finite-difference method based on the Telegraph equation
-    /// to price options. This approach can handle a variety of option styles and types,
-    /// including path-dependent options.
+    /// Averages the discounted payoff over
+    /// [`crate::pricing::TELEGRAPH_PATHS`] simulated paths,
+    /// with both transition rates estimated from returns simulated at the
+    /// option's implied volatility; see [`crate::pricing::telegraph()`] for
+    /// the model. Call that function directly to choose the path count or
+    /// the rates.
     ///
     /// # Parameters
     ///
@@ -206,8 +210,9 @@ pub trait OptionPricing {
     ///
     /// Propagates any `PricingError` returned by the `telegraph` pricing
     /// kernel (wrapped as `OptionsError::PricingError`), typically
-    /// `PricingError::ExpirationDate` or `PricingError::MethodError`
-    /// when the finite-difference kernel fails to converge.
+    /// `PricingError::ExpirationDate`, `PricingError::NonFinite` or
+    /// `PricingError::MethodError` when a simulated quantity is not
+    /// representable.
     fn calculate_price_telegraph(
         &self,
         no_steps: NonZeroUsize,
@@ -355,7 +360,7 @@ impl OptionPricing for Options {
         no_steps: NonZeroUsize,
         rng: &mut dyn Rng,
     ) -> OptionsResult<Decimal> {
-        Ok(telegraph(self, no_steps, None, None, rng)?)
+        Ok(telegraph(self, no_steps, TELEGRAPH_PATHS, None, None, rng)?)
     }
 
     fn time_value(&self) -> OptionsResult<Decimal> {

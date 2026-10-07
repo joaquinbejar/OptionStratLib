@@ -337,7 +337,7 @@ impl SPANMargin {
         Ok(d_mul(
             d_mul(
                 move_in_value,
-                option.quantity.to_dec(),
+                option.position_size()?.to_dec(),
                 "SPANMargin::scenario_loss",
             )?,
             sign,
@@ -361,7 +361,7 @@ impl SPANMargin {
     ///
     /// # Behavior
     /// For short options, the minimum margin is calculated as:
-    /// `short_option_minimum * underlying_price * quantity`
+    /// `short_option_minimum * underlying_price * quantity * contract_size`
     ///
     /// For long options, the function returns zero as the short option minimum doesn't apply.
     ///
@@ -379,7 +379,7 @@ impl SPANMargin {
                     option.underlying_price.to_dec(),
                     "SPANMargin::short_option_minimum",
                 )?,
-                option.quantity.to_dec(),
+                option.position_size()?.to_dec(),
                 "SPANMargin::short_option_minimum",
             )?)
         } else {
@@ -429,6 +429,36 @@ mod tests_span {
         let margin = span.calculate_margin(&position)?;
         assert!(margin > Decimal::ZERO, "Margin should be positive");
         info!("Calculated margin: {}", margin);
+        Ok(())
+    }
+
+    #[test]
+    fn test_span_margin_contract_size_scales_like_quantity() -> Result<(), PricingError> {
+        let position = |quantity: Positive, contract_size: Positive| Position {
+            option: create_sample_option(
+                OptionStyle::Call,
+                Side::Short,
+                pos_or_panic!(155.0),
+                quantity,
+                pos_or_panic!(150.0),
+                pos_or_panic!(0.2),
+            )
+            .with_contract_size(contract_size),
+            premium: pos_or_panic!(5.0),
+            date: Utc::now(),
+            open_fee: pos_or_panic!(0.5),
+            close_fee: pos_or_panic!(0.5),
+            epic: None,
+            extra_fields: None,
+        };
+        let span = SPANMargin::new(dec!(0.1), dec!(0.05), dec!(0.1));
+
+        let one = span.calculate_margin(&position(Positive::ONE, Positive::ONE))?;
+        let sized = span.calculate_margin(&position(Positive::ONE, Positive::HUNDRED))?;
+        let hundred = span.calculate_margin(&position(Positive::HUNDRED, Positive::ONE))?;
+        // One contract of 100 units carries the margin of 100 one-unit contracts.
+        assert_eq!(sized, hundred);
+        assert!((sized - one * Decimal::ONE_HUNDRED).abs() <= dec!(1e-12));
         Ok(())
     }
 }

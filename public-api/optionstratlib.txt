@@ -40,6 +40,7 @@ pub use optionstratlib::error::DecimalError
 pub use optionstratlib::error::DecimalResult
 pub use optionstratlib::error::GraphError
 pub use optionstratlib::error::GreeksError
+pub use optionstratlib::error::GreeksResult
 pub use optionstratlib::error::InterpolationError
 pub use optionstratlib::error::MetricsError
 pub use optionstratlib::error::OhlcvError
@@ -50,50 +51,21 @@ pub use optionstratlib::error::PositionError
 pub use optionstratlib::error::PricingError
 pub use optionstratlib::error::PricingResult
 pub use optionstratlib::error::ProbabilityError
+pub use optionstratlib::error::ProbabilityResult
 pub use optionstratlib::error::ProjectionError
 pub use optionstratlib::error::SimulationError
 pub use optionstratlib::error::SimulationResult
 pub use optionstratlib::error::StrategyError
+pub use optionstratlib::error::StrategyResult
 pub use optionstratlib::error::SurfaceError
 pub use optionstratlib::error::TradeError
 pub use optionstratlib::error::TransactionError
 pub use optionstratlib::error::VolatilityError
 pub use optionstratlib::error::chains
-pub use optionstratlib::error::curves
-pub use optionstratlib::error::decimal
 pub use optionstratlib::error::greeks
 pub use optionstratlib::error::position
-pub use optionstratlib::error::pricing
 pub use optionstratlib::error::probability
-pub use optionstratlib::error::simulation
 pub use optionstratlib::error::strategies
-pub use optionstratlib::error::trade
-pub mod optionstratlib::error::unified
-pub enum optionstratlib::error::unified::Error
-pub optionstratlib::error::unified::Error::Backtest(optionstratlib_backtest::error::backtesting::BacktestError)
-pub optionstratlib::error::unified::Error::Chain(optionstratlib_market::error::chains::ChainError)
-pub optionstratlib::error::unified::Error::Curve(optionstratlib_math::error::curves::CurveError)
-pub optionstratlib::error::unified::Error::Decimal(optionstratlib_core::error::decimal::DecimalError)
-pub optionstratlib::error::unified::Error::EmptyCollection
-pub optionstratlib::error::unified::Error::EmptyCollection::context: &'static str
-pub optionstratlib::error::unified::Error::Graph(optionstratlib_visualization::error::graph::GraphError)
-pub optionstratlib::error::unified::Error::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
-pub optionstratlib::error::unified::Error::Interpolation(optionstratlib_math::error::interpolation::InterpolationError)
-pub optionstratlib::error::unified::Error::Io(core::io::error::Error)
-pub optionstratlib::error::unified::Error::Metrics(optionstratlib_math::error::metrics::MetricsError)
-pub optionstratlib::error::unified::Error::Ohlcv(optionstratlib_market::error::csv::OhlcvError)
-pub optionstratlib::error::unified::Error::Options(optionstratlib_core::error::options::OptionsError)
-pub optionstratlib::error::unified::Error::Position(optionstratlib_core::error::position::PositionError)
-pub optionstratlib::error::unified::Error::Positive(positive::error::PositiveError)
-pub optionstratlib::error::unified::Error::Pricing(optionstratlib_pricing::error::pricing::PricingError)
-pub optionstratlib::error::unified::Error::Probability(optionstratlib_analytics::error::probability::ProbabilityError)
-pub optionstratlib::error::unified::Error::Projection(optionstratlib_analytics::error::projections::ProjectionError)
-pub optionstratlib::error::unified::Error::Simulation(optionstratlib_simulation::error::simulation::SimulationError)
-pub optionstratlib::error::unified::Error::Strategy(optionstratlib_strategies::error::strategies::StrategyError)
-pub optionstratlib::error::unified::Error::Surface(optionstratlib_math::error::surfaces::SurfaceError)
-pub optionstratlib::error::unified::Error::Trade(optionstratlib_core::error::trade::TradeError)
-pub optionstratlib::error::unified::Error::Transaction(optionstratlib_analytics::error::transaction::TransactionError)
-pub optionstratlib::error::unified::Error::Volatility(optionstratlib_pricing::error::volatility::VolatilityError)
 pub enum optionstratlib::error::Error
 pub optionstratlib::error::Error::Backtest(optionstratlib_backtest::error::backtesting::BacktestError)
 pub optionstratlib::error::Error::Chain(optionstratlib_market::error::chains::ChainError)

@@ -250,6 +250,7 @@ impl ProtectivePut {
         let put_premium = self
             .long_put
             .premium
+            .checked_mul(&self.long_put.option.contract_size)?
             .checked_mul(&self.long_put.option.quantity)?;
         let total_fees = self.total_fees()?;
 
@@ -342,11 +343,12 @@ impl ProtectivePut {
     ///
     /// Returns [`PositiveError::ArithmeticError`] when the spot leg holds
     /// zero shares, so there is no per-share premium to divide out, and when
-    /// `premium × quantity` or the final sum overflows.
+    /// `premium × contract_size × quantity` or the final sum overflows.
     pub fn effective_cost_basis(&self) -> Result<Positive, PositiveError> {
         let premium_per_share = self
             .long_put
             .premium
+            .checked_mul(&self.long_put.option.contract_size)?
             .checked_mul(&self.long_put.option.quantity)?
             // A per-share figure rarely divides exactly — one option unit of
             // premium over three shares repeats — so the rounding is chosen
@@ -613,6 +615,7 @@ impl PnLCalculator for ProtectivePut {
         let put_cost = self
             .long_put
             .premium
+            .checked_mul(&self.long_put.option.contract_size)?
             .checked_mul(&self.long_put.option.quantity)?;
         Ok(optionstratlib_analytics::pnl::utils::PnL {
             realized: None,

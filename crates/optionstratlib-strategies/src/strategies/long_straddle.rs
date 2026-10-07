@@ -389,12 +389,12 @@ impl BreakEvenable for LongStraddle {
         // non-negative figures, so only its overflow is reportable.
         let put_cost = d_div(
             total_cost.to_dec(),
-            self.long_put.option.quantity.to_dec(),
+            self.long_put.option.position_size()?.to_dec(),
             "LongStraddle::update_break_even_points",
         )?;
         let call_cost = d_div(
             total_cost.to_dec(),
-            self.long_call.option.quantity.to_dec(),
+            self.long_call.option.position_size()?.to_dec(),
             "LongStraddle::update_break_even_points",
         )?;
 

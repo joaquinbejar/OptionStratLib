@@ -475,7 +475,7 @@ impl BreakEvenable for IronButterfly {
         // strike leaves no attainable losing price.
         let net_credit = d_div(
             self.get_net_premium_received()?.to_dec(),
-            self.short_call.option.quantity.to_dec(),
+            self.short_call.option.position_size()?.to_dec(),
             "IronButterfly::update_break_even_points",
         )?;
 

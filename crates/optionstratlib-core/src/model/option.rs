@@ -10,11 +10,12 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use tracing::error;
 
-/// Error for a quantity-scaled payoff that leaves the `Decimal` range.
+/// Error for a size-scaled payoff that leaves the `Decimal` range.
 ///
 /// The three payoff entry points below (`payoff`, `payoff_at_price`,
 /// `intrinsic_value`) take the `Decimal` payoff of [`Payoff::payoff`] and
-/// scale it by the position quantity with a checked multiplication. Both
+/// scale it by the position size (`quantity × contract_size`, see
+/// [`Options::position_size`]) with a checked multiplication. Both
 /// factors can be as large as `Positive::MAX` (`≈ 7.92e28`), so the product
 /// can leave the `Decimal` range; a payoff that is itself unrepresentable
 /// (a deep in-the-money call on an underlying at `Positive::MAX`, whose `f64`
@@ -27,12 +28,33 @@ use tracing::error;
 /// point and the offending factors.
 #[cold]
 #[inline(never)]
-fn payoff_out_of_range(context: &'static str, payoff: Decimal, quantity: Positive) -> OptionsError {
+fn payoff_out_of_range(context: &'static str, payoff: Decimal, size: Positive) -> OptionsError {
     OptionsError::PayoffError {
         reason: format!(
-            "{context}: payoff {payoff} times quantity {quantity} is not representable as a Decimal (out of range)"
+            "{context}: payoff {payoff} times position size {size} is not representable as a Decimal (out of range)"
         ),
     }
+}
+
+/// Error for a `quantity × contract_size` product that leaves the `Positive`
+/// range.
+#[cold]
+#[inline(never)]
+fn position_size_out_of_range(quantity: Positive, contract_size: Positive) -> OptionsError {
+    OptionsError::ValidationError {
+        field: "contract_size".to_string(),
+        reason: format!(
+            "quantity {quantity} times contract size {contract_size} is not representable as a Positive (out of range)"
+        ),
+    }
+}
+
+/// Serde default for [`Options::contract_size`]: one unit of the underlying per
+/// contract, the library's behaviour before the field existed.
+#[inline]
+#[must_use]
+fn default_contract_size() -> Positive {
+    Positive::ONE
 }
 
 /// Parameters for exotic option pricing models.
@@ -160,6 +182,19 @@ pub struct Options {
     /// The number of contracts in this position.
     pub quantity: Positive,
 
+    /// The contract multiplier: units of the underlying covered by one
+    /// contract (100 for a standard US equity option, other sizes for futures
+    /// options). Defaults to 1, so one contract covers one unit of the
+    /// underlying, and payloads written before the field existed deserialize
+    /// unchanged.
+    ///
+    /// Payoff, intrinsic value, premium, P&L and Greeks of the position scale
+    /// by `quantity × contract_size` (see [`Options::position_size`]). Prices
+    /// returned by the pricing models stay per unit of the underlying, and
+    /// [`crate::model::Position`] fees stay per contract.
+    #[serde(default = "default_contract_size")]
+    pub contract_size: Positive,
+
     /// The current market price of the underlying asset.
     pub underlying_price: Positive,
 
@@ -236,12 +271,45 @@ impl Options {
             expiration_date,
             implied_volatility,
             quantity,
+            contract_size: default_contract_size(),
             underlying_price,
             risk_free_rate,
             option_style,
             dividend_yield,
             exotic_params,
         }
+    }
+
+    /// Returns the option with its contract multiplier set to `contract_size`.
+    ///
+    /// [`Options::new`] builds a contract that covers one unit of the
+    /// underlying; chain this to size it in market contracts, for example
+    /// `.with_contract_size(Positive::HUNDRED)` for a standard US equity
+    /// option. A zero multiplier is accepted here and rejected by validation,
+    /// as a zero quantity is.
+    #[must_use = "with_contract_size returns the updated option and leaves the original untouched"]
+    #[inline]
+    pub fn with_contract_size(mut self, contract_size: Positive) -> Self {
+        self.contract_size = contract_size;
+        self
+    }
+
+    /// The size of the position in units of the underlying:
+    /// `quantity × contract_size`.
+    ///
+    /// This is the factor that scales payoff, intrinsic value, premium, P&L
+    /// and Greeks from one unit of the underlying to the whole position. With
+    /// the default `contract_size` of 1 it is exactly `quantity`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`OptionsError::ValidationError`] when the product overflows the
+    /// `Positive` range.
+    #[inline]
+    pub fn position_size(&self) -> OptionsResult<Positive> {
+        self.quantity
+            .checked_mul(&self.contract_size)
+            .map_err(|_| position_size_out_of_range(self.quantity, self.contract_size))
     }
 
     /// Calculates the time to expiration of the option in years.
@@ -302,7 +370,7 @@ impl Options {
     /// # Returns
     ///
     /// * `OptionsResult<Decimal>` - A result containing the calculated payoff as a
-    ///   Decimal value, adjusted for the quantity of contracts held, or an error if
+    ///   Decimal value, adjusted for the position size (`quantity × contract_size`), or an error if
     ///   the calculation failed.
     ///
     /// This method is useful for determining the exercise value of an option and for
@@ -310,10 +378,13 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled payoff is
+    /// Returns [`OptionsError::PayoffError`] when the size-scaled payoff is
     /// not representable as a `Decimal` (non-finite, or beyond the `Decimal`
     /// range). It previously returned `Ok(Decimal::ZERO)` for those inputs,
     /// which reported a deep in-the-money position as worthless.
+    ///
+    /// Returns [`OptionsError::ValidationError`] when the position size
+    /// `quantity × contract_size` overflows the `Positive` range.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
@@ -325,16 +396,18 @@ impl Options {
             spot_max: None,
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
+        let size = self.position_size()?;
         payoff
-            .checked_mul(self.quantity.to_dec())
-            .ok_or_else(|| payoff_out_of_range("Options::payoff", payoff, self.quantity))
+            .checked_mul(size.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::payoff", payoff, size))
     }
 
     /// Calculates the financial payoff value of the option at a specific underlying price.
     ///
     /// This method determines the option's payoff based on its type, strike price, style,
     /// and side (long/short) at the given underlying price. The result represents the
-    /// total profit or loss for the option position at that price, adjusted by the position quantity.
+    /// total profit or loss for the option position at that price, adjusted by the position size
+    /// (`quantity × contract_size`).
     ///
     /// # Parameters
     ///
@@ -347,10 +420,13 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled payoff at
+    /// Returns [`OptionsError::PayoffError`] when the size-scaled payoff at
     /// `price` is not representable as a `Decimal` (non-finite, or beyond the
     /// `Decimal` range). It previously returned `Ok(Decimal::ZERO)` for those
     /// inputs, which reported a deep in-the-money position as worthless.
+    ///
+    /// Returns [`OptionsError::ValidationError`] when the position size
+    /// `quantity × contract_size` overflows the `Positive` range.
     pub fn payoff_at_price(&self, price: &Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: *price,
@@ -362,9 +438,10 @@ impl Options {
             spot_max: None,
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
+        let size = self.position_size()?;
         payoff
-            .checked_mul(self.quantity.to_dec())
-            .ok_or_else(|| payoff_out_of_range("Options::payoff_at_price", payoff, self.quantity))
+            .checked_mul(size.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::payoff_at_price", payoff, size))
     }
 
     /// Calculates the intrinsic value of the option.
@@ -383,10 +460,13 @@ impl Options {
     ///
     /// # Errors
     ///
-    /// Returns [`OptionsError::PayoffError`] when the quantity-scaled intrinsic
+    /// Returns [`OptionsError::PayoffError`] when the size-scaled intrinsic
     /// value is not representable as a `Decimal` (non-finite, or beyond the
     /// `Decimal` range). It previously returned `Ok(Decimal::ZERO)` for those
     /// inputs, which reported a deep in-the-money position as worthless.
+    ///
+    /// Returns [`OptionsError::ValidationError`] when the position size
+    /// `quantity × contract_size` overflows the `Positive` range.
     pub fn intrinsic_value(&self, underlying_price: Positive) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: underlying_price,
@@ -398,9 +478,10 @@ impl Options {
             spot_max: None,
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
+        let size = self.position_size()?;
         payoff
-            .checked_mul(self.quantity.to_dec())
-            .ok_or_else(|| payoff_out_of_range("Options::intrinsic_value", payoff, self.quantity))
+            .checked_mul(size.to_dec())
+            .ok_or_else(|| payoff_out_of_range("Options::intrinsic_value", payoff, size))
     }
 
     /// Determines whether an option is "in-the-money" based on its current price relative to strike price.
@@ -453,6 +534,10 @@ impl Options {
             error!("Quantity is equal to zero");
             return false;
         }
+        if self.contract_size == Positive::ZERO {
+            error!("Contract size is equal to zero");
+            return false;
+        }
         if self.strike_price == Positive::ZERO {
             error!("Strike is zero");
             return false;
@@ -475,6 +560,7 @@ impl Default for Options {
             expiration_date: ExpirationDate::Days(Positive::ZERO),
             implied_volatility: Positive::ZERO,
             quantity: Positive::ZERO,
+            contract_size: default_contract_size(),
             underlying_price: Positive::ZERO,
             risk_free_rate: Decimal::ZERO,
             option_style: OptionStyle::Call,
@@ -594,6 +680,7 @@ mod tests_valid_option {
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             implied_volatility: pos_or_panic!(0.2),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             underlying_price: pos_or_panic!(105.0),
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,
@@ -1176,5 +1263,117 @@ mod tests_serialize_deserialize {
         let deserialized: Options =
             serde_json::from_str(&serialized).expect("Failed to deserialize");
         assert_eq!(options, deserialized);
+    }
+}
+
+#[cfg(test)]
+mod tests_contract_size {
+    use super::*;
+    use crate::model::utils::create_sample_option;
+    use rust_decimal_macros::dec;
+
+    fn call(side: Side, spot: Positive, quantity: Positive) -> Options {
+        create_sample_option(
+            OptionStyle::Call,
+            side,
+            spot,
+            quantity,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        )
+    }
+
+    #[test]
+    fn test_options_contract_size_defaults_to_one() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::ONE);
+        assert_eq!(option.contract_size, Positive::ONE);
+        assert_eq!(Options::default().contract_size, Positive::ONE);
+        assert_eq!(option.position_size().ok(), Some(Positive::ONE));
+    }
+
+    #[test]
+    fn test_options_with_contract_size_sets_the_multiplier() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::TWO)
+            .with_contract_size(Positive::HUNDRED);
+        assert_eq!(option.contract_size, Positive::HUNDRED);
+        assert_eq!(option.position_size().ok(), Some(pos_or_panic!(200.0)));
+    }
+
+    #[test]
+    fn test_options_position_size_overflow_is_an_error() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::MAX)
+            .with_contract_size(Positive::HUNDRED);
+        assert!(matches!(
+            option.position_size(),
+            Err(OptionsError::ValidationError { .. })
+        ));
+        assert!(option.payoff().is_err());
+    }
+
+    #[test]
+    fn test_options_payoff_scales_by_contract_size() {
+        // 2 contracts of 100 units, 10 in the money: 2 × 100 × 10.
+        let one = call(Side::Long, pos_or_panic!(110.0), Positive::TWO);
+        let sized = one.clone().with_contract_size(Positive::HUNDRED);
+        assert_eq!(one.payoff().ok(), Some(dec!(20)));
+        assert_eq!(sized.payoff().ok(), Some(dec!(2000)));
+        assert_eq!(
+            sized.payoff_at_price(&pos_or_panic!(120.0)).ok(),
+            Some(dec!(4000))
+        );
+        assert_eq!(
+            sized.intrinsic_value(pos_or_panic!(105.0)).ok(),
+            Some(dec!(1000))
+        );
+        assert_eq!(
+            sized.intrinsic_value(pos_or_panic!(90.0)).ok(),
+            Some(Decimal::ZERO)
+        );
+    }
+
+    #[test]
+    fn test_options_short_payoff_scales_by_contract_size() {
+        let sized = call(Side::Short, pos_or_panic!(110.0), Positive::ONE)
+            .with_contract_size(Positive::HUNDRED);
+        assert_eq!(sized.payoff().ok(), Some(dec!(-1000)));
+    }
+
+    #[test]
+    fn test_options_validate_rejects_zero_contract_size() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::ONE);
+        assert!(option.validate());
+        assert!(!option.with_contract_size(Positive::ZERO).validate());
+    }
+
+    #[test]
+    fn test_options_deserialize_without_contract_size_defaults_to_one() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::ONE);
+        let mut value = serde_json::to_value(&option).expect("serialize");
+        let removed = value
+            .as_object_mut()
+            .and_then(|map| map.remove("contract_size"));
+        assert!(removed.is_some(), "contract_size is serialized");
+        let restored: Options = serde_json::from_value(value).expect("deserialize");
+        assert_eq!(restored.contract_size, Positive::ONE);
+        assert_eq!(restored, option);
+    }
+
+    #[test]
+    fn test_options_contract_size_round_trips_through_serde() {
+        let option = call(Side::Long, pos_or_panic!(110.0), Positive::ONE)
+            .with_contract_size(Positive::HUNDRED);
+        let json = serde_json::to_string(&option).expect("serialize");
+        let restored: Options = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(restored.contract_size, Positive::HUNDRED);
+    }
+
+    #[test]
+    fn test_options_format_shows_contract_size_only_when_not_one() {
+        let one = call(Side::Long, pos_or_panic!(110.0), Positive::ONE);
+        assert!(!format!("{one}").contains("Contract Size"));
+        assert!(!format!("{one:?}").contains("contract_size"));
+        let sized = one.with_contract_size(Positive::HUNDRED);
+        assert!(format!("{sized}").contains("Contract Size: 100"));
+        assert!(format!("{sized:?}").contains("contract_size: 100"));
     }
 }

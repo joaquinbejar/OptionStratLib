@@ -86,17 +86,18 @@ use crate::error::PricingError;
 use crate::kernels::discount_factor;
 use crate::pricing::utils::simulate_returns;
 use num_traits::{FromPrimitive, ToPrimitive};
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
+    d_add, d_div, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
 };
 use rand::{Rng, RngExt};
+use rand_distr::{Distribution, StandardNormal};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
-use tracing::warn;
+use tracing::{debug, warn};
 
 /// Represents a Telegraph Process, a two-state continuous-time Markov chain model
 /// used to simulate stochastic processes with discrete state transitions.
@@ -172,37 +173,7 @@ impl TelegraphProcess {
         } else {
             self.lambda_up
         };
-        // lambda_dt is non-positive for the physical case (lambda, dt >= 0).
-        // For very-negative values exp(lambda_dt) underflows to 0; treat as a
-        // guaranteed flip (probability = 1). Otherwise use the standard
-        // Poisson transition: P(flip in dt) = 1 - exp(-lambda * dt).
-        //
-        // The signature is infallible, so every unrepresentable intermediate
-        // degrades to the limit its sign implies rather than aborting: an
-        // exponent that overflows downward is a certain flip, one that
-        // overflows upward drives `1 - exp(..)` far below zero, i.e. no flip.
-        let probability = match (-lambda).checked_mul(dt) {
-            None if lambda.is_sign_negative() == dt.is_sign_negative() => Decimal::ONE,
-            None => Decimal::ZERO,
-            Some(lambda_dt) if lambda_dt < dec!(-11.7) => Decimal::ONE,
-            Some(lambda_dt) => match lambda_dt.checked_exp() {
-                Some(decay) => Decimal::ONE.checked_sub(decay).unwrap_or(Decimal::ZERO),
-                None if lambda_dt.is_sign_negative() => Decimal::ONE,
-                None => Decimal::ZERO,
-            },
-        };
-
-        // probability is mathematically in [0, 1] (Decimal::ONE or 1 - exp(neg)); to_f64 is
-        // expected to succeed. If conversion ever fails we log and treat the period as
-        // "no transition" rather than panicking.
-        let p_f64 = probability.to_f64().unwrap_or_else(|| {
-            warn!(
-                probability = %probability,
-                "telegraph::next_state: probability.to_f64() returned None; treating as 0.0"
-            );
-            0.0
-        });
-        if rng.random::<f64>() < p_f64 {
+        if rng.random::<f64>() < flip_probability(lambda, dt) {
             self.current_state *= -1;
         }
 
@@ -218,6 +189,43 @@ impl TelegraphProcess {
     pub fn get_current_state(&self) -> i8 {
         self.current_state
     }
+}
+
+/// Probability that a telegraph state with exit rate `lambda` flips within
+/// one step of length `dt`: `1 - exp(-lambda * dt)`, as an `f64` ready to be
+/// compared against a uniform draw.
+///
+/// Infallible by design: every unrepresentable intermediate degrades to the
+/// limit its sign implies rather than aborting.
+fn flip_probability(lambda: Decimal, dt: Decimal) -> f64 {
+    // lambda_dt is non-positive for the physical case (lambda, dt >= 0).
+    // For very-negative values exp(lambda_dt) underflows to 0; treat as a
+    // guaranteed flip (probability = 1). Otherwise use the standard
+    // Poisson transition: P(flip in dt) = 1 - exp(-lambda * dt).
+    //
+    // An exponent that overflows downward is a certain flip, one that
+    // overflows upward drives `1 - exp(..)` far below zero, i.e. no flip.
+    let probability = match (-lambda).checked_mul(dt) {
+        None if lambda.is_sign_negative() == dt.is_sign_negative() => Decimal::ONE,
+        None => Decimal::ZERO,
+        Some(lambda_dt) if lambda_dt < dec!(-11.7) => Decimal::ONE,
+        Some(lambda_dt) => match lambda_dt.checked_exp() {
+            Some(decay) => Decimal::ONE.checked_sub(decay).unwrap_or(Decimal::ZERO),
+            None if lambda_dt.is_sign_negative() => Decimal::ONE,
+            None => Decimal::ZERO,
+        },
+    };
+
+    // probability is mathematically in [0, 1] (Decimal::ONE or 1 - exp(neg)); to_f64 is
+    // expected to succeed. If conversion ever fails we log and treat the period as
+    // "no transition" rather than panicking.
+    probability.to_f64().unwrap_or_else(|| {
+        warn!(
+            probability = %probability,
+            "telegraph::flip_probability: probability.to_f64() returned None; treating as 0.0"
+        );
+        0.0
+    })
 }
 
 /// Estimates the Telegraph Process parameters from historical data.
@@ -353,28 +361,60 @@ pub(crate) fn estimate_telegraph_parameters(
     Ok((lambda_up, lambda_down))
 }
 
+/// Number of Monte-Carlo paths
+/// [`OptionPricing::calculate_price_telegraph`](crate::pricing::OptionPricing::calculate_price_telegraph)
+/// averages the discounted payoff over, and a sensible `no_paths` for
+/// [`telegraph()`].
+///
+/// The standard error of the estimate shrinks as `1 / sqrt(no_paths)`: with
+/// 10 000 paths it is 1% of the payoff's standard deviation (for an
+/// at-the-money one-year call with 20% volatility, about 0.15 on a price
+/// near 10.45). The cost is `no_paths * no_steps` steps of two draws each.
+pub const TELEGRAPH_PATHS: NonZeroUsize = match NonZeroUsize::new(10_000) {
+    Some(paths) => paths,
+    None => NonZeroUsize::MIN,
+};
+
 /// Prices an option using the Telegraph process simulation method.
 ///
-/// This function simulates the underlying asset price movement using a Telegraph process,
-/// which oscillates between two states, affecting the volatility of the price path.
-/// It provides a more sophisticated model than standard geometric Brownian motion by
-/// capturing regime-switching behavior in market volatility.
+/// The underlying follows a log-Euler geometric Brownian motion whose
+/// diffusion term is signed by a two-state telegraph process. Each step of
+/// length `dt = T / no_steps` first advances the regime `state` (flip
+/// probability `1 - exp(-lambda * dt)`, `lambda` being the exit rate of the
+/// current regime) and then updates the price as
+///
+/// ```text
+/// S <- S * exp((r - sigma^2 / 2) * dt + sigma * state * sqrt(dt) * Z),  Z ~ N(0, 1)
+/// ```
+///
+/// Every path draws its own initial regime (+1 or -1 with equal
+/// probability). The price is the average of the discounted payoff over
+/// `no_paths` paths, so it is a Monte-Carlo estimate of the
+/// risk-neutral expectation rather than a single draw.
+///
+/// Because the shock is symmetric and independent of the regime path, the
+/// sign the regime puts on the diffusion leaves the terminal law that of
+/// geometric Brownian motion: the estimate converges to the Black-Scholes
+/// price (without dividend yield) whatever the transition rates.
 ///
 /// # Arguments
 ///
 /// * `option` - Reference to the Options structure containing all option parameters
-/// * `no_steps` - Number of time steps for the simulation
+/// * `no_steps` - Number of time steps of every simulated path
+/// * `no_paths` - Number of simulated paths the discounted payoff is averaged
+///   over; [`TELEGRAPH_PATHS`] is the count the [`OptionPricing`] trait uses.
 /// * `lambda_up` - Optional transition rate from down state (-1) to up state (+1)
 /// * `lambda_down` - Optional transition rate from up state (+1) to down state (-1)
 /// * `rng` - The generator every draw is taken from: the returns simulated to
-///   estimate a missing rate, the process's initial state and transitions,
-///   and the per-step price shock. A seeded generator such as
-///   [`optionstratlib_core::utils::deterministic_rng`] makes the price
-///   reproducible; pass `&mut rand::rng()` to draw from the thread-local RNG.
+///   estimate a missing rate, then for each path its initial state, one
+///   transition draw and one standard normal shock per step. A seeded
+///   generator such as [`optionstratlib_core::utils::deterministic_rng`]
+///   makes the price reproducible; pass `&mut rand::rng()` to draw from the
+///   thread-local RNG.
 ///
 /// # Returns
 ///
-/// * `Result<Decimal, PricingError>` - The simulated option price or an error
+/// * `Result<Decimal, PricingError>` - The Monte-Carlo option price or an error
 ///
 /// # Details
 ///
@@ -385,27 +425,32 @@ pub(crate) fn estimate_telegraph_parameters(
 /// # Errors
 ///
 /// Returns `PricingError::ExpirationDate` when the option's
-/// expiration cannot be converted, `PricingError::MethodError`
-/// when the finite-difference recurrence fails to populate a node
-/// (e.g. parameter estimation produces degenerate rates) or when the
-/// terminal averaging yields a non-finite value.
+/// expiration cannot be converted, a decimal error when parameter
+/// estimation produces degenerate rates, `PricingError::NonFinite` when a
+/// simulated terminal price is not representable, and
+/// `PricingError::MethodError` when an intermediate is not representable
+/// as `f64` or the averaging overflows.
+///
+/// [`OptionPricing`]: crate::pricing::OptionPricing
+#[tracing::instrument(skip(option, rng), level = "debug")]
 pub fn telegraph<R: Rng + ?Sized>(
     option: &Options,
     no_steps: NonZeroUsize,
+    no_paths: NonZeroUsize,
     lambda_up: Option<Decimal>,
     lambda_down: Option<Decimal>,
     rng: &mut R,
 ) -> Result<Decimal, PricingError> {
     let no_steps_raw = no_steps.get();
-    let price = option.underlying_price;
+    let no_paths_raw = no_paths.get();
     let no_steps_dec = Decimal::from_usize(no_steps_raw).ok_or_else(|| {
         PricingError::method_error("telegraph", &format!("invalid no_steps: {no_steps_raw}"))
     })?;
-    let dt = d_div(
-        option.time_to_expiration()?.to_dec(),
-        no_steps_dec,
-        "pricing::telegraph::dt",
-    )?;
+    let no_paths_dec = Decimal::from_usize(no_paths_raw).ok_or_else(|| {
+        PricingError::method_error("telegraph", &format!("invalid no_paths: {no_paths_raw}"))
+    })?;
+    let time_to_expiration = option.time_to_expiration()?.to_dec();
+    let dt = d_div(time_to_expiration, no_steps_dec, "pricing::telegraph::dt")?;
 
     let one_over_252 = finite_decimal(1.0 / 252.0)
         .ok_or_else(|| PricingError::non_finite("pricing::telegraph::one_over_252", 1.0 / 252.0))?;
@@ -445,20 +490,19 @@ pub fn telegraph<R: Rng + ?Sized>(
         }
         (Some(l_up), Some(l_down)) => (l_up, l_down),
     };
-    let telegraph_process = TelegraphProcess::new(lambda_up_temp, lambda_down_temp, rng);
+    // `dt` is the same on every step, so each regime's flip probability is
+    // loop-invariant: the up regime leaves at `lambda_down`, the down regime
+    // at `lambda_up` (the same law as `TelegraphProcess::next_state`).
+    let flip_from_up = flip_probability(lambda_down_temp, dt);
+    let flip_from_down = flip_probability(lambda_up_temp, dt);
 
-    let tp = telegraph_process;
-    let mut telegraph_process = tp.clone();
     // Loop-invariant risk-neutral drift `r - σ²/2`.
+    let volatility = option.implied_volatility.to_dec();
     let drift: Decimal = d_sub(
         option.risk_free_rate,
         d_mul(
             dec!(0.5),
-            d_powd(
-                option.implied_volatility.to_dec(),
-                Decimal::TWO,
-                "pricing::telegraph::variance",
-            )?,
+            d_powd(volatility, Decimal::TWO, "pricing::telegraph::variance")?,
             "pricing::telegraph::half_variance",
         )?,
         "pricing::telegraph::drift",
@@ -466,45 +510,70 @@ pub fn telegraph<R: Rng + ?Sized>(
     let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
     let sqrt_dt = d_sqrt(dt, "pricing::telegraph::sqrt_dt")
         .map_err(|_| PricingError::method_error("telegraph", "non-finite dt sqrt"))?;
-    let sqrt_dt_f64 = sqrt_dt.to_f64().ok_or_else(|| {
-        PricingError::method_error("telegraph", "sqrt(dt) not representable as f64")
+    let diffusion = d_mul(volatility, sqrt_dt, "pricing::telegraph::diffusion")?;
+    let drift_dt_f64 = drift_dt.to_f64().ok_or_else(|| {
+        PricingError::method_error("telegraph", "drift * dt not representable as f64")
     })?;
-    let mut price = price.to_dec();
-    for _ in 0..no_steps_raw {
-        let state = telegraph_process.next_state(dt, rng);
-        let state_f64 = state as f64;
-        let state_dec = finite_decimal(state_f64)
-            .ok_or_else(|| PricingError::non_finite("pricing::telegraph::state_dec", state_f64))?;
-        let volatility: Decimal = d_mul(
-            option.implied_volatility.to_dec(),
-            state_dec,
-            "pricing::telegraph::volatility",
-        )?;
+    let diffusion_f64 = diffusion.to_f64().ok_or_else(|| {
+        PricingError::method_error("telegraph", "sigma * sqrt(dt) not representable as f64")
+    })?;
 
-        let rh_f64 = sqrt_dt_f64 * rng.random::<f64>();
-        let rh = finite_decimal(rh_f64)
-            .ok_or_else(|| PricingError::non_finite("pricing::telegraph::rh", rh_f64))?;
-        let lhs = d_add(drift_dt, volatility, "pricing::telegraph::exponent_scale")?;
-
-        let update = d_exp(
-            d_mul(lhs, rh, "pricing::telegraph::exponent")?,
-            "pricing::telegraph::update",
-        )?;
-        price = d_mul(price, update, "pricing::telegraph::path")?;
+    let spot = option.underlying_price.to_dec();
+    let mut payoff_sum = Decimal::ZERO;
+    // f64 moments of the payoff, only for the standard error traced below.
+    let mut payoff_sum_f64 = 0.0_f64;
+    let mut payoff_sum_sq_f64 = 0.0_f64;
+    for _ in 0..no_paths_raw {
+        let mut state_up = rng.random::<f64>() < 0.5;
+        let mut log_return = 0.0_f64;
+        for _ in 0..no_steps_raw {
+            let flip = if state_up {
+                flip_from_up
+            } else {
+                flip_from_down
+            };
+            if rng.random::<f64>() < flip {
+                state_up = !state_up;
+            }
+            let z: f64 = StandardNormal.sample(rng);
+            let shock = if state_up { z } else { -z };
+            log_return += drift_dt_f64 + diffusion_f64 * shock;
+        }
+        let growth_f64 = log_return.exp(); // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; the non-finite value is rejected by `finite_decimal` below
+        let growth = finite_decimal(growth_f64)
+            .ok_or_else(|| PricingError::non_finite("pricing::telegraph::growth", growth_f64))?;
+        let terminal =
+            Positive::new_decimal(d_mul(spot, growth, "pricing::telegraph::terminal_price")?)?;
+        let payoff = option.payoff_at_price(&terminal)?;
+        payoff_sum = d_add(payoff_sum, payoff, "pricing::telegraph::payoff_sum")?;
+        let payoff_f64 = payoff.to_f64().unwrap_or(0.0);
+        payoff_sum_f64 += payoff_f64;
+        payoff_sum_sq_f64 += payoff_f64 * payoff_f64;
     }
 
-    let price = Positive::new_decimal(price)?;
-    let payoff = option.payoff_at_price(&price)?;
+    let n = no_paths_raw as f64;
+    let mean_f64 = payoff_sum_f64 / n;
+    let variance_f64 = (payoff_sum_sq_f64 / n - mean_f64 * mean_f64).max(0.0);
+    let std_error_f64 = (variance_f64 / n).sqrt(); // scan-banned: allow -- f64 `sqrt` of a non-negative value, only traced
+    debug!(
+        paths = no_paths_raw,
+        steps = no_steps_raw,
+        payoff_mean = mean_f64,
+        payoff_std_error = std_error_f64,
+        "telegraph Monte-Carlo estimate"
+    );
+
+    let mean_payoff = d_div(payoff_sum, no_paths_dec, "pricing::telegraph::mean_payoff")?;
     // Build the discount exponent through a checked multiplication so
     // an overflow on `-risk_free_rate * time_to_expiration` is tagged
     // before `.exp()` compresses it back into a bounded range.
     let discount = discount_factor(
         option.risk_free_rate,
-        option.time_to_expiration()?.to_dec(),
+        time_to_expiration,
         "pricing::telegraph::discount_exponent",
         "pricing::telegraph::discount",
     )?;
-    let result = d_mul(payoff, discount, "pricing::telegraph::price")?;
+    let result = d_mul(mean_payoff, discount, "pricing::telegraph::price")?;
     Ok(result)
 }
 
@@ -613,12 +682,14 @@ mod tests_telegraph_process_basis {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
 
         let _price = telegraph(
             &option,
             optionstratlib_core::nz!(1000),
+            optionstratlib_core::nz!(1_000),
             Some(dec!(0.7)),
             Some(dec!(0.5)),
             &mut rng,
@@ -652,6 +723,7 @@ mod tests_telegraph_process_extended {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         }
     }
@@ -743,6 +815,7 @@ mod tests_telegraph_process_extended {
         let _price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -754,7 +827,14 @@ mod tests_telegraph_process_extended {
     fn test_telegraph_with_estimated_parameters() {
         let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let option = create_mock_option();
-        let _price = telegraph(&option, optionstratlib_core::nz!(100), None, None, &mut rng);
+        let _price = telegraph(
+            &option,
+            optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
+            None,
+            None,
+            &mut rng,
+        );
         // assert!(price > 0.0);
     }
 
@@ -765,6 +845,7 @@ mod tests_telegraph_process_extended {
         let _price_up = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             None,
             &mut rng,
@@ -772,6 +853,7 @@ mod tests_telegraph_process_extended {
         let _price_down = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             None,
             Some(dec!(0.5)),
             &mut rng,
@@ -788,6 +870,7 @@ mod tests_telegraph_process_extended {
         let _price_100 = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -795,6 +878,7 @@ mod tests_telegraph_process_extended {
         let _price_1000 = telegraph(
             &option,
             optionstratlib_core::nz!(1000),
+            optionstratlib_core::nz!(1_000),
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -813,6 +897,7 @@ mod tests_telegraph_process_extended {
         let _price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -828,6 +913,7 @@ mod tests_telegraph_process_extended {
         let _price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -842,6 +928,7 @@ mod tests_telegraph_process_extended {
         let price = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut rng,
@@ -863,9 +950,13 @@ mod tests_telegraph_seeded {
     use optionstratlib_core::utils::{DETERMINISTIC_RNG_DEFAULT_SEED, deterministic_rng};
     use rust_decimal_macros::dec;
 
-    /// `telegraph(&option_30d(), 100, Some(0.5), Some(0.5))` drawn from
-    /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`.
-    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(13.847827205510690706406628473);
+    /// `telegraph(&option_30d(), 100, TELEGRAPH_PATHS, Some(0.5), Some(0.5))`
+    /// drawn from
+    /// `deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED)`. Re-baselined by
+    /// #743: the kernel now averages `TELEGRAPH_PATHS` paths driven by a
+    /// standard normal shock instead of returning one path driven by a
+    /// positive uniform.
+    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.208194873575235296394764785);
 
     fn option_30d() -> Options {
         Options {
@@ -880,6 +971,7 @@ mod tests_telegraph_seeded {
             underlying_symbol: "TEST".to_string(),
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             exotic_params: None,
         }
     }
@@ -953,6 +1045,7 @@ mod tests_telegraph_seeded {
                 telegraph(
                     &option,
                     optionstratlib_core::nz!(100),
+                    TELEGRAPH_PATHS,
                     lambdas.0,
                     lambdas.1,
                     &mut deterministic_rng(seed),
@@ -968,6 +1061,7 @@ mod tests_telegraph_seeded {
         let price = telegraph(
             &option_30d(),
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             Some(dec!(0.5)),
             Some(dec!(0.5)),
             &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
@@ -989,11 +1083,123 @@ mod tests_telegraph_seeded {
         let via_kernel = telegraph(
             &option,
             optionstratlib_core::nz!(100),
+            TELEGRAPH_PATHS,
             None,
             None,
             &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
         assert_eq!(via_trait, via_kernel);
+    }
+
+    /// One-year at-the-money option, no dividend: the case Black-Scholes and
+    /// the telegraph kernel price under the same law.
+    fn option_1y_atm(style: OptionStyle) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_price: Positive::HUNDRED,
+            strike_price: Positive::HUNDRED,
+            risk_free_rate: dec!(0.05),
+            option_style: style,
+            dividend_yield: Positive::ZERO,
+            implied_volatility: pos_or_panic!(0.2),
+            underlying_symbol: "TEST".to_string(),
+            expiration_date: ExpirationDate::Days(pos_or_panic!(365.0)),
+            quantity: Positive::ONE,
+            contract_size: Positive::ONE,
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_telegraph_switching_disabled_converges_to_black_scholes() {
+        use crate::pricing::black_scholes_model::black_scholes;
+        // Zero rates keep every path in its initial regime. With a standard
+        // normal shock the log-Euler step is exact for GBM, so the estimate
+        // is unbiased for the Black-Scholes price (10.4506 call, 5.5735
+        // put). The payoff standard deviations are about 14.7 (call) and
+        // 8.7 (put); over 40 000 paths the standard errors are 0.074 and
+        // 0.044, and the band is 5 of them.
+        for (style, band) in [
+            (OptionStyle::Call, dec!(0.37)),
+            (OptionStyle::Put, dec!(0.22)),
+        ] {
+            let option = option_1y_atm(style);
+            let price = telegraph(
+                &option,
+                optionstratlib_core::nz!(12),
+                optionstratlib_core::nz!(40_000),
+                Some(Decimal::ZERO),
+                Some(Decimal::ZERO),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+            )
+            .unwrap();
+            let reference = black_scholes(&option).unwrap();
+            assert!(
+                (price - reference).abs() < band,
+                "{style:?}: telegraph {price} vs Black-Scholes {reference}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_telegraph_dispersion_across_seeds_shrinks_with_paths() {
+        // The spread of the estimate across seeds scales as 1 / sqrt(paths):
+        // 16 times the paths should cut it by about 4. Asserting a factor of
+        // 2 leaves room for the sampling error of a 32-seed standard
+        // deviation.
+        let option = option_1y_atm(OptionStyle::Call);
+        let spread = |paths: NonZeroUsize| {
+            let prices: Vec<f64> = (0..32_u64)
+                .map(|seed| {
+                    telegraph(
+                        &option,
+                        optionstratlib_core::nz!(8),
+                        paths,
+                        Some(dec!(0.5)),
+                        Some(dec!(0.5)),
+                        &mut deterministic_rng(seed),
+                    )
+                    .unwrap()
+                    .to_f64()
+                    .unwrap()
+                })
+                .collect();
+            let n = prices.len() as f64;
+            let mean = prices.iter().sum::<f64>() / n;
+            (prices.iter().map(|p| (p - mean).powi(2)).sum::<f64>() / (n - 1.0)).sqrt()
+        };
+        let coarse = spread(optionstratlib_core::nz!(100));
+        let fine = spread(optionstratlib_core::nz!(1_600));
+        assert!(
+            fine < coarse / 2.0,
+            "spread with 1600 paths {fine} not well below spread with 100 paths {coarse}"
+        );
+    }
+
+    #[test]
+    fn test_telegraph_put_call_parity_on_same_seed() {
+        // Same seed, same paths: C - P is the discounted mean of S_T - K,
+        // an unbiased estimate of S - K e^{-rT} = 4.877 whatever the
+        // regime rates. S_T has a standard deviation of about 20.3, so over
+        // 40 000 paths the standard error is 0.10; the band is 5 of them.
+        let price = |style| {
+            telegraph(
+                &option_1y_atm(style),
+                optionstratlib_core::nz!(12),
+                optionstratlib_core::nz!(40_000),
+                Some(dec!(1.0)),
+                Some(dec!(2.0)),
+                &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+            )
+            .unwrap()
+        };
+        let forward_gap = dec!(100) - dec!(100) * (-dec!(0.05)).exp();
+        let parity = price(OptionStyle::Call) - price(OptionStyle::Put);
+        assert!(
+            (parity - forward_gap).abs() < dec!(0.5),
+            "C - P = {parity}, expected about {forward_gap}"
+        );
     }
 }

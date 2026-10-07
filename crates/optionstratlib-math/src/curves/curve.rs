@@ -13,7 +13,7 @@ use crate::geometrics::{
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
 };
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter,
 };

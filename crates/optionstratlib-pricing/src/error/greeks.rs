@@ -34,9 +34,17 @@
 //! * Invalid rate values
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **pricing**. Owns `GreeksError`.
+//!
+//! The `...Kind` enums are canonical in this module (`optionstratlib_pricing::error::greeks`) and are not
+//! flattened into `optionstratlib_pricing::error`: the facade gathers every crate's errors
+//! in one `optionstratlib::error` module, where flat kind names would collide
+//! (`StrategyErrorKind` is defined in both core `error::position` and market
+//! `error::chains`, `PriceErrorKind` in both analytics `error::probability`
+//! and strategies `error::strategies`), so each crate keeps its kinds in its
+//! kind module and the facade re-exports that module (#550).
 
 use crate::error::VolatilityError;
-use optionstratlib_core::error::decimal;
+use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::ExpirationDateError;
 use optionstratlib_core::model::Positive;
 use thiserror::Error;
@@ -454,7 +462,7 @@ pub enum CalculationErrorKind {
     /// Wraps a decimal library error that occurred during option calculations,
     /// typically related to precision, arithmetic operations, or invalid values.
     #[error(transparent)]
-    DecimalError(#[from] decimal::DecimalError),
+    DecimalError(#[from] DecimalError),
 }
 
 /// Type alias for Results returned from Greek calculation functions.
@@ -561,14 +569,14 @@ impl GreeksError {
     }
 }
 
-/// Implements conversion from `decimal::DecimalError` to `GreeksError`.
+/// Implements conversion from `DecimalError` to `GreeksError`.
 ///
 /// This implementation allows decimal calculation errors to be automatically converted
 /// into the appropriate `GreeksError` variant, simplifying error handling when working
 /// with decimal operations in financial calculations.
 ///
-impl From<decimal::DecimalError> for GreeksError {
-    fn from(error: decimal::DecimalError) -> Self {
+impl From<DecimalError> for GreeksError {
+    fn from(error: DecimalError) -> Self {
         GreeksError::CalculationError(CalculationErrorKind::DecimalError(error))
     }
 }
@@ -717,7 +725,7 @@ mod tests_error_greeks {
 #[cfg(test)]
 mod tests_error_greeks_extended {
     use super::*;
-    use optionstratlib_core::error::decimal::DecimalError::InvalidPrecision;
+    use optionstratlib_core::error::DecimalError::InvalidPrecision;
     use optionstratlib_core::pos_or_panic;
 
     #[test]
@@ -834,7 +842,7 @@ mod tests_error_greeks_extended {
 
     #[test]
     fn test_calculation_error_decimal() {
-        use optionstratlib_core::error::decimal::DecimalError as DecErr;
+        use optionstratlib_core::error::DecimalError as DecErr;
         let decimal_error = DecErr::InvalidPrecision {
             precision: 0,
             reason: "Precision error".to_string(),

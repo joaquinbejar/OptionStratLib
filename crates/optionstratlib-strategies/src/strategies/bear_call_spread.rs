@@ -362,7 +362,7 @@ impl BreakEvenable for BearCallSpread {
         // range. Both are reported rather than aborted.
         let per_contract = d_div(
             self.get_net_premium_received()?.to_dec(),
-            self.short_call.option.quantity.to_dec(),
+            self.short_call.option.position_size()?.to_dec(),
             "BearCallSpread::update_break_even_points",
         )?;
         let break_even = d_add(
@@ -652,7 +652,7 @@ impl Strategies for BearCallSpread {
         }
         let exposure = d_mul(
             width,
-            self.short_call.option.quantity.to_dec(),
+            self.short_call.option.position_size()?.to_dec(),
             "BearCallSpread::get_max_loss",
         )?;
         let max_loss = d_sub(

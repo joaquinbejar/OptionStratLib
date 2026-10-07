@@ -5,6 +5,32 @@
 //! contract, a position or a trade. Errors raised by higher layers (pricing,
 //! market, analytics, strategies, …) live with those layers, so core never
 //! names an error it cannot raise.
+//!
+//! # Canonical paths (#550)
+//!
+//! Every error type is exported flat from this module, for example
+//! `optionstratlib_core::error::DecimalError`. The file modules `decimal`
+//! and `trade` are private: they held nothing the flat paths do not, and
+//! were public only because 0.21 exposed them. `position` stays public
+//! because its detail enums (`PositionValidationErrorKind`, …) are not
+//! flattened: kind names collide across crates once the facade gathers every
+//! crate's errors (see `position`'s module docs).
+//!
+//! ```rust
+//! use optionstratlib_core::error::{DecimalError, DecimalResult, TradeError};
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib_core::error::decimal::DecimalError;
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib_core::error::decimal::DecimalResult;
+//! ```
+//!
+//! ```compile_fail,E0603
+//! use optionstratlib_core::error::trade::TradeError;
+//! ```
 
 /// ### Common error kinds (`OperationErrorKind`)
 /// Provides a common set of error kinds used across various modules:
@@ -20,7 +46,7 @@ mod common;
 /// * Precision management
 /// * Arithmetic operations
 /// * Boundary validations
-pub mod decimal;
+mod decimal;
 
 /// ### Options Errors (`OptionsError`)
 /// Core module handling:
@@ -42,7 +68,7 @@ pub mod position;
 /// Covers:
 /// * Trade execution issues
 /// * Trade parameter validation
-pub mod trade;
+mod trade;
 
 pub use common::OperationErrorKind;
 pub use decimal::{DecimalError, DecimalResult};

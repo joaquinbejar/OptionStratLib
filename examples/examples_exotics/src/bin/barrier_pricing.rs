@@ -8,7 +8,7 @@ use optionstratlib::greeks::Greeks;
 use optionstratlib::model::types::{BarrierType, OptionStyle, OptionType, Side};
 use optionstratlib::pricing::{ClosedFormEngine, Priceable};
 use optionstratlib::{ExpirationDate, Options};
-use positive::pos_or_panic;
+use positive::{Positive, pos_or_panic};
 use prettytable::{Table, row};
 use rust_decimal_macros::dec;
 
@@ -57,6 +57,7 @@ fn main() {
                 expiration_date: ExpirationDate::Days(pos_or_panic!(time_to_expiration * 365.0)),
                 implied_volatility: pos_or_panic!(volatility),
                 quantity: pos_or_panic!(1.0),
+                contract_size: Positive::ONE,
                 underlying_price: pos_or_panic!(underlying_price),
                 risk_free_rate: dec!(0.08),
                 option_style: *style,

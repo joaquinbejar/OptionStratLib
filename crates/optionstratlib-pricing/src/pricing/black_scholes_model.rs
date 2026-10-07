@@ -480,6 +480,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
@@ -497,6 +498,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Call,
             underlying_symbol: "GOLD".to_string(),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             dividend_yield: Positive::ZERO,
 
             exotic_params: None,
@@ -515,6 +517,7 @@ mod tests_black_scholes {
             option_style: OptionStyle::Put,
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             dividend_yield: Positive::ZERO,
             exotic_params: None,
         }
