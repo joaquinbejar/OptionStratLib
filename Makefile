@@ -55,9 +55,11 @@ test-workspace-integration:
 
 # Run the tests that need a real browser: PNG/SVG export through a WebDriver,
 # and the one that hands a chart to the default browser. They are `#[ignore]`d
-# so `make test` never spawns a browser; run this target explicitly, with
-# WEBDRIVER_PATH pointing at a chromedriver whose major version matches the
-# installed Chrome.
+# so `make test` never spawns a browser (`check-browser-tests` enforces it);
+# run this target explicitly, with WEBDRIVER_PATH pointing at a chromedriver
+# whose major version matches the installed Chrome. Exports run one at a time
+# (`STATIC_EXPORT_LOCK` in graph.rs), so parallel tests never share a
+# chromedriver and no headless Chrome outlives the run.
 .PHONY: test-visual
 test-visual:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored
@@ -103,8 +105,16 @@ check-test-modules:
 	@python3 scripts/check_test_modules.py --self-test > /dev/null || (python3 scripts/check_test_modules.py --self-test; exit 1)
 	@python3 scripts/check_test_modules.py
 
+# Fails on a `#[test]` that exports PNG/SVG or opens a browser without being
+# `#[ignore]`d (#724): such a test spawns chromedriver and headless Chrome on
+# every `make test` and CI run. Those belong to `test-visual` / `test-export`.
+.PHONY: check-browser-tests
+check-browser-tests:
+	@python3 scripts/check_browser_tests.py --self-test > /dev/null || (python3 scripts/check_browser_tests.py --self-test; exit 1)
+	@python3 scripts/check_browser_tests.py
+
 .PHONY: lint
-lint: check-test-modules
+lint: check-test-modules check-browser-tests
 	cargo clippy --all-targets --all-features --workspace -- -D warnings
 	cargo clippy --all-targets --no-default-features --workspace -- -D warnings
 	LOGLEVEL=WARN cargo test -q -p optionstratlib --no-default-features
