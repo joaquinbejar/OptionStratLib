@@ -123,7 +123,6 @@ optionstratlib -> optionstratlib-pricing
 optionstratlib -> optionstratlib-simulation
 optionstratlib -> optionstratlib-strategies
 optionstratlib -> optionstratlib-visualization
-optionstratlib -> positive
 optionstratlib -> rust_decimal
 optionstratlib -> rust_decimal_macros
 optionstratlib -> thiserror

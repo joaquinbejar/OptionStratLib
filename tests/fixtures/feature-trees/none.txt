@@ -53,7 +53,6 @@ option_type -> positive
 option_type -> serde
 optionstratlib -> chrono
 optionstratlib -> optionstratlib-core
-optionstratlib -> positive
 optionstratlib -> rust_decimal
 optionstratlib -> rust_decimal_macros
 optionstratlib -> thiserror

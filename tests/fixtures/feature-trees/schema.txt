@@ -60,7 +60,6 @@ option_type -> serde
 option_type -> utoipa
 optionstratlib -> chrono
 optionstratlib -> optionstratlib-core
-optionstratlib -> positive
 optionstratlib -> rust_decimal
 optionstratlib -> rust_decimal_macros
 optionstratlib -> thiserror

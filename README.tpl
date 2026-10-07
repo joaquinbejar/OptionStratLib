@@ -25,9 +25,14 @@ We welcome contributions to this project! If you would like to contribute, pleas
 
 1. Fork the repository.
 2. Create a new branch for your feature or bug fix.
-3. Make your changes and ensure that the project still builds and all tests pass.
-4. Commit your changes and push your branch to your forked repository.
-5. Submit a pull request to the main repository.
+3. Find the crate that owns what you are changing in the
+   [public concept ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md): put new code in the
+   lowest layer that can own it, export it from its module's flat path, and
+   update the map with the code (`make check-graph` checks both the layering
+   and the map).
+4. Make your changes and ensure that the project still builds and all tests pass.
+5. Commit your changes and push your branch to your forked repository.
+6. Submit a pull request to the main repository.
 
 If you have any questions, issues, or would like to provide feedback, please feel free to contact the project maintainer:
 

@@ -267,6 +267,10 @@ fn test_canonical_error_paths_are_component_errors() {
         optionstratlib_strategies::error::StrategyResult<()>
     );
     same!(
+        facade::AdjustmentError,
+        optionstratlib_strategies::error::AdjustmentError
+    );
+    same!(
         facade::strategies::BreakEvenErrorKind,
         optionstratlib_strategies::error::strategies::BreakEvenErrorKind
     );

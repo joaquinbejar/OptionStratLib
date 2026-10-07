@@ -121,9 +121,12 @@ tracing = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
 thiserror = { workspace = true }
-positive = { workspace = true }
 
 [dev-dependencies]
+# `positive` is reached through `optionstratlib-core` in the facade's own
+# sources (ADR-0001 D8); the tests and benches name it directly to prove the
+# single `Positive` type.
+positive = { workspace = true }
 # Used by the facade's tests, property tests and doc examples; not
 # dependencies of the facade itself.
 rayon = { workspace = true }

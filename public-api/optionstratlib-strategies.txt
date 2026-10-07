@@ -58,6 +58,17 @@ pub fn optionstratlib_analytics::error::probability::ProbabilityError::from(opti
 impl core::convert::From<optionstratlib_strategies::error::strategies::StrategyError> for optionstratlib_core::error::position::PositionError
 pub fn optionstratlib_core::error::position::PositionError::from(optionstratlib_strategies::error::strategies::StrategyError) -> Self
 pub type optionstratlib_strategies::error::strategies::StrategyResult<T> = core::result::Result<T, optionstratlib_strategies::error::strategies::StrategyError>
+pub enum optionstratlib_strategies::error::AdjustmentError
+pub optionstratlib_strategies::error::AdjustmentError::ConfigurationViolation(alloc::string::String)
+pub optionstratlib_strategies::error::AdjustmentError::CostExceeded
+pub optionstratlib_strategies::error::AdjustmentError::GreeksError(alloc::string::String)
+pub optionstratlib_strategies::error::AdjustmentError::InvalidLegIndex(usize)
+pub optionstratlib_strategies::error::AdjustmentError::NoPositions
+pub optionstratlib_strategies::error::AdjustmentError::NoViablePlan
+impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::error::AdjustmentError
+pub fn optionstratlib_strategies::error::AdjustmentError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
+impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_strategies::error::AdjustmentError
+pub fn optionstratlib_strategies::error::AdjustmentError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
 pub enum optionstratlib_strategies::error::StrategyError
 pub optionstratlib_strategies::error::StrategyError::BreakEvenError(optionstratlib_strategies::error::strategies::BreakEvenErrorKind)
 pub optionstratlib_strategies::error::StrategyError::EmptyCollection
@@ -2795,20 +2806,6 @@ pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::Adjustm
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-pub enum optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::ConfigurationViolation(alloc::string::String)
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::CostExceeded
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::GreeksError(alloc::string::String)
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::InvalidLegIndex(usize)
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::NoPositions
-pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::NoViablePlan
-impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
-impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
-impl core::error::Error for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-impl core::fmt::Display for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig
 pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig::allow_new_legs: bool
 pub optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig::allow_underlying: bool
@@ -2860,7 +2857,7 @@ pub mod optionstratlib_strategies::strategies::delta_neutral::optimizer
 pub struct optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>
 impl<'a> optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::new(&'a [optionstratlib_core::model::position::Position], optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
-pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError>
+pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::error::AdjustmentError>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::with_chain(&'a [optionstratlib_core::model::position::Position], &'a optionstratlib_market::chains::chain::OptionChain, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
 pub mod optionstratlib_strategies::strategies::delta_neutral::portfolio
 pub struct optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget
@@ -2938,20 +2935,6 @@ pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::Adjustm
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-pub enum optionstratlib_strategies::strategies::delta_neutral::AdjustmentError
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::ConfigurationViolation(alloc::string::String)
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::CostExceeded
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::GreeksError(alloc::string::String)
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::InvalidLegIndex(usize)
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::NoPositions
-pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentError::NoViablePlan
-impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
-impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
-impl core::error::Error for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-impl core::fmt::Display for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct optionstratlib_strategies::strategies::delta_neutral::AdjustmentConfig
 pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentConfig::allow_new_legs: bool
 pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentConfig::allow_underlying: bool
@@ -2984,7 +2967,7 @@ pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::Adjustm
 pub struct optionstratlib_strategies::strategies::delta_neutral::AdjustmentOptimizer<'a>
 impl<'a> optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::new(&'a [optionstratlib_core::model::position::Position], optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
-pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError>
+pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::error::AdjustmentError>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::with_chain(&'a [optionstratlib_core::model::position::Position], &'a optionstratlib_market::chains::chain::OptionChain, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
 pub struct optionstratlib_strategies::strategies::delta_neutral::AdjustmentPlan
 pub optionstratlib_strategies::strategies::delta_neutral::AdjustmentPlan::actions: alloc::vec::Vec<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction>
@@ -5536,20 +5519,6 @@ pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::Adjustm
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction
 pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-pub enum optionstratlib_strategies::strategies::AdjustmentError
-pub optionstratlib_strategies::strategies::AdjustmentError::ConfigurationViolation(alloc::string::String)
-pub optionstratlib_strategies::strategies::AdjustmentError::CostExceeded
-pub optionstratlib_strategies::strategies::AdjustmentError::GreeksError(alloc::string::String)
-pub optionstratlib_strategies::strategies::AdjustmentError::InvalidLegIndex(usize)
-pub optionstratlib_strategies::strategies::AdjustmentError::NoPositions
-pub optionstratlib_strategies::strategies::AdjustmentError::NoViablePlan
-impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_core::error::decimal::DecimalError) -> Self
-impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
-impl core::error::Error for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-impl core::fmt::Display for optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError
-pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct optionstratlib_strategies::strategies::AdjustmentConfig
 pub optionstratlib_strategies::strategies::AdjustmentConfig::allow_new_legs: bool
 pub optionstratlib_strategies::strategies::AdjustmentConfig::allow_underlying: bool
@@ -5582,7 +5551,7 @@ pub fn optionstratlib_strategies::strategies::delta_neutral::adjustment::Adjustm
 pub struct optionstratlib_strategies::strategies::AdjustmentOptimizer<'a>
 impl<'a> optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::new(&'a [optionstratlib_core::model::position::Position], optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
-pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentError>
+pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::optimize(&self) -> core::result::Result<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentPlan, optionstratlib_strategies::error::AdjustmentError>
 pub fn optionstratlib_strategies::strategies::delta_neutral::optimizer::AdjustmentOptimizer<'a>::with_chain(&'a [optionstratlib_core::model::position::Position], &'a optionstratlib_market::chains::chain::OptionChain, optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentConfig, optionstratlib_strategies::strategies::delta_neutral::portfolio::AdjustmentTarget) -> Self
 pub struct optionstratlib_strategies::strategies::AdjustmentPlan
 pub optionstratlib_strategies::strategies::AdjustmentPlan::actions: alloc::vec::Vec<optionstratlib_strategies::strategies::delta_neutral::adjustment::AdjustmentAction>

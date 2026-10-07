@@ -420,6 +420,12 @@
 //! `...Kind` enums, which are not flattened because their names collide
 //! across crates. Paths kept only for 0.21 have been removed (#550).
 //!
+//! The [public concept ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
+//! (`docs/ownership.md`) lists, for every concept group, error and root
+//! item, its defining crate and module, the direct import, the facade path
+//! and the feature it needs. `make check-graph` checks it against the
+//! public API, the identity tests and the manifests, so it cannot go stale.
+//!
 //! Runnable programs that depend on the component crates directly, one per
 //! capability and with the smallest dependency set, are in
 //! [`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct),
@@ -478,7 +484,7 @@
 //! ### Enforcement
 //!
 //! ```sh
-//! make check-graph           # layer DAG, error/utils partition, synthetic gate
+//! make check-graph           # layer DAG, error/utils partition, synthetic gate, ownership map
 //! make check-feature-trees   # the dependency graph of each market surface
 //! ```
 //!
@@ -486,7 +492,9 @@
 //! `crate::error::Name` reference to the file that defines it, follows
 //! re-exports and aliases, and ignores `#[cfg(test)]` items, so a violation
 //! cannot hide behind a bare import path or a test module. It also runs a
-//! self-test proving the scanner catches what it must.
+//! self-test proving the scanner catches what it must, and checks the
+//! ownership map (`docs/ownership.md`) against the public-API snapshots,
+//! `tests/unit/canonical_paths_test.rs` and the manifests.
 //!
 //! Known reverse edges whose removal is a breaking change wait in the
 //! script's `DEFERRED` table, scoped to the exact files that carry them and

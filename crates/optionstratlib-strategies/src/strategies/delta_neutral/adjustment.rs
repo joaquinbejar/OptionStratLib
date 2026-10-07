@@ -28,7 +28,6 @@
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::types::{OptionStyle, Side};
 use optionstratlib_core::model::{ExpirationDate, Options};
-use optionstratlib_pricing::error::GreeksError;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -415,55 +414,10 @@ impl fmt::Display for AdjustmentPlan {
     }
 }
 
-/// Error types specific to adjustment operations.
-#[derive(Debug, Clone, PartialEq)]
-pub enum AdjustmentError {
-    /// No viable adjustment plan could be found
-    NoViablePlan,
-    /// Cost constraint exceeded
-    CostExceeded,
-    /// No positions to adjust
-    NoPositions,
-    /// Invalid leg index
-    InvalidLegIndex(usize),
-    /// Greeks calculation failed
-    GreeksError(String),
-    /// Configuration constraint violated
-    ConfigurationViolation(String),
-}
-
-impl fmt::Display for AdjustmentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AdjustmentError::NoViablePlan => write!(f, "No viable adjustment plan found"),
-            AdjustmentError::CostExceeded => write!(f, "Adjustment cost exceeds maximum"),
-            AdjustmentError::NoPositions => write!(f, "No positions to adjust"),
-            AdjustmentError::InvalidLegIndex(idx) => write!(f, "Invalid leg index: {}", idx),
-            AdjustmentError::GreeksError(msg) => write!(f, "Greeks calculation error: {}", msg),
-            AdjustmentError::ConfigurationViolation(msg) => {
-                write!(f, "Configuration violation: {}", msg)
-            }
-        }
-    }
-}
-
-impl std::error::Error for AdjustmentError {}
-
-impl From<optionstratlib_core::error::DecimalError> for AdjustmentError {
-    fn from(error: optionstratlib_core::error::DecimalError) -> Self {
-        AdjustmentError::GreeksError(error.to_string())
-    }
-}
-
-impl From<GreeksError> for AdjustmentError {
-    fn from(err: GreeksError) -> Self {
-        AdjustmentError::GreeksError(err.to_string())
-    }
-}
-
 #[cfg(test)]
 mod tests_adjustment {
     use super::*;
+    use crate::error::AdjustmentError;
     use optionstratlib_core::pos_or_panic;
 
     #[test]

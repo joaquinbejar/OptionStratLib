@@ -14,4 +14,9 @@
 /// * Operation validation
 pub mod strategies;
 
+/// ### Adjustment Errors (`AdjustmentError`)
+/// Raised by the delta-neutral `AdjustmentOptimizer`.
+mod adjustment;
+
+pub use adjustment::AdjustmentError;
 pub use strategies::{StrategyError, StrategyResult};

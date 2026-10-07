@@ -393,6 +393,8 @@ measure-strategies:
 check-graph:
 	@python3 scripts/check_module_boundaries.py --self-test > /dev/null || (python3 scripts/check_module_boundaries.py --self-test; exit 1)
 	@python3 scripts/check_module_boundaries.py
+	@python3 scripts/check_ownership_map.py --self-test > /dev/null || (python3 scripts/check_ownership_map.py --self-test; exit 1)
+	@python3 scripts/check_ownership_map.py
 
 # Verifies every extracted component crate on its own, without the facade in
 # the build (#519): tests with default, no and all features, Clippy, docs
