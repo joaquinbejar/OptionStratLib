@@ -4,7 +4,7 @@
    Date: 21/1/25
 ******************************************************************************/
 use crate::geometrics::ConstructionMethod;
-use optionstratlib_core::error::decimal::DecimalError;
+use optionstratlib_core::error::DecimalError;
 use rust_decimal::{Decimal, MathematicalOps};
 use std::collections::BTreeSet;
 

@@ -70,6 +70,14 @@
 //! with Results that may contain probability errors.
 //!
 //! Target crate (ADR-0001 D6, roadmap M1-14): **analytics**. Owns `ProbabilityError` and its kind enums.
+//!
+//! The `...Kind` enums are canonical in this module (`optionstratlib_analytics::error::probability`) and are not
+//! flattened into `optionstratlib_analytics::error`: the facade gathers every crate's errors
+//! in one `optionstratlib::error` module, where flat kind names would collide
+//! (`StrategyErrorKind` is defined in both core `error::position` and market
+//! `error::chains`, `PriceErrorKind` in both analytics `error::probability`
+//! and strategies `error::strategies`), so each crate keeps its kinds in its
+//! kind module and the facade re-exports that module (#550).
 
 use optionstratlib_core::error::OperationErrorKind;
 use optionstratlib_pricing::error::GreeksError;

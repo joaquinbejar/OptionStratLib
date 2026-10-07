@@ -16,16 +16,16 @@ impl optionstratlib_core::utils::traits::Len for optionstratlib_math::curves::Cu
 pub fn optionstratlib_math::curves::Curve::is_empty(&self) -> bool
 pub fn optionstratlib_math::curves::Curve::len(&self) -> usize
 impl optionstratlib_math::curves::StatisticalCurve for optionstratlib_math::curves::Curve
-pub fn optionstratlib_math::curves::Curve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Curve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Curve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Curve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 pub fn optionstratlib_math::curves::Curve::get_x_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::Curve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Curve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::CurveError>
 impl optionstratlib_math::geometrics::Arithmetic<optionstratlib_math::curves::Curve> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::curves::Curve::merge(&[&optionstratlib_math::curves::Curve], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Curve::merge_with(&self, &optionstratlib_math::curves::Curve, optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::curves::Curve::merge(&[&optionstratlib_math::curves::Curve], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Curve::merge_with(&self, &optionstratlib_math::curves::Curve, optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 impl optionstratlib_math::geometrics::AxisOperations<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::contains_point(&self, &rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_math::curves::Curve::get_closest_point(&self, &rust_decimal::decimal::Decimal) -> core::result::Result<&optionstratlib_math::curves::Point2D, Self::Error>
 pub fn optionstratlib_math::curves::Curve::get_index_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
@@ -37,15 +37,15 @@ pub fn optionstratlib_math::curves::Curve::bilinear_interpolate(&self, rust_deci
 impl optionstratlib_math::geometrics::CubicInterpolation<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
 pub fn optionstratlib_math::curves::Curve::cubic_interpolate(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Point2D, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::GeometricObject<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::calculate_range<I>(I) -> (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) where I: core::iter::traits::iterator::Iterator<Item = rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::curves::CurveError>>
+pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::CurveError>>
 pub fn optionstratlib_math::curves::Curve::from_vector<T>(alloc::vec::Vec<T>) -> Self where T: core::convert::Into<optionstratlib_math::curves::Point2D> + core::clone::Clone
 pub fn optionstratlib_math::curves::Curve::get_points(&self) -> alloc::collections::btree::set::BTreeSet<&optionstratlib_math::curves::Point2D>
 pub fn optionstratlib_math::curves::Curve::to_vector(&self) -> alloc::vec::Vec<&Point>
 pub fn optionstratlib_math::curves::Curve::vector(&self) -> alloc::vec::Vec<&Point>
 impl optionstratlib_math::geometrics::GeometricTransformations<optionstratlib_math::curves::Point2D> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::derivative_at(&self, &optionstratlib_math::curves::Point2D) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, Self::Error>
 pub fn optionstratlib_math::curves::Curve::extrema(&self) -> core::result::Result<(optionstratlib_math::curves::Point2D, optionstratlib_math::curves::Point2D), Self::Error>
 pub fn optionstratlib_math::curves::Curve::intersect_with(&self, &Self) -> core::result::Result<alloc::vec::Vec<optionstratlib_math::curves::Point2D>, Self::Error>
@@ -79,11 +79,11 @@ pub struct optionstratlib_math::curves::Point2D
 pub optionstratlib_math::curves::Point2D::x: rust_decimal::decimal::Decimal
 pub optionstratlib_math::curves::Point2D::y: rust_decimal::decimal::Decimal
 impl optionstratlib_math::curves::Point2D
-pub fn optionstratlib_math::curves::Point2D::from_f64_tuple(f64, f64) -> core::result::Result<Self, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Point2D::from_tuple<T: core::convert::Into<rust_decimal::decimal::Decimal>, U: core::convert::Into<rust_decimal::decimal::Decimal>>(T, U) -> core::result::Result<Self, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Point2D::from_f64_tuple(f64, f64) -> core::result::Result<Self, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Point2D::from_tuple<T: core::convert::Into<rust_decimal::decimal::Decimal>, U: core::convert::Into<rust_decimal::decimal::Decimal>>(T, U) -> core::result::Result<Self, optionstratlib_math::error::CurveError>
 pub fn optionstratlib_math::curves::Point2D::new<T: core::convert::Into<rust_decimal::decimal::Decimal>, U: core::convert::Into<rust_decimal::decimal::Decimal>>(T, U) -> Self
-pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result::Result<(f64, f64), optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Point2D::to_tuple<T: core::convert::TryFrom<rust_decimal::decimal::Decimal> + 'static, U: core::convert::TryFrom<rust_decimal::decimal::Decimal> + 'static>(&self) -> core::result::Result<(T, U), optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Point2D::to_f64_tuple(&self) -> core::result::Result<(f64, f64), optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Point2D::to_tuple<T: core::convert::TryFrom<rust_decimal::decimal::Decimal> + 'static, U: core::convert::TryFrom<rust_decimal::decimal::Decimal> + 'static>(&self) -> core::result::Result<(T, U), optionstratlib_math::error::CurveError>
 impl core::cmp::Eq for optionstratlib_math::curves::Point2D
 impl core::cmp::Ord for optionstratlib_math::curves::Point2D
 pub fn optionstratlib_math::curves::Point2D::cmp(&self, &Self) -> core::cmp::Ordering
@@ -98,7 +98,7 @@ pub fn optionstratlib_math::curves::Point2D::fmt(&self, &mut core::fmt::Formatte
 impl core::hash::Hash for optionstratlib_math::curves::Point2D
 pub fn optionstratlib_math::curves::Point2D::hash<H: core::hash::Hasher>(&self, &mut H)
 impl optionstratlib_math::geometrics::AxisOperations<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::contains_point(&self, &rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_math::curves::Curve::get_closest_point(&self, &rust_decimal::decimal::Decimal) -> core::result::Result<&optionstratlib_math::curves::Point2D, Self::Error>
 pub fn optionstratlib_math::curves::Curve::get_index_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
@@ -122,9 +122,9 @@ pub fn optionstratlib_math::curves::Curve::cubic_interpolate(&self, rust_decimal
 impl optionstratlib_math::geometrics::CubicInterpolation<optionstratlib_math::surfaces::Point3D, optionstratlib_math::curves::Point2D> for optionstratlib_math::surfaces::Surface
 pub fn optionstratlib_math::surfaces::Surface::cubic_interpolate(&self, optionstratlib_math::curves::Point2D) -> core::result::Result<optionstratlib_math::surfaces::Point3D, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::GeometricObject<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::calculate_range<I>(I) -> (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) where I: core::iter::traits::iterator::Iterator<Item = rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::curves::CurveError>>
+pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::CurveError>>
 pub fn optionstratlib_math::curves::Curve::from_vector<T>(alloc::vec::Vec<T>) -> Self where T: core::convert::Into<optionstratlib_math::curves::Point2D> + core::clone::Clone
 pub fn optionstratlib_math::curves::Curve::get_points(&self) -> alloc::collections::btree::set::BTreeSet<&optionstratlib_math::curves::Point2D>
 pub fn optionstratlib_math::curves::Curve::to_vector(&self) -> alloc::vec::Vec<&Point>
@@ -138,7 +138,7 @@ pub fn optionstratlib_math::surfaces::Surface::get_points(&self) -> alloc::colle
 pub fn optionstratlib_math::surfaces::Surface::to_vector(&self) -> alloc::vec::Vec<&Point>
 pub fn optionstratlib_math::surfaces::Surface::vector(&self) -> alloc::vec::Vec<&Point>
 impl optionstratlib_math::geometrics::GeometricTransformations<optionstratlib_math::curves::Point2D> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::derivative_at(&self, &optionstratlib_math::curves::Point2D) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, Self::Error>
 pub fn optionstratlib_math::curves::Curve::extrema(&self) -> core::result::Result<(optionstratlib_math::curves::Point2D, optionstratlib_math::curves::Point2D), Self::Error>
 pub fn optionstratlib_math::curves::Curve::intersect_with(&self, &Self) -> core::result::Result<alloc::vec::Vec<optionstratlib_math::curves::Point2D>, Self::Error>
@@ -173,45 +173,20 @@ pub fn optionstratlib_math::curves::Point2D::schemas(&mut alloc::vec::Vec<(alloc
 impl utoipa::__dev::ComposeSchema for optionstratlib_math::curves::Point2D
 pub fn optionstratlib_math::curves::Point2D::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub trait optionstratlib_math::curves::Curvable
-pub fn optionstratlib_math::curves::Curvable::curve(&self) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Curvable::curve(&self) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 pub trait optionstratlib_math::curves::StatisticalCurve: optionstratlib_math::geometrics::MetricsExtractor
-pub fn optionstratlib_math::curves::StatisticalCurve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::StatisticalCurve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::StatisticalCurve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::StatisticalCurve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 pub fn optionstratlib_math::curves::StatisticalCurve::get_x_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::StatisticalCurve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::StatisticalCurve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::CurveError>
 impl optionstratlib_math::curves::StatisticalCurve for optionstratlib_math::curves::Curve
-pub fn optionstratlib_math::curves::Curve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Curve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Curve::generate_refined_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, usize, rust_decimal::decimal::Decimal, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Curve::generate_statistical_curve(&self, &optionstratlib_math::geometrics::BasicMetrics, &optionstratlib_math::geometrics::ShapeMetrics, &optionstratlib_math::geometrics::RangeMetrics, &optionstratlib_math::geometrics::TrendMetrics, usize, core::option::Option<u64>) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 pub fn optionstratlib_math::curves::Curve::get_x_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::Curve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::create_constant_curve(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::create_linear_curve(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::curves::Curve::verify_curve_metrics(&self, &optionstratlib_math::curves::Curve, &optionstratlib_math::geometrics::BasicMetrics, rust_decimal::decimal::Decimal) -> core::result::Result<bool, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::create_constant_curve(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::create_linear_curve(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 pub mod optionstratlib_math::error
-pub mod optionstratlib_math::error::curves
-pub enum optionstratlib_math::error::curves::CurveError
-pub optionstratlib_math::error::curves::CurveError::AnalysisError(alloc::string::String)
-pub optionstratlib_math::error::curves::CurveError::ConstructionError(alloc::string::String)
-pub optionstratlib_math::error::curves::CurveError::Generator(alloc::boxed::Box<(dyn core::error::Error + core::marker::Send + core::marker::Sync)>)
-pub optionstratlib_math::error::curves::CurveError::InterpolationError(alloc::string::String)
-pub optionstratlib_math::error::curves::CurveError::InterpolationOp(alloc::string::String)
-pub optionstratlib_math::error::curves::CurveError::MetricsError(alloc::string::String)
-pub optionstratlib_math::error::curves::CurveError::OperationError(optionstratlib_core::error::common::OperationErrorKind)
-pub optionstratlib_math::error::curves::CurveError::Options(optionstratlib_core::error::options::OptionsError)
-pub optionstratlib_math::error::curves::CurveError::Point2DError
-pub optionstratlib_math::error::curves::CurveError::Point2DError::reason: &'static str
-pub optionstratlib_math::error::curves::CurveError::Position(optionstratlib_core::error::position::PositionError)
-impl optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
-impl optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::invalid_parameters(&str, &str) -> Self
-pub fn optionstratlib_math::error::curves::CurveError::operation_not_supported(&str, &str) -> Self
-impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::InterpolationError) -> Self
-impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
-impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_math::error::InterpolationError
-pub fn optionstratlib_math::error::InterpolationError::from(optionstratlib_math::error::curves::CurveError) -> Self
-pub type optionstratlib_math::error::curves::CurvesResult<T> = core::result::Result<T, optionstratlib_math::error::curves::CurveError>
 pub enum optionstratlib_math::error::CurveError
 pub optionstratlib_math::error::CurveError::AnalysisError(alloc::string::String)
 pub optionstratlib_math::error::CurveError::ConstructionError(alloc::string::String)
@@ -224,21 +199,21 @@ pub optionstratlib_math::error::CurveError::Options(optionstratlib_core::error::
 pub optionstratlib_math::error::CurveError::Point2DError
 pub optionstratlib_math::error::CurveError::Point2DError::reason: &'static str
 pub optionstratlib_math::error::CurveError::Position(optionstratlib_core::error::position::PositionError)
-impl optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
-impl optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::invalid_parameters(&str, &str) -> Self
-pub fn optionstratlib_math::error::curves::CurveError::operation_not_supported(&str, &str) -> Self
-impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::InterpolationError) -> Self
-impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
-impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_math::error::InterpolationError
-pub fn optionstratlib_math::error::InterpolationError::from(optionstratlib_math::error::curves::CurveError) -> Self
+impl optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::generator<E>(E) -> Self where E: core::error::Error + core::marker::Send + core::marker::Sync + 'static
+impl optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::invalid_parameters(&str, &str) -> Self
+pub fn optionstratlib_math::error::CurveError::operation_not_supported(&str, &str) -> Self
+impl core::convert::From<optionstratlib_math::error::CurveError> for optionstratlib_math::error::InterpolationError
+pub fn optionstratlib_math::error::InterpolationError::from(optionstratlib_math::error::CurveError) -> Self
+impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::from(optionstratlib_math::error::InterpolationError) -> Self
+impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
 pub enum optionstratlib_math::error::InterpolationError
 pub optionstratlib_math::error::InterpolationError::Bilinear(alloc::string::String)
 pub optionstratlib_math::error::InterpolationError::Cubic(alloc::string::String)
-pub optionstratlib_math::error::InterpolationError::Curve(optionstratlib_math::error::curves::CurveError)
+pub optionstratlib_math::error::InterpolationError::Curve(optionstratlib_math::error::CurveError)
 pub optionstratlib_math::error::InterpolationError::DegenerateInterval
 pub optionstratlib_math::error::InterpolationError::EmptyData
 pub optionstratlib_math::error::InterpolationError::Linear(alloc::string::String)
@@ -247,22 +222,22 @@ pub optionstratlib_math::error::InterpolationError::OutOfRange::target: alloc::s
 pub optionstratlib_math::error::InterpolationError::Position(optionstratlib_core::error::position::PositionError)
 pub optionstratlib_math::error::InterpolationError::Spline(alloc::string::String)
 pub optionstratlib_math::error::InterpolationError::Surface(optionstratlib_math::error::SurfaceError)
+impl core::convert::From<optionstratlib_math::error::CurveError> for optionstratlib_math::error::InterpolationError
+pub fn optionstratlib_math::error::InterpolationError::from(optionstratlib_math::error::CurveError) -> Self
+impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::from(optionstratlib_math::error::InterpolationError) -> Self
 impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::SurfaceError
 pub fn optionstratlib_math::error::SurfaceError::from(optionstratlib_math::error::InterpolationError) -> Self
-impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::InterpolationError) -> Self
-impl core::convert::From<optionstratlib_math::error::curves::CurveError> for optionstratlib_math::error::InterpolationError
-pub fn optionstratlib_math::error::InterpolationError::from(optionstratlib_math::error::curves::CurveError) -> Self
 pub enum optionstratlib_math::error::MetricsError
 pub optionstratlib_math::error::MetricsError::BasicError(alloc::string::String)
-pub optionstratlib_math::error::MetricsError::Curve(optionstratlib_math::error::curves::CurveError)
+pub optionstratlib_math::error::MetricsError::Curve(optionstratlib_math::error::CurveError)
 pub optionstratlib_math::error::MetricsError::RangeError(alloc::string::String)
 pub optionstratlib_math::error::MetricsError::RiskError(alloc::string::String)
 pub optionstratlib_math::error::MetricsError::ShapeError(alloc::string::String)
 pub optionstratlib_math::error::MetricsError::Surface(optionstratlib_math::error::SurfaceError)
 pub optionstratlib_math::error::MetricsError::TrendError(alloc::string::String)
-impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::error::curves::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
+impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::error::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
 pub enum optionstratlib_math::error::SurfaceError
 pub optionstratlib_math::error::SurfaceError::AnalysisError(alloc::string::String)
 pub optionstratlib_math::error::SurfaceError::ConstructionError(alloc::string::String)
@@ -279,7 +254,7 @@ pub fn optionstratlib_math::error::SurfaceError::invalid_parameters(&str, &str) 
 pub fn optionstratlib_math::error::SurfaceError::operation_not_supported(&str, &str) -> Self
 impl core::convert::From<optionstratlib_math::error::InterpolationError> for optionstratlib_math::error::SurfaceError
 pub fn optionstratlib_math::error::SurfaceError::from(optionstratlib_math::error::InterpolationError) -> Self
-pub type optionstratlib_math::error::CurvesResult<T> = core::result::Result<T, optionstratlib_math::error::curves::CurveError>
+pub type optionstratlib_math::error::CurvesResult<T> = core::result::Result<T, optionstratlib_math::error::CurveError>
 pub mod optionstratlib_math::geometrics
 pub enum optionstratlib_math::geometrics::ConstructionMethod<Point, Input, Error>
 pub optionstratlib_math::geometrics::ConstructionMethod::FromData
@@ -354,7 +329,7 @@ pub optionstratlib_math::geometrics::Metrics::risk: optionstratlib_math::geometr
 pub optionstratlib_math::geometrics::Metrics::shape: optionstratlib_math::geometrics::ShapeMetrics
 pub optionstratlib_math::geometrics::Metrics::trend: optionstratlib_math::geometrics::TrendMetrics
 impl optionstratlib_math::geometrics::Metrics
-pub fn optionstratlib_math::geometrics::Metrics::analysis_result(&self) -> core::result::Result<optionstratlib_math::geometrics::AnalysisResult, optionstratlib_math::error::curves::CurveError>
+pub fn optionstratlib_math::geometrics::Metrics::analysis_result(&self) -> core::result::Result<optionstratlib_math::geometrics::AnalysisResult, optionstratlib_math::error::CurveError>
 pub fn optionstratlib_math::geometrics::Metrics::new(optionstratlib_math::geometrics::BasicMetrics, optionstratlib_math::geometrics::ShapeMetrics, optionstratlib_math::geometrics::RangeMetrics, optionstratlib_math::geometrics::TrendMetrics, optionstratlib_math::geometrics::RiskMetrics) -> Self
 impl core::fmt::Debug for optionstratlib_math::geometrics::Metrics
 pub fn optionstratlib_math::geometrics::Metrics::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -429,9 +404,9 @@ pub type optionstratlib_math::geometrics::Arithmetic::Error
 pub fn optionstratlib_math::geometrics::Arithmetic::merge(&[&Input], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<Input, Self::Error>
 pub fn optionstratlib_math::geometrics::Arithmetic::merge_with(&self, &Input, optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<Input, Self::Error>
 impl optionstratlib_math::geometrics::Arithmetic<optionstratlib_math::curves::Curve> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
-pub fn optionstratlib_math::curves::Curve::merge(&[&optionstratlib_math::curves::Curve], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
-pub fn optionstratlib_math::curves::Curve::merge_with(&self, &optionstratlib_math::curves::Curve, optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::curves::CurveError>
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
+pub fn optionstratlib_math::curves::Curve::merge(&[&optionstratlib_math::curves::Curve], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
+pub fn optionstratlib_math::curves::Curve::merge_with(&self, &optionstratlib_math::curves::Curve, optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::curves::Curve, optionstratlib_math::error::CurveError>
 impl optionstratlib_math::geometrics::Arithmetic<optionstratlib_math::surfaces::Surface> for optionstratlib_math::surfaces::Surface
 pub type optionstratlib_math::surfaces::Surface::Error = optionstratlib_math::error::SurfaceError
 pub fn optionstratlib_math::surfaces::Surface::merge(&[&optionstratlib_math::surfaces::Surface], optionstratlib_math::geometrics::MergeOperation) -> core::result::Result<optionstratlib_math::surfaces::Surface, Self::Error>
@@ -445,7 +420,7 @@ pub fn optionstratlib_math::geometrics::AxisOperations::get_point(&self, &Input)
 pub fn optionstratlib_math::geometrics::AxisOperations::get_values(&self, Input) -> alloc::vec::Vec<&rust_decimal::decimal::Decimal>
 pub fn optionstratlib_math::geometrics::AxisOperations::merge_indexes(&self, alloc::vec::Vec<Input>) -> alloc::vec::Vec<Input>
 impl optionstratlib_math::geometrics::AxisOperations<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::contains_point(&self, &rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_math::curves::Curve::get_closest_point(&self, &rust_decimal::decimal::Decimal) -> core::result::Result<&optionstratlib_math::curves::Point2D, Self::Error>
 pub fn optionstratlib_math::curves::Curve::get_index_values(&self) -> alloc::vec::Vec<rust_decimal::decimal::Decimal>
@@ -481,9 +456,9 @@ pub fn optionstratlib_math::geometrics::GeometricObject::get_points(&self) -> al
 pub fn optionstratlib_math::geometrics::GeometricObject::to_vector(&self) -> alloc::vec::Vec<&Point>
 pub fn optionstratlib_math::geometrics::GeometricObject::vector(&self) -> alloc::vec::Vec<&Point>
 impl optionstratlib_math::geometrics::GeometricObject<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::calculate_range<I>(I) -> (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal) where I: core::iter::traits::iterator::Iterator<Item = rust_decimal::decimal::Decimal>
-pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::curves::CurveError>>
+pub fn optionstratlib_math::curves::Curve::construct<T>(T) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized, T: core::convert::Into<optionstratlib_math::geometrics::ConstructionMethod<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal, optionstratlib_math::error::CurveError>>
 pub fn optionstratlib_math::curves::Curve::from_vector<T>(alloc::vec::Vec<T>) -> Self where T: core::convert::Into<optionstratlib_math::curves::Point2D> + core::clone::Clone
 pub fn optionstratlib_math::curves::Curve::get_points(&self) -> alloc::collections::btree::set::BTreeSet<&optionstratlib_math::curves::Point2D>
 pub fn optionstratlib_math::curves::Curve::to_vector(&self) -> alloc::vec::Vec<&Point>
@@ -505,7 +480,7 @@ pub fn optionstratlib_math::geometrics::GeometricTransformations::measure_under(
 pub fn optionstratlib_math::geometrics::GeometricTransformations::scale(&self, alloc::vec::Vec<&rust_decimal::decimal::Decimal>) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized
 pub fn optionstratlib_math::geometrics::GeometricTransformations::translate(&self, alloc::vec::Vec<&rust_decimal::decimal::Decimal>) -> core::result::Result<Self, Self::Error> where Self: core::marker::Sized
 impl optionstratlib_math::geometrics::GeometricTransformations<optionstratlib_math::curves::Point2D> for optionstratlib_math::curves::Curve
-pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::curves::CurveError
+pub type optionstratlib_math::curves::Curve::Error = optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::curves::Curve::derivative_at(&self, &optionstratlib_math::curves::Point2D) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, Self::Error>
 pub fn optionstratlib_math::curves::Curve::extrema(&self) -> core::result::Result<(optionstratlib_math::curves::Point2D, optionstratlib_math::curves::Point2D), Self::Error>
 pub fn optionstratlib_math::curves::Curve::intersect_with(&self, &Self) -> core::result::Result<alloc::vec::Vec<optionstratlib_math::curves::Point2D>, Self::Error>

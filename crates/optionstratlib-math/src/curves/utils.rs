@@ -18,7 +18,7 @@ use std::collections::BTreeSet;
 use tracing::warn;
 
 /// Wraps a checked-arithmetic failure raised while sampling a utility curve.
-fn sampling_err(err: optionstratlib_core::error::decimal::DecimalError) -> CurveError {
+fn sampling_err(err: optionstratlib_core::error::DecimalError) -> CurveError {
     CurveError::ConstructionError(err.to_string())
 }
 

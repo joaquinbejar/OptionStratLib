@@ -9,6 +9,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Canonical 0.22 error paths: the duplicate error file modules are gone**
+  (#550). Each error type has one canonical path, flat in its crate's
+  `error` module and in the facade's `optionstratlib::error`. The file
+  modules that held nothing beyond a type already exported flat were public
+  only because 0.21 exposed them, and are now private. The modules that hold
+  detail enums (the `...Kind` types) stay public and are canonical for
+  them: `error::position` (core), `error::greeks` (pricing),
+  `error::chains` (market), `error::probability` (analytics) and
+  `error::strategies` (strategies). The kinds are not flattened because
+  their names collide once the facade gathers every crate's errors
+  (`StrategyErrorKind` in core `position` and market `chains`,
+  `PriceErrorKind` in analytics `probability` and strategies `strategies`).
+  No type, variant or behaviour changes.
+  Removed paths and their migration:
+
+  | Removed path | Use instead |
+  | --- | --- |
+  | `optionstratlib_core::error::decimal::{DecimalError, DecimalResult}` | `optionstratlib_core::error::{DecimalError, DecimalResult}` |
+  | `optionstratlib_core::error::trade::TradeError` | `optionstratlib_core::error::TradeError` |
+  | `optionstratlib_math::error::curves::{CurveError, CurvesResult}` | `optionstratlib_math::error::{CurveError, CurvesResult}` |
+  | `optionstratlib_pricing::error::pricing::{PricingError, PricingResult}` | `optionstratlib_pricing::error::{PricingError, PricingResult}` |
+  | `optionstratlib_simulation::error::simulation::{SimulationError, SimulationResult}` | `optionstratlib_simulation::error::{SimulationError, SimulationResult}` |
+  | `optionstratlib::error::decimal::*` | `optionstratlib::error::{DecimalError, DecimalResult}` |
+  | `optionstratlib::error::trade::*` | `optionstratlib::error::TradeError` |
+  | `optionstratlib::error::curves::*` | `optionstratlib::error::{CurveError, CurvesResult}` |
+  | `optionstratlib::error::pricing::*` | `optionstratlib::error::{PricingError, PricingResult}` |
+  | `optionstratlib::error::simulation::*` | `optionstratlib::error::{SimulationError, SimulationResult}` |
+  | `optionstratlib::error::unified::Error` | `optionstratlib::error::Error` (or `optionstratlib::prelude::Error`) |
+
+  Every `...Result` alias now has a flat path: `optionstratlib_pricing::error`
+  exports `GreeksResult` flat (it was reachable only as
+  `error::greeks::GreeksResult`, which still resolves), and the facade's
+  `error` module adds `GreeksResult`, `ProbabilityResult` and
+  `StrategyResult`.
+
+  Canonical-path policy for the rest of the API: an item defined in a
+  submodule and re-exported by its parent is canonical at the parent
+  (`optionstratlib::pricing::black_scholes`, not
+  `optionstratlib::pricing::black_scholes_model::black_scholes`). The
+  defining submodules (65 of them, such as `pricing::black_scholes_model`,
+  `strategies::long_call` and `backtesting::metrics`) stay public as
+  documentation anchors; nothing there is removed. The crate docs of
+  `optionstratlib` state the policy under "Canonical paths".
+
+  The facade module docs and each changed component's `error` module docs
+  list the canonical paths, with a `compile_fail` doctest per removed path
+  next to a compiling one for its replacement. A new facade test,
+  `tests/unit/canonical_paths_test.rs`, compares every canonical
+  facade path with its defining crate by `TypeId`: the root re-exports, one
+  type per facade module, and every flat error re-export, kind module and
+  the aggregate `Error`. Workspace call sites that used the long paths
+  (math curves and surfaces, pricing kernels, telegraph, pricing utils and
+  the Greeks error) now use the flat ones.
+
 - **Stochastic pricing entry points take the generator from the caller**
   (#638). No public function of `optionstratlib-pricing` draws from the
   thread-local RNG implicitly any more, so a seeded generator reproduces

@@ -199,7 +199,7 @@ impl From<InterpolationError> for SurfaceError {
 mod tests {
     use super::*;
     use crate::error::CurveError;
-    use crate::error::curves::CurvesResult;
+    use crate::error::CurvesResult;
     use optionstratlib_core::error::position::PositionValidationErrorKind;
 
     #[test]

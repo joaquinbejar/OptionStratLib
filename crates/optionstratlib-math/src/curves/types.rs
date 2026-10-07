@@ -3,7 +3,7 @@
    Email: jb@taunais.com
    Date: 26/8/24
 ******************************************************************************/
-use crate::error::curves::CurveError;
+use crate::error::CurveError;
 use crate::geometrics::HasX;
 use num_traits::FromPrimitive;
 use optionstratlib_core::model::is_positive;
