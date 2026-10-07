@@ -35,6 +35,10 @@ use {plotly::plotly_static::ImageFormat, std::sync::Mutex, tracing::debug};
 /// session's headless Chrome is then orphaned and never exits (#724). Holding
 /// this lock across the whole export, retries included, makes every
 /// spawn → session → close → stop cycle run alone.
+///
+/// The lock is per process: two test binaries running at once (parallel
+/// worktrees, or a runner with one process per test) still share the default
+/// chromedriver port.
 #[cfg(feature = "static_export")]
 static STATIC_EXPORT_LOCK: Mutex<()> = Mutex::new(());
 
@@ -211,8 +215,9 @@ pub trait Graph {
     ///
     /// # Concurrency
     ///
-    /// Static exports run one at a time per process: concurrent calls wait on
-    /// a shared lock so no two exports share a chromedriver (#724).
+    /// Static exports run one at a time per process: concurrent calls in the
+    /// same process wait on a shared lock so they never share a chromedriver
+    /// (#724). Separate processes are not coordinated.
     ///
     #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
@@ -326,8 +331,9 @@ pub trait Graph {
     ///
     /// # Concurrency
     ///
-    /// Static exports run one at a time per process: concurrent calls wait on
-    /// a shared lock so no two exports share a chromedriver (#724).
+    /// Static exports run one at a time per process: concurrent calls in the
+    /// same process wait on a shared lock so they never share a chromedriver
+    /// (#724). Separate processes are not coordinated.
     ///
     #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
