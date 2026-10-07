@@ -46,8 +46,8 @@ use crate::pricing::black_scholes_model::european_price_band;
 use crate::pricing::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
-    BinomialPricingParams, TELEGRAPH_PATHS, black_scholes, generate_binomial_tree, price_binomial,
-    telegraph,
+    BinomialPricingParams, RegimeVolatility, TELEGRAPH_PATHS, black_scholes,
+    generate_binomial_tree, price_binomial, telegraph,
 };
 use optionstratlib_core::error::{OptionsError, OptionsResult};
 use optionstratlib_core::model::Options;
@@ -180,20 +180,25 @@ pub trait OptionPricing {
     /// Monte Carlo price computation fails during the execution of `price_option_monte_carlo`.
     fn calculate_price_montecarlo(&self, prices: &[Positive]) -> OptionsResult<Positive>;
 
-    /// Calculates option price with the telegraph process Monte-Carlo pricer.
+    /// Calculates option price with the telegraph regime-switching
+    /// volatility Monte-Carlo pricer.
     ///
     /// Averages the discounted payoff over
-    /// [`crate::pricing::TELEGRAPH_PATHS`] simulated paths,
-    /// with both transition rates estimated from returns simulated at the
-    /// option's implied volatility; see [`crate::pricing::telegraph()`] for
-    /// the model. Call that function directly to choose the path count or
-    /// the rates.
+    /// [`crate::pricing::TELEGRAPH_PATHS`] simulated paths whose volatility
+    /// switches between the two levels of `volatility`, with both transition
+    /// rates estimated from returns simulated at the option's implied
+    /// volatility; see [`crate::pricing::telegraph()`] for the model. Call
+    /// that function directly to choose the path count or the rates.
     ///
     /// # Parameters
     ///
     /// * `no_steps` - The number of discrete time steps to use in the model,
     ///   as a [`NonZeroUsize`] so zero is structurally invalid at the type
     ///   level. Higher values increase precision but also computational cost.
+    /// * `volatility` - The volatilities of the two regimes. A single implied
+    ///   volatility does not identify two levels, so the caller states them;
+    ///   [`RegimeVolatility::constant`]`(option.implied_volatility)` prices at
+    ///   the option's own volatility, which converges to Black-Scholes.
     /// * `rng` - The generator every draw of the telegraph simulation is
     ///   taken from (see [`crate::pricing::telegraph()`]). A seeded generator
     ///   such as [`optionstratlib_core::utils::deterministic_rng`] makes the
@@ -216,6 +221,7 @@ pub trait OptionPricing {
     fn calculate_price_telegraph(
         &self,
         no_steps: NonZeroUsize,
+        volatility: RegimeVolatility,
         rng: &mut dyn Rng,
     ) -> OptionsResult<Decimal>;
 
@@ -358,9 +364,18 @@ impl OptionPricing for Options {
     fn calculate_price_telegraph(
         &self,
         no_steps: NonZeroUsize,
+        volatility: RegimeVolatility,
         rng: &mut dyn Rng,
     ) -> OptionsResult<Decimal> {
-        Ok(telegraph(self, no_steps, TELEGRAPH_PATHS, None, None, rng)?)
+        Ok(telegraph(
+            self,
+            no_steps,
+            TELEGRAPH_PATHS,
+            None,
+            None,
+            volatility,
+            rng,
+        )?)
     }
 
     fn time_value(&self) -> OptionsResult<Decimal> {

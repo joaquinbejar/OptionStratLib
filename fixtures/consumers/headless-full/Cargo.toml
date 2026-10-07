@@ -20,3 +20,8 @@ optionstratlib = { path = "../../..", version = "0.22.0" }
 optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.22.0" }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"
+
+[dev-dependencies]
+# Named only to state the bound the schema test checks; the normal graph
+# resolves `utoipa` through the components' own `schema` feature.
+utoipa = "6.0"

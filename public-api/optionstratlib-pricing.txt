@@ -121,6 +121,10 @@ pub optionstratlib_pricing::error::PricingError::ExpirationDate(expiration_date:
 pub optionstratlib_pricing::error::PricingError::Greeks(optionstratlib_pricing::error::greeks::GreeksError)
 pub optionstratlib_pricing::error::PricingError::InvalidEngine
 pub optionstratlib_pricing::error::PricingError::InvalidEngine::reason: alloc::string::String
+pub optionstratlib_pricing::error::PricingError::InvalidParameter
+pub optionstratlib_pricing::error::PricingError::InvalidParameter::parameter: &'static str
+pub optionstratlib_pricing::error::PricingError::InvalidParameter::reason: &'static str
+pub optionstratlib_pricing::error::PricingError::InvalidParameter::value: rust_decimal::decimal::Decimal
 pub optionstratlib_pricing::error::PricingError::MethodError
 pub optionstratlib_pricing::error::PricingError::MethodError::method: alloc::string::String
 pub optionstratlib_pricing::error::PricingError::MethodError::reason: alloc::string::String
@@ -139,6 +143,7 @@ pub optionstratlib_pricing::error::PricingError::UnsupportedOptionType::method: 
 pub optionstratlib_pricing::error::PricingError::UnsupportedOptionType::option_type: alloc::string::String
 impl optionstratlib_pricing::error::PricingError
 pub fn optionstratlib_pricing::error::PricingError::invalid_engine(&str) -> Self
+pub fn optionstratlib_pricing::error::PricingError::invalid_parameter(&'static str, rust_decimal::decimal::Decimal, &'static str) -> Self
 pub fn optionstratlib_pricing::error::PricingError::method_error(&str, &str) -> Self
 pub fn optionstratlib_pricing::error::PricingError::non_finite(&'static str, f64) -> Self
 pub fn optionstratlib_pricing::error::PricingError::other(&str) -> Self
@@ -418,7 +423,7 @@ pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate
 pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
 pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
-pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_pricing::pricing::option_pricing::OptionPricing::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib_pricing::pricing::option_pricing::OptionPricing for optionstratlib_core::model::option::Options
 pub fn optionstratlib_core::model::option::Options::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
@@ -426,7 +431,7 @@ pub fn optionstratlib_core::model::option::Options::calculate_price_binomial(&se
 pub fn optionstratlib_core::model::option::Options::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
 pub fn optionstratlib_core::model::option::Options::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
-pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub type optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree = optionstratlib_core::error::options::OptionsResult<(rust_decimal::decimal::Decimal, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>, alloc::vec::Vec<alloc::vec::Vec<rust_decimal::decimal::Decimal>>)>
 pub mod optionstratlib_pricing::pricing::power
@@ -438,13 +443,19 @@ pub fn optionstratlib_pricing::pricing::rainbow::rainbow_black_scholes(&optionst
 pub mod optionstratlib_pricing::pricing::spread
 pub fn optionstratlib_pricing::pricing::spread::spread_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::telegraph
+pub struct optionstratlib_pricing::pricing::telegraph::RegimeVolatility
+impl optionstratlib_pricing::pricing::telegraph::RegimeVolatility
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::constant(positive::positive::Positive) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::new(positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::sigma_minus(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::sigma_plus(&self) -> positive::positive::Positive
 pub struct optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::new<R: rand_core::Rng + ?core::marker::Sized>(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &mut R) -> Self
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state<R: rand_core::Rng + ?core::marker::Sized>(&mut self, rust_decimal::decimal::Decimal, &mut R) -> i8
 pub const optionstratlib_pricing::pricing::telegraph::TELEGRAPH_PATHS: core::num::nonzero::NonZeroUsize
-pub fn optionstratlib_pricing::pricing::telegraph::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::unified
 #[non_exhaustive] pub enum optionstratlib_pricing::pricing::unified::GenericPricingEngine<M: optionstratlib_pricing::pricing::unified::MonteCarloPricer>
 pub optionstratlib_pricing::pricing::unified::GenericPricingEngine::ClosedFormBS
@@ -486,6 +497,12 @@ pub optionstratlib_pricing::pricing::BinomialPricingParams::volatility: positive
 pub struct optionstratlib_pricing::pricing::NoMonteCarlo
 impl optionstratlib_pricing::pricing::unified::MonteCarloPricer for optionstratlib_pricing::pricing::unified::NoMonteCarlo
 pub fn optionstratlib_pricing::pricing::unified::NoMonteCarlo::price_monte_carlo(&self, &optionstratlib_core::model::option::Options) -> optionstratlib_pricing::error::PricingResult<positive::positive::Positive>
+pub struct optionstratlib_pricing::pricing::RegimeVolatility
+impl optionstratlib_pricing::pricing::telegraph::RegimeVolatility
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::constant(positive::positive::Positive) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::new(positive::positive::Positive, positive::positive::Positive) -> core::result::Result<Self, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::sigma_minus(&self) -> positive::positive::Positive
+pub fn optionstratlib_pricing::pricing::telegraph::RegimeVolatility::sigma_plus(&self) -> positive::positive::Positive
 pub struct optionstratlib_pricing::pricing::TelegraphProcess
 impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
@@ -513,7 +530,7 @@ pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_binomial(
 pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
 pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
-pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_pricing::pricing::OptionPricing::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_pricing::pricing::OptionPricing::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 impl optionstratlib_pricing::pricing::option_pricing::OptionPricing for optionstratlib_core::model::option::Options
 pub fn optionstratlib_core::model::option::Options::calculate_implied_volatility(&self, rust_decimal::decimal::Decimal) -> core::result::Result<positive::positive::Positive, optionstratlib_pricing::error::VolatilityError>
@@ -521,7 +538,7 @@ pub fn optionstratlib_core::model::option::Options::calculate_price_binomial(&se
 pub fn optionstratlib_core::model::option::Options::calculate_price_binomial_tree(&self, core::num::nonzero::NonZeroUsize) -> optionstratlib_pricing::pricing::option_pricing::PriceBinomialTree
 pub fn optionstratlib_core::model::option::Options::calculate_price_black_scholes(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::calculate_price_montecarlo(&self, &[positive::positive::Positive]) -> optionstratlib_core::error::options::OptionsResult<positive::positive::Positive>
-pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
+pub fn optionstratlib_core::model::option::Options::calculate_price_telegraph(&self, core::num::nonzero::NonZeroUsize, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut dyn rand_core::Rng) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_core::model::option::Options::time_value(&self) -> optionstratlib_core::error::options::OptionsResult<rust_decimal::decimal::Decimal>
 pub trait optionstratlib_pricing::pricing::Priceable
 pub fn optionstratlib_pricing::pricing::Priceable::price<M>(&self, &optionstratlib_pricing::pricing::unified::GenericPricingEngine<M>) -> optionstratlib_pricing::error::PricingResult<positive::positive::Positive> where M: optionstratlib_pricing::pricing::unified::MonteCarloPricer
@@ -558,7 +575,7 @@ pub fn optionstratlib_pricing::pricing::quanto_black_scholes(&optionstratlib_cor
 pub fn optionstratlib_pricing::pricing::rainbow_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub fn optionstratlib_pricing::pricing::simulate_returns<R: rand_core::Rng + ?core::marker::Sized>(rust_decimal::decimal::Decimal, positive::positive::Positive, usize, rust_decimal::decimal::Decimal, &mut R) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::decimal::DecimalError>
 pub fn optionstratlib_pricing::pricing::spread_black_scholes(&optionstratlib_core::model::option::Options) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
-pub fn optionstratlib_pricing::pricing::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
+pub fn optionstratlib_pricing::pricing::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub type optionstratlib_pricing::pricing::ClosedFormEngine = optionstratlib_pricing::pricing::unified::GenericPricingEngine<optionstratlib_pricing::pricing::unified::NoMonteCarlo>
 pub mod optionstratlib_pricing::volatility
 pub trait optionstratlib_pricing::volatility::AtmIvProvider

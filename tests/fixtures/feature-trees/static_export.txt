@@ -34,13 +34,6 @@ askama_parser -> winnow
 async-trait -> proc-macro2
 async-trait -> quote
 async-trait -> syn
-aws-lc-rs -> aws-lc-sys
-aws-lc-rs -> zeroize
-aws-lc-sys -> cc
-aws-lc-sys -> cmake
-aws-lc-sys -> dunce
-aws-lc-sys -> fs_extra
-aws-lc-sys -> pkg-config
 basic-toml -> serde
 block-buffer -> generic-array
 block-buffer -> hybrid-array
@@ -65,9 +58,6 @@ chrono -> wasm-bindgen
 chrono -> windows-link
 cipher -> crypto-common
 cipher -> inout
-cmake -> cc
-combine -> bytes
-combine -> memchr
 cookie -> percent-encoding
 cookie -> time
 cookie -> version_check
@@ -139,7 +129,6 @@ expiration_date -> serde
 expiration_date -> serde_json
 expiration_date -> thiserror
 expiration_date -> tracing
-expiration_date -> utoipa
 fantoccini -> base64
 fantoccini -> cookie
 fantoccini -> futures-core
@@ -160,28 +149,16 @@ fantoccini -> webdriver
 filetime -> cfg-if
 filetime -> libc
 financial_types -> serde
-financial_types -> utoipa
 flate2 -> crc32fast
 flate2 -> miniz_oxide
 flate2 -> zlib-rs
 foreign-types -> foreign-types-shared
 form_urlencoded -> percent-encoding
-futures -> futures-channel
-futures -> futures-core
-futures -> futures-executor
-futures -> futures-io
-futures -> futures-sink
-futures -> futures-task
-futures -> futures-util
 futures-channel -> futures-core
 futures-channel -> futures-sink
-futures-executor -> futures-core
-futures-executor -> futures-task
-futures-executor -> futures-util
 futures-macro -> proc-macro2
 futures-macro -> quote
 futures-macro -> syn
-futures-util -> futures-channel
 futures-util -> futures-core
 futures-util -> futures-io
 futures-util -> futures-macro
@@ -244,13 +221,6 @@ hyper -> tokio
 hyper -> tower-service
 hyper -> tracing
 hyper -> want
-hyper-rustls -> http
-hyper-rustls -> hyper
-hyper-rustls -> hyper-util
-hyper-rustls -> rustls
-hyper-rustls -> tokio
-hyper-rustls -> tokio-rustls
-hyper-rustls -> tower-service
 hyper-tls -> bytes
 hyper-tls -> http-body-util
 hyper-tls -> hyper
@@ -341,31 +311,12 @@ idna_adapter -> icu_normalizer
 idna_adapter -> icu_properties
 indexmap -> equivalent
 indexmap -> hashbrown
-indexmap -> serde
-indexmap -> serde_core
 inout -> generic-array
 inout -> hybrid-array
 is-terminal -> hermit-abi
 is-terminal -> libc
 is-terminal -> windows-sys
 itertools -> either
-jni -> cfg-if
-jni -> combine
-jni -> jni-macros
-jni -> jni-sys
-jni -> log
-jni -> simd_cesu8
-jni -> thiserror
-jni -> walkdir
-jni -> windows-link
-jni-macros -> proc-macro2
-jni-macros -> quote
-jni-macros -> rustc_version
-jni-macros -> simd_cesu8
-jni-macros -> syn
-jni-sys -> jni-sys-macros
-jni-sys-macros -> quote
-jni-sys-macros -> syn
 jobserver -> getrandom
 jobserver -> libc
 js-sys -> cfg-if
@@ -433,15 +384,7 @@ option_type -> expiration_date
 option_type -> financial_types
 option_type -> positive
 option_type -> serde
-option_type -> utoipa
-optionstratlib -> approx
-optionstratlib -> async-trait
 optionstratlib -> chrono
-optionstratlib -> expiration_date
-optionstratlib -> financial_types
-optionstratlib -> futures
-optionstratlib -> num-traits
-optionstratlib -> option_type
 optionstratlib -> optionstratlib-analytics
 optionstratlib -> optionstratlib-backtest
 optionstratlib -> optionstratlib-core
@@ -452,19 +395,10 @@ optionstratlib -> optionstratlib-simulation
 optionstratlib -> optionstratlib-strategies
 optionstratlib -> optionstratlib-visualization
 optionstratlib -> positive
-optionstratlib -> rand
-optionstratlib -> rand_distr
-optionstratlib -> rayon
-optionstratlib -> reqwest
 optionstratlib -> rust_decimal
 optionstratlib -> rust_decimal_macros
-optionstratlib -> serde
-optionstratlib -> serde_json
-optionstratlib -> statrs
 optionstratlib -> thiserror
-optionstratlib -> tokio
 optionstratlib -> tracing
-optionstratlib -> utoipa
 optionstratlib-analytics -> chrono
 optionstratlib-analytics -> lazy_static
 optionstratlib-analytics -> num-traits
@@ -478,7 +412,6 @@ optionstratlib-analytics -> serde
 optionstratlib-analytics -> serde_json
 optionstratlib-analytics -> thiserror
 optionstratlib-analytics -> tracing
-optionstratlib-analytics -> utoipa
 optionstratlib-backtest -> chrono
 optionstratlib-backtest -> optionstratlib-analytics
 optionstratlib-backtest -> optionstratlib-core
@@ -490,7 +423,6 @@ optionstratlib-backtest -> rust_decimal_macros
 optionstratlib-backtest -> serde
 optionstratlib-backtest -> thiserror
 optionstratlib-backtest -> tracing
-optionstratlib-backtest -> utoipa
 optionstratlib-backtest -> uuid
 optionstratlib-core -> chrono
 optionstratlib-core -> expiration_date
@@ -506,7 +438,6 @@ optionstratlib-core -> serde
 optionstratlib-core -> serde_json
 optionstratlib-core -> thiserror
 optionstratlib-core -> tracing
-optionstratlib-core -> utoipa
 optionstratlib-core -> uuid
 optionstratlib-market -> chrono
 optionstratlib-market -> csv
@@ -521,7 +452,6 @@ optionstratlib-market -> serde_json
 optionstratlib-market -> thiserror
 optionstratlib-market -> tokio
 optionstratlib-market -> tracing
-optionstratlib-market -> utoipa
 optionstratlib-market -> zip
 optionstratlib-math -> itertools
 optionstratlib-math -> num-traits
@@ -534,7 +464,6 @@ optionstratlib-math -> serde
 optionstratlib-math -> statrs
 optionstratlib-math -> thiserror
 optionstratlib-math -> tracing
-optionstratlib-math -> utoipa
 optionstratlib-pricing -> num-traits
 optionstratlib-pricing -> optionstratlib-core
 optionstratlib-pricing -> optionstratlib-math
@@ -547,7 +476,6 @@ optionstratlib-pricing -> serde
 optionstratlib-pricing -> statrs
 optionstratlib-pricing -> thiserror
 optionstratlib-pricing -> tracing
-optionstratlib-pricing -> utoipa
 optionstratlib-simulation -> num-traits
 optionstratlib-simulation -> optionstratlib-core
 optionstratlib-simulation -> optionstratlib-pricing
@@ -558,7 +486,6 @@ optionstratlib-simulation -> rust_decimal_macros
 optionstratlib-simulation -> serde
 optionstratlib-simulation -> thiserror
 optionstratlib-simulation -> tracing
-optionstratlib-simulation -> utoipa
 optionstratlib-strategies -> chrono
 optionstratlib-strategies -> itertools
 optionstratlib-strategies -> num-traits
@@ -572,7 +499,6 @@ optionstratlib-strategies -> rust_decimal_macros
 optionstratlib-strategies -> serde
 optionstratlib-strategies -> thiserror
 optionstratlib-strategies -> tracing
-optionstratlib-strategies -> utoipa
 optionstratlib-visualization -> num-traits
 optionstratlib-visualization -> optionstratlib-backtest
 optionstratlib-visualization -> optionstratlib-core
@@ -640,7 +566,6 @@ positive -> rust_decimal
 positive -> rust_decimal_macros
 positive -> serde
 positive -> thiserror
-positive -> utoipa
 potential_utf -> zerovec
 ppv-lite86 -> zerocopy
 prettytable-rs -> encode_unicode
@@ -685,7 +610,6 @@ reqwest -> http
 reqwest -> http-body
 reqwest -> http-body-util
 reqwest -> hyper
-reqwest -> hyper-rustls
 reqwest -> hyper-tls
 reqwest -> hyper-util
 reqwest -> ipnet
@@ -696,10 +620,8 @@ reqwest -> native-tls
 reqwest -> once_cell
 reqwest -> percent-encoding
 reqwest -> pin-project-lite
-reqwest -> rustls
 reqwest -> rustls-pemfile
 reqwest -> rustls-pki-types
-reqwest -> rustls-platform-verifier
 reqwest -> serde
 reqwest -> serde_json
 reqwest -> serde_urlencoded
@@ -707,7 +629,6 @@ reqwest -> sync_wrapper
 reqwest -> system-configuration
 reqwest -> tokio
 reqwest -> tokio-native-tls
-reqwest -> tokio-rustls
 reqwest -> tower
 reqwest -> tower-http
 reqwest -> tower-service
@@ -721,42 +642,14 @@ rust_decimal -> num-traits
 rust_decimal -> serde
 rust_decimal_macros -> quote
 rust_decimal_macros -> syn
-rustc_version -> semver
 rustix -> bitflags
 rustix -> errno
 rustix -> libc
 rustix -> linux-raw-sys
 rustix -> windows-sys
-rustls -> aws-lc-rs
-rustls -> once_cell
-rustls -> rustls-pki-types
-rustls -> rustls-webpki
-rustls -> subtle
-rustls -> zeroize
-rustls-native-certs -> openssl-probe
-rustls-native-certs -> rustls-pki-types
-rustls-native-certs -> schannel
-rustls-native-certs -> security-framework
 rustls-pemfile -> base64
 rustls-pki-types -> zeroize
-rustls-platform-verifier -> core-foundation
-rustls-platform-verifier -> core-foundation-sys
-rustls-platform-verifier -> jni
-rustls-platform-verifier -> log
-rustls-platform-verifier -> once_cell
-rustls-platform-verifier -> rustls
-rustls-platform-verifier -> rustls-native-certs
-rustls-platform-verifier -> rustls-platform-verifier-android
-rustls-platform-verifier -> rustls-webpki
-rustls-platform-verifier -> security-framework
-rustls-platform-verifier -> security-framework-sys
-rustls-platform-verifier -> webpki-root-certs
-rustls-platform-verifier -> windows-sys
-rustls-webpki -> aws-lc-rs
-rustls-webpki -> rustls-pki-types
-rustls-webpki -> untrusted
 safe_arch -> bytemuck
-same-file -> winapi-util
 schannel -> windows-sys
 security-framework -> bitflags
 security-framework -> core-foundation
@@ -804,8 +697,6 @@ simba -> approx
 simba -> num-complex
 simba -> num-traits
 simba -> wide
-simd_cesu8 -> rustc_version
-simd_cesu8 -> simdutf8
 socket2 -> libc
 socket2 -> windows-sys
 statrs -> approx
@@ -864,8 +755,6 @@ tokio-macros -> quote
 tokio-macros -> syn
 tokio-native-tls -> native-tls
 tokio-native-tls -> tokio
-tokio-rustls -> rustls
-tokio-rustls -> tokio
 tokio-util -> bytes
 tokio-util -> futures-core
 tokio-util -> futures-sink
@@ -899,18 +788,8 @@ tracing-core -> once_cell
 url -> form_urlencoded
 url -> idna
 url -> percent-encoding
-utoipa -> indexmap
-utoipa -> serde
-utoipa -> serde_json
-utoipa -> utoipa-gen
-utoipa-gen -> proc-macro2
-utoipa-gen -> quote
-utoipa-gen -> regex
-utoipa-gen -> syn
 uuid -> getrandom
 uuid -> serde_core
-walkdir -> same-file
-walkdir -> winapi-util
 want -> try-lock
 wasip2 -> wit-bindgen
 wasm-bindgen -> cfg-if
@@ -964,7 +843,6 @@ webdriver-downloader -> tokio
 webdriver-downloader -> tracing
 webdriver-downloader -> which
 webdriver-downloader -> zip
-webpki-root-certs -> rustls-pki-types
 which -> either
 which -> home
 which -> rustix
@@ -973,7 +851,6 @@ wide -> bytemuck
 wide -> safe_arch
 winapi -> winapi-i686-pc-windows-gnu
 winapi -> winapi-x86_64-pc-windows-gnu
-winapi-util -> windows-sys
 windows-core -> windows-implement
 windows-core -> windows-interface
 windows-core -> windows-link
@@ -1082,8 +959,6 @@ askama_parser [config]
 async-trait []
 atomic-waker []
 autocfg []
-aws-lc-rs [aws-lc-sys,prebuilt-nasm]
-aws-lc-sys [prebuilt-nasm]
 base64 [alloc,default,simd-unsafe,std]
 base64ct []
 basic-toml []
@@ -1100,9 +975,7 @@ cfg-if []
 chacha20 [rng]
 chrono [alloc,clock,default,iana-time-zone,js-sys,now,oldtime,serde,std,wasm-bindgen,wasmbind,winapi,windows-link]
 cipher []
-cmake []
 cmov []
-combine [alloc,bytes,default,std]
 const-oid []
 constant_time_eq [default,std]
 cookie [percent-encode,percent-encoding]
@@ -1132,7 +1005,6 @@ dirs-next []
 dirs-sys []
 dirs-sys-next []
 displaydoc []
-dunce []
 dyn-clone []
 either [default,std,use_std]
 encode_unicode [default,std]
@@ -1140,27 +1012,24 @@ encoding_rs [alloc,default]
 equivalent []
 erased-serde [alloc,default,std]
 errno [default,std]
-expiration_date [default,utoipa]
+expiration_date [default]
 fantoccini [default,hyper-tls,native-tls,openssl]
 fastrand [alloc,default,std]
 filetime []
-financial_types [default,std,utoipa]
+financial_types [default,std]
 find-msvc-tools []
 flate2 [any_impl,any_zlib,default,miniz_oxide,runtime_detection,rust_backend,zlib-rs]
 fnv [default,std]
 foreign-types []
 foreign-types-shared []
 form_urlencoded [alloc,default,std]
-fs_extra []
-futures [alloc,async-await,default,executor,futures-executor,std]
 futures-channel [alloc,default,futures-sink,sink,std]
 futures-core [alloc,default,std]
-futures-executor [std]
 futures-io [std]
 futures-macro []
 futures-sink [alloc,default,std]
 futures-task [alloc,std]
-futures-util [alloc,async-await,async-await-macro,channel,default,futures-channel,futures-io,futures-macro,futures-sink,io,memchr,sink,slab,std]
+futures-util [alloc,async-await,async-await-macro,default,futures-io,futures-macro,futures-sink,io,memchr,sink,slab,std]
 generic-array [more_lengths]
 getrandom [std,sys_rng,wasm_js]
 h2 []
@@ -1175,7 +1044,6 @@ httparse [default,std]
 httpdate []
 hybrid-array []
 hyper [client,default,h2,http1,http2,runtime,socket2,stream,tcp]
-hyper-rustls [aws-lc-rs,http1,http2,tls12]
 hyper-tls []
 hyper-util [client,client-legacy,client-proxy,client-proxy-system,default,http1,http2,tokio]
 iana-time-zone [fallback]
@@ -1194,16 +1062,12 @@ icu_segmenter_data []
 ident_case []
 idna [alloc,compiled_data,std]
 idna_adapter [compiled_data]
-indexmap [default,serde,std]
+indexmap [default,std]
 inout []
 ipnet [default,std]
 is-terminal []
 itertools [default,use_alloc,use_std]
 itoa []
-jni []
-jni-macros []
-jni-sys []
-jni-sys-macros []
 jobserver []
 js-sys [default,std,unsafe-eval]
 lazy_static []
@@ -1241,16 +1105,16 @@ openssl-macros []
 openssl-probe []
 openssl-sys []
 option-ext []
-option_type [default,utoipa]
+option_type [default]
 optionstratlib [analytics,async,backtest,io,market,math,plotly,pricing,simulation,static_export,strategies,visualization]
-optionstratlib-analytics [default,schema]
-optionstratlib-backtest [default,schema]
-optionstratlib-core [default,schema]
-optionstratlib-market [async,default,io,schema]
-optionstratlib-math [default,schema]
-optionstratlib-pricing [default,schema]
-optionstratlib-simulation [default,schema]
-optionstratlib-strategies [default,schema]
+optionstratlib-analytics [default]
+optionstratlib-backtest [default]
+optionstratlib-core [default]
+optionstratlib-market [async,default,io]
+optionstratlib-math [default]
+optionstratlib-pricing [default]
+optionstratlib-simulation [default]
+optionstratlib-strategies [default]
 optionstratlib-visualization [default,plotly,static_export]
 parking_lot [default]
 parking_lot_core []
@@ -1262,7 +1126,7 @@ pkg-config []
 plotly [async-trait,plotly_static,static_export_default]
 plotly_derive []
 plotly_static [chromedriver,webdriver_download]
-positive [default,utoipa]
+positive [default]
 potential_utf [zerovec]
 powerfmt []
 ppmd-rust [default]
@@ -1283,23 +1147,16 @@ redox_users []
 regex [default,perf,perf-backtrack,perf-cache,perf-dfa,perf-inline,perf-literal,perf-onepass,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment]
 regex-automata [alloc,dfa-onepass,hybrid,meta,nfa-backtrack,nfa-pikevm,nfa-thompson,perf-inline,perf-literal,perf-literal-multisubstring,perf-literal-substring,std,syntax,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment,unicode-word-boundary]
 regex-syntax [default,std,unicode,unicode-age,unicode-bool,unicode-case,unicode-gencat,unicode-perl,unicode-script,unicode-segment]
-reqwest [__rustls,__rustls-aws-lc-rs,__tls,blocking,charset,default,default-tls,h2,http2,hyper-tls,json,native-tls,native-tls-crate,rustls,system-proxy,tokio-native-tls]
+reqwest [__tls,blocking,charset,default,default-tls,h2,http2,hyper-tls,native-tls,native-tls-crate,system-proxy,tokio-native-tls]
 rust_decimal [default,maths,serde,std]
 rust_decimal_macros [default]
 rustc-hash [default,std]
-rustc_version []
 rustix [alloc,default,fs,libc-extra-traits,std]
-rustls [aws-lc-rs,aws_lc_rs,std,tls12]
-rustls-native-certs []
 rustls-pemfile []
 rustls-pki-types [alloc,default,std]
-rustls-platform-verifier []
-rustls-platform-verifier-android []
-rustls-webpki [alloc,aws-lc-rs,std]
 rustversion []
 ryu []
 safe_arch [bytemuck,default]
-same-file []
 schannel []
 scopeguard []
 security-framework [OSX_10_14,alpn,default,session-tickets]
@@ -1320,8 +1177,7 @@ shlex [default,std]
 signal-hook-registry []
 simba [std,wide]
 simd-adler32 [std]
-simd_cesu8 [default,std]
-simdutf8 [aarch64_neon,public_imp,std]
+simdutf8 [aarch64_neon,public_imp]
 slab [default,std]
 smallvec [const_generics,const_new]
 socket2 [all]
@@ -1346,7 +1202,6 @@ tinystr [alloc,zerovec]
 tokio [bytes,default,fs,full,io-std,io-util,libc,macros,mio,net,parking_lot,process,rt,rt-multi-thread,signal,signal-hook-registry,socket2,sync,time,tokio-macros,windows-sys]
 tokio-macros []
 tokio-native-tls []
-tokio-rustls [aws-lc-rs,aws_lc_rs,tls12]
 tokio-util [codec,default,io,libc]
 tower [futures-core,futures-util,pin-project-lite,retry,sync_wrapper,timeout,tokio,util]
 tower-http [follow-redirect,futures-util,tower]
@@ -1362,16 +1217,12 @@ typenum [const-generics]
 unicode-ident []
 unicode-segmentation []
 unicode-width [cjk,default]
-untrusted []
 url [default,std]
 urlencoding []
 utf8_iter []
-utoipa [axum_extras,chrono,decimal,default,macros]
-utoipa-gen [axum_extras,chrono,decimal,regex]
 uuid [default,rng,serde,std,v4]
 vcpkg []
 version_check []
-walkdir []
 want []
 wasi [default,std]
 wasip2 []
@@ -1380,15 +1231,13 @@ wasm-bindgen-futures [default,std]
 wasm-bindgen-macro []
 wasm-bindgen-macro-support []
 wasm-bindgen-shared []
-web-sys [AbortController,AbortSignal,Blob,BlobPropertyBag,Document,Element,EventTarget,File,FormData,Headers,HtmlElement,Node,ReadableStream,ReferrerPolicy,Request,RequestCache,RequestCredentials,RequestInit,RequestMode,Response,ServiceWorkerGlobalScope,Window,WorkerGlobalScope,default,std]
+web-sys [AbortController,AbortSignal,Blob,BlobPropertyBag,Document,Element,EventTarget,File,FormData,Headers,HtmlElement,Node,ReadableStream,Request,RequestCache,RequestCredentials,RequestInit,RequestMode,Response,ServiceWorkerGlobalScope,Window,WorkerGlobalScope,default,std]
 webdriver []
 webdriver-downloader [default,native-tls]
-webpki-root-certs []
 which []
 wide [std]
 winapi [consoleapi,fileapi,handleapi,knownfolders,objbase,shlobj,winbase,wincon,winerror]
 winapi-i686-pc-windows-gnu []
-winapi-util []
 winapi-x86_64-pc-windows-gnu []
 windows-core [default,std]
 windows-implement []

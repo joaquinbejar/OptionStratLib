@@ -6,7 +6,9 @@
 # (scripts/check_fixtures.py).
 present = [
     "optionstratlib", "optionstratlib-visualization", "plotly", "plotly_static",
-    "fantoccini", "webdriver", "tokio", "reqwest", "futures", "async-trait",
+    "fantoccini", "webdriver", "tokio", "reqwest", "async-trait",
 ]
 # `async` brings market's I/O (`csv`, `zip`) with it.
-absent = ["tracing-subscriber", "indicatif", "pretty-simple-display"]
+absent = ["tracing-subscriber", "indicatif", "pretty-simple-display",
+    "utoipa",
+]

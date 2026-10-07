@@ -36,7 +36,8 @@ use tracing::instrument;
 ///     - For each simulation, initialize the stock price `st` to the underlying price.
 ///     - Loop through the number of steps:
 ///         - Calculate a Wiener process increment `w`.
-///         - Update the stock price `st` using the discrete approximation of the geometric Brownian motion model.
+///         - Update the stock price `st` using the Euler discretisation of geometric Brownian motion,
+///           `st <- st * (1 + (r - q) dt + sigma dW)`, with `q` the option's dividend yield.
 ///     - Calculate the payoff of the option for this simulation (for a call option, this is `max(st - strike_price, 0)`).
 ///     - Add the payoff to the `payoff_sum`.
 /// 4. Return the average payoff discounted to its present value.
@@ -68,11 +69,14 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
     let mut payoff_sum = 0.0;
 
     let dt_dec = dt.to_dec();
-    let drift = d_mul(
+    // Risk-neutral drift `(r - q) dt`. The dividend yield was missing until
+    // #756, which overpriced calls on a dividend-paying underlying.
+    let carry = d_sub(
         option.risk_free_rate,
-        dt_dec,
-        "pricing::monte_carlo::gbm::drift",
+        option.dividend_yield.to_dec(),
+        "pricing::monte_carlo::gbm::carry",
     )?;
+    let drift = d_mul(carry, dt_dec, "pricing::monte_carlo::gbm::drift")?;
     for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps_raw {
@@ -383,6 +387,28 @@ mod tests {
         )
         .unwrap();
         assert_decimal_eq!(price, dec!(10.4506), dec!(0.92));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_dividend_yield_converges_to_black_scholes() {
+        use crate::pricing::black_scholes_model::black_scholes;
+        // #756: with q = 3% the drift is r - q, so the estimate converges to
+        // the Black-Scholes call with the same q (8.6525). The payoff
+        // standard deviation is about 13.0, so with 20 000 paths the
+        // standard error is about 0.092; the band is 4.5 of them and absorbs
+        // the Euler bias of 12 steps. Before the fix the estimate sat near
+        // the q = 0 price 10.45, about 20 standard errors away.
+        let mut option = create_test_option();
+        option.dividend_yield = pos_or_panic!(0.03);
+        let price = monte_carlo_option_pricing(
+            &option,
+            optionstratlib_core::nz!(12),
+            optionstratlib_core::nz!(20_000),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap();
+        let reference = black_scholes(&option).unwrap();
+        assert_decimal_eq!(price, reference, dec!(0.41));
     }
 }
 

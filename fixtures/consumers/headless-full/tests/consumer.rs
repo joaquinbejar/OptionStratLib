@@ -163,3 +163,20 @@ fn test_the_prelude_names_the_canonical_items() {
         Error::Graph(optionstratlib::error::GraphError::Render(_))
     ));
 }
+
+/// Compiles only for a type that derives `utoipa::ToSchema`.
+fn derives_schema<T: utoipa::ToSchema>() {}
+
+#[test]
+fn test_the_default_derives_a_schema_for_every_component() {
+    // `schema` is a default feature, so each component that has it is on:
+    // one type from each (`facade-schema-off` shows the same types without).
+    derives_schema::<optionstratlib::model::option::ExoticParams>();
+    derives_schema::<optionstratlib::geometrics::MergeOperation>();
+    derives_schema::<optionstratlib::greeks::Greek>();
+    derives_schema::<optionstratlib::simulation::ExitPolicy>();
+    derives_schema::<optionstratlib::chains::OptionsInStrike>();
+    derives_schema::<optionstratlib::pnl::DeltaAdjustment>();
+    derives_schema::<optionstratlib::strategies::LongCall>();
+    derives_schema::<optionstratlib::backtesting::results::SimulationResult>();
+}

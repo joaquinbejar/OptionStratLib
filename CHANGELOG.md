@@ -190,6 +190,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without dividend yield) instead of being one biased draw, and a call
   costs `no_paths` times as many steps as before.
 
+- **The telegraph regime switches the volatility** (#755). The telegraph
+  regime used to enter only as the sign of the diffusion term; since the
+  normal shock is symmetric, the price was Black-Scholes whatever
+  `lambda_up` / `lambda_down` were. The regime now selects one of two
+  volatility levels: each step applies `S *= exp((r - q - sigma_s^2 / 2) *
+  dt + sigma_s * sqrt(dt) * Z)` with `sigma_s` = `sigma_plus` in the +1 regime and
+  `sigma_minus` in the -1 regime. Every step carries the risk-neutral drift
+  of its regime, so discounted prices stay martingales and put-call parity
+  holds; a European price lies between the Black-Scholes prices at the two
+  levels and rises with the time the rates keep the path in the
+  higher-volatility regime. New API: `pricing::RegimeVolatility`
+  (`new(sigma_plus, sigma_minus)`, `constant(sigma)`, both rejecting a zero
+  level, and the `sigma_plus()` / `sigma_minus()` accessors) and
+  `PricingError::InvalidParameter { parameter, value, reason }`, also
+  returned when a supplied transition rate is negative. Signatures:
+  - `telegraph(option, no_steps, no_paths, lambda_up, lambda_down, rng)` →
+    `telegraph(option, no_steps, no_paths, lambda_up, lambda_down,
+    volatility, rng)`, with `volatility: RegimeVolatility`; the option's
+    `implied_volatility` no longer diffuses the price (it still feeds the
+    estimate of a missing rate).
+  - `OptionPricing::calculate_price_telegraph(no_steps, rng)` →
+    `calculate_price_telegraph(no_steps, volatility, rng)`. One implied
+    volatility does not identify two levels, so the caller states them
+    rather than the trait inventing a split.
+
+  Migration: pass `RegimeVolatility::constant(option.implied_volatility)?`
+  to keep the previous law (it converges to the same Black-Scholes price),
+  or `RegimeVolatility::new(sigma_plus, sigma_minus)?` for two regimes. A
+  negative `lambda_up` / `lambda_down`, which used to be read as a rate that
+  never or always flips, is now an error. Seeded prices change even at equal
+  levels, because the shock is no longer signed by the regime.
+
 - **`OptionChain::strike_price_range_vec` works in `Positive`** (#642). The
   signature changes from `strike_price_range_vec(&self, step: f64) ->
   Option<Vec<f64>>` to `strike_price_range_vec(&self, step: Positive) ->
@@ -1252,6 +1284,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Path-based pricers include the dividend yield in the drift** (#756).
+  `pricing::telegraph` simulated the log price with drift
+  `r - sigma^2/2` and `pricing::monte_carlo_option_pricing` grew it by
+  `1 + r dt + sigma dW`; both ignored `option.dividend_yield`, so on a
+  dividend-paying underlying they priced as if `q = 0`, overpricing calls
+  and underpricing puts against Black-Scholes. The drifts are now
+  `r - q - sigma^2/2` and `(r - q) dt`. No signature changes, but **results
+  change for every option with `dividend_yield > 0`** (including
+  `OptionPricing::calculate_price_telegraph`, which calls the telegraph
+  kernel); options with `q = 0` price exactly as before on the same seed.
+  The other path-based code (`price_option_monte_carlo`, which takes
+  caller-supplied terminal prices, and the Heston variance simulation) has
+  no price drift and is unchanged. Tests: with `q = 3%` and a fixed seed,
+  the telegraph kernel with switching disabled (call and put, 40 000
+  paths) and `monte_carlo_option_pricing` (20 000 paths) land within
+  Monte-Carlo tolerance of Black-Scholes with the same `q` (call 8.6525),
+  where the old drift sat near the `q = 0` price 10.45.
+
 - **Heston volatility simulation draws a normal Wiener increment** (#742).
   `volatility::simulate_heston_volatility` drew `dW` as
   `uniform[0, 1) * sqrt(dt)`, a strictly positive shock with mean
@@ -1964,6 +2014,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `StrategyError` both already convert from `PositionError`.
 
 ### Added
+
+- **The facade's feature model is reconciled and pinned** (#549).
+  The facade declared twelve dependencies it never imports (`approx`,
+  `statrs`, `rand`, `rand_distr`, `num-traits`, `serde`, `serde_json`,
+  `rayon`, `utoipa`, `expiration_date`, `financial_types`, `option_type`) as
+  normal dependencies, so `--no-default-features` resolved `statrs`, `rayon`
+  and `utoipa` before any capability was on; they are removed (the few its
+  tests and doc examples use are dev-dependencies). `async` no longer enables
+  the unused optional `tokio`, `async-trait`, `reqwest` and `futures` of the
+  facade and forwards only `optionstratlib-market/async` as ADR-0002 section
+  2 says, so `async` alone resolves `tokio` and no `reqwest`, `futures` or
+  `async-trait` (`static_export` still resolves `reqwest` and `async-trait`
+  through `plotly_static`).
+  - **`schema` and `parallel`**, the two features ADR-0002 section 2 lists and
+    main lacked. `schema` (now in `default`, so the default surface is
+    unchanged) forwards `optionstratlib-core/schema` and the weak
+    `optionstratlib-{math,pricing,simulation,market,analytics,strategies,backtest}?/schema`
+    of the components another feature enabled; the component dependencies
+    are no longer declared with `features = ["schema"]`, so a build with
+    `default-features = false` derives no `utoipa::ToSchema` and resolves no
+    `utoipa` (add `schema`, or keep the default, to get the derives back).
+    `parallel` is reserved and empty.
+  - **`expiration_date` 0.4.1** is the minimum (#628): it brings `utoipa`
+    only behind its own `utoipa` feature, so no build without `schema`
+    resolves the package. Because the facade no longer enables `utoipa`
+    itself, the default graph also loses the `utoipa/axum_extras` feature the
+    facade used to switch on through unification. A consumer that relied on
+    it (the `axum` integration of `utoipa`) must enable `axum_extras` on its
+    own `utoipa` dependency.
+  - **Checks.** `make check-graph` pins every row of the facade's feature
+    table and the default exactly, and forbids `utoipa` in each component's
+    default tree. `make check-feature-trees` pins 15 surfaces (the facade with
+    no capability, `schema`, `pricing`, `simulation`, `market`, `io`, `async`,
+    `synthetic`, `analytics`, `strategies`, `backtest`, `visualization`,
+    `plotly`, `static_export` and the default, i.e. the headless full domain),
+    asserts for each the exact set of `optionstratlib-*` components and the
+    backends it may resolve, that `utoipa` resolves only where `schema` is on,
+    and that a component has an edge to it only there. The new
+    `facade-schema-off` fixture shows by `compile_fail` doctests that one
+    type of each component implements no `ToSchema` without the feature and
+    that its normal graph resolves no `utoipa`; `headless-full` shows the
+    same types implement it by default and lists `utoipa` as present. The
+    other component and facade fixtures built without `schema` list `utoipa`
+    as absent. The `FACADE_FEATURE_SETS` loop of `make lint` and `build.yml`
+    also cover `schema`, `io`, `async`, `synthetic`, `math` and the
+    all-features build, and the `lib.rs` docs carry the feature routing
+    table, the 0.22 default and the combinations that do not exist.
 
 - **The facade's visualization routing is asserted, not just wired** (#548).
   `make check-graph` fails unless the facade's `visualization`, `plotly` and

@@ -1,0 +1,24 @@
+# Consumer fixture: the `optionstratlib` facade with every capability and
+# no `schema` (ADR-0002 section 5 `osl-fixture-facade-schema-off`, #549): the
+# domain types derive no `utoipa::ToSchema`. Excluded from the root workspace
+# so feature unification with the other members cannot widen its graph; built
+# with `--manifest-path`.
+[package]
+name = "osl-fixture-facade-schema-off"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: the optionstratlib facade built with every capability and without schema."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib = { path = "../../..", version = "0.22.0", default-features = false, features = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io"] }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"
+
+[dev-dependencies]
+# Named only to state the bound the doctests check; it is not in the normal
+# graph, which is the point.
+utoipa = "6.0"

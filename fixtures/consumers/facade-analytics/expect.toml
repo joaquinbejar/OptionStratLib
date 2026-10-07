@@ -4,10 +4,7 @@
 present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "optionstratlib-market", "optionstratlib-analytics",
-    "utoipa",
 ]
-# `utoipa` resolves by design: the facade enables `schema` on every crate it
-# names (#628 only removed it from the component crates without `schema`).
 # `optionstratlib-simulation` exists since #536 and this capability must not
 # resolve it. The component crates also listed as direct
 # dependencies above are there only for the identity checks; compiling the
@@ -18,4 +15,5 @@ absent = [
     "async-trait", "plotly", "plotly_static", "fantoccini", "webdriver",
     "tracing-subscriber", "indicatif",
     "prettytable-rs", "pretty-simple-display",
+    "utoipa",
 ]
