@@ -327,11 +327,12 @@ impl CoveredCall {
     ///
     /// Returns [`PositiveError::ArithmeticError`] when the spot leg holds
     /// zero shares, so there is no per-share premium to divide out, and when
-    /// `premium × quantity` overflows.
+    /// `premium × contract_size × quantity` overflows.
     pub fn effective_cost_basis(&self) -> Result<Positive, PositiveError> {
         let premium_per_share = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?
             // A per-share figure rarely divides exactly — one option unit of
             // premium over three shares repeats — so the rounding is chosen
@@ -389,6 +390,7 @@ impl CoveredCall {
         let premium_received = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?;
         let total_fees = self.total_fees()?;
 
@@ -436,6 +438,7 @@ impl CoveredCall {
         let premium_received = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?;
         let total_fees = self.total_fees()?;
 
@@ -507,6 +510,7 @@ impl BreakEvenable for CoveredCall {
         let premium_per_share = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?
             // Same rounding choice as the per-share premium above.
             .checked_div_with_strategy(
@@ -748,6 +752,7 @@ impl PnLCalculator for CoveredCall {
         let premium_received = self
             .short_call
             .premium
+            .checked_mul(&self.short_call.option.contract_size)?
             .checked_mul(&self.short_call.option.quantity)?;
 
         Ok(optionstratlib_analytics::pnl::utils::PnL {

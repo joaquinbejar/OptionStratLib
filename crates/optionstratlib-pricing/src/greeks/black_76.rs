@@ -26,12 +26,13 @@
 //!
 //! Every value is the sensitivity of the position: [`Side::Long`] keeps the
 //! analytic long-option sign, [`Side::Short`] negates it, and
-//! `option.quantity` scales it linearly. All values are returned as `Decimal`.
+//! `option.quantity × option.contract_size` scales it linearly. All values are returned as `Decimal`.
 //!
 //! See `src/pricing/black_76.rs` for the matching pricing kernel.
 
 use crate::error::PricingError;
 use crate::error::greeks::GreeksError;
+use crate::greeks::equations::position_size;
 use crate::greeks::utils::n;
 use crate::kernels::{big_n, calculate_d_values_black_76, discount_factor as discount_kernel};
 use optionstratlib_core::model::Options;
@@ -92,7 +93,7 @@ fn discount_factor(option: &Options, t: Decimal) -> Result<Decimal, GreeksError>
 /// - Put:  `Δ_put  = -e^(-rT) · N(-d1)`
 ///
 /// The result is multiplied by `+1` for `Side::Long` and `-1` for `Side::Short`,
-/// then by `option.quantity`.
+/// then by `option.quantity × option.contract_size`.
 ///
 /// # Errors
 ///
@@ -118,7 +119,7 @@ pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let signed = d_mul(side_sign(option), raw, "greeks::black_76::delta::sign")?;
     let result = d_mul(
         signed,
-        option.quantity.to_dec(),
+        position_size(option)?,
         "greeks::black_76::delta::quantity",
     )?;
 
@@ -140,7 +141,7 @@ pub fn delta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Sign convention
 ///
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
-/// by `option.quantity`. A short position reports the negative of the
+/// by `option.quantity × option.contract_size`. A short position reports the negative of the
 /// equivalent long.
 ///
 /// # Errors
@@ -170,7 +171,7 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let signed = d_mul(side_sign(option), raw, "greeks::black_76::gamma::sign")?;
     let result = d_mul(
         signed,
-        option.quantity.to_dec(),
+        position_size(option)?,
         "greeks::black_76::gamma::quantity",
     )?;
     trace!(
@@ -193,7 +194,7 @@ pub fn gamma_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Sign convention
 ///
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
-/// by `option.quantity`. A short position reports the negative of the
+/// by `option.quantity × option.contract_size`. A short position reports the negative of the
 /// equivalent long.
 ///
 /// # Errors
@@ -219,7 +220,7 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let signed = d_mul(side_sign(option), raw, "greeks::black_76::vega::sign")?;
     let weighted = d_mul(
         signed,
-        option.quantity.to_dec(),
+        position_size(option)?,
         "greeks::black_76::vega::quantity",
     )?;
     let result = d_div(
@@ -246,7 +247,7 @@ pub fn vega_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Sign convention
 ///
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
-/// by `option.quantity`. A short position therefore reports a positive theta
+/// by `option.quantity × option.contract_size`. A short position therefore reports a positive theta
 /// when the equivalent long position loses value to time decay.
 ///
 /// # Errors
@@ -301,7 +302,7 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let signed = d_mul(side_sign(option), annual, "greeks::black_76::theta::sign")?;
     let weighted = d_mul(
         signed,
-        option.quantity.to_dec(),
+        position_size(option)?,
         "greeks::black_76::theta::quantity",
     )?;
     let result = d_div(
@@ -334,7 +335,7 @@ pub fn theta_b76(option: &Options) -> Result<Decimal, GreeksError> {
 /// # Sign convention
 ///
 /// Returns the sensitivity of the **position**: signed by [`Side`] and scaled
-/// by `option.quantity`. A short position reports the negative of the
+/// by `option.quantity × option.contract_size`. A short position reports the negative of the
 /// equivalent long.
 ///
 /// # Errors
@@ -375,7 +376,7 @@ pub fn rho_b76(option: &Options) -> Result<Decimal, GreeksError> {
     let signed = d_mul(side_sign(option), annual, "greeks::black_76::rho::sign")?;
     let weighted = d_mul(
         signed,
-        option.quantity.to_dec(),
+        position_size(option)?,
         "greeks::black_76::rho::quantity",
     )?;
     let result = d_div(
@@ -778,6 +779,37 @@ mod tests {
             assert!(
                 close(three_value, one_value * Decimal::from(3), dec!(1e-15)),
                 "{label} did not scale linearly with quantity"
+            );
+        }
+    }
+
+    #[test]
+    fn test_black_76_contract_size_scales_like_quantity() {
+        let one = create_option(100.0, 95.0, dec!(0.05), 180.0, 0.2, OptionStyle::Call);
+        let sized = one.clone().with_contract_size(Positive::HUNDRED);
+        let mut hundred_contracts = one.clone();
+        hundred_contracts.quantity = Positive::HUNDRED;
+
+        let calculators: [(&str, GreekCalculator); 5] = [
+            ("delta", delta_b76),
+            ("gamma", gamma_b76),
+            ("vega", vega_b76),
+            ("theta", theta_b76),
+            ("rho", rho_b76),
+        ];
+
+        for (label, calculate) in calculators {
+            let one_value = greek_value(label, calculate(&one));
+            let sized_value = greek_value(label, calculate(&sized));
+            // One contract of 100 units is the same position as 100 of one.
+            assert_eq!(
+                sized_value,
+                greek_value(label, calculate(&hundred_contracts)),
+                "{label}: contract size and quantity disagree"
+            );
+            assert!(
+                close(sized_value, one_value * Decimal::ONE_HUNDRED, dec!(1e-12)),
+                "{label} did not scale by the contract size"
             );
         }
     }

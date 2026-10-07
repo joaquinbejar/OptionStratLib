@@ -46,15 +46,16 @@ impl PnLCalculator for Options {
         // Calculate initial costs (premium paid/received)
         let (initial_costs, initial_income) = initial_flows(self, initial_price)?;
 
-        // Both prices are per contract and already signed by the side, so
-        // the change is scaled by the contract count and not signed again.
+        // Both prices are per unit of the underlying and already signed by the
+        // side, so the change is scaled by the position size
+        // (`quantity × contract_size`) and not signed again.
         let unrealized = Some(d_mul(
             d_sub(
                 current_price,
                 initial_price,
                 "options::calculate_pnl::unrealized_per_contract",
             )?,
-            self.quantity.to_dec(),
+            self.position_size()?.to_dec(),
             "options::calculate_pnl::unrealized",
         )?);
 
@@ -71,7 +72,8 @@ impl PnLCalculator for Options {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        // `payoff_at_price` is signed by the side and scaled by the quantity.
+        // `payoff_at_price` is signed by the side and scaled by the position
+        // size (`quantity × contract_size`).
         let realized = Some(self.payoff_at_price(underlying_price)?);
         let initial_price = OptionPricing::calculate_price_black_scholes(self)?;
 
@@ -91,16 +93,16 @@ impl PnLCalculator for Options {
 }
 
 /// Premium paid (long) or received (short) for the whole option, from the
-/// side-signed per-contract price `black_scholes` returns: a long pays
-/// `price * quantity`, a short receives `-price * quantity`, both
-/// non-negative.
+/// side-signed per-unit price `black_scholes` returns: a long pays
+/// `price * quantity * contract_size`, a short receives
+/// `-price * quantity * contract_size`, both non-negative.
 fn initial_flows(
     option: &Options,
     signed_price: Decimal,
 ) -> Result<(Decimal, Decimal), PricingError> {
     let total = d_mul(
         signed_price,
-        option.quantity.to_dec(),
+        option.position_size()?.to_dec(),
         "options::pnl::initial_premium",
     )?;
     Ok(match option.side {
@@ -152,19 +154,20 @@ impl PnLCalculator for Position {
         current_option.underlying_price = *underlying_price;
         current_option.implied_volatility = *implied_volatility;
         let price_at_sell = OptionPricing::calculate_price_black_scholes(&current_option)?;
-        // Both prices are per contract and already signed by the side
-        // (`black_scholes` negates a short), so the side is applied once and
-        // the change is scaled by the contract count (#725).
+        // Both prices are per unit of the underlying and already signed by the
+        // side (`black_scholes` negates a short), so the side is applied once
+        // and the change is scaled by the position size
+        // (`quantity × contract_size`, #725).
         let unrealized = d_mul(
             d_sub(
                 price_at_sell,
                 price_at_buy,
                 "position::calculate_pnl::unrealized_per_contract",
             )?,
-            self.option.quantity.to_dec(),
+            self.option.position_size()?.to_dec(),
             "position::calculate_pnl::unrealized",
         )?;
-        // Cost and income are already scaled by the quantity.
+        // Cost and income are already scaled by the quantity and contract size.
         let initial_cost = self.total_cost()?;
         let initial_income = self.premium_received()?;
 
@@ -284,6 +287,15 @@ impl PnLCalculator for Position {
             return Err(PositionError::invalid_position(&format!(
                 "Quantities do not match: {} vs {}",
                 self.option.quantity, position.option.quantity
+            ))
+            .into());
+        }
+
+        // Check contract size
+        if self.option.contract_size != position.option.contract_size {
+            return Err(PositionError::invalid_position(&format!(
+                "Contract sizes do not match: {} vs {}",
+                self.option.contract_size, position.option.contract_size
             ))
             .into());
         }
@@ -1229,5 +1241,115 @@ mod tests_pnl_quantity {
             assert_eq!(pnl.initial_income.to_dec(), -price * dec!(3), "{style:?}");
             assert!(pnl.initial_income > Positive::ZERO, "{style:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_pnl_contract_size {
+    use super::*;
+    use chrono::Utc;
+    use optionstratlib_core::model::types::OptionStyle;
+    use optionstratlib_core::model::utils::create_sample_option_simplest;
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    fn option(side: Side, contract_size: Positive) -> Options {
+        create_sample_option_simplest(OptionStyle::Call, side).with_contract_size(contract_size)
+    }
+
+    fn position(side: Side, contract_size: Positive) -> Position {
+        Position::new(
+            option(side, contract_size),
+            pos_or_panic!(5.0),
+            Utc::now(),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
+            None,
+            None,
+        )
+    }
+
+    fn close(a: Decimal, b: Decimal) -> bool {
+        (a - b).abs() <= dec!(1e-12)
+    }
+
+    #[test]
+    fn test_options_pnl_contract_size_scales_premium_and_change() {
+        for side in [Side::Long, Side::Short] {
+            let one = option(side, Positive::ONE);
+            let sized = option(side, Positive::HUNDRED);
+            let expiry = ExpirationDate::Days(pos_or_panic!(20.0));
+            let (Ok(one_pnl), Ok(sized_pnl)) = (
+                one.calculate_pnl(&pos_or_panic!(110.0), expiry, &pos_or_panic!(0.2)),
+                sized.calculate_pnl(&pos_or_panic!(110.0), expiry, &pos_or_panic!(0.2)),
+            ) else {
+                panic!("pnl computes");
+            };
+            let (Some(one_unrealized), Some(sized_unrealized)) =
+                (one_pnl.unrealized, sized_pnl.unrealized)
+            else {
+                panic!("unrealized is reported");
+            };
+            assert!(close(
+                sized_unrealized,
+                one_unrealized * Decimal::ONE_HUNDRED
+            ));
+            assert!(close(
+                sized_pnl.initial_costs.to_dec(),
+                one_pnl.initial_costs.to_dec() * Decimal::ONE_HUNDRED
+            ));
+            assert!(close(
+                sized_pnl.initial_income.to_dec(),
+                one_pnl.initial_income.to_dec() * Decimal::ONE_HUNDRED
+            ));
+        }
+    }
+
+    #[test]
+    fn test_options_pnl_at_expiration_contract_size_scales_payoff() {
+        let sized = option(Side::Long, Positive::HUNDRED);
+        let Ok(pnl) = sized.calculate_pnl_at_expiration(&pos_or_panic!(110.0)) else {
+            panic!("pnl computes");
+        };
+        // Strike 100, spot 110: 10 per unit over 100 units.
+        assert_eq!(pnl.realized, Some(dec!(1000)));
+    }
+
+    #[test]
+    fn test_position_pnl_contract_size_scales_premium_not_fees() {
+        let one = position(Side::Long, Positive::ONE);
+        let sized = position(Side::Long, Positive::HUNDRED);
+        let expiry = ExpirationDate::Days(pos_or_panic!(20.0));
+        let (Ok(one_pnl), Ok(sized_pnl)) = (
+            one.calculate_pnl(&pos_or_panic!(110.0), expiry, &pos_or_panic!(0.2)),
+            sized.calculate_pnl(&pos_or_panic!(110.0), expiry, &pos_or_panic!(0.2)),
+        ) else {
+            panic!("pnl computes");
+        };
+        let (Some(one_unrealized), Some(sized_unrealized)) =
+            (one_pnl.unrealized, sized_pnl.unrealized)
+        else {
+            panic!("unrealized is reported");
+        };
+        assert!(close(
+            sized_unrealized,
+            one_unrealized * Decimal::ONE_HUNDRED
+        ));
+        // (5 × 100 + 0.5 + 0.5) × 1: the fees are per contract.
+        assert_eq!(sized_pnl.initial_costs, pos_or_panic!(501.0));
+        assert_eq!(one_pnl.initial_costs, pos_or_panic!(6.0));
+
+        let Ok(at_expiry) = sized.calculate_pnl_at_expiration(&pos_or_panic!(110.0)) else {
+            panic!("pnl at expiration computes");
+        };
+        assert_eq!(at_expiry.realized, Some(dec!(499)));
+    }
+
+    #[test]
+    fn test_position_diff_pnl_rejects_mismatched_contract_sizes() {
+        let one = position(Side::Long, Positive::ONE);
+        let sized = position(Side::Long, Positive::HUNDRED);
+        assert!(one.diff_position_pnl(&sized).is_err());
+        assert!(sized.diff_position_pnl(&sized.clone()).is_ok());
     }
 }

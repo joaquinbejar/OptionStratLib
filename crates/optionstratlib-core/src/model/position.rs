@@ -59,8 +59,11 @@ pub struct Position {
     /// expiration, underlying asset details, and other option-specific parameters.
     pub option: Options,
 
-    /// The premium paid or received per contract. For long positions, this represents
-    /// the cost per contract; for short positions, this is the credit received.
+    /// The premium paid or received, quoted per unit of the underlying (the
+    /// option price). For long positions, this represents the cost; for short
+    /// positions, this is the credit received. One contract pays or receives
+    /// `premium × option.contract_size`; with the default contract size of 1
+    /// that is the premium itself.
     pub premium: Positive,
 
     /// The date and time when the position was opened, used for calculating
@@ -68,11 +71,13 @@ pub struct Position {
     pub date: DateTime<Utc>,
 
     /// The fee paid to open the position per contract. This typically includes
-    /// broker commissions and exchange fees.
+    /// broker commissions and exchange fees. It scales by `option.quantity`
+    /// only, never by `option.contract_size`.
     pub open_fee: Positive,
 
     /// The fee that will be paid to close the position per contract. This is used
-    /// in profit/loss calculations to account for all transaction costs.
+    /// in profit/loss calculations to account for all transaction costs. It
+    /// scales by `option.quantity` only, never by `option.contract_size`.
     pub close_fee: Positive,
 
     /// Identifier for the position in an external system or platform
@@ -83,6 +88,20 @@ pub struct Position {
 }
 
 impl Position {
+    /// The premium paid or received for one contract:
+    /// `premium × option.contract_size`.
+    ///
+    /// With the default contract size of 1 this is `premium` itself.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product overflows the
+    /// `Positive` range.
+    #[inline]
+    fn premium_per_contract(&self) -> Result<Positive, PositionError> {
+        Ok(self.premium.checked_mul(&self.option.contract_size)?)
+    }
+
     /// Creates a new options position.
     ///
     /// This constructor initializes a new `Position` instance representing an options trade,
@@ -155,10 +174,12 @@ impl Position {
     /// Depending on whether the position is long or short, different components
     /// contribute to the total cost calculation:
     ///
-    /// - For a long position, the total cost includes the premium, open fee, and close fee
-    ///   multiplied by the option's quantity.
+    /// - For a long position, the total cost includes the premium per contract
+    ///   (`premium × contract_size`), open fee, and close fee multiplied by the
+    ///   option's quantity.
     /// - For a short position, the total cost includes only the open fee and close fee
-    ///   multiplied by the option's quantity.
+    ///   multiplied by the option's quantity; fees are per contract and do not
+    ///   scale by the contract size.
     ///
     /// # Returns
     ///
@@ -167,14 +188,15 @@ impl Position {
     /// # Errors
     ///
     /// Returns [`PositionError::PositiveError`] when accumulating the premium
-    /// and the two fees, or scaling the accumulated per-contract cost by the
-    /// contract quantity, overflows the `Positive` range. The raw `Positive`
+    /// and the two fees, scaling the premium by the contract size, or scaling
+    /// the accumulated per-contract cost by the contract quantity, overflows
+    /// the `Positive` range. The raw `Positive`
     /// operators abort on overflow, so every step is taken through its
     /// checked counterpart.
     pub fn total_cost(&self) -> Result<Positive, PositionError> {
         let total_cost = match self.option.side {
             Side::Long => self
-                .premium
+                .premium_per_contract()?
                 .checked_add(&self.open_fee)?
                 .checked_add(&self.close_fee)?
                 .checked_mul(&self.option.quantity)?,
@@ -188,7 +210,8 @@ impl Position {
     ///
     /// This method determines the premium amount received based on the position's side:
     /// - For long positions, it returns zero as the trader pays premium (doesn't receive any)
-    /// - For short positions, it returns the total premium received (premium per contract × quantity)
+    /// - For short positions, it returns the total premium received
+    ///   (`premium × contract_size × quantity`)
     ///
     /// The result is always returned as a `Positive` value, ensuring non-negative amounts.
     ///
@@ -230,12 +253,15 @@ impl Position {
     /// # Errors
     ///
     /// Returns [`PositionError::PositiveError`] when the short-side
-    /// `premium × quantity` product overflows the `Positive` range. Long
+    /// `premium × contract_size × quantity` product overflows the `Positive`
+    /// range. Long
     /// positions receive no premium and are infallible.
     pub fn premium_received(&self) -> Result<Positive, PositionError> {
         match self.option.side {
             Side::Long => Ok(Positive::ZERO),
-            Side::Short => Ok(self.premium.checked_mul(&self.option.quantity)?),
+            Side::Short => Ok(self
+                .premium_per_contract()?
+                .checked_mul(&self.option.quantity)?),
         }
     }
 
@@ -261,7 +287,7 @@ impl Position {
     ///
     /// Propagates any `PositionError` raised by `total_cost()`, and returns
     /// [`PositionError::PositiveError`] when scaling the premium by the
-    /// contract quantity overflows the `Positive` range.
+    /// contract size and quantity overflows the `Positive` range.
     ///
     /// When the short-side net amount `premium − total_cost` is
     /// negative the function returns `Ok(Positive::ZERO)` (clamped)
@@ -272,7 +298,9 @@ impl Position {
             Side::Long => Ok(Positive::ZERO),
             Side::Short => {
                 // max profit is premium received - fees (cost)
-                let premium = self.premium.checked_mul(&self.option.quantity)?;
+                let premium = self
+                    .premium_per_contract()?
+                    .checked_mul(&self.option.quantity)?;
                 let total_cost = self.total_cost()?;
                 if premium >= total_cost {
                     Ok(premium.checked_sub(&total_cost)?)
@@ -365,12 +393,16 @@ impl Position {
     /// all transaction fees (both opening and closing fees).
     ///
     /// The calculation differs based on the position side:
-    /// - For long positions: (current_price - premium - open_fee - close_fee) * quantity
-    /// - For short positions: (premium - current_price - open_fee - close_fee) * quantity
+    /// - For long positions: ((current_price - premium) * contract_size - open_fee - close_fee) * quantity
+    /// - For short positions: ((premium - current_price) * contract_size - open_fee - close_fee) * quantity
+    ///
+    /// Prices are quoted per unit of the underlying and fees per contract, so
+    /// only the price difference scales by the contract size.
     ///
     /// # Parameters
     ///
-    /// * `price` - A `Positive` value representing the current price of the option
+    /// * `price` - A `Positive` value representing the current price of the option,
+    ///   quoted per unit of the underlying like `premium`
     ///
     /// # Returns
     ///
@@ -407,20 +439,26 @@ impl Position {
     /// # Errors
     ///
     /// Returns [`PositionError::DecimalError`] when the premium and fee
-    /// deductions, or the scaling by the contract quantity, leave the
+    /// deductions, or the scaling by the contract size and quantity, leave the
     /// representable `Decimal` range. Nothing is repriced here: the result is
     /// arithmetic over the stored premium, fees and quantity.
     pub fn unrealized_pnl(&self, price: Positive) -> Result<Decimal, PositionError> {
-        // Per-contract P&L (Long: price - premium - fees; Short: premium -
-        // price - fees) then scaled by the contract quantity. Each step is a
+        // Per-contract P&L (Long: (price - premium) × contract_size - fees;
+        // Short: (premium - price) × contract_size - fees) then scaled by the
+        // contract quantity. Fees are per contract, so the contract size
+        // scales only the price difference. Each step is a
         // monetary flow, so overflow surfaces a typed error rather than
         // wrapping silently on Decimal::MIN or Decimal::MAX-class inputs.
         let per_contract = match self.option.side {
             Side::Long => {
-                let after_premium = d_sub(
-                    price.to_dec(),
-                    self.premium.to_dec(),
-                    "position::unrealized_pnl::long::after_premium",
+                let after_premium = d_mul(
+                    d_sub(
+                        price.to_dec(),
+                        self.premium.to_dec(),
+                        "position::unrealized_pnl::long::after_premium",
+                    )?,
+                    self.option.contract_size.to_dec(),
+                    "position::unrealized_pnl::long::contract_size",
                 )?;
                 let after_open = d_sub(
                     after_premium,
@@ -434,10 +472,14 @@ impl Position {
                 )?
             }
             Side::Short => {
-                let after_price = d_sub(
-                    self.premium.to_dec(),
-                    price.to_dec(),
-                    "position::unrealized_pnl::short::after_price",
+                let after_price = d_mul(
+                    d_sub(
+                        self.premium.to_dec(),
+                        price.to_dec(),
+                        "position::unrealized_pnl::short::after_price",
+                    )?,
+                    self.option.contract_size.to_dec(),
+                    "position::unrealized_pnl::short::contract_size",
                 )?;
                 let after_open = d_sub(
                     after_price,
@@ -598,10 +640,14 @@ impl Position {
     /// position to become profitable, accounting for all costs associated with the position.
     ///
     /// # Formula by position type:
-    /// - Long Call: Strike Price + Total Cost per Contract
-    /// - Short Call: Strike Price + Premium - Total Cost per Contract
-    /// - Long Put: Strike Price - Total Cost per Contract
-    /// - Short Put: Strike Price - Premium + Total Cost per Contract
+    /// - Long Call: Strike Price + Total Cost per Unit
+    /// - Short Call: Strike Price + Premium - Total Cost per Unit
+    /// - Long Put: Strike Price - Total Cost per Unit
+    /// - Short Put: Strike Price - Premium + Total Cost per Unit
+    ///
+    /// The total cost per unit is the position total cost divided by the
+    /// position size (`quantity × contract_size`), so per-contract fees are
+    /// spread over the units one contract covers.
     ///
     /// # Returns
     ///
@@ -620,31 +666,30 @@ impl Position {
         // The raw `Positive` operators abort on overflow and on a difference
         // that would go below zero; a long put whose cost per contract exceeds
         // its strike reaches the latter with entirely ordinary numbers.
-        let total_cost_per_contract = position_total_cost
-            .checked_div(&self.option.quantity)
-            .ok()?;
+        let position_size = self.option.position_size().ok()?;
+        let total_cost_per_unit = position_total_cost.checked_div(&position_size).ok()?;
         match (&self.option.side, &self.option.option_style) {
             (Side::Long, OptionStyle::Call) => self
                 .option
                 .strike_price
-                .checked_add(&total_cost_per_contract)
+                .checked_add(&total_cost_per_unit)
                 .ok(),
             (Side::Short, OptionStyle::Call) => self
                 .option
                 .strike_price
                 .checked_add(&self.premium)
-                .and_then(|total| total.checked_sub(&total_cost_per_contract))
+                .and_then(|total| total.checked_sub(&total_cost_per_unit))
                 .ok(),
             (Side::Long, OptionStyle::Put) => self
                 .option
                 .strike_price
-                .checked_sub(&total_cost_per_contract)
+                .checked_sub(&total_cost_per_unit)
                 .ok(),
             (Side::Short, OptionStyle::Put) => self
                 .option
                 .strike_price
                 .checked_sub(&self.premium)
-                .and_then(|net| net.checked_add(&total_cost_per_contract))
+                .and_then(|net| net.checked_add(&total_cost_per_unit))
                 .ok(),
         }
     }
@@ -786,6 +831,13 @@ impl TradeAble for Position {
                     "open and close fees overflow the Positive range: {error}"
                 ))
             })?;
+        // `Trade::premium` is per contract, so it carries the contract size;
+        // `Trade::fee` is per contract already.
+        let premium = self.premium_per_contract().map_err(|error| {
+            TradeError::invalid_trade(&format!(
+                "premium times contract size overflows the Positive range: {error}"
+            ))
+        })?;
         if let (Ok(expiry), Some(timestamp)) = (
             resolve_expiration_date(&self.option.expiration_date),
             Utc::now().timestamp_nanos_opt(),
@@ -801,7 +853,7 @@ impl TradeAble for Position {
                 expiry,
                 timestamp,
                 quantity: self.option.quantity,
-                premium: self.premium,
+                premium,
                 underlying_price: self.option.underlying_price,
                 notes: None,
                 status: TradeStatus::Other("Not yet initialized".to_string()),
@@ -905,6 +957,7 @@ mod tests_position {
             expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos_or_panic!(0.2),
             quantity,
+            contract_size: Positive::ONE,
             underlying_price,
             risk_free_rate: dec!(0.01),
             option_style,
@@ -1637,6 +1690,7 @@ mod tests_position_break_even {
             expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos_or_panic!(0.2),
             quantity,
+            contract_size: Positive::ONE,
             underlying_price,
             risk_free_rate: dec!(0.01),
             option_style,
@@ -1870,6 +1924,7 @@ mod tests_position_max_loss_profit {
             expiration_date: ExpirationDate::Days(expiration_days),
             implied_volatility: pos_or_panic!(0.2),
             quantity,
+            contract_size: Positive::ONE,
             underlying_price,
             risk_free_rate: dec!(0.01),
             option_style,
@@ -2438,5 +2493,166 @@ mod tests_position_tradestatusable_trait {
         let position = build(pos_or_panic!(0.005));
         let trade = position.close().expect("close() should succeed");
         assert_eq!(trade.premium, Positive::ZERO);
+    }
+}
+
+#[cfg(test)]
+mod tests_position_contract_size {
+    use super::*;
+    use crate::model::leg::{Leg, LegAble};
+    use crate::model::utils::create_sample_option;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// Two contracts of 100 units each on a call struck at 100, premium 5 per
+    /// unit, open and close fees of 0.5 per contract.
+    fn sized_call(side: Side, contract_size: Positive) -> Position {
+        let option = create_sample_option(
+            OptionStyle::Call,
+            side,
+            Positive::HUNDRED,
+            Positive::TWO,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        )
+        .with_contract_size(contract_size);
+        Position::new(
+            option,
+            pos_or_panic!(5.0),
+            Utc::now(),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_position_contract_size_fees_stay_per_contract() {
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        assert_eq!(long.fees().ok(), Some(Positive::TWO));
+        let short = sized_call(Side::Short, Positive::HUNDRED);
+        assert_eq!(short.fees().ok(), Some(Positive::TWO));
+    }
+
+    #[test]
+    fn test_position_contract_size_long_cost_scales_premium_not_fees() {
+        // (5 × 100 + 0.5 + 0.5) × 2
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        assert_eq!(long.total_cost().ok(), Some(pos_or_panic!(1002.0)));
+        assert_eq!(long.premium_received().ok(), Some(Positive::ZERO));
+        assert_eq!(long.net_cost().ok(), Some(dec!(1002)));
+    }
+
+    #[test]
+    fn test_position_contract_size_short_premium_scales_fees_do_not() {
+        // 5 × 100 × 2 received, (0.5 + 0.5) × 2 paid.
+        let short = sized_call(Side::Short, Positive::HUNDRED);
+        assert_eq!(short.total_cost().ok(), Some(Positive::TWO));
+        assert_eq!(short.premium_received().ok(), Some(pos_or_panic!(1000.0)));
+        assert_eq!(
+            short.net_premium_received().ok(),
+            Some(pos_or_panic!(998.0))
+        );
+        assert_eq!(short.net_cost().ok(), Some(dec!(-998)));
+    }
+
+    #[test]
+    fn test_position_contract_size_pnl_at_expiration_scales() {
+        // Long: 20 × 2 × 100 intrinsic minus 1002 cost.
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        assert_eq!(
+            long.pnl_at_expiration(&Some(&pos_or_panic!(120.0))).ok(),
+            Some(dec!(2998))
+        );
+        assert_eq!(
+            long.pnl_at_expiration(&Some(&pos_or_panic!(90.0))).ok(),
+            Some(dec!(-1002))
+        );
+        // Short: -10 × 2 × 100 intrinsic, minus 2 of fees, plus 1000 received.
+        let short = sized_call(Side::Short, Positive::HUNDRED);
+        assert_eq!(
+            short.pnl_at_expiration(&Some(&pos_or_panic!(110.0))).ok(),
+            Some(dec!(-1002))
+        );
+        assert_eq!(
+            short.pnl_at_expiration(&Some(&pos_or_panic!(90.0))).ok(),
+            Some(dec!(998))
+        );
+    }
+
+    #[test]
+    fn test_position_contract_size_unrealized_pnl_scales_price_not_fees() {
+        // Long: ((7 - 5) × 100 - 1) × 2; short: ((5 - 3) × 100 - 1) × 2.
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        assert_eq!(
+            long.unrealized_pnl(pos_or_panic!(7.0)).ok(),
+            Some(dec!(398))
+        );
+        let short = sized_call(Side::Short, Positive::HUNDRED);
+        assert_eq!(
+            short.unrealized_pnl(pos_or_panic!(3.0)).ok(),
+            Some(dec!(398))
+        );
+    }
+
+    #[test]
+    fn test_position_contract_size_break_even_spreads_fees_over_units() {
+        // Long call: 100 + 1002 / 200; short call: 100 + 5 - 2 / 200.
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        assert_eq!(long.break_even(), Some(pos_or_panic!(105.01)));
+        let short = sized_call(Side::Short, Positive::HUNDRED);
+        assert_eq!(short.break_even(), Some(pos_or_panic!(104.99)));
+        // Each break-even is a zero of the expiry P&L.
+        for position in [long, short] {
+            let Some(break_even) = position.break_even() else {
+                panic!("break-even exists");
+            };
+            assert_eq!(
+                position.pnl_at_expiration(&Some(&break_even)).ok(),
+                Some(Decimal::ZERO)
+            );
+        }
+    }
+
+    #[test]
+    fn test_position_contract_size_one_matches_default() {
+        let default = sized_call(Side::Long, Positive::ONE);
+        let mut legacy = default.clone();
+        legacy.option = create_sample_option(
+            OptionStyle::Call,
+            Side::Long,
+            Positive::HUNDRED,
+            Positive::TWO,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+        );
+        assert_eq!(default, legacy);
+        assert_eq!(default.total_cost().ok(), Some(pos_or_panic!(12.0)));
+    }
+
+    #[test]
+    fn test_position_contract_size_trade_premium_is_per_contract() {
+        let long = sized_call(Side::Long, Positive::HUNDRED);
+        let Ok(trade) = long.trade() else {
+            panic!("trade builds");
+        };
+        assert_eq!(trade.premium, pos_or_panic!(500.0));
+        assert_eq!(trade.fee, Positive::ONE);
+        assert_eq!(trade.quantity, Positive::TWO);
+    }
+
+    #[test]
+    fn test_position_contract_size_leg_notional_covers_all_units() {
+        let leg = Leg::from(sized_call(Side::Long, Positive::HUNDRED));
+        assert_eq!(leg.get_quantity(), Positive::TWO);
+        assert_eq!(
+            leg.notional_value(Positive::HUNDRED),
+            pos_or_panic!(20000.0)
+        );
+        assert_eq!(
+            leg.pnl_at_price(pos_or_panic!(120.0)).ok(),
+            Some(dec!(2998))
+        );
     }
 }

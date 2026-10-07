@@ -91,6 +91,7 @@ use tracing::{instrument, trace};
 ///     expiration_date: ExpirationDate::Days(pos_or_panic!(90.0)),
 ///     implied_volatility: pos_or_panic!(0.15),
 ///     quantity: Positive::ONE,
+///     contract_size: Positive::ONE,
 ///     risk_free_rate: dec!(0.05),
 ///     option_style: OptionStyle::Call,
 ///     dividend_yield: pos_or_panic!(0.0),

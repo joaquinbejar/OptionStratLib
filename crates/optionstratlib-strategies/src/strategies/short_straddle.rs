@@ -402,12 +402,12 @@ impl BreakEvenable for ShortStraddle {
         // figures, so only its overflow is reportable.
         let put_credit = d_div(
             total_premium.to_dec(),
-            self.short_put.option.quantity.to_dec(),
+            self.short_put.option.position_size()?.to_dec(),
             "ShortStraddle::update_break_even_points",
         )?;
         let call_credit = d_div(
             total_premium.to_dec(),
-            self.short_call.option.quantity.to_dec(),
+            self.short_call.option.position_size()?.to_dec(),
             "ShortStraddle::update_break_even_points",
         )?;
 

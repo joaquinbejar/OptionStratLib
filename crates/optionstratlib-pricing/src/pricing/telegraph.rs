@@ -613,6 +613,7 @@ mod tests_telegraph_process_basis {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
 
@@ -652,6 +653,7 @@ mod tests_telegraph_process_extended {
             underlying_symbol: "".to_string(),
             expiration_date: Default::default(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         }
     }
@@ -880,6 +882,7 @@ mod tests_telegraph_seeded {
             underlying_symbol: "TEST".to_string(),
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             exotic_params: None,
         }
     }

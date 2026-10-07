@@ -383,7 +383,7 @@ impl BreakEvenable for PoorMansCoveredCall {
         // it at zero, hence the negated debit, which sits above the strike.
         let net_debit = d_div(
             self.get_net_cost()?,
-            self.long_call.option.quantity.to_dec(),
+            self.long_call.option.position_size()?.to_dec(),
             "PoorMansCoveredCall::update_break_even_points",
         )?;
 

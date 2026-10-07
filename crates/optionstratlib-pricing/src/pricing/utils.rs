@@ -907,6 +907,7 @@ mod tests_probability_keep_under_strike {
             implied_volatility: pos_or_panic!(0.001),
             underlying_symbol: "".to_string(),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
         let strike = spos!(100.0);
@@ -929,6 +930,7 @@ mod tests_probability_keep_under_strike {
             implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
         let strike = None;
@@ -956,6 +958,7 @@ mod tests_probability_keep_under_strike {
             implied_volatility: Positive::ZERO,
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
         let strike = None;
@@ -979,6 +982,7 @@ mod tests_probability_keep_under_strike {
             implied_volatility: pos_or_panic!(5.0), // Alta volatilidad
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
         let strike = None;
@@ -1003,6 +1007,7 @@ mod tests_probability_keep_under_strike {
             implied_volatility: pos_or_panic!(0.2),
             underlying_symbol: "".to_string(),
             quantity: Positive::ZERO,
+            contract_size: Positive::ONE,
             exotic_params: None,
         };
         let strike = None;

@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — breaking
 
+- **Options carry a contract multiplier** (#733). `Options` gains
+  `contract_size: Positive`, the units of the underlying one contract
+  covers (100 for a standard US equity option). It defaults to 1 and is
+  `#[serde(default)]`, so payloads written before the field existed
+  deserialize unchanged, and with a contract size of 1 every result is
+  identical to before. Payoff (`payoff`, `payoff_at_price`,
+  `intrinsic_value`), premium and cost (`Position::total_cost`,
+  `premium_received`, `net_premium_received`, `net_cost`), P&L
+  (`pnl_at_expiration`, `unrealized_pnl`, `PnLCalculator` for `Options` and
+  `Position`), every Greek (Black-Scholes, Black-76, Garman–Kohlhagen and
+  the numerical fallback), SPAN margin and the strategies' break-evens,
+  max profit/loss and premiums scale by `quantity × contract_size`.
+  `Position` fees stay per contract (`fee × quantity`); `Position::premium`
+  is quoted per unit of the underlying, and `Position::trade()` reports
+  `premium × contract_size` as the per-contract `Trade::premium`. Prices
+  from the pricing models stay per unit. New API:
+  `Options::with_contract_size(contract_size)` and
+  `Options::position_size()` (`quantity × contract_size`, checked).
+  `Options::new` keeps its signature and builds a one-unit contract.
+  `Position::diff_position_pnl` rejects positions whose contract sizes
+  differ. `Display`/`Debug` for `Options` print the contract size only when
+  it is not 1.
+
+  Migration: a struct literal `Options { .. }` must name the new field; add
+  `contract_size: Positive::ONE` to keep the previous behaviour, or build
+  with `Options::new(..)` and chain `.with_contract_size(..)`. To size a
+  leg in market contracts, set `quantity` to the contract count and
+  `contract_size` to the multiplier, and quote the premium per unit of the
+  underlying; per-contract fees are unchanged.
+
 - **Stochastic pricing entry points take the generator from the caller**
   (#638). No public function of `optionstratlib-pricing` draws from the
   thread-local RNG implicitly any more, so a seeded generator reproduces

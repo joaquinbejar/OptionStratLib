@@ -291,7 +291,7 @@ impl BreakEvenable for LongCall {
         // sentinel for "no lower break-even" rather than an abort.
         let per_contract = d_div(
             self.get_net_cost()?,
-            self.long_call.option.quantity.to_dec(),
+            self.long_call.option.position_size()?.to_dec(),
             "LongCall::update_break_even_points",
         )?;
         self.break_even_points.push(

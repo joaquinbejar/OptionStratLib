@@ -531,6 +531,7 @@ mod tests {
             expiration_date: ExpirationDate::Days(pos_or_panic!(30.0)),
             implied_volatility: pos_or_panic!(0.2),
             quantity: Positive::ONE,
+            contract_size: Positive::ONE,
             underlying_price: Positive::HUNDRED,
             risk_free_rate: dec!(0.05),
             option_style: OptionStyle::Call,

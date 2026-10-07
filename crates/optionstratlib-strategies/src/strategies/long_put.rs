@@ -287,7 +287,7 @@ impl BreakEvenable for LongPut {
         // sentinel for "no lower break-even" rather than an abort.
         let per_contract = d_div(
             self.get_net_cost()?,
-            self.long_put.option.quantity.to_dec(),
+            self.long_put.option.position_size()?.to_dec(),
             "LongPut::update_break_even_points",
         )?;
         self.break_even_points.push(
