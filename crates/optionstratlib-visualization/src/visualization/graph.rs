@@ -24,7 +24,68 @@ use {
 };
 
 #[cfg(feature = "static_export")]
-use {plotly::plotly_static::ImageFormat, tracing::debug};
+use {plotly::plotly_static::ImageFormat, std::sync::Mutex, tracing::debug};
+
+/// Serializes every static export in the process.
+///
+/// `Plot::write_image` builds a `StaticExporter` per call, which attaches to a
+/// chromedriver already listening on the default port or spawns its own. The
+/// exporter that spawned the driver SIGKILLs it on close, even while another
+/// exporter that attached to it still has a browser session open; that
+/// session's headless Chrome is then orphaned and never exits (#724). Holding
+/// this lock across the whole export, retries included, makes every
+/// spawn → session → close → stop cycle run alone.
+#[cfg(feature = "static_export")]
+static STATIC_EXPORT_LOCK: Mutex<()> = Mutex::new(());
+
+/// Writes `plot` to `path` as a static image, retrying up to three times.
+///
+/// Holds [`STATIC_EXPORT_LOCK`] for the whole call so no two exports share a
+/// chromedriver.
+#[cfg(feature = "static_export")]
+fn export_image(
+    plot: &Plot,
+    path: &std::path::Path,
+    format: ImageFormat,
+    width: u32,
+    height: u32,
+) -> Result<(), GraphError> {
+    const MAX_ATTEMPTS: u32 = 3;
+
+    prepare_file_path(path)?;
+    let label = format.to_string().to_uppercase();
+    debug!("Writing {label} to: {}", path.display());
+
+    // The guarded value is `()`, so a panic in another export leaves nothing
+    // inconsistent behind: recover the guard instead of failing every export
+    // after it.
+    let _guard = STATIC_EXPORT_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+
+    let mut last_error = String::new();
+    for attempt in 1..=MAX_ATTEMPTS {
+        debug!("{label} export attempt {attempt} of {MAX_ATTEMPTS}");
+        match plot.write_image(path, format.clone(), width as usize, height as usize, 1.0) {
+            Ok(()) => {
+                debug!("Successfully wrote {label} to: {}", path.display());
+                return Ok(());
+            }
+            Err(e) => {
+                debug!("{label} export attempt {attempt} failed: {e}");
+                last_error = e.to_string();
+                if attempt < MAX_ATTEMPTS {
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+            }
+        }
+    }
+
+    Err(GraphError::Render(format!(
+        "Failed to write {label} after {MAX_ATTEMPTS} attempts: {last_error} on path: {}",
+        path.display()
+    )))
+}
 
 /// Chart contract of every type the library can draw: strategies, option
 /// chains' curves and surfaces, options, positions and simulations.
@@ -148,46 +209,21 @@ pub trait Graph {
     /// Modifying global state like environment variables in a multithreaded context can lead to undefined behavior.
     /// Ensure this function is used in a controlled environment where such changes are safe.
     ///
+    /// # Concurrency
+    ///
+    /// Static exports run one at a time per process: concurrent calls wait on
+    /// a shared lock so no two exports share a chromedriver (#724).
+    ///
     #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        prepare_file_path(path)?;
-        debug!("Writing PNG to: {}", path.display());
         let cfg = self.graph_config();
-
-        let mut attempts = 0;
-        let max_attempts = 3;
-
-        while attempts < max_attempts {
-            attempts += 1;
-            debug!("PNG export attempt {} of {}", attempts, max_attempts);
-
-            match self.to_plot().write_image(
-                path,
-                ImageFormat::PNG,
-                cfg.width as usize,
-                cfg.height as usize,
-                1.0,
-            ) {
-                Ok(_) => {
-                    debug!("Successfully wrote PNG to: {}", path.display());
-                    return Ok(());
-                }
-                Err(e) => {
-                    if attempts >= max_attempts {
-                        return Err(GraphError::Render(format!(
-                            "Failed to write PNG after {max_attempts} attempts: {e} on path: {}",
-                            path.display()
-                        )));
-                    }
-                    debug!("PNG export attempt {} failed: {}", attempts, e);
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                }
-            }
-        }
-
-        Err(GraphError::Render(
-            "Failed to write PNG: unexpected error".to_string(),
-        ))
+        export_image(
+            &self.to_plot(),
+            path,
+            ImageFormat::PNG,
+            cfg.width,
+            cfg.height,
+        )
     }
 
     /// Writes the graph data to an HTML file at the specified path.
@@ -288,48 +324,21 @@ pub trait Graph {
     /// - The file path cannot be prepared (e.g., due to permissions issues or invalid path).
     /// - An error occurs during the conversion or writing process.
     ///
+    /// # Concurrency
+    ///
+    /// Static exports run one at a time per process: concurrent calls wait on
+    /// a shared lock so no two exports share a chromedriver (#724).
+    ///
     #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        prepare_file_path(path)?;
-        debug!("Writing SVG to: {}", path.display());
         let cfg = self.graph_config();
-
-        // Try up to 3 times with a small delay between attempts
-        // This helps with concurrency issues in test environments
-        let mut attempts = 0;
-        let max_attempts = 3;
-
-        while attempts < max_attempts {
-            attempts += 1;
-            debug!("SVG export attempt {} of {}", attempts, max_attempts);
-
-            match self.to_plot().write_image(
-                path,
-                ImageFormat::SVG,
-                cfg.width as usize,
-                cfg.height as usize,
-                1.0,
-            ) {
-                Ok(_) => {
-                    debug!("Successfully wrote SVG to: {}", path.display());
-                    return Ok(());
-                }
-                Err(e) => {
-                    if attempts >= max_attempts {
-                        return Err(GraphError::Render(format!(
-                            "Failed to write SVG after {max_attempts} attempts: {e} on path: {}",
-                            path.display()
-                        )));
-                    }
-                    debug!("SVG export attempt {} failed: {}", attempts, e);
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                }
-            }
-        }
-
-        Err(GraphError::Render(
-            "Failed to write SVG: unexpected error".to_string(),
-        ))
+        export_image(
+            &self.to_plot(),
+            path,
+            ImageFormat::SVG,
+            cfg.width,
+            cfg.height,
+        )
     }
 
     /// Show the plot in browser
