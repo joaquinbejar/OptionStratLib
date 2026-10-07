@@ -64,7 +64,15 @@ SURFACES = {
     # The facade with no capability at all (#548): headless, and nothing
     # optional resolved.
     "none": ["--no-default-features"],
+    # `schema` alone adds the derive crate to core and nothing else (#549).
+    "schema": ["--no-default-features", "--features", "schema"],
+    "pricing": ["--no-default-features", "--features", "pricing"],
+    "simulation": ["--no-default-features", "--features", "simulation"],
     "minimal": ["--no-default-features", "--features", "market"],
+    "io": ["--no-default-features", "--features", "io"],
+    "async": ["--no-default-features", "--features", "async"],
+    "analytics": ["--no-default-features", "--features", "analytics"],
+    "strategies": ["--no-default-features", "--features", "strategies"],
     "synthetic": ["--no-default-features", "--features", "synthetic"],
     # `backtest` enables strategies and simulation and no market feature
     # beyond the minimal one: in particular not `synthetic` (#541).
@@ -77,6 +85,9 @@ SURFACES = {
     # WebDriver client and the async runtime on top (#544).
     "plotly": ["--no-default-features", "--features", "plotly"],
     "static_export": ["--no-default-features", "--features", "static_export"],
+    # The facade default: the headless full domain, every capability and no
+    # rendering backend, async runtime or HTTP client (#549).
+    "default": [],
 }
 
 # What each surface's graph must and must not resolve, whatever its fixture
@@ -92,8 +103,21 @@ PLOTLY = {"plotly"}
 EXPORT_STACK = {"plotly_static", "fantoccini", "webdriver"}
 RUNTIME = {"tokio", "reqwest"}
 VISUALIZATION_CRATE = {"optionstratlib-visualization"}
+HEADLESS = PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE
 BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
-    "none": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
+    "none": (set(), HEADLESS),
+    "schema": (set(), HEADLESS),
+    "pricing": (set(), HEADLESS),
+    "simulation": (set(), HEADLESS),
+    "io": (set(), HEADLESS),
+    "analytics": (set(), HEADLESS),
+    "strategies": (set(), HEADLESS),
+    # `async` is `tokio` in the market crate and nothing else: no HTTP client
+    # or export stack.
+    "async": ({"tokio"}, PLOTLY | EXPORT_STACK | {"reqwest"} | VISUALIZATION_CRATE),
+    # Every capability and no backend: the visualization crate is in, Plotly,
+    # the exporter and the async runtime are not.
+    "default": (VISUALIZATION_CRATE, PLOTLY | EXPORT_STACK | RUNTIME),
     "minimal": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
     "synthetic": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
     "backtest": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
@@ -101,6 +125,47 @@ BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
     "plotly": (VISUALIZATION_CRATE | PLOTLY, EXPORT_STACK | {"reqwest"}),
     "static_export": (VISUALIZATION_CRATE | PLOTLY | EXPORT_STACK | RUNTIME, set()),
 }
+
+# The `optionstratlib-*` packages each surface resolves, exactly: a capability
+# alone brings the layers below it and no unrelated component (ADR-0002
+# section 2, #549).
+CORE = {"optionstratlib-core"}
+MATH = CORE | {"optionstratlib-math"}
+PRICING = MATH | {"optionstratlib-pricing"}
+MARKET = PRICING | {"optionstratlib-market"}
+SIMULATION = PRICING | {"optionstratlib-simulation"}
+ANALYTICS = MARKET | {"optionstratlib-analytics"}
+STRATEGIES = ANALYTICS | {"optionstratlib-strategies"}
+BACKTEST = STRATEGIES | SIMULATION | {"optionstratlib-backtest"}
+EVERYTHING = BACKTEST | VISUALIZATION_CRATE
+COMPONENTS: dict[str, set[str]] = {
+    "none": CORE,
+    "schema": CORE,
+    "pricing": PRICING,
+    "simulation": SIMULATION,
+    "minimal": MARKET,
+    "io": MARKET,
+    "async": MARKET,
+    "synthetic": MARKET | SIMULATION,
+    "analytics": ANALYTICS,
+    "strategies": STRATEGIES,
+    "backtest": BACKTEST,
+    "visualization": EVERYTHING,
+    "plotly": EVERYTHING,
+    "static_export": EVERYTHING,
+    "default": EVERYTHING,
+}
+
+
+# `utoipa` is declared by each component behind its own `schema` feature
+# (ADR-0002 section 2): the surfaces with the facade's `schema` on have an
+# edge to it from every component that has the feature, and no other surface
+# resolves the package at all: `positive` and its siblings bring `utoipa`
+# only behind their own `utoipa` feature since `expiration_date` 0.4.1
+# (#628).
+SCHEMA_SURFACES = {"schema", "default"}
+NO_SCHEMA_COMPONENTS = {"optionstratlib-visualization"}
+
 
 # Packages a surface tolerates only as a child of the named parents.
 ONLY_VIA: dict[str, dict[str, set[str]]] = {
@@ -174,9 +239,29 @@ def backend_violations(surface: str, graph: list[str]) -> list[str]:
     """Packages a surface must resolve and does not, or must not and does."""
     required, forbidden = BACKEND_RULES.get(surface, (set(), set()))
     names = packages_of(graph)
+    if surface in SCHEMA_SURFACES:
+        required = required | {"utoipa"}
+    else:
+        forbidden = forbidden | {"utoipa"}
     problems = [f"{surface}: does not resolve {name}" for name in sorted(required - names)] + [
         f"{surface}: resolves {name}" for name in sorted(forbidden & names)
     ]
+    components = {name for name in names if name.startswith("optionstratlib-")}
+    expected = COMPONENTS.get(surface)
+    if expected is not None:
+        problems += [
+            f"{surface}: does not resolve {name}" for name in sorted(expected - components - required)
+        ]
+        problems += [
+            f"{surface}: resolves {name}, an unrelated component"
+            for name in sorted(components - expected - forbidden)
+        ]
+    if expected is not None:
+        derived = {line.split(" -> ")[0] for line in graph if line.endswith(" -> utoipa")}
+        derived = {name for name in derived if name.startswith("optionstratlib-")}
+        want = expected - NO_SCHEMA_COMPONENTS if surface in SCHEMA_SURFACES else set()
+        problems += [f"{surface}: {name} lacks the schema derive crate" for name in sorted(want - derived)]
+        problems += [f"{surface}: {name} resolves utoipa without schema" for name in sorted(derived - want)]
     for name, parents in sorted(ONLY_VIA.get(surface, {}).items()):
         incoming = {line.split(" -> ")[0] for line in graph if line.endswith(f" -> {name}")}
         problems += [f"{surface}: {parent} brings {name}" for parent in sorted(incoming - parents)]
@@ -185,10 +270,9 @@ def backend_violations(surface: str, graph: list[str]) -> list[str]:
 
 def self_test() -> int:
     """Prove the dependency assertions see a regression a regenerated fixture would hide."""
-    base = ["a -> optionstratlib-core", "", "optionstratlib [backtest]", "optionstratlib-core []"]
-
     def graph(*extra: str) -> list[str]:
-        return base + [f"{name} []" for name in extra]
+        """Packages a case adds to its surface's expected components; `-name` removes one."""
+        return [f"{name} []" if " -> " not in name else name for name in extra]
 
     cases = {
         "headless surface is clean": ("minimal", graph(), 0),
@@ -196,8 +280,38 @@ def self_test() -> int:
         "headless surface resolves plotly": ("minimal", graph("plotly"), 1),
         "headless surface resolves the visualization crate": ("backtest", graph("optionstratlib-visualization"), 1),
         "headless surface resolves tokio": ("synthetic", graph("tokio"), 1),
+        "pricing alone is clean": ("pricing", graph(), 0),
+        "pricing alone resolves market": ("pricing", graph("optionstratlib-market"), 1),
+        "pricing lost math": ("pricing", graph("-optionstratlib-math"), 1),
+        "market alone resolves simulation": ("minimal", graph("optionstratlib-simulation"), 1),
+        "market alone resolves a made-up component": ("io", graph("optionstratlib-extra"), 1),
+        "simulation alone resolves market": ("simulation", graph("optionstratlib-market"), 1),
+        "analytics alone resolves strategies": ("analytics", graph("optionstratlib-strategies"), 1),
+        "no-capability surface resolves pricing": ("none", graph("optionstratlib-pricing"), 1),
+        "schema alone is clean": ("schema", graph(), 0),
+        "schema alone lost the package": ("schema", graph("-utoipa"), 1),
+        "no-capability facade resolves utoipa": ("none", graph("utoipa"), 1),
+        "pricing resolves utoipa without schema": ("pricing", graph("utoipa"), 1),
+        "visualization resolves utoipa without schema": ("visualization", graph("utoipa"), 1),
+        "static_export resolves utoipa without schema": (
+            "static_export",
+            graph("utoipa", "plotly", *sorted(EXPORT_STACK | RUNTIME)),
+            1,
+        ),
+        "schema alone resolves pricing": ("schema", graph("optionstratlib-pricing"), 1),
+        "schema lost core's derive crate": ("schema", graph("-optionstratlib-core -> utoipa"), 1),
+        "market without schema derives": ("minimal", graph("optionstratlib-market -> utoipa"), 1),
+        "no-capability facade with a derive edge": ("none", graph("optionstratlib-core -> utoipa"), 1),
+        "default lost a derive edge": ("default", graph("-optionstratlib-strategies -> utoipa"), 1),
+        "default derives on every component": ("default", graph("optionstratlib-visualization -> utoipa"), 1),
+        "async is clean": ("async", graph("tokio"), 0),
+        "async lost tokio": ("async", graph(), 1),
+        "async resolves reqwest": ("async", graph("tokio", "reqwest"), 1),
+        "default is clean": ("default", graph(), 0),
+        "default resolves the exporter": ("default", graph("plotly_static"), 1),
+        "default resolves tokio": ("default", graph("tokio"), 1),
         "visualization is clean": ("visualization", graph("optionstratlib-visualization"), 0),
-        "visualization lost its crate": ("visualization", graph(), 1),
+        "visualization lost its crate": ("visualization", graph("-optionstratlib-visualization"), 1),
         "visualization resolves plotly": ("visualization", graph("optionstratlib-visualization", "plotly"), 1),
         "plotly is clean": ("plotly", graph("optionstratlib-visualization", "plotly"), 0),
         "plotly lost plotly": ("plotly", graph("optionstratlib-visualization"), 1),
@@ -240,10 +354,19 @@ def self_test() -> int:
             graph("optionstratlib-visualization", "plotly", "fantoccini", "webdriver", "reqwest", "tokio"),
             1,
         ),
-        "an edge is not a package": ("minimal", ["optionstratlib -> plotly", "", "optionstratlib []"], 0),
+        "an edge is not a package": ("minimal", graph("optionstratlib -> plotly"), 0),
     }
     failures = 0
-    for name, (surface, case, expected) in cases.items():
+    for name, (surface, extra, expected) in cases.items():
+        removed = {line[1:].removesuffix(" []") for line in extra if line.startswith("-")}
+        components = [f"{c} []" for c in sorted(COMPONENTS.get(surface, set()) - removed)]
+        derives = [
+            f"{c} -> utoipa"
+            for c in sorted(COMPONENTS.get(surface, set()) - NO_SCHEMA_COMPONENTS - removed)
+            if surface in SCHEMA_SURFACES and f"-{c} -> utoipa" not in extra
+        ]
+        schema_package = ["utoipa []"] if surface in SCHEMA_SURFACES and "-utoipa []" not in extra else []
+        case = components + derives + schema_package + [line for line in extra if not line.startswith("-")]
         got = len(backend_violations(surface, case))
         ok = got == expected
         failures += 0 if ok else 1

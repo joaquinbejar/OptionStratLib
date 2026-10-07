@@ -7,7 +7,7 @@
 # (scripts/check_fixtures.py).
 present = [
     "optionstratlib", "optionstratlib-visualization", "optionstratlib-backtest",
-    "plotly", "csv", "zip",
+    "plotly", "csv", "zip", "utoipa",
 ]
 absent = [
     "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures",

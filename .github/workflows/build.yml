@@ -119,3 +119,22 @@ jobs:
 
       - name: Build the strategies facade without simulation
         run: cargo build --no-default-features --features strategies
+
+      - name: Build the math facade
+        run: cargo build --no-default-features --features math
+
+      - name: Build the schema derives alone
+        run: cargo build --no-default-features --features schema
+
+      - name: Build market I/O without async
+        run: cargo build --no-default-features --features io
+
+      - name: Build the async market wrappers
+        run: cargo build --no-default-features --features async
+
+      - name: Build the synthetic generators
+        run: cargo build --no-default-features --features synthetic
+
+      # Plotly and static export are built per surface by visualization.yml.
+      - name: Build the facade with every feature
+        run: cargo build --all-features

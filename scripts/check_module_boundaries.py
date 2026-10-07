@@ -1004,8 +1004,9 @@ FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
 # can bring one in (#517). `utoipa` is on every component list except the
 # facade's (#628): only the `schema` feature brings it, and each crate's
 # `schema` FEATURE_SETS entry is what lets the all-features tree carry it. The
-# facade always enables `schema` on the crates it names, so it resolves
-# `utoipa` by design and has no entry.
+# facade has `schema` in its default features, so its default tree carries
+# `utoipa` by design and it has no entry; `make check-feature-trees` pins which
+# of its surfaces do (#549).
 # Terminal presentation packages (M6-05, #546): progress bars, terminal
 # tables and the JSON `Debug` / `Display` derive crate. No crate below
 # visualization resolves any of them; terminal tables are
@@ -1127,9 +1128,11 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
     "optionstratlib": {
         "visualization": ("visualization", frozenset()),
         "plotly": ("plotly", frozenset({"plotly"})),
-        "async": ("async", frozenset({"tokio", "reqwest", "futures", "async-trait"})),
+        # `async` forwards to the market crate's `tokio` and the facade declares
+        # no async package of its own (ADR-0002 section 2, #549).
+        "async": ("async", frozenset({"tokio"})),
         "static_export": ("static_export", frozenset({
-            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures", "async-trait",
+            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait",
         })),
     },
     # ADR-0002 §3 visualization row (#542): `plotly` brings Plotly itself and
@@ -1401,37 +1404,62 @@ FACADE_ROUTING = {
 }
 
 
-def facade_routing_violations(packages: list[dict]) -> list[str]:
-    """The facade's `visualization`, `plotly` and `static_export` wiring, and what reaches it.
+# The rest of the facade's feature table, exactly (ADR-0002 section 2 and
+# Decision 1): the capability implications, the cross-cutting features, the
+# reserved `parallel` and the 0.22 default (#549). Anything else is drift.
+FACADE_EXACT = {
+    "math": frozenset({"dep:optionstratlib-math"}),
+    "pricing": frozenset({"dep:optionstratlib-pricing", "math"}),
+    "market": frozenset({"dep:optionstratlib-market", "pricing"}),
+    "analytics": frozenset({"dep:optionstratlib-analytics", "market"}),
+    "strategies": frozenset({"dep:optionstratlib-strategies", "analytics"}),
+    "simulation": frozenset({"dep:optionstratlib-simulation", "pricing"}),
+    "backtest": frozenset({"dep:optionstratlib-backtest", "strategies", "simulation"}),
+    "io": frozenset({"market", "optionstratlib-market/io"}),
+    "async": frozenset({"market", "io", "optionstratlib-market/async"}),
+    "synthetic": frozenset({"market", "simulation", "optionstratlib-market/synthetic"}),
+    "schema": frozenset({
+        "optionstratlib-core/schema", "optionstratlib-math?/schema", "optionstratlib-pricing?/schema",
+        "optionstratlib-simulation?/schema", "optionstratlib-market?/schema",
+        "optionstratlib-analytics?/schema", "optionstratlib-strategies?/schema",
+        "optionstratlib-backtest?/schema",
+    }),
+    "parallel": frozenset(),
+    "default": frozenset({
+        "pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization",
+        "synthetic", "io", "schema",
+    }),
+}
 
-    The three features must map to the documented direct-component surfaces,
-    and no other feature (a lower capability, `synthetic`, `io`, `async`,
-    `schema`...) may enable the visualization crate or one of the three.
-    Only `default` may name
-    `visualization`, and it names neither `plotly` nor `static_export`
-    (`plotly_gate_violations`).
+
+def facade_routing_violations(packages: list[dict]) -> list[str]:
+    """The facade's feature table, row by row (ADR-0002 section 2 and Decision 1).
+
+    `visualization`, `plotly` and `static_export` must map to the documented
+    direct-component surfaces, every other feature to its own row, and the
+    default to the approved list; a feature outside the table is drift. No row
+    enables the visualization crate or one of the three except `default`
+    (`visualization` only, `plotly_gate_violations` forbids the rest).
     """
     facade = next((p for p in packages if p["name"] == "optionstratlib"), None)
     if facade is None:
         return []
     features = facade.get("features", {})
     found = []
-    for feature, expected in FACADE_ROUTING.items():
+    for feature, expected in {**FACADE_ROUTING, **FACADE_EXACT}.items():
         got = frozenset(features.get(feature, []))
         if got != expected:
             found.append(f"feature `{feature}` is {sorted(got)}, expected {sorted(expected)}")
-    gated = set(FACADE_ROUTING)
-
-    def reaches(value: str) -> bool:
-        base = value.removeprefix("dep:").split("/")[0].rstrip("?")
-        return base == PLOTLY_OWNER or base in gated
-
-    # A direct check is a transitive one: a chain of features that ends in
-    # visualization has a last link that names it, and that link is reported.
-    for feature in sorted(set(features) - gated - {"default"}):
-        for value in features[feature]:
-            if reaches(value):
-                found.append(f"feature `{feature}` enables `{value}`; a lower capability never enables visualization")
+    # Every feature is pinned to its exact table row and none of the exact
+    # rows names the visualization crate or its three features, so a lower
+    # capability (or `synthetic`, `io`, `async`, `schema`) cannot enable
+    # visualization, whether directly or through a chain of features: either a
+    # row drifts or a feature is outside the table, and both are reported.
+    for feature in sorted(set(features) - set(FACADE_ROUTING) - set(FACADE_EXACT)):
+        found.append(
+            f"feature `{feature}` is not in the ADR-0002 table (it enables {sorted(features[feature])}); "
+            "add it there first, and a lower capability never enables visualization"
+        )
     return found
 
 
@@ -2128,21 +2156,7 @@ def self_test() -> int:
         ),
         "visualization lost its plotly dependency": ([replaced(visualization_ok, dependencies=[])], 1),
     }
-    routing_ok = {
-        "visualization": ["dep:optionstratlib-visualization", "backtest"],
-        "plotly": ["visualization", "optionstratlib-visualization/plotly"],
-        "static_export": ["plotly", "async", "optionstratlib-visualization/static_export"],
-        "backtest": ["dep:optionstratlib-backtest", "strategies", "simulation"],
-        "strategies": ["dep:optionstratlib-strategies", "analytics"],
-        "analytics": ["dep:optionstratlib-analytics", "market"],
-        "market": ["dep:optionstratlib-market", "pricing"],
-        "pricing": ["dep:optionstratlib-pricing", "math"],
-        "simulation": ["dep:optionstratlib-simulation", "pricing"],
-        "synthetic": ["market", "simulation", "optionstratlib-market/synthetic"],
-        "io": ["market", "optionstratlib-market/io"],
-        "async": ["market", "io", "dep:tokio", "optionstratlib-market/async"],
-        "default": ["pricing", "backtest", "visualization", "synthetic", "io"],
-    }
+    routing_ok = {k: sorted(v) for k, v in {**FACADE_ROUTING, **FACADE_EXACT}.items()}
 
     def routed(**changes: list[str]) -> list[dict]:
         return [gated("optionstratlib", features={**routing_ok, **changes})]
@@ -2159,9 +2173,21 @@ def self_test() -> int:
         "io enables the crate": (routed(io=["market", "dep:optionstratlib-visualization"]), 1),
         "a feature reaches static_export through another feature": (
             routed(market=["dep:optionstratlib-market", "pricing", "charts"], charts=["static_export"]),
-            1,
+            2,
         ),
         "visualization drops backtest": (routed(visualization=["dep:optionstratlib-visualization"]), 1),
+        "default loses schema": (
+            routed(default=[v for v in sorted(FACADE_EXACT["default"]) if v != "schema"]),
+            1,
+        ),
+        "default gains plotly": (routed(default=sorted(FACADE_EXACT["default"]) + ["plotly"]), 1),
+        "schema stops at core": (routed(schema=["optionstratlib-core/schema"]), 1),
+        "schema forces a component on": (
+            routed(schema=sorted(FACADE_EXACT["schema"] - {"optionstratlib-math?/schema"} | {"optionstratlib-math/schema"})),
+            1,
+        ),
+        "parallel is no longer reserved": (routed(parallel=["pricing"]), 1),
+        "a feature outside the table": (routed(extra=["pricing"]), 1),
         "plotly drops visualization": (routed(plotly=["optionstratlib-visualization/plotly"]), 1),
         "static_export drops async": (
             routed(static_export=["plotly", "optionstratlib-visualization/static_export"]),
@@ -2278,6 +2304,14 @@ def self_test() -> int:
             0,
         ),
         "visualization csv under all features": ({("optionstratlib-visualization", "all features"): {"plotly", "csv"}}, 1),
+        "core pulls utoipa by default": ({("optionstratlib-core", "default"): {"utoipa"}}, 1),
+        "core utoipa under schema": ({("optionstratlib-core", "schema"): {"utoipa"}}, 0),
+        "core utoipa under all features": ({("optionstratlib-core", "all features"): {"utoipa"}}, 0),
+        "pricing pulls utoipa by default": ({("optionstratlib-pricing", "default"): {"utoipa"}}, 1),
+        "market utoipa under io": ({("optionstratlib-market", "io"): {"csv", "zip", "utoipa"}}, 1),
+        "market utoipa under schema": ({("optionstratlib-market", "schema"): {"utoipa"}}, 0),
+        "visualization pulls utoipa": ({("optionstratlib-visualization", "all features"): {"utoipa"}}, 1),
+        "facade default utoipa is not listed": ({("optionstratlib", "default"): {"utoipa"}}, 0),
         "clean facade tree": ({("optionstratlib", "default"): {"optionstratlib-core", "csv", "zip", "prettytable-rs"}}, 0),
         "facade pulls plotly by default": ({("optionstratlib", "default"): {"plotly"}}, 1),
         "facade pulls tokio by default": ({("optionstratlib", "default"): {"tokio"}}, 1),
@@ -2288,12 +2322,18 @@ def self_test() -> int:
             5,
         ),
         "facade static_export": (
-            {("optionstratlib", "static_export"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures"}},
+            {("optionstratlib", "static_export"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
             0,
         ),
+        "facade static_export pulls futures": (
+            {("optionstratlib", "static_export"): {"plotly", "tokio", "futures"}},
+            1,
+        ),
+        "facade async alone pulls reqwest": ({("optionstratlib", "async"): {"tokio", "reqwest"}}, 1),
+        "facade async alone": ({("optionstratlib", "async"): {"tokio", "csv"}}, 0),
         "facade async pulls plotly": ({("optionstratlib", "async"): {"tokio", "plotly"}}, 1),
         "facade all features": (
-            {("optionstratlib", "all features"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest"}},
+            {("optionstratlib", "all features"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
             0,
         ),
         "facade all features pulls tracing-subscriber": ({("optionstratlib", "all features"): {"tracing-subscriber"}}, 1),

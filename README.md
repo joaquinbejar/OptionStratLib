@@ -971,7 +971,14 @@ optionstratlib = { version = "0.22.0", features = ["plotly"] }
 - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
   `default-features = false` drops it, and `csv` and `zip` with it
-- `async`: asynchronous versions of that I/O (implies `market` and `io`; adds tokio)
+- `async`: asynchronous versions of that I/O (implies `market` and `io`; adds tokio
+  through the market crate)
+- `schema` (default): `utoipa::ToSchema` derives on the domain types of every
+  enabled component (forwards `optionstratlib-core/schema` and, weakly,
+  `schema` of each other component, so it never adds a component). Additive: it
+  changes no type. Without it no build resolves `utoipa`
+- `parallel`: reserved and empty in 0.22, so the name is not reused for another
+  meaning. `rayon` is mandatory in the numeric crates; a sequential build is not offered
 - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
   (`chains::generator_optionchain`, `series::generator_optionseries`, defined by
   `optionstratlib-market` behind its own `synthetic` feature), whose simulation
@@ -980,6 +987,73 @@ optionstratlib = { version = "0.22.0", features = ["plotly"] }
   market surface that names no simulation type at all.
   `make check-graph` proves the gate holds and `make check-feature-trees` pins both
   dependency graphs
+
+##### Feature routing
+
+Every facade feature, with exactly what it switches on (ADR-0002 section
+2). `dep:` names the optional component dependency, `crate/feature` a
+feature forwarded to a component, and "implies" another facade feature.
+Features only add: none replaces a type, and a type has the same defining
+crate whichever features are on.
+
+| Feature | Enables | Forwards | Implies | Default |
+| --- | --- | --- | --- | --- |
+| `math` | `dep:optionstratlib-math` | | | via `pricing` |
+| `pricing` | `dep:optionstratlib-pricing` | | `math` | yes |
+| `market` | `dep:optionstratlib-market` | | `pricing` | yes |
+| `analytics` | `dep:optionstratlib-analytics` | | `market` | yes |
+| `strategies` | `dep:optionstratlib-strategies` | | `analytics` | yes |
+| `simulation` | `dep:optionstratlib-simulation` | | `pricing` | yes |
+| `backtest` | `dep:optionstratlib-backtest` | | `strategies`, `simulation` | yes |
+| `visualization` | `dep:optionstratlib-visualization` | | `backtest` | yes |
+| `plotly` | | `optionstratlib-visualization/plotly` | `visualization` | no |
+| `static_export` | | `optionstratlib-visualization/static_export` | `plotly`, `async` | no |
+| `io` | | `optionstratlib-market/io` | `market` | yes |
+| `async` | | `optionstratlib-market/async` | `market`, `io` | no |
+| `synthetic` | | `optionstratlib-market/synthetic` | `market`, `simulation` | yes |
+| `schema` | | `optionstratlib-core/schema`, `optionstratlib-{math,pricing,simulation,market,analytics,strategies,backtest}?/schema` | | yes |
+| `parallel` | | | | no (reserved, empty) |
+
+The facade depends on `optionstratlib-core` always and declares no other
+optional dependency: `async` adds `tokio` through the market crate, and
+`plotly` and `static_export` add their packages through the visualization
+crate. `make check-graph` fails when this routing drifts, when a lower
+capability enables `visualization`, `plotly` or `static_export`, or when
+any package other than the visualization crate declares Plotly, and
+`make check-feature-trees` pins the resolved graph of the facade with no
+capability, of each capability alone and of the default.
+
+**The 0.22 default** is every capability that 0.21 shipped without a
+feature flag: `pricing`, `market`, `analytics`, `strategies`,
+`simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
+plain `optionstratlib = "0.22.0"` keeps the whole library and resolves no
+Plotly, image-export, async-runtime or HTTP package. The default is a
+compatibility contract of the 0.22 line, not a statement that a consumer
+needs all of it: opt out with `default-features = false` and name only the
+capability you use, or depend on a component crate directly.
+
+**Combinations that do not exist.** The implications are the whole
+dependency story, so some builds cannot be asked for:
+
+- There is no facade without `optionstratlib-core`.
+- There is no chart-only build: `visualization` implies `backtest`, because
+  the visualization crate renders strategies and simulations, so it brings
+  every capability below it.
+- There is no `plotly` or `static_export` without `visualization`, and no
+  `static_export` without `async` (and so `io`, `csv`, `zip` and `tokio`);
+  the implication is the 0.21 behaviour, kept for 0.22.
+- There is no `synthetic` without `simulation`, no `async` without `io`,
+  and no capability above `pricing` without `pricing` and `math`.
+- `parallel` enables nothing: the parallel code paths use `rayon`
+  unconditionally, so a sequential build is not offered.
+
+The matrix CI runs: no features, default, all features, each capability
+alone (`math`, `schema`, `pricing`, `market`, `io`, `async`, `synthetic`,
+`analytics`, `strategies`, `simulation`, `backtest`, `visualization`) and
+the pairs `market,simulation`, `analytics,simulation`,
+`strategies,simulation` and `market,synthetic`, plus `plotly` and
+`static_export` as their own surfaces (`make lint`,
+`make check-visualization`).
 
 #### Building from Source
 

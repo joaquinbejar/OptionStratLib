@@ -17,4 +17,5 @@ absent = [
     "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly",
     "plotly_static", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     "pretty-simple-display",
+    "utoipa",
 ]

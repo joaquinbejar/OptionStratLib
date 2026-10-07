@@ -7,15 +7,13 @@ present = [
     "optionstratlib", "optionstratlib-core", "optionstratlib-math",
     "optionstratlib-pricing", "optionstratlib-simulation", "optionstratlib-market",
     "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
-    "optionstratlib-visualization", "csv", "zip",
-    "utoipa",
+    "optionstratlib-visualization", "csv", "zip", "utoipa",
 ]
-# `utoipa` resolves by design: the facade enables `schema` on every crate it
-# names (#628 only removed it from the component crates without `schema`).
 # `prettytable-rs` resolves by design: `visualization` is a default
 # capability and its `visualization::terminal` adapter is the one owner of the
 # terminal tables (M6-05, #546); no crate below it resolves the package
-# (`make check-graph`).
+# (`make check-graph`). `utoipa` is present because `schema` is a default
+# feature (ADR-0002 section 5).
 absent = [
     "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest",
     "futures", "async-trait", "tracing-subscriber", "indicatif",
