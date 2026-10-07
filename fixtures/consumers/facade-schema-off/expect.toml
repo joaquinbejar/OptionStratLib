@@ -1,0 +1,17 @@
+# The facade with every capability and no `schema` (ADR-0002 section 5,
+# `osl-fixture-facade-schema-off`): packages the resolved normal graph must
+# contain, and packages it must not. `utoipa` is absent: `schema` is the only
+# path to it, the foundational crates bring it only behind their own `utoipa`
+# feature since `expiration_date` 0.4.1 (#628), and the doctests in
+# `src/lib.rs` show the components derive no `ToSchema`. Checked by
+# `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib", "optionstratlib-core", "optionstratlib-math",
+    "optionstratlib-pricing", "optionstratlib-simulation", "optionstratlib-market",
+    "optionstratlib-analytics", "optionstratlib-strategies", "optionstratlib-backtest",
+    "optionstratlib-visualization", "csv", "zip",
+]
+absent = [
+    "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest",
+    "futures", "async-trait", "tracing-subscriber", "indicatif", "utoipa",
+]

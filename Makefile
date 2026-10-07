@@ -163,7 +163,18 @@ fmt-check:
 # with warnings denied, so no doc link names a gated item, and its library
 # and doc tests run, so every doc example compiles under the capability it
 # needs (the integration suites declare `required-features` and are skipped).
-FACADE_FEATURE_SETS := math pricing market analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest visualization market,synthetic
+# The final facade matrix (ADR-0002 section 2, ADR-0004 section 2, #549):
+#   no features        `lint` (`cargo test -p optionstratlib --no-default-features`)
+#   each capability    this loop: math, schema, pricing, market, io, async, synthetic,
+#                      analytics, strategies, simulation, backtest,
+#                      visualization, and the documented pairs
+#   plotly, static_export  `check-visualization` (one job per surface, #547)
+#   default            `test` (`cargo test`) and `build`
+#   all features       `lint` (Clippy) and `test` (`--all-features`)
+# `check-feature-trees` pins the resolved graph of the no-capability facade,
+# of each capability alone and of the default, and asserts which components
+# and which backends each one may resolve.
+FACADE_FEATURE_SETS := math schema pricing market io async synthetic analytics strategies simulation market,simulation analytics,simulation strategies,simulation backtest visualization market,synthetic
 
 # Every test source must be reachable from its target root through `mod`
 # declarations, or it never compiles and its tests never run (#633).
@@ -321,7 +332,7 @@ test-consumer-market:
 # image-export package, `static_export` alone the whole export stack, and
 # `headless-full` (the facade defaults) none of them; each one also asserts
 # with a `compile_fail` doctest which `Graph` methods it does not have.
-FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest facade-visualization facade-plotly facade-static-export headless-full
+FACADE_FIXTURES := facade-pricing facade-market facade-analytics facade-strategies facade-simulation facade-backtest facade-visualization facade-plotly facade-static-export headless-full facade-schema-off
 
 .PHONY: check-consumer-facade
 check-consumer-facade:

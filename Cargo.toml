@@ -30,7 +30,7 @@ include = [
 # crate it names and the facade paths over it; none replaces a type. The
 # default enables every capability that exists today, so the default surface
 # is the whole library.
-default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io"]
+default = ["pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization", "synthetic", "io", "schema"]
 # `curves`, `surfaces`, `geometrics` and the math errors.
 math = ["dep:optionstratlib-math"]
 # `pricing`, `greeks`, `volatility` and the pricing errors. Resolves no market,
@@ -77,51 +77,59 @@ static_export = [
     "async",
     "optionstratlib-visualization/static_export",
 ]
-async = [
-    "market",
-    "io",
-    "dep:tokio",
-    "dep:async-trait",
-    "dep:reqwest",
-    "dep:futures",
-    "optionstratlib-market/async",
+# `utoipa::ToSchema` derives on the domain types of every enabled component
+# (ADR-0002 section 2, #549). Weak `crate?/schema` forwards reach only the
+# components another feature already enabled, so `schema` never adds a
+# component. On by default so 0.21 consumers keep their schemas; additive, it
+# changes no type. `optionstratlib-visualization` has no schema feature: its
+# chart models derive none.
+schema = [
+    "optionstratlib-core/schema",
+    "optionstratlib-math?/schema",
+    "optionstratlib-pricing?/schema",
+    "optionstratlib-simulation?/schema",
+    "optionstratlib-market?/schema",
+    "optionstratlib-analytics?/schema",
+    "optionstratlib-strategies?/schema",
+    "optionstratlib-backtest?/schema",
 ]
+# Reserved (ADR-0002 section 2, Option E): the name is held so it is not
+# reused for another meaning, and it enables nothing. `rayon` stays mandatory
+# in `math`, `pricing` and `simulation`; a sequential build needs a sequential
+# twin of every parallel site, which no 0.22 issue owns.
+parallel = []
+# The `*_async` wrappers over the market I/O functions: `tokio` in the market
+# crate and nothing in the facade itself (ADR-0002 section 2).
+async = ["market", "io", "optionstratlib-market/async"]
 
 [dependencies]
-optionstratlib-core = { workspace = true, features = ["schema"] }
-optionstratlib-math = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-pricing = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-simulation = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-market = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-analytics = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-strategies = { workspace = true, optional = true, features = ["schema"] }
-optionstratlib-backtest = { workspace = true, optional = true, features = ["schema"] }
+optionstratlib-core = { workspace = true }
+optionstratlib-math = { workspace = true, optional = true }
+optionstratlib-pricing = { workspace = true, optional = true }
+optionstratlib-simulation = { workspace = true, optional = true }
+optionstratlib-market = { workspace = true, optional = true }
+optionstratlib-analytics = { workspace = true, optional = true }
+optionstratlib-strategies = { workspace = true, optional = true }
+optionstratlib-backtest = { workspace = true, optional = true }
 optionstratlib-visualization = { workspace = true, optional = true }
 chrono = { workspace = true, features = ["serde"] }
-approx = { workspace = true }
-statrs = { workspace = true }
-rand = { workspace = true }
-rand_distr = { workspace = true }
+# Only what the facade's own sources import (`prelude`, `error`): everything
+# else a consumer needs comes through the component crates, so a build with
+# no capability resolves no numeric, serialization or schema package
+# (ADR-0002 section 3, #549).
 tracing = { workspace = true }
-num-traits = { workspace = true }
-serde_json = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-rayon = { workspace = true }
 rust_decimal = { workspace = true,  features = ["maths", "serde"] }
 rust_decimal_macros = { workspace = true }
-utoipa = { workspace = true, features = ["axum_extras"] }
 thiserror = { workspace = true }
 positive = { workspace = true }
+
+[dev-dependencies]
+# Used by the facade's tests, property tests and doc examples; not
+# dependencies of the facade itself.
+rayon = { workspace = true }
 expiration_date = { workspace = true }
 financial_types = { workspace = true }
 option_type = { workspace = true }
-tokio = { workspace = true, optional = true }
-async-trait = { workspace = true, optional = true }
-reqwest = { workspace = true, optional = true }
-futures = { workspace = true, optional = true }
-
-
-[dev-dependencies]
 uuid = { workspace = true, features = ["v4", "serde"] }
 criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
 mockall = { workspace = true }
@@ -159,6 +167,7 @@ exclude = [
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-plotly",
     "fixtures/consumers/facade-pricing",
+    "fixtures/consumers/facade-schema-off",
     "fixtures/consumers/facade-simulation",
     "fixtures/consumers/facade-static-export",
     "fixtures/consumers/facade-strategies",
@@ -250,9 +259,6 @@ expiration_date = { version = "0.4.1" }
 financial_types = { version = "0.3" }
 option_type = { version = "0.4" }
 tokio = { version = "1.53", features = ["full"] }
-async-trait = "0.1"
-reqwest = { version = "0.13", features = ["json"] }
-futures = "0.3"
 proptest = "1.11"
 mockall = "0.15"
 tempfile = "3.27"

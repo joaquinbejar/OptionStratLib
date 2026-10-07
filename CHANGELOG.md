@@ -1971,6 +1971,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The facade's feature model is reconciled and pinned** (#549).
+  The facade declared twelve dependencies it never imports (`approx`,
+  `statrs`, `rand`, `rand_distr`, `num-traits`, `serde`, `serde_json`,
+  `rayon`, `utoipa`, `expiration_date`, `financial_types`, `option_type`) as
+  normal dependencies, so `--no-default-features` resolved `statrs`, `rayon`
+  and `utoipa` before any capability was on; they are removed (the few its
+  tests and doc examples use are dev-dependencies). `async` no longer enables
+  the unused optional `tokio`, `async-trait`, `reqwest` and `futures` of the
+  facade and forwards only `optionstratlib-market/async` as ADR-0002 section
+  2 says, so `async` alone resolves `tokio` and no `reqwest`, `futures` or
+  `async-trait` (`static_export` still resolves `reqwest` and `async-trait`
+  through `plotly_static`).
+  - **`schema` and `parallel`**, the two features ADR-0002 section 2 lists and
+    main lacked. `schema` (now in `default`, so the default surface is
+    unchanged) forwards `optionstratlib-core/schema` and the weak
+    `optionstratlib-{math,pricing,simulation,market,analytics,strategies,backtest}?/schema`
+    of the components another feature enabled; the component dependencies
+    are no longer declared with `features = ["schema"]`, so a build with
+    `default-features = false` derives no `utoipa::ToSchema` and resolves no
+    `utoipa` (add `schema`, or keep the default, to get the derives back).
+    `parallel` is reserved and empty.
+  - **`expiration_date` 0.4.1** is the minimum (#628): it brings `utoipa`
+    only behind its own `utoipa` feature, so no build without `schema`
+    resolves the package. Because the facade no longer enables `utoipa`
+    itself, the default graph also loses the `utoipa/axum_extras` feature the
+    facade used to switch on through unification. A consumer that relied on
+    it (the `axum` integration of `utoipa`) must enable `axum_extras` on its
+    own `utoipa` dependency.
+  - **Checks.** `make check-graph` pins every row of the facade's feature
+    table and the default exactly, and forbids `utoipa` in each component's
+    default tree. `make check-feature-trees` pins 15 surfaces (the facade with
+    no capability, `schema`, `pricing`, `simulation`, `market`, `io`, `async`,
+    `synthetic`, `analytics`, `strategies`, `backtest`, `visualization`,
+    `plotly`, `static_export` and the default, i.e. the headless full domain),
+    asserts for each the exact set of `optionstratlib-*` components and the
+    backends it may resolve, that `utoipa` resolves only where `schema` is on,
+    and that a component has an edge to it only there. The new
+    `facade-schema-off` fixture shows by `compile_fail` doctests that one
+    type of each component implements no `ToSchema` without the feature and
+    that its normal graph resolves no `utoipa`; `headless-full` shows the
+    same types implement it by default and lists `utoipa` as present. The
+    other component and facade fixtures built without `schema` list `utoipa`
+    as absent. The `FACADE_FEATURE_SETS` loop of `make lint` and `build.yml`
+    also cover `schema`, `io`, `async`, `synthetic`, `math` and the
+    all-features build, and the `lib.rs` docs carry the feature routing
+    table, the 0.22 default and the combinations that do not exist.
+
 - **The facade's visualization routing is asserted, not just wired** (#548).
   `make check-graph` fails unless the facade's `visualization`, `plotly` and
   `static_export` features are exactly what ADR-0002 section 2 documents
