@@ -86,7 +86,6 @@ use optionstratlib_core::error::position::PositionValidationErrorKind;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::PositiveError;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::leg::{Leg, SpotPosition};
@@ -172,15 +171,18 @@ impl Collar {
     /// * `implied_volatility` - The implied volatility for option pricing
     /// * `risk_free_rate` - The risk-free interest rate
     /// * `dividend_yield` - The dividend yield of the underlying asset
-    /// * `quantity` - The number of shares (typically 100 per option contract)
+    /// * `quantity` - The number of shares. The option leg covers the same
+    ///   shares one for one: it is sized in shares, not in 100-share
+    ///   contracts, because an option here carries no contract multiplier
+    ///   (#731).
     /// * `premium_long_put` - The premium paid for buying the put
     /// * `premium_short_call` - The premium received for selling the call
     /// * `spot_open_fee` - Fee to open the spot position
     /// * `spot_close_fee` - Fee to close the spot position
-    /// * `put_open_fee` - Fee to open the put position
-    /// * `put_close_fee` - Fee to close the put position
-    /// * `call_open_fee` - Fee to open the call position
-    /// * `call_close_fee` - Fee to close the call position
+    /// * `put_open_fee` - Fee to open the put position, per share
+    /// * `put_close_fee` - Fee to close the put position, per share
+    /// * `call_open_fee` - Fee to open the call position, per share
+    /// * `call_close_fee` - Fee to close the call position, per share
     ///
     /// # Returns
     ///
@@ -246,7 +248,7 @@ impl Collar {
             put_strike,
             expiration,
             implied_volatility,
-            quantity / Positive::HUNDRED, // Convert shares to contracts
+            quantity, // One option unit per share (#731)
             underlying_price,
             risk_free_rate,
             OptionStyle::Put,
@@ -272,7 +274,7 @@ impl Collar {
             call_strike,
             expiration,
             implied_volatility,
-            quantity / Positive::HUNDRED, // Convert shares to contracts
+            quantity, // One option unit per share (#731)
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -526,20 +528,22 @@ impl Collar {
         }
     }
 
-    /// Calculates total fees for all positions.
+    /// Calculates total fees for all positions: the share leg's open and
+    /// close fees, plus each option leg's, which are per share and scale with
+    /// its quantity as in `Position::fees`. This is what the payoff charges;
+    /// the option fees used to be counted once whatever the quantity (#731).
     ///
     /// # Errors
     ///
-    /// Returns [`PositiveError`] when the running total leaves the `Positive`
-    /// range.
-    fn total_fees(&self) -> Result<Positive, PositiveError> {
-        self.spot_leg
+    /// Returns [`PositionError`] when a sum or an option leg's product leaves
+    /// the `Positive` range.
+    fn total_fees(&self) -> Result<Positive, PositionError> {
+        Ok(self
+            .spot_leg
             .open_fee
             .checked_add(&self.spot_leg.close_fee)?
-            .checked_add(&self.long_put.open_fee)?
-            .checked_add(&self.long_put.close_fee)?
-            .checked_add(&self.short_call.open_fee)?
-            .checked_add(&self.short_call.close_fee)
+            .checked_add(&self.long_put.fees()?)?
+            .checked_add(&self.short_call.fees()?)?)
     }
 
     /// Checks if the put is currently in-the-money.
@@ -840,20 +844,16 @@ impl Strategies for Collar {
 
 impl Profit for Collar {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
+        // A leg that cannot be valued is an error, not a zero contribution:
+        // the charts and the expiry P&L are built on this sum (#731).
         // Spot P&L
         let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
 
         // Put P&L at expiration
-        let put_pnl = self
-            .long_put
-            .pnl_at_expiration(&Some(price))
-            .unwrap_or(Decimal::ZERO);
+        let put_pnl = self.long_put.pnl_at_expiration(&Some(price))?;
 
         // Call P&L at expiration
-        let call_pnl = self
-            .short_call
-            .pnl_at_expiration(&Some(price))
-            .unwrap_or(Decimal::ZERO);
+        let call_pnl = self.short_call.pnl_at_expiration(&Some(price))?;
 
         Ok(d_add(
             d_add(spot_pnl, put_pnl, "Collar::pnl_at_expiration")?,
@@ -1086,8 +1086,8 @@ mod tests {
         let collar = create_test_collar();
         let net_premium = collar.net_premium();
 
-        // Call premium (3.00) - Put premium (2.50) = 0.50 credit per share
-        // With 1 contract (100 shares / 100 = 1), net = 0.50
+        // Call premium (3.00) - Put premium (2.50) = 0.50 credit per share,
+        // on 100 shares (the legs are sized in shares since #731) = 50.00.
         assert!(net_premium.is_ok_and(|p| p > Decimal::ZERO)); // Credit collar
     }
 

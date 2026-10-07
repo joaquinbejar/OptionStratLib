@@ -149,12 +149,15 @@ impl CoveredCall {
     /// * `implied_volatility` - The implied volatility for option pricing
     /// * `risk_free_rate` - The risk-free interest rate
     /// * `dividend_yield` - The dividend yield of the underlying asset
-    /// * `quantity` - The number of shares (typically 100 per option contract)
+    /// * `quantity` - The number of shares. The option leg covers the same
+    ///   shares one for one: it is sized in shares, not in 100-share
+    ///   contracts, because an option here carries no contract multiplier
+    ///   (#731).
     /// * `premium_short_call` - The premium received for selling the call
     /// * `spot_open_fee` - Fee to open the spot position
     /// * `spot_close_fee` - Fee to close the spot position
-    /// * `call_open_fee` - Fee to open the call position
-    /// * `call_close_fee` - Fee to close the call position
+    /// * `call_open_fee` - Fee to open the call position, per share
+    /// * `call_close_fee` - Fee to close the call position, per share
     ///
     /// # Returns
     ///
@@ -215,7 +218,7 @@ impl CoveredCall {
             call_strike,
             expiration,
             implied_volatility,
-            quantity / Positive::HUNDRED, // Convert shares to contracts
+            quantity, // One option unit per share (#731)
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -330,7 +333,7 @@ impl CoveredCall {
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?
-            // A per-share figure rarely divides exactly — one contract of
+            // A per-share figure rarely divides exactly — one option unit of
             // premium over three shares repeats — so the rounding is chosen
             // here rather than taken from the dependency's default.
             // `MidpointNearestEven` is what `d_div` already applies to every
@@ -345,6 +348,22 @@ impl CoveredCall {
         } else {
             Ok(Positive::ZERO)
         }
+    }
+
+    /// Total fees: the share leg's open and close fees, plus the call's,
+    /// which are per share and scale with its quantity as in
+    /// `Position::fees`. This is what the payoff charges (#731).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when a sum or the call's product leaves the
+    /// `Positive` range.
+    pub fn total_fees(&self) -> Result<Positive, PositionError> {
+        Ok(self
+            .spot_leg
+            .open_fee
+            .checked_add(&self.spot_leg.close_fee)?
+            .checked_add(&self.short_call.fees()?)?)
     }
 
     /// Calculates the maximum profit potential.
@@ -364,19 +383,14 @@ impl CoveredCall {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        // Checked: a premium and a contract count near the top of the
+        // Checked: a premium and a quantity near the top of the
         // `Positive` range overflow, and the struct's public fields let such a
         // leg in without passing `new` (#696).
         let premium_received = self
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?;
-        let total_fees = self
-            .spot_leg
-            .open_fee
-            .checked_add(&self.spot_leg.close_fee)?
-            .checked_add(&self.short_call.open_fee)?
-            .checked_add(&self.short_call.close_fee)?;
+        let total_fees = self.total_fees()?;
 
         if strike >= cost_basis {
             let capital_gain = price_gap(strike, cost_basis).checked_mul(&quantity)?;
@@ -416,19 +430,14 @@ impl CoveredCall {
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        // Checked: a premium and a contract count near the top of the
+        // Checked: a premium and a quantity near the top of the
         // `Positive` range overflow, and the struct's public fields let such a
         // leg in without passing `new` (#696).
         let premium_received = self
             .short_call
             .premium
             .checked_mul(&self.short_call.option.quantity)?;
-        let total_fees = self
-            .spot_leg
-            .open_fee
-            .checked_add(&self.spot_leg.close_fee)?
-            .checked_add(&self.short_call.open_fee)?
-            .checked_add(&self.short_call.close_fee)?;
+        let total_fees = self.total_fees()?;
 
         let total_investment = cost_basis.checked_mul(&quantity)?;
         let gross_outlay = total_investment.checked_add(&total_fees)?;
@@ -504,10 +513,9 @@ impl BreakEvenable for CoveredCall {
                 &self.spot_leg.quantity,
                 RoundingStrategy::MidpointNearestEven,
             )?;
+        // The call's fees count too: the payoff charges them (#731).
         let fees_per_share = self
-            .spot_leg
-            .open_fee
-            .checked_add(&self.spot_leg.close_fee)?
+            .total_fees()?
             // Same rounding choice as the per-share premium above.
             .checked_div_with_strategy(
                 &self.spot_leg.quantity,
@@ -679,14 +687,13 @@ impl Strategies for CoveredCall {
 
 impl Profit for CoveredCall {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
+        // A leg that cannot be valued is an error, not a zero contribution:
+        // the charts and the expiry P&L are built on this sum (#731).
         // Spot P&L
         let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
 
         // Option P&L at expiration
-        let option_pnl = self
-            .short_call
-            .pnl_at_expiration(&Some(price))
-            .unwrap_or(Decimal::ZERO);
+        let option_pnl = self.short_call.pnl_at_expiration(&Some(price))?;
 
         Ok(d_add(
             spot_pnl,
@@ -867,7 +874,7 @@ mod tests {
         .unwrap()
     }
 
-    /// A per-share premium that does not divide exactly: one contract of
+    /// A per-share premium that does not divide exactly: one option unit of
     /// 3.50 spread over three shares is 1.1666… repeating. The rounding is
     /// this crate's choice rather than the dependency's default, so the
     /// quotient is pinned here — if the strategy ever changes, the last digit
@@ -877,6 +884,9 @@ mod tests {
         let mut cc = create_test_covered_call();
         cc.spot_leg.quantity = pos_or_panic!(3.0);
         cc.spot_leg.cost_basis = Positive::HUNDRED;
+        // One call unit against three shares keeps the quotient repeating;
+        // `new` sizes the call in shares since #731, so it is set here.
+        cc.short_call.option.quantity = Positive::ONE;
 
         // 100 - 3.50/3. The quotient repeats, so it is rounded, and the
         // literal is written as a `Decimal` rather than through the `f64`
@@ -1037,7 +1047,7 @@ mod tests {
         assert_eq!(cc.quantity(), Positive::HUNDRED);
     }
 
-    /// A short call whose premium times its contract count leaves the
+    /// A short call whose premium times its quantity leaves the
     /// `Positive` range reports the overflow instead of aborting. `new` would
     /// not build it, but the public fields can; the panic-freedom property
     /// found this once #696 drove its rejected cases through them.

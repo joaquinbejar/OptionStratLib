@@ -170,6 +170,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the foreign rho against central differences of the price at `r_f = -1%`.
   The Garman–Kohlhagen example prices the negative-rate case.
 
+- **The option legs of `CoveredCall`, `Collar` and `ProtectivePut` are
+  sized in shares, with option fees per share** (#731). An option here has
+  no contract multiplier (its payoff is `intrinsic × quantity`), and the
+  three types disagreed on how to size it against their shares.
+  `CoveredCall` and `Collar` used `quantity / 100`, so one option unit
+  covered one share in a hundred: their payoffs were neither capped nor
+  floored, and disagreed with their own `max_profit_potential` and
+  `max_loss_potential` (502.40 against +4957 at 150 on 100 shares).
+  `ProtectivePut` already used `quantity` but divided its put fees by 100.
+  The owner chose shares; a real contract multiplier is its own issue.
+  - `CoveredCall::new` and `Collar::new` size their option legs in
+    `quantity` (shares), and `ProtectivePut::new` no longer divides the
+    put fees by 100. Every option fee argument is per share and scales
+    with the leg's quantity, as `Position::fees` does.
+  - The fee totals follow: `Collar`'s private fee sum and the new
+    `CoveredCall::total_fees` count each option leg's fees times its
+    quantity, so `max_profit_potential`, `max_loss_potential` and the
+    break-evens charge what the payoff charges. The covered call's
+    break-even now includes the call's fees (it counted the share fees
+    only).
+  - The same 100-share hedge gives identical put legs in `ProtectivePut`
+    and `Collar`, and each payoff is capped or floored at its own maximum.
+  - Migration: pass option fees per share, not per contract, and expect
+    option legs whose `quantity` is the share count. A `CoveredCall` or
+    `Collar` that relied on a hundredth of a contract per share should now
+    pass the number of shares the option actually covers.
+  - Values that move, before → after (hand-checked):
+    - 100 shares at 100, call 105 @ 2.40, put 95 @ 2.10, share fees
+      0.50 + 0.50, option fees 0.50 + 0.50 per share:
+      - covered call: break-even 99.99 → 98.61, max profit 500.40 → 639,
+        max loss 9999.60 → 9861, payoff at 150 4955.40 → 639 (capped),
+        expiry P&L at 103 300.40 → 439, mark-to-market at 103 (10 days,
+        vol 0.20) 300.09 → 309.14;
+      - collar: break-even 100.03 → 101.71, max profit 497.30 → 329, max
+        loss 502.70 → 671, payoff at 50 -4957.70 → -671 and at 150 4952.30
+        → 329, expiry P&L at 103 297.30 → 129, mark-to-market 299.60 →
+        260.31;
+      - protective put: break-even 102.12 → 103.11, max loss 712 → 811,
+        payoff at 150 4788 → 4689, expiry P&L at 103 88 → -11; the
+        mark-to-market (251.17) does not move, the put leg's quantity being
+        unchanged.
+    - `protective_put_test` (put fees 0.65 + 0.65 per share now cost 130,
+      were 1.30): break-even 153.53 → 154.82, max loss 853.3 → 982,
+      profit at 100 -853.3 → -982 and at 200 4646.7 → 4518.
+    - `test_covered_call_per_share_premium_rounds_to_nearest_even` sets
+      the call to one unit against three shares so the quotient still
+      repeats; its pinned value does not move.
+    - Golden chart data regenerated on purpose: `strategy_covered_call`,
+      `strategy_collar` and `strategy_protective_put` (one share, fees
+      0.50). The covered call now caps at 5.40, the collar floors at -7.70
+      and caps at 2.30, and the protective put floors at -9.10 with its
+      break-even at 104.10 (was 103.11). Every other entry is unchanged.
+
 - **Butterflies are textbook 1/2/1, `CallButterfly` is removed, and the
   1x1x1 call ladder it was is `BullCallLadder`** (#706). This closes the
   three butterfly exceptions #696 left.
@@ -968,6 +1021,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an orphan comment block in `error/graph.rs` is gone, and the module docs
   name the real `GraphSurface` variant and no longer suggest extending
   `GraphData` from a downstream crate. Chart data is unchanged.
+
+- **`CoveredCall`, `ProtectivePut` and `Collar` report a failing option
+  leg in `calculate_profit_at`** (#731). Each replaced a leg whose
+  `Position::pnl_at_expiration` failed (a cost or an income that leaves the
+  `Positive` range, a payoff out of range) with `unwrap_or(Decimal::ZERO)`,
+  so the payoff, the charts and the expiry P&L built on it silently dropped
+  the leg. The leg's `PositionError` now propagates as the `PricingError`
+  the signature already returns; no signature changes. Tests: a leg with a
+  premium at the top of the `Positive` range on two contracts makes
+  `calculate_profit_at` return an error for each strategy and each leg of
+  the collar, where it used to return the share leg's P&L alone.
 
 - **`CoveredCall`, `ProtectivePut` and `Collar` mark to market in
   `calculate_pnl`** (#728). They returned `calculate_pnl_at_expiration`, the

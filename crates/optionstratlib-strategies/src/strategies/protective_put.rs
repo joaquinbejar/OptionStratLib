@@ -76,6 +76,11 @@ pub struct ProtectivePut {
 impl ProtectivePut {
     /// Creates a new Protective Put strategy.
     ///
+    /// `quantity` is the number of shares, and the put covers them one for
+    /// one: it is sized in shares, like the option legs of `CoveredCall`
+    /// and `Collar`, because an option here carries no contract multiplier.
+    /// The put fees are per share and are not divided by 100 (#731).
+    ///
     /// # Errors
     ///
     /// Returns `StrategyError::InvalidStrategy` when the assembled strategy
@@ -152,8 +157,10 @@ impl ProtectivePut {
             long_put_option,
             premium_long_put,
             Utc::now(),
-            put_open_fee / Positive::HUNDRED,
-            put_close_fee / Positive::HUNDRED,
+            // Per share, like the covered call's and the collar's option
+            // fees; no longer divided by 100 (#731).
+            put_open_fee,
+            put_close_fee,
             None,
             None,
         );
@@ -341,7 +348,7 @@ impl ProtectivePut {
             .long_put
             .premium
             .checked_mul(&self.long_put.option.quantity)?
-            // A per-share figure rarely divides exactly — one contract of
+            // A per-share figure rarely divides exactly — one option unit of
             // premium over three shares repeats — so the rounding is chosen
             // here rather than taken from the dependency's default.
             // `MidpointNearestEven` is what `d_div` already applies to every
@@ -549,11 +556,10 @@ impl Strategies for ProtectivePut {
 
 impl Profit for ProtectivePut {
     fn calculate_profit_at(&self, price: &Positive) -> Result<Decimal, PricingError> {
+        // A leg that cannot be valued is an error, not a zero contribution:
+        // the charts and the expiry P&L are built on this sum (#731).
         let spot_pnl = self.spot_leg.pnl_at_price(*price)?;
-        let put_pnl = self
-            .long_put
-            .pnl_at_expiration(&Some(price))
-            .unwrap_or(Decimal::ZERO);
+        let put_pnl = self.long_put.pnl_at_expiration(&Some(price))?;
         Ok(d_add(
             spot_pnl,
             put_pnl,
