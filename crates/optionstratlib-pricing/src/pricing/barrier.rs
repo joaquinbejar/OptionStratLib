@@ -9,12 +9,26 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_powd, d_sqrt, d_sub};
-use optionstratlib_core::model::types::{BarrierType, OptionStyle, OptionType};
+use optionstratlib_core::model::types::{BarrierType, OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 /// Prices a barrier option using the Black-Scholes analytical extension.
 /// Supports Down-And-In, Up-And-In, Down-And-Out, and Up-And-Out variants.
+///
+/// # Method
+///
+/// Reiner and Rubinstein (1991) as tabulated in Haug, *The Complete Guide
+/// to Option Pricing Formulas*, §4.17.1: each of the eight contracts is a
+/// sum of the terms `A`, `B` (vanilla legs struck at `K` and at `H`), `C`,
+/// `D` (their reflections through the barrier), plus the rebate leg, with
+/// the case split on `K` against `H`. The rebate of a knock-in (`E`) is paid
+/// at expiry when the barrier was never hit; that of a knock-out (`F`) is
+/// paid at the hit. Without a rebate, knock-in + knock-out = vanilla.
+///
+/// When the spot is already at or beyond the barrier (`S ≤ H` down,
+/// `S ≥ H` up) the knock-in is the vanilla and the knock-out is worth its
+/// rebate, paid now. The result is the long price signed by `option.side`.
 ///
 /// # Errors
 ///
@@ -189,17 +203,24 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         "pricing::barrier::discount_r",
     )?;
 
-    let _phi = match option.option_style {
-        OptionStyle::Call => dec!(1.0),
-        OptionStyle::Put => dec!(-1.0),
+    let phi = match option.option_style {
+        OptionStyle::Call => Decimal::ONE,
+        OptionStyle::Put => Decimal::NEGATIVE_ONE,
     };
-
-    let _eta = match barrier_type {
-        BarrierType::DownAndIn | BarrierType::DownAndOut => dec!(1.0),
-        BarrierType::UpAndIn | BarrierType::UpAndOut => dec!(-1.0),
-        // `BarrierType` is `#[non_exhaustive]`; unreachable here because the
-        // match on `(style, barrier_type)` below rejects unknown variants.
-        _ => dec!(1.0),
+    // `η = 1` below the spot (down), `-1` above it (up), and whether the
+    // contract comes alive (`in`) or dies (`out`) at the hit.
+    let (eta, is_down, knock_in) = match barrier_type {
+        BarrierType::DownAndIn => (Decimal::ONE, true, true),
+        BarrierType::DownAndOut => (Decimal::ONE, true, false),
+        BarrierType::UpAndIn => (Decimal::NEGATIVE_ONE, false, true),
+        BarrierType::UpAndOut => (Decimal::NEGATIVE_ONE, false, false),
+        // `BarrierType` is `#[non_exhaustive]`: a barrier added upstream has
+        // no closed form here until it gets its own arm.
+        _ => {
+            return Err(PricingError::other(
+                "barrier_black_scholes: unsupported BarrierType",
+            ));
+        }
     };
 
     // `(H / S)^e`: the reflection factor shared by the `C`, `D`, `E` and `F`
@@ -236,9 +257,6 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         )?;
         Ok(d_sub(spot, strike, "pricing::barrier::vanilla")?)
     };
-
-    let f_a = &vanilla_leg;
-    let f_b = &vanilla_leg;
 
     // `φ S e^(-qT) (H/S)^(2(μ+1)) N(·) − φ K e^(-rT) (H/S)^(2μ) N(·)`.
     let reflected_leg =
@@ -294,10 +312,8 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             Ok(d_sub(spot, strike, "pricing::barrier::reflected")?)
         };
 
-    let f_c = &reflected_leg;
-    let f_d = &reflected_leg;
-
-    // Rebate paid at expiry when the barrier is never hit.
+    // Haug's `E`: the rebate of a knock-in, paid at expiry when the barrier
+    // is never hit.
     let f_e = |eta_val: Decimal| -> Result<Decimal, PricingError> {
         if rebate == Decimal::ZERO {
             return Ok(Decimal::ZERO);
@@ -335,7 +351,7 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         )?)
     };
 
-    // Rebate paid on the hit itself.
+    // Haug's `F`: the rebate of a knock-out, paid on the hit itself.
     let f_f = |eta_val: Decimal| -> Result<Decimal, PricingError> {
         if rebate == Decimal::ZERO {
             return Ok(Decimal::ZERO);
@@ -385,95 +401,93 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
         )?)
     };
 
-    // Each closure return is an addend of the final barrier price; the
-    // composition that fuses them into the returned value goes through
-    // `d_add` / `d_sub` so an overflow of the user-visible price surfaces a
+    // Already through the barrier: the knock-in is a vanilla and the
+    // knock-out has paid its rebate on the hit, which is now. These are the
+    // limits of the formulas below as `S` reaches `H`.
+    let breached = if is_down {
+        s <= barrier_level
+    } else {
+        s >= barrier_level
+    };
+    if breached {
+        let price = if knock_in {
+            vanilla_leg(phi, x1)?
+        } else {
+            rebate
+        };
+        return Ok(apply_side(price, option));
+    }
+
+    // Haug §4.17.1 (Reiner-Rubinstein 1991): each of the eight contracts is
+    // a sum of the terms `A` (vanilla on `X`), `B` (vanilla on `H`), `C` / `D`
+    // (their reflections through the barrier), `E` (knock-in rebate) and `F`
+    // (knock-out rebate), with the case split on the strike against the
+    // barrier. At `X = H` both branches agree (`A = B`, `C = D`). Each term
+    // is an addend of the user-visible price, so the composition goes
+    // through `d_add` / `d_sub` and an overflow surfaces as a
     // `DecimalError::Overflow` instead of aborting.
     const OP: &str = "pricing::barrier::price";
-    match (option.option_style, barrier_type) {
-        // Down-and-out call
-        (OptionStyle::Call, BarrierType::DownAndOut) => {
-            if k >= barrier_level {
-                let lhs = d_sub(f_a(dec!(1.0), x1)?, f_c(dec!(1.0), dec!(1.0), y1)?, OP)?;
-                Ok(d_add(lhs, f_e(dec!(1.0))?, OP)?)
-            } else {
-                let lhs = d_sub(f_b(dec!(1.0), x2)?, f_d(dec!(1.0), dec!(1.0), y2)?, OP)?;
-                Ok(d_add(lhs, f_e(dec!(1.0))?, OP)?)
-            }
-        }
-        // Down-and-in call
-        (OptionStyle::Call, BarrierType::DownAndIn) => {
-            if k >= barrier_level {
-                Ok(d_add(f_c(dec!(1.0), dec!(1.0), y1)?, f_f(dec!(1.0))?, OP)?)
-            } else {
-                let s1 = d_sub(f_a(dec!(1.0), x1)?, f_b(dec!(1.0), x2)?, OP)?;
-                let s2 = d_add(s1, f_d(dec!(1.0), dec!(1.0), y2)?, OP)?;
-                Ok(d_add(s2, f_f(dec!(1.0))?, OP)?)
-            }
-        }
-        // Up-and-out call
-        (OptionStyle::Call, BarrierType::UpAndOut) => {
-            if k >= barrier_level {
-                Ok(f_f(dec!(-1.0))?)
-            } else {
-                let s1 = d_sub(f_a(dec!(1.0), x1)?, f_b(dec!(1.0), x2)?, OP)?;
-                let s2 = d_add(s1, f_d(dec!(1.0), dec!(-1.0), y2)?, OP)?;
-                Ok(d_add(s2, f_f(dec!(-1.0))?, OP)?)
-            }
-        }
-        // Up-and-in call
-        (OptionStyle::Call, BarrierType::UpAndIn) => {
-            if k >= barrier_level {
-                Ok(d_add(f_a(dec!(1.0), x1)?, f_f(dec!(-1.0))?, OP)?)
-            } else {
-                let s1 = d_sub(f_b(dec!(1.0), x2)?, f_d(dec!(1.0), dec!(-1.0), y2)?, OP)?;
-                Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
-            }
-        }
-        // Down-and-out put
-        (OptionStyle::Put, BarrierType::DownAndOut) => {
-            if k >= barrier_level {
-                let s1 = d_sub(f_b(dec!(-1.0), x2)?, f_d(dec!(-1.0), dec!(1.0), y2)?, OP)?;
-                Ok(d_add(s1, f_e(dec!(1.0))?, OP)?)
-            } else {
-                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_c(dec!(-1.0), dec!(1.0), y1)?, OP)?;
-                Ok(d_add(s1, f_e(dec!(1.0))?, OP)?)
-            }
-        }
-        // Down-and-in put
-        (OptionStyle::Put, BarrierType::DownAndIn) => {
-            if k >= barrier_level {
-                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_b(dec!(-1.0), x2)?, OP)?;
-                let s2 = d_add(s1, f_d(dec!(-1.0), dec!(1.0), y2)?, OP)?;
-                Ok(d_add(s2, f_f(dec!(1.0))?, OP)?)
-            } else {
-                Ok(d_add(f_c(dec!(-1.0), dec!(1.0), y1)?, f_f(dec!(1.0))?, OP)?)
-            }
-        }
-        // Up-and-out put
-        (OptionStyle::Put, BarrierType::UpAndOut) => {
-            if k >= barrier_level {
-                Ok(f_e(dec!(-1.0))?)
-            } else {
-                let s1 = d_sub(f_a(dec!(-1.0), x1)?, f_b(dec!(-1.0), x2)?, OP)?;
-                let s2 = d_add(s1, f_d(dec!(-1.0), dec!(-1.0), y2)?, OP)?;
-                Ok(d_add(s2, f_e(dec!(-1.0))?, OP)?)
-            }
-        }
-        // Up-and-in put
-        (OptionStyle::Put, BarrierType::UpAndIn) => {
-            if k >= barrier_level {
-                Ok(d_add(f_a(dec!(-1.0), x1)?, f_f(dec!(-1.0))?, OP)?)
-            } else {
-                let s1 = d_sub(f_b(dec!(-1.0), x2)?, f_d(dec!(-1.0), dec!(-1.0), y2)?, OP)?;
-                Ok(d_add(s1, f_f(dec!(-1.0))?, OP)?)
-            }
-        }
-        // `BarrierType` is `#[non_exhaustive]`: a barrier added upstream has no
-        // closed form here until it gets its own arm.
-        (_, _) => Err(PricingError::other(
-            "barrier_black_scholes: unsupported BarrierType",
-        )),
+    let term_a = || vanilla_leg(phi, x1);
+    let term_b = || vanilla_leg(phi, x2);
+    let term_c = || reflected_leg(phi, eta, y1);
+    let term_d = || reflected_leg(phi, eta, y2);
+    let strike_above = k >= barrier_level;
+    let core = match (option.option_style, knock_in) {
+        // Down-and-in call: X > H: C;  X < H: A - B + D.
+        // Up-and-in call:   X > H: A;  X < H: B - C + D.
+        (OptionStyle::Call, true) => match (is_down, strike_above) {
+            (true, true) => term_c()?,
+            (true, false) => d_add(d_sub(term_a()?, term_b()?, OP)?, term_d()?, OP)?,
+            (false, true) => term_a()?,
+            (false, false) => d_add(d_sub(term_b()?, term_c()?, OP)?, term_d()?, OP)?,
+        },
+        // Down-and-in put: X > H: B - C + D;  X < H: A.
+        // Up-and-in put:   X > H: A - B + D;  X < H: C.
+        (OptionStyle::Put, true) => match (is_down, strike_above) {
+            (true, true) => d_add(d_sub(term_b()?, term_c()?, OP)?, term_d()?, OP)?,
+            (true, false) => term_a()?,
+            (false, true) => d_add(d_sub(term_a()?, term_b()?, OP)?, term_d()?, OP)?,
+            (false, false) => term_c()?,
+        },
+        // Down-and-out call: X > H: A - C;  X < H: B - D.
+        // Up-and-out call:   X > H: 0;      X < H: A - B + C - D.
+        (OptionStyle::Call, false) => match (is_down, strike_above) {
+            (true, true) => d_sub(term_a()?, term_c()?, OP)?,
+            (true, false) => d_sub(term_b()?, term_d()?, OP)?,
+            (false, true) => Decimal::ZERO,
+            (false, false) => d_sub(
+                d_add(d_sub(term_a()?, term_b()?, OP)?, term_c()?, OP)?,
+                term_d()?,
+                OP,
+            )?,
+        },
+        // Down-and-out put: X > H: A - B + C - D;  X < H: 0.
+        // Up-and-out put:   X > H: B - D;          X < H: A - C.
+        (OptionStyle::Put, false) => match (is_down, strike_above) {
+            (true, true) => d_sub(
+                d_add(d_sub(term_a()?, term_b()?, OP)?, term_c()?, OP)?,
+                term_d()?,
+                OP,
+            )?,
+            (true, false) => Decimal::ZERO,
+            (false, true) => d_sub(term_b()?, term_d()?, OP)?,
+            (false, false) => d_sub(term_a()?, term_c()?, OP)?,
+        },
+    };
+    // The rebate of a knock-in is paid at expiry if it never comes alive
+    // (`E`); that of a knock-out on the hit (`F`). The two used to be swapped
+    // (#646).
+    let rebate_leg = if knock_in { f_e(eta)? } else { f_f(eta)? };
+    Ok(apply_side(d_add(core, rebate_leg, OP)?, option))
+}
+
+/// Signs a long price by `option.side`: a short barrier is the negated long
+/// one (#646).
+#[inline]
+fn apply_side(price: Decimal, option: &Options) -> Decimal {
+    match option.side {
+        Side::Long => price,
+        Side::Short => -price,
     }
 }
 

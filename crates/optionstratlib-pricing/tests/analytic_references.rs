@@ -35,8 +35,8 @@
 //! * Exchange: Margrabe (1978) reduced to the Hull Black-Scholes example by a
 //!   deterministic second asset.
 //! * Barrier: Haug §4.17.1 (Reiner-Rubinstein 1991) Table 4-13
-//!   (`S = 100, T = 0.5, r = 8 %, b = 4 %, rebate 3`), and the same formulas
-//!   at zero rebate.
+//!   (`S = 100, T = 0.5, r = 8 %, b = 4 %, rebate 3`), all eight contracts
+//!   at `σ = 25 %` and `30 %` (#646), and the same formulas at zero rebate.
 //! * Lookback: Haug §4.15.2 (Conze-Viswanathan 1991) fixed-strike table.
 //! * Payoff: the textbook payoffs `max(S - K, 0)` and `max(K - S, 0)`
 //!   through core's `Payoff` via `Options::payoff` / `payoff_at_price`.
@@ -66,8 +66,7 @@
 //!
 //! Reference checks that the library fails today are not in this suite;
 //! each lives in its issue with the test code, and the fix adds it here:
-//! barrier rebates and up-barrier/put values (#646), fixed-strike lookback
-//! (#647).
+//! fixed-strike lookback (#647).
 
 use optionstratlib_core::model::option::ExoticParams;
 use optionstratlib_core::model::types::{BarrierType, BinaryType, OptionStyle, OptionType, Side};
@@ -589,6 +588,11 @@ fn barrier(barrier_type: BarrierType, level: f64, rebate: Option<Positive>) -> O
 /// Prices a Haug Table 4-13 barrier: `S = 100, T = 0.5, r = 8 %, q = 4 %,
 /// σ = 25 %`.
 fn haug_barrier(option_type: OptionType, style: OptionStyle, strike: f64) -> Decimal {
+    haug_barrier_at(option_type, style, strike, 0.25)
+}
+
+/// [`haug_barrier`] at volatility `vol`.
+fn haug_barrier_at(option_type: OptionType, style: OptionStyle, strike: f64, vol: f64) -> Decimal {
     ok(
         black_scholes(&option(
             option_type,
@@ -596,7 +600,7 @@ fn haug_barrier(option_type: OptionType, style: OptionStyle, strike: f64) -> Dec
             100.0,
             strike,
             182.5,
-            0.25,
+            vol,
             dec!(0.08),
             0.04,
             None,
@@ -632,6 +636,209 @@ fn test_barrier_down_calls_without_rebate_match_reiner_rubinstein() {
                 reference,
                 TOL_4DP,
                 &format!("{barrier_type:?} call k={strike} no rebate"),
+            );
+        }
+    }
+}
+
+/// Haug Table 4-13, rebate 3, `σ = 25 %`: down-and-out call `9.0246,
+/// 6.7924, 4.8759` and down-and-in call `7.7627, 4.0109, 2.0576` for
+/// `K = 90, 100, 110`, `H = 95`.
+///
+/// The library used to add the knock-in rebate leg (paid at expiry if the
+/// barrier is never hit, Haug's `E`) to the knock-out and the knock-out leg
+/// (paid at the hit, Haug's `F`) to the knock-in, returning `7.4188, 5.1867,
+/// 3.2701` and `9.3684, 5.6167, 3.6633` (#646).
+#[test]
+fn test_barrier_down_calls_with_rebate_match_haug_table() {
+    let rebate = Some(pos_or_panic!(3.0));
+    let cases = [
+        (
+            BarrierType::DownAndOut,
+            [dec!(9.0246), dec!(6.7924), dec!(4.8759)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            [dec!(7.7627), dec!(4.0109), dec!(2.0576)],
+        ),
+    ];
+    for (barrier_type, references) in cases {
+        for (strike, reference) in [90.0, 100.0, 110.0].into_iter().zip(references) {
+            assert_close(
+                haug_barrier(
+                    barrier(barrier_type, 95.0, rebate),
+                    OptionStyle::Call,
+                    strike,
+                ),
+                reference,
+                TOL_4DP,
+                &format!("{barrier_type:?} call k={strike} rebate 3"),
+            );
+        }
+    }
+}
+
+/// Haug Table 4-13, rebate 3, `σ = 25 %`, `K = 90, 100, 110`:
+/// up-and-out call (`H = 105`) `2.6789, 2.3580, 2.3453`; up-and-in call
+/// `14.1112, 8.4482, 4.5910`; down-and-out put (`H = 95`) `2.2798, 2.2947,
+/// 2.6252`; down-and-in put `2.9586, 6.5677, 11.9752`; up-and-out put
+/// `3.7760, 5.4932, 7.5187`; up-and-in put `1.4653, 3.3721, 7.0846`.
+///
+/// The library used to return up-and-out call `5.9407, 0.0890, 2.3453`;
+/// up-and-in call `12.5833, 12.4511, 6.3249`; down-and-out put `10.0631,
+/// 9.3879, 9.2602`; down-and-in put `-4.8247, -0.5254, 5.3403`; up-and-out
+/// put `1.7989, 3.3847, 0.6114`; up-and-in put `3.4424, 5.4806, 13.9918`:
+/// the case selection for up barriers and for puts, not only the rebate,
+/// departed from Reiner-Rubinstein (#646).
+#[test]
+fn test_barrier_up_calls_and_puts_match_haug_table() {
+    let rebate = Some(pos_or_panic!(3.0));
+    let cases = [
+        (
+            BarrierType::UpAndOut,
+            105.0,
+            OptionStyle::Call,
+            [dec!(2.6789), dec!(2.3580), dec!(2.3453)],
+        ),
+        (
+            BarrierType::UpAndIn,
+            105.0,
+            OptionStyle::Call,
+            [dec!(14.1112), dec!(8.4482), dec!(4.5910)],
+        ),
+        (
+            BarrierType::DownAndOut,
+            95.0,
+            OptionStyle::Put,
+            [dec!(2.2798), dec!(2.2947), dec!(2.6252)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            95.0,
+            OptionStyle::Put,
+            [dec!(2.9586), dec!(6.5677), dec!(11.9752)],
+        ),
+        (
+            BarrierType::UpAndOut,
+            105.0,
+            OptionStyle::Put,
+            [dec!(3.7760), dec!(5.4932), dec!(7.5187)],
+        ),
+        (
+            BarrierType::UpAndIn,
+            105.0,
+            OptionStyle::Put,
+            [dec!(1.4653), dec!(3.3721), dec!(7.0846)],
+        ),
+    ];
+    for (barrier_type, level, style, references) in cases {
+        for (strike, reference) in [90.0, 100.0, 110.0].into_iter().zip(references) {
+            assert_close(
+                haug_barrier(barrier(barrier_type, level, rebate), style, strike),
+                reference,
+                TOL_4DP,
+                &format!("{barrier_type:?} {style:?} k={strike} rebate 3"),
+            );
+        }
+    }
+}
+
+/// Haug Table 4-13, rebate 3, the `σ = 30 %` column and the `H = 100` rows
+/// (the barrier at the spot): a knock-out is worth its rebate, paid now, and
+/// a knock-in is the vanilla. Every value was recomputed independently from
+/// the §4.17.1 formulas in `f64` (#646).
+#[test]
+fn test_barrier_haug_table_sigma_30_and_barrier_at_spot() {
+    let rebate = Some(pos_or_panic!(3.0));
+    let sigma_30 = [
+        (
+            BarrierType::DownAndOut,
+            95.0,
+            OptionStyle::Call,
+            [dec!(8.8334), dec!(7.0285), dec!(5.4137)],
+        ),
+        (
+            BarrierType::UpAndOut,
+            105.0,
+            OptionStyle::Call,
+            [dec!(2.6340), dec!(2.4389), dec!(2.4315)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            95.0,
+            OptionStyle::Call,
+            [dec!(9.0093), dec!(5.1370), dec!(2.8517)],
+        ),
+        (
+            BarrierType::UpAndIn,
+            105.0,
+            OptionStyle::Call,
+            [dec!(15.2098), dec!(9.7278), dec!(5.8350)],
+        ),
+        (
+            BarrierType::DownAndOut,
+            95.0,
+            OptionStyle::Put,
+            [dec!(2.4170), dec!(2.4258), dec!(2.6246)],
+        ),
+        (
+            BarrierType::UpAndOut,
+            105.0,
+            OptionStyle::Put,
+            [dec!(4.2292), dec!(5.8033), dec!(7.5650)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            95.0,
+            OptionStyle::Put,
+            [dec!(3.8769), dec!(7.7988), dec!(13.3077)],
+        ),
+        (
+            BarrierType::UpAndIn,
+            105.0,
+            OptionStyle::Put,
+            [dec!(2.0658), dec!(4.4226), dec!(8.3686)],
+        ),
+    ];
+    for (barrier_type, level, style, references) in sigma_30 {
+        for (strike, reference) in [90.0, 100.0, 110.0].into_iter().zip(references) {
+            assert_close(
+                haug_barrier_at(barrier(barrier_type, level, rebate), style, strike, 0.30),
+                reference,
+                TOL_4DP,
+                &format!("{barrier_type:?} {style:?} k={strike} σ=30% rebate 3"),
+            );
+        }
+    }
+    let at_spot = [
+        (
+            BarrierType::DownAndOut,
+            OptionStyle::Call,
+            [dec!(3), dec!(3), dec!(3)],
+        ),
+        (
+            BarrierType::DownAndOut,
+            OptionStyle::Put,
+            [dec!(3), dec!(3), dec!(3)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            OptionStyle::Call,
+            [dec!(13.8333), dec!(7.8494), dec!(3.9795)],
+        ),
+        (
+            BarrierType::DownAndIn,
+            OptionStyle::Put,
+            [dec!(2.2845), dec!(5.9085), dec!(11.6465)],
+        ),
+    ];
+    for (barrier_type, style, references) in at_spot {
+        for (strike, reference) in [90.0, 100.0, 110.0].into_iter().zip(references) {
+            assert_close(
+                haug_barrier(barrier(barrier_type, 100.0, rebate), style, strike),
+                reference,
+                TOL_4DP,
+                &format!("{barrier_type:?} {style:?} k={strike} H=S rebate 3"),
             );
         }
     }
