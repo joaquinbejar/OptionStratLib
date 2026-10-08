@@ -996,7 +996,7 @@ impl CustomStrategy {
 
             // Evaluate the current combination
             if let Err(e) = self.update_positions(current_positions.clone(), &mut recompute) {
-                tracing::warn!(
+                tracing::debug!(
                     error = %e,
                     "skipping candidate whose break-even points cannot be recomputed"
                 );
@@ -1009,7 +1009,7 @@ impl CustomStrategy {
             let current_value = match metric {
                 Ok(v) => v,
                 Err(e) => {
-                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    tracing::debug!(error = %e, "skipping candidate with unscorable metric");
                     return best_positions.clone();
                 }
             };

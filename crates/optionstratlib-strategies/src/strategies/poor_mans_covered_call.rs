@@ -779,7 +779,7 @@ impl Optimizable for PoorMansCoveredCall {
                 {
                     Ok(s) => s,
                     Err(e) => {
-                        tracing::warn!(
+                        tracing::debug!(
                             error = %e,
                             "skipping invalid strategy combination"
                         );
@@ -799,7 +799,7 @@ impl Optimizable for PoorMansCoveredCall {
                 let current_value = match metric {
                     Ok(v) => v,
                     Err(e) => {
-                        tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                        tracing::debug!(error = %e, "skipping candidate with unscorable metric");
                         continue;
                     }
                 };

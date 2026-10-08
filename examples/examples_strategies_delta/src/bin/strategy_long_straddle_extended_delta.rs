@@ -9,6 +9,7 @@
 //! This example shows portfolio-level Greeks and adjustment planning.
 
 use optionstratlib::error::Error;
+use optionstratlib::model::DisplayMoney;
 use optionstratlib::prelude::*;
 use optionstratlib::strategies::AdjustmentConfig;
 use optionstratlib::strategies::AdjustmentTarget;
@@ -43,12 +44,12 @@ fn main() -> Result<(), Error> {
     info!("\n--- Basic Strategy Info ---");
     info!("Break Even Points: {:?}", strategy.break_even_points);
     info!(
-        "Max Profit: ${:.2}",
-        strategy.get_max_profit().unwrap_or(Positive::ZERO)
+        "Max Profit: {:.2}",
+        DisplayMoney::from(strategy.get_max_profit().unwrap_or(Positive::ZERO))
     );
     info!(
-        "Max Loss: ${:.2}",
-        strategy.get_max_loss().unwrap_or(Positive::ZERO)
+        "Max Loss: {:.2}",
+        DisplayMoney::from(strategy.get_max_loss().unwrap_or(Positive::ZERO))
     );
 
     // Original delta neutrality

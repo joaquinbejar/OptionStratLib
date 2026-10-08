@@ -1553,6 +1553,26 @@ summarize the release.
 
 ### Fixed
 
+- **Unlimited amounts render as `Unlimited`, and handled data conditions
+  no longer log as errors or warnings** (#801). Returned values do not
+  change; only logging and display do.
+  - `optionstratlib_core::model::DisplayMoney` (with `unlimited_label` and
+    the `UNLIMITED` label) renders an amount as `$` plus the number, or as
+    `Unlimited` / `-Unlimited` for the `Decimal::MAX` (= `Positive::MAX`) /
+    `Decimal::MIN` sentinels. The `Strategy` and `ProtectivePut` `Display`
+    impls (max profit, max loss, break-even) and the backtest / simulation
+    terminal reports use it, so a short strangle's max loss shows
+    `Unlimited` instead of `$79228162514264337593543950335.00`. The examples
+    print max profit and max loss through it.
+  - `OptionData::validate` logs a zero strike and a row without call or put
+    prices at `DEBUG` instead of `ERROR`: the chain filters those rows out,
+    for example the unpriced strikes of `Germany-40-…json`.
+  - Every `find_optimal` search (the verticals, straddles, strangles,
+    butterflies, condor, ladder, `PoorMansCoveredCall` and `CustomStrategy`)
+    logs a skipped candidate (an invalid combination, an unscorable metric,
+    a custom candidate whose break-evens cannot be recomputed) at `DEBUG`
+    instead of `WARN`.
+
 - **An inverted `BearCallSpread` / `BullPutSpread` is reported as a
   structural error, not as a loss of zero** (#803). `get_max_loss` used
   `ProfitLossError::MaxLossError` both for "the worst case still gains" and

@@ -999,7 +999,7 @@ impl Optimizable for LongButterflySpread {
             let strategy = match self.create_strategy(option_chain, &legs) {
                 Ok(s) => s,
                 Err(e) => {
-                    tracing::warn!(error = %e, "skipping invalid strategy combination");
+                    tracing::debug!(error = %e, "skipping invalid strategy combination");
                     continue;
                 }
             };
@@ -1011,7 +1011,7 @@ impl Optimizable for LongButterflySpread {
             let current_value = match metric {
                 Ok(v) => v,
                 Err(e) => {
-                    tracing::warn!(error = %e, "skipping candidate with unscorable metric");
+                    tracing::debug!(error = %e, "skipping candidate with unscorable metric");
                     continue;
                 }
             };

@@ -5,6 +5,7 @@ use positive::pos_or_panic;
    Email: jb@taunais.com
    Date: 29/1/25
 ******************************************************************************/
+use optionstratlib::model::DisplayMoney;
 use optionstratlib::model::types::Action;
 use optionstratlib::prelude::*;
 use rust_decimal::Decimal;
@@ -52,8 +53,8 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         strategy.get_net_premium_received()?
     );
     info!(
-        "Max Profit: ${:.2}",
-        strategy.get_max_profit().unwrap_or(Positive::ZERO)
+        "Max Profit: {:.2}",
+        DisplayMoney::from(strategy.get_max_profit().unwrap_or(Positive::ZERO))
     );
     info!("Profit Area: {:.2}%", strategy.get_profit_area()?);
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
