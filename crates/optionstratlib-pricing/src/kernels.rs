@@ -305,7 +305,25 @@ pub fn d2(
         expiration_date,
         implied_volatility,
     )?;
+    d2_from_d1(d1_value, expiration_date, implied_volatility)
+}
 
+/// `d2 = d1 - sigma * sqrt(T)` from a `d1` already computed.
+///
+/// The single implementation of the step [`d2`] performs after its own
+/// [`d1`], so a caller that holds `d1` gets the same digits as `d2` without
+/// paying for `d1` (its logarithm and square root) a second time (#859).
+///
+/// # Errors
+///
+/// Returns [`GreeksError`] when `sqrt(T)`, `sigma * sqrt(T)` or the
+/// difference leaves the `Decimal` range.
+#[inline]
+fn d2_from_d1(
+    d1_value: Decimal,
+    expiration_date: Positive,
+    implied_volatility: Positive,
+) -> Result<Decimal, GreeksError> {
     let sqrt_time = d_sqrt(expiration_date.to_dec(), "greeks::d2::sqrt_time")?;
     let vol_time = d_mul(
         implied_volatility.to_dec(),
@@ -440,21 +458,18 @@ pub(crate) fn calculate_d_values_with_yield(
     // `Decimal`'s `-` panics on overflow, which a rate at the edge of the
     // range reaches (`Decimal::MIN` minus any positive yield).
     let b = d_sub(option.risk_free_rate, q, "greeks::carry_rate")?;
+    let years = option.expiration_date.get_years()?;
+    // `d2` is derived from this `d1`: calling [`d2`] recomputed `d1`, so every
+    // price paid for its logarithm twice (#859). Same digits either way.
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
         b,
-        option.expiration_date.get_years()?,
+        years,
         option.implied_volatility,
-    );
-    let d2_value = d2(
-        option.underlying_price,
-        option.strike_price,
-        b,
-        option.expiration_date.get_years()?,
-        option.implied_volatility,
-    );
-    Ok((d1_value?, d2_value?))
+    )?;
+    let d2_value = d2_from_d1(d1_value, years, option.implied_volatility)?;
+    Ok((d1_value, d2_value))
 }
 
 /// Calculates d1 and d2 for the Black-76 model (options on futures/forwards).
@@ -478,21 +493,16 @@ pub fn calculate_d_values_black_76(option: &Options) -> Result<(Decimal, Decimal
     // Black-76: cost of carry b = 0 (forward pricing, no carry term in d1/d2)
     let b = Decimal::ZERO;
     let years = option.expiration_date.get_years()?;
+    // `d1` once, `d2` from it (#859), as in `calculate_d_values_with_yield`.
     let d1_value = d1(
         option.underlying_price,
         option.strike_price,
         b,
         years,
         option.implied_volatility,
-    );
-    let d2_value = d2(
-        option.underlying_price,
-        option.strike_price,
-        b,
-        years,
-        option.implied_volatility,
-    );
-    Ok((d1_value?, d2_value?))
+    )?;
+    let d2_value = d2_from_d1(d1_value, years, option.implied_volatility)?;
+    Ok((d1_value, d2_value))
 }
 
 /// Continuous discount factor `e^(-rate * t)`.
@@ -2194,5 +2204,112 @@ mod tests_price_greek_consistency {
         // A negative exponent below the representable scale flushes to zero.
         let flushed = discount_factor(dec!(1000), Decimal::ONE, "a", "b");
         assert!(matches!(flushed, Ok(value) if value.is_zero()));
+    }
+}
+
+/// #859: the d-value helpers compute `d1` once and derive `d2` from it. The
+/// public [`d2`] still recomputes `d1`, so it is the reference the helpers
+/// must reproduce digit for digit on every point of the grid, including the
+/// points where the inputs are rejected.
+#[cfg(test)]
+mod tests_d_values_single_d1 {
+    use super::*;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    fn option(spot: Positive, sigma: Positive, days: Positive, rate: Decimal) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side: Side::Long,
+            underlying_symbol: "GRID".to_string(),
+            strike_price: Positive::HUNDRED,
+            expiration_date: ExpirationDate::Days(days),
+            implied_volatility: sigma,
+            quantity: Positive::ONE,
+            contract_size: Positive::ONE,
+            underlying_price: spot,
+            risk_free_rate: rate,
+            option_style: OptionStyle::Call,
+            dividend_yield: pos_or_panic!(0.02),
+            exotic_params: None,
+        }
+    }
+
+    /// `(d1, d2)` through the public `d1` and `d2`, as the helpers computed
+    /// them before #859; an error is kept as its message.
+    fn reference(option: &Options, carry: Decimal) -> Result<(Decimal, Decimal), String> {
+        let years = option
+            .expiration_date
+            .get_years()
+            .map_err(|e| e.to_string())?;
+        let args = (
+            option.underlying_price,
+            option.strike_price,
+            carry,
+            years,
+            option.implied_volatility,
+        );
+        let d1_value = d1(args.0, args.1, args.2, args.3, args.4);
+        let d2_value = d2(args.0, args.1, args.2, args.3, args.4);
+        match (d1_value, d2_value) {
+            (Ok(a), Ok(b)) => Ok((a, b)),
+            (Err(e), _) | (_, Err(e)) => Err(e.to_string()),
+        }
+    }
+
+    #[test]
+    fn test_d_values_bit_identical_to_the_d2_path_on_a_grid() {
+        let spots = [
+            pos_or_panic!(60.0),
+            pos_or_panic!(95.5),
+            Positive::HUNDRED,
+            pos_or_panic!(137.25),
+        ];
+        let sigmas = [
+            Positive::ZERO,
+            pos_or_panic!(0.05),
+            pos_or_panic!(0.2),
+            pos_or_panic!(0.85),
+        ];
+        let days = [
+            Positive::ZERO,
+            Positive::ONE,
+            pos_or_panic!(30.0),
+            pos_or_panic!(365.0),
+            pos_or_panic!(1825.0),
+        ];
+        let rates = [dec!(-0.01), Decimal::ZERO, dec!(0.05)];
+        let mut checked = 0_u32;
+        for &spot in &spots {
+            for &sigma in &sigmas {
+                for &day in &days {
+                    for &rate in &rates {
+                        let option = option(spot, sigma, day, rate);
+                        let q = option.dividend_yield.to_dec();
+                        let carry = rate - q;
+                        let with_yield =
+                            calculate_d_values_with_yield(&option, q).map_err(|e| e.to_string());
+                        assert_eq!(
+                            with_yield,
+                            reference(&option, carry),
+                            "{spot} {sigma} {day} {rate}"
+                        );
+                        let plain = calculate_d_values(&option).map_err(|e| e.to_string());
+                        assert_eq!(plain, with_yield, "{spot} {sigma} {day} {rate}");
+                        let black_76 =
+                            calculate_d_values_black_76(&option).map_err(|e| e.to_string());
+                        assert_eq!(
+                            black_76,
+                            reference(&option, Decimal::ZERO),
+                            "{spot} {sigma} {day} {rate}"
+                        );
+                        checked += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(checked, 240);
     }
 }
