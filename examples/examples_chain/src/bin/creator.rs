@@ -14,9 +14,12 @@ use tracing::info;
 fn main() -> Result<(), optionstratlib::error::Error> {
     let symbol = "GER400";
     setup_logger();
-    let option_chain = OptionChain::load_from_json(
+    let mut option_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
+    // The file stores the deltas of the snapshot, taken at the expiration
+    // instant, so they are 0 or 1; recompute them before searching by delta.
+    option_chain.update_greeks();
     info!("Successfully retrieved option chain for {}", symbol);
     info!("{}", option_chain);
 
@@ -52,8 +55,11 @@ fn main() -> Result<(), optionstratlib::error::Error> {
         pos_or_panic!(0.1), // open_fee_short_put
         pos_or_panic!(0.1), // close_fee_short_put
     )?;
+    // The snapshot was taken at the expiration instant, so every strike's delta
+    // is 0 or 1 even after `update_greeks`: the range must admit 0, as
+    // `option_chain_ger40` does, or no combination qualifies.
     let max_delta = dec!(0.3);
-    let min_delta = dec!(0.15);
+    let min_delta = dec!(-0.3);
     strategy.get_best_area(
         &option_chain,
         FindOptimalSide::DeltaRange(min_delta, max_delta),

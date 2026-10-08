@@ -73,3 +73,15 @@ jobs:
           "$WEBDRIVER_PATH" --version
           (command -v google-chrome && google-chrome --version) || true
           make test-export
+
+      # Every example binary, with image export, now that a matching driver
+      # is installed: an export failure here is a bug in the example (#787).
+      - name: Run every example with image export
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          CHROMEDRIVER_PATH: ${{ steps.chrome.outputs.chromedriver-path }}
+        run: |
+          set -euo pipefail
+          export WEBDRIVER_PATH="$CHROMEDRIVER_PATH"
+          export BROWSER_PATH="$CHROME_PATH"
+          make smoke-examples SMOKE_EXPORT=1

@@ -16,10 +16,12 @@ chrono = { workspace = true }
 # Three binaries need only the facade capabilities above; the rest need the
 # async wrappers or PNG/SVG export, which pull in the async runtime and the
 # WebDriver stack. `default` turns both on so `cargo run -p examples_chain
-# --bin <name>` works unchanged; `--no-default-features` builds only the
-# binaries that need neither.
+# --bin <name>` works unchanged (the package features name them, because a
+# `required-features` entry checks the package's features, and
+# `static_export` implies the facade's `async` but not this package's);
+# `--no-default-features` builds only the binaries that need neither.
 [features]
-default = ["static_export"]
+default = ["async", "static_export"]
 async = ["optionstratlib/async"]
 static_export = ["optionstratlib/static_export"]
 

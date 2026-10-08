@@ -1520,6 +1520,31 @@ summarize the release.
   successful edit return the same results as before. No signature
   changes.
 
+- **Every example and bench builds and runs, and a smoke pass keeps it so**
+  (#787). All 185 example binaries (`examples_*` and
+  `osl-example-direct-*`) were run to completion with a chromedriver that
+  matches Chrome, so every PNG/SVG export ran for real, and the 14 Criterion
+  targets (558 benchmarks) ran once in test mode; the evidence is
+  `docs/release/0.22/examples-benches.md`. Three real defects came out of it.
+  `examples_chain`'s `default` features omitted the package feature `async`
+  that `async_chain_ops` and `async_ohlcv` require (#774 made them
+  `required-features`), so `cargo run -p examples_chain --bin async_ohlcv`
+  failed to find the binary. `async_ohlcv` read `../../examples/Data/...`,
+  a path that only resolves from two directories down, and logged the error
+  instead of returning it, so it exited 0 having read nothing; it now reads
+  `examples/Data/cl-1m-sample.zip` and propagates the error. Two examples
+  found no strategy and printed a strategy with zero strikes: `creator` searched
+  a snapshot taken at the expiration instant (every delta is 0 or 1) for a
+  delta between 0.15 and 0.3, and `option_chain_raw_delta` searched the
+  S&P 500 chain for a price range copied from the DAX example (21,600 to
+  21,700); they now use a range their data can satisfy. `make smoke-examples`
+  builds and runs every example binary (`SMOKE_EXPORT=1` makes a failed image
+  export a failure instead of `needs-webdriver`), `make smoke-benches`
+  compiles every bench and runs each once, and the new Examples and benches
+  workflow runs both on every pull request (examples without a WebDriver); the
+  weekly Static Export workflow runs every example again with a matching
+  Chrome and chromedriver, where an export failure is a bug.
+
 - **Every strategy refreshes its break-evens on `add_position` /
   `modify_position`** (#780). #771 did this for `Collar`, `CoveredCall`
   and `ProtectivePut`; the other strategies kept the break-evens of their

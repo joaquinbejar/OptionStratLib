@@ -342,6 +342,31 @@ $(addprefix tree-example-direct-,$(DIRECT_EXAMPLES)): tree-example-direct-%:
 	cargo tree --manifest-path examples/direct/$*/Cargo.toml -e normal --prefix none | sed 's/ (\*)$$//' | sort -u
 	@python3 scripts/check_fixtures.py direct-$*
 
+# Every example binary and every Criterion bench builds and runs once (#787),
+# so neither can rot unnoticed. `smoke-examples` builds all example binaries
+# (`examples_*` and `osl-example-direct-*`, each with its default features)
+# and runs them from the repository root, each with a timeout; a program passes
+# with exit status 0 and no panic. PNG/SVG export needs a chromedriver of the
+# same major version as Chrome (`WEBDRIVER_PATH`, and `BROWSER_PATH` for a
+# Chrome that is not the default): without one a program that fails only
+# because the export could not start is reported as `needs-webdriver`, and
+# `SMOKE_EXPORT=1` makes that a failure, as on a machine that has the driver
+# (the weekly `static_export.yml` workflow). `smoke-benches` compiles every
+# bench target (`bench-build`, #789) and runs each benchmark for one iteration
+# (Criterion's `--test` mode, with the target's required features). Both
+# write one log per target under `target/smoke/`; the examples write their
+# charts under `Draws/`, so run `git checkout -- Draws/` after.
+.PHONY: smoke smoke-examples smoke-benches
+smoke: smoke-examples smoke-benches
+
+smoke-examples:
+	@python3 scripts/smoke_examples.py --self-test > /dev/null || (python3 scripts/smoke_examples.py --self-test; exit 1)
+	cargo build --workspace --bins
+	python3 scripts/smoke_examples.py $(if $(SMOKE_EXPORT),--export,)
+
+smoke-benches: bench-build
+	python3 scripts/smoke_examples.py --benches
+
 # Measures what a per-family feature split of optionstratlib-strategies could
 # save: packages, the crate's own check and build time, rlib sizes (#532).
 # Informational, not run in CI; the crate docs record the numbers.
