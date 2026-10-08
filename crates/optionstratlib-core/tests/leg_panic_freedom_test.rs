@@ -156,6 +156,8 @@ proptest! {
         let _ = future.is_liquidation_risk(price, Decimal::ZERO);
         let _ = future.days_to_expiration();
         let _ = future.time_to_expiration_years();
+        let _ = future.expiration_timestamp();
+        let _ = future.is_expired();
         let _ = FuturePosition::long(
             "FUT".to_string(),
             quantity,
