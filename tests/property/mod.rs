@@ -5,3 +5,4 @@
 
 mod chains_panic_freedom_test;
 mod model_panic_freedom_test;
+mod sim_market_analytics_panic_freedom_test;

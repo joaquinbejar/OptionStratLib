@@ -554,7 +554,9 @@ impl RNDAnalysis for OptionChain {
             return Err(ChainError::EmptyDensities);
         }
 
-        // Calculate minimum strike interval
+        // Calculate minimum strike interval. `options` is a `BTreeSet` ordered
+        // by strike, so `curr > prev` in every window and the `Positive`
+        // subtraction can neither go negative nor overflow.
         let min_interval = strikes
             .windows(2)
             .filter_map(|w| match w {

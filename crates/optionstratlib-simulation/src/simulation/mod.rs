@@ -156,3 +156,56 @@ pub use traits::{
 pub mod ou;
 pub use ou::generate_ou_process;
 pub use walk_driver::{expanding_window_vols, generator_positive, walk_steps, walk_steps_par};
+
+use crate::error::SimulationError;
+
+/// An empty buffer able to hold `len + extra` path points without growing.
+///
+/// A walk's length is caller input. `Vec::with_capacity` panics with
+/// `capacity overflow` when the points do not fit in `isize::MAX` bytes, and
+/// aborts the process when the allocator refuses the request, so a walk of
+/// `usize::MAX` steps used to take its caller down. `try_reserve_exact`
+/// reserves the same capacity and reports both cases (#788).
+///
+/// # Errors
+///
+/// Returns [`SimulationError::InvalidParameters`] when `len + extra`
+/// overflows `usize` or the buffer cannot be allocated.
+pub(crate) fn path_buffer<T>(len: usize, extra: usize) -> Result<Vec<T>, SimulationError> {
+    let capacity = len.checked_add(extra).ok_or_else(|| {
+        SimulationError::invalid_parameters(&format!(
+            "walk size {len} leaves no room for {extra} more point(s)"
+        ))
+    })?;
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(capacity).map_err(|e| {
+        SimulationError::invalid_parameters(&format!(
+            "cannot allocate a path of {capacity} points: {e}"
+        ))
+    })?;
+    Ok(buffer)
+}
+
+#[cfg(test)]
+mod tests_path_buffer {
+    use super::*;
+
+    #[test]
+    fn test_path_buffer_reserves_the_requested_points() -> Result<(), SimulationError> {
+        let buffer: Vec<u64> = path_buffer(4, 1)?;
+        assert!(buffer.is_empty());
+        assert!(buffer.capacity() >= 5);
+        Ok(())
+    }
+
+    #[test]
+    fn test_path_buffer_overflowing_or_unallocatable_size_returns_error() {
+        for (len, extra) in [(usize::MAX, 1), (usize::MAX / 2, 0)] {
+            let result: Result<Vec<u64>, SimulationError> = path_buffer(len, extra);
+            assert!(
+                matches!(result, Err(SimulationError::InvalidParameters { .. })),
+                "{len} + {extra}"
+            );
+        }
+    }
+}

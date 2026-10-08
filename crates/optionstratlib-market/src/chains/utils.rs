@@ -4,8 +4,7 @@
    Date: 25/10/24
 ******************************************************************************/
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_sqrt, p_sqrt};
-use std::ops::Mul;
+use optionstratlib_core::model::decimal::{d_add, d_mul, d_sqrt, d_sub, p_sqrt};
 
 /// Calculates the optimal price range for an option based on its underlying price,
 /// strike price, implied volatility, and expiration date.
@@ -40,6 +39,13 @@ use std::ops::Mul;
 /// The function will return an error if:
 /// - The extraction of `days_to_expiry` from the `expiration_date` fails.
 /// - `years_to_expiry.sqrt()` returns a `None` (e.g. if `years_to_expiry` is negative, which it shouldn't be).
+/// - The four-sigma band reaches below zero (`4·σ·√T > 1`): its lower bound
+///   is not a price, so [`ChainError::ChainBuildError`] names
+///   `implied_volatility` instead of aborting in the `Positive` product.
+/// - Both the spot and the strike are zero, which leaves no width to step
+///   ([`ChainError::ChainBuildError`] naming `underlying_price`).
+/// - A bound leaves the `Decimal` range ([`ChainError::OptionDataError`] or
+///   [`ChainError::PositiveError`]).
 ///
 /// # Note
 /// The constants such as the confidence interval (`4.0`) and scaling factors
@@ -60,20 +66,59 @@ pub fn calculate_optimal_price_range(
             )
         })?;
 
+    // Every step below was a `Positive` operator, which aborts on overflow,
+    // on a negative product and on a zero divisor. The checked forms compute
+    // the same values in the same order and report those cases (#788).
+    const OP: &str = "chains::utils::calculate_optimal_price_range";
     let confidence_interval = dec!(4.0);
-    let volatility_factor = implied_volatility * years_to_expiry_sqrt * confidence_interval;
+    let volatility_factor = d_mul(
+        d_mul(implied_volatility.to_dec(), years_to_expiry_sqrt, OP)?,
+        confidence_interval,
+        OP,
+    )?;
 
-    let lower_bound = underlying_price * (dec!(1.0) - volatility_factor);
-    let upper_bound = underlying_price * (dec!(1.0) + volatility_factor);
+    let lower = d_mul(
+        underlying_price.to_dec(),
+        d_sub(dec!(1.0), volatility_factor, OP)?,
+        OP,
+    )?;
+    let lower_bound = Positive::new_decimal(lower).map_err(|_| {
+        ChainError::invalid_parameters(
+            "implied_volatility",
+            &format!(
+                "the four-sigma band reaches below zero: lower bound {lower} for spot \
+                 {underlying_price}, volatility {implied_volatility}, {days_to_expiry} days"
+            ),
+        )
+    })?;
+    let upper_bound = Positive::new_decimal(d_mul(
+        underlying_price.to_dec(),
+        d_add(dec!(1.0), volatility_factor, OP)?,
+        OP,
+    )?)?;
 
-    let min_price = lower_bound.min(strike_price.mul(dec!(0.7)));
-    let max_price = upper_bound.max(strike_price.mul(dec!(1.3)));
+    let min_price = lower_bound.min(strike_price.checked_mul_dec(dec!(0.7))?);
+    let max_price = upper_bound.max(strike_price.checked_mul_dec(dec!(1.3))?);
 
-    let step = (max_price - min_price) / dec!(20.0);
-    let rounded_step = step.round_to_nice_number();
+    // `max_price >= upper_bound >= lower_bound >= min_price`, so the width is
+    // non-negative; dividing it by a constant cannot overflow.
+    let step = max_price.checked_sub(&min_price)? / dec!(20.0);
+    let rounded_step = step.checked_round_to_nice_number()?;
+    if rounded_step == Positive::ZERO {
+        return Err(ChainError::invalid_parameters(
+            "underlying_price",
+            "a zero spot and a zero strike leave no price range to step",
+        ));
+    }
 
-    let min_price_rounded = (min_price / rounded_step).floor() * rounded_step;
-    let max_price_rounded = (max_price / rounded_step).ceiling() * rounded_step;
+    let min_price_rounded = min_price
+        .checked_div(&rounded_step)?
+        .checked_floor()?
+        .checked_mul(&rounded_step)?;
+    let max_price_rounded = max_price
+        .checked_div(&rounded_step)?
+        .checked_ceiling()?
+        .checked_mul(&rounded_step)?;
 
     Ok((min_price_rounded, max_price_rounded))
 }
@@ -225,8 +270,7 @@ use crate::error::chains::ChainError;
 use num_traits::ToPrimitive;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::decimal::f64_to_decimal;
-use optionstratlib_core::model::utils::ToRound;
-use rust_decimal::{Decimal, MathematicalOps};
+use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -628,30 +672,49 @@ impl OptionDataPriceParams {
     }
 }
 
+/// `value * 100` to two decimals followed by `%`, or `"n/a"` when the
+/// percent form leaves the `Decimal` range. `Display` cannot report, so an
+/// unprintable percent reads "n/a" instead of aborting (#788).
+fn percent_or_na(value: Decimal) -> String {
+    value.checked_mul(dec!(100.0)).map_or_else(
+        || "n/a".to_string(),
+        |percent| format!("{}%", display_rounded(percent, 2)),
+    )
+}
+
+/// `value` rounded half-to-even to `places` decimals and padded to them.
+/// `Decimal`'s `{:.N}` truncates rather than rounds, so the rounding is
+/// explicit.
+fn display_rounded(value: Decimal, places: u32) -> String {
+    let rounded = value.round_dp_with_strategy(places, RoundingStrategy::MidpointNearestEven);
+    // `u32` to `usize` widens on every target Rust supports here.
+    format!("{rounded:.width$}", width = places as usize)
+}
+
 impl Display for OptionDataPriceParams {
+    /// The precision applies to the numbers. It used to be applied to the
+    /// already rendered strings, where it truncates instead of rounding:
+    /// a 5% rate printed as `5.%` and a missing one as `No%` (#788).
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let none = || "None".to_string();
+        let underlying = self
+            .underlying_price
+            .as_ref()
+            .map_or_else(none, |p| display_rounded(p.value(), 3));
+        // `get_years` can fail; `Display` cannot return `ChainError`, so the
+        // cell reads "n/a" then.
+        let years = self.expiration_date.map_or_else(none, |d| {
+            d.get_years()
+                .map_or_else(|_| "n/a".to_string(), |y| display_rounded(y.value(), 4))
+        });
+        let rate = self.risk_free_rate.map_or_else(none, percent_or_na);
+        let dividend = self
+            .dividend_yield
+            .map_or_else(none, |d| percent_or_na(d.value()));
+        let symbol = self.underlying_symbol.as_deref().unwrap_or("None");
         write!(
             f,
-            "Underlying Price: {:.3}, Expiration: {:.4} Years, Risk-Free Rate: {:.2}%, Dividend Yield: {:.2}%, Symbol: {}",
-            self.underlying_price
-                .as_ref()
-                .map_or_else(|| "None".to_string(), |p| p.value().to_string()),
-            self.expiration_date.map_or_else(
-                || "None".to_string(),
-                // SAFETY: Display impl cannot return ChainError; fall back to "n/a" if get_years fails.
-                |d| d
-                    .get_years()
-                    .map_or_else(|_| "n/a".to_string(), |y| y.to_string())
-            ),
-            self.risk_free_rate
-                .map_or_else(|| "None".to_string(), |r| (r * dec!(100.0)).to_string()),
-            self.dividend_yield.map_or_else(
-                || "None".to_string(),
-                |d| (d.value() * dec!(100.0)).to_string()
-            ),
-            self.underlying_symbol
-                .as_ref()
-                .map_or_else(|| "None".to_string(), |s| s.to_string()),
+            "Underlying Price: {underlying}, Expiration: {years} Years, Risk-Free Rate: {rate}, Dividend Yield: {dividend}, Symbol: {symbol}"
         )
     }
 }
@@ -821,12 +884,26 @@ impl RandomPositionsParams {
     ///
     /// The total number of option positions to be generated.
     ///
-    #[must_use]
-    pub fn total_positions(&self) -> usize {
-        self.qty_puts_long.unwrap_or(0)
-            + self.qty_puts_short.unwrap_or(0)
-            + self.qty_calls_long.unwrap_or(0)
-            + self.qty_calls_short.unwrap_or(0)
+    /// # Errors
+    ///
+    /// Returns [`ChainError::ChainBuildError`] naming `total_positions` when
+    /// the four quantities sum past `usize::MAX`. The sum used to be formed
+    /// with the raw `+`, which aborts there (#788).
+    pub fn total_positions(&self) -> Result<usize, ChainError> {
+        [
+            self.qty_puts_long,
+            self.qty_puts_short,
+            self.qty_calls_long,
+            self.qty_calls_short,
+        ]
+        .into_iter()
+        .try_fold(0usize, |total, qty| total.checked_add(qty.unwrap_or(0)))
+        .ok_or_else(|| {
+            ChainError::invalid_parameters(
+                "total_positions",
+                "the sum of the position quantities overflows usize",
+            )
+        })
     }
 }
 
@@ -918,12 +995,19 @@ pub(crate) fn parse<T: std::str::FromStr>(s: &str) -> Option<T> {
     input.ok()
 }
 
-pub(crate) fn empty_string_round_to_2<T: ToString + ToRound>(input: Option<T>) -> String {
-    input.map_or_else(|| "".to_string(), |v| v.round_to(2).to_string())
+/// A quote cell rounded to two places, or empty when there is no quote.
+///
+/// Rounds the `Decimal` directly: `Positive::round_to` goes through
+/// `unwrap_or_panic`, and `Decimal::round_dp` is total and returns the same
+/// value (#788).
+pub(crate) fn empty_string_round_to_2(input: Option<Positive>) -> String {
+    input.map_or_else(|| "".to_string(), |v| v.to_dec().round_dp(2).to_string())
 }
 
-pub(crate) fn empty_string_round_to_3<T: ToString + ToRound>(input: Option<T>) -> String {
-    input.map_or_else(|| "".to_string(), |v| v.round_to(3).to_string())
+/// A quote cell rounded to three places, or empty when there is no quote.
+/// See [`empty_string_round_to_2`].
+pub(crate) fn empty_string_round_to_3(input: Option<Positive>) -> String {
+    input.map_or_else(|| "".to_string(), |v| v.to_dec().round_dp(3).to_string())
 }
 
 pub(crate) fn default_empty_string<T: ToString>(input: Option<T>) -> String {
@@ -1498,7 +1582,7 @@ mod tests_random_positions_params {
     #[test]
     fn test_total_positions() {
         let params = create_test_params();
-        assert_eq!(params.total_positions(), 4);
+        assert_eq!(params.total_positions().unwrap(), 4);
 
         let params = RandomPositionsParams::new(
             Some(2),
@@ -1516,7 +1600,7 @@ mod tests_random_positions_params {
             Some("Epic".to_string()),
             None,
         );
-        assert_eq!(params.total_positions(), 5);
+        assert_eq!(params.total_positions().unwrap(), 5);
 
         let params = RandomPositionsParams::new(
             None,
@@ -1534,14 +1618,17 @@ mod tests_random_positions_params {
             Some("Epic".to_string()),
             None,
         );
-        assert_eq!(params.total_positions(), 0);
+        assert_eq!(params.total_positions().unwrap(), 0);
     }
 
     #[test]
     fn test_clone() {
         let params = create_test_params();
         let cloned = params.clone();
-        assert_eq!(params.total_positions(), cloned.total_positions());
+        assert_eq!(
+            params.total_positions().unwrap(),
+            cloned.total_positions().unwrap()
+        );
     }
 
     #[test]
@@ -1690,12 +1777,22 @@ mod tests_option_data_price_params {
     fn test_display_price_params() {
         let params = get_params();
 
-        let display_string = format!("{params}");
-        assert!(display_string.contains("Underlying Price: 100"));
-        assert!(display_string.contains("Risk-Free Rate: 5"));
-        assert!(display_string.contains("Dividend Yield: 2"));
-        assert!(display_string.contains("Symbol: AAPL"));
-        assert!(display_string.contains("Expiration: 0.08 Years"));
+        // 30 / 365 = 0.08219... years, rounded to four places; the rate and
+        // the yield print as percentages to two places (#788).
+        assert_eq!(
+            format!("{params}"),
+            "Underlying Price: 100.000, Expiration: 0.0822 Years, Risk-Free Rate: 5.00%, \
+             Dividend Yield: 2.00%, Symbol: AAPL"
+        );
+    }
+
+    #[test]
+    fn test_display_price_params_missing_fields() {
+        assert_eq!(
+            format!("{}", OptionDataPriceParams::default()),
+            "Underlying Price: None, Expiration: None Years, Risk-Free Rate: None, \
+             Dividend Yield: None, Symbol: None"
+        );
     }
 
     #[test]
@@ -1852,7 +1949,7 @@ mod tests_random_positions_params_extended {
         assert_eq!(params.qty_puts_short, None);
         assert_eq!(params.qty_calls_long, Some(1));
         assert_eq!(params.qty_calls_short, None);
-        assert_eq!(params.total_positions(), 3);
+        assert_eq!(params.total_positions().unwrap(), 3);
     }
 
     #[test]
@@ -1874,7 +1971,7 @@ mod tests_random_positions_params_extended {
             None,
         );
 
-        assert_eq!(params.total_positions(), 0);
+        assert_eq!(params.total_positions().unwrap(), 0);
     }
 
     #[test]
@@ -1952,5 +2049,163 @@ mod tests_sample {
         let value: Option<Positive> = None;
         let result = empty_string_round_to_2(value);
         assert_eq!(result, "");
+    }
+}
+
+/// Inputs that used to abort in a raw `Positive`, `Decimal` or `usize`
+/// operator, each pinned to the error or rendering it now produces (#788).
+#[cfg(test)]
+mod tests_panic_freedom {
+    use super::*;
+    use crate::chains::OptionChain;
+    use rust_decimal_macros::dec;
+
+    fn is_invalid_parameter(result: &Result<impl fmt::Debug, ChainError>, name: &str) -> bool {
+        matches!(
+            result,
+            Err(ChainError::ChainBuildError(
+                crate::error::chains::ChainBuildErrorKind::InvalidParameters { parameter, .. }
+            )) if parameter == name
+        )
+    }
+
+    fn quantities(qty: usize) -> RandomPositionsParams {
+        RandomPositionsParams::new(
+            Some(qty),
+            Some(qty),
+            None,
+            None,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
+            dec!(0.05),
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_calculate_optimal_price_range_band_below_zero_returns_error() {
+        // 4 · 0.5 · √1 = 2 > 1: the lower band bound is -100.
+        let result = calculate_optimal_price_range(
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            pos_or_panic!(0.5),
+            ExpirationDate::Days(pos_or_panic!(365.0)),
+        );
+        assert!(is_invalid_parameter(&result, "implied_volatility"));
+    }
+
+    #[test]
+    fn test_calculate_optimal_price_range_zero_spot_and_strike_returns_error() {
+        let result = calculate_optimal_price_range(
+            Positive::ZERO,
+            Positive::ZERO,
+            pos_or_panic!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        );
+        assert!(is_invalid_parameter(&result, "underlying_price"));
+    }
+
+    #[test]
+    fn test_calculate_optimal_price_range_overflow_returns_error() {
+        for (spot, iv) in [
+            (Positive::MAX, pos_or_panic!(0.2)),
+            (Positive::HUNDRED, Positive::MAX),
+        ] {
+            let result = calculate_optimal_price_range(
+                spot,
+                spot,
+                iv,
+                ExpirationDate::Days(pos_or_panic!(30.0)),
+            );
+            assert!(result.is_err(), "spot {spot}, iv {iv}");
+        }
+    }
+
+    #[test]
+    fn test_calculate_optimal_price_range_matches_reference() {
+        // σ√T·4 = 0.2 · √(30/365) · 4 ≈ 0.229: band [77.06, 122.94], widened
+        // to the 0.7K / 1.3K strike bounds [70, 130], stepped by 5.
+        let (min_price, max_price) = calculate_optimal_price_range(
+            Positive::HUNDRED,
+            Positive::HUNDRED,
+            pos_or_panic!(0.2),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+        )
+        .expect("a well-formed range");
+        assert_eq!(min_price, pos_or_panic!(70.0));
+        assert_eq!(max_price, pos_or_panic!(130.0));
+    }
+
+    #[test]
+    fn test_total_positions_overflow_returns_error() {
+        assert!(is_invalid_parameter(
+            &quantities(usize::MAX).total_positions(),
+            "total_positions"
+        ));
+    }
+
+    #[test]
+    fn test_get_random_positions_overflow_and_unallocatable_return_error() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        chain.add_option(
+            Positive::HUNDRED,
+            Some(Positive::ONE),
+            Some(Positive::TWO),
+            Some(Positive::ONE),
+            Some(Positive::TWO),
+            pos_or_panic!(0.2),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert!(is_invalid_parameter(
+            &chain.get_random_positions(quantities(usize::MAX)),
+            "total_positions"
+        ));
+        // Two halves of `usize::MAX` sum without overflow but cannot be
+        // reserved: `Vec::with_capacity` aborted on them.
+        assert!(is_invalid_parameter(
+            &chain.get_random_positions(quantities(usize::MAX / 2)),
+            "total_positions"
+        ));
+        assert_eq!(
+            chain
+                .get_random_positions(quantities(2))
+                .expect("four positions")
+                .len(),
+            4
+        );
+    }
+
+    #[test]
+    fn test_option_data_price_params_display_out_of_range_percent() {
+        let params = OptionDataPriceParams::new(
+            Some(Box::new(Positive::HUNDRED)),
+            None,
+            Some(Decimal::MAX),
+            Some(Positive::MAX),
+            None,
+        );
+        // `Decimal::MAX * 100` has no percent form; the row still renders.
+        assert_eq!(
+            params.to_string(),
+            "Underlying Price: 100.000, Expiration: None Years, Risk-Free Rate: n/a, \
+             Dividend Yield: n/a, Symbol: None"
+        );
     }
 }
