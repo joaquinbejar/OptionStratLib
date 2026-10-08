@@ -639,7 +639,14 @@ impl CoveredCall {
         if current_price >= self.call_strike() {
             Decimal::ONE
         } else {
-            current_price.to_dec() / self.call_strike().to_dec()
+            // `current_price < call_strike`, so the strike is positive (no
+            // zero divisor) and the quotient is below one (no overflow).
+            #[expect(
+                clippy::arithmetic_side_effects,
+                reason = "current_price < call_strike: the strike is positive and the quotient is below one"
+            )]
+            let ratio = current_price.to_dec() / self.call_strike().to_dec();
+            ratio
         }
     }
 }

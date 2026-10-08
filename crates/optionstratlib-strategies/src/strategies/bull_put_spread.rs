@@ -673,7 +673,11 @@ impl Strategies for BullPutSpread {
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
         let short_strike = self.short_put.option.strike_price.to_dec();
         let long_strike = self.long_put.option.strike_price.to_dec();
-        let width = short_strike - long_strike;
+        let width = d_sub(
+            short_strike,
+            long_strike,
+            "BullPutSpread::get_max_loss/width",
+        )?;
         // An inverted vertical is not a bull put spread: a structural
         // failure, not a report on the sign of the loss (#803).
         if width < Decimal::ZERO {
