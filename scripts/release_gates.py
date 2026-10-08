@@ -231,6 +231,10 @@ def render() -> str:
                 f"| `{gate.id}` | `{gate.command}` | {verdict(result, gate)} | {result['seconds']} s | {warnings} | {gate.purpose} |"
             )
         lines.append("")
+    notes = EVIDENCE.with_name("gates-notes.md")
+    if notes.is_file():
+        lines += ["", notes.read_text().rstrip("\n")]
+    lines += ["", "The semver rows are classified in [api-classification.md](api-classification.md).", ""]
     return "\n".join(lines).rstrip("\n") + "\n"
 
 

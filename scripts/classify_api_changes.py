@@ -147,6 +147,22 @@ def classify(items: list[tuple[str, str]], features: list[str]) -> list[dict]:
             else:
                 row["class"] = "removed"
         result.append(row)
+    # Constants are reported by bare name, without a path: find their
+    # definition in the snapshots and compile the facade path of each.
+    bare = sorted({path for lint, path in items if lint == "pub_module_level_const_missing" and "::" not in path})
+    bare_rows = []
+    for name in bare:
+        where = [(crate, full) for kind, crate, full in index.get(name, []) if kind == "const"]
+        bare_rows.append({"lint": "pub_module_level_const_missing", "path": name, "area": "(constants, bare name)",
+                          "name": name, "now": [full for _, full in where]})
+    facade_paths = [(row, "optionstratlib::" + full.split("::", 1)[1]) for row in bare_rows for full in row["now"]]
+    reached = resolves([f"use {facade};" for _, facade in facade_paths], features) if facade_paths else set()
+    for n, (row, facade) in enumerate(facade_paths):
+        if n in reached and "facade" not in row:
+            row["facade"] = facade
+    for row in bare_rows:
+        row["class"] = "facade-reexport" if "facade" in row else ("component-only" if row["now"] else "removed")
+    result += bare_rows
     # A component-only item may still be reachable from the facade, through
     # its module root: `optionstratlib_pricing::pricing::x::Name` is
     # `optionstratlib::pricing::x::Name`. Compile each candidate.
