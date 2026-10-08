@@ -176,6 +176,21 @@ summarize the release.
   Every other input returns the same value as before. Migration: pass a
   chain with at least one implied volatility to `vanna_volga_surface`, and
   day counts above zero to the two time surfaces.
+- **`OptionChain::load_from_csv` rejects a file name it cannot read the
+  chain's metadata from** (#827). The CSV carries only the quotes; the
+  symbol, expiration date and underlying price come from the
+  `symbol-day-month-year-price.csv` name `save_to_csv` writes. When the name
+  did not parse, the loader returned the chain anyway with symbol and
+  expiration `"unknown"` and an underlying price of zero. It now returns
+  `ChainError::ChainBuildError` (`InvalidParameters`) naming `file_name`,
+  `symbol`, `expiration_date` or `underlying_price`; `load_from_csv_async`
+  runs the same loader and returns the same errors. `set_from_title` also
+  rejects an empty symbol and a date that is not `YYYY-MM-DD`, `DD-MM-YYYY`
+  or `DD-mon-YYYY`, and changes nothing unless the whole name parses. The
+  price is parsed as a `Decimal` instead of an `f64`: a price an `f64`
+  round-trips loads as before, and a longer one keeps all its digits.
+  Migration: name the file in the `save_to_csv` form, for example
+  `SPX-2030-01-15-5781.88.csv`, before loading it.
 - **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
   `Result`** (#810). `expiration_timestamp` returns `Result<i64,
   PositionError>` and `is_expired` returns `Result<bool, PositionError>`.
