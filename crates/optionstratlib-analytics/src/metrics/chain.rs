@@ -1734,7 +1734,7 @@ mod tests_price_metrics_traits {
     fn test_put_call_ratio_premium_weighted_trait() {
         let result = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ));
         assert!(result.is_ok());
         let chain = result.unwrap();
@@ -1754,7 +1754,7 @@ mod tests_price_metrics_traits {
     fn test_strike_concentration_premium_weighted_trait() {
         let result = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ));
         assert!(result.is_ok());
         let chain = result.unwrap();

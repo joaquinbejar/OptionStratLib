@@ -26,6 +26,9 @@
         clippy::cast_sign_loss
     )
 )]
+// An error or a default built eagerly in `ok_or` / `unwrap_or` is paid on
+// the success path too (#857), so it is built in a closure.
+#![deny(clippy::or_fun_call)]
 
 //! # optionstratlib-analytics
 //!

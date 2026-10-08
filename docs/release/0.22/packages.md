@@ -52,6 +52,10 @@ reports:
   the READMEs link).
 - Each component: its `src/` tree, plus `Cargo.toml`, `Cargo.toml.orig`,
   `Cargo.lock`, `.cargo_vcs_info.json`, `LICENSE` and `README.md`.
+  `optionstratlib-market`, `-analytics` and `-strategies` also ship
+  `testdata/SP500-18-oct-2024-5781.88.json`, the option chain their unit tests
+  read, so `cargo test` passes from the archive (#558, `publish-dry-run.md`).
+  `make check-packages` checks it is the repository's `examples/Chains/` copy.
 
 No archive carries `Draws/`, `target/`, `doc/`, `.issues/`, `.github/`,
 `scripts/`, `fixtures/`, `public-api/`, tests, benches, examples, the
@@ -104,7 +108,9 @@ map documents; it enables nothing.
 
 `scripts/check_package_archives.sh` unpacks the ten archives into a scratch
 workspace outside the repository whose `[patch.crates-io]` resolves each
-crate's `0.22.0` dependencies on its siblings to the unpacked copies, and
+crate's `0.22.0` dependencies on its siblings to the unpacked copies, stamps
+the unpacked files with the current time (the archives carry a fixed 2006
+mtime, which let a kept build directory pass for up to date, #558), and
 runs:
 
 | Step | Result |
@@ -119,6 +125,8 @@ runs:
 Doc tests per crate (passed, with the ignored count in parentheses): facade
 31, core 62 (2), math 29 (1), pricing 46, simulation 9 (14), market 16,
 analytics 44 (39), strategies 22 (4), backtest 2 (1), visualization 9 (1).
+Each archive is also built and tested alone, with its own unit tests, in
+`make publish-dry-run` (#558, `publish-dry-run.md`).
 The direct-component examples (`make check-direct-examples-packaged`, #555)
 and the 0.22 consumer fixtures (`make check-022-consumers-packaged`, #552)
 build and pass their tests against the same archives.

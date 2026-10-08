@@ -3099,6 +3099,18 @@ summarize the release.
   37.6 ms to 2.75 ms. The host was shared (load average about 30 during
   the after run), so the medians carry its load.
 
+- **Errors and defaults are built lazily** (#857). `f64_to_decimal`,
+  `random_decimal`, `IronButterfly`'s position lookup, the chain built from
+  option data and `get_today_or_tomorrow_formatted` built their error or
+  default eagerly with `ok_or(..)` / `unwrap_or(..)`, so the success path
+  paid for it too: `f64_to_decimal` formatted the value and allocated three
+  `String`s on every successful conversion. They use `ok_or_else` /
+  `unwrap_or_else` now, with the same values, and every library crate denies
+  `clippy::or_fun_call` so the pattern does not come back. Criterion on the
+  bench host of `docs/release/0.22/benchmarks.md`, before and after:
+  `f64_to_decimal` 149 ns to 80 ns (-46%), and the normal CDF `big_n`, which
+  returns through it, 200 ns to 128 ns (-36%).
+
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
   instead of collecting the points into a `Vec` and scanning it, and reads
@@ -3125,6 +3137,35 @@ summarize the release.
   `linear/32x32` 151 µs to 21 µs, `cubic/32x32` 143 µs to 38 µs,
   `surface_merge_with_add/16x16` 19.2 ms to 9.4 ms. Spline interpolation
   still rebuilds its system per read (M2).
+- **Package and publish dry-runs for the ten crates** (#558, M8-02). The new
+  `make publish-dry-run` (`scripts/publish_dry_run.py`, also the
+  `publish-dry-run` release gate) packages the ten published crates with
+  cargo's verification and records each archive's size and SHA-256. It runs
+  `cargo publish --dry-run --workspace`, then `cargo publish --dry-run -p` for
+  each crate in dependency order: only `optionstratlib-core` resolves today,
+  and the others are reported as waiting on their first unpublished sibling.
+  Finally it builds and tests every archive alone outside the repository,
+  with its siblings taken from their archives, with default, no and all
+  features but `static_export`. Every `cargo publish` it runs carries
+  `--dry-run`, and it refuses one without; nothing was published. Evidence:
+  `docs/release/0.22/publish-dry-run.md`. Three packaging defects it found
+  are fixed:
+  - Ten example packages (`examples_chain`, `examples_curves`,
+    `examples_metrics`, `examples_simulation`, `examples_strategies`,
+    `examples_strategies_best`, `examples_strategies_delta`,
+    `examples_surfaces`, `examples_visualization`, `examples_volatility`)
+    declared no `publish = false`, so `cargo publish --workspace` tried to
+    publish them. They now do.
+  - 38 unit tests of `optionstratlib-market`, `-analytics` and
+    `-strategies` read `../../examples/Chains/SP500-18-oct-2024-5781.88.json`,
+    outside every package, and failed when run from the published archive.
+    Each of the three crates now ships a copy under `testdata/` and reads
+    it from there; `make check-packages` checks that each copy is archived
+    and identical to `examples/Chains/`.
+  - `cargo package` gives every archived file the same fixed mtime, so
+    `scripts/check_package_archives.sh` could reuse a stale build of
+    unchanged-looking sources from an earlier run. It now stamps the unpacked
+    files with the current time, as the new script does.
 
 - **The prelude's `dec!` documents that it needs `rust_decimal`** (#777).
   `optionstratlib::prelude` re-exports `rust_decimal_macros::dec`, which

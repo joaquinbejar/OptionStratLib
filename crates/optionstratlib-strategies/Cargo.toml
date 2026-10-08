@@ -11,7 +11,7 @@ description = "Option strategies of OptionStratLib: spreads, butterflies, condor
 readme = "README.md"
 keywords = ["finance", "options", "strategies", "spreads", "trading"]
 categories = ["finance", "mathematics"]
-include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
+include = ["/src/**/*", "/testdata/*.json", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

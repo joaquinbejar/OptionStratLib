@@ -26,6 +26,10 @@ separate crates.io products. For each one this checks:
   feature that enables the component feature in its last column.
 * Documentation links: every `github.com/joaquinbejar/OptionStratLib/blob/main/`
   link in a published README names a tracked file.
+* Test data: a crate whose unit tests read a fixture ships it under
+  `testdata/`, so `cargo test` works from the archive (#558); every such file
+  is in the archive and is byte for byte the repository's copy under
+  `examples/Chains/`.
 
 Usage:
     check_packages.py              check every package
@@ -233,6 +237,25 @@ def ownership_problems(packages: dict[str, dict]) -> list[str]:
     return problems
 
 
+def testdata_problems(packages: dict[str, dict], listings: dict[str, list[str]]) -> list[str]:
+    """Each package's `testdata/` files are archived and match `examples/Chains/`."""
+    problems: list[str] = []
+    for name in PACKAGES:
+        testdata = Path(packages[name]["manifest_path"]).parent / "testdata"
+        if not testdata.is_dir():
+            continue
+        for path in sorted(testdata.iterdir()):
+            relative = f"testdata/{path.name}"
+            if relative not in listings[name]:
+                problems.append(f"{name}: {relative} is not in the archive")
+            original = ROOT / "examples" / "Chains" / path.name
+            if not original.is_file():
+                problems.append(f"{name}: {relative} has no original under examples/Chains/")
+            elif original.read_bytes() != path.read_bytes():
+                problems.append(f"{name}: {relative} differs from examples/Chains/{path.name}")
+    return problems
+
+
 def link_problems(packages: dict[str, dict]) -> list[str]:
     tracked = set(run("git", "ls-files").split())
     problems = []
@@ -308,6 +331,7 @@ def self_test() -> int:
         ("forbidden Draws", bool(FORBIDDEN_RE.search("Draws/chart.png"))),
         ("forbidden nested README", contents_problems("p", ["examples/direct/README.md", *REQUIRED_FILES]) != []),
         ("source allowed", not FORBIDDEN_RE.search("src/tests.rs")),
+        ("test data allowed", not FORBIDDEN_RE.search("testdata/SP500-18-oct-2024-5781.88.json")),
     ]
     failures = 0
     for label, ok in checks:
@@ -327,6 +351,7 @@ def main() -> int:
         problems += contents_problems(name, listings[name])
     problems += ownership_problems(packages)
     problems += link_problems(packages)
+    problems += testdata_problems(packages, listings)
     versions = {packages[name]["version"] for name in PACKAGES}
     if versions != {VERSION}:
         problems.append(f"the packages are not in lockstep: {sorted(versions)}")
@@ -337,7 +362,8 @@ def main() -> int:
         return 1
     print(f"OK: the {len(PACKAGES)} packages carry their sources, README and LICENSE, no local artifact, "
           f"lockstep {VERSION} metadata, valid categories and keywords, versioned path dependencies, "
-          f"additive features matching the ownership map, and tracked documentation links")
+          f"additive features matching the ownership map, tracked documentation links, and archived test data "
+          f"matching examples/Chains")
     return 0
 
 

@@ -109,6 +109,11 @@ GATES: tuple[Gate, ...] = (
     Gate("package-archives", "Packages", "make check-package-archives",
          "the ten unpacked archives built, documented with `-D warnings` and doc-tested outside the "
          "repository, then checked with the declared rust-version, Rust 1.89 (#559)"),
+    Gate("publish-dry-run", "Packages", "make publish-dry-run",
+         "`cargo package` with verification and `cargo publish --dry-run`, as a workspace and per crate in "
+         "dependency order (only core resolves until its siblings are on crates.io), then each archive "
+         "built and tested alone with default, no and all features but `static_export`; nothing is "
+         "uploaded; needs a committed tree and network access for the crates.io index (#558)"),
     Gate("components", "Per crate", "make check-components",
          "each component alone with default, no and all features, named feature sets, Clippy, rustdoc "
          "`-D warnings` with and without features, package contents, and the packaged archives"),

@@ -176,7 +176,7 @@ mod tests {
     fn test_create_chain_from_step() -> Result<(), Box<dyn std::error::Error>> {
         let mut initial_price = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         initial_price.update_expiration_date(get_x_days_formatted(2)?);
@@ -222,7 +222,7 @@ mod tests {
         let n_steps = 4;
         let mut initial_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         initial_chain.update_expiration_date(get_x_days_formatted(2)?);
