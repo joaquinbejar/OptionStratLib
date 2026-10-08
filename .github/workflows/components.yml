@@ -57,6 +57,12 @@ jobs:
       - name: Direct-component examples against the packaged crates
         run: OSL_REUSE_PACKAGES=1 make check-direct-examples-packaged
 
+      # Every manifest-plus-program pair of the 0.22 release notes, built as a
+      # standalone crate outside the repository against this checkout; it
+      # resolves the crates.io index, so it needs network access (#562, #557).
+      - name: Release-notes examples
+        run: make check-release-notes
+
       # Cross-component regressions, against the components only (#534).
       - name: Workspace integration tests
         run: make test-workspace-integration
