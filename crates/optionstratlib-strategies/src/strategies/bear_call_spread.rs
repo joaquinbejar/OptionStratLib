@@ -674,11 +674,12 @@ impl Strategies for BearCallSpread {
             self.short_call.option.strike_price.to_dec(),
             "BearCallSpread::get_max_loss",
         )?;
+        // The legs do not form the strategy, which is a structural failure
+        // rather than a report on the sign of the loss (#803).
         if width < Decimal::ZERO {
-            return Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxLossError {
-                    reason: "Long call strike must be above short call strike".to_string(),
-                },
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BearCallSpread,
+                "get_max_loss: the long call strike must be above the short call strike",
             ));
         }
         let exposure = d_mul(
@@ -1077,6 +1078,28 @@ mod tests_bear_call_spread_strategies {
             pos_or_panic!(0.5),                        // close_fee_long_call
         )
         .unwrap()
+    }
+
+    /// An inverted vertical (the long strike below the short one, reachable
+    /// through the `pub` legs) is a structural failure: `get_max_loss`
+    /// reports it as `InvalidStrategy`, and the profit area and ratio pass
+    /// it on instead of reading it as zero loss (#803).
+    #[test]
+    fn test_inverted_strikes_propagate_as_invalid_strategy() {
+        let mut spread = create_test_spread();
+        spread.long_call.option.strike_price = pos_or_panic!(90.0);
+
+        let is_invalid = |error: StrategyError| {
+            matches!(
+                error,
+                StrategyError::InvalidStrategy {
+                    strategy: StrategyType::BearCallSpread,
+                    ..
+                }
+            )
+        };
+        assert!(spread.get_max_loss().is_err_and(is_invalid));
+        assert!(spread.get_profit_ratio().is_err_and(is_invalid));
     }
 
     #[test]

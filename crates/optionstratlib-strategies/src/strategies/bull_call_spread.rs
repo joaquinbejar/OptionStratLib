@@ -1072,6 +1072,25 @@ mod tests_bull_call_spread_strategy {
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
 
+    /// A debit spread whose debit exceeds its width never profits. It
+    /// reports that as a negative maximum profit (`MaxProfitError`), a sign
+    /// report rather than a structural failure, and the profit area and ratio
+    /// read it as zero profit (#803 keeps that meaning).
+    #[test]
+    fn test_debit_above_width_is_a_sign_report() {
+        let mut spread = bull_call_spread_test();
+        spread.long_call.premium = pos_or_panic!(150.0);
+
+        assert!(matches!(
+            spread.get_max_profit(),
+            Err(StrategyError::ProfitLossError(
+                ProfitLossErrorKind::MaxProfitError { .. }
+            ))
+        ));
+        assert_eq!(spread.get_profit_ratio().unwrap(), Decimal::ZERO);
+        assert_eq!(spread.get_profit_area().unwrap(), Decimal::ZERO);
+    }
+
     #[test]
     fn test_new_bull_call_spread() {
         let spread = bull_call_spread_test();

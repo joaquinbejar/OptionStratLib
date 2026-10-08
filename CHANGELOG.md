@@ -1522,6 +1522,22 @@ summarize the release.
 
 ### Fixed
 
+- **An inverted `BearCallSpread` / `BullPutSpread` is reported as a
+  structural error, not as a loss of zero** (#803). `get_max_loss` used
+  `ProfitLossError::MaxLossError` both for "the worst case still gains" and
+  for legs that do not form the strategy (the long call below the short
+  call, the short put below the long put; reachable through the `pub` legs
+  or `Deserialize`). Since #788 the profit area and ratio read
+  `MaxProfitError` / `MaxLossError` as zero profit or zero loss, so an
+  inverted spread got a profit ratio of `Decimal::MAX` instead of an error.
+  The two inverted cases now return `StrategyError::InvalidStrategy`, which
+  `get_profit_area` / `get_profit_ratio` propagate. `MaxProfitError` and
+  `MaxLossError` now carry only sign reports. The four "Net premium
+  received is negative" reports are sign reports (the best case still
+  loses) and keep their kind. Values for valid strategies are unchanged.
+  Migration: match `StrategyError::InvalidStrategy` instead of
+  `MaxLossError` to detect an inverted vertical.
+
 - **`Curve::merge` and `Surface::merge` keep their grid inside the common
   range** (#795). Both resample on `min + step * i` with
   `step = span / steps` rounded at 28 places, so on a span with a 27- or
