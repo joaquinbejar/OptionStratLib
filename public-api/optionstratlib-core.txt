@@ -218,13 +218,13 @@ pub mod optionstratlib_core::model::leg
 pub mod optionstratlib_core::model::leg::traits
 pub trait optionstratlib_core::model::leg::traits::Expirable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::traits::Expirable::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
-pub fn optionstratlib_core::model::leg::traits::Expirable::expiration_timestamp(&self) -> i64
-pub fn optionstratlib_core::model::leg::traits::Expirable::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::traits::Expirable::expiration_timestamp(&self) -> core::result::Result<i64, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::traits::Expirable::is_expired(&self) -> core::result::Result<bool, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::traits::Expirable::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
-pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
-pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> core::result::Result<i64, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> core::result::Result<bool, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub trait optionstratlib_core::model::leg::traits::Fundable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::traits::Fundable::annualized_funding(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
@@ -396,8 +396,8 @@ impl core::fmt::Display for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
-pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
-pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> core::result::Result<i64, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> core::result::Result<bool, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
@@ -515,13 +515,13 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::SpotPosit
 pub fn optionstratlib_core::model::leg::SpotPosition::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub trait optionstratlib_core::model::leg::Expirable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::Expirable::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
-pub fn optionstratlib_core::model::leg::Expirable::expiration_timestamp(&self) -> i64
-pub fn optionstratlib_core::model::leg::Expirable::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::Expirable::expiration_timestamp(&self) -> core::result::Result<i64, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::Expirable::is_expired(&self) -> core::result::Result<bool, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::Expirable::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
-pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
-pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
+pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> core::result::Result<i64, optionstratlib_core::error::position::PositionError>
+pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> core::result::Result<bool, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub trait optionstratlib_core::model::leg::Fundable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::Fundable::annualized_funding(&self, positive::positive::Positive) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>

@@ -297,8 +297,14 @@ pub trait Fundable: LegAble {
 ///
 /// This applies to futures, forwards, and options.
 pub trait Expirable: LegAble {
-    /// Returns the expiration date as a timestamp.
-    fn expiration_timestamp(&self) -> i64;
+    /// Returns the expiration date as a Unix timestamp in seconds.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PositionError`] when the expiration date cannot be
+    /// resolved to a calendar instant. The timestamp is never replaced by
+    /// `0`, which would read as the Unix epoch.
+    fn expiration_timestamp(&self) -> Result<i64, PositionError>;
 
     /// Returns the number of days until expiration.
     ///
@@ -310,7 +316,13 @@ pub trait Expirable: LegAble {
     fn days_to_expiration(&self) -> Result<Positive, PositionError>;
 
     /// Checks if the position has expired.
-    fn is_expired(&self) -> bool;
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PositionError`] when the expiration date cannot be
+    /// resolved to a calendar instant. The answer is never replaced by
+    /// `false`, which would read as a live position.
+    fn is_expired(&self) -> Result<bool, PositionError>;
 
     /// Returns the time to expiration in years (for pricing calculations).
     ///

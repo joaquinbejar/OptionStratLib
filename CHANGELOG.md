@@ -16,6 +16,18 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
+  `Result`** (#810). `expiration_timestamp` returns `Result<i64,
+  PositionError>` and `is_expired` returns `Result<bool, PositionError>`.
+  `FuturePosition` read an expiration date that resolves to no calendar
+  instant (for example `ExpirationDate::Days(Positive::MAX)`) as timestamp
+  `0`, the Unix epoch, and as not expired; both now return
+  `PositionError::DecimalError(DecimalError::ExpirationDate(_))`. Values for
+  dates that resolve are unchanged. `Trade::is_expired` reads the trade
+  status, has no fallback and keeps returning `bool`.
+  - Migration: add `?` (or match the `Err`) at each call, and implement both
+    methods with the `Result` return in a custom `Expirable`.
+
 - **Core helpers that aborted on extreme inputs now return `Result`**
   (#788, core, math and pricing). Each of these panicked inside a
   `Decimal` or `Positive` operator, an integer division or a `chrono`

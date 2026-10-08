@@ -483,14 +483,12 @@ impl Marginable for FuturePosition {
 }
 
 impl Expirable for FuturePosition {
-    fn expiration_timestamp(&self) -> i64 {
+    fn expiration_timestamp(&self) -> Result<i64, PositionError> {
         // The resolver rather than `get_date`, which aborts on a day count no
-        // calendar instant can hold instead of reporting it. The `unwrap_or`
-        // was never reached for that input, because there was nothing to
-        // unwrap: the process was already gone.
-        resolve_expiration_date(&self.expiration_date)
-            .map(|date| date.timestamp())
-            .unwrap_or(0)
+        // calendar instant can hold instead of reporting it. An unresolvable
+        // date used to read as `0`, the Unix epoch (#810).
+        let date = resolve_expiration_date(&self.expiration_date).map_err(DecimalError::from)?;
+        Ok(date.timestamp())
     }
 
     fn days_to_expiration(&self) -> Result<Positive, PositionError> {
@@ -506,10 +504,10 @@ impl Expirable for FuturePosition {
         Ok(Positive::new_decimal(days)?)
     }
 
-    fn is_expired(&self) -> bool {
-        resolve_expiration_date(&self.expiration_date)
-            .map(|date| date < Utc::now())
-            .unwrap_or(false)
+    fn is_expired(&self) -> Result<bool, PositionError> {
+        // An unresolvable date used to read as "not expired" (#810).
+        let date = resolve_expiration_date(&self.expiration_date).map_err(DecimalError::from)?;
+        Ok(date < Utc::now())
     }
 }
 
@@ -895,6 +893,55 @@ mod tests {
             "{result:?}"
         );
         assert!(future.time_to_expiration_years().is_err());
+    }
+
+    #[test]
+    fn test_future_expiration_timestamp_and_is_expired_are_unchanged() {
+        let expiry = Utc::now() + chrono::Duration::days(30);
+        let mut future = future_with_margins(
+            Side::Long,
+            pos_or_panic!(4500.0),
+            pos_or_panic!(15000.0),
+            pos_or_panic!(12000.0),
+        );
+        future.expiration_date = ExpirationDate::DateTime(expiry);
+        assert_eq!(future.expiration_timestamp().ok(), Some(expiry.timestamp()));
+        assert_eq!(future.is_expired().ok(), Some(false));
+
+        let past = Utc::now() - chrono::Duration::days(1);
+        future.expiration_date = ExpirationDate::DateTime(past);
+        assert_eq!(future.expiration_timestamp().ok(), Some(past.timestamp()));
+        assert_eq!(future.is_expired().ok(), Some(true));
+    }
+
+    #[test]
+    fn test_future_unresolvable_expiration_is_an_error_not_epoch_or_live() {
+        let mut future = future_with_margins(
+            Side::Long,
+            pos_or_panic!(4500.0),
+            pos_or_panic!(15000.0),
+            pos_or_panic!(12000.0),
+        );
+        // No calendar instant holds this many days: the timestamp read as
+        // `0` (the Unix epoch) and the position as not expired (#810).
+        future.expiration_date = ExpirationDate::Days(Positive::MAX);
+
+        let timestamp = future.expiration_timestamp();
+        assert!(
+            matches!(
+                timestamp,
+                Err(PositionError::DecimalError(DecimalError::ExpirationDate(_)))
+            ),
+            "{timestamp:?}"
+        );
+        let expired = future.is_expired();
+        assert!(
+            matches!(
+                expired,
+                Err(PositionError::DecimalError(DecimalError::ExpirationDate(_)))
+            ),
+            "{expired:?}"
+        );
     }
 
     fn future_with_quantity(quantity: Positive) -> FuturePosition {
