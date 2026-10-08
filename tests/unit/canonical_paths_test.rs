@@ -249,6 +249,7 @@ fn test_canonical_error_paths_are_component_errors() {
         facade::ProjectionError,
         optionstratlib_analytics::error::ProjectionError
     );
+    same!(facade::RNDError, optionstratlib_analytics::error::RNDError);
     same!(
         facade::TransactionError,
         optionstratlib_analytics::error::TransactionError

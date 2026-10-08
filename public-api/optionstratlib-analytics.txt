@@ -100,7 +100,7 @@ pub struct optionstratlib_analytics::analytics::rnd::RNDResult
 pub optionstratlib_analytics::analytics::rnd::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
 pub optionstratlib_analytics::analytics::rnd::RNDResult::statistics: optionstratlib_analytics::analytics::rnd::RNDStatistics
 impl optionstratlib_analytics::analytics::rnd::RNDResult
-pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_analytics::error::RNDError>
 pub struct optionstratlib_analytics::analytics::rnd::RNDStatistics
 pub optionstratlib_analytics::analytics::rnd::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
 pub optionstratlib_analytics::analytics::rnd::RNDStatistics::mean: rust_decimal::decimal::Decimal
@@ -108,13 +108,13 @@ pub optionstratlib_analytics::analytics::rnd::RNDStatistics::skewness: rust_deci
 pub optionstratlib_analytics::analytics::rnd::RNDStatistics::variance: positive::positive::Positive
 pub optionstratlib_analytics::analytics::rnd::RNDStatistics::volatility: positive::positive::Positive
 impl optionstratlib_analytics::analytics::rnd::RNDStatistics
-pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_analytics::error::RNDError>
 pub trait optionstratlib_analytics::analytics::rnd::RNDAnalysis
-pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_analytics::error::RNDError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_analytics::error::RNDError>
 impl optionstratlib_analytics::analytics::rnd::RNDAnalysis for optionstratlib_market::chains::chain::OptionChain
-pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_analytics::error::RNDError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_analytics::error::RNDError>
 pub struct optionstratlib_analytics::analytics::PriceTrend
 impl optionstratlib_analytics::analytics::probability::PriceTrend
 pub fn optionstratlib_analytics::analytics::probability::PriceTrend::confidence(&self) -> rust_decimal::decimal::Decimal
@@ -154,7 +154,7 @@ pub struct optionstratlib_analytics::analytics::RNDResult
 pub optionstratlib_analytics::analytics::RNDResult::densities: alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>
 pub optionstratlib_analytics::analytics::RNDResult::statistics: optionstratlib_analytics::analytics::rnd::RNDStatistics
 impl optionstratlib_analytics::analytics::rnd::RNDResult
-pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDResult::new(alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_analytics::error::RNDError>
 pub struct optionstratlib_analytics::analytics::RNDStatistics
 pub optionstratlib_analytics::analytics::RNDStatistics::kurtosis: rust_decimal::decimal::Decimal
 pub optionstratlib_analytics::analytics::RNDStatistics::mean: rust_decimal::decimal::Decimal
@@ -162,7 +162,7 @@ pub optionstratlib_analytics::analytics::RNDStatistics::skewness: rust_decimal::
 pub optionstratlib_analytics::analytics::RNDStatistics::variance: positive::positive::Positive
 pub optionstratlib_analytics::analytics::RNDStatistics::volatility: positive::positive::Positive
 impl optionstratlib_analytics::analytics::rnd::RNDStatistics
-pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::rnd::RNDStatistics::new(&alloc::collections::btree::map::BTreeMap<positive::positive::Positive, rust_decimal::decimal::Decimal>) -> core::result::Result<Self, optionstratlib_analytics::error::RNDError>
 pub struct optionstratlib_analytics::analytics::VolatilityAdjustment
 pub optionstratlib_analytics::analytics::VolatilityAdjustment::base_volatility: positive::positive::Positive
 pub optionstratlib_analytics::analytics::VolatilityAdjustment::std_dev_adjustment: positive::positive::Positive
@@ -219,11 +219,11 @@ pub fn optionstratlib_analytics::analytics::ProfitRangeProbability::calculate_pr
 impl optionstratlib_analytics::analytics::profit_range::ProfitRangeProbability for optionstratlib_analytics::analytics::profit_range::ProfitLossRange
 pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::calculate_probability(&mut self, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(), optionstratlib_analytics::error::probability::ProbabilityError>
 pub trait optionstratlib_analytics::analytics::RNDAnalysis
-pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_analytics::error::RNDError>
+pub fn optionstratlib_analytics::analytics::RNDAnalysis::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_analytics::error::RNDError>
 impl optionstratlib_analytics::analytics::rnd::RNDAnalysis for optionstratlib_market::chains::chain::OptionChain
-pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_market::error::chains::ChainError>
-pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_market::error::chains::ChainError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_rnd(&self, &optionstratlib_analytics::analytics::rnd::RNDParameters) -> core::result::Result<optionstratlib_analytics::analytics::rnd::RNDResult, optionstratlib_analytics::error::RNDError>
+pub fn optionstratlib_market::chains::chain::OptionChain::calculate_skew(&self) -> core::result::Result<alloc::vec::Vec<(positive::positive::Positive, rust_decimal::decimal::Decimal)>, optionstratlib_analytics::error::RNDError>
 pub fn optionstratlib_analytics::analytics::calculate_price_probability(&positive::positive::Positive, &positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
 pub fn optionstratlib_analytics::analytics::calculate_single_point_probability(&positive::positive::Positive, &positive::positive::Positive, optionstratlib_analytics::analytics::probability::VolatilityAdjustment, core::option::Option<optionstratlib_analytics::analytics::probability::PriceTrend>, &expiration_date::ExpirationDate, core::option::Option<rust_decimal::decimal::Decimal>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), optionstratlib_analytics::error::probability::ProbabilityError>
 pub mod optionstratlib_analytics::error
@@ -332,6 +332,19 @@ impl core::convert::From<optionstratlib_math::error::surfaces::SurfaceError> for
 pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_math::error::surfaces::SurfaceError) -> Self
 impl core::convert::From<optionstratlib_pricing::error::greeks::GreeksError> for optionstratlib_analytics::error::ProjectionError
 pub fn optionstratlib_analytics::error::ProjectionError::from(optionstratlib_pricing::error::greeks::GreeksError) -> Self
+pub enum optionstratlib_analytics::error::RNDError
+pub optionstratlib_analytics::error::RNDError::Chain(alloc::boxed::Box<optionstratlib_market::error::chains::ChainError>)
+pub optionstratlib_analytics::error::RNDError::Decimal(optionstratlib_core::error::decimal::DecimalError)
+pub optionstratlib_analytics::error::RNDError::EmptyDensities
+pub optionstratlib_analytics::error::RNDError::EmptySkewData
+pub optionstratlib_analytics::error::RNDError::InvalidParameters
+pub optionstratlib_analytics::error::RNDError::InvalidParameters::parameter: &'static str
+pub optionstratlib_analytics::error::RNDError::InvalidParameters::reason: alloc::string::String
+pub optionstratlib_analytics::error::RNDError::Positive(positive::error::PositiveError)
+impl optionstratlib_analytics::error::RNDError
+pub fn optionstratlib_analytics::error::RNDError::invalid_parameters(&'static str, &str) -> Self
+impl core::convert::From<optionstratlib_market::error::chains::ChainError> for optionstratlib_analytics::error::RNDError
+pub fn optionstratlib_analytics::error::RNDError::from(optionstratlib_market::error::chains::ChainError) -> Self
 pub enum optionstratlib_analytics::error::TransactionError
 pub optionstratlib_analytics::error::TransactionError::NotImplemented
 pub optionstratlib_analytics::error::TransactionError::NotImplemented::method: &'static str

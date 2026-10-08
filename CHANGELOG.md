@@ -16,6 +16,73 @@ summarize the release.
 
 ### Changed — breaking
 
+- **The core payoff of every option family is its contract's terminal
+  payoff** (#844). `OptionType::payoff`, behind `Options::payoff`,
+  `payoff_at_price`, `intrinsic_value` and the P&L built on them, disagreed
+  with the value each family's pricing kernel returns at `T = 0`. Each
+  family is now valued for a long position by one `Decimal` kernel and
+  signed once by the side, and `optionstratlib-pricing`'s
+  `terminal_payoff_test` asserts, for every family, call and put, long and
+  short, at spots 95, 100 and 105 against a strike of 100, that
+  `Options::payoff` equals the kernel's `T = 0` value exactly. API:
+  `PayoffInfo` gains `exotic_params: Option<ExoticParams>` (`None` by
+  default), which `Options::payoff` fills with the option's own, so the
+  two-asset rainbow and the cliquet see their parameters. Values that
+  change (per unit, `S` the spot, `K` the strike):
+  - Binary, Chooser and Power are signed by the side: a short position pays
+    what the long receives (a short in-the-money cash-or-nothing call is
+    `-1`, it was `+1`). So are an Asian with fixings and a floating-strike
+    lookback, which were unsigned as well.
+  - Floating-strike lookback: the path extremes include the expiry spot, so
+    with none observed the payoff is `0`; it was `S` (call) or `-S` (put).
+  - Asian with no fixings: the averaging window is the expiry instant, whose
+    average is the spot, so the payoff is the vanilla intrinsic value on
+    `S`, as `asian_black_scholes` prices a contract at `T = 0`; it was `0`.
+    With fixings the payoff is unchanged for a long position.
+  - Compound: the vanilla payoff of the compound strike on the underlying
+    option's long payoff `U` (`max(U - K, 0)` call, `max(K - U, 0)` put, the
+    underlying taking the compound's style); it was `U`, so a call on a call
+    with `S = 105`, `K = 100` was 5 and is 0.
+  - Spread: `max(S - S2 - K, 0)` call, `max(K - (S - S2), 0)` put; it was the
+    vanilla payoff on `S` (the put of #844, `S = 105`, `S2 = 98`, `K = 100`,
+    was 5 and is 93).
+  - Exchange: `max(S - S2, 0)` for either style, no strike; it was the
+    vanilla payoff on `S`.
+  - Rainbow (two assets): the vanilla payoff on `max(S, S2)` (best of) or
+    `min(S, S2)` (worst of), `S2` from `exotic_params`; it was the vanilla
+    payoff on `S`. A rainbow on other than two assets, or without
+    `rainbow_second_asset_price`, is now a `PayoffError`, as the pricer
+    rejects it.
+  - Cliquet: no reset fixings reach the payoff, so nothing has accrued: `0`,
+    clamped by `exotic_params`' global cap and floor; it was the vanilla
+    payoff on `S`.
+  - Every family's vanilla part is the exact `Decimal` difference instead
+    of an `f64` difference taken back to `Decimal`, which was off in the
+    16th significant digit for about a third of two-decimal prices
+    (`50.07 - 50` was `0.0700000000000003`; 1 709 of 4 999 in-the-money
+    calls on a grid of two-decimal spots), and a call struck at 0 on
+    `Positive::MAX` is `Decimal::MAX` instead of an error. Quanto's product
+    with the exchange rate is a `Decimal` product. The two seeded
+    Monte-Carlo regressions that sum `payoff_at_price` over paths move and
+    are re-baselined: the telegraph price by `8.8e-17` and
+    `Simulator::get_mc_option_price` by `8.0e-16`. The payoff is normalized
+    (no trailing zeros), the form `Decimal::from_f64` produced, so an exact
+    payoff keeps its serialized and displayed representation; the chart
+    goldens are unchanged. Asian averages of fixings and the power `S^n`
+    stay in `f64`, as in the pricers.
+  - Unchanged: European, American, Bermuda, fixed-strike lookback, barrier
+    (signed since #826) and quanto values, beyond the exact `Decimal`
+    difference above.
+
+  The pricer's spread kernel prices a strike below `1e-4` with Margrabe's
+  `max(S1 - S2, 0)` for either style, so a spread put struck at zero still
+  differs from its payoff `max(S2 - S1, 0)` at `T = 0`; the test avoids that
+  strike and the kernel is unchanged here.
+
+  Migration: a `PayoffInfo { .. }` literal names `exotic_params` (or ends
+  with `..Default::default()`); handle `PayoffError` from a rainbow payoff
+  without its second asset; re-read P&L and payoffs of the families above.
+
 - **`RiskMetrics::beta` is `coefficient_of_variation`, computed the same
   way for curves and surfaces, and a failed square root in the curve and
   surface metrics is an error** (#824). By owner decision the field is
@@ -57,6 +124,24 @@ summarize the release.
   `match` on `MetricsError` needs the arm) where data can have a zero
   mean; and do not read the new value as a market beta.
 
+
+- **The risk-neutral density analysis has an analytics-owned error**
+  (#829). `RNDAnalysis::calculate_rnd`, `RNDAnalysis::calculate_skew`,
+  `RNDResult::new` and `RNDStatistics::new` return
+  `optionstratlib_analytics::error::RNDError` (re-exported as
+  `optionstratlib::error::RNDError`, and wrapped by the facade's
+  `error::Error::Rnd`) instead of the market crate's `ChainError`.
+  `ChainError::EmptyDensities` and `ChainError::EmptySkewData` move to
+  `RNDError::EmptyDensities` and `RNDError::EmptySkewData`, with the same
+  messages. The other failures are `RNDError::InvalidParameters` (naming
+  `derivative_tolerance`, `strike_interval`, `expiration_date` or
+  `underlying_price`), `RNDError::Decimal` and `RNDError::Positive`, which
+  used to arrive as `ChainError::ChainBuildError`,
+  `ChainError::OptionDataError` and `ChainError::PositiveError`; a chain
+  failure (no ATM implied volatility) is carried unchanged as
+  `RNDError::Chain`. Migration: match `RNDError` where you matched
+  `ChainError` on these calls; `RNDError: From<ChainError>`, so a function
+  that mixes chain and RND calls can return `RNDError`.
 - **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
   `Result`** (#810). `expiration_timestamp` returns `Result<i64,
   PositionError>` and `is_expired` returns `Result<bool, PositionError>`.

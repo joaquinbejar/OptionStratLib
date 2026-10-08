@@ -697,6 +697,7 @@ fn underlying_payoff_at_expiry(
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     })?)
 }
 

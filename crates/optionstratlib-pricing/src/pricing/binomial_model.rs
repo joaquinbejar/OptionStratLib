@@ -154,6 +154,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     };
 
     if params.expiry == Decimal::ZERO {
@@ -481,6 +482,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     };
 
     let no_steps_raw = params.no_steps.get();

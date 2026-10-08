@@ -13,7 +13,7 @@ and on no strategy, simulation, backtesting or plotting code.
 | `pnl`       | `PnL`, `PnLCalculator`, `Transaction`, `DeltaAdjustment`, P&L metrics documents                   |
 | `risk`      | `SPANMargin`, `RiskMetricsSimulation`, `RiskCategory`                                            |
 | `metrics`   | price, risk, composite, temporal, stress and liquidity metrics over an `OptionChain`              |
-| `error`     | `ProbabilityError`, `ProjectionError`, `TransactionError`                                        |
+| `error`     | `ProbabilityError`, `ProjectionError`, `RNDError`, `TransactionError`                            |
 
 The probability analysis of a concrete strategy builds on these kernels and
 lives with the strategies; the `optionstratlib` facade provides it.

@@ -444,7 +444,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Analytics inputs and results (#656, #619, #623, #664)
+### Analytics inputs and results (#656, #619, #623, #664, #829)
 
 - `PriceTrend` has private `Decimal` fields: build it with
   `PriceTrend::new(drift_rate, confidence)?`, which rejects a confidence
@@ -457,6 +457,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   term, so the risk-neutral `P(S_T < K)` is `N(-d2)`. Every probability for
   `sigma > 0`, and every strategy probability and expected value built on
   it, changes.
+- `RNDAnalysis::calculate_rnd` / `calculate_skew`, `RNDResult::new` and
+  `RNDStatistics::new` return the analytics-owned `error::RNDError` instead
+  of the market's `ChainError`. `EmptyDensities` and `EmptySkewData` moved
+  from `ChainError` to `RNDError`; a chain failure (no ATM volatility, for
+  instance) arrives as `RNDError::Chain`, and a `?` into a function that
+  returns `ChainError` becomes a `?` into `RNDError` (`From<ChainError>`
+  exists) or into the facade's `error::Error`.
 
 ```rust
 use optionstratlib::analytics::{PriceTrend, VolatilityAdjustment, calculate_single_point_probability};
@@ -673,7 +680,10 @@ reference values in the CHANGELOG:
   mark to market (#728) and size in shares (#731);
 - put spreads chart and price their textbook payoff (#696), butterflies
   their 1/2/1 payoff (#706);
-- `decimal_to_f64` is correctly rounded (#670).
+- `decimal_to_f64` is correctly rounded (#670);
+- `Options::payoff` and the P&L built on it are each family's terminal payoff,
+  the value its pricing kernel gives at `T = 0`, signed by the side, and the
+  vanilla intrinsic value is the exact `Decimal` difference (#844).
 
 ## 7. Where to go next
 

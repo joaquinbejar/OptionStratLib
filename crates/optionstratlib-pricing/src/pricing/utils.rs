@@ -439,6 +439,7 @@ pub(crate) fn calculate_option_price(
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     };
     let payoff = params.option_type.payoff(&info)?;
 
@@ -496,6 +497,7 @@ pub(crate) fn calculate_discounted_payoff(
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     };
 
     let payoff = params.option_type.payoff(&info)?;

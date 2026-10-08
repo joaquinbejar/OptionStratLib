@@ -448,8 +448,6 @@ pub optionstratlib_market::error::chains::ChainError::EmptyChain
 pub optionstratlib_market::error::chains::ChainError::EmptyChain::symbol: alloc::string::String
 pub optionstratlib_market::error::chains::ChainError::EmptyChainAtm
 pub optionstratlib_market::error::chains::ChainError::EmptyChainAtm::symbol: alloc::string::String
-pub optionstratlib_market::error::chains::ChainError::EmptyDensities
-pub optionstratlib_market::error::chains::ChainError::EmptySkewData
 pub optionstratlib_market::error::chains::ChainError::ExpirationDate(expiration_date::error::ExpirationDateError)
 pub optionstratlib_market::error::chains::ChainError::FileError(optionstratlib_market::error::chains::FileErrorKind)
 pub optionstratlib_market::error::chains::ChainError::Generator(alloc::boxed::Box<(dyn core::error::Error + core::marker::Send + core::marker::Sync)>)
@@ -531,8 +529,6 @@ pub optionstratlib_market::error::ChainError::EmptyChain
 pub optionstratlib_market::error::ChainError::EmptyChain::symbol: alloc::string::String
 pub optionstratlib_market::error::ChainError::EmptyChainAtm
 pub optionstratlib_market::error::ChainError::EmptyChainAtm::symbol: alloc::string::String
-pub optionstratlib_market::error::ChainError::EmptyDensities
-pub optionstratlib_market::error::ChainError::EmptySkewData
 pub optionstratlib_market::error::ChainError::ExpirationDate(expiration_date::error::ExpirationDateError)
 pub optionstratlib_market::error::ChainError::FileError(optionstratlib_market::error::chains::FileErrorKind)
 pub optionstratlib_market::error::ChainError::Generator(alloc::boxed::Box<(dyn core::error::Error + core::marker::Send + core::marker::Sync)>)

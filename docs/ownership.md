@@ -106,6 +106,7 @@ and `optionstratlib::error::OperationErrorKind`.
 | `OhlcvError` | `optionstratlib-market` | `optionstratlib_market::error::OhlcvError` | `optionstratlib::error::OhlcvError` | market | — |
 | `ProbabilityError` | `optionstratlib-analytics` | `optionstratlib_analytics::error::ProbabilityError` | `optionstratlib::error::ProbabilityError` | analytics | `probability` |
 | `ProjectionError` | `optionstratlib-analytics` | `optionstratlib_analytics::error::ProjectionError` | `optionstratlib::error::ProjectionError` | analytics | — |
+| `RNDError` | `optionstratlib-analytics` | `optionstratlib_analytics::error::RNDError` | `optionstratlib::error::RNDError` | analytics | — |
 | `TransactionError` | `optionstratlib-analytics` | `optionstratlib_analytics::error::TransactionError` | `optionstratlib::error::TransactionError` | analytics | — |
 | `StrategyError` | `optionstratlib-strategies` | `optionstratlib_strategies::error::StrategyError` | `optionstratlib::error::StrategyError` | strategies | `strategies` |
 | `AdjustmentError` | `optionstratlib-strategies` | `optionstratlib_strategies::error::AdjustmentError` | `optionstratlib::error::AdjustmentError` | strategies | — |
