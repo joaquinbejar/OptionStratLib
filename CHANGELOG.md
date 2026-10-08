@@ -1479,6 +1479,18 @@ summarize the release.
 
 ### Fixed
 
+- **`CustomStrategy::find_optimal` no longer leaves stale break-evens
+  when they cannot be recomputed** (#791). The search only logged a
+  failed recomputation, so it scored candidates against stale
+  break-evens and could finish with the best legs and the break-evens of
+  other legs. A candidate whose break-evens cannot be recomputed is now
+  skipped with a warning and the search continues; when the best legs
+  cannot be applied at the end, the strategy is left exactly as it was
+  before the search, with an error logged. `find_optimal` still returns
+  `()`, so the failure is not reported to the caller. A run where every
+  recomputation succeeds returns the same result as before. No signature
+  changes.
+
 - **`CustomStrategy` no longer discards a failed break-even recomputation
   after an edit** (#784). `add_position`, `modify_position` and
   `replace_position` recomputed the break-evens but ignored a failure, so
