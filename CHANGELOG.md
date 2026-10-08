@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Upgrading from 0.21: start with the [0.22 architecture and adoption
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md), which
+groups the changes below by the workflow that replaces them. 0.22 keeps no
+compatibility with 0.21.
+
 ### Changed — breaking
 
 - **`AdjustmentError` moved to `optionstratlib_strategies::error`, as a
@@ -2047,6 +2052,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `<!-- #553 ... -->` marker where #553 links the migration guide. No
   ignore rule changes: planning material stays under the locally excluded
   `doc/`, user-facing documents live in the tracked `docs/` (#556).
+
+- **The 0.22 architecture and adoption guide** (#553, closes the #554
+  markers). `docs/migration-0.22.md` covers the crate layers and their
+  dependency direction, facade versus direct component use with the feature
+  of every crate, minimal consumers (`examples/direct`, the consumer
+  fixtures), the import rules (canonical paths, the explicit prelude, the
+  flat error paths) and, for each API redesign of 0.22, the workflow that
+  replaces the 0.21 one: seeded stochastic pricing and walks, binding
+  strategy validation, the textbook put spreads and 1/2/1 butterflies,
+  `CallButterfly`'s removal, the contract multiplier and covered-strategy
+  sizing, the analytics inputs and the `-sigma^2 / 2` probability term,
+  market `io`/`synthetic`, payoffs, negative and foreign rates, backtest
+  reports and charts. A table lists the serialized-data changes (a
+  `"CallButterfly"` strategy type no longer deserializes; `contract_size`
+  and `foreign_rate` keys; `OptionSeries` keys) and a list the fixes that
+  change results. The facade compiles and runs the guide's Rust examples
+  as doctests (`MigrationGuideDoctests`, under `cfg(doctest)` with
+  `visualization`, absent from every build and the public API), and ships
+  `docs/*.md` in its package. Every crate root, crate `README.md`, the
+  facade docs and `README.tpl` link the guide where #554 left a marker.
 
 - **`optionstratlib-core` builds without `utoipa` unless `schema` is on**
   (#628). `expiration_date` 0.4.1 forwards `positive/utoipa` only from its own

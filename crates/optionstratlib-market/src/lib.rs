@@ -40,7 +40,10 @@
 //!   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
 //!   lists every one with its feature.
 //!
-//! <!-- #553: link the 0.21 to 0.22 migration guide here -->
+//! Moving from 0.21? The [0.22 architecture and adoption
+//! guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
+//! maps each redesign to its replacement workflow; 0.22 keeps no
+//! compatibility with 0.21.
 //!
 //! ## Minimal example
 //!

@@ -18,6 +18,17 @@
 {{readme}}
 
 
+## Upgrading from 0.21
+
+0.22 splits the library into nine component crates behind this facade and
+redesigns several APIs without keeping compatibility with 0.21. The [0.22
+architecture and adoption
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
+explains the layers, facade versus component use, feature selection, and the
+replacement workflow for each redesign, including serialized data that no
+longer reads the same way.
+
+
 
 ## Contribution and Contact
 
