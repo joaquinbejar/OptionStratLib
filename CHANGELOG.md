@@ -2065,8 +2065,10 @@ compatibility with 0.21.
   sizing, the analytics inputs and the `-sigma^2 / 2` probability term,
   market `io`/`synthetic`, payoffs, negative and foreign rates, backtest
   reports and charts. A table lists the serialized-data changes (a
-  `"CallButterfly"` strategy type no longer deserializes; `contract_size`
-  and `foreign_rate` keys; `OptionSeries` keys) and a list the fixes that
+  `"CallButterfly"` strategy type no longer deserializes; put-spread and
+  butterfly requests in the 0.21 shape are rejected; covered-strategy
+  quantities mean shares; `contract_size` and `foreign_rate` keys;
+  `OptionSeries` keys) and a list of the fixes that
   change results. The facade compiles and runs the guide's Rust examples
   as doctests (`MigrationGuideDoctests`, under `cfg(doctest)` with
   `visualization`, absent from every build and the public API), and ships

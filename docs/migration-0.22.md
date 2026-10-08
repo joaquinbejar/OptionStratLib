@@ -39,8 +39,9 @@ path are the same type, never a wrapper, so code may mix them.
 
 Depend on the **facade** (`optionstratlib`) for the whole library behind
 one version and one prelude. Its default enables every capability plus
-`io`, `synthetic` and `schema`, so a plain dependency keeps everything 0.21
-shipped:
+`io`, `synthetic` and `schema`, so a plain dependency enables every
+capability 0.21's default build had (not every 0.21 item: section 4 lists
+the removals):
 
 ```toml
 [dependencies]
@@ -99,7 +100,10 @@ submodules stay public as documentation anchors. Paths kept only for 0.21
 are gone. Errors are flat in `optionstratlib::error`:
 `optionstratlib::error::decimal`, `error::trade`, `error::curves`,
 `error::pricing`, `error::simulation` and `error::unified` are removed, so
-import `optionstratlib::error::{DecimalError, PricingError, Error, ..}`.
+import `optionstratlib::error::{DecimalError, PricingError, ..}`. The
+aggregate `optionstratlib::error::Error` exists only with the
+`visualization` feature (on by default); a narrower build such as
+`features = ["pricing"]` returns the layer error, `PricingError` there.
 The detail enums (`...Kind`) stay in their kind module
 (`error::position`, `error::greeks`, `error::chains`, `error::probability`,
 `error::strategies`), and `AdjustmentError` moved from `strategies` to
@@ -139,7 +143,9 @@ fn main() -> Result<(), Error> {
         None,
     );
     // `OptionPricing` carries the pricing methods, `Greeks` the Greeks; the
-    // aggregate `error::Error` takes either error through `?`.
+    // aggregate `error::Error` (only with `visualization`) takes either
+    // error through `?`. A `pricing`-only build would return `PricingError`
+    // and map the `GreeksError` of `delta` into it.
     let price = call.calculate_price_black_scholes()?;
     assert!((price - dec!(4.76)).abs() < dec!(0.01));
     assert!(call.delta()? > dec!(0.7));
@@ -570,16 +576,22 @@ longer imports `Graph`, `GraphData` and the rest for it.
 
 ## 5. Serialized data
 
-0.22 reads and writes JSON with the same `serde` model, except:
+0.22 reads and writes JSON with the same `serde` model, except as listed
+below. Strategies derive `Deserialize`, so a strategy document is not
+re-validated when read: the constructors, the builders and
+`StrategyRequest::get_strategy` validate (#696), a deserialized strategy
+does not until you call `validate()`.
 
 | Data | 0.22 behaviour | What to do |
 | --- | --- | --- |
 | `StrategyType` / `StrategyRequest` with `"CallButterfly"` | No longer deserializes; `"CallButterfly".parse::<StrategyType>()` fails | Write `"BullCallLadder"` (the former ladder) or `"LongButterflySpread"` (the butterfly) |
+| `StrategyRequest` for `BullPutSpread` / `BearPutSpread` with the 0.21 leg order | `get_strategy` returns an error instead of the other spread's payoff (#696): a bull put spread is long the lower strike and short the higher one, a bear put spread the reverse | Swap the legs of the stored request, or rebuild through the constructors |
+| `StrategyRequest` or document for `LongButterflySpread` / `ShortButterflySpread` with one contract per leg | `get_strategy` rejects the request (#706); a deserialized document reads but fails `validate()` | Rebuild through the constructors, which put twice the wing quantity on the body, or call `validate()` on what you read |
+| `CoveredCall`, `Collar` documents | Deserialize without re-validation, and their 0.21 option quantities (a hundredth of an option per share) now mean shares (#731) | Rebuild through the constructors with the shares covered and fees per share, then `validate()` |
 | `Options` | Gains `contract_size` (`#[serde(default)]` = 1) | Old documents read as one-unit contracts |
 | `Trade`, `Transaction` | Gain `contract_size` (`#[serde(default)]` = 1); `premium` is per unit of the underlying, fees per contract | Old documents read as one-unit contracts; for larger contracts store the per-unit premium and set `contract_size` |
 | `ExoticParams` | Gains `foreign_rate` (`null` when unset) | Old documents read as `None` |
 | `OptionSeries` | Keys are read back as absolute dates (`ExpirationDate::DateTime` at 18:30 UTC); only `YYYY-MM-DD` keys are accepted | Rewrite other key formats as `YYYY-MM-DD`; match `DateTime` or use `get_days()` |
-| `PriceTrend` | Private `Decimal` fields; confidence must be in `[0, 1]` | Build with `PriceTrend::new` |
 | `ToSchema` (OpenAPI) | Derived only with the `schema` feature (on in the facade default) | Enable `schema` on component crates that need it |
 
 ## 6. Results that change
