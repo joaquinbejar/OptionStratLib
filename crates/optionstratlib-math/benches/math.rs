@@ -8,7 +8,7 @@
 
 use criterion::measurement::WallTime;
 use criterion::{BenchmarkGroup, Criterion, Throughput, criterion_group, criterion_main};
-use optionstratlib_math::curves::{Curve, Point2D};
+use optionstratlib_math::curves::{Curve, CurveSpline, Point2D};
 use optionstratlib_math::error::{CurveError, SurfaceError};
 use optionstratlib_math::geometrics::{
     Arithmetic, ConstructionMethod, ConstructionParams, GeometricObject, GeometricTransformations,
@@ -163,6 +163,11 @@ fn bench_curve_interpolation(c: &mut Criterion) {
                 black_box(&curve).interpolate(black_box(x), method)
             });
         }
+        // One read of a spline solved beforehand (#858).
+        let spline = CurveSpline::new(&curve);
+        bench_ok(&mut group, &format!("spline_prepared/{size}"), || {
+            black_box(&spline).interpolate(black_box(x))
+        });
     }
 
     // A sweep of 100 reads on one curve: the access pattern of a resampling
@@ -179,6 +184,14 @@ fn bench_curve_interpolation(c: &mut Criterion) {
                 .collect::<Result<Vec<_>, _>>()
         });
     }
+    // The same sweep through a spline solved once per sweep (#858): the
+    // solve is inside the timed closure.
+    bench_ok(&mut group, "spline_prepared_sweep_100/128", || {
+        let spline = CurveSpline::new(black_box(&curve));
+        xs.iter()
+            .map(|x| spline.interpolate(black_box(*x)))
+            .collect::<Result<Vec<_>, _>>()
+    });
     group.finish();
 }
 

@@ -3,7 +3,7 @@ mod traits;
 mod types;
 mod utils;
 
-pub use curve::Curve;
+pub use curve::{Curve, CurveSpline};
 pub use traits::Curvable;
 pub use traits::StatisticalCurve;
 pub use types::Point2D;

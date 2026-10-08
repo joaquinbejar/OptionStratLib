@@ -3311,6 +3311,33 @@ summarize the release.
 
 ### Added
 
+- **`CurveSpline`: a curve's natural cubic spline, solved once and read
+  many times** (#858, M2). `Curve::spline_interpolate` solves the
+  tridiagonal system for the second derivatives on every call, O(n)
+  `Decimal` arithmetic per read. `optionstratlib_math::curves::CurveSpline`
+  (also `optionstratlib::curves::CurveSpline`) borrows a `Curve`, solves the
+  system in `CurveSpline::new`, and `CurveSpline::interpolate(x)` finds the
+  segment by binary search and evaluates one cubic. It returns exactly what
+  `spline_interpolate(x)` returns, errors and messages included: the
+  pre-checks, the solve and the evaluation are shared code, and a system
+  that cannot be solved reports its error on every read that reaches it.
+  `spline_interpolate` keeps its behaviour and now locates the segment by
+  binary search too; `Curve::merge_axis_interpolate` with
+  `InterpolationType::Spline` solves each curve's spline once, on the first
+  abscissa that needs it. Bit-identical: a verbatim copy of the previous
+  `spline_interpolate` is the reference in the new unit tests (edge,
+  stacked, long-mantissa, overflowing and 300 random curves, and the spline
+  merge), and a differential run of 64,131 results (every interpolation
+  method, `CurveSpline` in place of `spline_interpolate`, and the spline
+  merge) matched the previous commit exactly.
+  Criterion medians on one Apple M5 Max under other load, base and branch
+  interleaved (`cargo bench -p optionstratlib-math --bench math`): a sweep
+  of 100 reads on a 128-point curve, `spline_sweep_100/128` (a solve per
+  read) 4.86 ms, against `spline_prepared_sweep_100/128` (one solve plus
+  100 reads) 0.13 ms; one prepared read, `spline_prepared/{32,128,512,2048}`,
+  0.75 to 0.90 µs where `spline/2048` is 0.79 ms. The per-read
+  `spline/{size}` benches are unchanged within noise.
+
 - **Every component crate has Criterion benches** (#789). Fourteen bench
   targets now cover the public hot paths of the workspace: `core` (checked
   `Decimal` helpers, `Positive`, payoffs, construction), `math` (curve and

@@ -75,6 +75,10 @@ pub fn optionstratlib_math::curves::Curve::name() -> alloc::borrow::Cow<'static,
 pub fn optionstratlib_math::curves::Curve::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_math::curves::Curve
 pub fn optionstratlib_math::curves::Curve::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_math::curves::CurveSpline<'a>
+impl<'a> optionstratlib_math::curves::CurveSpline<'a>
+pub fn optionstratlib_math::curves::CurveSpline<'a>::interpolate(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Point2D, optionstratlib_math::error::InterpolationError>
+pub fn optionstratlib_math::curves::CurveSpline<'a>::new(&'a optionstratlib_math::curves::Curve) -> Self
 pub struct optionstratlib_math::curves::Point2D
 pub optionstratlib_math::curves::Point2D::x: rust_decimal::decimal::Decimal
 pub optionstratlib_math::curves::Point2D::y: rust_decimal::decimal::Decimal

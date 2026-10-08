@@ -173,24 +173,6 @@ impl Curve {
         Curve { points, x_range }
     }
 
-    /// Fetches the point at `index` without going through the panicking
-    /// [`Index`] contract.
-    ///
-    /// `kind` selects the [`InterpolationError`] variant so each algorithm
-    /// reports an out-of-bounds window under its own name.
-    fn point_at(
-        &self,
-        index: usize,
-        kind: fn(String) -> InterpolationError,
-    ) -> Result<&Point2D, InterpolationError> {
-        self.points.iter().nth(index).ok_or_else(|| {
-            kind(format!(
-                "point index {index} is out of bounds for a curve of {} points",
-                self.points.len()
-            ))
-        })
-    }
-
     /// Returns the sample sitting exactly at the abscissa `x`, if the curve
     /// has one there.
     ///
@@ -334,6 +316,148 @@ impl Curve {
                 self.points.len()
             ))),
         }
+    }
+
+    /// The checks [`SplineInterpolation::spline_interpolate`] runs before
+    /// it solves the spline, in its order: at least three points, `x`
+    /// inside the knots, then the exact-sample branch. `Some` is the sample
+    /// sitting at `x`, which is the answer without solving.
+    fn spline_precheck(&self, x: Decimal) -> Result<Option<Point2D>, InterpolationError> {
+        let len = self.points.len();
+
+        // Need at least 3 points for spline interpolation
+        if len < 3 {
+            return Err(InterpolationError::Spline(
+                "Need at least three points for spline interpolation".to_string(),
+            ));
+        }
+
+        // Check if x is within the valid range
+        let (Some(first), Some(last)) = (self.points.first(), self.points.last()) else {
+            return Err(InterpolationError::Spline(format!(
+                "point index 0 is out of bounds for a curve of {len} points"
+            )));
+        };
+        if x < first.x || x > last.x {
+            return Err(InterpolationError::Spline(
+                "x is outside the range of points".to_string(),
+            ));
+        }
+
+        // For exact points, return the actual point value. A stack of
+        // ordinates at `x` has no single value, so it errors out instead of
+        // yielding the lowest of them.
+        self.exact_point_at(x)
+    }
+}
+
+/// A natural cubic spline through the points of a [`Curve`], solved once
+/// and read many times.
+///
+/// [`SplineInterpolation::spline_interpolate`] solves the tridiagonal
+/// system for the spline's second derivatives on every call, so each read
+/// costs O(n) `Decimal` arithmetic. [`CurveSpline::new`] solves it once;
+/// each [`CurveSpline::interpolate`] then locates the segment by binary
+/// search and evaluates one cubic. Use it when one curve is read at many
+/// abscissas: a resampling, a chart, a smile lookup across a chain.
+///
+/// # Same answers as `spline_interpolate`
+///
+/// `spline.interpolate(x)` returns exactly what `curve.spline_interpolate(x)`
+/// returns, to the last digit and including the error and its message: the
+/// same pre-checks run in the same order, the solve and the evaluation are
+/// the same code, and a curve whose system cannot be solved (a repeated
+/// abscissa, an overflowing step) reports that error on every read that
+/// reaches the solve, as `spline_interpolate` does.
+///
+/// The spline borrows the curve, so the curve cannot change while the
+/// solved system is in use.
+///
+/// # Examples
+///
+/// ```rust
+/// use optionstratlib_math::curves::{Curve, CurveSpline, Point2D};
+/// use optionstratlib_math::geometrics::SplineInterpolation;
+/// use rust_decimal_macros::dec;
+///
+/// let curve = Curve::new(
+///     [(0, 0), (1, 1), (2, 4), (3, 9), (4, 16)]
+///         .into_iter()
+///         .map(|(x, y)| Point2D::new(x, y))
+///         .collect(),
+/// );
+/// let spline = CurveSpline::new(&curve);
+/// for x in [dec!(0.5), dec!(1.25), dec!(3.9)] {
+///     assert_eq!(
+///         spline.interpolate(x).unwrap(),
+///         curve.spline_interpolate(x).unwrap()
+///     );
+/// }
+/// assert!(spline.interpolate(dec!(5)).is_err());
+/// ```
+#[derive(Debug, Clone)]
+pub struct CurveSpline<'a> {
+    curve: &'a Curve,
+    knots: Vec<&'a Point2D>,
+    /// The solved second derivatives, `None` when the curve has fewer than
+    /// three points or its system cannot be solved.
+    moments: Option<Vec<Decimal>>,
+}
+
+impl<'a> CurveSpline<'a> {
+    /// Solves the natural cubic spline through `curve`'s points.
+    ///
+    /// Never fails: a curve the spline cannot be built on reports why on
+    /// each [`CurveSpline::interpolate`] call that needs the solve, exactly
+    /// as [`SplineInterpolation::spline_interpolate`] would.
+    #[must_use]
+    pub fn new(curve: &'a Curve) -> Self {
+        let knots: Vec<&'a Point2D> = curve.points.iter().collect();
+        let moments = if knots.len() < 3 {
+            None
+        } else {
+            spline_moments(&knots).ok()
+        };
+        CurveSpline {
+            curve,
+            knots,
+            moments,
+        }
+    }
+
+    /// Reads the spline at `x`.
+    ///
+    /// # Errors
+    ///
+    /// The errors of [`SplineInterpolation::spline_interpolate`] at the same
+    /// `x`, with the same messages:
+    ///
+    /// - [`InterpolationError::Spline`] when the curve has fewer than three
+    ///   points, when `x` is outside its knots, or when a checked step leaves
+    ///   the `Decimal` range;
+    /// - [`InterpolationError::DegenerateInterval`] when several points sit
+    ///   at `x`, or when a repeated abscissa elsewhere collapses a knot
+    ///   interval.
+    pub fn interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
+        if let Some(point) = self.curve.spline_precheck(x)? {
+            return Ok(point);
+        }
+        match &self.moments {
+            Some(moments) => spline_eval(&self.knots, moments, x),
+            None => self.unsolvable(),
+        }
+    }
+
+    /// Re-runs the solve that failed in [`CurveSpline::new`] to return its
+    /// error. The solve is deterministic, so this is the error
+    /// `spline_interpolate` returns.
+    #[cold]
+    fn unsolvable(&self) -> Result<Point2D, InterpolationError> {
+        spline_moments(&self.knots).and_then(|_| {
+            Err(InterpolationError::Spline(
+                "the spline system solved on retry after failing once".to_string(),
+            ))
+        })
     }
 }
 
@@ -665,8 +789,8 @@ impl Index<usize> for Curve {
             None => {
                 // INVARIANT: `std::ops::Index` returns `&Self::Output` and has
                 // no fallible channel; the contract mirrors `Vec::index`. No
-                // library code reaches this arm: every internal lookup goes
-                // through `Curve::point_at`.
+                // library code reaches this arm: no internal lookup indexes
+                // a curve.
                 let len = self.points.len();
                 panic!("Curve::index: out of bounds (index = {index}, len = {len})") // scan-banned: allow -- `Index` has no fallible channel and no library call site reaches it
             }
@@ -1421,6 +1545,9 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     ///
     /// - The function operates with `O(n)` complexity, where `n` is the number of points. The
     ///   tridiagonal system is solved efficiently using the Thomas algorithm.
+    /// - Every call solves the system again. To read one curve at many
+    ///   abscissas, solve it once with [`CurveSpline`], which returns the
+    ///   same answers.
     ///
     /// # Notes
     ///
@@ -1433,198 +1560,203 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
     ///   both return `InterpolationError::DegenerateInterval` rather than
     ///   picking an ordinate. See [`Curve::new`] for the rule.
     fn spline_interpolate(&self, x: Decimal) -> Result<Point2D, InterpolationError> {
-        let len = self.len();
-
-        // Need at least 3 points for spline interpolation
-        if len < 3 {
-            return Err(InterpolationError::Spline(
-                "Need at least three points for spline interpolation".to_string(),
-            ));
-        }
-
-        // Check if x is within the valid range
-        let first = self.point_at(0, InterpolationError::Spline)?;
-        let spline = InterpolationError::Spline;
-        let last_index = shift_index(len, -1, spline)?;
-        let last = self.point_at(last_index, spline)?;
-        if x < first.x || x > last.x {
-            return Err(InterpolationError::Spline(
-                "x is outside the range of points".to_string(),
-            ));
-        }
-
-        // For exact points, return the actual point value. A stack of
-        // ordinates at `x` has no single value, so it errors out instead of
-        // yielding the lowest of them.
-        if let Some(point) = self.exact_point_at(x)? {
+        if let Some(point) = self.spline_precheck(x)? {
             return Ok(point);
         }
-
-        let n = len;
         let pts: Vec<&Point2D> = self.points.iter().collect();
-        let at = |index: usize| -> Result<&Point2D, InterpolationError> {
-            pts.get(index).copied().ok_or_else(|| {
-                InterpolationError::Spline(format!(
-                    "point index {index} is out of bounds for a curve of {n} points"
-                ))
-            })
-        };
+        let m = spline_moments(&pts)?;
+        spline_eval(&pts, &m, x)
+    }
+}
 
-        // Calculate second derivatives. The three interior bands and the
-        // right-hand side are built in order, with the natural-spline
-        // boundary rows (`b[0] = b[n-1] = 1`) pushed at the ends.
-        let mut a = vec![Decimal::ZERO];
-        let mut b = vec![Decimal::ONE];
-        let mut c = vec![Decimal::ZERO];
-        let mut r = vec![Decimal::ZERO];
+/// The second derivatives of the natural cubic spline through `pts`, by the
+/// Thomas algorithm. They depend on the knots alone, so
+/// [`CurveSpline`] solves them once per curve.
+///
+/// Errors as [`SplineInterpolation::spline_interpolate`] does once its
+/// pre-checks pass: [`InterpolationError::DegenerateInterval`] for a
+/// repeated abscissa, [`InterpolationError::Spline`] when a checked step
+/// leaves the `Decimal` range.
+fn spline_moments(pts: &[&Point2D]) -> Result<Vec<Decimal>, InterpolationError> {
+    let n = pts.len();
+    let spline = InterpolationError::Spline;
+    let last_index = shift_index(n, -1, spline)?;
+    let at = |index: usize| -> Result<&Point2D, InterpolationError> {
+        pts.get(index).copied().ok_or_else(|| {
+            InterpolationError::Spline(format!(
+                "point index {index} is out of bounds for a curve of {n} points"
+            ))
+        })
+    };
 
-        // Fill the matrices
-        for i in 1..last_index {
-            let prev = at(shift_index(i, -1, spline)?)?;
-            let curr = at(i)?;
-            let next = at(shift_index(i, 1, spline)?)?;
+    // Calculate second derivatives. The three interior bands and the
+    // right-hand side are built in order, with the natural-spline
+    // boundary rows (`b[0] = b[n-1] = 1`) pushed at the ends.
+    let mut a = vec![Decimal::ZERO];
+    let mut b = vec![Decimal::ONE];
+    let mut c = vec![Decimal::ZERO];
+    let mut r = vec![Decimal::ZERO];
 
-            let hi = d_sub(curr.x, prev.x, "Curve::spline_interpolate::hi")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let hi1 = d_sub(next.x, curr.x, "Curve::spline_interpolate::hi1")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            // A repeated abscissa collapses a knot interval; the second
-            // derivative there is undefined rather than infinite.
-            if hi.is_zero() || hi1.is_zero() {
-                return Err(InterpolationError::DegenerateInterval);
-            }
+    // Fill the matrices
+    for i in 1..last_index {
+        let prev = at(shift_index(i, -1, spline)?)?;
+        let curr = at(i)?;
+        let next = at(shift_index(i, 1, spline)?)?;
 
-            let band = d_add(hi, hi1, "Curve::spline_interpolate::band")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let diag = d_mul(dec!(2), band, "Curve::spline_interpolate::diag")
-                .map_err(interp_err(InterpolationError::Spline))?;
-
-            let rise_next = d_sub(next.y, curr.y, "Curve::spline_interpolate::rise_next")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let slope_next = d_div(rise_next, hi1, "Curve::spline_interpolate::slope_next")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let rise_prev = d_sub(curr.y, prev.y, "Curve::spline_interpolate::rise_prev")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let slope_prev = d_div(rise_prev, hi, "Curve::spline_interpolate::slope_prev")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let curvature = d_sub(
-                slope_next,
-                slope_prev,
-                "Curve::spline_interpolate::curvature",
-            )
+        let hi = d_sub(curr.x, prev.x, "Curve::spline_interpolate::hi")
             .map_err(interp_err(InterpolationError::Spline))?;
-            let rhs = d_mul(dec!(6), curvature, "Curve::spline_interpolate::rhs")
-                .map_err(interp_err(InterpolationError::Spline))?;
-
-            a.push(hi);
-            b.push(diag);
-            c.push(hi1);
-            r.push(rhs);
-        }
-
-        // Add boundary conditions (natural spline)
-        a.push(Decimal::ZERO);
-        b.push(Decimal::ONE);
-        c.push(Decimal::ZERO);
-        r.push(Decimal::ZERO);
-
-        // Solve tridiagonal system using Thomas algorithm
-        let mut m = vec![Decimal::ZERO; n];
-
-        for i in 1..last_index {
-            let prev = shift_index(i, -1, spline)?;
-            let a_i = band_at(&a, i, "a")?;
-            let b_prev = band_at(&b, prev, "b")?;
-            if b_prev.is_zero() {
-                return Err(InterpolationError::DegenerateInterval);
-            }
-            let w = d_div(a_i, b_prev, "Curve::spline_interpolate::w")
-                .map_err(interp_err(InterpolationError::Spline))?;
-
-            let c_prev = band_at(&c, prev, "c")?;
-            let wc = d_mul(w, c_prev, "Curve::spline_interpolate::wc")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let b_i = band_at(&b, i, "b")?;
-            *band_at_mut(&mut b, i, "b")? = d_sub(b_i, wc, "Curve::spline_interpolate::b_i")
-                .map_err(interp_err(InterpolationError::Spline))?;
-
-            let r_prev = band_at(&r, prev, "r")?;
-            let wr = d_mul(w, r_prev, "Curve::spline_interpolate::wr")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let r_i = band_at(&r, i, "r")?;
-            *band_at_mut(&mut r, i, "r")? = d_sub(r_i, wr, "Curve::spline_interpolate::r_i")
-                .map_err(interp_err(InterpolationError::Spline))?;
-        }
-
-        let b_last = band_at(&b, last_index, "b")?;
-        if b_last.is_zero() {
+        let hi1 = d_sub(next.x, curr.x, "Curve::spline_interpolate::hi1")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        // A repeated abscissa collapses a knot interval; the second
+        // derivative there is undefined rather than infinite.
+        if hi.is_zero() || hi1.is_zero() {
             return Err(InterpolationError::DegenerateInterval);
         }
-        let r_last = band_at(&r, last_index, "r")?;
-        *band_at_mut(&mut m, last_index, "m")? =
-            d_div(r_last, b_last, "Curve::spline_interpolate::m_last")
-                .map_err(interp_err(InterpolationError::Spline))?;
-        for i in (1..last_index).rev() {
-            let c_i = band_at(&c, i, "c")?;
-            let m_next = band_at(&m, shift_index(i, 1, spline)?, "m")?;
-            let cm = d_mul(c_i, m_next, "Curve::spline_interpolate::cm")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let r_i = band_at(&r, i, "r")?;
-            let numerator = d_sub(r_i, cm, "Curve::spline_interpolate::m_numerator")
-                .map_err(interp_err(InterpolationError::Spline))?;
-            let b_i = band_at(&b, i, "b")?;
-            if b_i.is_zero() {
-                return Err(InterpolationError::DegenerateInterval);
-            }
-            *band_at_mut(&mut m, i, "m")? = d_div(numerator, b_i, "Curve::spline_interpolate::m_i")
-                .map_err(interp_err(InterpolationError::Spline))?;
-        }
 
-        // Find segment for interpolation
-        let mut segment = None;
-        for i in 0..last_index {
-            if at(i)?.x <= x && x <= at(shift_index(i, 1, spline)?)?.x {
-                segment = Some(i);
-                break;
-            }
-        }
-
-        let segment = segment.ok_or_else(|| {
-            InterpolationError::Spline("Could not find valid segment for interpolation".to_string())
-        })?;
-
-        // Calculate interpolated value
-        let left = at(segment)?;
-        let right = at(shift_index(segment, 1, spline)?)?;
-        let h = d_sub(right.x, left.x, "Curve::spline_interpolate::h")
+        let band = d_add(hi, hi1, "Curve::spline_interpolate::band")
             .map_err(interp_err(InterpolationError::Spline))?;
-        if h.is_zero() {
-            return Err(InterpolationError::DegenerateInterval);
-        }
-        let dx = d_sub(right.x, x, "Curve::spline_interpolate::dx")
-            .map_err(interp_err(InterpolationError::Spline))?;
-        let dx1 = d_sub(x, left.x, "Curve::spline_interpolate::dx1")
+        let diag = d_mul(dec!(2), band, "Curve::spline_interpolate::diag")
             .map_err(interp_err(InterpolationError::Spline))?;
 
-        let m_left = band_at(&m, segment, "m")?;
-        let m_right = band_at(&m, shift_index(segment, 1, spline)?, "m")?;
-        let six_h = d_mul(dec!(6), h, "Curve::spline_interpolate::six_h")
+        let rise_next = d_sub(next.y, curr.y, "Curve::spline_interpolate::rise_next")
             .map_err(interp_err(InterpolationError::Spline))?;
-
-        let left_cube = cube_scaled(m_left, dx, six_h, "Curve::spline_interpolate::left_cube")?;
-        let right_cube = cube_scaled(m_right, dx1, six_h, "Curve::spline_interpolate::right_cube")?;
-        let left_linear = linear_term(left.y, m_left, h, dx, "Curve::spline_interpolate::left")?;
-        let right_linear =
-            linear_term(right.y, m_right, h, dx1, "Curve::spline_interpolate::right")?;
-
-        let y = d_sum_iter(
-            [left_cube, right_cube, left_linear, right_linear],
-            "Curve::spline_interpolate::y",
+        let slope_next = d_div(rise_next, hi1, "Curve::spline_interpolate::slope_next")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let rise_prev = d_sub(curr.y, prev.y, "Curve::spline_interpolate::rise_prev")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let slope_prev = d_div(rise_prev, hi, "Curve::spline_interpolate::slope_prev")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let curvature = d_sub(
+            slope_next,
+            slope_prev,
+            "Curve::spline_interpolate::curvature",
         )
         .map_err(interp_err(InterpolationError::Spline))?;
+        let rhs = d_mul(dec!(6), curvature, "Curve::spline_interpolate::rhs")
+            .map_err(interp_err(InterpolationError::Spline))?;
 
-        Ok(Point2D::new(x, y))
+        a.push(hi);
+        b.push(diag);
+        c.push(hi1);
+        r.push(rhs);
     }
+
+    // Add boundary conditions (natural spline)
+    a.push(Decimal::ZERO);
+    b.push(Decimal::ONE);
+    c.push(Decimal::ZERO);
+    r.push(Decimal::ZERO);
+
+    // Solve tridiagonal system using Thomas algorithm
+    let mut m = vec![Decimal::ZERO; n];
+
+    for i in 1..last_index {
+        let prev = shift_index(i, -1, spline)?;
+        let a_i = band_at(&a, i, "a")?;
+        let b_prev = band_at(&b, prev, "b")?;
+        if b_prev.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let w = d_div(a_i, b_prev, "Curve::spline_interpolate::w")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let c_prev = band_at(&c, prev, "c")?;
+        let wc = d_mul(w, c_prev, "Curve::spline_interpolate::wc")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let b_i = band_at(&b, i, "b")?;
+        *band_at_mut(&mut b, i, "b")? = d_sub(b_i, wc, "Curve::spline_interpolate::b_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let r_prev = band_at(&r, prev, "r")?;
+        let wr = d_mul(w, r_prev, "Curve::spline_interpolate::wr")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let r_i = band_at(&r, i, "r")?;
+        *band_at_mut(&mut r, i, "r")? = d_sub(r_i, wr, "Curve::spline_interpolate::r_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    }
+
+    let b_last = band_at(&b, last_index, "b")?;
+    if b_last.is_zero() {
+        return Err(InterpolationError::DegenerateInterval);
+    }
+    let r_last = band_at(&r, last_index, "r")?;
+    *band_at_mut(&mut m, last_index, "m")? =
+        d_div(r_last, b_last, "Curve::spline_interpolate::m_last")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    for i in (1..last_index).rev() {
+        let c_i = band_at(&c, i, "c")?;
+        let m_next = band_at(&m, shift_index(i, 1, spline)?, "m")?;
+        let cm = d_mul(c_i, m_next, "Curve::spline_interpolate::cm")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let r_i = band_at(&r, i, "r")?;
+        let numerator = d_sub(r_i, cm, "Curve::spline_interpolate::m_numerator")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let b_i = band_at(&b, i, "b")?;
+        if b_i.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        *band_at_mut(&mut m, i, "m")? = d_div(numerator, b_i, "Curve::spline_interpolate::m_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    }
+
+    Ok(m)
+}
+
+/// Evaluates the spline with second derivatives `m` through `pts` at `x`,
+/// which the pre-checks keep inside the knots.
+fn spline_eval(pts: &[&Point2D], m: &[Decimal], x: Decimal) -> Result<Point2D, InterpolationError> {
+    let n = pts.len();
+    let spline = InterpolationError::Spline;
+    let at = |index: usize| -> Result<&Point2D, InterpolationError> {
+        pts.get(index).copied().ok_or_else(|| {
+            InterpolationError::Spline(format!(
+                "point index {index} is out of bounds for a curve of {n} points"
+            ))
+        })
+    };
+
+    // Find segment for interpolation: the first `[x_i, x_{i+1}]` holding
+    // `x`. With `k` the first knot at or after `x` that is `k - 1`, or 0
+    // when `k` is the first knot, so a binary search finds the window a
+    // scan from the left would (#858).
+    let first_at_or_after = pts.partition_point(|p| p.x < x);
+    let segment = shift_index(first_at_or_after.max(1), -1, spline)?;
+    if segment >= shift_index(n, -1, spline)? {
+        return Err(InterpolationError::Spline(
+            "Could not find valid segment for interpolation".to_string(),
+        ));
+    }
+
+    // Calculate interpolated value
+    let left = at(segment)?;
+    let right = at(shift_index(segment, 1, spline)?)?;
+    let h = d_sub(right.x, left.x, "Curve::spline_interpolate::h")
+        .map_err(interp_err(InterpolationError::Spline))?;
+    if h.is_zero() {
+        return Err(InterpolationError::DegenerateInterval);
+    }
+    let dx = d_sub(right.x, x, "Curve::spline_interpolate::dx")
+        .map_err(interp_err(InterpolationError::Spline))?;
+    let dx1 = d_sub(x, left.x, "Curve::spline_interpolate::dx1")
+        .map_err(interp_err(InterpolationError::Spline))?;
+
+    let m_left = band_at(m, segment, "m")?;
+    let m_right = band_at(m, shift_index(segment, 1, spline)?, "m")?;
+    let six_h = d_mul(dec!(6), h, "Curve::spline_interpolate::six_h")
+        .map_err(interp_err(InterpolationError::Spline))?;
+
+    let left_cube = cube_scaled(m_left, dx, six_h, "Curve::spline_interpolate::left_cube")?;
+    let right_cube = cube_scaled(m_right, dx1, six_h, "Curve::spline_interpolate::right_cube")?;
+    let left_linear = linear_term(left.y, m_left, h, dx, "Curve::spline_interpolate::left")?;
+    let right_linear = linear_term(right.y, m_right, h, dx1, "Curve::spline_interpolate::right")?;
+
+    let y = d_sum_iter(
+        [left_cube, right_cube, left_linear, right_linear],
+        "Curve::spline_interpolate::y",
+    )
+    .map_err(interp_err(InterpolationError::Spline))?;
+
+    Ok(Point2D::new(x, y))
 }
 
 impl StatisticalCurve for Curve {
@@ -2329,6 +2461,24 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     }
 }
 
+/// Reads `curve` at `x` for a resampling. A spline is solved into `spline`
+/// on the first call and reused after, with the answers
+/// [`Interpolate::interpolate`] gives.
+fn resample<'a>(
+    curve: &'a Curve,
+    spline: &mut Option<CurveSpline<'a>>,
+    x: Decimal,
+    interpolation: InterpolationType,
+) -> Result<Point2D, InterpolationError> {
+    if interpolation == InterpolationType::Spline {
+        spline
+            .get_or_insert_with(|| CurveSpline::new(curve))
+            .interpolate(x)
+    } else {
+        curve.interpolate(x, interpolation)
+    }
+}
+
 impl MergeAxisInterpolate<Point2D, Decimal> for Curve
 where
     Self: Sized,
@@ -2356,6 +2506,11 @@ where
         let mut interpolated_self_points = BTreeSet::new();
         let mut interpolated_other_points = BTreeSet::new();
 
+        // A spline is solved once per curve, on the first abscissa that
+        // needs it, instead of once per resampled abscissa (#858).
+        let mut self_spline: Option<CurveSpline<'_>> = None;
+        let mut other_spline: Option<CurveSpline<'_>> = None;
+
         for x in &sorted_x_values {
             if self.contains_point(x) {
                 let pt = self.get_point(x).ok_or_else(|| {
@@ -2365,7 +2520,7 @@ where
                 })?;
                 interpolated_self_points.insert(*pt);
             } else {
-                let interpolated_point = self.interpolate(*x, interpolation)?;
+                let interpolated_point = resample(self, &mut self_spline, *x, interpolation)?;
                 interpolated_self_points.insert(interpolated_point);
             }
             if other.contains_point(x) {
@@ -2376,7 +2531,7 @@ where
                 })?;
                 interpolated_other_points.insert(*pt);
             } else {
-                let interpolated_point = other.interpolate(*x, interpolation)?;
+                let interpolated_point = resample(other, &mut other_spline, *x, interpolation)?;
                 interpolated_other_points.insert(interpolated_point);
             }
         }
@@ -5689,6 +5844,367 @@ mod tests_bracket_matches_scan {
             let curve = curve_of(&points);
             for x in probes(&curve) {
                 check(&curve, x);
+            }
+        }
+    }
+}
+
+/// [`CurveSpline`] and the refactored `spline_interpolate` of #858 against
+/// the `spline_interpolate` they replace, kept here verbatim as
+/// `legacy_spline`: the same point or the same error at every probe.
+#[cfg(test)]
+mod tests_spline_matches_legacy {
+    use super::*;
+
+    fn legacy_point_at(
+        curve: &Curve,
+        index: usize,
+        kind: fn(String) -> InterpolationError,
+    ) -> Result<&Point2D, InterpolationError> {
+        curve.points.iter().nth(index).ok_or_else(|| {
+            kind(format!(
+                "point index {index} is out of bounds for a curve of {} points",
+                curve.points.len()
+            ))
+        })
+    }
+
+    fn legacy_exact_point_at(
+        curve: &Curve,
+        x: Decimal,
+    ) -> Result<Option<Point2D>, InterpolationError> {
+        let mut at_x = curve.points.iter().filter(|p| p.x == x);
+        let Some(point) = at_x.next() else {
+            return Ok(None);
+        };
+        if at_x.next().is_some() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        Ok(Some(*point))
+    }
+
+    /// `Curve::spline_interpolate` as it was before #858.
+    #[rustfmt::skip]
+fn legacy_spline(curve: &Curve, x: Decimal) -> Result<Point2D, InterpolationError> {
+    let len = curve.len();
+
+    // Need at least 3 points for spline interpolation
+    if len < 3 {
+        return Err(InterpolationError::Spline(
+            "Need at least three points for spline interpolation".to_string(),
+        ));
+    }
+
+    // Check if x is within the valid range
+    let first = legacy_point_at(curve, 0, InterpolationError::Spline)?;
+    let spline = InterpolationError::Spline;
+    let last_index = shift_index(len, -1, spline)?;
+    let last = legacy_point_at(curve, last_index, spline)?;
+    if x < first.x || x > last.x {
+        return Err(InterpolationError::Spline(
+            "x is outside the range of points".to_string(),
+        ));
+    }
+
+    // For exact points, return the actual point value. A stack of
+    // ordinates at `x` has no single value, so it errors out instead of
+    // yielding the lowest of them.
+    if let Some(point) = legacy_exact_point_at(curve, x)? {
+        return Ok(point);
+    }
+
+    let n = len;
+    let pts: Vec<&Point2D> = curve.points.iter().collect();
+    let at = |index: usize| -> Result<&Point2D, InterpolationError> {
+        pts.get(index).copied().ok_or_else(|| {
+            InterpolationError::Spline(format!(
+                "point index {index} is out of bounds for a curve of {n} points"
+            ))
+        })
+    };
+
+    // Calculate second derivatives. The three interior bands and the
+    // right-hand side are built in order, with the natural-spline
+    // boundary rows (`b[0] = b[n-1] = 1`) pushed at the ends.
+    let mut a = vec![Decimal::ZERO];
+    let mut b = vec![Decimal::ONE];
+    let mut c = vec![Decimal::ZERO];
+    let mut r = vec![Decimal::ZERO];
+
+    // Fill the matrices
+    for i in 1..last_index {
+        let prev = at(shift_index(i, -1, spline)?)?;
+        let curr = at(i)?;
+        let next = at(shift_index(i, 1, spline)?)?;
+
+        let hi = d_sub(curr.x, prev.x, "Curve::spline_interpolate::hi")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let hi1 = d_sub(next.x, curr.x, "Curve::spline_interpolate::hi1")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        // A repeated abscissa collapses a knot interval; the second
+        // derivative there is undefined rather than infinite.
+        if hi.is_zero() || hi1.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+
+        let band = d_add(hi, hi1, "Curve::spline_interpolate::band")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let diag = d_mul(dec!(2), band, "Curve::spline_interpolate::diag")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let rise_next = d_sub(next.y, curr.y, "Curve::spline_interpolate::rise_next")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let slope_next = d_div(rise_next, hi1, "Curve::spline_interpolate::slope_next")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let rise_prev = d_sub(curr.y, prev.y, "Curve::spline_interpolate::rise_prev")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let slope_prev = d_div(rise_prev, hi, "Curve::spline_interpolate::slope_prev")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let curvature = d_sub(
+            slope_next,
+            slope_prev,
+            "Curve::spline_interpolate::curvature",
+        )
+        .map_err(interp_err(InterpolationError::Spline))?;
+        let rhs = d_mul(dec!(6), curvature, "Curve::spline_interpolate::rhs")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        a.push(hi);
+        b.push(diag);
+        c.push(hi1);
+        r.push(rhs);
+    }
+
+    // Add boundary conditions (natural spline)
+    a.push(Decimal::ZERO);
+    b.push(Decimal::ONE);
+    c.push(Decimal::ZERO);
+    r.push(Decimal::ZERO);
+
+    // Solve tridiagonal system using Thomas algorithm
+    let mut m = vec![Decimal::ZERO; n];
+
+    for i in 1..last_index {
+        let prev = shift_index(i, -1, spline)?;
+        let a_i = band_at(&a, i, "a")?;
+        let b_prev = band_at(&b, prev, "b")?;
+        if b_prev.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        let w = d_div(a_i, b_prev, "Curve::spline_interpolate::w")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let c_prev = band_at(&c, prev, "c")?;
+        let wc = d_mul(w, c_prev, "Curve::spline_interpolate::wc")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let b_i = band_at(&b, i, "b")?;
+        *band_at_mut(&mut b, i, "b")? = d_sub(b_i, wc, "Curve::spline_interpolate::b_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+
+        let r_prev = band_at(&r, prev, "r")?;
+        let wr = d_mul(w, r_prev, "Curve::spline_interpolate::wr")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let r_i = band_at(&r, i, "r")?;
+        *band_at_mut(&mut r, i, "r")? = d_sub(r_i, wr, "Curve::spline_interpolate::r_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    }
+
+    let b_last = band_at(&b, last_index, "b")?;
+    if b_last.is_zero() {
+        return Err(InterpolationError::DegenerateInterval);
+    }
+    let r_last = band_at(&r, last_index, "r")?;
+    *band_at_mut(&mut m, last_index, "m")? =
+        d_div(r_last, b_last, "Curve::spline_interpolate::m_last")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    for i in (1..last_index).rev() {
+        let c_i = band_at(&c, i, "c")?;
+        let m_next = band_at(&m, shift_index(i, 1, spline)?, "m")?;
+        let cm = d_mul(c_i, m_next, "Curve::spline_interpolate::cm")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let r_i = band_at(&r, i, "r")?;
+        let numerator = d_sub(r_i, cm, "Curve::spline_interpolate::m_numerator")
+            .map_err(interp_err(InterpolationError::Spline))?;
+        let b_i = band_at(&b, i, "b")?;
+        if b_i.is_zero() {
+            return Err(InterpolationError::DegenerateInterval);
+        }
+        *band_at_mut(&mut m, i, "m")? = d_div(numerator, b_i, "Curve::spline_interpolate::m_i")
+            .map_err(interp_err(InterpolationError::Spline))?;
+    }
+
+    // Find segment for interpolation
+    let mut segment = None;
+    for i in 0..last_index {
+        if at(i)?.x <= x && x <= at(shift_index(i, 1, spline)?)?.x {
+            segment = Some(i);
+            break;
+        }
+    }
+
+    let segment = segment.ok_or_else(|| {
+        InterpolationError::Spline("Could not find valid segment for interpolation".to_string())
+    })?;
+
+    // Calculate interpolated value
+    let left = at(segment)?;
+    let right = at(shift_index(segment, 1, spline)?)?;
+    let h = d_sub(right.x, left.x, "Curve::spline_interpolate::h")
+        .map_err(interp_err(InterpolationError::Spline))?;
+    if h.is_zero() {
+        return Err(InterpolationError::DegenerateInterval);
+    }
+    let dx = d_sub(right.x, x, "Curve::spline_interpolate::dx")
+        .map_err(interp_err(InterpolationError::Spline))?;
+    let dx1 = d_sub(x, left.x, "Curve::spline_interpolate::dx1")
+        .map_err(interp_err(InterpolationError::Spline))?;
+
+    let m_left = band_at(&m, segment, "m")?;
+    let m_right = band_at(&m, shift_index(segment, 1, spline)?, "m")?;
+    let six_h = d_mul(dec!(6), h, "Curve::spline_interpolate::six_h")
+        .map_err(interp_err(InterpolationError::Spline))?;
+
+    let left_cube = cube_scaled(m_left, dx, six_h, "Curve::spline_interpolate::left_cube")?;
+    let right_cube = cube_scaled(m_right, dx1, six_h, "Curve::spline_interpolate::right_cube")?;
+    let left_linear = linear_term(left.y, m_left, h, dx, "Curve::spline_interpolate::left")?;
+    let right_linear =
+        linear_term(right.y, m_right, h, dx1, "Curve::spline_interpolate::right")?;
+
+    let y = d_sum_iter(
+        [left_cube, right_cube, left_linear, right_linear],
+        "Curve::spline_interpolate::y",
+    )
+    .map_err(interp_err(InterpolationError::Spline))?;
+
+    Ok(Point2D::new(x, y))
+}
+
+    fn check(curve: &Curve) {
+        let spline = CurveSpline::new(curve);
+        let mut xs = vec![dec!(-1000), dec!(1000), dec!(0.123456789)];
+        let knots: Vec<Decimal> = curve.points.iter().map(|p| p.x).collect();
+        for pair in knots.windows(2) {
+            xs.push((pair[0] + pair[1]) / dec!(2));
+            xs.push(pair[0] + (pair[1] - pair[0]) / dec!(3));
+        }
+        for x in knots {
+            xs.extend([x, x - dec!(0.001), x + dec!(0.001)]);
+        }
+        for x in xs {
+            let legacy = format!("{:?}", legacy_spline(curve, x));
+            assert_eq!(
+                format!("{:?}", curve.spline_interpolate(x)),
+                legacy,
+                "spline_interpolate at {x} on {curve:?}"
+            );
+            assert_eq!(
+                format!("{:?}", spline.interpolate(x)),
+                legacy,
+                "CurveSpline at {x} on {curve:?}"
+            );
+        }
+    }
+
+    fn curve_of(points: &[(Decimal, Decimal)]) -> Curve {
+        Curve::new(points.iter().map(|&(x, y)| Point2D::new(x, y)).collect())
+    }
+
+    #[test]
+    fn edge_curves() {
+        let d = |v: i64| Decimal::from(v);
+        let cases: Vec<Vec<(Decimal, Decimal)>> = vec![
+            vec![],
+            vec![(d(1), d(1))],
+            vec![(d(0), d(0)), (d(1), d(1))],
+            vec![(d(0), d(0)), (d(1), d(1)), (d(2), d(4))],
+            vec![(d(0), d(0)), (d(1), d(1)), (d(1), d(3)), (d(2), d(4))],
+            vec![(d(0), d(0)), (d(0), d(2)), (d(1), d(1)), (d(2), d(4))],
+            vec![(d(0), d(0)), (d(1), d(1)), (d(2), d(4)), (d(2), d(5))],
+            // Long mantissas: the solve rounds at the 28th place.
+            (0..9)
+                .map(|i| {
+                    let x = dec!(10) / dec!(7) * d(i);
+                    (x, (x - dec!(5)) / dec!(7) * (x - dec!(5)) / dec!(3))
+                })
+                .collect(),
+            // Uneven knots, including a close pair.
+            vec![
+                (d(-3), d(2)),
+                (d(-1), d(0)),
+                (dec!(-0.999), d(1)),
+                (d(4), d(4)),
+                (d(9), d(-3)),
+            ],
+        ];
+        for points in cases {
+            check(&curve_of(&points));
+        }
+    }
+
+    #[test]
+    fn overflowing_solve_reports_the_same_error() {
+        let curve = curve_of(&[
+            (dec!(0), dec!(0)),
+            (dec!(0.0000000000000000000000000001), Decimal::MAX),
+            (dec!(1), Decimal::MIN),
+            (dec!(2), dec!(1)),
+        ]);
+        assert!(legacy_spline(&curve, dec!(0.5)).is_err());
+        check(&curve);
+    }
+
+    #[test]
+    fn random_curves() {
+        let mut state: u64 = 0xd1b5_4a32_d192_ed03;
+        let mut next = |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        for _ in 0..300 {
+            let len = next(16) as usize;
+            let points: Vec<(Decimal, Decimal)> = (0..len)
+                .map(|_| {
+                    (
+                        Decimal::new(next(400) as i64 - 100, 1),
+                        Decimal::new(next(20_000) as i64 - 10_000, 3),
+                    )
+                })
+                .collect();
+            check(&curve_of(&points));
+        }
+    }
+
+    #[test]
+    fn merge_resampling_matches_per_read_splines() {
+        // The merge solves each spline once; reading every resampled
+        // abscissa through `spline_interpolate` gives the same curves.
+        let a = curve_of(
+            &(0..12)
+                .map(|i| (Decimal::from(i), Decimal::from(i * i % 7)))
+                .collect::<Vec<_>>(),
+        );
+        let b = curve_of(
+            &(0..9)
+                .map(|i| {
+                    (
+                        dec!(0.5) + Decimal::from(i) * dec!(1.3),
+                        Decimal::from(i % 4),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
+        let (ra, rb) = a
+            .merge_axis_interpolate(&b, InterpolationType::Spline)
+            .unwrap();
+        for (resampled, source) in [(&ra, &a), (&rb, &b)] {
+            for p in &resampled.points {
+                let want = match source.get_point(&p.x) {
+                    Some(point) => *point,
+                    None => legacy_spline(source, p.x).unwrap(),
+                };
+                assert_eq!(*p, want);
             }
         }
     }

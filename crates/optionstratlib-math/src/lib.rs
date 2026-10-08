@@ -52,9 +52,9 @@
 //!
 //! This crate has no `prelude` module, by decision (#518). Each module root
 //! re-exports what a caller needs: `curves` (`Curve`, `Point2D`, `Curvable`,
-//! `StatisticalCurve`), `surfaces` (`Surface`, `Point3D`, `Surfacable`),
-//! `geometrics` (construction, interpolation and the shared traits) and
-//! `error`.
+//! `StatisticalCurve`, `CurveSpline`), `surfaces` (`Surface`, `Point3D`,
+//! `Surfacable`), `geometrics` (construction, interpolation and the shared
+//! traits) and `error`.
 //!
 //! Measured when the crate was extracted, counting explicit
 //! `optionstratlib::{curves,surfaces,geometrics}::…` imports: the examples
