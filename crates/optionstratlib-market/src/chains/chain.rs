@@ -284,6 +284,18 @@ impl<'de> Deserialize<'de> for OptionChain {
     }
 }
 
+/// Whether a `day-month-year` title component reads as a date in one of the
+/// date-only formats `ExpirationDate::from_string` accepts. Checked here with
+/// `NaiveDate` because `from_string` also records a process-wide reference
+/// date, which a file-name check must not do.
+fn is_title_date(text: &str) -> bool {
+    const FORMATS: [&str; 4] = ["%Y-%m-%d", "%d-%m-%Y", "%d-%b-%Y", "%d-%B-%Y"];
+    let lowered = text.to_lowercase();
+    FORMATS
+        .iter()
+        .any(|format| chrono::NaiveDate::parse_from_str(&lowered, format).is_ok())
+}
+
 impl OptionChain {
     /// Creates a new `OptionChain` for a specific underlying instrument and expiration date.
     ///
@@ -1220,12 +1232,24 @@ impl OptionChain {
     /// * `Ok(())` - If the file name was successfully parsed and the properties were set
     /// * `Err(...)` - If the file name format is invalid or the underlying price cannot be parsed
     ///
+    /// The expiration date is the three middle parts joined by `-`, and must
+    /// read as a calendar date in one of the formats the chain's expiration
+    /// parser accepts: `YYYY-MM-DD`, `DD-MM-YYYY`, `DD-mon-YYYY` or
+    /// `DD-month-YYYY` (month names in any case). The price is parsed as a
+    /// `Decimal`, with `,` accepted as the decimal separator; it used to go
+    /// through `f64`, which moved its last digits (#827).
+    ///
+    /// Nothing is changed unless the whole name parses.
+    ///
     /// # Errors
     ///
-    /// Returns `ChainError` if:
-    /// - The file path is empty
-    /// - The file name format is invalid (expected 5 parts: symbol, day, month, year, price)
-    /// - The underlying price cannot be parsed as a valid number
+    /// Returns [`ChainError::ChainBuildError`] (`InvalidParameters`) naming
+    /// - `file` when the path is empty,
+    /// - `file_name` when the name does not have exactly five `-`-separated
+    ///   parts (symbol, day, month, year, price),
+    /// - `symbol` when the symbol part is empty,
+    /// - `expiration_date` when the three date parts do not form a date,
+    /// - `underlying_price` when the price is not a decimal number.
     pub fn set_from_title(&mut self, file: &str) -> Result<(), ChainError> {
         let file_name = file
             .split('/')
@@ -1235,28 +1259,39 @@ impl OptionChain {
             .rsplit_once('.')
             .map_or(file_name, |(name, _ext)| name);
         let parts: Vec<&str> = file_name.split('-').collect();
-        if parts.len() != 5 {
+        let [symbol, day, month, year, price] = parts.as_slice() else {
             return Err(ChainError::invalid_parameters(
                 "file_name",
                 "expected exactly 5 parts (symbol, day, month, year, price)",
             ));
+        };
+        if symbol.trim().is_empty() {
+            return Err(ChainError::invalid_parameters(
+                "symbol",
+                &format!("no symbol in file name {file_name:?}"),
+            ));
         }
-        let missing = || ChainError::invalid_parameters("file_name", "missing expected component");
-        let p0 = parts.first().ok_or_else(missing)?;
-        let p1 = parts.get(1).ok_or_else(missing)?;
-        let p2 = parts.get(2).ok_or_else(missing)?;
-        let p3 = parts.get(3).ok_or_else(missing)?;
-        let p4 = parts.get(4).ok_or_else(missing)?;
-        self.symbol = (*p0).to_string();
-        self.expiration_date = format!("{p1}-{p2}-{p3}");
-        let underlying_price_str = p4.replace(",", ".");
-        let price = underlying_price_str.parse::<f64>().map_err(|_| {
+        let expiration_date = format!("{day}-{month}-{year}");
+        if !is_title_date(&expiration_date) {
+            return Err(ChainError::invalid_parameters(
+                "expiration_date",
+                &format!(
+                    "{expiration_date:?} in file name {file_name:?} is not a date \
+                     (expected YYYY-MM-DD, DD-MM-YYYY or DD-mon-YYYY)"
+                ),
+            ));
+        }
+        let price_text = price.replace(',', ".");
+        let price = price_text.parse::<Decimal>().map_err(|e| {
             ChainError::invalid_parameters(
                 "underlying_price",
-                "invalid underlying price format in file name",
+                &format!("{price_text:?} in file name {file_name:?} is not a number: {e}"),
             )
         })?;
-        self.underlying_price = Positive::new(price).map_err(ChainError::from)?;
+        let underlying_price = Positive::new_decimal(price)?;
+        self.symbol = (*symbol).to_string();
+        self.expiration_date = expiration_date;
+        self.underlying_price = underlying_price;
         Ok(())
     }
 
@@ -1481,13 +1516,24 @@ impl OptionChain {
     ///
     /// This method is only available on non-WebAssembly targets.
     ///
+    /// The CSV carries the quotes only: the symbol, the expiration date and
+    /// the underlying price come from the file name, in the
+    /// `symbol-day-month-year-price.csv` form [`OptionChain::save_to_csv`]
+    /// writes (see [`OptionChain::set_from_title`]). A name they cannot be
+    /// derived from is an error; the loader used to return the chain with
+    /// symbol and expiration `"unknown"` and an underlying price of zero
+    /// (#827).
+    ///
     /// # Errors
     ///
     /// Returns [`ChainError::FileError`] wrapping `FileErrorKind::IOError`
     /// when the CSV file cannot be opened or read, or
     /// `FileErrorKind::ParseError` when the CSV records cannot be parsed.
     /// Invalid option data (bad strike, volatility or price) surfaces as
-    /// [`ChainError::OptionDataError`].
+    /// [`ChainError::OptionDataError`]. A file name the symbol, expiration
+    /// date or underlying price cannot be derived from returns the
+    /// [`ChainError::ChainBuildError`] [`OptionChain::set_from_title`]
+    /// documents.
     #[inline(never)]
     #[cfg(feature = "io")]
     pub fn load_from_csv(file_path: &str) -> Result<Self, ChainError> {
@@ -1531,22 +1577,17 @@ impl OptionChain {
             option_data.set_mid_prices();
             options.insert(option_data);
         }
+        // The placeholders never escape: `set_from_title` either sets all
+        // three fields or returns its error.
         let mut option_chain = OptionChain {
-            symbol: "unknown".to_string(),
+            symbol: String::new(),
             underlying_price: Positive::ZERO,
-            expiration_date: "unknown".to_string(),
+            expiration_date: String::new(),
             options,
             risk_free_rate: None,
             dividend_yield: None,
         };
-        match option_chain.set_from_title(file_path) {
-            Ok(_) => {
-                // TODO: find other way to set symbol, underlying_price and expiration_date
-            }
-            Err(e) => {
-                debug!("Failed to set title from file name: {}", e);
-            }
-        }
+        option_chain.set_from_title(file_path)?;
         Ok(option_chain)
     }
 
@@ -1556,11 +1597,16 @@ impl OptionChain {
     ///
     /// This method is only available on non-WebAssembly targets with the `async` feature.
     ///
+    /// It runs [`OptionChain::load_from_csv`] on the blocking pool, so it
+    /// derives the symbol, expiration date and underlying price from the
+    /// file name the same way and rejects the same names (#827).
+    ///
     /// # Errors
     ///
     /// Returns the same variants as [`OptionChain::load_from_csv`]. A
     /// `spawn_blocking` join failure is surfaced as
-    /// [`ChainError::FileError`] wrapping `FileErrorKind::IOError`.
+    /// [`ChainError::ChainBuildError`] (`InvalidParameters` naming
+    /// `async_task`).
     #[cfg(feature = "async")]
     pub async fn load_from_csv_async(file_path: &str) -> Result<Self, ChainError> {
         let path = file_path.to_string();
@@ -10359,5 +10405,153 @@ mod tests_to_build_params_panic_freedom {
                 OptionDataErrorKind::PriceCalculationError(_)
             ))
         ));
+    }
+}
+
+/// The file-name metadata of a CSV chain: a name it cannot be derived from is
+/// an error, and the price is read as a `Decimal` (#827).
+#[cfg(test)]
+mod tests_title_metadata {
+    use super::*;
+    use crate::error::chains::ChainBuildErrorKind;
+    use rust_decimal_macros::dec;
+
+    fn invalid_parameter<T: fmt::Debug>(result: Result<T, ChainError>) -> String {
+        match result {
+            Err(ChainError::ChainBuildError(ChainBuildErrorKind::InvalidParameters {
+                parameter,
+                ..
+            })) => parameter,
+            other => panic!("expected an invalid-parameter error, got {other:?}"),
+        }
+    }
+
+    fn untouched() -> OptionChain {
+        OptionChain::new(
+            "KEEP",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_set_from_title_reads_the_price_as_decimal() -> Result<(), ChainError> {
+        // 18 significant digits: an `f64` keeps about 16 of them.
+        let mut chain = untouched();
+        chain.set_from_title("SPX-2030-01-15-1234567.12345678901234567.csv")?;
+        assert_eq!(
+            chain.underlying_price.to_dec(),
+            dec!(1234567.12345678901234567)
+        );
+        assert_eq!(chain.symbol, "SPX");
+        assert_eq!(chain.expiration_date, "2030-01-15");
+
+        chain.set_from_title("DAX-30-jan-2025-21637,5.csv")?;
+        assert_eq!(chain.underlying_price.to_dec(), dec!(21637.5));
+        assert_eq!(chain.expiration_date, "30-jan-2025");
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_from_title_rejects_underivable_metadata_and_changes_nothing() {
+        for (name, parameter) in [
+            ("-2030-01-15-100.csv", "symbol"),
+            ("SPX-2030-13-45-100.csv", "expiration_date"),
+            ("SPX-xx-yy-zz-100.csv", "expiration_date"),
+            ("SPX-2030-01-15-abc.csv", "underlying_price"),
+            ("SPX-2030-01-15-.csv", "underlying_price"),
+            ("chain.csv", "file_name"),
+        ] {
+            let mut chain = untouched();
+            assert_eq!(
+                invalid_parameter(chain.set_from_title(name)),
+                parameter,
+                "{name}"
+            );
+            assert_eq!(chain.symbol, "KEEP", "{name}");
+            assert_eq!(chain.underlying_price, Positive::HUNDRED, "{name}");
+            assert_eq!(chain.expiration_date, "2030-01-01", "{name}");
+        }
+    }
+
+    #[cfg(feature = "io")]
+    fn write_quotes(dir: &std::path::Path, name: &str) -> String {
+        let mut chain = OptionChain::new(
+            "SPX",
+            Positive::HUNDRED,
+            "2030-01-15".to_string(),
+            None,
+            None,
+        );
+        chain.add_option(
+            Positive::HUNDRED,
+            Some(Positive::ONE),
+            Some(Positive::TWO),
+            Some(Positive::ONE),
+            Some(Positive::TWO),
+            Positive::new_decimal(dec!(0.2)).expect("a positive literal"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let dir_text = dir.to_string_lossy().to_string();
+        chain.save_to_csv(&dir_text).expect("the chain is written");
+        let written = format!("{dir_text}/{}.csv", chain.get_title());
+        let target = format!("{dir_text}/{name}");
+        std::fs::rename(&written, &target).expect("the file is renamed");
+        target
+    }
+
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_load_from_csv_without_metadata_in_the_name_returns_error() {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let path = write_quotes(dir.path(), "quotes.csv");
+        assert_eq!(
+            invalid_parameter(OptionChain::load_from_csv(&path)),
+            "file_name"
+        );
+        let path = write_quotes(dir.path(), "SPX-2030-02-30-100.csv");
+        assert_eq!(
+            invalid_parameter(OptionChain::load_from_csv(&path)),
+            "expiration_date"
+        );
+    }
+
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_load_from_csv_takes_the_metadata_from_the_name() -> Result<(), ChainError> {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let path = write_quotes(dir.path(), "SPX-2030-01-15-5781.88.csv");
+        let chain = OptionChain::load_from_csv(&path)?;
+        assert_eq!(chain.symbol, "SPX");
+        assert_eq!(chain.expiration_date, "2030-01-15");
+        assert_eq!(chain.underlying_price.to_dec(), dec!(5781.88));
+        assert_eq!(chain.options.len(), 1);
+        Ok(())
+    }
+
+    #[cfg(feature = "async")]
+    #[test]
+    fn test_load_from_csv_async_rejects_the_same_names() -> Result<(), ChainError> {
+        let dir = tempfile::tempdir().expect("a temporary directory");
+        let bad = write_quotes(dir.path(), "quotes.csv");
+        let good = write_quotes(dir.path(), "SPX-2030-01-15-5781.88.csv");
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a test runtime");
+        assert_eq!(
+            invalid_parameter(runtime.block_on(OptionChain::load_from_csv_async(&bad))),
+            "file_name"
+        );
+        let chain = runtime.block_on(OptionChain::load_from_csv_async(&good))?;
+        assert_eq!(chain.underlying_price.to_dec(), dec!(5781.88));
+        Ok(())
     }
 }
