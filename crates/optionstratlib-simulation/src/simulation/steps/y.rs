@@ -98,9 +98,17 @@ where
     /// # Returns
     ///
     /// A new `Ystep<T>` instance with incremented index
-    pub fn next(&self, value: T) -> Self {
-        let index = self.index + 1;
-        Self { index, value }
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SimulationError::StepError`] when the index is already
+    /// `i32::MAX`. The raw `+ 1` used here aborted in debug builds and wrapped
+    /// to `i32::MIN` in release builds (#788).
+    pub fn next(&self, value: T) -> Result<Self, SimulationError> {
+        let index = self.index.checked_add(1).ok_or_else(|| {
+            SimulationError::step_error("step index overflowed advancing the walk")
+        })?;
+        Ok(Self { index, value })
     }
 
     /// Returns an immutable reference to the stored value.
@@ -164,7 +172,9 @@ where
             f,
             "Ystep {{ index: {}, value: {} }}",
             self.index,
-            positive_value.round_to(3)
+            // Rounding the `Decimal` prints what `Positive::round_to(3)` did,
+            // without its `unwrap_or_panic` (#788).
+            positive_value.to_dec().round_dp(3).normalize()
         )
     }
 }
@@ -340,7 +350,7 @@ mod tests_serialize {
     #[test]
     fn test_next_serialization() {
         let step = Ystep::new(1, 5.0f64);
-        let next_step = step.next(10.0f64);
+        let next_step = step.next(10.0f64).unwrap();
 
         let serialized = serde_json::to_string(&next_step).unwrap();
         let parsed: Value = serde_json::from_str(&serialized).unwrap();
@@ -363,5 +373,28 @@ mod tests_serialize {
         let parsed: Value = serde_json::from_str(&serialized).unwrap();
         assert_eq!(parsed["index"], 7);
         assert_eq!(parsed["value"], "15.25");
+    }
+}
+
+/// `Ystep::next` formed `index + 1` with the raw operator: an abort in debug
+/// builds and a silent wrap to `i32::MIN` in release builds (#788).
+#[cfg(test)]
+mod tests_next_panic_freedom {
+    use super::*;
+
+    #[test]
+    fn test_next_at_max_index_returns_error() {
+        let step = Ystep::new(i32::MAX, 1.0f64);
+        assert!(matches!(
+            step.next(2.0f64),
+            Err(SimulationError::StepError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_next_increments_index() -> Result<(), SimulationError> {
+        let step = Ystep::new(i32::MAX - 1, 1.0f64).next(2.0f64)?;
+        assert_eq!(*step.index(), i32::MAX);
+        Ok(())
     }
 }

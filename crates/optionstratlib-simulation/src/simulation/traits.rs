@@ -1,13 +1,7 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::SimulationError;
 use crate::simulation::model::WalkPath;
 use crate::simulation::ou::ou_path;
-use crate::simulation::{WalkParams, WalkType};
+use crate::simulation::{WalkParams, WalkType, path_buffer};
 use num_traits::ToPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
@@ -80,8 +74,8 @@ where
                 return Err(SimulationError::GarchStationarity { alpha, beta });
             }
 
-            let mut path = Vec::with_capacity(params.size + 1);
-            let mut vols = Vec::with_capacity(params.size + 1);
+            let mut path = path_buffer(params.size, 1)?;
+            let mut vols = path_buffer(params.size, 1)?;
             let mut price = params.ystep_as_positive()?.to_dec();
             path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
             vols.push(volatility);
@@ -194,8 +188,8 @@ where
                 return Err(SimulationError::InvalidCorrelation { rho });
             }
 
-            let mut values = Vec::with_capacity(params.size);
-            let mut vols = Vec::with_capacity(params.size);
+            let mut values = path_buffer(params.size, 0)?;
+            let mut vols = path_buffer(params.size, 0)?;
             let mut price: Positive = params.ystep_as_positive()?;
 
             // Initial variance is the square of initial volatility
@@ -362,8 +356,8 @@ where
 
             let sqrt_dt = p_sqrt(&dt, "simulation::traits::custom_walk")?;
             let mut price = params.ystep_as_positive()?.to_dec();
-            let mut path = Vec::with_capacity(params.size + 1);
-            let mut vols_out = Vec::with_capacity(params.size + 1);
+            let mut path = path_buffer(params.size, 1)?;
+            let mut vols_out = path_buffer(params.size, 1)?;
             path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
             vols_out.push(volatility);
 
@@ -448,8 +442,8 @@ where
             vol_multiplier_up,
             vol_multiplier_down,
         } => {
-            let mut values = Vec::with_capacity(params.size);
-            let mut vols = Vec::with_capacity(params.size);
+            let mut values = path_buffer(params.size, 0)?;
+            let mut vols = path_buffer(params.size, 0)?;
             let mut price = params.ystep_as_positive()?.to_dec();
             values.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
             vols.push(volatility);
@@ -551,7 +545,7 @@ where
             drift,
             volatility,
         } => {
-            let mut values = Vec::with_capacity(params.size + 1);
+            let mut values = path_buffer(params.size, 1)?;
             let start: Positive = params.ystep_as_positive()?;
             values.push(start);
             let mut x: Decimal = start.to_dec();
@@ -601,7 +595,7 @@ where
             drift,
             volatility,
         } => {
-            let mut values = Vec::with_capacity(params.size);
+            let mut values = path_buffer(params.size, 0)?;
             let mut current_value: Positive = params.ystep_as_positive()?;
             values.push(current_value);
             let sqrt_dt = p_sqrt(&dt, "simulation::traits::geometric_brownian")?;
@@ -652,7 +646,7 @@ where
             volatility,
             autocorrelation,
         } => {
-            let mut values = Vec::with_capacity(params.size + 1);
+            let mut values = path_buffer(params.size, 1)?;
             let mut price: Positive = params.ystep_as_positive()?;
             values.push(price);
 
@@ -762,7 +756,7 @@ where
             jump_mean,
             jump_volatility,
         } => {
-            let mut values = Vec::with_capacity(params.size + 1);
+            let mut values = path_buffer(params.size, 1)?;
             let mut x: Decimal = params.ystep_as_positive()?.to_dec();
             values.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
@@ -2087,7 +2081,7 @@ mod tests_walk_type_able {
                 params: &WalkParams<X, Y>,
             ) -> Result<Vec<Positive>, SimulationError> {
                 let start = params.ystep_as_positive()?;
-                let mut out = Vec::with_capacity(params.size);
+                let mut out = path_buffer(params.size, 0)?;
                 out.push(start);
                 for i in 1..params.size {
                     let offset = Positive::new(f64::from(self.seed) + i as f64)?;
@@ -2118,5 +2112,117 @@ mod tests_walk_type_able {
             .expect("deterministic walker succeeds");
         let cloned_out = cloned.brownian(&params).expect("cloned walker succeeds");
         assert_eq!(original_out, cloned_out);
+    }
+}
+
+/// Every walk kernel reserved its path with `Vec::with_capacity(size + 1)`,
+/// which overflowed at `size = usize::MAX` and hit `capacity overflow` for any
+/// size whose points do not fit in `isize::MAX` bytes (#788).
+#[cfg(test)]
+mod tests_walk_size_panic_freedom {
+    use super::*;
+    use crate::simulation::steps::Step;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::utils::TimeFrame;
+    use rust_decimal_macros::dec;
+
+    #[derive(Debug, Clone)]
+    struct BareWalker;
+
+    impl WalkTypeAble<Positive, Positive> for BareWalker {}
+
+    fn walk_types() -> Vec<WalkType> {
+        let dt = Positive::new_decimal(dec!(0.004)).unwrap_or(Positive::ONE);
+        let volatility = Positive::new_decimal(dec!(0.2)).unwrap_or(Positive::ONE);
+        vec![
+            WalkType::Brownian {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+            },
+            WalkType::GeometricBrownian {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+            },
+            WalkType::LogReturns {
+                dt,
+                expected_return: Decimal::ZERO,
+                volatility,
+                autocorrelation: None,
+            },
+            WalkType::MeanReverting {
+                dt,
+                volatility,
+                speed: Positive::ONE,
+                mean: Positive::HUNDRED,
+            },
+            WalkType::JumpDiffusion {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+                intensity: Positive::ONE,
+                jump_mean: Decimal::ZERO,
+                jump_volatility: volatility,
+            },
+            WalkType::Garch {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+                alpha: Positive::new_decimal(dec!(0.1)).unwrap_or(Positive::ZERO),
+                beta: Positive::new_decimal(dec!(0.8)).unwrap_or(Positive::ZERO),
+            },
+            WalkType::Heston {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+                kappa: Positive::ONE,
+                theta: volatility,
+                xi: volatility,
+                rho: Decimal::ZERO,
+            },
+            WalkType::Custom {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+                vov: volatility,
+                vol_speed: Positive::ONE,
+                vol_mean: volatility,
+            },
+            WalkType::Telegraph {
+                dt,
+                drift: Decimal::ZERO,
+                volatility,
+                lambda_up: Positive::ONE,
+                lambda_down: Positive::ONE,
+                vol_multiplier_up: None,
+                vol_multiplier_down: None,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_walk_kernels_unrepresentable_size_return_error() {
+        for size in [usize::MAX, usize::MAX / 2] {
+            for walk_type in walk_types() {
+                let params = WalkParams {
+                    size,
+                    init_step: Step::new(
+                        Positive::ONE,
+                        TimeFrame::Day,
+                        ExpirationDate::Days(Positive::HUNDRED),
+                        Positive::HUNDRED,
+                    ),
+                    walk_type: walk_type.clone(),
+                    walker: Box::new(BareWalker),
+                    seed: Some(788),
+                };
+                let result = BareWalker.generate(&params);
+                assert!(
+                    matches!(result, Err(SimulationError::InvalidParameters { .. })),
+                    "size {size}, {walk_type:?}: {result:?}"
+                );
+            }
+        }
     }
 }

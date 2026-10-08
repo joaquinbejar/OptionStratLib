@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::simulation::WalkParams;
 use crate::simulation::randomwalk::RandomWalk;
 use crate::simulation::steps::Step;
@@ -18,6 +12,7 @@ use rand::RngExt;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
+use tracing::warn;
 
 /// Represents a generic simulator for managing and simulating random walks.
 ///
@@ -101,7 +96,19 @@ where
         X: Copy + TryInto<Positive> + AddAssign + Display,
         Y: TryInto<Positive> + Display + Clone,
     {
-        let mut random_walks = Vec::with_capacity(size);
+        // The reservation is only a growth hint, and `E` is the generator's
+        // error type, which cannot carry an allocation failure. A `size` whose
+        // walks cannot be reserved up front used to abort in
+        // `Vec::with_capacity`; it now grows walk by walk, and each walk's own
+        // allocation reports through the generator (#788).
+        let mut random_walks = Vec::new();
+        if let Err(e) = random_walks.try_reserve_exact(size) {
+            warn!(
+                size,
+                error = %e,
+                "Simulator::new: cannot reserve the walks up front; growing on demand"
+            );
+        }
         match params.seed {
             None => {
                 for i in 0..size {
@@ -287,11 +294,8 @@ where
     ///
     /// # Notes
     /// * The `last_values` method is called internally to obtain the most recent set of steps.
-    /// * The positive value for each step is retrieved via the `get_positive_value` method.
-    ///
-    /// # Panics
-    /// This function assumes that all steps in `last_values` have valid positive values accessible via
-    /// `get_positive_value`. Ensure `last_values` returns valid data to avoid runtime errors.
+    /// * The positive value for each step is retrieved via the `get_positive_value` method;
+    ///   a step whose value is not a valid `Positive` is left out of the result.
     #[must_use]
     pub fn get_last_positive_values(&self) -> Vec<Positive> {
         let last_values = self.get_last_values();
@@ -398,11 +402,16 @@ where
     ///
     /// # Panics
     /// This function will panic if the given `index` is out of bounds, i.e., greater than or equal to
-    /// the length of the `random_walks` vector.
+    /// the length of the `random_walks` vector, as indexing a `Vec` does. Use
+    /// [`Simulator::get_random_walk`] for the checked form, which returns `None` instead.
     ///
     /// Note: This implementation assumes that `Self` implements the `Index` trait and
     /// that `random_walks` is a field in the implementing struct.
+    #[allow(clippy::indexing_slicing)]
     fn index(&self, index: usize) -> &Self::Output {
+        // `Index` / `IndexMut` follow the std contract: an out-of-bounds index
+        // is a caller bug and panics, exactly like `Vec`. The checked
+        // accessor is `get_random_walk`, which returns `None` instead (#341, #788).
         &self.random_walks[index]
     }
 }
@@ -412,7 +421,18 @@ where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
 {
+    /// Retrieves a mutable reference to the walk at `index`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index` is out of bounds, as indexing a `Vec` does. Use
+    /// [`Simulator::get_random_walk_mut`] for the checked form, which returns
+    /// `None` instead.
+    #[allow(clippy::indexing_slicing)]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        // `Index` / `IndexMut` follow the std contract: an out-of-bounds index
+        // is a caller bug and panics, exactly like `Vec`. The checked
+        // accessor is `get_random_walk_mut`, which returns `None` instead (#341, #788).
         &mut self.random_walks[index]
     }
 }
@@ -1083,5 +1103,45 @@ mod tests {
         assert_eq!(last_values.len(), simulator_size);
 
         Ok(())
+    }
+}
+
+/// `Simulator::new` reserved `Vec::with_capacity(size)` up front, which hit
+/// `capacity overflow` for a `size` whose walks cannot fit in memory before
+/// the generator ever ran (#788).
+#[cfg(test)]
+mod tests_new_panic_freedom {
+    use super::*;
+    use crate::simulation::{WalkType, WalkTypeAble};
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::utils::TimeFrame;
+    use rust_decimal::Decimal;
+
+    #[derive(Debug, Clone)]
+    struct BareWalker;
+
+    impl WalkTypeAble<Positive, Positive> for BareWalker {}
+
+    #[test]
+    fn test_new_unreservable_size_reaches_the_generator() {
+        let params = WalkParams {
+            size: 3,
+            init_step: Step::new(
+                Positive::ONE,
+                TimeFrame::Day,
+                ExpirationDate::Days(Positive::HUNDRED),
+                Positive::HUNDRED,
+            ),
+            walk_type: WalkType::Brownian {
+                dt: Positive::ONE,
+                drift: Decimal::ZERO,
+                volatility: Positive::ONE,
+            },
+            walker: Box::new(BareWalker),
+            seed: Some(788),
+        };
+        let result: Result<Simulator<Positive, Positive>, &'static str> =
+            Simulator::new("Huge".to_string(), usize::MAX, &params, |_| Err("boom"));
+        assert!(matches!(result, Err("boom")));
     }
 }

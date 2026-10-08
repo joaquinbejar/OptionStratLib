@@ -167,7 +167,7 @@ pub struct optionstratlib_simulation::simulation::steps::Ystep<T> where T: core:
 impl<T> optionstratlib_simulation::simulation::steps::Ystep<T> where T: core::convert::TryInto<positive::positive::Positive> + core::fmt::Display + core::clone::Clone
 pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::index(&self) -> &i32
 pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::new(i32, T) -> Self
-pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::next(&self, T) -> Self
+pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::next(&self, T) -> core::result::Result<Self, optionstratlib_simulation::error::SimulationError>
 pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::positive(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_simulation::error::SimulationError>
 pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::value(&self) -> &T
 pub fn optionstratlib_simulation::simulation::steps::Ystep<T>::value_mut(&mut self) -> &mut T

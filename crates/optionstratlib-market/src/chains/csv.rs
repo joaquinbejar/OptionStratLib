@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::OhlcvError;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
@@ -112,8 +106,9 @@ pub fn read_ohlcv_from_zip(
         let line = line_result?;
         let parts: Vec<&str> = line.split(';').collect();
 
-        // Ensure we have 7 parts: date, time, open, high, low, close, volume
-        if parts.len() != 7 {
+        // Ensure we have 7 parts: date, time, open, high, low, close, volume.
+        // The slice pattern binds each field without indexing (#788).
+        let [date_s, time_s, open_s, high_s, low_s, close_s, volume_s] = parts.as_slice() else {
             return Err(OhlcvError::CsvError {
                 reason: format!(
                     "Invalid CSV format at line {}: expected 7 fields, got {}",
@@ -121,10 +116,10 @@ pub fn read_ohlcv_from_zip(
                     parts.len()
                 ),
             });
-        }
+        };
 
         // Parse date
-        let date = NaiveDate::parse_from_str(parts[0], "%d/%m/%Y")?;
+        let date = NaiveDate::parse_from_str(date_s, "%d/%m/%Y")?;
 
         // Skip records outside our date range if dates are specified
         if start.is_some_and(|s| date < s) || end.is_some_and(|e| date > e) {
@@ -134,12 +129,12 @@ pub fn read_ohlcv_from_zip(
         // Parse other fields
         let candle = OhlcvCandle {
             date,
-            time: parts[1].to_string(),
-            open: Decimal::from_str(parts[2])?,
-            high: Decimal::from_str(parts[3])?,
-            low: Decimal::from_str(parts[4])?,
-            close: Decimal::from_str(parts[5])?,
-            volume: parts[6].parse::<u64>().map_err(|e| OhlcvError::CsvError {
+            time: (*time_s).to_string(),
+            open: Decimal::from_str(open_s)?,
+            high: Decimal::from_str(high_s)?,
+            low: Decimal::from_str(low_s)?,
+            close: Decimal::from_str(close_s)?,
+            volume: volume_s.parse::<u64>().map_err(|e| OhlcvError::CsvError {
                 reason: format!("Invalid volume at line {}: {}", line_num + 1, e),
             })?,
         };

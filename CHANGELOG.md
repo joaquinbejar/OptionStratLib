@@ -184,6 +184,23 @@ summarize the release.
   of these calls, return `Ok(..)` from an override, and override
   `one_option` / `one_option_mut` in a custom strategy that holds options.
 
+- **Two step and count helpers report overflow instead of aborting** (#788).
+  `Ystep::next` returns `Result<Ystep<T>, SimulationError>`: at index
+  `i32::MAX` it returns `SimulationError::StepError` where `index + 1`
+  aborted in debug builds and wrapped to `i32::MIN` in release builds, the
+  contract `Step::next` and `Xstep::next` already had.
+  `RandomPositionsParams::total_positions` returns `Result<usize,
+  ChainError>`: quantities that sum past `usize::MAX` return
+  `ChainError::ChainBuildError` naming `total_positions` instead of
+  aborting. Migration: add `?` (or handle the error) at both call sites.
+- **`PnL` no longer implements `Add` or `Sum`** (#788). `impl Add for PnL`,
+  `impl Add for &PnL`, `impl Sum for PnL` and `impl Sum<&PnL> for PnL`
+  added the `Positive` costs with the raw operator and aborted on an
+  overflowing total; `std` fixes both traits to return `Self`, so no
+  signature could report it. Migration: replace `a + b` with
+  `a.try_add(&b)?` and `items.iter().sum::<PnL>()` with
+  `items.iter().try_fold(PnL::default(), |acc, item| acc.try_add(item))?`;
+  both return `Result<PnL, PricingError>`.
 - **Package contents and metadata are verified for 0.22.0** (M8-03, #559),
   with the evidence in `docs/release/0.22/packages.md`.
   - **Rust 1.89 is the declared minimum.** The workspace sets
@@ -1945,6 +1962,68 @@ summarize the release.
   workflow runs both on every pull request (examples without a WebDriver); the
   weekly Static Export workflow runs every example again with a matching
   Chrome and chromedriver, where an export failure is a bug.
+
+- **Simulation, market and analytics no longer abort on extreme input**
+  (#788). Each site below was a raw `Decimal`, `Positive` or `usize`
+  operator, or an unchecked allocation; each now returns a typed error, and
+  every input that worked before returns the same value.
+  - Chain metrics: `volatility_skew` on a zero spot, `premium_concentration`
+    on a book whose premia are all zero, `dollar_gamma_curve`,
+    `delta_gamma_curve` and `price_shock_curve` when the spot square or the
+    shock leaves the `Decimal` range, `iv_surface`, `smile_dynamics_surface`
+    and `volume_profile_surface` on day counts that overflow their scaling,
+    and `bid_ask_spread_curve` on a quote whose sides sum past the range.
+    These return `CurveError::MetricsError` or `SurfaceError::AnalysisError`.
+  - The grid surfaces (`vanna_volga_surface`, `delta_gamma_surface`,
+    `volatility_sensitivity_surface`, `price_shock_surface`,
+    `time_decay_surface`, `theta_surface`, `charm_surface`, `color_surface`)
+    return `SurfaceError::OperationError` naming `price_range` or
+    `vol_range` when the upper bound is below the lower one. With zero steps
+    the bounds are still not compared. `bid_ask_spread_curve` rejects a
+    crossed quote (ask below bid) the same way.
+  - `calculate_optimal_price_range` returns `ChainError::ChainBuildError`
+    naming `implied_volatility` when the four-sigma band reaches below zero
+    (`4·σ·√T > 1`), and naming `underlying_price` when the spot and the
+    strike are both zero. Overflowing bounds return an error too.
+    `OptionChain::to_build_params` checks the sum of the bid-ask spreads,
+    and `OptionChain::get_random_positions` reserves its positions with
+    `try_reserve_exact`.
+  - Every walk kernel reserves its path with `try_reserve_exact`. A walk
+    size of `usize::MAX`, or one whose points cannot be allocated, returns
+    `SimulationError::InvalidParameters`; `Vec::with_capacity` overflowed
+    or aborted the process there. `Simulator::new` no longer reserves an
+    unallocatable `size` up front.
+  - `Position::diff_position_pnl` checks the realized and unrealized
+    differences, and the percentages in `OptionDataPriceParams`'s
+    `Display` render as `n/a` when they leave the range.
+  - The metric surfaces no longer stand in a value for a failed step
+    (#639): `iv_surface`, `smile_dynamics_surface` and
+    `volume_profile_surface` propagate a failed square root instead of
+    reading it as 1, and the grid surfaces propagate a grid point that is
+    not a valid `Positive` instead of pricing at a spot of 1 or a
+    volatility of 0.01. Neither fallback fires on a finite input, so every
+    value returned before is unchanged.
+  - The `Display` of `PnLMetricsStep` and `Ystep` and the quote cells of
+    the chain table round the `Decimal` (`round_dp`) instead of calling
+    `Positive::round_to`, which routes through `unwrap_or_panic`; the
+    printed digits are unchanged.
+  - The file-wide `#![allow(clippy::indexing_slicing)]` in
+    `simulation/randomwalk.rs`, `simulation/simulator.rs`,
+    `simulation/traits.rs` and `chains/csv.rs` is gone (#341). `traits.rs`
+    had no indexing left; `csv.rs` binds its seven fields with a slice
+    pattern. The allow now sits only on the `Index` / `IndexMut` impls of
+    `RandomWalk` and `Simulator`, which panic out of bounds by the `std`
+    contract; `get_step` and `get_random_walk` are the checked forms.
+  - `make scan-banned` also rejects `.round_to_nice_number()` and the
+    `*_unchecked` forms in production code.
+
+- **`OptionDataPriceParams`'s `Display` rounds its numbers instead of
+  truncating their text** (#788). The `{:.3}` / `{:.4}` / `{:.2}` precisions
+  were applied to already rendered strings, so a 5% rate printed as `5.%`,
+  a missing one as `No%`, and 30 days as `0.08` years. The spot now prints
+  to three places, the years to four and the rate and dividend yield as
+  percentages to two, each rounded half to even (`100.000`, `0.0822`,
+  `5.00%`); a missing field prints `None`.
 
 - **Every strategy refreshes its break-evens on `add_position` /
   `modify_position`** (#780). #771 did this for `Collar`, `CoveredCall`

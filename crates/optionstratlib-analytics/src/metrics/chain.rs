@@ -20,7 +20,7 @@ use crate::metrics::{
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::d_sqrt;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt};
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, Options, Side};
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_math::curves::{Curve, Point2D};
@@ -34,6 +34,83 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::fmt::Display;
+
+// The arithmetic left on raw operators in this module is total: a difference
+// of two non-negative `Decimal`s (strike minus spot, ask minus bid, one
+// volatility minus another) lies in `[-MAX, MAX]`, and a division by a
+// constant of at least one cannot overflow. Every product, every sum and
+// every division by chain data goes through the checked helpers (#788).
+//
+// No metric substitutes a value for a failed step (#639): a square root that
+// fails, or a grid point that is not a valid `Positive`, is an error. Both
+// used to read as 1 (or 0.01 for a volatility); for every finite input on
+// which they succeed the result is unchanged.
+
+/// Carries a checked-arithmetic failure out of a curve metric.
+///
+/// A metric over an extreme chain (a spot whose square leaves the `Decimal`
+/// range, a zero spot under a moneyness ratio, a book whose premia are all
+/// zero) has no representable value. It is reported through the curve error
+/// channel instead of aborting in a raw operator (#788).
+#[cold]
+#[inline(never)]
+fn curve_math<E: Display>(error: E) -> CurveError {
+    CurveError::MetricsError(error.to_string())
+}
+
+/// Surface counterpart of [`curve_math`].
+#[cold]
+#[inline(never)]
+fn surface_math<E: Display>(error: E) -> SurfaceError {
+    SurfaceError::AnalysisError(error.to_string())
+}
+
+/// Spacing of `[range.0, range.1]` divided into `steps` equal intervals.
+///
+/// Zero steps keep the single point `range.0` and need no spacing, so the
+/// bounds are not compared there, as before. Otherwise an upper bound below
+/// the lower one has no non-negative width; it is rejected as an invalid
+/// range instead of aborting in the `Positive` subtraction (#788).
+///
+/// # Errors
+///
+/// Returns [`SurfaceError::OperationError`] naming `name` when
+/// `range.1 < range.0`, and [`SurfaceError::AnalysisError`] when the spacing
+/// leaves the `Decimal` range.
+fn grid_step(
+    range: (Positive, Positive),
+    steps: usize,
+    name: &'static str,
+) -> Result<Decimal, SurfaceError> {
+    if steps == 0 {
+        return Ok(Decimal::ZERO);
+    }
+    let width = range.1.checked_sub(&range.0).map_err(|_| {
+        SurfaceError::invalid_parameters(
+            name,
+            &format!("upper bound {} is below lower bound {}", range.1, range.0),
+        )
+    })?;
+    d_div(
+        width.to_dec(),
+        Decimal::from(steps),
+        "metrics::chain::grid_step",
+    )
+    .map_err(surface_math)
+}
+
+/// The `index`-th point, `lower + step * index`, of an evenly spaced grid.
+///
+/// # Errors
+///
+/// Returns [`SurfaceError::AnalysisError`] when the point leaves the
+/// `Decimal` range.
+fn grid_point(lower: Positive, step: Decimal, index: usize) -> Result<Decimal, SurfaceError> {
+    d_mul(step, Decimal::from(index), "metrics::chain::grid_point")
+        .and_then(|offset| d_add(lower.to_dec(), offset, "metrics::chain::grid_point"))
+        .map_err(surface_math)
+}
 
 impl VolatilitySkewCurve for OptionChain {
     /// Computes the volatility skew for the option chain.
@@ -50,17 +127,28 @@ impl VolatilitySkewCurve for OptionChain {
     /// implied volatilities.
     fn volatility_skew(&self) -> Result<Curve, CurveError> {
         // Build a BTreeSet with the known points (options with implied volatility)
+        // A zero spot has no moneyness, and a far strike over a tiny spot
+        // leaves the `Decimal` range: both come back as errors (#788).
         let mut bt_points = self
             .options
             .iter()
             .map(|option| {
-                Point2D::new(
-                    (option.strike_price.to_dec() / self.underlying_price.to_dec() - Decimal::ONE)
-                        * Decimal::ONE_HUNDRED,
-                    option.implied_volatility.to_dec(),
+                let ratio = d_div(
+                    option.strike_price.to_dec(),
+                    self.underlying_price.to_dec(),
+                    "metrics::chain::volatility_skew",
                 )
+                .map_err(curve_math)?;
+                // `ratio >= 0`, so `ratio - 1` cannot leave the range.
+                let moneyness = d_mul(
+                    ratio - Decimal::ONE,
+                    Decimal::ONE_HUNDRED,
+                    "metrics::chain::volatility_skew",
+                )
+                .map_err(curve_math)?;
+                Ok(Point2D::new(moneyness, option.implied_volatility.to_dec()))
             })
-            .collect::<BTreeSet<_>>();
+            .collect::<Result<BTreeSet<_>, CurveError>>()?;
 
         // Create an initial Curve object using the known points
         let curve = Curve::new(bt_points.clone());
@@ -157,10 +245,13 @@ impl PutCallRatioCurve for OptionChain {
                 if call_mid_dec.is_zero() {
                     continue;
                 }
-                points.insert(Point2D::new(
-                    opt.strike_price.to_dec(),
-                    put_mid.to_dec() / call_mid_dec,
-                ));
+                let ratio = d_div(
+                    put_mid.to_dec(),
+                    call_mid_dec,
+                    "metrics::chain::premium_weighted_pcr",
+                )
+                .map_err(curve_math)?;
+                points.insert(Point2D::new(opt.strike_price.to_dec(), ratio));
             }
         }
         if points.is_empty() {
@@ -201,10 +292,13 @@ impl StrikeConcentrationCurve for OptionChain {
         let mut strike_count = Decimal::ZERO;
         for opt in self.options.iter() {
             if let (Some(put_mid), Some(call_mid)) = (opt.put_middle, opt.call_middle) {
-                _strike_premium = put_mid.to_dec() + call_mid.to_dec();
+                const OP: &str = "metrics::chain::premium_concentration";
+                _strike_premium =
+                    d_add(put_mid.to_dec(), call_mid.to_dec(), OP).map_err(curve_math)?;
                 points.insert(Point2D::new(opt.strike_price.to_dec(), _strike_premium));
-                total_chain_premium += _strike_premium;
-                strike_count += Decimal::ONE;
+                total_chain_premium =
+                    d_add(total_chain_premium, _strike_premium, OP).map_err(curve_math)?;
+                strike_count = d_add(strike_count, Decimal::ONE, OP).map_err(curve_math)?;
             }
         }
         // If there are no points calculated return an error
@@ -214,11 +308,24 @@ impl StrikeConcentrationCurve for OptionChain {
             ));
         }
         // Calculate the average chain premium
-        let average_premium = total_chain_premium / strike_count;
+        // `strike_count >= 1` here; a book whose premia are all zero has a
+        // zero average, and no concentration to normalise by (#788).
+        let average_premium = d_div(
+            total_chain_premium,
+            strike_count,
+            "metrics::chain::premium_concentration",
+        )
+        .map_err(curve_math)?;
         // Normalize Strike Concentration data points based on average premium
         let mut points_normalized = BTreeSet::new();
         for point in points.iter() {
-            points_normalized.insert(Point2D::new(point.x, point.y / average_premium));
+            let normalized = d_div(
+                point.y,
+                average_premium,
+                "metrics::chain::premium_concentration",
+            )
+            .map_err(curve_math)?;
+            points_normalized.insert(Point2D::new(point.x, normalized));
         }
 
         Ok(Curve::new(points_normalized))
@@ -263,12 +370,18 @@ impl ImpliedVolatilitySurface for OptionChain {
             for days in &days_to_expiry {
                 // Scale IV using square root of time rule
                 // This projects the current IV to different time horizons
+                // Dividing by a constant above one cannot leave the range.
                 let time_factor = d_sqrt(
                     days.to_dec() / dec!(365.0),
                     "metrics::chain::iv_time_factor",
                 )
-                .unwrap_or(Decimal::ONE);
-                let adjusted_iv = opt.implied_volatility.to_dec() * time_factor;
+                .map_err(surface_math)?;
+                let adjusted_iv = d_mul(
+                    opt.implied_volatility.to_dec(),
+                    time_factor,
+                    "metrics::chain::iv_surface",
+                )
+                .map_err(surface_math)?;
 
                 points.insert(Point3D::new(
                     opt.strike_price.to_dec(),
@@ -394,9 +507,12 @@ impl DollarGammaCurve for OptionChain {
     /// let dg_curve = chain.dollar_gamma_curve(&OptionStyle::Call)?;
     /// ```
     fn dollar_gamma_curve(&self, option_style: &OptionStyle) -> Result<Curve, CurveError> {
+        const OP: &str = "metrics::chain::dollar_gamma_curve";
         let spot = self.underlying_price;
-        let spot_squared = spot.to_dec() * spot.to_dec();
+        let spot_squared = d_mul(spot.to_dec(), spot.to_dec(), OP).map_err(curve_math)?;
 
+        // A strike whose greek cannot be computed is skipped, as before; an
+        // overflow in the dollar scaling is an error, not a missing point.
         let points: BTreeSet<Point2D> = self
             .get_single_iter()
             .filter_map(|opt| {
@@ -407,11 +523,13 @@ impl DollarGammaCurve for OptionChain {
 
                 let gamma = option.gamma().ok()?;
                 // Dollar Gamma = Gamma × Spot² × 0.01
-                let dollar_gamma = gamma * spot_squared * dec!(0.01);
+                let dollar_gamma = d_mul(gamma, spot_squared, OP)
+                    .and_then(|value| d_mul(value, dec!(0.01), OP))
+                    .map_err(curve_math);
 
-                Some(Point2D::new(opt.strike_price.to_dec(), dollar_gamma))
+                Some(dollar_gamma.map(|value| Point2D::new(opt.strike_price.to_dec(), value)))
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
         if points.is_empty() {
             return Err(CurveError::ConstructionError(
@@ -465,36 +583,38 @@ impl VannaVolgaSurface for OptionChain {
             .map(|opt| opt.implied_volatility.to_dec())
             .unwrap_or(dec!(0.20));
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
+        let vol_step = grid_step(vol_range, vol_steps, "vol_range")?;
 
-        let vol_step = if vol_steps > 0 {
-            (vol_range.1 - vol_range.0).to_dec() / Decimal::from(vol_steps)
-        } else {
-            Decimal::ZERO
-        };
-
+        const OP: &str = "metrics::chain::vanna_volga_surface";
         for p in 0..=price_steps {
-            let price = price_range.0.to_dec() + price_step * Decimal::from(p);
+            let price = grid_point(price_range.0, price_step, p)?;
 
             for v in 0..=vol_steps {
-                let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
+                let vol = grid_point(vol_range.0, vol_step, v)?;
 
                 // Vanna-Volga cost model:
-                // Cost increases with distance from ATM and with volatility difference
-                let moneyness =
-                    (price - self.underlying_price.to_dec()).abs() / self.underlying_price.to_dec();
+                // Cost increases with distance from ATM and with volatility difference.
+                // Both differences are of two non-negative values, so they
+                // stay in range; the ratio and the products may not (#788).
+                let moneyness = d_div(
+                    (price - self.underlying_price.to_dec()).abs(),
+                    self.underlying_price.to_dec(),
+                    OP,
+                )
+                .map_err(surface_math)?;
                 let vol_diff = (vol - atm_vol).abs();
 
                 // Simplified Vanna-Volga cost: combines moneyness and vol effects
                 // Vanna component: moneyness × vol_diff
                 // Volga component: vol_diff²
-                let vanna_cost = moneyness * vol_diff * dec!(100.0);
-                let volga_cost = vol_diff * vol_diff * dec!(50.0);
-                let vv_cost = vanna_cost + volga_cost;
+                let vanna_cost = d_mul(moneyness, vol_diff, OP)
+                    .and_then(|value| d_mul(value, dec!(100.0), OP))
+                    .map_err(surface_math)?;
+                let volga_cost = d_mul(vol_diff, vol_diff, OP)
+                    .and_then(|value| d_mul(value, dec!(50.0), OP))
+                    .map_err(surface_math)?;
+                let vv_cost = d_add(vanna_cost, volga_cost, OP).map_err(surface_math)?;
 
                 points.insert(Point3D::new(price, vol, vv_cost));
             }
@@ -522,9 +642,12 @@ impl DeltaGammaProfileCurve for OptionChain {
     ///   delta-gamma metric (dollar delta + dollar gamma) on y-axis
     /// - `Err(CurveError)`: If the curve cannot be computed
     fn delta_gamma_curve(&self) -> Result<Curve, CurveError> {
+        const OP: &str = "metrics::chain::delta_gamma_curve";
         let spot = self.underlying_price.to_dec();
-        let spot_squared = spot * spot;
+        let spot_squared = d_mul(spot, spot, OP).map_err(curve_math)?;
 
+        // A strike whose greeks cannot be computed is skipped, as before; an
+        // overflow in the dollar scaling is an error, not a missing point.
         let points: BTreeSet<Point2D> = self
             .get_single_iter()
             .filter_map(|opt| {
@@ -534,17 +657,22 @@ impl DeltaGammaProfileCurve for OptionChain {
                 let delta = option.delta().ok()?;
                 let gamma = option.gamma().ok()?;
 
-                // Dollar Delta = Delta × Spot
-                let dollar_delta = delta * spot;
-                // Dollar Gamma = Gamma × Spot² × 0.01
-                let dollar_gamma = gamma * spot_squared * dec!(0.01);
+                let combined = d_mul(delta, spot, OP).and_then(|dollar_delta| {
+                    // Dollar Delta = Delta × Spot
+                    // Dollar Gamma = Gamma × Spot² × 0.01
+                    let dollar_gamma = d_mul(gamma, spot_squared, OP)
+                        .and_then(|value| d_mul(value, dec!(0.01), OP))?;
+                    // Combined metric
+                    d_add(dollar_delta, dollar_gamma, OP)
+                });
 
-                // Combined metric
-                let combined = dollar_delta + dollar_gamma;
-
-                Some(Point2D::new(opt.strike_price.to_dec(), combined))
+                Some(
+                    combined
+                        .map(|value| Point2D::new(opt.strike_price.to_dec(), value))
+                        .map_err(curve_math),
+                )
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
         if points.is_empty() {
             return Err(CurveError::ConstructionError(
@@ -581,11 +709,7 @@ impl DeltaGammaProfileSurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
 
         // Get a representative option to use as template
         let template_opt = self
@@ -603,8 +727,8 @@ impl DeltaGammaProfileSurface for OptionChain {
 
         for days in &days_to_expiry {
             for p in 0..=price_steps {
-                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+                let price = grid_point(price_range.0, price_step, p)?;
+                let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
                 // Create option with modified price and expiration
                 let modified_option = Options::new(
@@ -718,14 +842,20 @@ impl SmileDynamicsSurface for OptionChain {
                     days.to_dec() / dec!(30.0),
                     "metrics::chain::skew_time_factor",
                 )
-                .unwrap_or(Decimal::ONE);
+                .map_err(surface_math)?;
                 let adjusted_skew = if time_factor > Decimal::ZERO {
-                    skew / time_factor
+                    d_div(skew, time_factor, "metrics::chain::smile_dynamics_surface")
+                        .map_err(surface_math)?
                 } else {
                     skew
                 };
 
-                let adjusted_iv = atm_vol + adjusted_skew;
+                let adjusted_iv = d_add(
+                    atm_vol,
+                    adjusted_skew,
+                    "metrics::chain::smile_dynamics_surface",
+                )
+                .map_err(surface_math)?;
                 let final_iv = adjusted_iv.max(dec!(0.01)); // Ensure positive IV
 
                 points.insert(Point3D::new(strike, days.to_dec(), final_iv));
@@ -756,21 +886,15 @@ impl BidAskSpreadCurve for OptionChain {
         let mut points = BTreeSet::new();
 
         for opt in self.options.iter() {
-            // Calculate call spread if available
-            if let (Some(bid), Some(ask)) = (opt.call_bid, opt.call_ask) {
-                let mid = (bid + ask) / Positive::TWO;
-                if mid > Positive::ZERO {
-                    let spread = (ask - bid).to_dec() / mid.to_dec();
-                    points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
-                }
-            }
-            // If no call data, try put spread
-            else if let (Some(bid), Some(ask)) = (opt.put_bid, opt.put_ask) {
-                let mid = (bid + ask) / Positive::TWO;
-                if mid > Positive::ZERO {
-                    let spread = (ask - bid).to_dec() / mid.to_dec();
-                    points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
-                }
+            // Calculate call spread if available, else the put spread
+            let quote = match (opt.call_bid, opt.call_ask) {
+                (Some(bid), Some(ask)) => Some((bid, ask)),
+                _ => opt.put_bid.zip(opt.put_ask),
+            };
+            if let Some((bid, ask)) = quote
+                && let Some(spread) = relative_spread(opt.strike_price, bid, ask)?
+            {
+                points.insert(Point2D::new(opt.strike_price.to_dec(), spread));
             }
         }
 
@@ -782,6 +906,38 @@ impl BidAskSpreadCurve for OptionChain {
 
         Ok(Curve::new(points))
     }
+}
+
+/// Relative spread `(ask - bid) / mid` of one quote, `None` at a zero mid.
+///
+/// # Errors
+///
+/// Returns [`CurveError::OperationError`] for a crossed quote (`ask < bid`),
+/// which has no non-negative spread, and [`CurveError::MetricsError`] when
+/// `bid + ask` leaves the `Decimal` range. Both used to abort in the
+/// `Positive` operators (#788).
+fn relative_spread(
+    strike: Positive,
+    bid: Positive,
+    ask: Positive,
+) -> Result<Option<Decimal>, CurveError> {
+    let mid = bid.checked_add(&ask).map_err(curve_math)? / Positive::TWO;
+    if mid == Positive::ZERO {
+        return Ok(None);
+    }
+    let width = ask.checked_sub(&bid).map_err(|_| {
+        CurveError::invalid_parameters(
+            "bid_ask_spread_curve",
+            &format!("crossed quote at strike {strike}: ask {ask} is below bid {bid}"),
+        )
+    })?;
+    d_div(
+        width.to_dec(),
+        mid.to_dec(),
+        "metrics::chain::bid_ask_spread_curve",
+    )
+    .map(Some)
+    .map_err(curve_math)
 }
 
 impl VolumeProfileCurve for OptionChain {
@@ -836,17 +992,19 @@ impl VolumeProfileSurface for OptionChain {
                 for day in &days {
                     // Volume typically increases closer to expiration
                     // Using a simple model: volume scales inversely with sqrt(time)
+                    const OP: &str = "metrics::chain::volume_profile_surface";
                     let time_factor = if day.to_dec() > Decimal::ZERO {
                         d_sqrt(
-                            dec!(30.0) / day.to_dec(),
+                            d_div(dec!(30.0), day.to_dec(), OP).map_err(surface_math)?,
                             "metrics::chain::volume_time_factor",
                         )
-                        .unwrap_or(Decimal::ONE)
+                        .map_err(surface_math)?
                     } else {
                         Decimal::ONE
                     };
 
-                    let adjusted_vol = base_vol.to_dec() * time_factor;
+                    let adjusted_vol =
+                        d_mul(base_vol.to_dec(), time_factor, OP).map_err(surface_math)?;
                     points.insert(Point3D::new(
                         opt.strike_price.to_dec(),
                         day.to_dec(),
@@ -952,17 +1110,8 @@ impl VolatilitySensitivitySurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
-
-        let vol_step = if vol_steps > 0 {
-            (vol_range.1 - vol_range.0).to_dec() / Decimal::from(vol_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
+        let vol_step = grid_step(vol_range, vol_steps, "vol_range")?;
 
         // Get a representative option to use as template
         let template_opt = self
@@ -978,18 +1127,17 @@ impl VolatilitySensitivitySurface for OptionChain {
             }
         };
 
-        // `dec!(0.01)` is a compile-time positive literal; the checked
-        // constructor is total, so the `Positive::ZERO` branch is
-        // unreachable. Hoisted out of the nested loop so the fallback
-        // isn't rebuilt for every (price, vol) pair.
-        let vol_fallback = Positive::new_decimal(dec!(0.01)).unwrap_or(Positive::ZERO);
+        // Grid points are `lower + step * i` with both terms non-negative, so
+        // the `Positive` conversions below cannot fail on a finite grid; they
+        // used to fall back to a made-up spot of 1 and volatility of 0.01,
+        // and now report instead (#639, #788).
         for p in 0..=price_steps {
-            let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-            let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+            let price = grid_point(price_range.0, price_step, p)?;
+            let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
             for v in 0..=vol_steps {
-                let vol = vol_range.0.to_dec() + vol_step * Decimal::from(v);
-                let vol_pos = Positive::new_decimal(vol).unwrap_or(vol_fallback);
+                let vol = grid_point(vol_range.0, vol_step, v)?;
+                let vol_pos = Positive::new_decimal(vol).map_err(surface_math)?;
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -1077,11 +1225,7 @@ impl TimeDecaySurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
 
         // Get a representative option to use as template
         let template_opt = self
@@ -1099,8 +1243,8 @@ impl TimeDecaySurface for OptionChain {
 
         for days in &days_to_expiry {
             for p in 0..=price_steps {
-                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+                let price = grid_point(price_range.0, price_step, p)?;
+                let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -1148,9 +1292,12 @@ impl PriceShockCurve for OptionChain {
     /// - `Ok(Curve)`: The shock curve with strike on x-axis and P&L on y-axis
     /// - `Err(CurveError)`: If no valid delta/gamma data is available
     fn price_shock_curve(&self, shock_pct: Decimal) -> Result<Curve, CurveError> {
+        const OP: &str = "metrics::chain::price_shock_curve";
         let spot = self.underlying_price.to_dec();
-        let price_move = spot * shock_pct;
+        let price_move = d_mul(spot, shock_pct, OP).map_err(curve_math)?;
 
+        // A strike whose greeks cannot be computed is skipped, as before; an
+        // overflow in the Taylor expansion is an error, not a missing point.
         let points: BTreeSet<Point2D> = self
             .get_single_iter()
             .filter_map(|opt| {
@@ -1159,11 +1306,19 @@ impl PriceShockCurve for OptionChain {
                 let gamma = option.gamma().ok()?;
 
                 // P&L = Delta × ΔS + 0.5 × Gamma × ΔS²
-                let pnl = delta * price_move + dec!(0.5) * gamma * price_move * price_move;
+                let pnl = d_mul(delta, price_move, OP).and_then(|first_order| {
+                    let second_order = d_mul(dec!(0.5), gamma, OP)
+                        .and_then(|value| d_mul(value, price_move, OP))
+                        .and_then(|value| d_mul(value, price_move, OP))?;
+                    d_add(first_order, second_order, OP)
+                });
 
-                Some(Point2D::new(opt.strike_price.to_dec(), pnl))
+                Some(
+                    pnl.map(|value| Point2D::new(opt.strike_price.to_dec(), value))
+                        .map_err(curve_math),
+                )
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
         if points.is_empty() {
             return Err(CurveError::ConstructionError(
@@ -1256,11 +1411,7 @@ impl ThetaSurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
 
         let template_opt = self
             .get_single_iter()
@@ -1277,8 +1428,8 @@ impl ThetaSurface for OptionChain {
 
         for days in &days_to_expiry {
             for p in 0..=price_steps {
-                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+                let price = grid_point(price_range.0, price_step, p)?;
+                let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -1364,11 +1515,7 @@ impl CharmSurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
 
         let template_opt = self
             .get_single_iter()
@@ -1385,8 +1532,8 @@ impl CharmSurface for OptionChain {
 
         for days in &days_to_expiry {
             for p in 0..=price_steps {
-                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+                let price = grid_point(price_range.0, price_step, p)?;
+                let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -1472,11 +1619,7 @@ impl ColorSurface for OptionChain {
     ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
-        let price_step = if price_steps > 0 {
-            (price_range.1 - price_range.0).to_dec() / Decimal::from(price_steps)
-        } else {
-            Decimal::ZERO
-        };
+        let price_step = grid_step(price_range, price_steps, "price_range")?;
 
         let template_opt = self
             .get_single_iter()
@@ -1493,8 +1636,8 @@ impl ColorSurface for OptionChain {
 
         for days in &days_to_expiry {
             for p in 0..=price_steps {
-                let price = price_range.0.to_dec() + price_step * Decimal::from(p);
-                let price_pos = Positive::new_decimal(price).unwrap_or(Positive::ONE);
+                let price = grid_point(price_range.0, price_step, p)?;
+                let price_pos = Positive::new_decimal(price).map_err(surface_math)?;
 
                 let modified_option = Options::new(
                     template.option_type.clone(),
@@ -1716,5 +1859,329 @@ mod tests_volatility_skew {
         let skew = chain.volatility_skew();
 
         assert!(skew.is_err());
+    }
+}
+
+/// Inputs that used to abort the chain metrics in a raw `Decimal` or
+/// `Positive` operator, each pinned to the error it now returns (#788).
+#[cfg(test)]
+mod tests_panic_freedom {
+    use super::*;
+    use optionstratlib_core::pos_or_panic;
+
+    /// Strike, bid, ask (both styles) and volume of one chain row.
+    type Row = (
+        Positive,
+        Option<Positive>,
+        Option<Positive>,
+        Option<Positive>,
+    );
+
+    fn chain_with(spot: Positive, rows: &[Row]) -> OptionChain {
+        let mut chain = OptionChain::new("TEST", spot, "2030-01-01".to_string(), None, None);
+        for (strike, bid, ask, volume) in rows {
+            chain.add_option(
+                *strike,
+                *bid,
+                *ask,
+                *bid,
+                *ask,
+                pos_or_panic!(0.2),
+                None,
+                None,
+                None,
+                *volume,
+                Some(10),
+                None,
+            );
+        }
+        chain
+    }
+
+    fn quoted_chain() -> OptionChain {
+        chain_with(
+            Positive::HUNDRED,
+            &[
+                (
+                    pos_or_panic!(90.0),
+                    Some(pos_or_panic!(11.0)),
+                    Some(pos_or_panic!(12.0)),
+                    Some(Positive::HUNDRED),
+                ),
+                (
+                    Positive::HUNDRED,
+                    Some(pos_or_panic!(4.0)),
+                    Some(pos_or_panic!(5.0)),
+                    Some(Positive::HUNDRED),
+                ),
+                (
+                    pos_or_panic!(110.0),
+                    Some(Positive::ONE),
+                    Some(Positive::TWO),
+                    Some(Positive::HUNDRED),
+                ),
+            ],
+        )
+    }
+
+    fn reversed() -> (Positive, Positive) {
+        (pos_or_panic!(200.0), Positive::HUNDRED)
+    }
+
+    fn is_invalid_range<T>(result: Result<T, SurfaceError>) -> bool {
+        matches!(
+            result,
+            Err(SurfaceError::OperationError(
+                optionstratlib_core::error::OperationErrorKind::InvalidParameters { .. }
+            ))
+        )
+    }
+
+    #[test]
+    fn test_volatility_skew_zero_spot_returns_error() {
+        let chain = chain_with(
+            Positive::ZERO,
+            &[(
+                Positive::HUNDRED,
+                Some(Positive::ONE),
+                Some(Positive::TWO),
+                None,
+            )],
+        );
+        assert!(matches!(
+            chain.volatility_skew(),
+            Err(CurveError::MetricsError(_))
+        ));
+    }
+
+    #[test]
+    fn test_premium_concentration_zero_premia_returns_error() {
+        let chain = chain_with(
+            Positive::HUNDRED,
+            &[(
+                Positive::HUNDRED,
+                Some(Positive::ZERO),
+                Some(Positive::ZERO),
+                None,
+            )],
+        );
+        assert!(matches!(
+            chain.premium_concentration(),
+            Err(CurveError::MetricsError(_))
+        ));
+    }
+
+    #[test]
+    fn test_grid_surfaces_reversed_range_return_error() {
+        let chain = quoted_chain();
+        let iv = pos_or_panic!(0.2);
+        let days = vec![pos_or_panic!(30.0)];
+        assert!(is_invalid_range(chain.vanna_volga_surface(
+            reversed(),
+            (iv, iv),
+            2,
+            2
+        )));
+        assert!(is_invalid_range(chain.vanna_volga_surface(
+            (Positive::HUNDRED, Positive::HUNDRED),
+            (pos_or_panic!(0.5), iv),
+            2,
+            2
+        )));
+        assert!(is_invalid_range(chain.delta_gamma_surface(
+            reversed(),
+            days.clone(),
+            2
+        )));
+        assert!(is_invalid_range(chain.volatility_sensitivity_surface(
+            reversed(),
+            (iv, iv),
+            2,
+            2
+        )));
+        assert!(is_invalid_range(chain.price_shock_surface(
+            reversed(),
+            (iv, iv),
+            2,
+            2
+        )));
+        assert!(is_invalid_range(chain.time_decay_surface(
+            reversed(),
+            days.clone(),
+            2
+        )));
+        assert!(is_invalid_range(chain.theta_surface(
+            reversed(),
+            days.clone(),
+            2
+        )));
+        assert!(is_invalid_range(chain.charm_surface(
+            reversed(),
+            days.clone(),
+            2
+        )));
+        assert!(is_invalid_range(chain.color_surface(reversed(), days, 2)));
+    }
+
+    #[test]
+    fn test_grid_surfaces_reversed_range_without_steps_is_a_single_point() {
+        // Zero steps never formed the width, so a reversed range was, and
+        // stays, the single point at its lower bound.
+        let chain = quoted_chain();
+        let iv = pos_or_panic!(0.2);
+        let surface = chain
+            .vanna_volga_surface(reversed(), (iv, iv), 0, 0)
+            .expect("zero steps need no width");
+        assert_eq!(surface.points.len(), 1);
+    }
+
+    #[test]
+    fn test_vanna_volga_surface_overflow_and_zero_spot_return_error() {
+        let iv = pos_or_panic!(0.2);
+        assert!(matches!(
+            quoted_chain().vanna_volga_surface(
+                (Positive::ZERO, Positive::MAX),
+                (Positive::ZERO, Positive::MAX),
+                2,
+                2
+            ),
+            Err(SurfaceError::AnalysisError(_))
+        ));
+        let zero_spot = chain_with(
+            Positive::ZERO,
+            &[(
+                Positive::HUNDRED,
+                Some(Positive::ONE),
+                Some(Positive::TWO),
+                None,
+            )],
+        );
+        assert!(matches!(
+            zero_spot.vanna_volga_surface((Positive::HUNDRED, Positive::HUNDRED), (iv, iv), 1, 1),
+            Err(SurfaceError::AnalysisError(_))
+        ));
+    }
+
+    #[test]
+    fn test_bid_ask_spread_curve_crossed_quote_returns_error() {
+        let chain = chain_with(
+            Positive::HUNDRED,
+            &[(
+                Positive::HUNDRED,
+                Some(pos_or_panic!(5.0)),
+                Some(pos_or_panic!(4.0)),
+                None,
+            )],
+        );
+        assert!(matches!(
+            chain.bid_ask_spread_curve(),
+            Err(CurveError::OperationError(_))
+        ));
+    }
+
+    #[test]
+    fn test_bid_ask_spread_curve_overflowing_mid_returns_error() {
+        let chain = chain_with(
+            Positive::HUNDRED,
+            &[(
+                Positive::HUNDRED,
+                Some(Positive::MAX),
+                Some(Positive::MAX),
+                None,
+            )],
+        );
+        assert!(matches!(
+            chain.bid_ask_spread_curve(),
+            Err(CurveError::MetricsError(_))
+        ));
+    }
+
+    #[test]
+    fn test_bid_ask_spread_curve_matches_reference() {
+        // (ask - bid) / mid: 1 / 11.5, 1 / 4.5 and 1 / 1.5.
+        let curve = quoted_chain()
+            .bid_ask_spread_curve()
+            .expect("well-formed quotes");
+        let spreads: Vec<Decimal> = curve.points.iter().map(|p| p.y).collect();
+        assert_eq!(
+            spreads,
+            vec![
+                Decimal::ONE / dec!(11.5),
+                Decimal::ONE / dec!(4.5),
+                Decimal::ONE / dec!(1.5)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_dollar_gamma_and_delta_gamma_huge_spot_return_error() {
+        let huge = pos_or_panic!(1e20);
+        let chain = chain_with(
+            huge,
+            &[(huge, Some(Positive::ONE), Some(Positive::TWO), None)],
+        );
+        assert!(matches!(
+            chain.dollar_gamma_curve(&OptionStyle::Call),
+            Err(CurveError::MetricsError(_))
+        ));
+        assert!(matches!(
+            chain.delta_gamma_curve(),
+            Err(CurveError::MetricsError(_))
+        ));
+        assert!(matches!(
+            chain.price_shock_curve(dec!(1e10)),
+            Err(CurveError::MetricsError(_))
+        ));
+    }
+
+    #[test]
+    fn test_price_shock_curve_overflowing_shock_returns_error() {
+        assert!(matches!(
+            quoted_chain().price_shock_curve(Decimal::MAX),
+            Err(CurveError::MetricsError(_))
+        ));
+    }
+
+    #[test]
+    fn test_volume_and_iv_surfaces_overflow_return_error() {
+        let chain = chain_with(
+            Positive::HUNDRED,
+            &[(
+                Positive::HUNDRED,
+                Some(Positive::ONE),
+                Some(Positive::TWO),
+                Some(Positive::MAX),
+            )],
+        );
+        let tiny_day = Positive::new_decimal(Decimal::new(1, 28)).expect("positive literal");
+        assert!(matches!(
+            chain.volume_profile_surface(vec![tiny_day]),
+            Err(SurfaceError::AnalysisError(_))
+        ));
+        let mut max_iv = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        max_iv.add_option(
+            Positive::HUNDRED,
+            None,
+            None,
+            None,
+            None,
+            Positive::MAX,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert!(matches!(
+            max_iv.iv_surface(vec![Positive::MAX]),
+            Err(SurfaceError::AnalysisError(_))
+        ));
     }
 }

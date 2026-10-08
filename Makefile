@@ -516,6 +516,10 @@ release-gates-render:
 #     iteration oscillates (#588); `d_sqrt` / `p_sqrt` in
 #     `src/model/decimal.rs` are the total forms. `f64::sqrt` call sites
 #     carry a marker saying so, like `exp`/`ln`/`powd`.
+#   * `.round_to_nice_number()` — `Positive`'s rounder aborts where
+#     `checked_round_to_nice_number` reports (#788).
+#   * `unwrap_unchecked` / `get_unchecked` / `unreachable_unchecked` — the
+#     `unsafe` forms of the same panics, undefined behaviour instead (#788).
 #
 # A stricter set applies to the crates listed in `SCAN_STRICT_DIRS`, the ones
 # already clean of it (#788); a crate joins the list once it is:
@@ -611,7 +615,7 @@ scan-banned:
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(|pos_or_panic!|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber|^($(SCAN_STRICT_DIRS))/[^:]*:[0-9]+:.*($(SCAN_STRICT_PATTERN))' \
+		| grep -E '\.unwrap\(\)|\.expect\(|pos_or_panic!|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|\.round_to_nice_number\(\)|(unwrap|get|unreachable)_unchecked|tracing_subscriber|^($(SCAN_STRICT_DIRS))/[^:]*:[0-9]+:.*($(SCAN_STRICT_PATTERN))' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	malformed=$$(grep -rn 'scan-banned: allow' src crates/*/src \
@@ -626,7 +630,7 @@ scan-banned:
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code; in $(SCAN_STRICT_DIRS): no saturating/wrapping, spos!, aborting chrono/Positive helpers, Decimal trig, asserts or Decimal/Positive sum/product"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no *_unchecked, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt/round_to_nice_number in production code; in $(SCAN_STRICT_DIRS): no saturating/wrapping, spos!, aborting chrono/Positive helpers, Decimal trig, asserts or Decimal/Positive sum/product"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,
