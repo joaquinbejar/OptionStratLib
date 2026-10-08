@@ -6426,7 +6426,7 @@ mod tests_gamma_calculations {
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         option_chain.expiration_date = match get_x_days_formatted(30) {
@@ -6504,7 +6504,7 @@ mod tests_delta_calculations {
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -6580,7 +6580,7 @@ mod tests_vega_calculations {
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -6656,7 +6656,7 @@ mod tests_theta_calculations {
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -6732,7 +6732,7 @@ mod tests_vanna_calculations {
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -6789,7 +6789,7 @@ mod tests_vomma_calculations {
     fn create_test_chain_with_vomma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -6842,7 +6842,7 @@ mod tests_veta_calculations {
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -6895,7 +6895,7 @@ mod tests_charm_calculations {
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -6948,7 +6948,7 @@ mod tests_color_calculations {
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -7909,7 +7909,7 @@ mod tests_to_build_params_bis {
 
         let mut chain = match OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         )) {
             Ok(chain) => chain,
             Err(e) => panic!("fixture load failed: {e}"),

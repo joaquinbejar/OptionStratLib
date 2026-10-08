@@ -1358,7 +1358,7 @@ mod tests_gamma_calculations_projections {
     fn create_test_chain_with_gamma() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         option_chain.set_expiration_date(match get_x_days_formatted(30) {
@@ -1424,7 +1424,7 @@ mod tests_delta_calculations_projections {
     fn create_test_chain_with_delta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -1509,7 +1509,7 @@ mod tests_vega_calculations_projections {
     fn create_test_chain_with_vega() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -1594,7 +1594,7 @@ mod tests_theta_calculations_projections {
     fn create_test_chain_with_theta() -> OptionChain {
         OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap()
     }
@@ -1677,7 +1677,7 @@ mod tests_vanna_calculations_projections {
     fn create_test_chain_with_vanna() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -1740,7 +1740,7 @@ mod tests_veta_calculations_projections {
     fn create_test_chain_with_veta() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -1803,7 +1803,7 @@ mod tests_charm_calculations_projections {
     fn create_test_chain_with_charm() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain
@@ -1866,7 +1866,7 @@ mod tests_color_calculations_projections {
     fn create_test_chain_with_color() -> OptionChain {
         let mut option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         // It is necessary to update the expiration date of all the options in the chain

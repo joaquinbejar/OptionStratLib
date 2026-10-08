@@ -333,6 +333,18 @@ check-packages:
 check-package-archives:
 	scripts/check_package_archives.sh
 
+# Packages the ten published crates with cargo's verification, dry-runs their
+# publication as a workspace and one by one in dependency order (every
+# `cargo publish` carries `--dry-run`: nothing is uploaded), and builds and
+# tests each archive on its own with default, no and all features but
+# `static_export` (#558, scripts/publish_dry_run.py). Release evidence runs it
+# on a committed tree; OSL_ALLOW_DIRTY=1 passes --allow-dirty for a working
+# copy with uncommitted changes.
+.PHONY: publish-dry-run
+publish-dry-run:
+	@python3 scripts/publish_dry_run.py --self-test > /dev/null || (python3 scripts/publish_dry_run.py --self-test; exit 1)
+	python3 scripts/publish_dry_run.py $(if $(filter 1,$(OSL_ALLOW_DIRTY)),--allow-dirty,)
+
 .PHONY: check-direct-examples-packaged
 check-direct-examples-packaged:
 	scripts/check_packaged_examples.sh

@@ -2,6 +2,7 @@
 name = "examples_simulation"
 version = "0.1.0"
 edition = "2024"
+publish = false
 
 [dependencies]
 optionstratlib = { workspace = true, default-features = false, features = ["static_export", "synthetic"] }
