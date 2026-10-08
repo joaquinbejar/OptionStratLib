@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-optionstratlib = { path = "../../" }
+optionstratlib = { workspace = true, default-features = false, features = ["pricing"] }
 osl-example-support = { path = "../support" }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }

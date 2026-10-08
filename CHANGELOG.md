@@ -2030,6 +2030,29 @@ compatibility with 0.21.
 
 ### Changed
 
+- **The workspace examples declare only the capabilities they use** (#774).
+  Every `examples/examples_*` package depended on the facade with its default
+  features, which enable every capability, and most added `plotly` and
+  `static_export`. Each now sets `default-features = false` and lists what
+  its binaries need: `pricing` for `examples_pricing` and `examples_exotics`;
+  `visualization` for `examples_volatility` and `examples_strategies_delta`
+  (their `error::Error` is the unified error, which needs it);
+  `static_export` for `examples_curves`, `examples_metrics`,
+  `examples_strategies`, `examples_strategies_best`, `examples_surfaces` and
+  `examples_visualization` (their `PlotBuilder::save`, `write_png` and
+  `write_svg` calls); `static_export` and `synthetic` for
+  `examples_simulation`. `examples_chain` needs the async wrappers or image
+  export in seven of its ten binaries, so those declare `required-features`
+  (`async` or `static_export`, both package features) and `default` enables
+  `static_export`: `cargo run -p examples_chain --bin <name>` works as before
+  and `--no-default-features` builds the three that need neither.
+  `examples_pricing` takes the facade from the workspace table like the
+  others. The leftover `examples/Local` package, referenced only by a
+  `.gitignore` line, is removed. `make check-graph` now fails when a workspace
+  package that is not a component depends on the facade with its defaults, with
+  no explicit features, or by path (`example_facade_violations`, with
+  self-tests), so this cannot regress.
+
 - **Root and crate-level documentation for the 0.22 workspace** (#554).
   The facade docs (and so the generated `README.md`) explain when to depend
   on the facade and when on component crates, with a crate-selection table

@@ -51,6 +51,12 @@ checks apply, both read from `cargo metadata`:
   with default features and with all of them, holds none of the packages the
   ADR-0002 fixture table lists as absent (`FORBIDDEN_PACKAGES`, #517).
 
+* the example consumers: every workspace package that is not a component and
+  depends on the `optionstratlib` facade sets `default-features = false`,
+  lists its features and takes the dependency from the workspace table, so no
+  example compiles a capability it never calls
+  (`example_facade_violations`, #774);
+
 * the Plotly gate: only `optionstratlib-visualization` among the workspace
   packages (examples and tests included) declares `plotly` or `plotly_static`, and declares them optional,
   without default features and without `static_export_default`; no lower-layer
@@ -1318,6 +1324,42 @@ FACADE_VISUALIZATION_FEATURES = {
 }
 
 
+FACADE = "optionstratlib"
+
+
+def example_facade_violations(packages: list[dict]) -> list[str]:
+    """Workspace consumers of the facade that do not name the capabilities they use (#774).
+
+    The facade's default features enable every capability, so a program that
+    depends on it with defaults compiles code it never calls. Every workspace
+    package that is not a component (the examples, the cross-component tests)
+    and depends on `optionstratlib` must set `default-features = false`, list
+    its features explicitly, and take the dependency from the workspace table
+    (`workspace = true`) instead of a path of its own, so the facade is
+    declared once. Components never depend on the facade at all
+    (`crate_graph_violations`).
+    """
+    found: list[str] = []
+    for package in packages:
+        name = package["name"]
+        if is_component(name):
+            continue
+        for dep in package.get("dependencies", []):
+            if dep["name"] != FACADE or (dep.get("kind") or "normal") != "normal":
+                continue
+            if dep.get("uses_default_features", True):
+                found.append(f"{name}: `{FACADE}` keeps its default features; set `default-features = false`")
+            if not dep.get("features"):
+                found.append(f"{name}: `{FACADE}` names no features; list the capabilities the package uses")
+        manifest = package.get("manifest_path")
+        if manifest and Path(manifest).is_file():
+            for line in Path(manifest).read_text().splitlines():
+                stripped = line.strip()
+                if re.match(rf"{FACADE}\s*=", stripped) and re.search(r"\bpath\s*=", stripped):
+                    found.append(f"{name}: `{FACADE}` is declared by path; use `workspace = true`")
+    return found
+
+
 def plotly_gate_violations(packages: list[dict]) -> list[str]:
     """Ways a library package could resolve Plotly or static export outside its gate.
 
@@ -2205,6 +2247,50 @@ def self_test() -> int:
             failures += 1
         print(f"self-test {'ok' if ok else 'FAIL'}: facade routing, {name} (expected {expected}, got {got})")
 
+    def consumer(name: str, *, defaults: bool = False, features: tuple[str, ...] = ("pricing",),
+                 kind: str | None = None, manifest: str | None = None) -> dict:
+        package = {
+            "name": name,
+            "dependencies": [{
+                "name": FACADE, "kind": kind, "uses_default_features": defaults, "features": list(features),
+            }],
+        }
+        if manifest is not None:
+            package["manifest_path"] = manifest
+        return package
+
+    with tempfile.TemporaryDirectory() as tmp:
+        by_path = Path(tmp) / "path.toml"
+        by_path.write_text('[dependencies]\noptionstratlib = { path = "../../", default-features = false, features = ["pricing"] }\n')
+        by_workspace = Path(tmp) / "workspace.toml"
+        by_workspace.write_text(
+            '[dependencies]\noptionstratlib = { workspace = true, default-features = false, features = ["pricing"] }\n'
+            'rust_decimal = { path = "../x" }\n'
+        )
+        facade_cases = {
+            "an example names its capability": ([consumer("examples_pricing", manifest=str(by_workspace))], 0),
+            "an example keeps the defaults": ([consumer("examples_chain", defaults=True)], 1),
+            "an example names no feature": ([consumer("examples_chain", features=())], 1),
+            "an example keeps the defaults and names none": (
+                [consumer("examples_chain", defaults=True, features=())],
+                2,
+            ),
+            "an example declares the facade by path": ([consumer("examples_pricing", manifest=str(by_path))], 1),
+            "another path dependency is not the facade": ([consumer("examples_pricing", manifest=str(by_workspace))], 0),
+            "a dev-dependency on the facade is not checked here": (
+                [consumer("osl-workspace-tests", defaults=True, features=(), kind="dev")],
+                0,
+            ),
+            "a component is not an example": ([consumer("optionstratlib-core", defaults=True, features=())], 0),
+            "a package without the facade": ([gated("examples_exotics", dep("rust_decimal"))], 0),
+        }
+        for name, (packages_case, expected) in facade_cases.items():
+            got = len(example_facade_violations(packages_case))
+            ok = got == expected
+            if not ok:
+                failures += 1
+            print(f"self-test {'ok' if ok else 'FAIL'}: example facade dependencies, {name} (expected {expected}, got {got})")
+
     for name, (packages_case, expected) in plotly_cases.items():
         got = len(plotly_gate_violations(packages_case))
         ok = got == expected
@@ -2603,6 +2689,8 @@ def main() -> int:
         ("foundational type crates must resolve once, at one requirement, and only core may "
          "depend on them (ADR-0001 D8, #515):", foundational_violations(metadata)),
         ("forbidden workspace crate dependencies (ADR-0001 D1/D9):", crate_graph_violations(packages)),
+        ("workspace consumers of the facade must disable its defaults and list their features (#774):",
+         example_facade_violations(packages)),
         ("Plotly and static export reachable outside the visualization gate (ADR-0002 section 3, #544):",
          plotly_gate_violations(packages)),
         ("facade visualization features are mis-routed (ADR-0002 section 2, #548):",

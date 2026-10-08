@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { workspace = true , features = ["plotly", "static_export", "async"] }
+optionstratlib = { workspace = true, default-features = false, features = ["visualization", "io"] }
 osl-example-support = { path = "../support" }
 tokio = { workspace = true, features = ["full"] }
 positive = { workspace = true }
@@ -12,3 +12,48 @@ tracing = { workspace = true }
 rust_decimal_macros = { workspace = true }
 rust_decimal = { workspace = true }
 chrono = { workspace = true }
+
+# Three binaries need only the facade capabilities above; the rest need the
+# async wrappers or PNG/SVG export, which pull in the async runtime and the
+# WebDriver stack. `default` turns both on so `cargo run -p examples_chain
+# --bin <name>` works unchanged; `--no-default-features` builds only the
+# binaries that need neither.
+[features]
+default = ["static_export"]
+async = ["optionstratlib/async"]
+static_export = ["optionstratlib/static_export"]
+
+[[bin]]
+name = "async_chain_ops"
+path = "src/bin/async_chain_ops.rs"
+required-features = ["async"]
+
+[[bin]]
+name = "async_ohlcv"
+path = "src/bin/async_ohlcv.rs"
+required-features = ["async"]
+
+[[bin]]
+name = "option_chain_build_synthetic"
+path = "src/bin/option_chain_build_synthetic.rs"
+required-features = ["static_export"]
+
+[[bin]]
+name = "option_chain_curve_surface"
+path = "src/bin/option_chain_curve_surface.rs"
+required-features = ["static_export"]
+
+[[bin]]
+name = "option_chain_ger40"
+path = "src/bin/option_chain_ger40.rs"
+required-features = ["static_export"]
+
+[[bin]]
+name = "option_chain_raw"
+path = "src/bin/option_chain_raw.rs"
+required-features = ["static_export"]
+
+[[bin]]
+name = "option_chain_raw_delta"
+path = "src/bin/option_chain_raw_delta.rs"
+required-features = ["static_export"]
