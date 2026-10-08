@@ -231,7 +231,9 @@ pub fn ewma_volatility(
 /// `VolatilityError::Options` or `VolatilityError::DecimalError` when the
 /// band's discount factors leave the `Decimal` range;
 /// `VolatilityError::NoValidVolatility` when every grid
-/// point failed the Black–Scholes evaluation, and
+/// point failed the Black–Scholes evaluation or the option has expired (at
+/// `T = 0` the price is the intrinsic value whatever the volatility, #843),
+/// and
 /// `VolatilityError::PositiveError` when the boundary `Positive`
 /// conversion fails. Black–Scholes errors on individual candidates
 /// are discarded by the parallel filter rather than propagated.
@@ -250,6 +252,12 @@ pub fn implied_volatility(
     options: &mut Options,
     max_iterations: i64,
 ) -> Result<Positive, VolatilityError> {
+    // At expiry the price is the intrinsic value for every volatility
+    // (#843), so no grid point implies one. This is the error the grid
+    // returned when Black-Scholes rejected `T = 0` on every candidate.
+    if options.time_to_expiration()?.is_zero() {
+        return Err(VolatilityError::NoValidVolatility);
+    }
     let base_option = options.clone();
     let iterations =
         max_iterations

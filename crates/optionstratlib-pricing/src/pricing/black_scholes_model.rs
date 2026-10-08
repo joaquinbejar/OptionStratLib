@@ -9,6 +9,7 @@ use crate::kernels::{
 };
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::decimal::{d_exp, d_mul, d_sub};
+use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use tracing::{instrument, trace};
@@ -27,10 +28,23 @@ use tracing::{instrument, trace};
 ///
 /// # Supported Option Types
 ///
-/// Currently, only **European** options are supported by the Black-Scholes model.
-/// The following exotic option types will return `PricingError::UnsupportedOptionType`:
-/// - American, Bermuda, Asian, Barrier, Binary, Lookback, Compound, Chooser,
-///   Cliquet, Rainbow, Spread, Quanto, Exchange, Power
+/// **European** options are priced by the closed form below. American and
+/// Bermuda options return [`PricingError::UnsupportedOptionType`]. Every
+/// other type (Asian, Barrier, Binary, Lookback, Compound, Chooser,
+/// Cliquet, Rainbow, Spread, Quanto, Exchange, Power) is dispatched to its
+/// own closed-form kernel.
+///
+/// # At expiry (`T = 0`)
+///
+/// `d1` and `d2` divide by `σ√T`, so they are undefined at expiry. The
+/// exotic kernels each define their value at `T = 0` (the contract's
+/// payoff at the current spot, per unit and signed by the side), so at
+/// `T = 0` an exotic option is dispatched to its kernel without computing
+/// `d1` / `d2`, and a European option returns its intrinsic value, per unit
+/// and signed by the side (#843). American and Bermuda options keep the
+/// errors they returned before. For `T > 0` nothing changes: `d1` / `d2` are computed first
+/// for every type, as before, so a type whose inputs they reject keeps that
+/// error.
 ///
 /// # Description
 ///
@@ -74,6 +88,20 @@ use tracing::{instrument, trace};
     side = ?option.side,
 ))]
 pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
+    // At expiry `d1` / `d2` are undefined, while every exotic kernel defines
+    // its `T = 0` value: dispatch straight to it (#843). The expiration is
+    // read first on both paths, as `d_values_and_time` does, so a failure
+    // to read it is the same error either way.
+    if option.time_to_expiration()?.is_zero() {
+        if let Some(price) = exotic_kernel(option) {
+            return price;
+        }
+        // A European option at expiry is worth its intrinsic value, per
+        // unit and signed by the side, the limit of the closed form below.
+        if matches!(option.option_type, OptionType::European) {
+            return european_at_expiry(option);
+        }
+    }
     let (d1, d2, expiry_time) = d_values_and_time(option, calculate_d_values)?;
     match option.option_type {
         OptionType::European => calculate_european_option_price(
@@ -91,6 +119,43 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
             "Bermuda",
             "Black-Scholes",
         )),
+        // `OptionType` is `#[non_exhaustive]`: a variant added upstream has no
+        // closed form here until it gets its own kernel.
+        _ => exotic_kernel(option).unwrap_or_else(|| {
+            Err(PricingError::unsupported_option_type(
+                "unknown",
+                "Black-Scholes",
+            ))
+        }),
+    }
+}
+
+/// The intrinsic value of a European option at expiry, per unit and signed
+/// by the side: the payoff of the contract at the spot, which is the limit
+/// of the closed form as `T → 0`.
+///
+/// # Errors
+///
+/// Returns [`PricingError::Options`] carrying `OptionsError::PayoffError`
+/// when the payoff has no `Decimal` representation.
+fn european_at_expiry(option: &Options) -> Result<Decimal, PricingError> {
+    let info = PayoffInfo {
+        spot: option.underlying_price,
+        strike: option.strike_price,
+        style: option.option_style,
+        side: option.side,
+        spot_prices: None,
+        spot_min: None,
+        spot_max: None,
+    };
+    Ok(option.option_type.payoff(&info)?)
+}
+
+/// The closed-form kernel of an exotic option type, or `None` for the
+/// European, American and Bermuda types, which have none here, and for a
+/// type added upstream.
+fn exotic_kernel(option: &Options) -> Option<Result<Decimal, PricingError>> {
+    Some(match option.option_type {
         OptionType::Asian { .. } => crate::pricing::asian::asian_black_scholes(option),
         OptionType::Barrier { .. } => crate::pricing::barrier::barrier_black_scholes(option),
         OptionType::Binary { .. } => crate::pricing::binary::binary_black_scholes(option),
@@ -103,13 +168,8 @@ pub fn black_scholes(option: &Options) -> Result<Decimal, PricingError> {
         OptionType::Quanto { .. } => crate::pricing::quanto::quanto_black_scholes(option),
         OptionType::Exchange { .. } => crate::pricing::exchange::exchange_black_scholes(option),
         OptionType::Power { .. } => crate::pricing::power::power_black_scholes(option),
-        // `OptionType` is `#[non_exhaustive]`: a variant added upstream has no
-        // closed form here until it gets its own kernel.
-        _ => Err(PricingError::unsupported_option_type(
-            "unknown",
-            "Black-Scholes",
-        )),
-    }
+        _ => return None,
+    })
 }
 
 /// European Black–Scholes–Merton price with the continuous yield `q` given
