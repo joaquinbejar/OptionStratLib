@@ -9,6 +9,7 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_ln, d_mul, d_powd, d_sqrt, d_sub};
+use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{BarrierType, OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -28,7 +29,20 @@ use rust_decimal_macros::dec;
 ///
 /// When the spot is already at or beyond the barrier (`S ≤ H` down,
 /// `S ≥ H` up) the knock-in is the vanilla and the knock-out is worth its
-/// rebate, paid now. The result is the long price signed by `option.side`.
+/// rebate, paid now. The result is the long price signed by `option.side`,
+/// per unit of the underlying: like the closed form, it does not scale by
+/// `quantity` or `contract_size`.
+///
+/// # At expiry (`T = 0`)
+///
+/// The price is the per-unit payoff of the contract,
+/// [`Payoff::payoff`] on the option type, which is the limit of the closed
+/// form as `T → 0` (#826). Only `underlying_price` is known, so the barrier
+/// counts as hit when it is at or beyond the barrier, the same test the
+/// closed form applies before pricing: a hit knock-in pays the vanilla
+/// payoff and a hit knock-out its rebate; an unhit knock-in pays its rebate
+/// (Haug's `E`, which tends to the rebate itself) and an unhit knock-out the
+/// vanilla payoff.
 ///
 /// # Errors
 ///
@@ -42,6 +56,8 @@ use rust_decimal_macros::dec;
 ///   to zero: `μ`, the `x` / `y` / `z` arguments, the reflection powers,
 ///   the discount factors, or the final price composition.
 /// - `PricingError::ExpirationDate` when the expiration cannot be converted.
+/// - [`PricingError::Options`] carrying `OptionsError::PayoffError` when the
+///   payoff at expiry has no `Decimal` representation.
 pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let (barrier_type, barrier_level, rebate) = match &option.option_type {
         OptionType::Barrier {
@@ -73,9 +89,18 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
     let t = option.time_to_expiration()?.to_dec();
 
     if t == Decimal::ZERO {
-        return option
-            .payoff()
-            .map_err(|e| PricingError::other(&e.to_string()));
+        // Per unit, like the closed form: `Options::payoff` scales by the
+        // position size, which the price never does (#826).
+        let info = PayoffInfo {
+            spot: option.underlying_price,
+            strike: option.strike_price,
+            style: option.option_style,
+            side: option.side,
+            spot_prices: None,
+            spot_min: None,
+            spot_max: None,
+        };
+        return Ok(option.option_type.payoff(&info)?);
     }
 
     if sigma == Decimal::ZERO {

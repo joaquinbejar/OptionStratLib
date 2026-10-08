@@ -108,12 +108,14 @@ pub struct PayoffInfo {
     ///   Asian options base their payoff on the average price of the underlying asset over a specified period.
     pub spot_prices: Option<Vec<Positive>>, // Asian
     /// * `spot_min` - The minimum observed price of the underlying asset during the option's life.
-    ///   This field is used specifically for Lookback options where the payoff depends on the
-    ///   minimum price reached.
+    ///   Lookback options read it for the minimum price reached, and a down barrier
+    ///   (`DownAndIn`, `DownAndOut`) is hit when it is at or below the barrier level.
+    ///   When `None`, a down barrier is judged from `spot` alone.
     pub spot_min: Option<Positive>, // Lookback / down barriers
     /// * `spot_max` - The maximum observed price of the underlying asset during the option's life.
-    ///   This field is used specifically for Lookback options where the payoff depends on the
-    ///   maximum price reached.
+    ///   Lookback options read it for the maximum price reached, and an up barrier
+    ///   (`UpAndIn`, `UpAndOut`) is hit when it is at or above the barrier level.
+    ///   When `None`, an up barrier is judged from `spot` alone.
     pub spot_max: Option<Positive>, // Lookback / up barriers
 }
 
@@ -438,36 +440,37 @@ fn geometric_mean(fixings: &[Positive]) -> f64 {
     centre * (log_sum / fixings.len() as f64).exp() // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite payoff is rejected at the `Decimal` boundary
 }
 
-/// Calculates the payoff for a financial instrument with a barrier feature.
+/// The payoff at expiry of a barrier option (Reiner-Rubinstein contract
+/// terms), signed by `info.side` like every other payoff in this module.
 ///
-/// # Arguments
+/// # Barrier state at expiry
 ///
-/// * `barrier_type` - Specifies the type of barrier condition. Can be one of the following:
-///     - `BarrierType::UpAndIn`: Payoff is only valid if the spot price has risen above or to the barrier level.
-///     - `BarrierType::DownAndIn`: Payoff is only valid if the spot price has fallen below or to the barrier level.
-///     - `BarrierType::UpAndOut`: Payoff is only valid if the spot price does not rise above the barrier level.
-///     - `BarrierType::DownAndOut`: Payoff is only valid if the spot price does not fall below the barrier level.
-/// * `barrier_level` - A reference to the barrier level price, which serves as the activation or deactivation threshold for the payoff.
-/// * `info` - Contains information required to calculate the payoff, including the spot price and additional data for standard payoff calculations.
+/// The barrier counts as hit when the extreme of the path reached it: for an
+/// up barrier `spot_max >= barrier_level`, for a down barrier
+/// `spot_min <= barrier_level`. A missing extreme falls back to the final
+/// `spot`, so with neither field set the state is judged from the expiry
+/// price alone, and a path that touched the barrier and came back is treated
+/// as never hit. [`crate::model::Options::payoff`] sets neither field: it
+/// knows only the current underlying price, which is also the state
+/// `barrier_black_scholes` prices at `T = 0`.
 ///
-/// # Returns
+/// # Payoff
 ///
-/// Returns the calculated payoff as a `f64`. If the barrier conditions are met, the payoff will either be the standard payoff or zero, based on the barrier type.
+/// | Contract | Barrier hit | Barrier not hit |
+/// | --- | --- | --- |
+/// | knock-in (`UpAndIn`, `DownAndIn`) | vanilla payoff | rebate |
+/// | knock-out (`UpAndOut`, `DownAndOut`) | rebate | vanilla payoff |
 ///
-/// # Behavior
+/// The rebate is `rebate` (zero when `None`): a knock-in pays it at expiry
+/// when it never came alive (Haug's `E` term), a knock-out pays it on the
+/// hit (`F`). A long position receives it and a short one pays it, so the
+/// rebate carries the side's sign, as the vanilla payoff does. A barrier
+/// type added upstream (`BarrierType` is `#[non_exhaustive]`) pays the
+/// vanilla payoff.
 ///
-/// 1. Evaluates whether the current spot price satisfies the barrier condition based on the given `barrier_type` and `barrier_level`.
-/// 2. If the condition for an "In" type (`UpAndIn` or `DownAndIn`) barrier is met, the standard payoff is returned; otherwise, it returns `0.0`.
-/// 3. If the condition for an "Out" type (`UpAndOut` or `DownAndOut`) barrier is met, the payoff is `0.0`; otherwise, it returns the standard payoff.
-///
-/// # Assumptions
-///
-/// * It is assumed that the `standard_payoff` function is defined elsewhere and provides the base payoff calculation.
-/// * The `PayoffInfo` struct and the `BarrierType` enum are pre-defined and accessible in the same context.
-///
-/// # Errors
-///
-/// This function does not explicitly handle errors. Ensure that the inputs are valid for the `barrier_type`, `barrier_level`, and `info` parameters.
+/// Until #826 an unhit knock-in paid zero instead of its rebate, and the
+/// rebate of a hit knock-out was not signed by the side, so the payoff
+/// disagreed with the Reiner-Rubinstein price as `T → 0`.
 fn calculate_barrier_payoff(
     barrier_type: &BarrierType,
     barrier_level: &Positive,
@@ -490,17 +493,25 @@ fn calculate_barrier_payoff(
         _ => false,
     };
     let std_payoff = standard_payoff(info);
+    // Received by a long, paid by a short.
+    let signed_rebate = match rebate {
+        Some(amount) if !amount.is_zero() => match info.side {
+            Side::Long => amount.to_f64(),
+            Side::Short => -amount.to_f64(),
+        },
+        _ => 0.0,
+    };
     match barrier_type {
         BarrierType::UpAndIn | BarrierType::DownAndIn => {
             if barrier_condition {
                 std_payoff
             } else {
-                0.0
+                signed_rebate
             }
         }
         BarrierType::UpAndOut | BarrierType::DownAndOut => {
             if barrier_condition {
-                rebate.map_or(0.0, |r| r.to_f64())
+                signed_rebate
             } else {
                 std_payoff
             }
@@ -1507,6 +1518,120 @@ mod tests_decimal_boundary_equivalence {
             )
         };
         assert_eq!(option.payoff(&knocked_out).unwrap(), dec!(2.5));
+    }
+
+    fn barrier_with_rebate(barrier_type: BarrierType, level: f64) -> OptionType {
+        OptionType::Barrier {
+            barrier_type,
+            barrier_level: pos_or_panic!(level),
+            rebate: Some(pos_or_panic!(3.0)),
+        }
+    }
+
+    // An unhit knock-in pays its rebate at expiry (Haug's `E` term); it
+    // paid zero before #826.
+    #[test]
+    fn test_payoff_unhit_knock_in_pays_the_rebate() {
+        let spot = Positive::HUNDRED;
+        for (barrier_type, level) in [
+            (BarrierType::DownAndIn, 95.0),
+            (BarrierType::UpAndIn, 105.0),
+        ] {
+            let option = barrier_with_rebate(barrier_type, level);
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                let long = info(spot, pos_or_panic!(90.0), style, Side::Long);
+                let short = info(spot, pos_or_panic!(90.0), style, Side::Short);
+                assert_eq!(
+                    option.payoff(&long).unwrap(),
+                    dec!(3),
+                    "{barrier_type:?} {style:?}"
+                );
+                assert_eq!(
+                    option.payoff(&short).unwrap(),
+                    dec!(-3),
+                    "{barrier_type:?} {style:?}"
+                );
+            }
+        }
+    }
+
+    // A hit knock-in is the vanilla payoff, with no rebate.
+    #[test]
+    fn test_payoff_hit_knock_in_is_the_vanilla_payoff() {
+        let option = barrier_with_rebate(BarrierType::DownAndIn, 95.0);
+        let hit = PayoffInfo {
+            spot_min: Some(pos_or_panic!(94.0)),
+            ..info(
+                Positive::HUNDRED,
+                pos_or_panic!(90.0),
+                OptionStyle::Call,
+                Side::Long,
+            )
+        };
+        assert_eq!(option.payoff(&hit).unwrap(), dec!(10));
+    }
+
+    // The rebate of a hit knock-out is paid by a short; it came back with a
+    // positive sign before #826.
+    #[test]
+    fn test_payoff_hit_knock_out_rebate_is_signed_by_side() {
+        let option = barrier_with_rebate(BarrierType::UpAndOut, 105.0);
+        let long = info(
+            pos_or_panic!(106.0),
+            Positive::HUNDRED,
+            OptionStyle::Call,
+            Side::Long,
+        );
+        let short = info(
+            pos_or_panic!(106.0),
+            Positive::HUNDRED,
+            OptionStyle::Call,
+            Side::Short,
+        );
+        assert_eq!(option.payoff(&long).unwrap(), dec!(3));
+        assert_eq!(option.payoff(&short).unwrap(), dec!(-3));
+    }
+
+    // Without a rebate an unhit knock-in still pays nothing, for either side.
+    #[test]
+    fn test_payoff_unhit_knock_in_without_rebate_is_zero() {
+        let option = OptionType::Barrier {
+            barrier_type: BarrierType::DownAndIn,
+            barrier_level: pos_or_panic!(95.0),
+            rebate: Some(Positive::ZERO),
+        };
+        let short = info(
+            Positive::HUNDRED,
+            pos_or_panic!(90.0),
+            OptionStyle::Call,
+            Side::Short,
+        );
+        let payoff = option.payoff(&short).unwrap();
+        assert_eq!(payoff, Decimal::ZERO);
+        assert!(!payoff.is_sign_negative());
+    }
+
+    // `Options::payoff` passes no path extremes, so the barrier is judged
+    // from the expiry spot alone: a down-and-in whose spot ends above the
+    // barrier is unhit and pays its rebate, scaled by the position size.
+    #[test]
+    fn test_options_payoff_judges_the_barrier_from_the_spot() {
+        let mut option =
+            crate::model::utils::create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.option_type = barrier_with_rebate(BarrierType::DownAndIn, 95.0);
+        option.underlying_price = Positive::HUNDRED;
+        option.quantity = Positive::TWO;
+        assert_eq!(option.payoff().unwrap(), dec!(6));
+        option.underlying_price = pos_or_panic!(95.0);
+        let vanilla_at_95 = OptionType::European
+            .payoff(&info(
+                pos_or_panic!(95.0),
+                option.strike_price,
+                OptionStyle::Call,
+                Side::Long,
+            ))
+            .unwrap();
+        assert_eq!(option.payoff().unwrap(), vanilla_at_95 * dec!(2));
     }
 
     #[test]
