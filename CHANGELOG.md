@@ -1573,6 +1573,15 @@ summarize the release.
     a custom candidate whose break-evens cannot be recomputed) at `DEBUG`
     instead of `WARN`.
 
+- **`Options::graph_data` returns a bounded series for any strike**
+  (#797). The single-contract payoff chart (also drawn for a `Position`)
+  stepped one unit of the underlying at a time across its price range, so
+  a strike of 1e15, whose range is about 6e14 units wide, looped for hours.
+  A range of up to 10,000 units is still charted one unit at a time, so
+  every chart that returned before returns the same series (the golden
+  `options_*` and `position_long_put` entries are unchanged). A wider range
+  is sampled at 10,000 evenly spaced prices. No signature changes.
+
 - **An inverted `BearCallSpread` / `BullPutSpread` is reported as a
   structural error, not as a loss of zero** (#803). `get_max_loss` used
   `ProfitLossError::MaxLossError` both for "the worst case still gains" and
