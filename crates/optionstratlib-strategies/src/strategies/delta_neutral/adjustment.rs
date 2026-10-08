@@ -404,8 +404,8 @@ impl fmt::Display for AdjustmentPlan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Adjustment Plan:")?;
         writeln!(f, "  Actions: {}", self.actions.len())?;
-        for (i, action) in self.actions.iter().enumerate() {
-            writeln!(f, "    {}: {}", i + 1, action)?;
+        for (position, action) in (1usize..).zip(self.actions.iter()) {
+            writeln!(f, "    {}: {}", position, action)?;
         }
         writeln!(f, "  Estimated Cost: {:.2}", self.estimated_cost)?;
         writeln!(f, "  Residual Delta: {:.4}", self.residual_delta)?;

@@ -745,7 +745,7 @@ impl Optimizable for PoorMansCoveredCall {
         let mut found = false;
 
         for (long_call_index, long_call_option) in options.iter().enumerate() {
-            for short_call_option in options.iter().skip(long_call_index + 1) {
+            for short_call_option in options.iter().skip(long_call_index).skip(1) {
                 debug!(
                     "Long: {:#?} Short: {:#?}",
                     long_call_option.strike_price, short_call_option.strike_price

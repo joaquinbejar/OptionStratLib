@@ -302,7 +302,7 @@ impl CustomStrategy {
                 .calculate_profit_at(&x.checked_add(&h).ok()?)
                 .ok()?
                 .to_f64()?;
-            let derivative = (f_x_h - f_x) / h;
+            let derivative = (f_x_h - f_x) / h.to_f64();
 
             // Avoid division by very small numbers
             if derivative.abs() < self.epsilon {
@@ -319,7 +319,7 @@ impl CustomStrategy {
             }
 
             x = next_x;
-            iterations += 1;
+            iterations = iterations.checked_add(1)?;
         }
 
         None
@@ -779,7 +779,7 @@ impl Strategies for CustomStrategy {
 
         // Limit iterations to prevent infinite loops
         let max_iterations = 100;
-        let mut iterations = 0;
+        let mut iterations: i32 = 0;
 
         while current_price <= max_price && iterations < max_iterations {
             if let Ok(current_profit) = self.calculate_profit_at(&current_price)
@@ -788,7 +788,9 @@ impl Strategies for CustomStrategy {
                 max_profit = current_profit;
             }
             current_price = current_price.checked_add(&step)?;
-            iterations += 1;
+            iterations = iterations.checked_add(1).ok_or_else(|| {
+                StrategyError::invalid_parameters("CustomStrategy", "iteration counter overflowed")
+            })?;
         }
 
         // If max_profit is still zero or negative, return zero
@@ -813,7 +815,7 @@ impl Strategies for CustomStrategy {
 
         // Limit iterations to prevent infinite loops
         let max_iterations = 100;
-        let mut iterations = 0;
+        let mut iterations: i32 = 0;
 
         while current_price <= max_price && iterations < max_iterations {
             if let Ok(current_profit) = self.calculate_profit_at(&current_price)
@@ -822,7 +824,9 @@ impl Strategies for CustomStrategy {
                 max_loss = current_profit;
             }
             current_price = current_price.checked_add(&step)?;
-            iterations += 1;
+            iterations = iterations.checked_add(1).ok_or_else(|| {
+                StrategyError::invalid_parameters("CustomStrategy", "iteration counter overflowed")
+            })?;
         }
 
         // Return absolute value of max loss
@@ -847,7 +851,7 @@ impl Strategies for CustomStrategy {
 
         // Limit iterations to prevent infinite loops
         let max_iterations = 100;
-        let mut iterations = 0;
+        let mut iterations: i32 = 0;
 
         while current_price <= max_price && iterations < max_iterations {
             if let Ok(current_profit) = self.calculate_profit_at(&current_price)
@@ -860,7 +864,9 @@ impl Strategies for CustomStrategy {
                 )?;
             }
             current_price = current_price.checked_add(&step)?;
-            iterations += 1;
+            iterations = iterations.checked_add(1).ok_or_else(|| {
+                StrategyError::invalid_parameters("CustomStrategy", "iteration counter overflowed")
+            })?;
         }
 
         // The area is expressed as a fraction of the spot, which a zero

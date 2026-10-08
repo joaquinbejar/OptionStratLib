@@ -928,7 +928,7 @@ impl Strategies for IronCondor {
             self.long_put.option.strike_price,
         )
         .to_f64();
-        let height = measured_max_profit(self)?;
+        let height = measured_max_profit(self)?.to_f64();
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;

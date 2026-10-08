@@ -817,7 +817,7 @@ impl Strategies for ShortStrangle {
         let inner_square = strike_diff.checked_mul(&max_profit)?;
         let break_even_diff = price_gap(upper, lower);
         let outer_square = break_even_diff.checked_mul(&max_profit)?;
-        let triangles = price_gap(outer_square, inner_square) / 2.0;
+        let triangles = price_gap(outer_square, inner_square).checked_div_f64(2.0)?;
         let result = inner_square
             .checked_add(&triangles)?
             .checked_div(&self.short_call.option.underlying_price)?
@@ -836,7 +836,7 @@ impl Strategies for ShortStrangle {
         })?;
         let break_even_diff = price_gap(upper, lower);
         let result = match self.get_max_profit() {
-            Ok(max_profit) => max_profit.to_f64() / break_even_diff * 100.0,
+            Ok(max_profit) => max_profit.to_f64() / break_even_diff.to_f64() * 100.0,
             Err(error) if is_extreme_sign_error(&error) => ZERO,
             Err(error) => return Err(error),
         };

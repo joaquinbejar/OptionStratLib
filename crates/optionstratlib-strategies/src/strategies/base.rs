@@ -16,7 +16,7 @@ use optionstratlib_core::model::DisplayMoney;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::d_add;
+use optionstratlib_core::model::decimal::{d_add, d_sub};
 use optionstratlib_core::model::utils::sub_floor_zero;
 use optionstratlib_core::model::{
     Trade,
@@ -1207,9 +1207,20 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let underlying_price = self.get_underlying_price()?;
 
         // Calculate the largest difference from the underlying price to furthest strike
-        let max_diff = (last_strike.value() - underlying_price.value())
-            .abs()
-            .max((first_strike.value() - underlying_price.value()).abs());
+        let max_diff = d_sub(
+            last_strike.value(),
+            underlying_price.value(),
+            "get_range_to_show/last_strike_distance",
+        )?
+        .abs()
+        .max(
+            d_sub(
+                first_strike.value(),
+                underlying_price.value(),
+                "get_range_to_show/first_strike_distance",
+            )?
+            .abs(),
+        );
 
         // Expand range by max_diff. A strike further below the spot than the
         // spot itself — a penny strike against a ten dollar underlying — puts

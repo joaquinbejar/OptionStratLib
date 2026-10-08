@@ -162,8 +162,8 @@ impl fmt::Display for DeltaInfo {
         )?;
         writeln!(f, "  Underlying Price: {}", self.underlying_price)?;
         writeln!(f, "  Individual Deltas:")?;
-        for (i, delta) in self.individual_deltas.iter().enumerate() {
-            writeln!(f, "    Position {}: {:.4}", i + 1, delta)?;
+        for (position, delta) in (1usize..).zip(self.individual_deltas.iter()) {
+            writeln!(f, "    Position {}: {:.4}", position, delta)?;
         }
         Ok(())
     }
@@ -487,7 +487,9 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 "delta_adjustments::delta_per_contract",
             )?;
             total_size = total_size.checked_add(&option.quantity)?;
-            if option_delta_per_contract.abs() > DELTA_THRESHOLD / dec!(10.0) {
+            if option_delta_per_contract.abs()
+                > d_div(DELTA_THRESHOLD, dec!(10.0), "delta_adjustments::threshold")?
+            {
                 // Try to generate delta adjustments, but skip if not possible
                 match self.generate_delta_adjustments(net_delta, option_delta_per_contract, option)
                 {
