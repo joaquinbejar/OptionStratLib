@@ -5,7 +5,8 @@ script commits (the runner and the `report_api_changes.py` fix). The branch
 was rebased afterwards, onto `f2bea813` (#779), so that SHA is no longer in
 its history; the files changed after the run are this documentation, the
 classifier's handling of bare-name constants and the new `release-gates`
-Makefile target, none of which a gate reads. This is the evidence for the
+Makefile target, none of which a gate reads. The `release-notes` gate (#562, merged
+after the run) ran on `9d962a36`, the rebased head, and is the only row from it. This is the evidence for the
 state of `main` on 2026-10-08, not the release candidate: the candidate is
 frozen by the owner (#560) and gets a complete rerun of `make release-gates`
 on its commit, which rewrites this file.
@@ -27,7 +28,13 @@ on its commit, which rewrites this file.
   contents, not compiler or tool warnings, and the run counts them apart
   ("package notices"); the gates that package the crates (`components`,
   `consumers-022`, `direct-examples-packaged`) pass otherwise. Package contents
-  and metadata belong to #559.
+  and metadata belong to #559, which keeps them on purpose: an archive ships
+  only `src/`, the manifest, the README and the licence (the facade also the
+  two `docs/*.md` its rustdoc includes), while the integration tests and
+  benches read repository data and stay in the repository and CI. The facade
+  adds the same kind of notice for its own `[[test]]` and `[[bench]]` targets
+  once #559 merges. They are accepted cargo notices, not warnings to fix.
+  #559 records its package evidence in `docs/release/0.22/packages.md`.
 
 ## Facade capability matrix
 
