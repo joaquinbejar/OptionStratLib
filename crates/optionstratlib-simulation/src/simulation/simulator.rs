@@ -9,10 +9,24 @@ use optionstratlib_pricing::pricing::Profit;
 use optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo;
 use optionstratlib_pricing::pricing::unified::MonteCarloPricer;
 use rand::RngExt;
+use rayon::prelude::*;
 use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::ops::{AddAssign, Index, IndexMut};
 use tracing::warn;
+
+/// Number of walks from which [`Simulator::new`] builds them on the rayon
+/// pool rather than serially (#860). Measured on an Apple M5 Max (18 cores)
+/// with 30-step geometric Brownian walks: one or two walks build no faster on
+/// the pool than serially, three already build faster. Longer walks only
+/// move the crossover lower.
+pub const PARALLEL_MIN_WALKS: usize = 3;
+
+/// Walks [`Simulator::new`] builds per round on the rayon pool. Each round
+/// draws its walks' seeds in order and returns at its first failing walk, so
+/// a huge `size` never holds more than one round of seeds and results, and a
+/// failing build stops within a round of its first error.
+const PARALLEL_ROUND_WALKS: usize = 1024;
 
 /// Represents a generic simulator for managing and simulating random walks.
 ///
@@ -57,8 +71,18 @@ where
     /// Creates a new simulator that builds `size` random walks from the
     /// supplied fallible generator.
     ///
-    /// The generator is invoked once per random walk; any error short
-    /// circuits the constructor and no partial `Simulator` is returned.
+    /// The generator is invoked once per random walk; if any walk fails, no
+    /// partial `Simulator` is returned and the error is the one of the
+    /// lowest-indexed failing walk.
+    ///
+    /// From [`PARALLEL_MIN_WALKS`] walks up, the walks are built on the rayon
+    /// pool and collected in index order (#860). The seed of every walk is
+    /// drawn up front, in order, from the master seed, so a seeded simulator
+    /// is bit-identical to the serial build whatever the thread count. Below
+    /// the threshold the walks are built serially, which is faster there.
+    /// The serial build stops at the first failing walk; the parallel build
+    /// works in rounds of 1024 walks and stops at the end of the round that
+    /// holds the first failing walk, whose error it returns.
     ///
     /// # Parameters
     ///
@@ -77,8 +101,8 @@ where
     ///
     /// # Returns
     ///
-    /// `Ok(Simulator)` on success, or `Err(E)` from the first generator
-    /// invocation that fails.
+    /// `Ok(Simulator)` on success, or `Err(E)` from the lowest-indexed walk
+    /// whose generator invocation fails.
     ///
     /// # Errors
     ///
@@ -92,9 +116,10 @@ where
         generator: F,
     ) -> Result<Self, E>
     where
-        F: Fn(&WalkParams<X, Y>) -> Result<Vec<Step<X, Y>>, E> + Clone,
-        X: Copy + TryInto<Positive> + AddAssign + Display,
-        Y: TryInto<Positive> + Display + Clone,
+        F: Fn(&WalkParams<X, Y>) -> Result<Vec<Step<X, Y>>, E> + Clone + Send + Sync,
+        E: Send,
+        X: Copy + TryInto<Positive> + AddAssign + Display + Send + Sync,
+        Y: TryInto<Positive> + Display + Clone + Send + Sync,
     {
         // The reservation is only a growth hint, and `E` is the generator's
         // error type, which cannot carry an allocation failure. A `size` whose
@@ -109,27 +134,55 @@ where
                 "Simulator::new: cannot reserve the walks up front; growing on demand"
             );
         }
-        match params.seed {
-            None => {
-                for i in 0..size {
-                    let walk_title = format!("{title}_{i}");
-                    random_walks.push(RandomWalk::new(walk_title, params, generator.clone())?);
-                }
-            }
-            Some(seed) => {
-                // Walk `i` is seeded with the `i`-th `u64` of
-                // `deterministic_rng(seed)`: distinct paths, reproducible
-                // run to run, and independent of how many walks follow.
-                let mut seeds = deterministic_rng(seed);
-                let mut walk_params = params.clone();
-                for i in 0..size {
+        // Walk `i` is seeded with the `i`-th `u64` of
+        // `deterministic_rng(seed)`: distinct paths, reproducible run to run,
+        // and independent of how many walks follow. The seeds are drawn in
+        // order before any walk is built, so the parallel build below gives
+        // every walk the seed the serial build gives it.
+        let mut seeds = params.seed.map(deterministic_rng);
+        if size < PARALLEL_MIN_WALKS {
+            let mut walk_params = params.clone();
+            for i in 0..size {
+                if let Some(seeds) = seeds.as_mut() {
                     walk_params.seed = Some(seeds.random::<u64>());
-                    let walk_title = format!("{title}_{i}");
-                    random_walks.push(RandomWalk::new(
-                        walk_title,
-                        &walk_params,
-                        generator.clone(),
-                    )?);
+                }
+                let walk_title = format!("{title}_{i}");
+                random_walks.push(RandomWalk::new(
+                    walk_title,
+                    &walk_params,
+                    generator.clone(),
+                )?);
+            }
+        } else {
+            // One round at a time: its seeds are drawn in order, its walks
+            // are built on the pool, and they are appended in index order up
+            // to the first error. Memory beyond the walks themselves stays
+            // bounded by the round, and a failing build stops after the round
+            // that holds its first failure.
+            let mut indices = 0..size;
+            loop {
+                let jobs: Vec<(usize, Option<u64>)> = indices
+                    .by_ref()
+                    .take(PARALLEL_ROUND_WALKS)
+                    .map(|i| (i, seeds.as_mut().map(|seeds| seeds.random::<u64>())))
+                    .collect();
+                if jobs.is_empty() {
+                    break;
+                }
+                let built: Vec<Result<RandomWalk<X, Y>, E>> = jobs
+                    .into_par_iter()
+                    .map_init(
+                        || params.clone(),
+                        |walk_params, (i, seed)| {
+                            if seed.is_some() {
+                                walk_params.seed = seed;
+                            }
+                            RandomWalk::new(format!("{title}_{i}"), walk_params, generator.clone())
+                        },
+                    )
+                    .collect();
+                for walk in built {
+                    random_walks.push(walk?);
                 }
             }
         }
@@ -915,7 +968,7 @@ mod tests {
         // Regression for #349: ensure the simulator constructor returns
         // the first generator error and does not silently build a
         // partial simulator.
-        use std::cell::Cell;
+        use std::sync::atomic::{AtomicU32, Ordering};
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -943,12 +996,16 @@ mod tests {
             seed: Some(SEED),
         };
 
-        let calls: Cell<u32> = Cell::new(0);
+        // The generator is shared across the rayon pool from
+        // `PARALLEL_MIN_WALKS` walks up, so it must be `Sync`: the call count
+        // is an atomic. One walk short of the threshold the walks are built
+        // serially, which stops at the first error.
+        let calls = AtomicU32::new(0);
+        let size = PARALLEL_MIN_WALKS - 1;
         let result: Result<Simulator<Positive, Positive>, &'static str> =
-            Simulator::new("Err Sim".to_string(), 5, &walk_params, |p| {
-                let n = calls.get();
-                calls.set(n + 1);
-                if n == 1 {
+            Simulator::new("Err Sim".to_string(), size, &walk_params, |p| {
+                let n = calls.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
                     Err("boom")
                 } else {
                     Ok(vec![p.init_step.clone()])
@@ -959,9 +1016,8 @@ mod tests {
             Err(msg) => assert_eq!(msg, "boom"),
             Ok(_) => panic!("expected generator error to propagate"),
         }
-        // Generator should have been called twice (success then failure)
-        // and not five times — short-circuited.
-        assert_eq!(calls.get(), 2);
+        // The first walk failed, so no later walk was built.
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
         Ok(())
     }
 
