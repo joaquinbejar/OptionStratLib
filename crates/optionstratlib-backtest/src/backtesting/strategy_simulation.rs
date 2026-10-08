@@ -432,13 +432,9 @@ where
     // bar (ADR-0002 section 6): the caller's subscriber decides whether and
     // how to show it.
     let walk_count = sim.len();
-    for (index, random_walk) in sim.into_iter().enumerate() {
+    for (random_walk, completed) in sim.into_iter().zip(1usize..) {
         simulation_results.push(evaluator.evaluate_path(random_walk, &exit)?);
-        tracing::debug!(
-            completed = index + 1,
-            total = walk_count,
-            "simulated path evaluated"
-        );
+        tracing::debug!(completed, total = walk_count, "simulated path evaluated");
     }
     tracing::info!(total = walk_count, "simulations completed");
 
