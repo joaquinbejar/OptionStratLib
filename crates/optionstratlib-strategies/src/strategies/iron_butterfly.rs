@@ -991,8 +991,9 @@ impl Optimizable for IronButterfly {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -1040,7 +1041,16 @@ impl Optimizable for IronButterfly {
                 info!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::IronButterfly,
+            ))
         }
     }
 
@@ -2042,7 +2052,18 @@ mod tests_iron_butterfly_optimizable {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        // No combination of the fixture chain forms a valid iron butterfly: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&butterfly).unwrap();
+        let result =
+            butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronButterfly
+            })
+        ));
+        assert_eq!(serde_json::to_string(&butterfly).unwrap(), before);
 
         assert!(butterfly.validate());
         // Short strikes should be at or very near the money
@@ -2061,7 +2082,18 @@ mod tests_iron_butterfly_optimizable {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        // No combination of the fixture chain forms a valid iron butterfly: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&butterfly).unwrap();
+        let result =
+            butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronButterfly
+            })
+        ));
+        assert_eq!(serde_json::to_string(&butterfly).unwrap(), before);
 
         assert!(butterfly.validate());
         // Wings should be roughly symmetric
@@ -2077,11 +2109,21 @@ mod tests_iron_butterfly_optimizable {
         let mut butterfly = create_test_butterfly();
         let chain = create_test_chain();
 
-        butterfly.find_optimal(
+        // No combination of the fixture chain forms a valid iron butterfly: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&butterfly).unwrap();
+        let result = butterfly.find_optimal(
             &chain,
             FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronButterfly
+            })
+        ));
+        assert_eq!(serde_json::to_string(&butterfly).unwrap(), before);
 
         assert!(butterfly.validate());
         // Short strikes should be within the specified range

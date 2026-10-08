@@ -1083,27 +1083,24 @@ impl Optimizable for ShortStrangle {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
+        // The expiration date is applied before the search; a failed search
+        // restores this snapshot so the caller keeps its previous state.
+        let original = self.clone();
+
         // Ensure the strategy got the expiration date from the option chain
         let expiration_date = option_chain.get_expiration();
-        if let Some(expiration) = expiration_date {
-            let _ = self.set_expiration_date(expiration);
+        if let Some(expiration) = expiration_date
+            && let Err(e) = self.set_expiration_date(expiration)
+        {
+            *self = original;
+            return Err(e);
         }
 
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
-        let mut options_iter = strategy_clone
-            .filter_combinations(option_chain, side)
-            .peekable();
-
-        // No valid combinations for the supplied criteria: log and return
-        // without mutating `self` so the caller keeps its previous state.
-        if options_iter.peek().is_none() {
-            tracing::warn!(
-                "ShortStrangle::find_optimal: no valid option combinations for supplied criteria"
-            );
-            return;
-        }
+        let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
         for option_data_group in options_iter {
             // Unpack the OptionDataGroup into individual options
@@ -1147,7 +1144,17 @@ impl Optimizable for ShortStrangle {
                 debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            *self = original;
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::ShortStrangle,
+            ))
         }
     }
 
@@ -1717,7 +1724,9 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
-        strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_ratio(&option_chain, FindOptimalSide::All)
+            .unwrap();
         assert!(strategy.validate());
     }
 
@@ -1726,7 +1735,9 @@ is expected and the underlying asset's price is anticipated to remain stable."
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
-        strategy.get_best_area(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_area(&option_chain, FindOptimalSide::All)
+            .unwrap();
         assert!(strategy.validate());
     }
 

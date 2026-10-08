@@ -16,6 +16,40 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`Optimizable::find_optimal`, `get_best_ratio` and `get_best_area`
+  return `Result<(), StrategyError>`** (#793). They returned `()`, so a
+  search that changed nothing could not be told from one that worked:
+  failures were only logged. A search that finds a candidate picks the
+  same legs as before.
+  - No candidate (an empty filtered chain, or every combination discarded
+    because it cannot be built, scored or, for `CustomStrategy`, given
+    break-evens) returns the new `StrategyError::NoValidCandidate {
+    strategy: StrategyType }` and leaves the strategy exactly as it was.
+    `ShortStrangle` applies the chain's expiration before searching; a
+    failed search now restores the previous one. `CustomStrategy` no longer
+    reapplies its original legs and recomputes their break-evens when
+    nothing is eligible: it restores the pre-search state.
+  - `CustomStrategy` reports a position it cannot update from the chain
+    (`update_from_option_data`, for example a strike without the quote the
+    leg needs) and the failed break-even recomputation of the best
+    positions, both with the strategy left as it was. A missing quote was
+    ignored and the candidate scored with the leg's previous premium; the
+    search now stops with that error.
+  - A strategy without a search (`LongCall`, `LongPut`, `ShortCall`,
+    `ShortPut`, and the trait default used by `CoveredCall`,
+    `ProtectivePut` and `Collar`) returns
+    `StrategyError::OperationError(OperationErrorKind::NotSupported { .. })`
+    with operation `"find_optimal"` instead of a warning.
+  - Candidates that cannot be built or scored are still skipped (logged at
+    `DEBUG`) and do not stop the search.
+  - Migration: add `?` to `strategy.get_best_area(..)`,
+    `strategy.get_best_ratio(..)` and `strategy.find_optimal(..)`, or match
+    `Err(StrategyError::NoValidCandidate { .. })` where an empty search is
+    expected and the seed should be kept. An `Optimizable` implementation
+    returns `Ok(())` after applying its best candidate and
+    `Err(StrategyError::no_valid_candidate(..))` when there is none. A
+    `match` on `StrategyError` needs an arm for `NoValidCandidate`.
+
 - **Core time, futures and balance helpers report a failed step instead of
   inventing a value** (#805). Values for every input that worked before are
   unchanged, except that the `Balance` products are now exact `Decimal`.
@@ -1621,10 +1655,9 @@ summarize the release.
   other legs. A candidate whose break-evens cannot be recomputed is now
   skipped with a warning and the search continues; when the best legs
   cannot be applied at the end, the strategy is left exactly as it was
-  before the search, with an error logged. `find_optimal` still returns
-  `()`, so the failure is not reported to the caller. A run where every
-  recomputation succeeds returns the same result as before. No signature
-  changes.
+  before the search, with an error logged; since #793 `find_optimal`
+  also returns the error. A run where every recomputation succeeds
+  returns the same result as before.
 
 - **Strategies, backtesting and visualization no longer abort on extreme
   or degenerate input** (#788). Every site below panicked; each now

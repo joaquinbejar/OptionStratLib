@@ -800,8 +800,9 @@ impl Optimizable for ShortStraddle {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -847,7 +848,16 @@ impl Optimizable for ShortStraddle {
                 info!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::ShortStraddle,
+            ))
         }
     }
 
@@ -1330,7 +1340,9 @@ mod tests_short_straddle {
         let option_chain = create_test_option_chain();
 
         info!("{}", option_chain);
-        strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_ratio(&option_chain, FindOptimalSide::All)
+            .unwrap();
         assert!(strategy.validate());
     }
 
@@ -1339,7 +1351,9 @@ mod tests_short_straddle {
         let mut strategy = setup();
         let option_chain = create_test_option_chain();
 
-        strategy.get_best_area(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_area(&option_chain, FindOptimalSide::All)
+            .unwrap();
         assert!(strategy.validate());
     }
 

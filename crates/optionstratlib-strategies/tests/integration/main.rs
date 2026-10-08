@@ -20,6 +20,7 @@ mod covered_sizing_test;
 mod custom_break_even_refresh_test;
 mod custom_test;
 mod delta;
+mod find_optimal_result_test;
 mod long_call_test;
 mod long_put_test;
 mod no_lower_break_even_test;

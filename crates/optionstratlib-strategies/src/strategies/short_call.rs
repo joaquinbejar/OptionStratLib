@@ -40,7 +40,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, warn};
+use tracing::debug;
 
 pub(super) const SHORT_CALL_DESCRIPTION: &str = "A Short Call (or Naked Call) is an options strategy where the trader sells a call option without owning the underlying stock. \
     This strategy generates immediate income through the premium received but carries unlimited risk if the stock price rises significantly. \
@@ -483,8 +483,11 @@ impl Optimizable for ShortCall {
         _option_chain: &OptionChain,
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
-    ) {
-        warn!("find_optimal: stub — no optimization performed for ShortCall");
+    ) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "find_optimal",
+            "ShortCall",
+        ))
     }
 }
 

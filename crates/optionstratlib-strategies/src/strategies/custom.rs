@@ -945,8 +945,8 @@ impl Optimizable for CustomStrategy {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
-        self.find_optimal_with(option_chain, side, criteria, Self::update_break_even_points);
+    ) -> Result<(), StrategyError> {
+        self.find_optimal_with(option_chain, side, criteria, Self::update_break_even_points)
     }
 }
 
@@ -954,16 +954,25 @@ impl CustomStrategy {
     /// The search of [`Optimizable::find_optimal`], with the break-even
     /// recomputation injected so the tests can make it fail (#791).
     ///
-    /// A candidate whose break-evens cannot be recomputed is skipped. When
-    /// the best positions cannot be applied at the end, the strategy is left
-    /// exactly as it was before the search.
+    /// A candidate whose break-evens cannot be recomputed is skipped. On any
+    /// error the strategy is left exactly as it was before the search.
+    ///
+    /// # Errors
+    ///
+    /// - The first [`PositionError`](optionstratlib_core::error::PositionError)
+    ///   raised while updating a position from the chain, converted into a
+    ///   `StrategyError`; the search stops there.
+    /// - [`StrategyError::NoValidCandidate`] when the filtered chain is empty
+    ///   or every candidate is discarded.
+    /// - The error of the break-even recomputation of the best positions.
     fn find_optimal_with<R>(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
         mut recompute: R,
-    ) where
+    ) -> Result<(), StrategyError>
+    where
         R: FnMut(&mut Self) -> Result<(), StrategyError> + Send + Sync,
     {
         let original = self.clone();
@@ -972,18 +981,25 @@ impl CustomStrategy {
 
         let mut best_value = Decimal::MIN;
         let mut best_positions = positions.clone();
+        let mut found = false;
+        let mut update_error: Option<StrategyError> = None;
 
         debug!("Starting optimization with {} positions", positions.len());
 
         let _result = process_n_times_iter(&options, positions.len(), |combination| {
+            // A failed position update aborts the search: skip the remaining
+            // combinations.
+            if update_error.is_some() {
+                return vec![];
+            }
             let mut current_positions = positions.clone();
 
             // Update each position with the new data
             for (position, option_data) in current_positions.iter_mut().zip(combination.iter()) {
-                // TODO now update_from_option_data is returning a Result
-                // consider the opportunity to propagate the error by adding a Result return type
-                // also to the find_optimal method.
-                let _ = position.update_from_option_data(option_data);
+                if let Err(e) = position.update_from_option_data(option_data) {
+                    update_error = Some(e.into());
+                    return vec![];
+                }
             }
 
             // check if the positions are valid
@@ -1018,6 +1034,7 @@ impl CustomStrategy {
                 debug!("Found better value: {} > {}", current_value, best_value);
                 best_value = current_value;
                 best_positions = current_positions.clone();
+                found = true;
             }
 
             best_positions.clone()
@@ -1026,8 +1043,13 @@ impl CustomStrategy {
             tracing::warn!(error = ?e, "process_n_times_iter failed during find_optimal");
         }
 
-        if best_value == Decimal::MIN {
-            error!("No valid combinations found");
+        if let Some(e) = update_error {
+            *self = original;
+            return Err(e);
+        }
+        if !found {
+            *self = original;
+            return Err(StrategyError::no_valid_candidate(StrategyType::Custom));
         }
 
         debug!("Optimization completed. Best value: {}", best_value);
@@ -1037,7 +1059,9 @@ impl CustomStrategy {
                 "CustomStrategy::find_optimal cannot recompute the break-even points of the best positions; strategy left unchanged"
             );
             *self = original;
+            return Err(e);
         }
+        Ok(())
     }
 }
 
@@ -1296,11 +1320,13 @@ mod tests_find_optimal_break_evens {
     fn test_custom_find_optimal_normal_run_refreshes_break_evens() {
         let mut strategy = base();
         let before = legs(&strategy);
-        strategy.find_optimal(
-            &chain(None),
-            FindOptimalSide::All,
-            OptimizationCriteria::Ratio,
-        );
+        strategy
+            .find_optimal(
+                &chain(None),
+                FindOptimalSide::All,
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
 
         assert_ne!(legs(&strategy), before);
         let rebuilt = CustomStrategy::new(
@@ -1321,38 +1347,44 @@ mod tests_find_optimal_break_evens {
     fn test_custom_find_optimal_failed_candidate_skipped() {
         // The strike the unrestricted search picks for the long call.
         let mut unrestricted = base();
-        unrestricted.find_optimal(
-            &chain(None),
-            FindOptimalSide::All,
-            OptimizationCriteria::Ratio,
-        );
+        unrestricted
+            .find_optimal(
+                &chain(None),
+                FindOptimalSide::All,
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
         let chosen = unrestricted.positions[0].option.strike_price;
 
         // The same search where every candidate using that strike fails to
         // recompute its break-evens picks what a chain without it picks.
         let mut skipping = base();
-        skipping.find_optimal_with(
-            &chain(None),
-            FindOptimalSide::All,
-            OptimizationCriteria::Ratio,
-            |strategy: &mut CustomStrategy| {
-                if strategy
-                    .positions
-                    .iter()
-                    .any(|p| p.option.strike_price == chosen)
-                {
-                    Err(recompute_failure())
-                } else {
-                    strategy.update_break_even_points()
-                }
-            },
-        );
+        skipping
+            .find_optimal_with(
+                &chain(None),
+                FindOptimalSide::All,
+                OptimizationCriteria::Ratio,
+                |strategy: &mut CustomStrategy| {
+                    if strategy
+                        .positions
+                        .iter()
+                        .any(|p| p.option.strike_price == chosen)
+                    {
+                        Err(recompute_failure())
+                    } else {
+                        strategy.update_break_even_points()
+                    }
+                },
+            )
+            .unwrap();
         let mut reference = base();
-        reference.find_optimal(
-            &chain(Some(chosen.to_f64())),
-            FindOptimalSide::All,
-            OptimizationCriteria::Ratio,
-        );
+        reference
+            .find_optimal(
+                &chain(Some(chosen.to_f64())),
+                FindOptimalSide::All,
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
 
         assert!(
             skipping
@@ -1369,22 +1401,24 @@ mod tests_find_optimal_break_evens {
         // Count the recomputations of a run: every candidate, then the best.
         let calls = AtomicUsize::new(0);
         let mut counted = base();
-        counted.find_optimal_with(
-            &chain(None),
-            FindOptimalSide::All,
-            OptimizationCriteria::Ratio,
-            |strategy: &mut CustomStrategy| {
-                calls.fetch_add(1, Ordering::SeqCst);
-                strategy.update_break_even_points()
-            },
-        );
+        counted
+            .find_optimal_with(
+                &chain(None),
+                FindOptimalSide::All,
+                OptimizationCriteria::Ratio,
+                |strategy: &mut CustomStrategy| {
+                    calls.fetch_add(1, Ordering::SeqCst);
+                    strategy.update_break_even_points()
+                },
+            )
+            .unwrap();
         let total = calls.load(Ordering::SeqCst);
         assert!(total > 1);
 
         let mut strategy = base();
         let before = snapshot(&strategy);
         let seen = AtomicUsize::new(0);
-        strategy.find_optimal_with(
+        let result = strategy.find_optimal_with(
             &chain(None),
             FindOptimalSide::All,
             OptimizationCriteria::Ratio,
@@ -1397,6 +1431,10 @@ mod tests_find_optimal_break_evens {
             },
         );
 
+        match result {
+            Err(e) => assert_eq!(e.to_string(), recompute_failure().to_string()),
+            Ok(()) => panic!("a failed final application must be reported"),
+        }
         assert_eq!(seen.load(Ordering::SeqCst), total);
         assert_eq!(snapshot(&strategy), before);
     }
@@ -1405,13 +1443,72 @@ mod tests_find_optimal_break_evens {
     fn test_custom_find_optimal_every_recomputation_failing_leaves_strategy_unchanged() {
         let mut strategy = base();
         let before = snapshot(&strategy);
-        strategy.find_optimal_with(
+        let result = strategy.find_optimal_with(
             &chain(None),
             FindOptimalSide::All,
             OptimizationCriteria::Ratio,
             |_: &mut CustomStrategy| Err(recompute_failure()),
         );
 
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::Custom
+            })
+        ));
+        assert_eq!(snapshot(&strategy), before);
+    }
+
+    #[test]
+    fn test_custom_find_optimal_empty_chain_no_valid_candidate() {
+        let mut strategy = base();
+        let before = snapshot(&strategy);
+        let empty = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+        let result =
+            strategy.find_optimal(&empty, FindOptimalSide::All, OptimizationCriteria::Ratio);
+
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::Custom
+            })
+        ));
+        assert_eq!(snapshot(&strategy), before);
+    }
+
+    #[test]
+    fn test_custom_find_optimal_failed_position_update_leaves_strategy_unchanged() {
+        // A strike with no call ask: the long call cannot take its premium.
+        let mut unquoted = chain(None);
+        unquoted.add_option(
+            pos_or_panic!(110.0),
+            None,
+            None,
+            spos!(10.0),
+            spos!(10.2),
+            pos_or_panic!(0.2),
+            Some(dec!(0.5)),
+            Some(dec!(0.2)),
+            Some(dec!(0.2)),
+            spos!(100.0),
+            Some(50),
+            None,
+        );
+        let mut strategy = base();
+        let before = snapshot(&strategy);
+        let result =
+            strategy.find_optimal(&unquoted, FindOptimalSide::All, OptimizationCriteria::Ratio);
+
+        match result {
+            Err(e) => assert!(e.to_string().contains("call ask"), "{e}"),
+            Ok(()) => panic!("a failed position update must be reported"),
+        }
         assert_eq!(snapshot(&strategy), before);
     }
 

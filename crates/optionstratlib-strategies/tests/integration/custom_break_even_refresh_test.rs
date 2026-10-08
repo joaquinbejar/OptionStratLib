@@ -7,7 +7,7 @@
 //!
 //! `find_optimal` skips a candidate whose break-evens cannot be recomputed
 //! and, when the best one cannot be applied, leaves the strategy as it was
-//! (#791).
+//! (#791) and reports the error (#793).
 
 use chrono::{DateTime, Utc};
 use optionstratlib_core::model::position::Position;
@@ -16,7 +16,10 @@ use optionstratlib_core::model::{ExpirationDate, Options, Positive};
 use optionstratlib_core::{pos_or_panic, spos};
 use optionstratlib_market::chains::chain::OptionChain;
 use optionstratlib_market::chains::utils::FindOptimalSide;
-use optionstratlib_strategies::strategies::base::{BreakEvenable, Optimizable, Positionable};
+use optionstratlib_strategies::error::StrategyError;
+use optionstratlib_strategies::strategies::base::{
+    BreakEvenable, Optimizable, Positionable, StrategyType,
+};
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::utils::OptimizationCriteria;
 use rust_decimal_macros::dec;
@@ -203,8 +206,8 @@ fn test_custom_strategy_invalid_edit_rejected_and_unchanged() {
 
 #[test]
 fn test_custom_strategy_find_optimal_failed_recomputation_leaves_strategy_unchanged() {
-    // With every recomputation failing no candidate is eligible, and the
-    // original legs cannot be reapplied either.
+    // With every recomputation failing no candidate is eligible: the search
+    // reports it and leaves the strategy as it was.
     let mut chain = OptionChain::new(
         "TEST",
         Positive::HUNDRED,
@@ -234,7 +237,14 @@ fn test_custom_strategy_find_optimal_failed_recomputation_leaves_strategy_unchan
     let before_break_evens = break_evens(&strategy);
     assert!(!before_break_evens.is_empty());
 
-    strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+    let result = strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+
+    assert!(matches!(
+        result,
+        Err(StrategyError::NoValidCandidate {
+            strategy: StrategyType::Custom
+        })
+    ));
 
     assert_eq!(snapshot(&strategy), before);
     assert_eq!(break_evens(&strategy), before_break_evens);

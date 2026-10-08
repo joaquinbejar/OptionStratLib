@@ -343,9 +343,11 @@ fn bench_optimiser<S>(
             || strategy.clone(),
             |mut s| {
                 if area {
-                    s.get_best_area(black_box(chain), FindOptimalSide::All);
+                    s.get_best_area(black_box(chain), FindOptimalSide::All)
+                        .expect("benchmark search finds a candidate");
                 } else {
-                    s.get_best_ratio(black_box(chain), FindOptimalSide::All);
+                    s.get_best_ratio(black_box(chain), FindOptimalSide::All)
+                        .expect("benchmark search finds a candidate");
                 }
                 s
             },

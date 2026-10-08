@@ -196,8 +196,10 @@ where
     let mut unit = strategy.clone();
     let mut contracts = sized(&strategy);
 
-    unit.get_best_area(&chain, FindOptimalSide::All);
-    contracts.get_best_area(&chain, FindOptimalSide::All);
+    unit.get_best_area(&chain, FindOptimalSide::All).unwrap();
+    contracts
+        .get_best_area(&chain, FindOptimalSide::All)
+        .unwrap();
 
     assert_sized(&unit, Positive::ONE);
     assert_sized(&contracts, CONTRACT);

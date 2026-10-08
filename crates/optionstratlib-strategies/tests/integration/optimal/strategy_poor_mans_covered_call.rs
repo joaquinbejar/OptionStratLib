@@ -38,13 +38,17 @@ fn test_poor_mans_covered_call_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
     ))?;
-    strategy.get_best_area(&option_chain, FindOptimalSide::All);
+    strategy
+        .get_best_area(&option_chain, FindOptimalSide::All)
+        .unwrap();
     assert_relative_eq!(
         strategy.get_profit_area().unwrap().to_f64().unwrap(),
         1785.7483,
         epsilon = 0.001
     );
-    strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
+    strategy
+        .get_best_ratio(&option_chain, FindOptimalSide::Upper)
+        .unwrap();
     assert_relative_eq!(
         strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
         955.5946,

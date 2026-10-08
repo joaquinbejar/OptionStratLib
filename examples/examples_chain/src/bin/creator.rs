@@ -63,7 +63,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     strategy.get_best_area(
         &option_chain,
         FindOptimalSide::DeltaRange(min_delta, max_delta),
-    );
+    )?;
     info!("Strategy:  {:#?}", strategy);
     info!("Delta:  {:#?}", strategy.delta_neutrality()?);
     strategy.apply_delta_adjustments(Some(Action::Buy))?;
