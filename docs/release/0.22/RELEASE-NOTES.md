@@ -128,7 +128,9 @@ standalone crate with exactly the `[dependencies]` shown, and the programs
 also run as doctests of the facade (`cargo test --doc`). Each lists
 `rust_decimal`: the `dec!` macro, which the facade prelude re-exports from
 `rust_decimal_macros`, expands to `rust_decimal` paths, so a crate that
-writes `dec!` depends on `rust_decimal` itself.
+writes `dec!` depends on `rust_decimal` itself (#777). The check refuses a
+manifest whose program writes `dec!` without it, and its self-test proves
+against the compiler that such a manifest fails and the fixed one builds.
 
 The whole library through the facade:
 

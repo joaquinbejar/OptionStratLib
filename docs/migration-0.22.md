@@ -46,6 +46,7 @@ the removals):
 ```toml
 [dependencies]
 optionstratlib = "0.22.0"
+rust_decimal = "1.43"  # for the prelude's `dec!`, see section 3
 ```
 
 Narrow it with `default-features = false` and the capabilities you use.
@@ -55,6 +56,7 @@ Each capability implies the layers it is built on (the table below):
 [dependencies]
 # pricing, greeks and volatility; no market data, I/O, async or charts
 optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+rust_decimal = "1.43"  # for the prelude's `dec!`
 ```
 
 Or depend on **component crates** directly for the smallest graph. Their
@@ -117,6 +119,14 @@ globs, no free functions, no errors and no standard-library items: import
 `black_scholes`, `delta`, `generator_optionchain`, `Error`, `PricingError`,
 `GraphData`, `std::path::Path` and the rest from their modules. The
 prelude's own docs list every item with its reason.
+
+**`dec!` needs `rust_decimal` in your manifest (#777).** The prelude
+re-exports `rust_decimal_macros::dec`, which checks its literal at compile
+time and expands to `::rust_decimal` paths, so a crate that writes `dec!`
+depends on `rust_decimal` itself, next to the facade (the manifests in
+section 2 do). Without it the build fails with ``cannot find `rust_decimal` ``.
+`Decimal` alone needs nothing extra. `make check-release-notes` proves both
+halves against the compiler.
 
 **Pricing methods come from a trait (#499).** `Options` lost its inherent
 `calculate_price_*`, `time_value` and `calculate_implied_volatility`; the
