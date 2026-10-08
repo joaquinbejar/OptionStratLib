@@ -3330,6 +3330,34 @@ mod tests_butterfly_optimizable {
         assert!(short_butterfly.long_call.option.strike_price >= pos_or_panic!(95.0));
         assert!(short_butterfly.long_call.option.strike_price <= pos_or_panic!(105.0));
     }
+
+    #[test]
+    fn test_short_butterfly_find_optimal_priced_chain_range_within_bounds() {
+        // The priced chain has valid short butterflies inside the range: the
+        // search picks one and moves the legs off the seed.
+        let mut short_butterfly = create_test_short();
+        let chain = crate::strategies::test_support::priced_chain();
+        let strikes = |s: &ShortButterflySpread| {
+            [
+                s.short_call_low.option.strike_price,
+                s.long_call.option.strike_price,
+                s.short_call_high.option.strike_price,
+            ]
+        };
+        let seed = strikes(&short_butterfly);
+        short_butterfly
+            .find_optimal(
+                &chain,
+                FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
+        let chosen = strikes(&short_butterfly);
+        assert_ne!(chosen, seed);
+        assert!(chosen[0] < chosen[1] && chosen[1] < chosen[2]);
+        assert!(chosen[0] >= pos_or_panic!(95.0) && chosen[2] <= pos_or_panic!(105.0));
+        assert!(short_butterfly.validate());
+    }
 }
 
 #[cfg(test)]

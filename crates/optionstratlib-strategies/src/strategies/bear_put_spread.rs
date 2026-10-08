@@ -1837,6 +1837,81 @@ mod tests_bear_put_spread_optimization {
         assert_eq!(spread.long_put.option.quantity, Positive::TWO);
         assert_eq!(spread.short_put.option.quantity, Positive::TWO);
     }
+
+    /// The two strikes of `spread`: long put, short put.
+    fn put_strikes(spread: &BearPutSpread) -> (Positive, Positive) {
+        (
+            spread.long_put.option.strike_price,
+            spread.short_put.option.strike_price,
+        )
+    }
+
+    #[test]
+    fn test_bear_put_spread_find_optimal_priced_chain_moves_legs() {
+        // A chain whose put quotes rise with the strike has valid bear put
+        // spreads: both criteria pick one and move the legs off the seed.
+        let chain = crate::strategies::test_support::priced_chain();
+        for criteria in [OptimizationCriteria::Ratio, OptimizationCriteria::Area] {
+            let mut spread = create_base_spread();
+            let seed = put_strikes(&spread);
+            spread
+                .find_optimal(&chain, FindOptimalSide::All, criteria)
+                .unwrap();
+            let (long, short) = put_strikes(&spread);
+            assert_ne!((long, short), seed);
+            assert!(long > short, "long put above short put");
+            assert!(spread.validate());
+        }
+    }
+
+    #[test]
+    fn test_bear_put_spread_find_optimal_priced_chain_upper_side_above_spot() {
+        let mut spread = create_base_spread();
+        let chain = crate::strategies::test_support::priced_chain();
+        let seed = put_strikes(&spread);
+        spread
+            .find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio)
+            .unwrap();
+        let (long, short) = put_strikes(&spread);
+        assert_ne!((long, short), seed);
+        assert!(long > short);
+        assert!(short >= chain.underlying_price);
+        assert!(spread.validate());
+    }
+
+    #[test]
+    fn test_bear_put_spread_find_optimal_priced_chain_range_within_bounds() {
+        let mut spread = create_base_spread();
+        let chain = crate::strategies::test_support::priced_chain();
+        let seed = put_strikes(&spread);
+        spread
+            .find_optimal(
+                &chain,
+                FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
+        let (long, short) = put_strikes(&spread);
+        assert_ne!((long, short), seed);
+        assert!(long > short);
+        assert!(short >= pos_or_panic!(95.0) && long <= pos_or_panic!(105.0));
+        assert!(spread.validate());
+    }
+
+    #[test]
+    fn test_bear_put_spread_find_optimal_priced_chain_keeps_quantity() {
+        let mut spread = create_base_spread();
+        spread.long_put.option.quantity = Positive::TWO;
+        spread.short_put.option.quantity = Positive::TWO;
+        let chain = crate::strategies::test_support::priced_chain();
+        let seed = put_strikes(&spread);
+        spread
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
+        assert_ne!(put_strikes(&spread), seed);
+        assert_eq!(spread.long_put.option.quantity, Positive::TWO);
+        assert_eq!(spread.short_put.option.quantity, Positive::TWO);
+    }
 }
 
 #[cfg(test)]
