@@ -404,6 +404,17 @@ impl Options {
     ///
     /// Returns [`OptionsError::ValidationError`] when the position size
     /// `quantity × contract_size` overflows the `Positive` range.
+    ///
+    /// # Barrier options
+    ///
+    /// No path is known here, only `underlying_price`, so the
+    /// [`PayoffInfo`] carries no `spot_min` / `spot_max` and a barrier
+    /// counts as hit only when `underlying_price` is at or beyond it (`≥`
+    /// for an up barrier, `≤` for a down one). An unhit knock-in pays its
+    /// rebate and a hit knock-out pays its rebate, signed by the side. For
+    /// a path-dependent payoff build a [`PayoffInfo`] with the observed
+    /// extremes and call [`crate::model::payoff::Payoff::payoff`] on the
+    /// option type.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,

@@ -1705,6 +1705,43 @@ summarize the release.
 
 ### Fixed
 
+- **A barrier option's payoff at expiry pays its rebate, and its price at
+  `T = 0` agrees with the Reiner-Rubinstein price as `T → 0`** (#826).
+  - **The unhit knock-in rebate.** An `UpAndIn` / `DownAndIn` whose barrier
+    was never hit paid zero at expiry. The closed form includes Haug's `E`,
+    the rebate paid at expiry in exactly that case, so the price tended to
+    the rebate and the payoff did not. `OptionType::payoff` now pays the
+    rebate. For example, a down-and-in call with `S = 100`, `H = 95` and
+    rebate 3 had a payoff of 0 and now has 3.
+  - **The sign of the rebate.** A hit `UpAndOut` / `DownAndOut` paid its
+    rebate with a positive sign for a short position. It now carries the
+    side's sign, like the vanilla payoff: a short pays it, `-3` instead of
+    `3`.
+  - **The price at `T = 0`.** `barrier_black_scholes` returned
+    `Options::payoff`, which scales by `quantity × contract_size`. It now
+    returns the per-unit payoff, like the closed form. For example, a
+    down-and-out call with `K = 90`, `S = 100`, quantity 5 and contract size
+    100 was priced 5000 and is now 10. A payoff with no `Decimal`
+    representation is reported as `PricingError::Options(PayoffError)`, no
+    longer as an untyped `PricingError::MethodError`.
+  - **How the barrier state is read at expiry.** The barrier is hit when
+    `spot_max` reaches an up barrier or `spot_min` a down one. Without
+    them it is judged from the final spot. `Options::payoff` and the `T = 0`
+    price carry no path extremes, so they read only the underlying price.
+    This is now documented on `PayoffInfo`, `Options::payoff` and
+    `barrier_black_scholes`.
+  - **Every other path is unchanged.** Barriers without a rebate (or with a
+    zero one), long knock-outs and the closed form at `T > 0` return the same
+    values as before. Callers of the payoff see the new values too:
+    `Options::payoff`, `payoff_at_price` and the Monte-Carlo and telegraph
+    terminal payoffs for a barrier with a rebate.
+  - **Tests.** A test checks the closed form for four unhit knock-ins at
+    10 days, 1 day and 1 hour against an independent `f64`
+    Reiner-Rubinstein `C + E`; their price one minute out is the rebate to
+    four places. Another sweeps all eight contracts, unhit, at the barrier
+    and through it, for both sides. Away from the money, the price one
+    minute out matches the price at expiry to three places.
+
 - **`OptionSeries` keeps every expired expiry** (#825). Its `chains` map is
   keyed by `ExpirationDate`, whose ordering in `expiration_date` 0.4.1
   clamped every past date to zero days, so two expired expiries compared

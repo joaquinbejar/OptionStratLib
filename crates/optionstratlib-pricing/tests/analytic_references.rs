@@ -71,8 +71,8 @@ use optionstratlib_core::model::{ExpirationDate, Options, Positive};
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::{delta, gamma, rho, theta, vega};
 use optionstratlib_pricing::pricing::{
-    BinomialPricingParams, barone_adesi_whaley, black_76, black_scholes, garman_kohlhagen,
-    price_binomial,
+    BinomialPricingParams, barone_adesi_whaley, barrier_black_scholes, black_76, black_scholes,
+    garman_kohlhagen, price_binomial,
 };
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -839,6 +839,205 @@ fn test_barrier_haug_table_sigma_30_and_barrier_at_spot() {
             );
         }
     }
+}
+
+/// Standard normal CDF in `f64`, from the complementary error function of
+/// Numerical Recipes (`erfcc`, fractional error below `1.2e-7`): an
+/// evaluation independent of the library's `big_n`.
+fn normal_cdf_f64(x: f64) -> f64 {
+    let z = x.abs() / std::f64::consts::SQRT_2;
+    let t = 1.0 / (1.0 + 0.5 * z);
+    let poly = -z * z - 1.265_512_23
+        + t * (1.000_023_68
+            + t * (0.374_091_96
+                + t * (0.096_784_18
+                    + t * (-0.186_288_06
+                        + t * (0.278_868_07
+                            + t * (-1.135_203_98
+                                + t * (1.488_515_87 + t * (-0.822_152_23 + t * 0.170_872_77))))))));
+    let erfc = t * poly.exp();
+    if x >= 0.0 {
+        1.0 - 0.5 * erfc
+    } else {
+        0.5 * erfc
+    }
+}
+
+/// Reiner-Rubinstein (Haug §4.17.1) `C + E` in `f64`: the price of a
+/// down-and-in call with `K > H` (`η = φ = 1`) or an up-and-in put with
+/// `K < H` (`η = φ = -1`), on `S = 100, r = 8 %, q = 4 %, σ = 25 %`.
+fn reiner_rubinstein_c_plus_e(eta: f64, k: f64, h: f64, rebate: f64, t: f64) -> f64 {
+    let (s, r, q, sigma) = (100.0_f64, 0.08_f64, 0.04_f64, 0.25_f64);
+    let phi = eta;
+    let b = r - q;
+    let mu = (b - sigma * sigma / 2.0) / (sigma * sigma);
+    let sst = sigma * t.sqrt();
+    let x2 = (s / h).ln() / sst + (1.0 + mu) * sst;
+    let y1 = (h * h / (s * k)).ln() / sst + (1.0 + mu) * sst;
+    let y2 = (h / s).ln() / sst + (1.0 + mu) * sst;
+    let hs = h / s;
+    let c = phi * s * ((b - r) * t).exp() * hs.powf(2.0 * (mu + 1.0)) * normal_cdf_f64(eta * y1)
+        - phi * k * (-r * t).exp() * hs.powf(2.0 * mu) * normal_cdf_f64(eta * y1 - eta * sst);
+    let e = rebate
+        * (-r * t).exp()
+        * (normal_cdf_f64(eta * x2 - eta * sst)
+            - hs.powf(2.0 * mu) * normal_cdf_f64(eta * y2 - eta * sst));
+    c + e
+}
+
+/// A barrier priced on `S = 100, r = 8 %, q = 4 %, σ = 25 %` and the given
+/// expiry in days, for `side`.
+fn barrier_at_days(
+    option_type: OptionType,
+    style: OptionStyle,
+    strike: f64,
+    days: f64,
+    side: Side,
+) -> Decimal {
+    let mut contract = option(
+        option_type,
+        style,
+        100.0,
+        strike,
+        days,
+        0.25,
+        dec!(0.08),
+        0.04,
+        None,
+    );
+    contract.side = side;
+    // The barrier kernel itself: `black_scholes` computes `d1` before it
+    // dispatches, which rejects `T = 0`.
+    ok(barrier_black_scholes(&contract), "barrier")
+}
+
+/// An unhit knock-in carries its rebate to expiry (Haug's `E`), so the
+/// Reiner-Rubinstein price tends to the rebate as `T → 0`, and the price at
+/// `T = 0` is that rebate (#826). It used to be zero. The closed form at
+/// `T = 10, 1` days and one hour is checked against an independent `f64`
+/// evaluation of the same `C + E` terms.
+#[test]
+fn test_barrier_unhit_knock_in_rebate_is_continuous_at_expiry() {
+    let rebate = Some(pos_or_panic!(3.0));
+    let cases = [
+        (BarrierType::DownAndIn, 95.0, OptionStyle::Call, 1.0, 100.0),
+        (BarrierType::DownAndIn, 95.0, OptionStyle::Call, 1.0, 110.0),
+        (BarrierType::UpAndIn, 105.0, OptionStyle::Put, -1.0, 100.0),
+        (BarrierType::UpAndIn, 105.0, OptionStyle::Put, -1.0, 90.0),
+    ];
+    for (barrier_type, level, style, eta, strike) in cases {
+        let contract = barrier(barrier_type, level, rebate);
+        for days in [10.0, 1.0, 1.0 / 24.0] {
+            let reference = reiner_rubinstein_c_plus_e(eta, strike, level, 3.0, days / 365.0);
+            assert_close(
+                barrier_at_days(contract.clone(), style, strike, days, Side::Long),
+                Decimal::try_from(reference).unwrap_or(Decimal::ZERO),
+                TOL_4DP,
+                &format!("{barrier_type:?} {style:?} k={strike} T={days}d"),
+            );
+        }
+        // One minute before expiry the price is the rebate to four places,
+        // and at expiry it is the rebate, for either side.
+        let near = barrier_at_days(contract.clone(), style, strike, 1.0 / 1440.0, Side::Long);
+        assert_close(
+            near,
+            dec!(3),
+            TOL_4DP,
+            &format!("{barrier_type:?} one minute"),
+        );
+        assert_eq!(
+            barrier_at_days(contract.clone(), style, strike, 0.0, Side::Long),
+            dec!(3),
+            "{barrier_type:?} {style:?} k={strike} at expiry"
+        );
+        assert_eq!(
+            barrier_at_days(contract, style, strike, 0.0, Side::Short),
+            dec!(-3),
+            "{barrier_type:?} {style:?} k={strike} short at expiry"
+        );
+    }
+}
+
+/// All eight contracts, rebate 3, `K ∈ {90, 100, 110}`, with the spot short
+/// of the barrier (unhit), at it and through it (hit): the price at expiry
+/// is the payoff the contract defines, for both sides, and away from the
+/// money (`K = 90, 110`) the price one minute before expiry agrees with it
+/// to three places (#826).
+#[test]
+fn test_barrier_price_is_continuous_at_expiry_with_rebate() {
+    let rebate = Some(pos_or_panic!(3.0));
+    let vanilla = |style: OptionStyle, strike: f64| -> Decimal {
+        let spot = dec!(100);
+        let k = Decimal::try_from(strike).unwrap_or(Decimal::ZERO);
+        match style {
+            OptionStyle::Call => (spot - k).max(Decimal::ZERO),
+            OptionStyle::Put => (k - spot).max(Decimal::ZERO),
+        }
+    };
+    let contracts = [
+        (BarrierType::DownAndIn, true, true),
+        (BarrierType::DownAndOut, true, false),
+        (BarrierType::UpAndIn, false, true),
+        (BarrierType::UpAndOut, false, false),
+    ];
+    for (barrier_type, is_down, knock_in) in contracts {
+        // Unhit, at the barrier, through it.
+        let levels = if is_down {
+            [95.0, 100.0, 105.0]
+        } else {
+            [105.0, 100.0, 95.0]
+        };
+        for (index, level) in levels.into_iter().enumerate() {
+            let hit = index > 0;
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                for strike in [90.0, 100.0, 110.0] {
+                    let expected = match (knock_in, hit) {
+                        (true, true) | (false, false) => vanilla(style, strike),
+                        (true, false) | (false, true) => dec!(3),
+                    };
+                    for (side, sign) in [
+                        (Side::Long, Decimal::ONE),
+                        (Side::Short, Decimal::NEGATIVE_ONE),
+                    ] {
+                        let contract = barrier(barrier_type, level, rebate);
+                        let context =
+                            format!("{barrier_type:?} H={level} {style:?} k={strike} {side:?}");
+                        let at_expiry = barrier_at_days(contract.clone(), style, strike, 0.0, side);
+                        assert_eq!(at_expiry, expected * sign, "{context} at expiry");
+                        // At the money the vanilla keeps a time value of
+                        // order `Sσ√T` (`≈ 0.014` one minute out), which
+                        // vanishes as `√T`, not within a tolerance.
+                        if strike == 100.0 {
+                            continue;
+                        }
+                        let near = barrier_at_days(contract, style, strike, 1.0 / 1440.0, side);
+                        assert_close(near, at_expiry, TOL_3DP, &format!("{context} one minute"));
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The price at expiry is per unit, like the closed form: it does not scale
+/// by the position size (#826). It used to return `Options::payoff`, which
+/// does.
+#[test]
+fn test_barrier_price_at_expiry_is_per_unit() {
+    let mut contract = option(
+        barrier(BarrierType::DownAndOut, 95.0, Some(pos_or_panic!(3.0))),
+        OptionStyle::Call,
+        100.0,
+        90.0,
+        0.0,
+        0.25,
+        dec!(0.08),
+        0.04,
+        None,
+    );
+    contract.quantity = pos_or_panic!(5.0);
+    contract.contract_size = Positive::HUNDRED;
+    assert_eq!(ok(barrier_black_scholes(&contract), "per unit"), dec!(10));
 }
 
 /// Haug §4.15.2 (Conze-Viswanathan 1991), fixed-strike lookback on a new
