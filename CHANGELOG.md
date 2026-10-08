@@ -1647,6 +1647,32 @@ summarize the release.
 
 ### Fixed
 
+- **`greeks::theta` and `greeks::vega` price exotic options with their own
+  pricer** (#817). For every non-European `OptionType` they returned the
+  European Black-Scholes closed form, although their docs said they fell
+  back to the numerical Greeks. They now dispatch exactly as `delta` and
+  `gamma` do: theta is `numerical_theta` (per day) and vega is
+  `numerical_vega` divided by 100, signed by `Side` and scaled by
+  `quantity × contract_size`. `numerical_vega` is per unit of volatility
+  while `vega` is per vol point, so the division keeps one unit for every
+  option type. European values are unchanged, digit for digit, and every
+  type still reports `0` at expiry. Values change for **Barrier, Asian,
+  Lookback, Binary, Chooser, Compound, Cliquet, Rainbow, Spread, Quanto,
+  Exchange and Power** options; for example, a 90-day at-the-money
+  up-and-out call (barrier 130, `sigma = 0.25`) moves from theta
+  `-0.03251` / vega `0.19564` to `-0.00129` / `-0.01470`, and an arithmetic
+  Asian call to `-0.01830` / `0.11327`. Each family agrees with a
+  bumped-price reference of its own pricer within 1% (absolute floors
+  `1e-4` per day, `5e-4` per vol point). American and Bermuda options, which
+  have no closed form, now return `GreeksError::Pricing` from `theta` and
+  `vega`, as they already did from `delta` and `gamma`, instead of the
+  European value.
+- **`numerical_vega` below one vol point** (#817). At `sigma < 0.01` the
+  lower bump `sigma - 0.01` went negative and was folded back through
+  `abs`, so the central difference spanned less than its stated `0.02` and
+  came out about half the true vega near zero volatility. At
+  `sigma <= 0.01` it is now the one-sided `(P(sigma + 0.01) - P(sigma)) /
+  0.01`.
 - **`numerical_theta` is implemented** (#796). It was a public stub:
   `Err(GreeksError::CalculationError)` for any expiry of at least 0.01
   years and `0` below. It is now a central difference in time, by owner

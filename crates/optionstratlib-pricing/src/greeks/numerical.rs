@@ -130,7 +130,20 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// Calculates vega numerically using finite differences.
 ///
 /// Vega measures the sensitivity of the option price to changes in the
-/// underlying asset's volatility.
+/// underlying asset's volatility. The value is the derivative per unit of
+/// volatility (a move of `1.0`, i.e. 100 vol points), the central difference
+/// `(P(sigma + h) - P(sigma - h)) / 2h` with `h = 0.01`, one vol point. The
+/// closed-form [`crate::greeks::vega`] is quoted per vol point, so it equals
+/// this value divided by 100; that function divides before it returns this
+/// one for non-European options.
+///
+/// At `sigma <= h` the lower bump would reach zero or below, so the
+/// difference is the one-sided `(P(sigma + h) - P(sigma)) / h`, with an
+/// `O(h)` error instead of `O(h^2)`.
+///
+/// Like the other numerical Greeks, the value is that of one long unit
+/// contract: the evaluator prices the absolute value, with no `Side`,
+/// quantity or contract size.
 ///
 /// # Errors
 ///
@@ -146,6 +159,17 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
         )?
         .abs(),
     )?;
+
+    if option.implied_volatility.to_dec() <= H {
+        let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
+        let p = price_option_with(option, &ClosedFormEngine::ClosedFormBS)?;
+        let diff = d_sub(
+            p_plus.to_dec(),
+            p.to_dec(),
+            "greeks::numerical::vega::forward_diff",
+        )?;
+        return Ok(d_div(diff, H, "greeks::numerical::vega::forward_scaled")?);
+    }
 
     let mut opt_minus = option.clone();
     opt_minus.implied_volatility = Positive::new_decimal(
@@ -308,6 +332,27 @@ mod tests {
         let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
         option.expiration_date = ExpirationDate::Days(Positive::MAX);
         let _ = numerical_theta(&option);
+    }
+
+    // At `sigma < H` the lower bump used to fold back above zero through
+    // `abs`, halving the difference (#817). With `r = q = 0` at the money
+    // the vega is flat in `sigma` near zero, `S sqrt(T) n(0)` per unit, so
+    // the one-sided difference matches the closed form (per vol point,
+    // hence the factor 100) to well under 1%.
+    #[test]
+    fn test_numerical_vega_below_one_vol_point_matches_closed_form() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.strike_price = option.underlying_price;
+        option.risk_free_rate = Decimal::ZERO;
+        option.dividend_yield = Positive::ZERO;
+        option.implied_volatility = Positive::new_decimal(dec!(0.005)).unwrap_or(Positive::ONE);
+        let numerical = numerical_vega(&option).unwrap_or(Decimal::ZERO);
+        let closed = crate::greeks::vega(&option).unwrap_or(Decimal::ZERO) * dec!(100);
+        assert!(closed > Decimal::ZERO);
+        assert!(
+            (numerical - closed).abs() < closed * dec!(0.01),
+            "numerical {numerical} vs closed form {closed}"
+        );
     }
 
     #[test]

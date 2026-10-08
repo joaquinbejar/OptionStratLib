@@ -1272,8 +1272,19 @@ fn gamma_with(option: &Options, k: &BlackScholesKernels) -> Result<Decimal, Gree
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by `numerical_theta` for non-European
-/// options.
+/// [`GreeksError`] surfaced by
+/// [`numerical_theta`](crate::greeks::numerical::numerical_theta) for
+/// non-European options (typically [`GreeksError::Pricing`] when a bumped
+/// price fails, e.g. for an American option, which has no closed form).
+///
+/// # Non-European options
+///
+/// The formula above is the European Black-Scholes theta. For any other
+/// [`OptionType`] (the same dispatch as [`delta`] and [`gamma`]) theta is
+/// the one-day central difference of the type's own closed-form price,
+/// [`numerical_theta`](crate::greeks::numerical::numerical_theta), in the
+/// same unit (per calendar day) and with the same sign convention. At expiry
+/// it is `0` for every type.
 ///
 /// # Sign convention
 ///
@@ -1284,6 +1295,14 @@ pub fn theta(option: &Options) -> Result<Decimal, GreeksError> {
     let t = option.expiration_date.get_years()?;
     if t == Decimal::ZERO {
         return Ok(Decimal::ZERO);
+    }
+    if !matches!(option.option_type, OptionType::European) {
+        // Same per-contract long value as the delta fallback; see there.
+        return Ok(d_mul(
+            crate::greeks::numerical::numerical_theta(option)?,
+            signed_quantity(option)?,
+            "greeks::theta::numerical_position_weighted",
+        )?);
     }
 
     let kernels = BlackScholesKernels::new(option, t)?;
@@ -1447,8 +1466,20 @@ fn theta_with(option: &Options, kernels: &BlackScholesKernels) -> Result<Decimal
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
 /// cannot be converted to a positive year fraction, and propagates any
-/// [`GreeksError`] surfaced by `numerical_vega` for non-European
-/// options.
+/// [`GreeksError`] surfaced by
+/// [`numerical_vega`](crate::greeks::numerical::numerical_vega) for
+/// non-European options (typically [`GreeksError::Pricing`] when a bumped
+/// price fails, e.g. for an American option, which has no closed form).
+///
+/// # Non-European options
+///
+/// The formula above is the European Black-Scholes vega. For any other
+/// [`OptionType`] (the same dispatch as [`delta`] and [`gamma`]) vega is
+/// the central difference of the type's own closed-form price in implied
+/// volatility, [`numerical_vega`](crate::greeks::numerical::numerical_vega).
+/// That function returns the derivative per unit of volatility (`1.0`), so
+/// it is divided by 100 here: every option type reports vega per volatility
+/// point, as the closed form does. At expiry it is `0` for every type.
 ///
 /// # Sign convention
 ///
@@ -1459,6 +1490,21 @@ pub fn vega(option: &Options) -> Result<Decimal, GreeksError> {
     if expiration_date == Decimal::ZERO {
         // At expiration, volatility has no impact on option price
         return Ok(Decimal::ZERO);
+    }
+    if !matches!(option.option_type, OptionType::European) {
+        // `numerical_vega` is per unit of volatility; the closed form below is
+        // per volatility point. Same per-contract long value as the delta
+        // fallback; see there.
+        let per_point = d_div(
+            crate::greeks::numerical::numerical_vega(option)?,
+            Decimal::ONE_HUNDRED,
+            "greeks::vega::numerical_per_percent",
+        )?;
+        return Ok(d_mul(
+            per_point,
+            signed_quantity(option)?,
+            "greeks::vega::numerical_position_weighted",
+        )?);
     }
     let kernels = BlackScholesKernels::new(option, expiration_date)?;
     vega_with(option, &kernels)
