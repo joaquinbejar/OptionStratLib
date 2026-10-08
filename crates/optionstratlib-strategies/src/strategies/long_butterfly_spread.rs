@@ -4,6 +4,7 @@ use super::base::{
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::price_gap;
+use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
@@ -32,6 +33,7 @@ use optionstratlib_core::model::{
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
+use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -42,7 +44,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info};
+use tracing::debug;
 
 /// The default description for the Long Butterfly Spread strategy.
 pub const LONG_BUTTERFLY_DESCRIPTION: &str = "A long butterfly spread is created by buying one call at a lower strike price, \
@@ -908,16 +910,15 @@ impl Strategies for LongButterflySpread {
     }
 }
 
-impl Optimizable for LongButterflySpread {
-    type Strategy = LongButterflySpread;
-
-    fn filter_combinations<'a>(
+impl LongButterflySpread {
+    /// The leg combinations that pass the side and quote filters, before any
+    /// strategy is built from them (#862).
+    fn quoted_candidates<'a>(
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData, &'a OptionData)> {
         let underlying_price = &self.short_call.option.underlying_price;
-        let strategy = self.clone();
         option_chain
             .get_triple_iter()
             // Filter out invalid combinations based on FindOptimalSide
@@ -950,18 +951,37 @@ impl Optimizable for LongButterflySpread {
                     && short.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && long_high.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
+    }
+
+    /// The strategy of one candidate, when it builds, validates and has
+    /// both a maximum profit and a maximum loss.
+    fn valid_candidate(
+        &self,
+        option_chain: &OptionChain,
+        (long_low, short, long_high): (&OptionData, &OptionData, &OptionData),
+    ) -> Option<LongButterflySpread> {
+        let legs = StrategyLegs::ThreeLegs {
+            first: long_low,
+            second: short,
+            third: long_high,
+        };
+        self.create_strategy(option_chain, &legs)
+            .ok()
+            .filter(|s| s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok())
+    }
+}
+
+impl Optimizable for LongButterflySpread {
+    type Strategy = LongButterflySpread;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        self.quoted_candidates(option_chain, side)
             // Filter out options that don't meet strategy constraints
-            .filter(move |(long_low, short, long_high)| {
-                let legs = StrategyLegs::ThreeLegs {
-                    first: long_low,
-                    second: short,
-                    third: long_high,
-                };
-                match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
-                    Err(_) => false,
-                }
-            })
+            .filter(move |&legs| self.valid_candidate(option_chain, legs).is_some())
             // Map to OptionDataGroup
             .map(move |(long_low, short, long_high)| {
                 OptionDataGroup::Three(long_low, short, long_high)
@@ -974,64 +994,32 @@ impl Optimizable for LongButterflySpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) -> Result<(), StrategyError> {
-        let mut best_value = Decimal::MIN;
-        let mut found = false;
-        let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
-
-        for option_data_group in options_iter {
-            // Unpack the OptionDataGroup into individual options
-            let (long_low, short, long_high) = match option_data_group {
-                OptionDataGroup::Three(first, second, third) => (first, second, third),
-                other => {
-                    tracing::warn!(
-                        group = ?other,
-                        "find_optimal: skipping unexpected OptionDataGroup variant"
-                    );
-                    continue;
-                }
-            };
-
-            let legs = StrategyLegs::ThreeLegs {
-                first: long_low,
-                second: short,
-                third: long_high,
-            };
-            let strategy = match self.create_strategy(option_chain, &legs) {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::debug!(error = %e, "skipping invalid strategy combination");
-                    continue;
-                }
-            };
+        // Every candidate is built once, from `self`, and scored on the
+        // rayon pool; among equal scores the first candidate in chain order
+        // wins, as in the serial search (#862).
+        let best = best_candidate(self.quoted_candidates(option_chain, side), |legs| {
+            let strategy = self.valid_candidate(option_chain, legs)?;
             // Calculate the current value based on the optimization criteria
             let metric = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
                 OptimizationCriteria::Area => strategy.get_profit_area(),
             };
-            let current_value = match metric {
-                Ok(v) => v,
+            match metric {
+                Ok(value) => Some((value, strategy)),
                 Err(e) => {
                     tracing::debug!(error = %e, "skipping candidate with unscorable metric");
-                    continue;
+                    None
                 }
-            };
-
-            if current_value > best_value {
-                // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
-                best_value = current_value;
-                *self = strategy.clone();
-                found = true;
             }
-        }
-
-        if found {
-            Ok(())
-        } else {
-            Err(StrategyError::no_valid_candidate(
+        });
+        match best {
+            Some(strategy) => {
+                *self = strategy;
+                Ok(())
+            }
+            None => Err(StrategyError::no_valid_candidate(
                 StrategyType::LongButterflySpread,
-            ))
+            )),
         }
     }
 
@@ -3420,6 +3408,7 @@ mod tests_butterfly_optimizable {
 mod tests_butterfly_probability {
     use super::*;
     use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
+    use tracing::info;
 
     use optionstratlib_core::model::ExpirationDate;
 

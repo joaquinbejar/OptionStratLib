@@ -16,6 +16,7 @@ use super::base::{
 use super::shared::CondorStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
@@ -44,7 +45,9 @@ use optionstratlib_core::model::{
 };
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
-use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
+use optionstratlib_market::chains::{
+    OptionData, StrategyLegs, chain::OptionChain, utils::OptionDataGroup,
+};
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
@@ -53,7 +56,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{error, info};
+use tracing::error;
 
 /// The default description for the Iron Condor strategy.
 pub const IRON_CONDOR_DESCRIPTION: &str = "An Iron Condor is a neutral options strategy combining a bull put spread with a bear call spread. \
@@ -949,16 +952,24 @@ impl Strategies for IronCondor {
     }
 }
 
-impl Optimizable for IronCondor {
-    type Strategy = IronCondor;
+/// Four legs of an iron condor candidate: long put, short put, short call,
+/// long call.
+type CondorLegs<'a> = (
+    &'a OptionData,
+    &'a OptionData,
+    &'a OptionData,
+    &'a OptionData,
+);
 
-    fn filter_combinations<'a>(
+impl IronCondor {
+    /// The leg quadruples that pass the side and quote filters, before any
+    /// strategy is built from them (#862).
+    fn quoted_candidates<'a>(
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = CondorLegs<'a>> {
         let underlying_price = &self.short_call.option.underlying_price;
-        let strategy = self.clone();
         option_chain
             .get_quad_iter()
             // Filter out invalid combinations based on FindOptimalSide
@@ -985,90 +996,74 @@ impl Optimizable for IronCondor {
                     && short_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && long_call.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
+    }
+
+    /// The iron condor of one candidate, when it builds, validates and has
+    /// both a maximum profit and a maximum loss.
+    fn valid_candidate(
+        &self,
+        option_chain: &OptionChain,
+        (long_put, short_put, short_call, long_call): CondorLegs<'_>,
+    ) -> Option<IronCondor> {
+        let legs = StrategyLegs::FourLegs {
+            first: long_put,
+            second: short_put,
+            third: short_call,
+            fourth: long_call,
+        };
+        self.create_strategy(option_chain, &legs)
+            .ok()
+            .filter(|s| s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok())
+    }
+}
+
+impl Optimizable for IronCondor {
+    type Strategy = IronCondor;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        self.quoted_candidates(option_chain, side)
             // Filter out options that don't meet strategy constraints
-            .filter(move |(long_put, short_put, short_call, long_call)| {
-                let legs = StrategyLegs::FourLegs {
-                    first: long_put,
-                    second: short_put,
-                    third: short_call,
-                    fourth: long_call,
-                };
-                match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
-                    Err(_) => false,
-                }
-            })
+            .filter(move |&legs| self.valid_candidate(option_chain, legs).is_some())
             // Map to OptionDataGroup
             .map(move |(long_put, short_put, short_call, long_call)| {
                 OptionDataGroup::Four(long_put, short_put, short_call, long_call)
             })
     }
 
+    /// Every candidate is built once, from `self`, and scored on the rayon
+    /// pool; among equal scores the first candidate in chain order wins, as
+    /// in the serial search (#862).
     fn find_optimal(
         &mut self,
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) -> Result<(), StrategyError> {
-        let mut best_value = Decimal::MIN;
-        let mut found = false;
-        let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
-
-        for option_data_group in options_iter {
-            // Unpack the OptionDataGroup into individual options
-            let (long_put, short_put, short_call, long_call) = match option_data_group {
-                OptionDataGroup::Four(first, second, third, fourth) => {
-                    (first, second, third, fourth)
-                }
-                other => {
-                    tracing::warn!(
-                        group = ?other,
-                        "find_optimal: skipping unexpected OptionDataGroup variant"
-                    );
-                    continue;
-                }
-            };
-
-            let legs = StrategyLegs::FourLegs {
-                first: long_put,
-                second: short_put,
-                third: short_call,
-                fourth: long_call,
-            };
-            let strategy = match self.create_strategy(option_chain, &legs) {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::debug!(error = %e, "skipping invalid strategy combination");
-                    continue;
-                }
-            };
+        let best = best_candidate(self.quoted_candidates(option_chain, side), |legs| {
+            let strategy = self.valid_candidate(option_chain, legs)?;
             // Calculate the current value based on the optimization criteria
             let metric = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
                 OptimizationCriteria::Area => strategy.get_profit_area(),
             };
-            let current_value = match metric {
-                Ok(v) => v,
+            match metric {
+                Ok(value) => Some((value, strategy)),
                 Err(e) => {
                     tracing::debug!(error = %e, "skipping candidate with unscorable metric");
-                    continue;
+                    None
                 }
-            };
-
-            if current_value > best_value {
-                // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
-                best_value = current_value;
-                *self = strategy.clone();
-                found = true;
             }
-        }
-
-        if found {
-            Ok(())
-        } else {
-            Err(StrategyError::no_valid_candidate(StrategyType::IronCondor))
+        });
+        match best {
+            Some(strategy) => {
+                *self = strategy;
+                Ok(())
+            }
+            None => Err(StrategyError::no_valid_candidate(StrategyType::IronCondor)),
         }
     }
 

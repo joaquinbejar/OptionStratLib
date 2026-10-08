@@ -22,6 +22,7 @@ use super::shared::StrangleStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::combinations::best_candidate;
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor,
     delta_neutral::DeltaNeutrality,
@@ -47,6 +48,7 @@ use optionstratlib_core::model::{
     types::{Action, OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -57,7 +59,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, error, trace, warn};
+use tracing::{error, trace, warn};
 
 pub(super) const SHORT_STRANGLE_DESCRIPTION: &str = "A short strangle involves selling an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when low volatility \
@@ -998,16 +1000,15 @@ impl Validable for ShortStrangle {
     }
 }
 
-impl Optimizable for ShortStrangle {
-    type Strategy = ShortStrangle;
-
-    fn filter_combinations<'a>(
+impl ShortStrangle {
+    /// The leg combinations that pass the side and quote filters, before any
+    /// strategy is built from them (#862).
+    fn quoted_candidates<'a>(
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData)> {
         let underlying_price = &self.short_call.option.underlying_price;
-        let strategy = self.clone();
         option_chain
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
@@ -1062,18 +1063,37 @@ impl Optimizable for ShortStrangle {
                 short_put.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && short_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
+    }
+
+    /// The strategy of one candidate, when it builds, validates and has
+    /// both a maximum profit and a maximum loss.
+    fn valid_candidate(
+        &self,
+        option_chain: &OptionChain,
+        (short_put, short_call): (&OptionData, &OptionData),
+    ) -> Option<ShortStrangle> {
+        let legs = StrategyLegs::TwoLegs {
+            first: short_put,
+            second: short_call,
+        };
+        trace!("Legs: {:?}", legs);
+        self.create_strategy(option_chain, &legs)
+            .ok()
+            .filter(|s| s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok())
+    }
+}
+
+impl Optimizable for ShortStrangle {
+    type Strategy = ShortStrangle;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        self.quoted_candidates(option_chain, side)
             // Filter out options that don't meet strategy constraints
-            .filter(move |(short_put, short_call)| {
-                let legs = StrategyLegs::TwoLegs {
-                    first: short_put,
-                    second: short_call,
-                };
-                trace!("Legs: {:?}", legs);
-                match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
-                    Err(_) => false,
-                }
-            })
+            .filter(move |&legs| self.valid_candidate(option_chain, legs).is_some())
             // Map to OptionDataGroup
             .map(move |(short_put, short_call)| OptionDataGroup::Two(short_put, short_call))
     }
@@ -1097,64 +1117,35 @@ impl Optimizable for ShortStrangle {
             return Err(e);
         }
 
-        let mut best_value = Decimal::MIN;
-        let mut found = false;
-        let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
-
-        for option_data_group in options_iter {
-            // Unpack the OptionDataGroup into individual options
-            let (short_put, short_call) = match option_data_group {
-                OptionDataGroup::Two(first, second) => (first, second),
-                other => {
-                    tracing::warn!(
-                        group = ?other,
-                        "find_optimal: skipping unexpected OptionDataGroup variant"
-                    );
-                    continue;
-                }
-            };
-
-            let legs = StrategyLegs::TwoLegs {
-                first: short_put,
-                second: short_call,
-            };
-            let strategy = match self.create_strategy(option_chain, &legs) {
-                Ok(s) => s,
-                Err(e) => {
-                    debug!(error = %e, "skipping invalid strategy combination");
-                    continue;
-                }
-            };
+        // Every candidate is built once, from `self`, and scored on the
+        // rayon pool; among equal scores the first candidate in chain order
+        // wins, as in the serial search (#862).
+        let best = best_candidate(self.quoted_candidates(option_chain, side), |legs| {
+            let strategy = self.valid_candidate(option_chain, legs)?;
             // Calculate the current value based on the optimization criteria
             let metric = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
                 OptimizationCriteria::Area => strategy.get_profit_area(),
             };
-            let current_value = match metric {
-                Ok(v) => v,
+            match metric {
+                Ok(value) => Some((value, strategy)),
                 Err(e) => {
-                    debug!(error = %e, "skipping candidate with unscorable metric");
-                    continue;
+                    tracing::debug!(error = %e, "skipping candidate with unscorable metric");
+                    None
                 }
-            };
-
-            if current_value > best_value {
-                // Update the best value and replace the current strategy
-                debug!("Found better value: {}", current_value);
-                best_value = current_value;
-                *self = strategy.clone();
-                found = true;
             }
-        }
-
-        if found {
-            Ok(())
-        } else {
-            *self = original;
-            Err(StrategyError::no_valid_candidate(
-                StrategyType::ShortStrangle,
-            ))
+        });
+        match best {
+            Some(strategy) => {
+                *self = strategy;
+                Ok(())
+            }
+            None => {
+                *self = original;
+                Err(StrategyError::no_valid_candidate(
+                    StrategyType::ShortStrangle,
+                ))
+            }
         }
     }
 

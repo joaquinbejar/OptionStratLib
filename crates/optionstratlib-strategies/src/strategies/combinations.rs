@@ -5,10 +5,20 @@
 //! [`crate::strategies::custom`], so the helper is strategies-owned and
 //! reports [`crate::error::StrategyError`] (ADR-0001 D2, amended: ownership follows the
 //! responsibility, not the historical signature).
+//!
+//! `best_candidate` scores the candidates of a chain optimiser's
+//! `find_optimal` on the rayon pool and picks the one the serial search
+//! picked (#862).
 
 use crate::error::StrategyError;
 use itertools::Itertools;
 use rayon::prelude::*;
+use rust_decimal::Decimal;
+
+/// Candidates [`best_candidate`] scores per round on the rayon pool. A round
+/// is collected before it is scored, so the candidates held at once stay
+/// bounded however many combinations the chain yields.
+const OPTIMISER_ROUND: usize = 4096;
 
 /// Processes combinations of elements from a slice in parallel.
 ///
@@ -78,6 +88,130 @@ where
             closure(combination)
         })
         .collect())
+}
+
+/// The best-scoring candidate of a chain optimiser's search (#862).
+///
+/// `score` builds and scores one candidate, or returns `None` to skip it. It
+/// runs once per candidate, on the rayon pool, in rounds of
+/// [`OPTIMISER_ROUND`] candidates taken in order from `candidates`.
+///
+/// The result is the candidate with the highest score above `Decimal::MIN`;
+/// among equal scores, the one `candidates` yields first. That is the
+/// candidate the serial search picked: it started from `Decimal::MIN` and
+/// replaced its best only on a strictly greater score. `None` when no
+/// candidate scores above `Decimal::MIN`.
+pub(crate) fn best_candidate<C, S, F>(candidates: impl Iterator<Item = C>, score: F) -> Option<S>
+where
+    C: Send,
+    S: Send,
+    F: Fn(C) -> Option<(Decimal, S)> + Sync,
+{
+    // The strategy rides through the reduction boxed: rayon carries the
+    // partial result through every level of its split, and a strategy held
+    // by value there overflowed a worker's stack in debug builds.
+    let mut best: Option<(usize, Decimal, Box<S>)> = None;
+    let mut indexed = candidates.enumerate();
+    loop {
+        let round: Vec<(usize, C)> = indexed.by_ref().take(OPTIMISER_ROUND).collect();
+        if round.is_empty() {
+            break;
+        }
+        let round_best = round
+            .into_par_iter()
+            .filter_map(|(index, candidate)| {
+                let (value, strategy) = score(candidate)?;
+                (value > Decimal::MIN).then(|| (index, value, Box::new(strategy)))
+            })
+            .reduce_with(better_candidate);
+        best = match (best, round_best) {
+            (Some(current), Some(challenger)) => Some(better_candidate(current, challenger)),
+            (current, challenger) => current.or(challenger),
+        };
+    }
+    best.map(|(_, _, strategy)| *strategy)
+}
+
+/// The higher-scoring of two scored candidates, the lower index on a tie.
+///
+/// Indices are distinct, so this is the maximum of a total order: the
+/// reduction picks the same candidate however rayon splits the round.
+fn better_candidate<S>(a: (usize, Decimal, S), b: (usize, Decimal, S)) -> (usize, Decimal, S) {
+    if b.1 > a.1 || (b.1 == a.1 && b.0 < a.0) {
+        b
+    } else {
+        a
+    }
+}
+
+#[cfg(test)]
+mod tests_best_candidate {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// The serial search the optimisers ran before #862.
+    fn serial(values: &[Option<Decimal>]) -> Option<usize> {
+        let mut best_value = Decimal::MIN;
+        let mut chosen = None;
+        for (index, value) in values.iter().enumerate() {
+            if let Some(value) = value
+                && *value > best_value
+            {
+                best_value = *value;
+                chosen = Some(index);
+            }
+        }
+        chosen
+    }
+
+    fn parallel(values: &[Option<Decimal>]) -> Option<usize> {
+        best_candidate(values.iter().enumerate(), |(index, value)| {
+            value.map(|value| (value, index))
+        })
+    }
+
+    #[test]
+    fn test_ties_pick_the_first_candidate() {
+        let values = vec![
+            Some(dec!(1)),
+            Some(dec!(3)),
+            None,
+            Some(dec!(3)),
+            Some(dec!(2)),
+        ];
+        assert_eq!(parallel(&values), Some(1));
+        assert_eq!(parallel(&values), serial(&values));
+    }
+
+    #[test]
+    fn test_decimal_min_is_never_chosen() {
+        let values = vec![Some(Decimal::MIN), None, Some(Decimal::MIN)];
+        assert_eq!(parallel(&values), None);
+        assert_eq!(serial(&values), None);
+        let values = vec![Some(Decimal::MIN), Some(dec!(-5))];
+        assert_eq!(parallel(&values), Some(1));
+    }
+
+    #[test]
+    fn test_empty_and_unscorable() {
+        assert_eq!(parallel(&[]), None);
+        assert_eq!(parallel(&[None, None]), None);
+    }
+
+    #[test]
+    fn test_matches_serial_across_rounds() {
+        // Several rounds, many ties: scores cycle through 0..97, and the
+        // maximum recurs in every round.
+        let values: Vec<Option<Decimal>> = (0..3 * OPTIMISER_ROUND + 17)
+            .map(|i| (i % 5 != 0).then(|| Decimal::from(i % 97)))
+            .collect();
+        assert_eq!(parallel(&values), serial(&values));
+        // The maximum appears only in the last round.
+        let mut late = values.clone();
+        late.push(Some(dec!(1000)));
+        assert_eq!(parallel(&late), Some(late.len() - 1));
+        assert_eq!(parallel(&late), serial(&late));
+    }
 }
 
 #[cfg(test)]
