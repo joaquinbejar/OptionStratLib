@@ -17,6 +17,7 @@ mod contract_size_test;
 mod covered_leg_errors_test;
 mod covered_mtm_test;
 mod covered_sizing_test;
+mod custom_break_even_refresh_test;
 mod custom_test;
 mod delta;
 mod long_call_test;

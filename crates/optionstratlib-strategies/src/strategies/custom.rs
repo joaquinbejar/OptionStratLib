@@ -14,7 +14,9 @@ use super::base::{
 };
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::price_gap;
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use crate::strategies::utils::calculate_price_range_bounded;
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, combinations::process_n_times_iter,
@@ -183,6 +185,17 @@ impl CustomStrategy {
         }
         strategy.update_break_even_points()?;
         Ok(strategy)
+    }
+
+    /// Fails with `reason` when the strategy no longer validates, so an edit
+    /// run through [`edit_refreshing_break_evens`] is rolled back. A custom
+    /// strategy has always rejected an edit that leaves it invalid (#784).
+    fn ensure_valid_after_edit(&self, reason: &str) -> Result<(), PositionError> {
+        if self.validate() {
+            Ok(())
+        } else {
+            Err(PositionError::invalid_position(reason))
+        }
     }
 
     fn update_positions(&mut self, new_positions: Vec<Position>) {
@@ -434,14 +447,10 @@ impl BreakEvenable for CustomStrategy {
 
 impl Positionable for CustomStrategy {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        self.positions.push(position.clone());
-        if !self.validate() {
-            return Err(PositionError::invalid_position(
-                "Strategy is not valid after adding new position",
-            ));
-        }
-        let _ = self.update_break_even_points();
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| {
+            strategy.positions.push(position.clone());
+            strategy.ensure_valid_after_edit("Strategy is not valid after adding new position")
+        })
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -514,22 +523,25 @@ impl Positionable for CustomStrategy {
     }
 
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        let existing_position =
-            self.get_position_unique(&position.option.option_style, &position.option.side)?;
+        edit_refreshing_break_evens(self, |strategy| {
+            let existing_position = strategy
+                .get_position_unique(&position.option.option_style, &position.option.side)?;
 
-        *existing_position = position.clone();
+            *existing_position = position.clone();
 
-        if !self.validate() {
-            return Err(PositionError::invalid_position(
-                "Strategy is not valid after modifying position",
-            ));
-        }
-
-        let _ = self.update_break_even_points();
-        Ok(())
+            strategy.ensure_valid_after_edit("Strategy is not valid after modifying position")
+        })
     }
 
     fn replace_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
+    }
+}
+
+impl CustomStrategy {
+    /// Replaces the leg matching `position`'s style, side and strike; the
+    /// body of `replace_position` before break-evens were refreshed (#784).
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         // Find and replace the position with matching criteria
         let index = self
             .positions
@@ -550,14 +562,13 @@ impl Positionable for CustomStrategy {
 
         self.positions[index] = position.clone();
 
-        if !self.validate() {
-            return Err(PositionError::invalid_position(
-                "Strategy is not valid after replacing position",
-            ));
-        }
+        self.ensure_valid_after_edit("Strategy is not valid after replacing position")
+    }
+}
 
-        let _ = self.update_break_even_points();
-        Ok(())
+impl CachedBreakEvens for CustomStrategy {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
     }
 }
 

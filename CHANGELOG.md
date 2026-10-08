@@ -1479,6 +1479,19 @@ summarize the release.
 
 ### Fixed
 
+- **`CustomStrategy` no longer discards a failed break-even recomputation
+  after an edit** (#784). `add_position`, `modify_position` and
+  `replace_position` recomputed the break-evens but ignored a failure, so
+  an edit whose break-evens could not be computed reported success with
+  the previous break-evens. They now go through the shared helper of
+  #780: a failed recomputation restores the strategy (legs and
+  break-evens) and returns the error as a `PositionError`. `CustomStrategy`
+  keeps its stricter contract for an edit that leaves it invalid: it is
+  still rejected with the same `PositionError`, and the strategy is now
+  also restored instead of keeping the rejected leg. `new` and every
+  successful edit return the same results as before. No signature
+  changes.
+
 - **Every strategy refreshes its break-evens on `add_position` /
   `modify_position`** (#780). #771 did this for `Collar`, `CoveredCall`
   and `ProtectivePut`; the other strategies kept the break-evens of their
