@@ -1913,6 +1913,12 @@ summarize the release.
   function was getting the long call; the value it now returns is the
   instrument's.
 
+- **`make check-spanish` fails on Spanish comments, not on a clean tree.**
+  The recipe ran `rg ... || exit 1`, but `rg` exits 1 when it finds no
+  match, so the target failed on every clean tree and passed whenever a
+  match was found. It now fails on a match (status 0) and on an `rg` error
+  (status 2), and passes on status 1. No issue; found by the #789 run.
+
 - **`pricing::black_scholes()` prices every exotic option at expiry**
   (#843). The dispatcher computed `d1` / `d2` before it looked at the
   option type. Both divide by `σ√T`, so at `T = 0` every exotic failed with

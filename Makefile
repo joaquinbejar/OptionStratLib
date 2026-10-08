@@ -822,11 +822,17 @@ check-cargo-readme:
 	fi
 
 .PHONY: check-spanish
+# Fails when a comment line carries Spanish characters. `rg` exits 0 when it
+# finds a match, 1 when it finds none and 2 on an error; the recipe used to
+# fail on 1, that is on a clean tree, and pass when a match was found.
 check-spanish:
-	@rg -n --pcre2 -e '^\s*(//|///|//!|#|/\*|\*).*?[áéíóúÁÉÍÓÚñÑ¿¡]' \
-    	    --glob '!target/*' \
-    	    --glob '!**/*.png' \
-    	    . || (echo "❌  Spanish comments found"; exit 1)
+	@status=0; \
+	rg -n --pcre2 -e '^\s*(//|///|//!|#|/\*|\*).*?[áéíóúÁÉÍÓÚñÑ¿¡]' \
+		--glob '!target/*' \
+		--glob '!**/*.png' \
+		. || status=$$?; \
+	if [ $$status -eq 0 ]; then echo "❌  Spanish comments found"; exit 1; fi; \
+	if [ $$status -ne 1 ]; then echo "❌  rg failed with status $$status"; exit 1; fi
 
 .PHONY: zip
 zip:
