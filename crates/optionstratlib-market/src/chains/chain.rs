@@ -16,7 +16,7 @@ use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
     reject_unrepresentable_expiration,
@@ -44,6 +44,31 @@ use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
 
 /// A constant representing the skew value for the smile curve in financial modeling.
 ///
+/// Returns the option whose strike is closest to `target`, the first one on a
+/// tie, or `None` for an empty set.
+///
+/// # Errors
+///
+/// Returns an error when a distance leaves the `Decimal` range.
+fn closest_strike(
+    options: &BTreeSet<OptionData>,
+    target: Positive,
+) -> Result<Option<&OptionData>, ChainError> {
+    let mut closest: Option<(&OptionData, Decimal)> = None;
+    for option in options {
+        let distance = d_sub(
+            option.strike_price.to_dec(),
+            target.to_dec(),
+            "OptionChain::closest_strike",
+        )?
+        .abs();
+        if closest.is_none_or(|(_, best)| distance < best) {
+            closest = Some((option, distance));
+        }
+    }
+    Ok(closest.map(|(option, _)| option))
+}
+
 /// The skew smile curve is often used in options pricing to represent the implied volatility
 /// skew relative to strike prices. It helps adjust for market conditions and asset-specific
 /// behaviors in pricing models.
@@ -664,7 +689,7 @@ impl OptionChain {
             s4 += m2 * m2;
             sy1 += m * y;
             sy2 += m2 * y;
-            count += 1;
+            count = count.checked_add(1)?;
         }
         if count < 3 {
             return None;
@@ -730,7 +755,11 @@ impl OptionChain {
             // division and the `usize` conversion are checked rather than
             // truncated through `as` (#788).
             let strikes_below = d_div(
-                atm_strike.to_dec() - min_strike.to_dec(),
+                d_sub(
+                    atm_strike.to_dec(),
+                    min_strike.to_dec(),
+                    "OptionChain::to_build_params/atm_minus_min",
+                )?,
                 strike_interval.to_dec(),
                 "OptionChain::to_build_params/strikes_below",
             )?
@@ -739,7 +768,11 @@ impl OptionChain {
             .unwrap_or(0);
 
             let strikes_above = d_div(
-                max_strike.to_dec() - atm_strike.to_dec(),
+                d_sub(
+                    max_strike.to_dec(),
+                    atm_strike.to_dec(),
+                    "OptionChain::to_build_params/max_minus_atm",
+                )?,
                 strike_interval.to_dec(),
                 "OptionChain::to_build_params/strikes_above",
             )?
@@ -771,19 +804,33 @@ impl OptionChain {
             if let (Some(ask), Some(bid)) = (option.call_ask, option.call_bid) {
                 total_spread = d_add(
                     total_spread,
-                    (ask.to_dec() - bid.to_dec()).abs(),
+                    d_sub(
+                        ask.to_dec(),
+                        bid.to_dec(),
+                        "OptionChain::to_build_params/spread",
+                    )?
+                    .abs(),
                     "OptionChain::to_build_params/total_spread",
                 )?;
-                count += 1;
+                count = count.checked_add(1).ok_or_else(|| {
+                    ChainError::invalid_parameters("count", "quoted option count overflowed")
+                })?;
             }
 
             if let (Some(ask), Some(bid)) = (option.put_ask, option.put_bid) {
                 total_spread = d_add(
                     total_spread,
-                    (ask.to_dec() - bid.to_dec()).abs(),
+                    d_sub(
+                        ask.to_dec(),
+                        bid.to_dec(),
+                        "OptionChain::to_build_params/spread",
+                    )?
+                    .abs(),
                     "OptionChain::to_build_params/total_spread",
                 )?;
-                count += 1;
+                count = count.checked_add(1).ok_or_else(|| {
+                    ChainError::invalid_parameters("count", "quoted option count overflowed")
+                })?;
             }
         }
 
@@ -1128,13 +1175,7 @@ impl OptionChain {
         }
 
         // Find the option with strike price closest to underlying price
-        let option_data = self.options.iter().min_by(|a, b| {
-            let a_distance = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-            let b_distance = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-            a_distance
-                .partial_cmp(&b_distance)
-                .unwrap_or(Ordering::Equal)
-        });
+        let option_data = closest_strike(&self.options, self.underlying_price)?;
 
         match option_data {
             Some(opt) => Ok(opt),
@@ -1559,7 +1600,10 @@ impl OptionChain {
         option_chain.set_optiondata_extra_params()?;
         option_chain.mutate_single_options(|option| {
             option.implied_volatility = if option.implied_volatility >= Positive::ONE {
-                option.implied_volatility / Positive::HUNDRED
+                option
+                    .implied_volatility
+                    .checked_div(&Positive::HUNDRED)
+                    .unwrap_or(option.implied_volatility)
             } else {
                 option.implied_volatility
             }
@@ -1933,7 +1977,8 @@ impl OptionChain {
     pub fn get_double_iter(&self) -> impl Iterator<Item = (&OptionData, &OptionData)> {
         self.get_single_iter().enumerate().flat_map(|(i, item1)| {
             self.get_single_iter()
-                .skip(i + 1)
+                .skip(i)
+                .skip(1)
                 .map(move |item2| (item1, item2))
         })
     }
@@ -1994,11 +2039,14 @@ impl OptionChain {
             .enumerate()
             .flat_map(move |(i, item1)| {
                 self.get_single_iter()
-                    .skip(i + 1)
+                    .skip(i)
+                    .skip(1)
                     .enumerate()
                     .flat_map(move |(j, item2)| {
                         self.get_single_iter()
-                            .skip(i + j + 2)
+                            .skip(i)
+                            .skip(j)
+                            .skip(2)
                             .map(move |item3| (item1, item2, item3))
                     })
             })
@@ -2037,7 +2085,8 @@ impl OptionChain {
                     .enumerate()
                     .flat_map(move |(j, item2)| {
                         self.get_single_iter()
-                            .skip(i + j)
+                            .skip(i)
+                            .skip(j)
                             .map(move |item3| (item1, item2, item3))
                     })
             })
@@ -2071,16 +2120,23 @@ impl OptionChain {
             .enumerate()
             .flat_map(move |(i, item1)| {
                 self.get_single_iter()
-                    .skip(i + 1)
+                    .skip(i)
+                    .skip(1)
                     .enumerate()
                     .flat_map(move |(j, item2)| {
-                        self.get_single_iter().skip(i + j + 2).enumerate().flat_map(
-                            move |(k, item3)| {
+                        self.get_single_iter()
+                            .skip(i)
+                            .skip(j)
+                            .skip(2)
+                            .enumerate()
+                            .flat_map(move |(k, item3)| {
                                 self.get_single_iter()
-                                    .skip(i + j + k + 3)
+                                    .skip(i)
+                                    .skip(j)
+                                    .skip(k)
+                                    .skip(3)
                                     .map(move |item4| (item1, item2, item3, item4))
-                            },
-                        )
+                            })
                     })
             })
     }
@@ -2117,10 +2173,12 @@ impl OptionChain {
                     .skip(i)
                     .enumerate()
                     .flat_map(move |(j, item2)| {
-                        self.get_single_iter().skip(i + j).enumerate().flat_map(
+                        self.get_single_iter().skip(i).skip(j).enumerate().flat_map(
                             move |(k, item3)| {
                                 self.get_single_iter()
-                                    .skip(i + j + k)
+                                    .skip(i)
+                                    .skip(j)
+                                    .skip(k)
                                     .map(move |item4| (item1, item2, item3, item4))
                             },
                         )
@@ -2591,13 +2649,18 @@ impl OptionChain {
 
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
 
-        let mut intervals: Vec<Decimal> = strikes
+        // A difference that leaves the `Decimal` range cannot be rounded to a
+        // strike interval; the documented default stands in for it.
+        let Some(mut intervals) = strikes
             .windows(2)
-            .filter_map(|w| match w {
-                [prev, curr] => Some(curr.to_dec() - prev.to_dec()),
+            .map(|w| match w {
+                [prev, curr] => curr.to_dec().checked_sub(prev.to_dec()),
                 _ => None,
             })
-            .collect();
+            .collect::<Option<Vec<Decimal>>>()
+        else {
+            return default_interval;
+        };
 
         // Return the median interval for robustness
         intervals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
@@ -2816,13 +2879,7 @@ impl OptionChain {
         }
 
         // Find the option with strike price closest to the price parameter
-        let option_data = self.options.iter().min_by(|a, b| {
-            let a_distance = (a.strike_price.to_dec() - price.to_dec()).abs();
-            let b_distance = (b.strike_price.to_dec() - price.to_dec()).abs();
-            a_distance
-                .partial_cmp(&b_distance)
-                .unwrap_or(Ordering::Equal)
-        });
+        let option_data = closest_strike(&self.options, *price)?;
 
         match option_data {
             Some(opt) => Ok(opt),
