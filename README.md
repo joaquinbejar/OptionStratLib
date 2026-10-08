@@ -399,7 +399,10 @@ and the [ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main
 gives the defining crate, direct import, facade path and feature of every
 public concept.
 
-<!-- #553: link the 0.21 to 0.22 migration guide here -->
+Moving from 0.21? The [0.22 architecture and adoption
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
+maps each redesign to its replacement workflow; 0.22 keeps no
+compatibility with 0.21.
 
 | Crate | Owns | Own features | Facade feature | Facade paths |
 | --- | --- | --- | --- | --- |
@@ -1480,6 +1483,17 @@ cargo test --all-features
 
 **OptionStratLib v0.22.0** - Built with ❤️ in Rust for the financial community
 
+
+
+## Upgrading from 0.21
+
+0.22 splits the library into nine component crates behind this facade and
+redesigns several APIs without keeping compatibility with 0.21. The [0.22
+architecture and adoption
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
+explains the layers, facade versus component use, feature selection, and the
+replacement workflow for each redesign, including serialized data that no
+longer reads the same way.
 
 
 
