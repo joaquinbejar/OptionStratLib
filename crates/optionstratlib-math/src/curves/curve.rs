@@ -11,7 +11,8 @@ use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
-    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    coefficient_of_variation, powu_checked,
 };
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::decimal::{
@@ -1596,8 +1597,9 @@ impl MetricsExtractor for Curve {
         // Standard Deviation
         let variance = variance_of(&y_values, mean, "Curve::compute_basic_metrics::variance")
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
-        let std_dev =
-            d_sqrt(variance, "Curve::compute_basic_metrics::std_dev").unwrap_or(Decimal::ZERO);
+        // A failed square root is an error, not a zero dispersion (#824).
+        let std_dev = d_sqrt(variance, "Curve::compute_basic_metrics::std_dev")
+            .map_err(|e| MetricsError::BasicError(e.to_string()))?;
 
         Ok(BasicMetrics {
             mean,
@@ -1635,8 +1637,9 @@ impl MetricsExtractor for Curve {
         // Compute variance
         let variance = variance_of(&y_values, mean, "Curve::compute_shape_metrics::variance")
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
-        let std_dev =
-            d_sqrt(variance, "Curve::compute_shape_metrics::std_dev").unwrap_or(Decimal::ONE);
+        // A failed square root is an error, not a unit dispersion (#824).
+        let std_dev = d_sqrt(variance, "Curve::compute_shape_metrics::std_dev")
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
         if std_dev.is_zero() || std_dev < dec!(1e-9) {
             return Err(MetricsError::ShapeError(format!(
                 "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the curve is degenerate"
@@ -1832,7 +1835,7 @@ impl MetricsExtractor for Curve {
                 volatility: Decimal::ZERO,
                 value_at_risk: Decimal::ZERO,
                 expected_shortfall: Decimal::ZERO,
-                beta: Decimal::ZERO,
+                coefficient_of_variation: Decimal::ZERO,
                 sharpe_ratio: Decimal::ZERO,
             });
         }
@@ -1851,7 +1854,8 @@ impl MetricsExtractor for Curve {
             squared_deviations = d_add(squared_deviations, squared, op)
                 .map_err(|e| MetricsError::RiskError(e.to_string()))?;
         }
-        let sqrt_n = d_sqrt(Decimal::from(y_values.len()), op).unwrap_or(Decimal::ZERO);
+        let sqrt_n = d_sqrt(Decimal::from(y_values.len()), op)
+            .map_err(|e| MetricsError::RiskError(e.to_string()))?;
         // `d_div` rejects the zero denominator, which the emptiness guard
         // above already rules out.
         let volatility = d_div(squared_deviations, sqrt_n, op)
@@ -1874,13 +1878,14 @@ impl MetricsExtractor for Curve {
             mean_of(&tail, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         };
 
-        // `volatility / mean` is already zero at zero dispersion, so this
-        // guard only covers the undefined `x / 0`.
-        let beta = if mean != Decimal::ZERO {
-            d_div(volatility, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
-        } else {
-            Decimal::ZERO
-        };
+        // The coefficient of variation divides the population standard
+        // deviation, the `std_dev` of `compute_basic_metrics`, by the mean,
+        // as `Surface` does (#824). It is not `volatility / mean`: the
+        // `volatility` above keeps its own grouping.
+        let variance =
+            variance_of(&y_values, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+        let std_dev = d_sqrt(variance, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
+        let coefficient_of_variation = coefficient_of_variation(std_dev, mean, op)?;
 
         // Sharpe Ratio (assuming risk-free rate of 0). A flat curve has no
         // dispersion to divide by, which makes this the one field that is
@@ -1896,7 +1901,7 @@ impl MetricsExtractor for Curve {
             volatility,
             value_at_risk: var,
             expected_shortfall,
-            beta,
+            coefficient_of_variation,
             sharpe_ratio,
         })
     }
@@ -4081,7 +4086,7 @@ mod tests_curve_metrics {
         let risk_metrics = constant_curve.compute_risk_metrics().unwrap();
 
         assert_eq!(risk_metrics.volatility, dec!(0.0));
-        assert_eq!(risk_metrics.beta, dec!(0.0));
+        assert_eq!(risk_metrics.coefficient_of_variation, dec!(0.0));
         assert_eq!(risk_metrics.sharpe_ratio, dec!(0.0));
     }
 
@@ -4100,8 +4105,8 @@ mod tests_curve_metrics {
         // No sample falls below the VaR, so the conditional mean has an empty
         // tail and the function's own empty-tail rule gives zero.
         assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
-        // `volatility / mean` is already zero here; no special case needed.
-        assert_eq!(metrics.beta, Decimal::ZERO);
+        // Zero dispersion over a mean of 5: a zero coefficient of variation.
+        assert_eq!(metrics.coefficient_of_variation, Decimal::ZERO);
         // `mean / 0` is the one genuinely undefined field.
         assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
     }
@@ -4136,7 +4141,10 @@ mod tests_curve_metrics {
             risk_metrics.value_at_risk != dec!(0.0),
             "Value at Risk no debe ser cero."
         );
-        assert!(risk_metrics.beta != dec!(0.0), "Beta no debe ser cero.");
+        assert!(
+            risk_metrics.coefficient_of_variation != dec!(0.0),
+            "the coefficient of variation must not be zero"
+        );
     }
 
     #[test]
@@ -4148,7 +4156,7 @@ mod tests_curve_metrics {
         // Volatility and risk metrics should be non-zero
         assert!(risk_metrics.volatility > dec!(0.0));
         assert!(risk_metrics.value_at_risk != dec!(0.0));
-        assert!(risk_metrics.beta != dec!(0.0));
+        assert!(risk_metrics.coefficient_of_variation != dec!(0.0));
 
         // Constant curve
         let constant_curve = create_constant_curve();
@@ -5292,5 +5300,65 @@ mod tests_duplicate_abscissa {
                 .expect("x = 2 is a stored abscissa");
             assert_eq!(point, Point2D::new(dec!(2.0), dec!(4.0)));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_coefficient_of_variation {
+    use super::*;
+    use crate::error::MetricsError;
+    use crate::geometrics::MetricsExtractor;
+
+    fn line(values: impl IntoIterator<Item = i64>) -> Curve {
+        Curve::new(
+            values
+                .into_iter()
+                .enumerate()
+                .map(|(x, y)| Point2D::new(Decimal::from(x), Decimal::from(y)))
+                .collect(),
+        )
+    }
+
+    /// `y = 1..5`: mean 3, population standard deviation `sqrt(2)`, so the
+    /// coefficient of variation is `sqrt(2) / 3`, here to the last of
+    /// `Decimal`'s 28 places. As `beta` the field held `volatility / mean`,
+    /// `(10 / sqrt(5)) / 3 = 1.4907119849998597976061157791`, which divided
+    /// the sum of squared deviations by `sqrt(n)` instead of taking a
+    /// standard deviation (#824).
+    #[test]
+    fn test_risk_metrics_coefficient_of_variation_is_std_dev_over_mean() {
+        let curve = line(1..=5);
+        let metrics = curve.compute_risk_metrics().unwrap();
+        assert_eq!(
+            metrics.coefficient_of_variation,
+            dec!(0.4714045207910316829338962414)
+        );
+        let basic = curve.compute_basic_metrics().unwrap();
+        assert_eq!(
+            metrics.coefficient_of_variation,
+            d_div(basic.std_dev, basic.mean, "test").unwrap()
+        );
+    }
+
+    /// The coefficient of variation is signed as the mean.
+    #[test]
+    fn test_risk_metrics_coefficient_of_variation_follows_the_sign_of_the_mean() {
+        let metrics = line((1..=5).map(|y| -y)).compute_risk_metrics().unwrap();
+        assert_eq!(
+            metrics.coefficient_of_variation,
+            dec!(-0.4714045207910316829338962414)
+        );
+    }
+
+    /// `y = -1, 0, 1` has a zero mean, where `std_dev / mean` is undefined:
+    /// an error, not the zero `beta` reported (#824).
+    #[test]
+    fn test_risk_metrics_zero_mean_is_an_error() {
+        assert!(matches!(
+            line([-1, 0, 1]).compute_risk_metrics(),
+            Err(MetricsError::ZeroMean {
+                metric: "coefficient of variation"
+            })
+        ));
     }
 }

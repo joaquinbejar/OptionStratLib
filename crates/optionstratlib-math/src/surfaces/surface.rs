@@ -11,7 +11,8 @@ use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
-    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics, powu_checked,
+    RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
+    coefficient_of_variation, powu_checked,
 };
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
@@ -1376,7 +1377,8 @@ impl MetricsExtractor for Surface {
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
             .map_err(|e| MetricsError::BasicError(e.to_string()))?;
-        let std_dev = d_sqrt(variance, op).unwrap_or(Decimal::ZERO);
+        // A failed square root is an error, not a zero dispersion (#824).
+        let std_dev = d_sqrt(variance, op).map_err(|e| MetricsError::BasicError(e.to_string()))?;
 
         Ok(BasicMetrics {
             mean,
@@ -1408,7 +1410,8 @@ impl MetricsExtractor for Surface {
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op)
             .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
-        let std_dev = d_sqrt(variance, op).unwrap_or(Decimal::ONE);
+        // A failed square root is an error, not a unit dispersion (#824).
+        let std_dev = d_sqrt(variance, op).map_err(|e| MetricsError::ShapeError(e.to_string()))?;
         if std_dev.is_zero() {
             return Err(MetricsError::ShapeError(format!(
                 "standard deviation ({std_dev}) is too small to compute skewness/kurtosis; the surface is degenerate"
@@ -1590,7 +1593,7 @@ impl MetricsExtractor for Surface {
                 volatility: Decimal::ZERO,
                 value_at_risk: Decimal::ZERO,
                 expected_shortfall: Decimal::ZERO,
-                beta: Decimal::ZERO,
+                coefficient_of_variation: Decimal::ZERO,
                 sharpe_ratio: Decimal::ZERO,
             });
         }
@@ -1599,7 +1602,7 @@ impl MetricsExtractor for Surface {
         let mean = mean_of(&z_values, op).map_err(risk_err)?;
         let sum_sq = central_moment(&z_values, mean, 2, op).map_err(risk_err)?;
         let variance = d_div(sum_sq, Decimal::from(z_values.len()), op).map_err(risk_err)?;
-        let volatility = d_sqrt(variance, op).unwrap_or(Decimal::ZERO);
+        let volatility = d_sqrt(variance, op).map_err(risk_err)?;
 
         // Value at Risk (95% confidence) using parametric method. At zero
         // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
@@ -1618,8 +1621,9 @@ impl MetricsExtractor for Surface {
             mean_of(&tail, op).map_err(risk_err)?
         };
 
-        // Beta calculation with optional market volatility
-        let beta = Decimal::ZERO; // TODO: Implement beta calculation
+        // The coefficient of variation: the population standard deviation,
+        // `volatility` here, over the mean, as `Curve` computes it (#824).
+        let coefficient_of_variation = coefficient_of_variation(volatility, mean, op)?;
 
         // Sharpe Ratio (assuming risk-free rate of 0). A flat surface has no
         // dispersion to divide by, which makes this the one field that is
@@ -1635,7 +1639,7 @@ impl MetricsExtractor for Surface {
             volatility,
             value_at_risk: var,
             expected_shortfall,
-            beta,
+            coefficient_of_variation,
             sharpe_ratio,
         })
     }
@@ -3727,8 +3731,8 @@ mod tests_metrics {
         // No sample falls below the VaR, so the conditional mean has an empty
         // tail and the function's own empty-tail rule gives zero.
         assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
-        // Not implemented yet, zero either way.
-        assert_eq!(metrics.beta, Decimal::ZERO);
+        // Zero dispersion over a mean of 5: a zero coefficient of variation.
+        assert_eq!(metrics.coefficient_of_variation, Decimal::ZERO);
         // `mean / 0` is the one genuinely undefined field.
         assert_eq!(metrics.sharpe_ratio, Decimal::ZERO);
     }
@@ -4590,5 +4594,66 @@ mod tests_surface_serde {
 
         let surface = result.unwrap();
         assert_eq!(surface.points.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod tests_coefficient_of_variation {
+    use super::*;
+    use crate::curves::{Curve, Point2D};
+    use crate::geometrics::MetricsExtractor;
+
+    /// A 3 x 3 grid whose `z` values are `z0 + 0..9`.
+    fn grid(z0: i64) -> Surface {
+        Surface::new(
+            (0..3i64)
+                .flat_map(|i| {
+                    (0..3i64).map(move |j| {
+                        Point3D::new(
+                            Decimal::from(i),
+                            Decimal::from(j),
+                            Decimal::from(z0 + i * 3 + j),
+                        )
+                    })
+                })
+                .collect(),
+        )
+    }
+
+    /// `z = 1..9`: mean 5, population standard deviation `sqrt(80 / 12)`,
+    /// so the coefficient of variation is `0.5163977794943222513572353866`,
+    /// correct to `Decimal`'s 28 places, where `beta` was a placeholder zero.
+    /// A curve over the same values gives the same digits: both compute it
+    /// as `std_dev / mean` (#824).
+    #[test]
+    fn test_risk_metrics_coefficient_of_variation_matches_the_curve() {
+        let surface = grid(1).compute_risk_metrics().unwrap();
+        assert_eq!(
+            surface.coefficient_of_variation,
+            dec!(0.5163977794943222513572353866)
+        );
+        let curve = Curve::new(
+            (1..=9i64)
+                .map(|y| Point2D::new(Decimal::from(y), Decimal::from(y)))
+                .collect(),
+        );
+        assert_eq!(
+            curve
+                .compute_risk_metrics()
+                .unwrap()
+                .coefficient_of_variation,
+            surface.coefficient_of_variation
+        );
+    }
+
+    /// `z = -4..4` has a zero mean: an error, not a zero (#824).
+    #[test]
+    fn test_risk_metrics_zero_mean_is_an_error() {
+        assert!(matches!(
+            grid(-4).compute_risk_metrics(),
+            Err(MetricsError::ZeroMean {
+                metric: "coefficient of variation"
+            })
+        ));
     }
 }

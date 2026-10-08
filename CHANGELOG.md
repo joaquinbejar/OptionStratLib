@@ -16,6 +16,47 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`RiskMetrics::beta` is `coefficient_of_variation`, computed the same
+  way for curves and surfaces, and a failed square root in the curve and
+  surface metrics is an error** (#824). By owner decision the field is
+  renamed rather than removed: it promised a sensitivity to market
+  returns, which no curve or surface has the data for, and held two
+  different things, `volatility / mean` on a `Curve` and a placeholder `0`
+  on a `Surface`.
+  - `coefficient_of_variation` is the population standard deviation (the
+    `std_dev` of `compute_basic_metrics`) over the mean, signed as the
+    mean, on both types. A zero mean, where it is undefined, is the new
+    `MetricsError::ZeroMean { metric: "coefficient of variation" }`, so
+    `compute_risk_metrics`, `compute_curve_metrics` and
+    `compute_surface_metrics` return that error for data with a zero mean
+    where they returned `beta = 0`. Empty data still reports every field
+    as zero.
+  - Values that change. A `Curve`'s value was `volatility / mean`, whose
+    `volatility` divides the sum of squared deviations `S` by `sqrt(n)`, so
+    the old value was the new one times `sqrt(S)`: for `y = 1..5`,
+    `1.4907119849998597976061157791` becomes
+    `0.4714045207910316829338962414` (`sqrt(2) / 3`), and for `y = 1..9`,
+    `4` becomes `0.5163977794943222513572353866`. A `Surface`'s value was
+    always `0` and is now the same quantity: `z = 1..9` gives
+    `0.5163977794943222513572353866`, digit for digit the curve's. A
+    constant curve or surface stays at `0`. `volatility` itself is
+    unchanged on both types, including the curve's `S / sqrt(n)` grouping.
+  - `d_sqrt(..).unwrap_or(..)` in `compute_basic_metrics`,
+    `compute_shape_metrics` and `compute_risk_metrics` of both types
+    reported a failed square root as a zero standard deviation or
+    volatility (or, in the shape metrics, a unit one). Each is now
+    `MetricsError::BasicError`, `ShapeError` or `RiskError`. A square root
+    of a variance fails only when its iteration overflows, so ordinary
+    data is unaffected.
+  - `test_verify_curve_metrics_failure` asserted `is_ok()` under a
+    `TODO`; it now asserts the `Ok(false)` the mismatched targets give, and
+    `Ok(true)` for the curve's own metrics.
+
+  Migration: rename `beta` to `coefficient_of_variation` in field reads and
+  `RiskMetrics { .. }` literals; handle `MetricsError::ZeroMean` (a
+  `match` on `MetricsError` needs the arm) where data can have a zero
+  mean; and do not read the new value as a market beta.
+
 - **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
   `Result`** (#810). `expiration_timestamp` returns `Result<i64,
   PositionError>` and `is_expired` returns `Result<bool, PositionError>`.

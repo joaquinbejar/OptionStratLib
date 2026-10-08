@@ -11,6 +11,7 @@ mod operations;
 
 mod analysis;
 
+pub(crate) use analysis::coefficient_of_variation;
 pub use analysis::{
     AnalysisResult, BasicMetrics, Metrics, MetricsExtractor, RangeMetrics, RiskMetrics,
     ShapeMetrics, TrendMetrics,

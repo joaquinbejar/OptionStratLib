@@ -84,14 +84,17 @@ pub trait MetricsExtractor: Len {
     /// Computes risk-related metrics for the curve.
     ///
     /// # Returns
-    /// - `Ok(RiskMetrics)`: Struct containing volatility, VaR, expected shortfall, beta, and Sharpe ratio.
+    /// - `Ok(RiskMetrics)`: Struct containing volatility, VaR, expected shortfall, coefficient of variation, and Sharpe ratio.
     /// - `Err(CurvesError)`: If metrics computation fails.
     ///
     /// # Errors
     ///
     /// Returns [`MetricsError::RiskError`] when the sample cannot
     /// support VaR/ES estimation (fewer than the required quantile
-    /// sample count) or when the Sharpe ratio denominator is zero.
+    /// sample count), when the Sharpe ratio denominator is zero, or when a
+    /// checked step (including a square root) fails, and
+    /// [`MetricsError::ZeroMean`] when the values have a zero mean, where
+    /// the coefficient of variation is undefined (#824).
     fn compute_risk_metrics(&self) -> Result<RiskMetrics, MetricsError>;
 
     /// Computes and aggregates all curve metrics into a comprehensive `CurveMetrics` struct.
@@ -138,6 +141,8 @@ pub trait MetricsExtractor: Len {
     /// - `MetricsError::RangeError` - If range metrics computation fails
     /// - `MetricsError::TrendError` - If trend metrics computation fails
     /// - `MetricsError::RiskError` - If risk metrics computation fails
+    /// - `MetricsError::ZeroMean` - If the values have a zero mean, where the
+    ///   coefficient of variation of the risk metrics is undefined
     ///
     fn compute_surface_metrics(&self) -> Result<Metrics, MetricsError> {
         let basic = self.compute_basic_metrics()?;
@@ -216,7 +221,7 @@ mod tests {
                 volatility: dec!(0.15),
                 value_at_risk: dec!(0.05),
                 expected_shortfall: dec!(0.07),
-                beta: dec!(1.2),
+                coefficient_of_variation: dec!(1.2),
                 sharpe_ratio: dec!(2.5),
             })
         }
@@ -323,7 +328,7 @@ mod tests {
             assert_eq!(metrics.volatility, dec!(0.15));
             assert_eq!(metrics.value_at_risk, dec!(0.05));
             assert_eq!(metrics.expected_shortfall, dec!(0.07));
-            assert_eq!(metrics.beta, dec!(1.2));
+            assert_eq!(metrics.coefficient_of_variation, dec!(1.2));
             assert_eq!(metrics.sharpe_ratio, dec!(2.5));
         }
 
