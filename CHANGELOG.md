@@ -1812,6 +1812,26 @@ summarize the release.
 
 ### Fixed
 
+- **A spread put struck near zero prices as the put, not the Margrabe
+  call** (#852). For a strike below `1e-4`, `spread_black_scholes`
+  switched to Margrabe's exchange formula `max(S1 - S2, 0)` for both
+  styles, so the put was priced as the call and, at expiry, differed from
+  its payoff `max(S2 - S1, 0)`.
+  - **The fix.** The put now uses Margrabe on the swapped assets, the
+    option to exchange `S1` for `S2`. The call, every strike from `1e-4`
+    up (Kirk), and every T > 0 call are unchanged.
+  - **Values** with `S2 = 100`, `σ1 = 20 %`, `σ2 = 25 %`, `ρ = 0.5`,
+    `r = 5 %`, `q = 0`, `K = 0`:
+    - put at `S1 = 105`, 90 days: 7.5706 → 2.5706;
+    - put at `S1 = 95`, 90 days: 2.3646 → 7.3646;
+    - put at expiry: 5 → 0 for `S1 = 105`, and 0 → 5 for `S1 = 95`.
+  - **Tests.**
+    - Both styles equal `OptionType::payoff` at expiry.
+    - The exchange put-call parity `C - P = S1 e^(-q1 T) - S2 e^(-q2 T)`
+      holds at `K = 0` and `K = 5e-5` with unequal dividend yields, and is
+      within `K` of the full parity.
+    - The put is continuous across the `1e-4` threshold.
+
 - **Compound options are priced by the Geske closed form they claim, and
   the price is continuous at expiry** (#845).
   - **The bug.** A put with `S = 105`, `K = 100` was priced near 62.3 at

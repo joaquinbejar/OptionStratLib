@@ -29,6 +29,11 @@ use rust_decimal_macros::dec;
 
 /// Prices a Spread option using Kirk's approximation or Margrabe's formula.
 ///
+/// A strike below `1e-4` in absolute value is treated as zero: the call is
+/// Margrabe's option to exchange `S2` for `S1`, and the put the option to
+/// exchange `S1` for `S2` (Margrabe on the swapped assets). Otherwise both
+/// styles use Kirk's approximation.
+///
 /// # Arguments
 ///
 /// * `option` - The option to price. Must have `OptionType::Spread`.
@@ -92,16 +97,32 @@ pub fn spread_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     let t = Decimal::from(option.expiration_date.get_years()?);
 
     let price = if k.abs() < dec!(0.0001) {
-        margrabe_formula(
-            s1,
-            s2,
-            q1,
-            Decimal::from(q2),
-            sigma1,
-            Decimal::from(sigma2),
-            rho,
-            t,
-        )?
+        // With no strike the spread is an exchange option: the call
+        // exchanges `S2` for `S1`, `max(S1 - S2, 0)`, and the put the other
+        // way, `max(S2 - S1, 0)`, which is Margrabe's formula on the swapped
+        // assets. Both styles used to take the call (#852).
+        match option.option_style {
+            OptionStyle::Call => margrabe_formula(
+                s1,
+                s2,
+                q1,
+                Decimal::from(q2),
+                sigma1,
+                Decimal::from(sigma2),
+                rho,
+                t,
+            )?,
+            OptionStyle::Put => margrabe_formula(
+                s2,
+                s1,
+                Decimal::from(q2),
+                q1,
+                Decimal::from(sigma2),
+                sigma1,
+                rho,
+                t,
+            )?,
+        }
     } else {
         kirk_approximation(
             s1,
@@ -676,6 +697,131 @@ mod tests {
             price > dec!(0.0),
             "Exchange option (K=0) should have positive value"
         );
+    }
+
+    /// A spread with the given spots, strike, style, expiry in days and
+    /// dividend yields `q1`, `q2`.
+    fn spread_with(
+        spot1: f64,
+        spot2: f64,
+        strike: Positive,
+        style: OptionStyle,
+        days: f64,
+        q1: Positive,
+        q2: Positive,
+    ) -> Options {
+        let mut option = create_spread_option(strike, style);
+        option.option_type = OptionType::Spread {
+            second_asset: pos_or_panic!(spot2),
+        };
+        option.underlying_price = pos_or_panic!(spot1);
+        option.expiration_date = ExpirationDate::Days(pos_or_panic!(days));
+        option.dividend_yield = q1;
+        if let Some(params) = option.exotic_params.as_mut() {
+            params.spread_second_asset_dividend = Some(q2);
+        }
+        option
+    }
+
+    /// At expiry a spread struck at zero pays `max(S1 - S2, 0)` as a call
+    /// and `max(S2 - S1, 0)` as a put, the contract payoff. The put used to
+    /// take the call's exchange option and pay `max(S1 - S2, 0)` (#852).
+    #[test]
+    fn test_zero_strike_spread_at_expiry_is_the_payoff() {
+        use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
+        for (spot1, spot2) in [(105.0, 100.0), (95.0, 100.0)] {
+            for style in [OptionStyle::Call, OptionStyle::Put] {
+                let option = spread_with(
+                    spot1,
+                    spot2,
+                    Positive::ZERO,
+                    style,
+                    0.0,
+                    Positive::ZERO,
+                    Positive::ZERO,
+                );
+                let payoff = option
+                    .option_type
+                    .payoff(&PayoffInfo {
+                        spot: option.underlying_price,
+                        strike: option.strike_price,
+                        style,
+                        side: Side::Long,
+                        spot_prices: None,
+                        spot_min: None,
+                        spot_max: None,
+                        exotic_params: option.exotic_params.clone(),
+                    })
+                    .unwrap();
+                let expected = match style {
+                    OptionStyle::Call => (spot1 - spot2).max(0.0),
+                    OptionStyle::Put => (spot2 - spot1).max(0.0),
+                };
+                assert_eq!(payoff, Decimal::from_f64_retain(expected).unwrap());
+                assert_eq!(
+                    spread_black_scholes(&option).unwrap(),
+                    payoff,
+                    "S1={spot1} S2={spot2} {style:?}"
+                );
+            }
+        }
+    }
+
+    /// Put-call parity for a spread struck near zero, which prices as an
+    /// exchange option: `C - P = S1 e^(-q1 T) - S2 e^(-q2 T)`. The branch
+    /// ignores a strike below `1e-4`, so against the full parity
+    /// `C - P = S1 e^(-q1 T) - S2 e^(-q2 T) - K e^(-rT)` the gap is at most
+    /// `K`. With both styles on the call the difference was zero (#852).
+    #[test]
+    fn test_small_strike_spread_put_call_parity() {
+        let q1 = pos_or_panic!(0.01);
+        let q2 = pos_or_panic!(0.03);
+        for strike in [Positive::ZERO, pos_or_panic!(0.00005)] {
+            for (spot1, spot2) in [(105.0, 100.0), (95.0, 100.0)] {
+                let call = spread_with(spot1, spot2, strike, OptionStyle::Call, 90.0, q1, q2);
+                let put = spread_with(spot1, spot2, strike, OptionStyle::Put, 90.0, q1, q2);
+                let call_price = spread_black_scholes(&call).unwrap();
+                let put_price = spread_black_scholes(&put).unwrap();
+                let t = Decimal::from(call.expiration_date.get_years().unwrap());
+                let s1_pv = Decimal::from_f64_retain(spot1).unwrap() * (-q1.to_dec() * t).exp();
+                let s2_pv = Decimal::from_f64_retain(spot2).unwrap() * (-q2.to_dec() * t).exp();
+                let exchange_gap = (call_price - put_price - (s1_pv - s2_pv)).abs();
+                assert!(
+                    exchange_gap < dec!(0.000000001),
+                    "K={strike} S1={spot1}: C={call_price} P={put_price}, gap {exchange_gap}"
+                );
+                let k_pv = strike.to_dec() * (-call.risk_free_rate * t).exp();
+                let full_gap = (call_price - put_price - (s1_pv - s2_pv - k_pv)).abs();
+                assert!(full_gap <= strike.to_dec() + dec!(0.000000001));
+            }
+        }
+    }
+
+    /// Across the `1e-4` threshold the put moves from Kirk to the exchange
+    /// put without a jump: Kirk tends to Margrabe as the strike vanishes.
+    #[test]
+    fn test_spread_put_is_continuous_across_the_zero_strike_threshold() {
+        let below = spread_with(
+            105.0,
+            100.0,
+            pos_or_panic!(0.00009),
+            OptionStyle::Put,
+            90.0,
+            Positive::ZERO,
+            Positive::ZERO,
+        );
+        let above = spread_with(
+            105.0,
+            100.0,
+            pos_or_panic!(0.00011),
+            OptionStyle::Put,
+            90.0,
+            Positive::ZERO,
+            Positive::ZERO,
+        );
+        let gap =
+            (spread_black_scholes(&below).unwrap() - spread_black_scholes(&above).unwrap()).abs();
+        assert!(gap < dec!(0.001), "gap {gap}");
     }
 
     #[test]
