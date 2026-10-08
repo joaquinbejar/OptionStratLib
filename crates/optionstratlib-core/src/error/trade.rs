@@ -36,6 +36,20 @@ pub enum TradeError {
         /// A description explaining why the trade status is invalid.
         reason: String,
     },
+
+    /// Error indicating that a monetary figure of a trade (its cost, income
+    /// or net) left the representable range.
+    ///
+    /// The premium, the contract size, the fee and the quantity are public
+    /// `Positive` fields, so their product can overflow even though each
+    /// value is valid on its own.
+    #[error("Trade arithmetic overflow in {operation}: {reason}")]
+    ArithmeticOverflow {
+        /// The computation that overflowed, for example `"Trade::cost"`.
+        operation: &'static str,
+        /// The underlying arithmetic error.
+        reason: String,
+    },
 }
 
 /// Helper methods for creating trading-related errors
@@ -84,6 +98,26 @@ impl TradeError {
             reason: reason.to_string(),
         }
     }
+
+    /// Creates an arithmetic overflow error for `operation`.
+    ///
+    /// # Parameters
+    ///
+    /// * `operation` - The computation that overflowed
+    /// * `reason` - The underlying arithmetic error
+    ///
+    /// # Returns
+    ///
+    /// A `TradeError::ArithmeticOverflow` variant
+    #[must_use]
+    #[cold]
+    #[inline(never)]
+    pub fn arithmetic_overflow(operation: &'static str, reason: impl std::fmt::Display) -> Self {
+        TradeError::ArithmeticOverflow {
+            operation,
+            reason: reason.to_string(),
+        }
+    }
 }
 
 impl From<&str> for TradeError {
@@ -111,6 +145,22 @@ mod tests_trade_errors {
         };
 
         assert_eq!(error.to_string(), "Invalid trade: Trade is not valid");
+    }
+
+    #[test]
+    fn test_trade_error_arithmetic_overflow_names_operation() {
+        let error = TradeError::arithmetic_overflow("Trade::cost", "overflow");
+        assert!(matches!(
+            error,
+            TradeError::ArithmeticOverflow {
+                operation: "Trade::cost",
+                ..
+            }
+        ));
+        assert_eq!(
+            error.to_string(),
+            "Trade arithmetic overflow in Trade::cost: overflow"
+        );
     }
 
     #[test]

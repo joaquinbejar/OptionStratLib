@@ -75,7 +75,9 @@ use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::shared::spot_leg_mark_to_market;
-use crate::strategies::shared::{apply_hedge_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
+};
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -87,7 +89,7 @@ use optionstratlib_core::error::position::PositionValidationErrorKind;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
@@ -127,6 +129,15 @@ pub const COLLAR_DESCRIPTION: &str = "A collar is a protective options strategy 
 /// - **Maximum Profit**: (Call Strike - Cost Basis) + Net Premium
 /// - **Maximum Loss**: (Cost Basis - Put Strike) - Net Premium
 /// - **Break-even**: Cost Basis - Net Premium (if credit) or + Net Premium (if debit)
+///
+/// These hold when each option leg covers the shares one for one
+/// (`quantity × contract_size` equal to the spot quantity), as `Collar::new`
+/// and `BasicAble::set_contract_size` build them. A leg resized to cover
+/// fewer or more units changes the slope beyond its strike: an under-hedged
+/// put leaves the uncovered shares falling to zero, an under-covered call
+/// leaves the profit unbounded, an over-covered call the loss. The
+/// break-evens, max profit and max loss and the profit and loss zones then
+/// follow the expiry P&L for that cover.
 ///
 /// # Greeks
 ///
@@ -450,24 +461,39 @@ impl Collar {
         )?)
     }
 
-    /// Calculates the maximum profit potential.
+    /// Calculates the maximum profit potential, floored at zero.
     ///
     /// Max Profit = (Call Strike - Cost Basis) × Quantity + Net Premium - Fees
+    /// when both option legs cover the shares exactly, so the call caps the
+    /// gain at its strike.
+    ///
+    /// A leg that does not cover the shares changes the slope beyond its
+    /// strike: `N - Q` above the call strike for `Q` call units against `N`
+    /// shares, `N - P` below the put strike for `P` put units. A call that
+    /// covers fewer units than the shares leaves the profit unbounded, which
+    /// is reported as `Positive::MAX`. Otherwise the expiry P&L is piecewise
+    /// linear and peaks at zero, at the put strike or at the call strike, and
+    /// the largest of the three is reported.
     ///
     /// # Errors
     ///
-    /// Currently infallible — both branches compute
-    /// `Positive::new_decimal(total_profit.max(Decimal::ZERO))
-    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
-    /// clamped to `Positive::ZERO` rather than surfaced as an error.
-    /// The `Result` signature is retained so future implementations
-    /// that add checked arithmetic or validate the
-    /// `call_strike ≥ cost_basis` precondition can return
-    /// `PricingError::MethodError` without a breaking change.
+    /// Returns [`PricingError`] when a leg's size, premium or fees, or the
+    /// expiry P&L at a strike, leaves the `Positive` or `Decimal` range.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
+        let (put_units, call_units) = self.hedge_units()?;
+        if put_units != quantity || call_units != quantity {
+            if call_units < quantity {
+                return Ok(Positive::MAX);
+            }
+            let best = self
+                .profit_at_kinks()?
+                .into_iter()
+                .fold(Decimal::MIN, Decimal::max);
+            return Ok(Positive::new_decimal(best.max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+        }
         let net_premium = self.net_premium()?;
         let total_fees = self.total_fees()?;
 
@@ -491,24 +517,40 @@ impl Collar {
         }
     }
 
-    /// Calculates the maximum loss potential.
+    /// Calculates the maximum loss potential, floored at zero.
     ///
     /// Max Loss = (Cost Basis - Put Strike) × Quantity - Net Premium + Fees
+    /// when both option legs cover the shares exactly, so the put floors the
+    /// loss at its strike.
+    ///
+    /// A call that covers more units than the shares is net short above its
+    /// strike and its loss is unbounded, which is reported as
+    /// `Positive::MAX`. Otherwise the expiry P&L bottoms out at zero, at the
+    /// put strike or at the call strike: an under-hedged put leaves the
+    /// unprotected shares falling to zero, and the deepest of the three is
+    /// reported.
     ///
     /// # Errors
     ///
-    /// Currently infallible — both branches compute
-    /// `Positive::new_decimal(total_loss.max(Decimal::ZERO))
-    /// .unwrap_or(Positive::ZERO)`, so negative decompositions are
-    /// clamped to `Positive::ZERO` rather than surfaced as an error.
-    /// The `Result` signature is retained so future implementations
-    /// that add checked arithmetic or validate the
-    /// `cost_basis ≥ put_strike` precondition can return
-    /// `PricingError::MethodError` without a breaking change.
+    /// Returns [`PricingError`] when a leg's size, premium or fees, or the
+    /// expiry P&L at a strike, leaves the `Positive` or `Decimal` range.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
+        let (put_units, call_units) = self.hedge_units()?;
+        if put_units != quantity || call_units != quantity {
+            if call_units > quantity {
+                return Ok(Positive::MAX);
+            }
+            let worst = self
+                .profit_at_kinks()?
+                .into_iter()
+                .fold(Decimal::MAX, Decimal::min);
+            // `Decimal` is symmetric, so negating a representable value is
+            // itself representable.
+            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+        }
         let net_premium = self.net_premium()?;
         let total_fees = self.total_fees()?;
 
@@ -548,6 +590,59 @@ impl Collar {
             .checked_add(&self.spot_leg.close_fee)?
             .checked_add(&self.long_put.fees()?)?
             .checked_add(&self.short_call.fees()?)?)
+    }
+
+    /// The units of the underlying each option leg covers, `quantity ×
+    /// contract_size`, as `(put, call)`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError`] when a leg's size leaves the `Positive`
+    /// range.
+    fn hedge_units(&self) -> Result<(Positive, Positive), PricingError> {
+        Ok((
+            self.long_put.option.position_size()?,
+            self.short_call.option.position_size()?,
+        ))
+    }
+
+    /// Whether both option legs cover the shares exactly.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Collar::hedge_units`].
+    fn is_exact_hedge(&self) -> Result<bool, PricingError> {
+        let (put_units, call_units) = self.hedge_units()?;
+        let shares = self.spot_leg.quantity;
+        Ok(put_units == shares && call_units == shares)
+    }
+
+    /// The expiry P&L at the points where its slope can change: zero, the
+    /// put strike and the call strike.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Profit::calculate_profit_at`].
+    fn profit_at_kinks(&self) -> Result<[Decimal; 3], PricingError> {
+        Ok([
+            self.calculate_profit_at(&Positive::ZERO)?,
+            self.calculate_profit_at(&self.put_strike())?,
+            self.calculate_profit_at(&self.call_strike())?,
+        ])
+    }
+
+    /// The profit and loss zones of a collar whose legs do not cover the
+    /// shares exactly, cut at the break-evens.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`expiry_zones`].
+    fn mismatched_hedge_zones(
+        &self,
+    ) -> Result<(Vec<ProfitLossRange>, Vec<ProfitLossRange>), ProbabilityError> {
+        expiry_zones(&self.break_even_points, self.spot_leg.cost_basis, |price| {
+            self.calculate_profit_at(price)
+        })
     }
 
     /// Checks if the put is currently in-the-money.
@@ -614,8 +709,26 @@ impl BreakEvenable for Collar {
         Ok(&self.break_even_points)
     }
 
+    /// The zeros of the expiry P&L. With `N` shares bought at `C`, a put of
+    /// `P` units struck at `Kp`, a call of `Q` units struck at `Kc` (units
+    /// are `quantity × contract_size`), net premium `NP` (credit positive)
+    /// and total fees `F`:
+    ///
+    /// - between the strikes, `N (S - C) + NP - F`, zero at
+    ///   `S = C - (NP - F) / N`;
+    /// - below the put strike, `(N - P) S - N C + P Kp + NP - F`, zero at
+    ///   `S = (N C - P Kp - NP + F) / (N - P)` when `P != N`;
+    /// - above the call strike, `(N - Q) S - N C + Q Kc + NP - F`, zero at
+    ///   `S = (N C - Q Kc - NP + F) / (N - Q)` when `Q != N`.
+    ///
+    /// When both legs cover the shares exactly the single break-even
+    /// `C - (NP - F) / N` is recorded wherever it falls, as before. Otherwise
+    /// each zero is recorded only inside its own region, in ascending order.
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points.clear();
+        if !self.is_exact_hedge()? {
+            return self.update_mismatched_break_even_points();
+        }
 
         // Break-even = Cost Basis - Net Premium per Share
         let net_premium_per_share = d_div(
@@ -647,6 +760,86 @@ impl BreakEvenable for Collar {
             self.break_even_points.push(be.checked_round_to(2)?);
         }
 
+        Ok(())
+    }
+}
+
+impl Collar {
+    /// The break-evens of a collar whose option legs do not both cover the
+    /// shares exactly; see [`BreakEvenable::update_break_even_points`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError`] when a leg's size, the premium, the fees or
+    /// a step of the arithmetic leaves the `Positive` or `Decimal` range.
+    fn update_mismatched_break_even_points(&mut self) -> Result<(), StrategyError> {
+        let shares = self.spot_leg.quantity.to_dec();
+        let entry_price = self.spot_leg.cost_basis.to_dec();
+        let (put_units, call_units) = self.hedge_units()?;
+        let (put_units, call_units) = (put_units.to_dec(), call_units.to_dec());
+        let put_strike = self.put_strike().to_dec();
+        let call_strike = self.call_strike().to_dec();
+        // NP - F: what the options and the fees add to the shares' P&L.
+        let carry = d_sub(
+            self.net_premium()?,
+            self.total_fees()?.to_dec(),
+            "Collar::break_even/carry",
+        )?;
+        // N C - NP + F, the constant every region's zero starts from.
+        let basis = d_sub(
+            d_mul(shares, entry_price, "Collar::break_even/basis")?,
+            carry,
+            "Collar::break_even/basis_net",
+        )?;
+
+        let mut zeros = Vec::with_capacity(3);
+        if put_units != shares {
+            // (N C - P Kp - NP + F) / (N - P), below the put strike.
+            let below = d_div(
+                d_sub(
+                    basis,
+                    d_mul(put_units, put_strike, "Collar::break_even/floor")?,
+                    "Collar::break_even/below_numerator",
+                )?,
+                d_sub(shares, put_units, "Collar::break_even/below_slope")?,
+                "Collar::break_even/below",
+            )?;
+            if below >= Decimal::ZERO && below < put_strike {
+                zeros.push(below);
+            }
+        }
+
+        // C - (NP - F) / N, between the strikes.
+        let middle = d_sub(
+            entry_price,
+            d_div(carry, shares, "Collar::break_even/carry_per_share")?,
+            "Collar::break_even/middle",
+        )?;
+        if middle >= put_strike && middle <= call_strike {
+            zeros.push(middle);
+        }
+
+        if call_units != shares {
+            // (N C - Q Kc - NP + F) / (N - Q), above the call strike.
+            let above = d_div(
+                d_sub(
+                    basis,
+                    d_mul(call_units, call_strike, "Collar::break_even/cap")?,
+                    "Collar::break_even/above_numerator",
+                )?,
+                d_sub(shares, call_units, "Collar::break_even/above_slope")?,
+                "Collar::break_even/above",
+            )?;
+            if above > call_strike {
+                zeros.push(above);
+            }
+        }
+
+        for zero in zeros {
+            if let Ok(be) = Positive::new_decimal(zero) {
+                self.break_even_points.push(be.checked_round_to(2)?);
+            }
+        }
         Ok(())
     }
 }
@@ -958,7 +1151,20 @@ impl Optimizable for Collar {
 impl crate::strategies::StrategyConstructor for Collar {}
 
 impl ProbabilityAnalysis for Collar {
+    /// With both legs covering the shares exactly the profit zone runs from
+    /// the break-even to the call strike. A mismatched leg lets the P&L cross
+    /// zero beyond a strike too, and the zones then follow the sign of the
+    /// expiry P&L between the break-evens.
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_hedge()? {
+            let (mut profit, _) = self.mismatched_hedge_zones()?;
+            price_zones(
+                &mut profit,
+                &self.spot_leg.cost_basis,
+                &self.short_call.option,
+            )?;
+            return Ok(profit);
+        }
         let break_even_point =
             self.break_even_points
                 .first()
@@ -992,7 +1198,15 @@ impl ProbabilityAnalysis for Collar {
         Ok(vec![profit_range])
     }
 
+    /// With both legs covering the shares exactly the loss zone runs from the
+    /// put strike up to the break-even. A mismatched leg follows the sign of
+    /// the expiry P&L, as in [`ProbabilityAnalysis::get_profit_ranges`].
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_hedge()? {
+            let (_, mut loss) = self.mismatched_hedge_zones()?;
+            price_zones(&mut loss, &self.spot_leg.cost_basis, &self.long_put.option)?;
+            return Ok(loss);
+        }
         let break_even_point =
             self.break_even_points
                 .first()

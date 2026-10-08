@@ -24,7 +24,9 @@ use crate::strategies::base::price_gap;
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::shared::spot_leg_mark_to_market;
-use crate::strategies::shared::{apply_hedge_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
+};
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -57,6 +59,13 @@ pub const PROTECTIVE_PUT_DESCRIPTION: &str = "A protective put (married put) is 
     same asset. This provides downside protection while maintaining unlimited upside potential.";
 
 /// Represents a Protective Put options trading strategy.
+///
+/// The put normally covers the shares one for one (`quantity ×
+/// contract_size` equal to the spot quantity), which floors the loss at the
+/// strike. A put resized to cover fewer units leaves the uncovered shares
+/// falling to zero, and one that covers more gains on a deep fall: the
+/// break-evens, the max loss and the profit and loss zones follow the expiry
+/// P&L for that cover.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ProtectivePut {
@@ -236,21 +245,31 @@ impl ProtectivePut {
         Ok(d_add(spot_delta, put_delta, "ProtectivePut::net_delta")?)
     }
 
-    /// Calculates the maximum loss potential.
+    /// Calculates the maximum loss potential: the deepest point of the expiry
+    /// P&L, floored at zero.
+    ///
+    /// With `N` shares bought at `C`, a put of `U = quantity × contract_size`
+    /// units struck at `K` bought at `p` per unit, and total fees `F`, the
+    /// expiry P&L rises with slope `N` above the strike and `N - U` below it,
+    /// so its minimum sits at the strike or at zero:
+    ///
+    /// - a put that covers the shares (`U >= N`) floors the P&L at the
+    ///   strike: `N (C - K) + U p + F`. An over-hedged put gains on a deeper
+    ///   fall, so the strike is still the worst case;
+    /// - an under-hedged put (`U < N`) leaves `N - U` shares unprotected all
+    ///   the way down: `N C - U K + U p + F`, reached at zero.
+    ///
+    /// An exact hedge gives the same figure on both readings.
     ///
     /// # Errors
     ///
-    /// Currently infallible — both branches compute
-    /// `Positive::new_decimal(total_loss.max(Decimal::ZERO))
-    /// .unwrap_or(Positive::ZERO)`, so any negative decomposition is
-    /// clamped to `Positive::ZERO` rather than surfaced as an error.
-    /// The `Result` signature is retained so future implementations
-    /// that add checked arithmetic or validate the strike layout can
-    /// return `PricingError::MethodError` without a breaking change.
+    /// Returns [`PricingError`] when the put's size, its premium, the fees or
+    /// a sum or product of them leaves the `Positive` or `Decimal` range.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
+        let put_units = self.long_put.option.position_size()?;
         let put_premium = self
             .long_put
             .premium
@@ -258,7 +277,31 @@ impl ProtectivePut {
             .checked_mul(&self.long_put.option.quantity)?;
         let total_fees = self.total_fees()?;
 
-        if cost_basis >= put_strike {
+        if put_units < quantity {
+            // N C - U K + U p + F: the unhedged shares fall to zero.
+            let total_loss = d_add(
+                d_add(
+                    d_sub(
+                        d_mul(
+                            quantity.to_dec(),
+                            cost_basis.to_dec(),
+                            "ProtectivePut::max_loss/basis",
+                        )?,
+                        d_mul(
+                            put_units.to_dec(),
+                            put_strike.to_dec(),
+                            "ProtectivePut::max_loss/floor",
+                        )?,
+                        "ProtectivePut::max_loss/unhedged",
+                    )?,
+                    put_premium.to_dec(),
+                    "ProtectivePut::max_loss",
+                )?,
+                total_fees.to_dec(),
+                "ProtectivePut::max_loss",
+            )?;
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+        } else if cost_basis >= put_strike {
             let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
             let total_loss = d_add(
                 d_add(
@@ -365,6 +408,31 @@ impl ProtectivePut {
                 RoundingStrategy::MidpointNearestEven,
             )?;
         self.spot_leg.cost_basis.checked_add(&premium_per_share)
+    }
+
+    /// Whether the put covers the shares exactly: `quantity × contract_size`
+    /// units of the underlying against the spot leg's share count.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError`] when the put's size leaves the `Positive`
+    /// range.
+    fn is_exact_hedge(&self) -> Result<bool, PricingError> {
+        Ok(self.long_put.option.position_size()? == self.spot_leg.quantity)
+    }
+
+    /// The profit and loss zones of a put that does not cover the shares
+    /// exactly, cut at the break-evens.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`expiry_zones`].
+    fn mismatched_hedge_zones(
+        &self,
+    ) -> Result<(Vec<ProfitLossRange>, Vec<ProfitLossRange>), ProbabilityError> {
+        expiry_zones(&self.break_even_points, self.spot_leg.cost_basis, |price| {
+            self.calculate_profit_at(price)
+        })
     }
 
     /// Checks if the put is out-of-the-money.
@@ -712,7 +780,20 @@ impl Optimizable for ProtectivePut {
 impl crate::strategies::StrategyConstructor for ProtectivePut {}
 
 impl ProbabilityAnalysis for ProtectivePut {
+    /// With an exact hedge the profit zone runs from the break-even up. A put
+    /// that covers more or fewer units than the shares can cross zero below
+    /// the strike as well, and the zones then follow the sign of the expiry
+    /// P&L between the break-evens.
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_hedge()? {
+            let (mut profit, _) = self.mismatched_hedge_zones()?;
+            price_zones(
+                &mut profit,
+                &self.spot_leg.cost_basis,
+                &self.long_put.option,
+            )?;
+            return Ok(profit);
+        }
         let break_even_point =
             self.break_even_points
                 .first()
@@ -737,7 +818,15 @@ impl ProbabilityAnalysis for ProtectivePut {
         Ok(vec![profit_range])
     }
 
+    /// With an exact hedge the loss zone runs from the strike, where the put
+    /// floors the loss, up to the break-even. A mismatched hedge follows the
+    /// sign of the expiry P&L, as in [`ProbabilityAnalysis::get_profit_ranges`].
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_hedge()? {
+            let (_, mut loss) = self.mismatched_hedge_zones()?;
+            price_zones(&mut loss, &self.spot_leg.cost_basis, &self.long_put.option)?;
+            return Ok(loss);
+        }
         let break_even_point =
             self.break_even_points
                 .first()

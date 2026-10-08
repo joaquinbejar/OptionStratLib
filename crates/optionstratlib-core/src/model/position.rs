@@ -25,6 +25,22 @@ use tracing::debug;
 /// when the position was opened. It provides methods for analyzing profitability, time metrics,
 /// and position characteristics.
 ///
+/// # Contract size
+///
+/// The option's `quantity` counts contracts of `contract_size` units of the
+/// underlying (see [`Options::position_size`]):
+///
+/// - `premium` is quoted per unit of the underlying, so one contract pays or
+///   receives `premium × contract_size` and the position
+///   `premium × contract_size × quantity`;
+/// - `open_fee` and `close_fee` are per contract and scale with `quantity`
+///   only;
+/// - payoff, P&L and Greeks are per position, scaled by
+///   `quantity × contract_size`;
+/// - [`TradeAble::trade`] records the per-unit premium and copies the
+///   contract size into the [`Trade`], whose `cost`, `income` and `net` apply
+///   the same rules.
+///
 /// # Examples
 ///
 /// ```rust
@@ -39,7 +55,7 @@ use tracing::debug;
 /// let option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
 /// let position = Position::new(
 ///     option,
-///     pos_or_panic!(5.25),           // premium per contract
+///     pos_or_panic!(5.25),           // premium per unit of the underlying
 ///     Utc::now(),           // position open date
 ///     pos_or_panic!(0.65),           // opening fee per contract
 ///     pos_or_panic!(0.65),           // closing fee per contract
@@ -2647,16 +2663,16 @@ mod tests_position_contract_size {
         assert_eq!(trade.fee, Positive::ONE);
         assert_eq!(trade.quantity, Positive::TWO);
         // Bought long: (5 × 100 + 1) × 2.
-        assert_eq!(trade.cost(), pos_or_panic!(1002.0));
-        assert_eq!(trade.income(), Positive::ZERO);
-        assert_eq!(trade.net(), dec!(-1002));
+        assert_eq!(trade.cost().unwrap(), pos_or_panic!(1002.0));
+        assert_eq!(trade.income().unwrap(), Positive::ZERO);
+        assert_eq!(trade.net().unwrap(), dec!(-1002));
         let Ok(sold) = sized_call(Side::Short, Positive::HUNDRED).trade() else {
             panic!("trade builds");
         };
         let mut sold = sold;
         sold.action = Action::Sell;
         // Sold short: the cost carries the premium and the fees.
-        assert_eq!(sold.cost(), pos_or_panic!(1002.0));
+        assert_eq!(sold.cost().unwrap(), pos_or_panic!(1002.0));
     }
 
     #[test]
@@ -2670,8 +2686,8 @@ mod tests_position_contract_size {
         lots.contract_size = Positive::ONE;
         lots.quantity = pos_or_panic!(200.0);
         lots.fee = pos_or_panic!(0.01);
-        assert_eq!(sized.cost(), lots.cost());
-        assert_eq!(sized.net(), lots.net());
+        assert_eq!(sized.cost().unwrap(), lots.cost().unwrap());
+        assert_eq!(sized.net().unwrap(), lots.net().unwrap());
     }
 
     #[test]

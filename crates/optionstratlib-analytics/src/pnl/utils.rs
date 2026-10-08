@@ -7,6 +7,7 @@
 pub use crate::pnl::PnLCalculator;
 use chrono::{DateTime, Utc};
 use optionstratlib_core::error::DecimalError;
+use optionstratlib_core::error::TradeError;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::Trade;
 use optionstratlib_core::model::decimal::d_add;
@@ -389,27 +390,32 @@ impl Add for &PnL {
     }
 }
 
-impl From<Trade> for PnL {
-    fn from(value: Trade) -> Self {
-        PnL {
-            realized: Some(value.net()),
-            unrealized: None,
-            initial_costs: value.cost(),
-            initial_income: value.income(),
-            date_time: value.datetime(),
-        }
+/// The P&L a trade realises on entry: its net cash flow, with its cost and
+/// income.
+///
+/// This was `From<Trade>` until the trade's monetary helpers became checked
+/// (#765): [`Trade::cost`], [`Trade::income`] and [`Trade::net`] multiply
+/// public `Positive` fields and can overflow.
+impl TryFrom<Trade> for PnL {
+    type Error = TradeError;
+
+    fn try_from(value: Trade) -> Result<Self, Self::Error> {
+        PnL::try_from(&value)
     }
 }
 
-impl From<&Trade> for PnL {
-    fn from(value: &Trade) -> Self {
-        PnL {
-            realized: Some(value.net()),
+/// The borrowed form of `PnL::try_from(trade)`.
+impl TryFrom<&Trade> for PnL {
+    type Error = TradeError;
+
+    fn try_from(value: &Trade) -> Result<Self, Self::Error> {
+        Ok(PnL {
+            realized: Some(value.net()?),
             unrealized: None,
-            initial_costs: value.cost(),
-            initial_income: value.income(),
+            initial_costs: value.cost()?,
+            initial_income: value.income()?,
             date_time: value.datetime(),
-        }
+        })
     }
 }
 
@@ -709,5 +715,60 @@ mod tests_total_pnl {
         );
 
         assert_eq!(pnl.total_pnl(), Some(dec!(300.0)));
+    }
+}
+
+#[cfg(test)]
+mod tests_try_from_trade {
+    use super::*;
+    use optionstratlib_core::model::TradeStatus;
+    use optionstratlib_core::model::types::{Action, OptionStyle, Side};
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    fn trade(premium: Positive) -> Trade {
+        Trade::new(
+            Default::default(),
+            Action::Buy,
+            Side::Long,
+            OptionStyle::Call,
+            pos_or_panic!(0.15),
+            None,
+            pos_or_panic!(180.0),
+            Utc::now(),
+            pos_or_panic!(3.0),
+            premium,
+            pos_or_panic!(185.0),
+            None,
+            TradeStatus::Open,
+        )
+        .with_contract_size(Positive::HUNDRED)
+    }
+
+    #[test]
+    fn test_pnl_try_from_trade_carries_cost_income_and_net() {
+        let trade = trade(pos_or_panic!(2.5));
+        let Ok(pnl) = PnL::try_from(&trade) else {
+            panic!("a representable trade converts");
+        };
+        // (2.50 × 100 + 0.15) × 3
+        assert_eq!(pnl.initial_costs, pos_or_panic!(750.45));
+        assert_eq!(pnl.initial_income, Positive::ZERO);
+        assert_eq!(pnl.realized, Some(dec!(-750.45)));
+        assert_eq!(pnl.unrealized, None);
+        assert_eq!(pnl.date_time, trade.datetime());
+
+        let Ok(owned) = PnL::try_from(trade.clone()) else {
+            panic!("a representable trade converts");
+        };
+        assert_eq!(owned, pnl);
+    }
+
+    #[test]
+    fn test_pnl_try_from_trade_overflow_is_an_error() {
+        assert!(matches!(
+            PnL::try_from(trade(Positive::MAX)),
+            Err(TradeError::ArithmeticOverflow { .. })
+        ));
     }
 }

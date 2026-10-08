@@ -160,11 +160,15 @@ pub fn optionstratlib_core::error::position::PositionError::invalid_position_upd
 pub fn optionstratlib_core::error::position::PositionError::strategy_full(&str, usize) -> Self
 pub fn optionstratlib_core::error::position::PositionError::unsupported_operation(&str, &str) -> Self
 pub enum optionstratlib_core::error::TradeError
+pub optionstratlib_core::error::TradeError::ArithmeticOverflow
+pub optionstratlib_core::error::TradeError::ArithmeticOverflow::operation: &'static str
+pub optionstratlib_core::error::TradeError::ArithmeticOverflow::reason: alloc::string::String
 pub optionstratlib_core::error::TradeError::InvalidTrade
 pub optionstratlib_core::error::TradeError::InvalidTrade::reason: alloc::string::String
 pub optionstratlib_core::error::TradeError::InvalidTradeStatus
 pub optionstratlib_core::error::TradeError::InvalidTradeStatus::reason: alloc::string::String
 impl optionstratlib_core::error::TradeError
+pub fn optionstratlib_core::error::TradeError::arithmetic_overflow(&'static str, impl core::fmt::Display) -> Self
 pub fn optionstratlib_core::error::TradeError::invalid_trade(&str) -> Self
 pub fn optionstratlib_core::error::TradeError::invalid_trade_status(&str) -> Self
 impl core::convert::From<&str> for optionstratlib_core::error::TradeError
@@ -951,13 +955,13 @@ pub optionstratlib_core::model::Trade::symbol: core::option::Option<alloc::strin
 pub optionstratlib_core::model::Trade::timestamp: i64
 pub optionstratlib_core::model::Trade::underlying_price: positive::positive::Positive
 impl optionstratlib_core::model::Trade
-pub fn optionstratlib_core::model::Trade::cost(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Trade::cost(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::datetime(&self) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
-pub fn optionstratlib_core::model::Trade::income(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Trade::income(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::is_closed(&self) -> bool
 pub fn optionstratlib_core::model::Trade::is_expired(&self) -> bool
 pub fn optionstratlib_core::model::Trade::is_open(&self) -> bool
-pub fn optionstratlib_core::model::Trade::net(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::Trade::net(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> Self
 pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>)
 pub fn optionstratlib_core::model::Trade::with_contract_size(self, positive::positive::Positive) -> Self

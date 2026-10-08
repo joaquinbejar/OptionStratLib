@@ -883,6 +883,18 @@ pub trait BasicAble {
     /// and re-express the option quantity and fees in contracts of the new
     /// size. Their payoff, premium and fees are unchanged.
     ///
+    /// After the call, every figure the strategy reports follows the
+    /// multiplier the way `Options` and `Position` do: payoff, P&L, max
+    /// profit and max loss and the Greeks are per strategy, for the whole
+    /// `quantity × contract_size` of each leg; the premium is per unit of the
+    /// underlying times that size; the fees are per contract. A trade taken
+    /// from a leg (`TradeAble::trade`) carries the size with it.
+    ///
+    /// A covered strategy whose option leg is later resized so that it no
+    /// longer covers the shares one for one (fewer or more units than the
+    /// shares) reports break-evens, max profit and max loss, and profit and
+    /// loss zones for that partial or excess cover.
+    ///
     /// Strategy rebuilds (`Optimizable::create_strategy`) use this to keep
     /// the contract size of the strategy they rebuild from.
     ///

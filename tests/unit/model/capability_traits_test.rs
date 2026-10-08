@@ -189,7 +189,7 @@ mod moved_trait_impls_still_resolve {
 }
 
 /// The leg Greeks and a trade's P&L reach the core types through their owning
-/// layers (#498): `greeks::LegGreeks` for the legs, `PnL::from(&Trade)` for a
+/// layers (#498): `greeks::LegGreeks` for the legs, `PnL::try_from(&Trade)` for a
 /// trade. Core keeps the data; nothing here needs `model` to import an upper
 /// layer.
 mod leg_greeks_and_trade_pnl_from_owning_layers {
@@ -226,7 +226,7 @@ mod leg_greeks_and_trade_pnl_from_owning_layers {
             None,
             TradeStatus::Open,
         );
-        let pnl = PnL::from(&trade);
-        assert_eq!(pnl.realized, Some(trade.net()));
+        let pnl = PnL::try_from(&trade).unwrap();
+        assert_eq!(pnl.realized, Some(trade.net().unwrap()));
     }
 }

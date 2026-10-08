@@ -115,6 +115,16 @@ pub trait TradeStatusAble {
 /// Represents a trade with detailed information such as action, side, option style,
 /// associated fees, and various metadata.
 ///
+/// # Contract size
+///
+/// A trade carries its own `contract_size`, so the record stays
+/// self-contained once the position it came from is gone. `premium` is
+/// quoted per unit of the underlying and `fee` per contract: the trade's
+/// premium is `premium × contract_size × quantity` and its fees
+/// `fee × quantity`. [`Trade::cost`], [`Trade::income`] and [`Trade::net`]
+/// combine them with checked arithmetic and return a
+/// [`TradeError::ArithmeticOverflow`] when the result leaves the
+/// representable range.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Trade {
     /// * `id` - A universally unique identifier (`UUID`) for the trade.
@@ -274,6 +284,34 @@ impl Trade {
             .unwrap_or_else(|| datetime.timestamp() * 1_000_000_000);
     }
 
+    /// The fees of the whole trade: the per-contract `fee` times `quantity`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::ArithmeticOverflow`] when the product leaves the
+    /// `Positive` range.
+    #[inline]
+    fn total_fees(&self) -> Result<Positive, TradeError> {
+        self.fee
+            .checked_mul(&self.quantity)
+            .map_err(|e| TradeError::arithmetic_overflow("Trade::fees", e))
+    }
+
+    /// The premium of the whole trade: the per-unit `premium` times
+    /// `contract_size × quantity`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TradeError::ArithmeticOverflow`] when the product leaves the
+    /// `Positive` range.
+    #[inline]
+    fn total_premium(&self) -> Result<Positive, TradeError> {
+        self.premium
+            .checked_mul(&self.contract_size)
+            .and_then(|per_contract| per_contract.checked_mul(&self.quantity))
+            .map_err(|e| TradeError::arithmetic_overflow("Trade::premium", e))
+    }
+
     /// Calculates the total cost associated with a transaction based on the action,
     /// side, fee, and premium.
     ///
@@ -292,17 +330,20 @@ impl Trade {
     ///   - `(Action::Buy, Side::Short)` or `(Action::Sell, Side::Long)`:
     ///     The cost includes only `fees`.
     ///
-    /// # Assumptions
-    /// - It assumes that `fee`, `premium`, and `quantity` are positive values.
-    /// - The `Positive` type enforces that the resulting cost is non-negative.
-    #[must_use]
-    pub fn cost(&self) -> Positive {
-        let fees = self.fee * self.quantity;
-        let premium = self.premium * self.contract_size * self.quantity;
+    /// # Errors
+    ///
+    /// Returns [`TradeError::ArithmeticOverflow`] when the fees, the premium
+    /// or their sum leaves the `Positive` range. Every field is a public
+    /// `Positive`, so the products can overflow even though each value is
+    /// valid on its own.
+    pub fn cost(&self) -> Result<Positive, TradeError> {
         match (self.action, self.side) {
-            (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => premium + fees,
-            (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => fees,
-            _ => Positive::ZERO,
+            (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => self
+                .total_premium()?
+                .checked_add(&self.total_fees()?)
+                .map_err(|e| TradeError::arithmetic_overflow("Trade::cost", e)),
+            (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => self.total_fees(),
+            _ => Ok(Positive::ZERO),
         }
     }
 
@@ -324,22 +365,21 @@ impl Trade {
     /// - A `Positive` value (equal to the computed `premium`): For combinations
     ///   where income is generated.
     ///
-    /// # Panics
-    /// This function does not explicitly handle invalid cases, so incorrect usage
-    /// (e.g., uninitialized fields or invalid state) may lead to runtime panics.
+    /// # Errors
+    ///
+    /// Returns [`TradeError::ArithmeticOverflow`] when `premium ×
+    /// contract_size × quantity` leaves the `Positive` range.
     ///
     /// # Dependencies
     /// This method relies on:
     /// - `Action` enum (expected values: `Buy`, `Sell`)
     /// - `Side` enum (expected values: `Long`, `Short`)
     /// - `Positive` type for representing non-negative values.
-    #[must_use]
-    pub fn income(&self) -> Positive {
-        let premium = self.quantity * self.contract_size * self.premium;
+    pub fn income(&self) -> Result<Positive, TradeError> {
         match (self.action, self.side) {
-            (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => Positive::ZERO,
-            (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => premium,
-            _ => Positive::ZERO,
+            (Action::Buy, Side::Long) | (Action::Sell, Side::Short) => Ok(Positive::ZERO),
+            (Action::Buy, Side::Short) | (Action::Sell, Side::Long) => self.total_premium(),
+            _ => Ok(Positive::ZERO),
         }
     }
 
@@ -354,9 +394,16 @@ impl Trade {
     /// - The `cost()` method is called to obtain the cost value, which is also converted to a `Decimal` using `to_dec()`.
     /// - The net value is computed as: `income.to_dec() - cost.to_dec()`.
     ///
-    #[must_use]
-    pub fn net(&self) -> Decimal {
-        self.income().to_dec() - self.cost().to_dec()
+    /// # Errors
+    ///
+    /// Propagates [`Trade::cost`] and [`Trade::income`], and returns
+    /// [`TradeError::ArithmeticOverflow`] when the difference leaves the
+    /// `Decimal` range.
+    pub fn net(&self) -> Result<Decimal, TradeError> {
+        self.income()?
+            .to_dec()
+            .checked_sub(self.cost()?.to_dec())
+            .ok_or_else(|| TradeError::arithmetic_overflow("Trade::net", "income - cost"))
     }
 
     /// Checks if the current trade status is `Open`.
@@ -593,16 +640,75 @@ mod tests {
     fn test_trade_contract_size_scales_premium_not_fees() {
         let trade = sample_trade().with_contract_size(Positive::HUNDRED);
         // (2.50 × 100 + 0.15) × 3
-        assert_eq!(trade.cost(), pos_or_panic!(750.45));
-        assert_eq!(trade.income(), Positive::ZERO);
-        assert_eq!(trade.net(), dec!(-750.45));
+        assert_eq!(trade.cost().unwrap(), pos_or_panic!(750.45));
+        assert_eq!(trade.income().unwrap(), Positive::ZERO);
+        assert_eq!(trade.net().unwrap(), dec!(-750.45));
 
         let mut sold = trade.clone();
         sold.action = Action::Sell;
         // 2.50 × 100 × 3 received, 0.15 × 3 in fees.
-        assert_eq!(sold.income(), pos_or_panic!(750.0));
-        assert_eq!(sold.cost(), pos_or_panic!(0.45));
-        assert_eq!(sold.net(), dec!(749.55));
+        assert_eq!(sold.income().unwrap(), pos_or_panic!(750.0));
+        assert_eq!(sold.cost().unwrap(), pos_or_panic!(0.45));
+        assert_eq!(sold.net().unwrap(), dec!(749.55));
+    }
+
+    #[test]
+    fn test_trade_cost_overflowing_premium_is_an_error() {
+        // `Positive::MAX × 100` leaves the range; the product is checked.
+        let trade = sample_trade().with_contract_size(Positive::HUNDRED);
+        let mut huge = trade.clone();
+        huge.premium = Positive::MAX;
+        assert!(matches!(
+            huge.cost(),
+            Err(TradeError::ArithmeticOverflow {
+                operation: "Trade::premium",
+                ..
+            })
+        ));
+        assert!(huge.net().is_err());
+
+        // A sale pays no premium away: only the fees are charged, so its cost
+        // does not touch the premium, but its income does.
+        let mut sold = huge.clone();
+        sold.action = Action::Sell;
+        assert_eq!(sold.cost().unwrap(), pos_or_panic!(0.45));
+        assert!(matches!(
+            sold.income(),
+            Err(TradeError::ArithmeticOverflow { .. })
+        ));
+    }
+
+    #[test]
+    fn test_trade_cost_overflowing_fees_is_an_error() {
+        let mut trade = sample_trade();
+        trade.fee = Positive::MAX;
+        assert!(matches!(
+            trade.cost(),
+            Err(TradeError::ArithmeticOverflow {
+                operation: "Trade::fees",
+                ..
+            })
+        ));
+        // A purchase's income is zero whatever the fees.
+        assert_eq!(trade.income().unwrap(), Positive::ZERO);
+    }
+
+    #[test]
+    fn test_trade_cost_overflowing_sum_is_an_error() {
+        // Premium and fees fit on their own, their sum does not.
+        let mut trade = sample_trade();
+        trade.quantity = Positive::ONE;
+        trade.premium = Positive::new_decimal(Decimal::MAX / Decimal::TWO).unwrap();
+        trade.fee = Positive::new_decimal(Decimal::MAX / Decimal::TWO).unwrap();
+        trade.premium = trade.premium.checked_add(&Positive::ONE).unwrap();
+        trade.fee = trade.fee.checked_add(&Positive::ONE).unwrap();
+        assert!(matches!(
+            trade.cost(),
+            Err(TradeError::ArithmeticOverflow {
+                operation: "Trade::cost",
+                ..
+            })
+        ));
     }
 
     #[test]
@@ -697,9 +803,9 @@ mod tests {
     fn expect_cost_income(action: Action, side: Side, exp_cost: Decimal, exp_income: Decimal) {
         let tr = sample_trade_bis(action, side, TradeStatus::Open);
 
-        assert_eq!(tr.cost().to_dec(), exp_cost);
-        assert_eq!(tr.income().to_dec(), exp_income);
-        assert_eq!(tr.net(), exp_income - exp_cost);
+        assert_eq!(tr.cost().unwrap().to_dec(), exp_cost);
+        assert_eq!(tr.income().unwrap().to_dec(), exp_income);
+        assert_eq!(tr.net().unwrap(), exp_income - exp_cost);
     }
 
     #[test]
