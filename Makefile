@@ -295,6 +295,13 @@ test-direct-component-examples:
 		cargo run -q -p $$package; \
 	done
 
+# Builds and runs every manifest example of the 0.22 release notes (#562) as
+# a standalone crate with exactly the `[dependencies]` shown, patched to this
+# checkout; the facade's doctests compile the same programs with every feature.
+.PHONY: check-release-notes
+check-release-notes:
+	python3 scripts/check_release_notes.py
+
 # Builds a copy of each example, outside the repository, against the packaged
 # facade and component crates through `[patch.crates-io]` (#555): the "compile against
 # packaged crates" check that the path dependencies of the in-tree manifests
