@@ -894,6 +894,13 @@ where
 /// [`optionstratlib_core::model::decimal::decimal_normal_sample_with`] to keep
 /// seeded runs reproducible.
 ///
+/// # Thread safety
+///
+/// A walker is `Send + Sync`: [`crate::simulation::simulator::Simulator::new`]
+/// builds its walks on the rayon pool, each walk on a clone of the shared
+/// [`WalkParams`], so the boxed walker crosses threads (#860). Keep any
+/// interior state behind `Arc`, an atomic or a `Mutex`, not `Rc` or `RefCell`.
+///
 /// # Output contract
 ///
 /// The walk generators (`generator_optionchain`, `generator_positive`,
@@ -902,7 +909,7 @@ where
 /// vector or a single element; the generators then yield only the initial
 /// step. Returning fewer than `params.size` values is allowed and simply
 /// shortens the walk.
-pub trait WalkTypeAble<X, Y>: WalkTypeAbleClone<X, Y>
+pub trait WalkTypeAble<X, Y>: WalkTypeAbleClone<X, Y> + Send + Sync
 where
     X: Copy + TryInto<Positive> + AddAssign + Display,
     Y: TryInto<Positive> + Display + Clone,
