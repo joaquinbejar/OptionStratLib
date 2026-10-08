@@ -3027,6 +3027,33 @@ summarize the release.
 
 ### Changed
 
+- **Curve and surface interpolation no longer scan every point per read**
+  (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
+  instead of collecting the points into a `Vec` and scanning it, and reads
+  the bilinear cell and the cubic window off the tree instead of by index;
+  `find_bracket_points` is overridden for `Curve` with the same indices.
+  `Surface` finds the 3, 4 or 9 nearest points for the linear, bilinear and
+  cubic interpolators by walking outwards from `x` in the tree and stopping
+  a side once the abscissa offset alone exceeds the k-th best distance,
+  instead of keying and sorting every point. The exact-match lookups
+  (`contains_point`, `get_point`, `get_values`, the interpolators'
+  exact-sample branch and the merge resampling) are range reads on both
+  types. Results are bit-identical: the same bracket, window and
+  neighbours are selected, ties and errors included (a surface whose
+  distances could overflow takes the old sort, so the error names the same
+  point); unit tests compare each against the scan it replaced, and a
+  differential run of 63,823 interpolation, lookup, derivative and merge
+  results over curves with stacked abscissas and tie-heavy surface grids
+  matched the previous commit exactly.
+  Criterion medians, before and after, on one Apple M5 Max under other
+  load (`cargo bench -p optionstratlib-math --bench math`): curve
+  `linear/2048` 39.4 µs to 0.50 µs, `cubic/2048` 53.5 µs to 1.07 µs,
+  `linear_sweep_100/128` 404 µs to 51 µs, `curve_derivative_at/512` 8.0 µs
+  to 0.22 µs, `curve_merge_with_add/512` 2.26 ms to 0.25 ms; surface
+  `linear/32x32` 151 µs to 21 µs, `cubic/32x32` 143 µs to 38 µs,
+  `surface_merge_with_add/16x16` 19.2 ms to 9.4 ms. Spline interpolation
+  still rebuilds its system per read (M2).
+
 - **The prelude's `dec!` documents that it needs `rust_decimal`** (#777).
   `optionstratlib::prelude` re-exports `rust_decimal_macros::dec`, which
   expands to `::rust_decimal` paths, so a consumer that writes `dec!` fails
