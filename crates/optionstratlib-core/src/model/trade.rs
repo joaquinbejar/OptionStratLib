@@ -181,6 +181,31 @@ fn default_contract_size() -> Positive {
     Positive::ONE
 }
 
+/// Nanoseconds in one second, for the whole-second timestamp fallback.
+const NANOS_PER_SECOND: i64 = 1_000_000_000;
+
+/// `datetime` in nanoseconds since the Unix epoch, falling back to its whole
+/// seconds in nanoseconds when the exact figure leaves the `i64` range.
+///
+/// # Errors
+///
+/// Returns [`TradeError::ArithmeticOverflow`] for `operation` when the whole
+/// seconds in nanoseconds leave the `i64` range too.
+fn timestamp_nanos(datetime: &DateTime<Utc>, operation: &'static str) -> Result<i64, TradeError> {
+    if let Some(nanos) = datetime.timestamp_nanos_opt() {
+        return Ok(nanos);
+    }
+    datetime
+        .timestamp()
+        .checked_mul(NANOS_PER_SECOND)
+        .ok_or_else(|| {
+            TradeError::arithmetic_overflow(
+                operation,
+                format!("{datetime} in nanoseconds since the Unix epoch leaves the i64 range"),
+            )
+        })
+}
+
 impl Trade {
     /// Creates a new instance of the struct with the provided parameters.
     ///
@@ -203,15 +228,15 @@ impl Trade {
     /// (`i64`) in nanoseconds representing the moment of creation. The contract size is 1; chain
     /// [`Trade::with_contract_size`] to record a larger multiplier.
     ///
-    /// # Panics
-    /// The method will panic if obtaining the current timestamp (`Utc::now()`) in nanoseconds fails.
+    /// # Errors
+    /// Returns [`TradeError::ArithmeticOverflow`] when the current time in nanoseconds since the
+    /// Unix epoch leaves the `i64` range, after 2262, even when truncated to whole seconds.
     ///
     /// # Remarks
     /// - Ensure all `Positive` values are validated and created using the appropriate constructors.
     /// - The `symbol` and `notes` parameters are optional and can be set to `None` if not applicable.
     ///
     #[allow(clippy::too_many_arguments)]
-    #[must_use]
     pub fn new(
         id: uuid::Uuid,
         action: Action,
@@ -226,12 +251,9 @@ impl Trade {
         underlying_price: Positive,
         notes: Option<String>,
         status: TradeStatus,
-    ) -> Self {
-        // Use current timestamp in nanoseconds, fallback to seconds * 1e9 if nanos overflow
-        let timestamp = Utc::now()
-            .timestamp_nanos_opt()
-            .unwrap_or_else(|| Utc::now().timestamp() * 1_000_000_000);
-        Self {
+    ) -> Result<Self, TradeError> {
+        let timestamp = timestamp_nanos(&Utc::now(), "Trade::new")?;
+        Ok(Self {
             id,
             action,
             side,
@@ -247,7 +269,7 @@ impl Trade {
             underlying_price,
             notes,
             status,
-        }
+        })
     }
 
     /// Returns the trade with its contract multiplier set to `contract_size`.
@@ -275,13 +297,16 @@ impl Trade {
     /// - `datetime`: A `DateTime<Utc>` object representing the new timestamp to be set.
     ///
     /// # Note
-    /// If the nanosecond representation overflows, falls back to seconds * 1e9.
+    /// If the nanosecond representation overflows, falls back to the whole seconds in
+    /// nanoseconds.
     ///
-    pub fn set_timestamp(&mut self, datetime: DateTime<Utc>) {
-        // Use timestamp in nanoseconds, fallback to seconds * 1e9 if nanos overflow
-        self.timestamp = datetime
-            .timestamp_nanos_opt()
-            .unwrap_or_else(|| datetime.timestamp() * 1_000_000_000);
+    /// # Errors
+    /// Returns [`TradeError::ArithmeticOverflow`] when `datetime` in nanoseconds since the Unix
+    /// epoch leaves the `i64` range even when truncated to whole seconds (before 1677 or after
+    /// 2262); the timestamp is left unchanged then.
+    pub fn set_timestamp(&mut self, datetime: DateTime<Utc>) -> Result<(), TradeError> {
+        self.timestamp = timestamp_nanos(&datetime, "Trade::set_timestamp")?;
+        Ok(())
     }
 
     /// The fees of the whole trade: the per-contract `fee` times `quantity`.
@@ -743,7 +768,8 @@ mod tests {
             Positive::new_decimal(Decimal::new(1900, 1)).unwrap(), // 190.0
             None,
             TradeStatus::Open,
-        );
+        )
+        .unwrap();
         let now_after = Utc::now().timestamp_nanos_opt().unwrap();
         assert!(trade.timestamp >= now_before - FIVE_SECS_NS);
         assert!(trade.timestamp <= now_after + FIVE_SECS_NS);
@@ -773,6 +799,7 @@ mod tests {
             Some("unit-test".into()), // notes
             status,
         )
+        .unwrap()
     }
 
     #[test]
@@ -794,8 +821,35 @@ mod tests {
     fn set_timestamp_overwrites_value() {
         let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
         let new_dt = Utc.with_ymd_and_hms(2030, 1, 1, 0, 0, 0).unwrap();
-        tr.set_timestamp(new_dt);
+        tr.set_timestamp(new_dt).unwrap();
         assert_eq!(tr.datetime(), new_dt);
+    }
+
+    #[test]
+    fn test_trade_set_timestamp_falls_back_to_whole_seconds() {
+        // The nanoseconds of the last second before i64::MAX overflow, its
+        // whole seconds do not.
+        let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+        let late = DateTime::<Utc>::from_timestamp(9_223_372_036, 999_999_999).unwrap();
+        assert!(late.timestamp_nanos_opt().is_none());
+        tr.set_timestamp(late).unwrap();
+        assert_eq!(tr.timestamp, 9_223_372_036_000_000_000);
+    }
+
+    #[test]
+    fn test_trade_set_timestamp_overflow_reports_error() {
+        let mut tr = sample_trade_bis(Action::Buy, Side::Long, TradeStatus::Open);
+        let before = tr.timestamp;
+        for datetime in [DateTime::<Utc>::MAX_UTC, DateTime::<Utc>::MIN_UTC] {
+            assert!(matches!(
+                tr.set_timestamp(datetime),
+                Err(TradeError::ArithmeticOverflow {
+                    operation: "Trade::set_timestamp",
+                    ..
+                })
+            ));
+            assert_eq!(tr.timestamp, before);
+        }
     }
 
     /* ---------- cost / income / net math ---------- */

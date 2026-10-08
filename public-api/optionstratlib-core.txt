@@ -962,8 +962,8 @@ pub fn optionstratlib_core::model::Trade::is_closed(&self) -> bool
 pub fn optionstratlib_core::model::Trade::is_expired(&self) -> bool
 pub fn optionstratlib_core::model::Trade::is_open(&self) -> bool
 pub fn optionstratlib_core::model::Trade::net(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::TradeError>
-pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> Self
-pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>)
+pub fn optionstratlib_core::model::Trade::new(uuid::Uuid, financial_types::Action, financial_types::Side, financial_types::OptionStyle, positive::positive::Positive, core::option::Option<alloc::string::String>, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, optionstratlib_core::model::TradeStatus) -> core::result::Result<Self, optionstratlib_core::error::TradeError>
+pub fn optionstratlib_core::model::Trade::set_timestamp(&mut self, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::result::Result<(), optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::with_contract_size(self, positive::positive::Positive) -> Self
 impl core::fmt::Display for optionstratlib_core::model::Trade
 pub fn optionstratlib_core::model::Trade::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result

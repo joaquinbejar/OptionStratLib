@@ -435,6 +435,25 @@ impl ProtectivePut {
         })
     }
 
+    /// Replaces the long put with `position` and recomputes the break-evens;
+    /// on error the strategy is left as it was. A failed recomputation used
+    /// to be discarded, leaving the break-evens cleared or stale.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`BreakEvenable::update_break_even_points`] as a
+    /// [`PositionError`].
+    fn replace_long_put(&mut self, position: &Position) -> Result<(), PositionError> {
+        let previous_put = std::mem::replace(&mut self.long_put, position.clone());
+        let previous_break_evens = self.break_even_points.clone();
+        if let Err(error) = self.update_break_even_points() {
+            self.long_put = previous_put;
+            self.break_even_points = previous_break_evens;
+            return Err(error.into());
+        }
+        Ok(())
+    }
+
     /// Checks if the put is out-of-the-money.
     #[must_use]
     pub fn is_put_otm(&self) -> bool {
@@ -560,9 +579,7 @@ impl Positionable for ProtectivePut {
                 "Position must be a put option".to_string(),
             ));
         }
-        self.long_put = position.clone();
-        let _ = self.update_break_even_points();
-        Ok(())
+        self.replace_long_put(position)
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -595,9 +612,7 @@ impl Positionable for ProtectivePut {
             ));
         }
 
-        self.long_put = position.clone();
-        let _ = self.update_break_even_points();
-        Ok(())
+        self.replace_long_put(position)
     }
 }
 

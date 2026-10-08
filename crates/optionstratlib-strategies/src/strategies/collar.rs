@@ -483,6 +483,10 @@ impl Collar {
         let call_strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
+        // Checked before the cover is classified, so an unpriceable leg is
+        // an error, not an unbounded figure.
+        let net_premium = self.net_premium()?;
+        let total_fees = self.total_fees()?;
         let (put_units, call_units) = self.hedge_units()?;
         if put_units != quantity || call_units != quantity {
             if call_units < quantity {
@@ -494,8 +498,6 @@ impl Collar {
                 .fold(Decimal::MIN, Decimal::max);
             return Ok(Positive::new_decimal(best.max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
         }
-        let net_premium = self.net_premium()?;
-        let total_fees = self.total_fees()?;
 
         if call_strike >= cost_basis {
             let capital_gain = price_gap(call_strike, cost_basis).checked_mul(&quantity)?;
@@ -538,6 +540,9 @@ impl Collar {
         let put_strike = self.put_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
+        // Checked before the cover is classified; see `max_profit_potential`.
+        let net_premium = self.net_premium()?;
+        let total_fees = self.total_fees()?;
         let (put_units, call_units) = self.hedge_units()?;
         if put_units != quantity || call_units != quantity {
             if call_units > quantity {
@@ -551,8 +556,6 @@ impl Collar {
             // itself representable.
             return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
         }
-        let net_premium = self.net_premium()?;
-        let total_fees = self.total_fees()?;
 
         if cost_basis >= put_strike {
             let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
@@ -842,18 +845,40 @@ impl Collar {
         }
         Ok(())
     }
+
+    /// Replaces the option leg of `position`'s style (the long put or the
+    /// short call) with `position` and recomputes the break-evens; on error
+    /// the strategy is left as it was.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`BreakEvenable::update_break_even_points`] as a
+    /// [`PositionError`].
+    fn replace_option_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        let style = position.option.option_style;
+        let slot = match style {
+            OptionStyle::Put => &mut self.long_put,
+            OptionStyle::Call => &mut self.short_call,
+        };
+        let previous_leg = std::mem::replace(slot, position.clone());
+        let previous_break_evens = self.break_even_points.clone();
+        if let Err(error) = self.update_break_even_points() {
+            match style {
+                OptionStyle::Put => self.long_put = previous_leg,
+                OptionStyle::Call => self.short_call = previous_leg,
+            }
+            self.break_even_points = previous_break_evens;
+            return Err(error.into());
+        }
+        Ok(())
+    }
 }
 
 impl Positionable for Collar {
     fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
         match (position.option.option_style, position.option.side) {
-            (OptionStyle::Put, Side::Long) => {
-                self.long_put = position.clone();
-                Ok(())
-            }
-            (OptionStyle::Call, Side::Short) => {
-                self.short_call = position.clone();
-                Ok(())
+            (OptionStyle::Put, Side::Long) | (OptionStyle::Call, Side::Short) => {
+                self.replace_option_leg(position)
             }
             _ => Err(PositionError::invalid_position_type(
                 position.option.side,
@@ -898,14 +923,12 @@ impl Positionable for Collar {
             (OptionStyle::Put, Side::Long)
                 if position.option.strike_price == self.long_put.option.strike_price =>
             {
-                self.long_put = position.clone();
-                Ok(())
+                self.replace_option_leg(position)
             }
             (OptionStyle::Call, Side::Short)
                 if position.option.strike_price == self.short_call.option.strike_price =>
             {
-                self.short_call = position.clone();
-                Ok(())
+                self.replace_option_leg(position)
             }
             _ => Err(PositionError::invalid_position(
                 "Position does not match existing collar positions",

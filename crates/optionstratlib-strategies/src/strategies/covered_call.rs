@@ -57,7 +57,9 @@ use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::delta_neutral::DeltaNeutrality;
 use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::shared::spot_leg_mark_to_market;
-use crate::strategies::shared::{apply_hedge_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
+};
 use crate::strategies::{BasicAble, Strategies};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
@@ -70,7 +72,7 @@ use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::PositiveError;
-use optionstratlib_core::model::decimal::{d_add, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
 use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
@@ -109,6 +111,15 @@ pub const COVERED_CALL_DESCRIPTION: &str = "A covered call is created by holding
 /// - **Maximum Profit**: (Strike Price - Cost Basis) + Premium Received
 /// - **Maximum Loss**: Cost Basis - Premium Received (if underlying goes to zero)
 /// - **Break-even**: Cost Basis - Premium Received per share
+///
+/// These hold when the call covers the shares one for one (`quantity ×
+/// contract_size` equal to the spot quantity), as `CoveredCall::new` and
+/// `BasicAble::set_contract_size` build it. A call resized to cover fewer or
+/// more units changes the slope above its strike: an under-covered call
+/// leaves the uncovered shares' upside, so the profit is unbounded, and an
+/// over-covered call is net short above the strike, so the loss is. The
+/// break-evens, max profit and max loss and the profit and loss zones then
+/// follow the expiry P&L for that cover.
 ///
 /// # Greeks
 ///
@@ -368,32 +379,45 @@ impl CoveredCall {
             .checked_add(&self.short_call.fees()?)?)
     }
 
-    /// Calculates the maximum profit potential.
+    /// Calculates the maximum profit potential, floored at zero.
     ///
     /// Max Profit = (Strike - Cost Basis) × Quantity + Premium Received - Fees
+    /// when the call covers the shares exactly, so it caps the gain at its
+    /// strike.
+    ///
+    /// A call of `Q` units against `N` shares has slope `N - Q` above its
+    /// strike. A call that covers fewer units than the shares leaves the
+    /// profit unbounded, which is reported as `Positive::MAX`. One that
+    /// covers more turns the P&L down above the strike, so it peaks at the
+    /// strike (or at zero), and the larger of the two is reported.
     ///
     /// # Errors
     ///
-    /// Currently infallible — when `strike >= cost_basis` the
-    /// function returns the capital gain plus premium minus fees as
-    /// an `Ok(...)`, and otherwise clamps any negative worst-case
-    /// to `Ok(Positive::ZERO)`. The `Result` signature is retained
-    /// so future implementations that add checked arithmetic or
-    /// validate the strike layout can return
-    /// `PricingError::MethodError` without a breaking change.
+    /// Returns [`PricingError`] when the call's size, premium or fees, or the
+    /// expiry P&L at zero or at the strike, leaves the `Positive` or
+    /// `Decimal` range.
     pub fn max_profit_potential(&self) -> Result<Positive, PricingError> {
         let strike = self.call_strike();
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
         // Checked: a premium and a quantity near the top of the
         // `Positive` range overflow, and the struct's public fields let such a
-        // leg in without passing `new` (#696).
-        let premium_received = self
-            .short_call
-            .premium
-            .checked_mul(&self.short_call.option.contract_size)?
-            .checked_mul(&self.short_call.option.quantity)?;
+        // leg in without passing `new` (#696). Checked before the cover is
+        // classified, so an unpriceable call is an error, not an unbounded
+        // figure.
+        let premium_received = self.premium_received()?;
         let total_fees = self.total_fees()?;
+        let call_units = self.call_units()?;
+        if call_units != quantity {
+            if call_units < quantity {
+                return Ok(Positive::MAX);
+            }
+            let best = self
+                .profit_at_kinks()?
+                .into_iter()
+                .fold(Decimal::MIN, Decimal::max);
+            return Ok(Positive::new_decimal(best.max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+        }
 
         if strike >= cost_basis {
             let capital_gain = price_gap(strike, cost_basis).checked_mul(&quantity)?;
@@ -416,32 +440,42 @@ impl CoveredCall {
         }
     }
 
-    /// Calculates the maximum loss potential.
+    /// Calculates the maximum loss potential, floored at zero.
     ///
     /// Max Loss = Cost Basis × Quantity - Premium Received + Fees
-    /// (occurs if underlying goes to zero)
+    /// (occurs if underlying goes to zero) when the call covers the shares
+    /// exactly.
+    ///
+    /// A call that covers more units than the shares is net short above its
+    /// strike and its loss is unbounded, which is reported as
+    /// `Positive::MAX`. One that covers fewer keeps a rising P&L on both
+    /// sides of the strike, so the loss bottoms out at zero; the deeper of
+    /// the P&L at zero and at the strike is reported.
     ///
     /// # Errors
     ///
-    /// Currently infallible. When `total_investment + total_fees`
-    /// exceeds `premium_received` the function returns the positive
-    /// delta, otherwise it clamps to `Ok(Positive::ZERO)`. The
-    /// `Result` signature is retained so future implementations
-    /// that add checked arithmetic or validate the premium/cost
-    /// relationship can return `PricingError::MethodError` without
-    /// a breaking change.
+    /// Returns [`PricingError`] when the call's size, premium or fees, the
+    /// cost of the shares, or the expiry P&L at zero or at the strike, leaves
+    /// the `Positive` or `Decimal` range.
     pub fn max_loss_potential(&self) -> Result<Positive, PricingError> {
         let cost_basis = self.spot_leg.cost_basis;
         let quantity = self.spot_leg.quantity;
-        // Checked: a premium and a quantity near the top of the
-        // `Positive` range overflow, and the struct's public fields let such a
-        // leg in without passing `new` (#696).
-        let premium_received = self
-            .short_call
-            .premium
-            .checked_mul(&self.short_call.option.contract_size)?
-            .checked_mul(&self.short_call.option.quantity)?;
+        // Checked before the cover is classified; see `max_profit_potential`.
+        let premium_received = self.premium_received()?;
         let total_fees = self.total_fees()?;
+        let call_units = self.call_units()?;
+        if call_units != quantity {
+            if call_units > quantity {
+                return Ok(Positive::MAX);
+            }
+            let worst = self
+                .profit_at_kinks()?
+                .into_iter()
+                .fold(Decimal::MAX, Decimal::min);
+            // `Decimal` is symmetric, so negating a representable value is
+            // itself representable.
+            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+        }
 
         let total_investment = cost_basis.checked_mul(&quantity)?;
         let gross_outlay = total_investment.checked_add(&total_fees)?;
@@ -450,6 +484,141 @@ impl CoveredCall {
         } else {
             Ok(Positive::ZERO)
         }
+    }
+
+    /// The premium received for the call, `premium × contract_size ×
+    /// quantity`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError`] when the product leaves the `Positive`
+    /// range.
+    fn premium_received(&self) -> Result<Positive, PositiveError> {
+        self.short_call
+            .premium
+            .checked_mul(&self.short_call.option.contract_size)?
+            .checked_mul(&self.short_call.option.quantity)
+    }
+
+    /// The units of the underlying the call covers, `quantity ×
+    /// contract_size`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PricingError`] when the call's size leaves the `Positive`
+    /// range.
+    fn call_units(&self) -> Result<Positive, PricingError> {
+        Ok(self.short_call.option.position_size()?)
+    }
+
+    /// Whether the call covers the shares exactly.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`CoveredCall::call_units`].
+    fn is_exact_cover(&self) -> Result<bool, PricingError> {
+        Ok(self.call_units()? == self.spot_leg.quantity)
+    }
+
+    /// The expiry P&L at the points where its slope can change or its
+    /// extreme can sit: zero and the call strike.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Profit::calculate_profit_at`].
+    fn profit_at_kinks(&self) -> Result<[Decimal; 2], PricingError> {
+        Ok([
+            self.calculate_profit_at(&Positive::ZERO)?,
+            self.calculate_profit_at(&self.call_strike())?,
+        ])
+    }
+
+    /// The profit and loss zones of a call that does not cover the shares
+    /// exactly, cut at the break-evens.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`expiry_zones`].
+    fn mismatched_cover_zones(
+        &self,
+    ) -> Result<(Vec<ProfitLossRange>, Vec<ProfitLossRange>), ProbabilityError> {
+        expiry_zones(&self.break_even_points, self.spot_leg.cost_basis, |price| {
+            self.calculate_profit_at(price)
+        })
+    }
+
+    /// The break-evens of a call that does not cover the shares exactly; see
+    /// [`BreakEvenable::update_break_even_points`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError`] when the call's size, the premium, the fees
+    /// or a step of the arithmetic leaves the `Positive` or `Decimal` range.
+    fn update_mismatched_break_even_points(&mut self) -> Result<(), StrategyError> {
+        let shares = self.spot_leg.quantity.to_dec();
+        let entry_price = self.spot_leg.cost_basis.to_dec();
+        let call_units = self.call_units()?.to_dec();
+        let strike = self.call_strike().to_dec();
+        // P - F: what the call and the fees add to the shares' P&L.
+        let carry = d_sub(
+            self.premium_received()?.to_dec(),
+            self.total_fees()?.to_dec(),
+            "CoveredCall::break_even/carry",
+        )?;
+
+        let mut zeros = Vec::with_capacity(2);
+        // C - (P - F) / N, at or below the strike.
+        let below = d_sub(
+            entry_price,
+            d_div(carry, shares, "CoveredCall::break_even/carry_per_share")?,
+            "CoveredCall::break_even/below",
+        )?;
+        if below >= Decimal::ZERO && below <= strike {
+            zeros.push(below);
+        }
+
+        // (N C - Q K - P + F) / (N - Q), above the strike.
+        let above = d_div(
+            d_sub(
+                d_sub(
+                    d_mul(shares, entry_price, "CoveredCall::break_even/basis")?,
+                    carry,
+                    "CoveredCall::break_even/basis_net",
+                )?,
+                d_mul(call_units, strike, "CoveredCall::break_even/cap")?,
+                "CoveredCall::break_even/above_numerator",
+            )?,
+            d_sub(shares, call_units, "CoveredCall::break_even/above_slope")?,
+            "CoveredCall::break_even/above",
+        )?;
+        if above > strike {
+            zeros.push(above);
+        }
+
+        for zero in zeros {
+            if let Ok(be) = Positive::new_decimal(zero) {
+                self.break_even_points.push(be.checked_round_to(2)?);
+            }
+        }
+        Ok(())
+    }
+
+    /// Replaces the short call with `position` and recomputes the
+    /// break-evens; on error the strategy is left as it was.
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`BreakEvenable::update_break_even_points`] as a
+    /// [`PositionError`].
+    fn replace_short_call(&mut self, position: &Position) -> Result<(), PositionError> {
+        let previous_call = std::mem::replace(&mut self.short_call, position.clone());
+        let previous_break_evens = self.break_even_points.clone();
+        if let Err(error) = self.update_break_even_points() {
+            self.short_call = previous_call;
+            self.break_even_points = previous_break_evens;
+            return Err(error.into());
+        }
+        Ok(())
     }
 
     /// Checks if the call is currently in-the-money.
@@ -504,8 +673,23 @@ impl BreakEvenable for CoveredCall {
         Ok(&self.break_even_points)
     }
 
+    /// The zeros of the expiry P&L. With `N` shares bought at `C`, a call of
+    /// `Q` units (`quantity × contract_size`) struck at `K`, premium received
+    /// `P` and total fees `F`:
+    ///
+    /// - at or below the strike, `N (S - C) + P - F`, zero at
+    ///   `S = C - (P - F) / N`;
+    /// - above the strike, `(N - Q) S - N C + Q K + P - F`, zero at
+    ///   `S = (N C - Q K - P + F) / (N - Q)` when `Q != N`.
+    ///
+    /// When the call covers the shares exactly the single break-even
+    /// `C - (P - F) / N` is recorded, floored at zero, as before. Otherwise
+    /// each zero is recorded only inside its own region, in ascending order.
     fn update_break_even_points(&mut self) -> Result<(), StrategyError> {
         self.break_even_points.clear();
+        if !self.is_exact_cover()? {
+            return self.update_mismatched_break_even_points();
+        }
 
         // Break-even = Cost Basis - Premium Received per Share
         let premium_per_share = self
@@ -553,8 +737,7 @@ impl Positionable for CoveredCall {
             ));
         }
 
-        self.short_call = position.clone();
-        Ok(())
+        self.replace_short_call(position)
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -592,8 +775,7 @@ impl Positionable for CoveredCall {
             && position.option.option_style == OptionStyle::Call
             && position.option.strike_price == self.short_call.option.strike_price
         {
-            self.short_call = position.clone();
-            Ok(())
+            self.replace_short_call(position)
         } else {
             Err(PositionError::invalid_position(
                 "Position does not match existing short call",
@@ -786,7 +968,20 @@ impl Optimizable for CoveredCall {
 impl crate::strategies::StrategyConstructor for CoveredCall {}
 
 impl ProbabilityAnalysis for CoveredCall {
+    /// With the call covering the shares exactly the profit zone runs from
+    /// the break-even up to the strike. A mismatched call lets the P&L cross
+    /// zero above the strike too, and the zones then follow the sign of the
+    /// expiry P&L between the break-evens.
     fn get_profit_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_cover()? {
+            let (mut profit, _) = self.mismatched_cover_zones()?;
+            price_zones(
+                &mut profit,
+                &self.spot_leg.cost_basis,
+                &self.short_call.option,
+            )?;
+            return Ok(profit);
+        }
         let break_even_point =
             self.break_even_points
                 .first()
@@ -820,7 +1015,19 @@ impl ProbabilityAnalysis for CoveredCall {
         Ok(vec![profit_range])
     }
 
+    /// With the call covering the shares exactly the loss zone runs from zero
+    /// up to the break-even. A mismatched call follows the sign of the expiry
+    /// P&L between the break-evens.
     fn get_loss_ranges(&self) -> Result<Vec<ProfitLossRange>, ProbabilityError> {
+        if !self.is_exact_cover()? {
+            let (_, mut loss) = self.mismatched_cover_zones()?;
+            price_zones(
+                &mut loss,
+                &self.spot_leg.cost_basis,
+                &self.short_call.option,
+            )?;
+            return Ok(loss);
+        }
         let break_even_point =
             self.break_even_points
                 .first()
