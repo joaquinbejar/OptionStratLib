@@ -16,7 +16,7 @@ use optionstratlib_core::model::{
 };
 use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::greeks::numerical::{
-    numerical_delta, numerical_gamma, numerical_rho, numerical_vega,
+    numerical_delta, numerical_gamma, numerical_rho, numerical_theta, numerical_vega,
 };
 use optionstratlib_pricing::greeks::{
     Greeks, big_n, d1, delta_b76, delta_gk, gamma_b76, gamma_gk, n, vega_b76, vega_gk,
@@ -123,8 +123,9 @@ fn bench_model_variants(c: &mut Criterion) {
     bench_ok(&mut group, "numerical_vega", || {
         numerical_vega(black_box(&option))
     });
-    // `numerical_theta` is not benchmarked: it returns an error for every
-    // input (reported under #789).
+    bench_ok(&mut group, "numerical_theta", || {
+        numerical_theta(black_box(&option))
+    });
     bench_ok(&mut group, "numerical_rho", || {
         numerical_rho(black_box(&option))
     });

@@ -11,13 +11,20 @@
 
 use crate::error::greeks::GreeksError;
 use crate::pricing::{ClosedFormEngine, price_option_with};
-use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub};
+use optionstratlib_core::model::{ExpirationDate, Options};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
 const H: Decimal = dec!(0.01);
+
+/// The time bump of [`numerical_theta`], in calendar days: theta is quoted
+/// per day, so a one-day step differences in the quoted unit (#796).
+const THETA_BUMP_DAYS: Decimal = dec!(1);
+
+/// `2 × THETA_BUMP_DAYS`, the span of the central time difference.
+const THETA_SPAN_DAYS: Decimal = dec!(2);
 
 /// `2 × H`, the span of the central differences: the literal carries the
 /// mantissa and scale `dec!(2.0) * H` produced, so no multiplication runs.
@@ -160,28 +167,83 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
     Ok(d_div(diff, TWO_H, "greeks::numerical::vega::scaled")?)
 }
 
-/// Calculates theta numerically using finite differences.
+/// Calculates theta numerically using finite differences in time.
 ///
-/// Theta measures the rate of decay of the option's value over time.
+/// Theta measures the rate of decay of the option's value over time. Like
+/// the other numerical Greeks it is a central difference on one input, here
+/// the time to expiry bumped by one calendar day either way:
+///
+/// ```text
+/// theta = (P(T - 1 day) - P(T + 1 day)) / 2
+/// ```
+///
+/// Calendar time running forward shortens `T`, hence the order of the
+/// terms. The step is one day, so the value is per day, the unit of the
+/// closed-form [`crate::greeks::theta`]; its truncation error is
+/// `O(h^2)` with `h = 1/365` year, and grows toward expiry: at the money
+/// with `sigma = 0.25` it is about `7e-6` per day at 30 days and `2.5e-4`
+/// at 7 days, so the one-day step is coarse in the last week. Within one
+/// day of expiry `P(T - 1 day)` does not exist and the difference is the
+/// one-sided `P(T) - P(T + 1 day)`, the mean theta over the next day, with
+/// an `O(h)` error; at expiry (`T = 0`) the result is `0`, as for the
+/// closed form. The bumped expiries are
+/// `ExpirationDate::Days`, so an absolute-date expiry is read as its days
+/// to expiry at the time of the call.
+///
+/// Like the other numerical Greeks, the value is that of one long unit
+/// contract: the evaluator prices the absolute value, with no `Side`,
+/// quantity or contract size.
 ///
 /// # Errors
 ///
 /// Returns [`GreeksError::ExpirationDate`] when the option's expiration
-/// cannot be resolved, and propagates any `PricingError` returned by
-/// the unified-pricing evaluator on the perturbed option clones
-/// (wrapped as [`GreeksError::Pricing`]).
+/// cannot be resolved, [`GreeksError::CalculationError`] when a bumped
+/// expiry or the difference leaves the `Decimal` range, and propagates any
+/// `PricingError` returned by the unified-pricing evaluator on the
+/// perturbed option clones (wrapped as [`GreeksError::Pricing`]).
 pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
-    let t = option.expiration_date.get_years()?;
-    if t < H {
+    let days = option.expiration_date.get_days()?.to_dec();
+    if days.is_zero() {
         return Ok(Decimal::ZERO);
     }
 
-    let _opt_plus = option.clone();
-    // ExpirationDate doesn't have a direct setter for years, but we can use Days for now if we assume 365 days/year
-    // Actually, we can't easily mutate ExpirationDate to subtract a small delta in years.
-    // Let's Skip numerical theta for now or implement it carefully.
-    // For now, return error or 0.
-    Err(GreeksError::CalculationError(crate::error::greeks::CalculationErrorKind::ThetaError { reason: "Numerical theta not yet implemented for exotics due to ExpirationDate mutation complexity".to_string() }))
+    let longer = with_days_to_expiry(
+        option,
+        d_add(days, THETA_BUMP_DAYS, "greeks::numerical::theta::days_up")?,
+    )?;
+    let p_longer = price_option_with(&longer, &ClosedFormEngine::ClosedFormBS)?;
+
+    if days > THETA_BUMP_DAYS {
+        let shorter = with_days_to_expiry(
+            option,
+            d_sub(days, THETA_BUMP_DAYS, "greeks::numerical::theta::days_down")?,
+        )?;
+        let p_shorter = price_option_with(&shorter, &ClosedFormEngine::ClosedFormBS)?;
+        let diff = d_sub(
+            p_shorter.to_dec(),
+            p_longer.to_dec(),
+            "greeks::numerical::theta::diff",
+        )?;
+        Ok(d_div(
+            diff,
+            THETA_SPAN_DAYS,
+            "greeks::numerical::theta::scaled",
+        )?)
+    } else {
+        let p = price_option_with(option, &ClosedFormEngine::ClosedFormBS)?;
+        Ok(d_sub(
+            p.to_dec(),
+            p_longer.to_dec(),
+            "greeks::numerical::theta::forward_diff",
+        )?)
+    }
+}
+
+/// A clone of `option` expiring in `days` days.
+fn with_days_to_expiry(option: &Options, days: Decimal) -> Result<Options, GreeksError> {
+    let mut bumped = option.clone();
+    bumped.expiration_date = ExpirationDate::Days(Positive::new_decimal(days)?);
+    Ok(bumped)
 }
 
 /// Calculates rho numerically using finite differences.
@@ -242,6 +304,10 @@ mod tests {
             option.risk_free_rate = rate;
             let _ = numerical_rho(&option);
         }
+
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.expiration_date = ExpirationDate::Days(Positive::MAX);
+        let _ = numerical_theta(&option);
     }
 
     #[test]

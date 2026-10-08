@@ -16,7 +16,9 @@
 //!   moneyness and maturity grid.
 //! * Finite-difference Greeks (`greeks::numerical`) agree with the closed
 //!   forms, both directly and through the non-European fallback of
-//!   `greeks::delta`; numerical theta reports its documented error.
+//!   `greeks::delta`; numerical theta (a one-day central difference in
+//!   time, #796) agrees with the closed-form theta, satisfies put-call
+//!   parity, and degrades near expiry as its error model says.
 //! * Monte Carlo is exercised only through supplied terminal prices
 //!   (`price_option_monte_carlo`), so nothing depends on an RNG: the price is
 //!   the discounted mean payoff, and a deterministic stratified sample of the
@@ -45,11 +47,10 @@
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
 use optionstratlib_core::pos_or_panic;
-use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::greeks::numerical::{
     numerical_delta, numerical_gamma, numerical_rho, numerical_theta, numerical_vega,
 };
-use optionstratlib_pricing::greeks::{delta, gamma, rho, vega};
+use optionstratlib_pricing::greeks::{delta, gamma, rho, theta, vega};
 use optionstratlib_pricing::pricing::monte_carlo::price_option_monte_carlo;
 use optionstratlib_pricing::pricing::{BinomialPricingParams, black_scholes, price_binomial};
 use rust_decimal::Decimal;
@@ -332,39 +333,132 @@ fn test_numerical_delta_fallback_matches_closed_form_on_power_option() {
     }
 }
 
-/// Numerical theta is not implemented: it returns
-/// `GreeksError::CalculationError` for any expiry of at least `h = 0.01`
-/// years and `0` below that, as documented.
+/// Numerical theta against the closed form, absolute per day. The central
+/// difference over one day either way has truncation `h^2/6 * V'''` with
+/// `h = 1` day; `V'''` grows like `T^(-5/2)` at the money, so the error is
+/// largest at the shortest maturity of the grid: `6.6e-6` per day at
+/// 30 days (`K = 100`), against `5.9e-8` at 182.5 days and `1.6e-8` at a
+/// year. Asserted at `2e-5` absolute: deep out-of-the-money thetas are
+/// near zero, so a relative bound would test nothing there.
+const THETA_TOL: Decimal = dec!(0.00002);
+
+/// Put-call parity for numerical theta: `C - P = S e^(-qT) - K e^(-rT)`
+/// exactly under Black-Scholes, so the difference of the two numerical
+/// thetas is a central difference of two exponentials, whose truncation is
+/// below `1e-14`. What remains is price rounding, measured at `5.1e-11`;
+/// asserted at `1.5e-10`.
+const THETA_PARITY_TOL: Decimal = dec!(0.00000000015);
+
+fn european(style: OptionStyle, strike: f64, days: f64, vol: f64, dividend: f64) -> Options {
+    option(
+        OptionType::European,
+        style,
+        100.0,
+        strike,
+        days,
+        vol,
+        dec!(0.05),
+        dividend,
+    )
+}
+
+/// `greeks::numerical::numerical_theta` (one-day bump, per day) against
+/// `greeks::theta` (per day), long European calls and puts, with and
+/// without a dividend yield (#796).
 #[test]
-fn test_numerical_theta_reports_documented_error() {
-    let opt = option(
-        OptionType::European,
-        OptionStyle::Call,
-        100.0,
-        100.0,
-        182.5,
-        0.25,
-        dec!(0.04),
-        0.0,
-    );
+fn test_numerical_theta_agrees_with_closed_form_grid() {
+    for strike in [80.0, 100.0, 120.0] {
+        for (vol, days) in [(0.30, 365.0), (0.20, 182.5), (0.25, 30.0)] {
+            for dividend in [0.0, 0.02] {
+                for style in [OptionStyle::Call, OptionStyle::Put] {
+                    let opt = european(style, strike, days, vol, dividend);
+                    let error =
+                        (ok(numerical_theta(&opt), "num theta") - ok(theta(&opt), "theta")).abs();
+                    assert!(
+                        error <= THETA_TOL,
+                        "{style:?} k={strike} vol={vol} days={days} q={dividend}: theta error {error}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// `theta_call - theta_put = (q S e^(-qT) - r K e^(-rT)) / 365` per day, from
+/// put-call parity, including within days of expiry where each theta alone
+/// is coarse.
+#[test]
+fn test_numerical_theta_satisfies_put_call_parity() {
+    for strike in [80.0, 100.0, 120.0] {
+        for days in [365.0, 182.5, 30.0, 7.0, 1.5] {
+            for dividend in [0.0, 0.02] {
+                let call = ok(
+                    numerical_theta(&european(OptionStyle::Call, strike, days, 0.25, dividend)),
+                    "call theta",
+                );
+                let put = ok(
+                    numerical_theta(&european(OptionStyle::Put, strike, days, 0.25, dividend)),
+                    "put theta",
+                );
+                let t = ok(Decimal::try_from(days), "days") / dec!(365);
+                let q = ok(Decimal::try_from(dividend), "dividend");
+                let k = ok(Decimal::try_from(strike), "strike");
+                let carry = q * dec!(100) * (-q * t).exp();
+                let rate = dec!(0.05) * k * (dec!(-0.05) * t).exp();
+                let expected = (carry - rate) / dec!(365);
+                let error = (call - put - expected).abs();
+                assert!(
+                    error <= THETA_PARITY_TOL,
+                    "k={strike} days={days} q={dividend}: parity error {error}"
+                );
+            }
+        }
+    }
+}
+
+/// The at-the-money error grows toward expiry as `T^(-5/2)`: measured
+/// `1.6e-8`, `6.6e-6` and `2.5e-4` per day at 365, 30 and 7 days. A one-day
+/// step is coarse in the last week, as the docs of `numerical_theta` state;
+/// this pins that the error orders by maturity.
+#[test]
+fn test_numerical_theta_error_shrinks_with_maturity() {
+    let errors: Vec<Decimal> = [7.0, 30.0, 182.5, 365.0]
+        .into_iter()
+        .map(|days| {
+            let opt = european(OptionStyle::Call, 100.0, days, 0.25, 0.0);
+            (ok(numerical_theta(&opt), "num theta") - ok(theta(&opt), "theta")).abs()
+        })
+        .collect();
     assert!(
-        matches!(numerical_theta(&opt), Err(GreeksError::CalculationError(_))),
-        "numerical theta must report CalculationError"
+        errors.windows(2).all(|pair| pair[0] > pair[1]),
+        "errors by maturity {errors:?}"
     );
-    let short_dated = option(
-        OptionType::European,
-        OptionStyle::Call,
-        100.0,
-        100.0,
-        1.0,
-        0.25,
-        dec!(0.04),
-        0.0,
-    );
-    assert!(
-        matches!(numerical_theta(&short_dated), Ok(value) if value.is_zero()),
-        "numerical theta below h must be zero"
-    );
+}
+
+/// Within one day of expiry the difference is one-sided,
+/// `P(T) - P(T + 1 day)`: the mean theta over that day. At the money theta
+/// grows in magnitude toward expiry, so the result lies between the closed
+/// forms at `T` and at `T + 1 day`. At expiry it is `0`, as the closed form.
+#[test]
+fn test_numerical_theta_near_and_at_expiry() {
+    for style in [OptionStyle::Call, OptionStyle::Put] {
+        let numerical = ok(
+            numerical_theta(&european(style, 100.0, 0.5, 0.25, 0.0)),
+            "num theta",
+        );
+        let at_t = ok(theta(&european(style, 100.0, 0.5, 0.25, 0.0)), "theta");
+        let a_day_later = ok(theta(&european(style, 100.0, 1.5, 0.25, 0.0)), "theta");
+        assert!(
+            at_t < numerical && numerical < a_day_later,
+            "{style:?}: {numerical} not between {at_t} and {a_day_later}"
+        );
+
+        let expired = european(style, 100.0, 0.0, 0.25, 0.0);
+        assert_eq!(
+            ok(numerical_theta(&expired), "expired theta"),
+            Decimal::ZERO
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
