@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-optionstratlib = { workspace = true , features = ["plotly", "static_export"] }
+optionstratlib = { workspace = true, default-features = false, features = ["static_export", "synthetic"] }
 osl-example-support = { path = "../support" }
 positive = { workspace = true }
 tracing = { workspace = true }
