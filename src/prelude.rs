@@ -43,6 +43,20 @@
 //! ADR-0001 D7 keeps in the facade prelude; `Positive` and its macros are
 //! core's foundational re-exports (ADR-0001 D8).
 //!
+//! **`dec!` needs `rust_decimal` in your manifest** (#777). The re-exported
+//! `rust_decimal_macros::dec` checks its literal at compile time and expands
+//! to `::rust_decimal` paths, so a crate that writes `dec!` must depend on
+//! `rust_decimal` directly, next to the facade; without it the build fails
+//! with ``cannot find `rust_decimal` ``. `Decimal` alone needs nothing extra.
+//!
+//! ```toml
+//! [dependencies]
+//! optionstratlib = "0.22.0"
+//! rust_decimal = "1.43"
+//! ```
+//!
+//! `make check-release-notes` proves both halves against the compiler.
+//!
 //! The prelude has no free functions, no error types (import them from
 //! [`crate::error`]), no glob re-exports and no standard-library items, so a
 //! new public item in a component never enters it silently.
@@ -121,6 +135,8 @@ pub use chrono::Utc;
 pub use optionstratlib_core::model::Positive;
 pub use optionstratlib_core::{assert_pos_relative_eq, pos_or_panic, spos};
 pub use rust_decimal::Decimal;
+/// Needs `rust_decimal` as a direct dependency of the crate that writes it:
+/// the macro expands to `::rust_decimal` paths (#777, see the module docs).
 pub use rust_decimal_macros::dec;
 pub use tracing::{debug, error, info, trace, warn};
 

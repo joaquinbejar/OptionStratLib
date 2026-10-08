@@ -2032,6 +2032,21 @@ summarize the release.
 
 ### Changed
 
+- **The prelude's `dec!` documents that it needs `rust_decimal`** (#777).
+  `optionstratlib::prelude` re-exports `rust_decimal_macros::dec`, which
+  expands to `::rust_decimal` paths, so a consumer that writes `dec!` fails
+  to compile until `rust_decimal` is one of its own dependencies; every
+  consumer fixture already listed it, which hid the gap. By owner decision
+  the macro stays, with its compile-time validation. The prelude module docs
+  and the `dec` re-export, the migration guide's import section, and the
+  facade docs (and so `README.md`) say so, and the facade manifests there
+  list `rust_decimal`. `make check-release-notes` pins it: a release-notes
+  manifest whose program writes `dec!` without `rust_decimal` is refused,
+  and the new `--self-test` builds a facade-only manifest
+  (`default-features = false`) that writes `dec!`, asserting that it fails
+  on the missing `rust_decimal` and compiles once the dependency is added.
+  No code changes.
+
 - **Draft 0.22.0 release notes** (#562). `docs/release/0.22/RELEASE-NOTES.md`
   lists the ten packages at 0.22.0 in dependency order with their crates.io
   and docs.rs links, the layer graph, the API policy, the facade defaults

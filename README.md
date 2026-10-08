@@ -428,6 +428,7 @@ layer, enable only its facade feature:
 [dependencies]
 # pricing, greeks and volatility, without market data, I/O or charts
 optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+rust_decimal = "1.43" # for `dec!`
 ```
 
 or depend on the component itself:
@@ -963,7 +964,12 @@ Add OptionStratLib to your `Cargo.toml`:
 ```toml
 [dependencies]
 optionstratlib = "0.22.0"
+rust_decimal = "1.43"
 ```
+
+List `rust_decimal` as well when you write `dec!`, from the prelude or
+from `rust_decimal_macros`: the macro expands to `::rust_decimal` paths,
+so the crate that writes it must depend on `rust_decimal` directly (#777).
 
 Or use cargo to add it to your project:
 
@@ -978,6 +984,7 @@ The library includes optional features for enhanced functionality:
 ```toml
 [dependencies]
 optionstratlib = { version = "0.22.0", features = ["plotly"] }
+rust_decimal = "1.43"
 ```
 
 - `math`, `pricing`, `market`, `analytics`, `strategies` (default): the

@@ -298,8 +298,11 @@ test-direct-component-examples:
 # Builds and runs every manifest example of the 0.22 release notes (#562) as
 # a standalone crate with exactly the `[dependencies]` shown, patched to this
 # checkout; the facade's doctests compile the same programs with every feature.
+# The self-test first proves that a facade-only manifest using the prelude's
+# `dec!` needs `rust_decimal` (#777), the rule every example is held to.
 .PHONY: check-release-notes
 check-release-notes:
+	python3 scripts/check_release_notes.py --self-test
 	python3 scripts/check_release_notes.py
 
 # Builds a copy of each example, outside the repository, against the packaged
