@@ -4,7 +4,7 @@
    Date: 25/10/24
 ******************************************************************************/
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_mul, d_sqrt, d_sub, p_sqrt};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub, p_sqrt};
 
 /// Calculates the optimal price range for an option based on its underlying price,
 /// strike price, implied volatility, and expiration date.
@@ -58,7 +58,11 @@ pub fn calculate_optimal_price_range(
     expiration_date: ExpirationDate,
 ) -> Result<(Positive, Positive), ChainError> {
     let days_to_expiry = expiration_date.get_days()?;
-    let years_to_expiry = Decimal::from(days_to_expiry) / dec!(365.0);
+    let years_to_expiry = d_div(
+        Decimal::from(days_to_expiry),
+        dec!(365.0),
+        "chains::utils::years_to_expiry",
+    )?;
     let years_to_expiry_sqrt = d_sqrt(years_to_expiry, "chains::utils::years_to_expiry_sqrt")
         .map_err(|_| {
             ChainError::invalid_price_calculation(
@@ -102,7 +106,9 @@ pub fn calculate_optimal_price_range(
 
     // `max_price >= upper_bound >= lower_bound >= min_price`, so the width is
     // non-negative; dividing it by a constant cannot overflow.
-    let step = max_price.checked_sub(&min_price)? / dec!(20.0);
+    let step = max_price
+        .checked_sub(&min_price)?
+        .checked_div_dec(dec!(20.0))?;
     let rounded_step = step.checked_round_to_nice_number()?;
     if rounded_step == Positive::ZERO {
         return Err(ChainError::invalid_parameters(
@@ -1163,11 +1169,14 @@ pub fn strike_step(
     // greater than or equal to one, so neither can divide by zero nor grow the
     // operand past the representable range. Every multiplication can, and
     // `sqrt` overflows at the top of the range.
-    let t = days_to_exp / 365.0;
+    let t = days_to_exp.checked_div_f64(365.0)?;
     let sigma = underlying_price
         .checked_mul(&implied_vol)?
         .checked_mul(&p_sqrt(&t, "chains::utils::strike_step")?)?;
-    let raw_step = Positive::TWO.checked_mul(&k)?.checked_mul(&sigma)? / (size as f64 - 1.0);
+    let raw_step = Positive::TWO
+        .checked_mul(&k)?
+        .checked_mul(&sigma)?
+        .checked_div_f64(size as f64 - 1.0)?;
 
     // Standard “nice” grids used by most exchanges
     let bins: &[Positive] = &[
@@ -1189,17 +1198,20 @@ pub fn strike_step(
     ];
 
     // Pick the closest one
-    Ok(bins
-        .iter()
-        .copied()
-        .min_by(|a, b| {
-            // SAFETY: total order on Decimal; partial_cmp only returns None
-            // for NaN, which Decimal cannot represent. Fall back to Equal.
-            ((a.to_dec() - raw_step.to_dec()).abs())
-                .partial_cmp(&(b.to_dec() - raw_step.to_dec()).abs())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .unwrap_or(raw_step))
+    // The first bin at the smallest distance wins, as `min_by` did.
+    let mut closest: Option<(Positive, Decimal)> = None;
+    for bin in bins.iter().copied() {
+        let distance = d_sub(
+            bin.to_dec(),
+            raw_step.to_dec(),
+            "chains::utils::strike_step_distance",
+        )?
+        .abs();
+        if closest.is_none_or(|(_, best)| distance < best) {
+            closest = Some((bin, distance));
+        }
+    }
+    Ok(closest.map_or(raw_step, |(bin, _)| bin))
 }
 
 #[cfg(test)]

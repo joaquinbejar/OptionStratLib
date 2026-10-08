@@ -103,6 +103,11 @@ pub fn read_ohlcv_from_zip(
             continue;
         }
 
+        let line_number = line_num
+            .checked_add(1)
+            .ok_or_else(|| OhlcvError::CsvError {
+                reason: "line counter overflowed".to_string(),
+            })?;
         let line = line_result?;
         let parts: Vec<&str> = line.split(';').collect();
 
@@ -112,7 +117,7 @@ pub fn read_ohlcv_from_zip(
             return Err(OhlcvError::CsvError {
                 reason: format!(
                     "Invalid CSV format at line {}: expected 7 fields, got {}",
-                    line_num + 1,
+                    line_number,
                     parts.len()
                 ),
             });
@@ -135,7 +140,7 @@ pub fn read_ohlcv_from_zip(
             low: Decimal::from_str(low_s)?,
             close: Decimal::from_str(close_s)?,
             volume: volume_s.parse::<u64>().map_err(|e| OhlcvError::CsvError {
-                reason: format!("Invalid volume at line {}: {}", line_num + 1, e),
+                reason: format!("Invalid volume at line {}: {}", line_number, e),
             })?,
         };
 

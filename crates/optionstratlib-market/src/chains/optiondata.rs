@@ -494,7 +494,7 @@ impl OptionData {
     pub fn get_call_spread(&self) -> Option<Positive> {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
-                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
+                let spread = call_ask.to_dec().checked_sub(call_bid.to_dec())?.abs();
                 Positive::new_decimal(spread).ok()
             }
             _ => None,
@@ -532,8 +532,12 @@ impl OptionData {
     pub fn get_call_spread_per(&self) -> Option<Positive> {
         match (self.call_bid, self.call_ask) {
             (Some(call_bid), Some(call_ask)) => {
-                let spread = (call_ask.to_dec() - call_bid.to_dec()).abs();
-                let mid_price = call_ask.checked_add(&call_bid).ok()? / 2.0;
+                let spread = call_ask.to_dec().checked_sub(call_bid.to_dec())?.abs();
+                let mid_price = call_ask
+                    .checked_add(&call_bid)
+                    .ok()?
+                    .checked_div_f64(2.0)
+                    .ok()?;
                 Positive::new_decimal(spread)
                     .ok()
                     .and_then(|s| s.checked_div(&mid_price).ok())
@@ -564,7 +568,7 @@ impl OptionData {
     pub fn get_put_spread(&self) -> Option<Positive> {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
-                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
+                let spread = put_ask.to_dec().checked_sub(put_bid.to_dec())?.abs();
                 Positive::new_decimal(spread).ok()
             }
             _ => None,
@@ -594,8 +598,12 @@ impl OptionData {
     pub fn get_put_spread_per(&self) -> Option<Positive> {
         match (self.put_bid, self.put_ask) {
             (Some(put_bid), Some(put_ask)) => {
-                let spread = (put_ask.to_dec() - put_bid.to_dec()).abs();
-                let mid_price = put_ask.checked_add(&put_bid).ok()? / 2.0;
+                let spread = put_ask.to_dec().checked_sub(put_bid.to_dec())?.abs();
+                let mid_price = put_ask
+                    .checked_add(&put_bid)
+                    .ok()?
+                    .checked_div_f64(2.0)
+                    .ok()?;
                 Positive::new_decimal(spread)
                     .ok()
                     .and_then(|s| s.checked_div(&mid_price).ok())
@@ -1133,7 +1141,11 @@ impl OptionData {
     ///   the representable `Decimal` range: this method returns `()`, so there
     ///   is nowhere to report an arithmetic failure
     pub fn apply_spread(&mut self, spread: Positive, decimal_places: u32) {
-        let half_spread: Decimal = (spread / Positive::TWO).into();
+        let Ok(half_spread) = spread.checked_div(&Positive::TWO) else {
+            warn!("apply_spread: half spread out of range; quotes left unchanged");
+            return;
+        };
+        let half_spread: Decimal = half_spread.into();
         let Some(tick) = tick_size(decimal_places) else {
             warn!(
                 decimal_places,
@@ -1461,8 +1473,10 @@ impl OptionData {
     /// in the correct format, preventing potential misinterpretations and calculation errors.
     #[cfg(feature = "io")]
     pub(super) fn check_and_convert_implied_volatility(&mut self) {
-        if self.implied_volatility > Positive::ONE {
-            self.implied_volatility = self.implied_volatility / Positive::HUNDRED;
+        if self.implied_volatility > Positive::ONE
+            && let Ok(converted) = self.implied_volatility.checked_div(&Positive::HUNDRED)
+        {
+            self.implied_volatility = converted;
         }
     }
 
