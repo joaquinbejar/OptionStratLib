@@ -11,11 +11,6 @@ Key characteristics:
 - High probability of small profit
 - Requires very low volatility
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -23,9 +18,11 @@ use super::base::{
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -366,7 +363,15 @@ impl StrategyConstructor for IronButterfly {
             .map(|opt| opt.option.strike_price)
             .collect();
 
-        if strike_prices[1] - strike_prices[0] != strike_prices[3] - strike_prices[2] {
+        let [k0, k1, k2, k3] = strike_prices.as_slice() else {
+            return Err(StrategyError::invalid_parameters(
+                "Iron Butterfly get_strategy",
+                "Must have exactly 4 options",
+            ));
+        };
+        // Sorted ascending, so both differences are non-negative; the checked
+        // form still reports an overflow instead of aborting.
+        if k1.checked_sub(k0)? != k3.checked_sub(k2)? {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
@@ -376,7 +381,11 @@ impl StrategyConstructor for IronButterfly {
         }
 
         // Validate expiration dates match
-        let exp_date = sorted_positions[0].option.expiration_date;
+        let exp_date = sorted_positions
+            .first()
+            .ok_or_else(|| StrategyError::empty_collection("Iron Butterfly get_strategy"))?
+            .option
+            .expiration_date;
         if !sorted_positions
             .iter()
             .all(|opt| opt.option.expiration_date == exp_date)
@@ -779,10 +788,10 @@ impl BasicAble for IronButterfly {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -800,20 +809,16 @@ impl BasicAble for IronButterfly {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -826,17 +831,13 @@ impl BasicAble for IronButterfly {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -877,10 +878,9 @@ impl Strategies for IronButterfly {
             ));
         }
 
-        Ok(
-            Positive::new_decimal(self.calculate_profit_at(&self.short_call.option.strike_price)?)
-                .unwrap_or(Positive::ZERO),
-        )
+        Ok(Positive::new_decimal(self.calculate_profit_at(
+            &self.short_call.option.strike_price,
+        )?)?)
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
@@ -893,7 +893,9 @@ impl Strategies for IronButterfly {
                 },
             ));
         }
-        Ok(Positive::new_decimal(left_loss.abs().max(right_loss.abs())).unwrap_or(Positive::ZERO))
+        Ok(Positive::new_decimal(
+            left_loss.abs().max(right_loss.abs()),
+        )?)
     }
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
@@ -909,7 +911,7 @@ impl Strategies for IronButterfly {
             self.long_put.option.strike_price,
         )
         .to_f64();
-        let height = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let height = measured_max_profit(self)?;
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
@@ -920,15 +922,12 @@ impl Strategies for IronButterfly {
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok(
-                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
-                    .unwrap_or(Decimal::ZERO),
-            ),
+            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
         }
     }
 }
@@ -941,7 +940,7 @@ impl Optimizable for IronButterfly {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.short_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_triple_iter()
@@ -1098,7 +1097,7 @@ impl Optimizable for IronButterfly {
                         "missing put_ask for long put leg",
                     )
                 })?;
-                let fee_per_leg = self.get_fees()? / 8.0;
+                let fee_per_leg = self.get_fees()?.checked_div_f64(8.0)?;
                 let mut strategy = IronButterfly::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
@@ -1176,7 +1175,7 @@ impl ProbabilityAnalysis for IronButterfly {
         )?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1219,7 +1218,7 @@ impl ProbabilityAnalysis for IronButterfly {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1230,7 +1229,7 @@ impl ProbabilityAnalysis for IronButterfly {
         )?;
 
         loss_range_upper.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -2894,6 +2893,7 @@ mod tests_iron_butterfly_probability {
         assert_eq!(
             butterfly
                 .get_risk_free_rate()
+                .unwrap()
                 .values()
                 .next()
                 .unwrap()

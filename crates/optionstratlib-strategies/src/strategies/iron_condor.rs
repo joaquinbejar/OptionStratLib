@@ -9,11 +9,6 @@ Key characteristics:
 - Limited risk
 - Profit is highest when the underlying asset price remains between the two sold options at expiration
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -21,9 +16,11 @@ use super::base::{
 use super::shared::CondorStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -366,10 +363,18 @@ impl StrategyConstructor for IronCondor {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let lowest_strike = &sorted_options[0];
-        let lower_middle_strike = &sorted_options[1];
-        let upper_middle_strike = &sorted_options[2];
-        let highest_strike = &sorted_options[3];
+        let [
+            lowest_strike,
+            lower_middle_strike,
+            upper_middle_strike,
+            highest_strike,
+        ] = sorted_options.as_slice()
+        else {
+            return Err(StrategyError::invalid_parameters(
+                "Iron Condor get_strategy",
+                "Must have exactly 4 options",
+            ));
+        };
 
         // Validate option types
         if lowest_strike.option.option_style != OptionStyle::Put
@@ -796,10 +801,10 @@ impl BasicAble for IronCondor {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -819,22 +824,18 @@ impl BasicAble for IronCondor {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
 
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
 
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -848,17 +849,13 @@ impl BasicAble for IronCondor {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -899,10 +896,9 @@ impl Strategies for IronCondor {
             ));
         }
 
-        Ok(
-            Positive::new_decimal(self.calculate_profit_at(&self.short_call.option.strike_price)?)
-                .unwrap_or(Positive::ZERO),
-        )
+        Ok(Positive::new_decimal(self.calculate_profit_at(
+            &self.short_call.option.strike_price,
+        )?)?)
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
@@ -932,7 +928,7 @@ impl Strategies for IronCondor {
             self.long_put.option.strike_price,
         )
         .to_f64();
-        let height = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let height = measured_max_profit(self)?;
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
@@ -943,15 +939,12 @@ impl Strategies for IronCondor {
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok(
-                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
-                    .unwrap_or(Decimal::ZERO),
-            ),
+            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
         }
     }
 }
@@ -964,7 +957,7 @@ impl Optimizable for IronCondor {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.short_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_quad_iter()
@@ -1125,7 +1118,7 @@ impl Optimizable for IronCondor {
                     )
                 })?;
 
-                let fee_per_leg = self.get_fees()? / 8.0;
+                let fee_per_leg = self.get_fees()?.checked_div_f64(8.0)?;
                 let mut strategy = IronCondor::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
@@ -1204,7 +1197,7 @@ impl ProbabilityAnalysis for IronCondor {
         )?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1247,7 +1240,7 @@ impl ProbabilityAnalysis for IronCondor {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1258,7 +1251,7 @@ impl ProbabilityAnalysis for IronCondor {
         )?;
 
         loss_range_upper.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -3130,7 +3123,12 @@ mod tests_iron_condor_probability {
     #[test]
     fn test_get_risk_free_rate() {
         let condor = create_test_condor();
-        let risk_free_rate = **condor.get_risk_free_rate().values().next().unwrap();
+        let risk_free_rate = **condor
+            .get_risk_free_rate()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap();
         assert_eq!(risk_free_rate, dec!(0.05));
     }
 

@@ -422,12 +422,18 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The delta gap if delta target is set, otherwise zero
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when the difference leaves the
+    /// representable `Decimal` range; both the target and the current Greeks
+    /// are `pub` fields.
     #[inline]
-    #[must_use]
-    pub fn delta_gap(&self, current: &PortfolioGreeks) -> Decimal {
-        self.delta
-            .map(|t| t - current.delta)
-            .unwrap_or(Decimal::ZERO)
+    pub fn delta_gap(&self, current: &PortfolioGreeks) -> Result<Decimal, GreeksError> {
+        match self.delta {
+            Some(target) => Ok(d_sub(target, current.delta, "AdjustmentTarget::delta_gap")?),
+            None => Ok(Decimal::ZERO),
+        }
     }
 
     /// Calculates the gamma gap from current Greeks.
@@ -439,10 +445,17 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The gamma gap if gamma target is set, otherwise None
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when the difference leaves the
+    /// representable `Decimal` range.
     #[inline]
-    #[must_use]
-    pub fn gamma_gap(&self, current: &PortfolioGreeks) -> Option<Decimal> {
-        self.gamma.map(|t| t - current.gamma)
+    pub fn gamma_gap(&self, current: &PortfolioGreeks) -> Result<Option<Decimal>, GreeksError> {
+        self.gamma
+            .map(|target| d_sub(target, current.gamma, "AdjustmentTarget::gamma_gap"))
+            .transpose()
+            .map_err(GreeksError::from)
     }
 
     /// Calculates the vega gap from current Greeks.
@@ -454,10 +467,17 @@ impl AdjustmentTarget {
     /// # Returns
     ///
     /// The vega gap if vega target is set, otherwise None
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::CalculationError`] when the difference leaves the
+    /// representable `Decimal` range.
     #[inline]
-    #[must_use]
-    pub fn vega_gap(&self, current: &PortfolioGreeks) -> Option<Decimal> {
-        self.vega.map(|t| t - current.vega)
+    pub fn vega_gap(&self, current: &PortfolioGreeks) -> Result<Option<Decimal>, GreeksError> {
+        self.vega
+            .map(|target| d_sub(target, current.vega, "AdjustmentTarget::vega_gap"))
+            .transpose()
+            .map_err(GreeksError::from)
     }
 
     /// Checks if the current Greeks meet all targets within tolerance.
@@ -469,27 +489,22 @@ impl AdjustmentTarget {
     ///
     /// # Returns
     ///
-    /// `true` if all specified targets are met within tolerance
+    /// `true` if all specified targets are met within tolerance. A deviation
+    /// too large for `Decimal` exceeds every tolerance, so it is not met.
     #[must_use]
     pub fn is_satisfied(&self, current: &PortfolioGreeks, tolerance: Decimal) -> bool {
-        let delta_ok = self
-            .delta
-            .map(|t| (current.delta - t).abs() <= tolerance)
-            .unwrap_or(true);
-        let gamma_ok = self
-            .gamma
-            .map(|t| (current.gamma - t).abs() <= tolerance)
-            .unwrap_or(true);
-        let vega_ok = self
-            .vega
-            .map(|t| (current.vega - t).abs() <= tolerance)
-            .unwrap_or(true);
-        let theta_ok = self
-            .theta
-            .map(|t| (current.theta - t).abs() <= tolerance)
-            .unwrap_or(true);
+        let within = |target: Option<Decimal>, value: Decimal| {
+            target.is_none_or(|t| {
+                value
+                    .checked_sub(t)
+                    .is_some_and(|deviation| deviation.abs() <= tolerance)
+            })
+        };
 
-        delta_ok && gamma_ok && vega_ok && theta_ok
+        within(self.delta, current.delta)
+            && within(self.gamma, current.gamma)
+            && within(self.vega, current.vega)
+            && within(self.theta, current.theta)
     }
 }
 
@@ -782,7 +797,7 @@ mod tests_adjustment_target {
         let greeks =
             PortfolioGreeks::new(dec!(0.3), dec!(0.02), dec!(-0.05), dec!(0.15), dec!(0.01));
 
-        assert_eq!(target.delta_gap(&greeks), dec!(-0.3));
+        assert_eq!(target.delta_gap(&greeks).unwrap(), dec!(-0.3));
     }
 
     #[test]
@@ -791,7 +806,23 @@ mod tests_adjustment_target {
         let greeks =
             PortfolioGreeks::new(dec!(0.3), dec!(0.02), dec!(-0.05), dec!(0.15), dec!(0.01));
 
-        assert_eq!(target.gamma_gap(&greeks), Some(dec!(-0.02)));
+        assert_eq!(target.gamma_gap(&greeks).unwrap(), Some(dec!(-0.02)));
+    }
+
+    #[test]
+    fn test_adjustment_target_gaps_overflow_errs() {
+        let target = AdjustmentTarget {
+            delta: Some(Decimal::MAX),
+            gamma: Some(Decimal::MAX),
+            vega: Some(Decimal::MAX),
+            theta: Some(Decimal::MAX),
+        };
+        let greeks = PortfolioGreeks::new(dec!(-1), dec!(-1), dec!(-1), dec!(-1), dec!(0));
+
+        assert!(target.delta_gap(&greeks).is_err());
+        assert!(target.gamma_gap(&greeks).is_err());
+        assert!(target.vega_gap(&greeks).is_err());
+        assert!(!target.is_satisfied(&greeks, Decimal::MAX));
     }
 
     #[test]

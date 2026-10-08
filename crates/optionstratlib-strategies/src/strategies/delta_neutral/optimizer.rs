@@ -4,12 +4,6 @@
    Date: 24/12/25
 ******************************************************************************/
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 //! # Adjustment Optimizer Module
 //!
 //! Provides optimization algorithms for finding the best adjustment plan
@@ -140,8 +134,8 @@ impl<'a> AdjustmentOptimizer<'a> {
             ));
         }
 
-        let delta_gap = self.target.delta_gap(&current_greeks);
-        let gamma_gap = self.target.gamma_gap(&current_greeks);
+        let delta_gap = self.target.delta_gap(&current_greeks)?;
+        let gamma_gap = self.target.gamma_gap(&current_greeks)?;
 
         debug!(
             "Current delta: {:.4}, gap: {:.4}",

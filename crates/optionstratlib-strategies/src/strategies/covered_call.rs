@@ -416,7 +416,9 @@ impl CoveredCall {
                 .profit_at_kinks()?
                 .into_iter()
                 .fold(Decimal::MIN, Decimal::max);
-            return Ok(Positive::new_decimal(best.max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+            // Domain floor: a best case that still loses earns nothing, so the
+            // maximum profit is zero rather than negative.
+            return Ok(Positive::new_decimal(best.max(Decimal::ZERO))?);
         }
 
         if strike >= cost_basis {
@@ -474,7 +476,9 @@ impl CoveredCall {
                 .fold(Decimal::MAX, Decimal::min);
             // `Decimal` is symmetric, so negating a representable value is
             // itself representable.
-            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO))?);
         }
 
         let total_investment = cost_basis.checked_mul(&quantity)?;
@@ -800,11 +804,11 @@ impl BasicAble for CoveredCall {
     // `delta_neutrality` and every probability method. The short call carries the
     // same underlying, expiration and rate as the spot leg, so it answers for
     // the strategy.
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
 
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
 

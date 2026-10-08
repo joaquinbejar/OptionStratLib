@@ -144,7 +144,7 @@ fn test_short_put_get_quantity() {
 #[test]
 fn test_short_put_one_option() {
     let short_put = create_test_short_put();
-    let option = short_put.one_option();
+    let option = short_put.one_option().unwrap();
     assert_eq!(option.strike_price, Positive::new(100.0).unwrap());
     assert_eq!(option.option_style, OptionStyle::Put);
     assert_eq!(option.side, Side::Short);

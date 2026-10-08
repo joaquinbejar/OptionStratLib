@@ -1,14 +1,10 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::strategies::base::lower_break_even;
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use optionstratlib_core::model::decimal::d_div;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
@@ -21,7 +17,6 @@ use crate::strategies::probabilities::core::ProbabilityAnalysis;
 use crate::strategies::utils::OptimizationCriteria;
 use crate::strategies::{BasicAble, Strategable, Strategies, StrategyConstructor, Validable};
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::ProbabilityError;
@@ -248,10 +243,10 @@ impl BasicAble for ShortPut {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_put.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_put.one_option_mut()
     }
     fn set_expiration_date(
@@ -264,15 +259,13 @@ impl BasicAble for ShortPut {
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.short_put.option.implied_volatility = *volatility;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -333,7 +326,7 @@ impl Strategies for ShortPut {
         // Max loss for a short put occurs at price = 0: strike - premium.
         let loss = self.calculate_profit_at(&Positive::ZERO)?;
         if loss <= Decimal::ZERO {
-            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(loss.abs())?)
         } else {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxLossError {
@@ -343,23 +336,20 @@ impl Strategies for ShortPut {
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let high = measured_max_profit(self)?;
         let break_even = self.break_even_points.first().ok_or_else(|| {
             StrategyError::empty_collection("ShortPut::get_profit_area: no break-even points")
         })?;
         let base = price_gap(self.short_put.option.strike_price, *break_even);
-        Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
+        decimal_from_f64(high.to_f64() * base.to_f64() / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok(
-                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
-                    .unwrap_or(Decimal::ZERO),
-            ),
+            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
         }
     }
 }
@@ -516,7 +506,7 @@ impl ProbabilityAnalysis for ShortPut {
         let mut profit_range = ProfitLossRange::new(Some(*break_even), None, Positive::ZERO)?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_put.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,
@@ -544,7 +534,7 @@ impl ProbabilityAnalysis for ShortPut {
         let mut loss_range = ProfitLossRange::new(None, Some(*break_even), Positive::ZERO)?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_put.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: option.implied_volatility,
                 std_dev_adjustment: Positive::ZERO,

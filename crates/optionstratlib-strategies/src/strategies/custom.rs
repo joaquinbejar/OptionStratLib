@@ -3,11 +3,6 @@
    Email: jb@taunais.com
    Date: 2/10/24
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -17,6 +12,7 @@ use crate::strategies::base::price_gap;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::utils::calculate_price_range_bounded;
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, combinations::process_n_times_iter,
@@ -352,8 +348,8 @@ impl CustomStrategy {
         let mut profit_zones = Vec::new();
         let mut loss_zones = Vec::new();
 
-        if break_even_points.len() == 1 {
-            let break_even = break_even_points[0];
+        if let [break_even] = break_even_points {
+            let break_even = *break_even;
             // A break-even inside the first cent has no probe point below it;
             // zero is the floor of the price domain, and the multi-point
             // branch below already measures the same distance that way.
@@ -383,25 +379,30 @@ impl CustomStrategy {
                     Positive::ZERO,
                 )?);
             }
-        } else {
+        } else if let (Some(first), Some(last)) =
+            (break_even_points.first(), break_even_points.last())
+        {
             // Multiple break-even points
-            let test_point = price_gap(break_even_points[0], pos_lit(dec!(0.01)));
+            let test_point = price_gap(*first, pos_lit(dec!(0.01)));
             let is_profit_below = self.calculate_profit_at(&test_point)? > Decimal::ZERO;
             let is_first_zone_profit = is_profit_below;
 
-            // Create ranges between break-even points
-            let ranges = (0..=break_even_points.len())
-                .map(|i| match i {
-                    0 => ProfitLossRange::new(None, Some(break_even_points[0]), Positive::ZERO),
-                    i if i == break_even_points.len() => {
-                        ProfitLossRange::new(Some(break_even_points[i - 1]), None, Positive::ZERO)
-                    }
-                    i => ProfitLossRange::new(
-                        Some(break_even_points[i - 1]),
-                        Some(break_even_points[i]),
-                        Positive::ZERO,
-                    ),
-                })
+            // Create ranges between break-even points: below the first, one
+            // per adjacent pair, and above the last.
+            let ranges = std::iter::once(ProfitLossRange::new(None, Some(*first), Positive::ZERO))
+                .chain(
+                    break_even_points
+                        .iter()
+                        .zip(break_even_points.iter().skip(1))
+                        .map(|(lower, upper)| {
+                            ProfitLossRange::new(Some(*lower), Some(*upper), Positive::ZERO)
+                        }),
+                )
+                .chain(std::iter::once(ProfitLossRange::new(
+                    Some(*last),
+                    None,
+                    Positive::ZERO,
+                )))
                 .collect::<Result<Vec<_>, _>>()?;
 
             // Classify ranges as profit or loss zones
@@ -561,10 +562,10 @@ impl CustomStrategy {
     /// body of `replace_position` before break-evens were refreshed (#784).
     fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         // Find and replace the position with matching criteria
-        let index = self
+        let slot = self
             .positions
-            .iter()
-            .position(|p| {
+            .iter_mut()
+            .find(|p| {
                 p.option.option_style == position.option.option_style
                     && p.option.side == position.option.side
                     && p.option.strike_price == position.option.strike_price
@@ -578,7 +579,7 @@ impl CustomStrategy {
                 ))
             })?;
 
-        self.positions[index] = position.clone();
+        *slot = position.clone();
 
         self.ensure_valid_after_edit("Strategy is not valid after replacing position")
     }
@@ -646,12 +647,74 @@ impl BasicAble for CustomStrategy {
         quantities
     }
 
-    fn one_option(&self) -> &Options {
-        &self.positions[0].option
+    // `positions` is a `pub` field and the strategy derives `Deserialize`, so
+    // an empty leg set reaches the getters below even though `new` rejects
+    // one. The getters that have an answer without a leg take it from the
+    // strategy itself (its symbol and its spot) or return an empty map; the
+    // ones that need a leg (`get_type`, `one_option`) return an error. The
+    // values for a strategy with legs are unchanged.
+    fn get_symbol(&self) -> Result<&str, StrategyError> {
+        match self.positions.first() {
+            Some(position) => position.option.get_symbol(),
+            None => Ok(&self.symbol),
+        }
     }
 
-    fn one_option_mut(&mut self) -> &mut Options {
-        &mut self.positions[0].option
+    fn get_strike(&self) -> Result<HashMap<OptionBasicType<'_>, &Positive>, StrategyError> {
+        match self.positions.first() {
+            Some(position) => position.option.get_strike(),
+            None => Ok(HashMap::new()),
+        }
+    }
+
+    fn get_underlying_price(&self) -> Result<&Positive, StrategyError> {
+        match self.positions.first() {
+            Some(position) => position.option.get_underlying_price(),
+            None => Ok(&self.underlying_price),
+        }
+    }
+
+    fn get_risk_free_rate(&self) -> Result<HashMap<OptionBasicType<'_>, &Decimal>, StrategyError> {
+        match self.positions.first() {
+            Some(position) => position.option.get_risk_free_rate(),
+            None => Ok(HashMap::new()),
+        }
+    }
+
+    fn get_dividend_yield(&self) -> Result<HashMap<OptionBasicType<'_>, &Positive>, StrategyError> {
+        match self.positions.first() {
+            Some(position) => position.option.get_dividend_yield(),
+            None => Ok(HashMap::new()),
+        }
+    }
+
+    /// The first leg's option.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::EmptyCollection`] when the strategy has no
+    /// legs: `new` rejects an empty leg set, but the `pub` `positions` field
+    /// and `Deserialize` can build one.
+    fn one_option(&self) -> Result<&Options, StrategyError> {
+        self.positions
+            .first()
+            .map(|position| &position.option)
+            .ok_or_else(|| StrategyError::empty_collection("CustomStrategy::one_option: no legs"))
+    }
+
+    /// The first leg's option, mutably.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::EmptyCollection`] when the strategy has no
+    /// legs, as [`Self::one_option`] does.
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
+        self.positions
+            .first_mut()
+            .map(|position| &mut position.option)
+            .ok_or_else(|| {
+                StrategyError::empty_collection("CustomStrategy::one_option_mut: no legs")
+            })
     }
 
     fn set_expiration_date(
@@ -708,7 +771,9 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos_lit(dec!(50.0)); // Use 50 steps max
+        let step = max_price
+            .checked_sub(&min_price)?
+            .checked_div(&pos_lit(dec!(50.0)))?; // Use 50 steps max
         let mut max_profit = Decimal::ZERO;
         let mut current_price = min_price;
 
@@ -740,7 +805,9 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos_lit(dec!(50.0)); // Use 50 steps max
+        let step = max_price
+            .checked_sub(&min_price)?
+            .checked_div(&pos_lit(dec!(50.0)))?; // Use 50 steps max
         let mut max_loss = Decimal::ZERO;
         let mut current_price = min_price;
 
@@ -772,7 +839,9 @@ impl Strategies for CustomStrategy {
         }
 
         let (min_price, max_price) = self.range_to_show()?;
-        let step = (max_price - min_price) / pos_lit(dec!(50.0)); // Use 50 steps max
+        let step = max_price
+            .checked_sub(&min_price)?
+            .checked_div(&pos_lit(dec!(50.0)))?; // Use 50 steps max
         let mut total_profit = Decimal::ZERO;
         let mut current_price = min_price;
 
@@ -808,8 +877,8 @@ impl Strategies for CustomStrategy {
             return Ok(Decimal::ZERO);
         }
 
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
 
         if max_loss == Positive::ZERO {
             return Ok(Decimal::ZERO);
@@ -1357,5 +1426,79 @@ mod tests_find_optimal_break_evens {
 
         assert!(result.is_err());
         assert_eq!(snapshot(&strategy), before);
+    }
+}
+
+#[cfg(test)]
+mod tests_empty_legs {
+    //! A `CustomStrategy` whose legs were removed through the `pub`
+    //! `positions` field (#788).
+
+    use super::*;
+    use optionstratlib_core::model::types::OptionType;
+
+    fn emptied() -> CustomStrategy {
+        let leg = Position::new(
+            Options::new(
+                OptionType::European,
+                Side::Long,
+                "TEST".to_string(),
+                Positive::HUNDRED,
+                ExpirationDate::Days(Positive::new(30.0).unwrap()),
+                Positive::new(0.2).unwrap(),
+                Positive::ONE,
+                Positive::HUNDRED,
+                dec!(0.05),
+                OptionStyle::Call,
+                Positive::ZERO,
+                None,
+            ),
+            Positive::ONE,
+            chrono::Utc::now(),
+            Positive::ZERO,
+            Positive::ZERO,
+            None,
+            None,
+        );
+        let mut strategy = CustomStrategy::new(
+            "Custom".to_string(),
+            "TEST".to_string(),
+            "One long call".to_string(),
+            Positive::HUNDRED,
+            vec![leg],
+            Positive::new(0.01).unwrap(),
+            100,
+            Positive::ONE,
+        )
+        .unwrap();
+        strategy.positions.clear();
+        strategy
+    }
+
+    #[test]
+    fn test_one_option_without_legs_returns_err() {
+        let mut strategy = emptied();
+        assert!(matches!(
+            strategy.one_option(),
+            Err(StrategyError::EmptyCollection { .. })
+        ));
+        assert!(matches!(
+            strategy.one_option_mut(),
+            Err(StrategyError::EmptyCollection { .. })
+        ));
+        assert!(matches!(
+            strategy.get_type(),
+            Err(StrategyError::EmptyCollection { .. })
+        ));
+    }
+
+    #[test]
+    fn test_getters_without_legs_answer_from_the_strategy() {
+        let strategy = emptied();
+        assert_eq!(strategy.get_symbol().unwrap(), "TEST");
+        assert_eq!(*strategy.get_underlying_price().unwrap(), Positive::HUNDRED);
+        assert!(strategy.get_strike().unwrap().is_empty());
+        assert!(strategy.get_risk_free_rate().unwrap().is_empty());
+        assert!(strategy.get_dividend_yield().unwrap().is_empty());
     }
 }

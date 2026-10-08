@@ -269,7 +269,14 @@ where
                 mark_adjustment,
                 "backtesting::strategy_simulation/mark_adjustment",
             )?;
-            let index = *step.x.index() as usize;
+            // A step index is an `i32`; a negative one would wrap to a
+            // holding period near `usize::MAX` under `as`.
+            let index = usize::try_from(*step.x.index()).map_err(|_| {
+                SimulationError::invalid_parameters(&format!(
+                    "backtesting::strategy_simulation: negative step index {}",
+                    step.x.index()
+                ))
+            })?;
 
             // Track premium statistics
             max_premium = max_premium.max(current_premium);
@@ -404,7 +411,8 @@ where
 ///
 /// Returns a [`BacktestError`] when the strategy has no single leg, a
 /// Black-Scholes price or an expiration P&L fails, a step cannot be read as
-/// a price, or the aggregate statistics overflow.
+/// a price or carries a negative index, or the aggregate statistics
+/// overflow.
 #[must_use = "the simulation statistics are the only product of this call"]
 #[tracing::instrument(level = "debug", skip(strategy, sim), fields(walks = sim.len()))]
 pub fn simulate_single_leg<S, X, Y>(
@@ -639,6 +647,27 @@ mod tests_single_leg_contract {
             evaluator.initial_premium(),
             option.calculate_price_black_scholes().unwrap().abs()
         );
+    }
+
+    /// A step whose index went below zero (`Xstep::previous` from the first
+    /// step) is reported; `as usize` used to wrap it into a holding period
+    /// near `usize::MAX` (#788).
+    #[test]
+    fn test_evaluate_path_rejects_a_negative_step_index() {
+        let strategy = create_test_long_call();
+        let evaluator = SingleLegPathEvaluator::new(&strategy).unwrap();
+        let walk_params = create_walk_params(vec![Positive::HUNDRED, Positive::HUNDRED]);
+        let walk = RandomWalk::new("negative index".to_string(), &walk_params, |params| {
+            let first = params.init_step.clone();
+            let mut rewound = first.clone();
+            rewound.x = first.x.previous()?;
+            Ok::<_, SimulationError>(vec![first, rewound])
+        })
+        .unwrap();
+        assert_eq!(*walk.get_steps()[1].x.index(), -1);
+
+        let result = evaluator.evaluate_path(&walk, &ExitPolicy::Expiration);
+        assert!(result.is_err(), "negative index accepted: {result:?}");
     }
 
     /// A `Positionable` with no legs (or with two) is not a single-leg

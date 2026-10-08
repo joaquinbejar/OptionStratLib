@@ -20,6 +20,7 @@ use optionstratlib_core::model::{OptionStyle, OptionType, Options, Position, Sid
 use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::BullCallSpread;
 use optionstratlib_strategies::strategies::base::{BreakEvenable, Positionable, Strategies};
+use optionstratlib_strategies::strategies::custom::CustomStrategy;
 use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
 use optionstratlib_visualization::visualization::Graph;
 use proptest::prelude::*;
@@ -151,4 +152,57 @@ proptest! {
         let _ = strategy.analyze_probabilities(None, None);
     }
 
+    /// The payoff chart pads its vertical extent by 5% of the profit span.
+    /// Legs at `Positive::MAX` put the extremes at the ends of the `Decimal`
+    /// range, and a range where no price could be scored leaves them at their
+    /// `Decimal::MAX` / `Decimal::MIN` seeds; either way `max - min` aborted
+    /// with `Subtraction overflowed` (#788).
+    #[test]
+    fn test_payoff_chart_extent_never_panics(
+        quantity in prop_oneof![Just(Positive::ONE), Just(Positive::MAX)],
+        premium in prop_oneof![Just(Positive::ONE), Just(Positive::MAX)],
+        short_quantity in prop_oneof![Just(Positive::ONE), Just(Positive::MAX)],
+    ) {
+        let leg = |side: Side, strike: Positive, quantity: Positive, premium: Positive| {
+            Position::new(
+                Options::new(
+                    OptionType::European, side, "PROP".to_string(), strike,
+                    ExpirationDate::Days(pos(dec!(30))), pos(dec!(0.2)), quantity,
+                    Positive::HUNDRED, dec!(0.05), OptionStyle::Call, Positive::ZERO, None,
+                ),
+                premium, chrono::Utc::now(), Positive::ZERO, Positive::ZERO, None, None,
+            )
+        };
+        let mut strategy = BullCallSpread {
+            long_call: leg(Side::Long, pos(dec!(90)), quantity, premium),
+            short_call: leg(Side::Short, pos(dec!(110)), short_quantity, Positive::ONE),
+            ..BullCallSpread::default()
+        };
+        let _ = strategy.update_break_even_points();
+        let _ = strategy.graph_data();
+    }
+
+    /// The payoff chart of a custom strategy whose legs were removed through
+    /// the `pub` `positions` field. It read the spot from `positions[0]` and
+    /// aborted with `index out of bounds` (#788).
+    #[test]
+    fn test_custom_strategy_chart_without_legs_never_panics(
+        underlying in prop_oneof![Just(Positive::ONE), Just(Positive::HUNDRED)],
+    ) {
+        let leg = Position::new(
+            Options::new(
+                OptionType::European, Side::Long, "PROP".to_string(), underlying,
+                ExpirationDate::Days(pos(dec!(30))), pos(dec!(0.2)), Positive::ONE,
+                underlying, dec!(0.05), OptionStyle::Call, Positive::ZERO, None,
+            ),
+            Positive::ONE, chrono::Utc::now(), Positive::ZERO, Positive::ZERO, None, None,
+        );
+        if let Ok(mut strategy) = CustomStrategy::new(
+            "prop".to_string(), "PROP".to_string(), "property".to_string(),
+            underlying, vec![leg], pos(dec!(0.01)), 100, Positive::ONE,
+        ) {
+            strategy.positions.clear();
+            let _ = strategy.graph_data();
+        }
+    }
 }

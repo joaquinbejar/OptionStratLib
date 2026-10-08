@@ -15,27 +15,22 @@ Key characteristics:
 - Also known as a vertical call credit spread
 */
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::SpreadStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -137,8 +132,6 @@ impl BearCallSpread {
     /// # Returns
     ///
     /// Returns a configured `BearCallSpread` strategy object with positions and break-even points calculated.
-    ///
-    /// # Panics
     ///
     /// # Errors
     ///
@@ -271,8 +264,12 @@ impl StrategyConstructor for BearCallSpread {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let lower_strike_position = &sorted_positions[0];
-        let higher_strike_position = &sorted_positions[1];
+        let [lower_strike_position, higher_strike_position] = sorted_positions.as_slice() else {
+            return Err(StrategyError::invalid_parameters(
+                "Bear Call Spread get_strategy",
+                "Must have exactly 2 options",
+            ));
+        };
 
         // Validate options are calls
         if lower_strike_position.option.option_style != OptionStyle::Call
@@ -598,10 +595,10 @@ impl BasicAble for BearCallSpread {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -619,12 +616,10 @@ impl BasicAble for BearCallSpread {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -635,11 +630,9 @@ impl BasicAble for BearCallSpread {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -705,24 +698,24 @@ impl Strategies for BearCallSpread {
                 },
             ))
         } else {
-            Ok(Positive::new_decimal(max_loss).unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(max_loss)?)
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
+        let high = measured_max_profit(self)?.to_f64();
         let break_even = self.break_even_points.first().ok_or_else(|| {
             StrategyError::empty_collection("BearCallSpread::get_profit_area: no break-even points")
         })?;
         let base = price_gap(*break_even, self.short_call.option.strike_price).to_f64();
-        Ok(Decimal::from_f64(high * base / 200.0).unwrap_or(Decimal::ZERO))
+        decimal_from_f64(high * base / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO).to_f64();
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO).to_f64();
+        let max_profit = measured_max_profit(self)?.to_f64();
+        let max_loss = measured_max_loss(self)?.to_f64();
         match (max_profit, max_loss) {
             (0.0, _) => Ok(Decimal::ZERO),
             (_, 0.0) => Ok(Decimal::MAX),
-            _ => Ok(Decimal::from_f64(max_profit / max_loss * 100.0).unwrap_or(Decimal::ZERO)),
+            _ => decimal_from_f64(max_profit / max_loss * 100.0),
         }
     }
 }
@@ -753,7 +746,7 @@ impl Optimizable for BearCallSpread {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.short_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_double_iter()
@@ -941,7 +934,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut profit_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -971,7 +964,7 @@ impl ProbabilityAnalysis for BearCallSpread {
         let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1089,7 +1082,7 @@ mod tests_bear_call_spread_strategies {
     #[test]
     fn test_get_underlying_price() {
         let spread = create_test_spread();
-        assert_eq!(spread.get_underlying_price(), &Positive::HUNDRED);
+        assert_eq!(spread.get_underlying_price().unwrap(), &Positive::HUNDRED);
     }
 
     #[test]
@@ -2315,7 +2308,12 @@ mod tests_bear_call_spread_probability {
     fn test_get_risk_free_rate() {
         let spread = create_test_spread();
         assert_eq!(
-            **spread.get_risk_free_rate().values().next().unwrap(),
+            **spread
+                .get_risk_free_rate()
+                .unwrap()
+                .values()
+                .next()
+                .unwrap(),
             dec!(0.05)
         );
     }

@@ -16,6 +16,49 @@ summarize the release.
 
 ### Changed — breaking
 
+- **The strategy width, break-even and aggregation helpers and the
+  adjustment-target gaps return a `Result`** (#788). Each one used a
+  panicking `Positive` / `Decimal` operator on values the caller controls
+  (the strikes are `pub` fields, the targets and Greeks are `pub`
+  `Decimal`s), so crossed strikes, a credit larger than the strike or a
+  total past `Positive::MAX` aborted the process. Values for every input
+  that worked before are unchanged.
+  - `SpreadStrategy::spread_width`, `ButterflyStrategy::wing_width`,
+    `CondorStrategy::{inner_width, outer_width, put_spread_width,
+    call_spread_width}` and `StrangleStrategy::strangle_width` return
+    `Result<Positive, StrategyError>` (`StrategyError::PositiveError` for
+    crossed strikes).
+  - `credit_spread_break_even`, `debit_spread_break_even`,
+    `aggregate_fees` and `aggregate_premiums` return
+    `Result<Positive, StrategyError>`.
+  - `AdjustmentTarget::delta_gap` returns `Result<Decimal, GreeksError>`,
+    and `gamma_gap` / `vega_gap` return
+    `Result<Option<Decimal>, GreeksError>`, like the `PortfolioGreeks`
+    gaps.
+  - Migration: add `?` (or match the `Err`) at each call.
+
+- **`BasicAble::one_option` and the getters that read through it return a
+  `Result`** (#788). `one_option` / `one_option_mut` return
+  `Result<&Options, StrategyError>` / `Result<&mut Options, StrategyError>`,
+  and `get_symbol`, `get_strike`, `get_type`, `get_underlying_price`,
+  `get_risk_free_rate` and `get_dividend_yield` return their former type
+  wrapped in `Result<_, StrategyError>`. The trait defaults of `one_option`
+  / `one_option_mut` panicked, so any `impl BasicAble for X {}` aborted on
+  `get_underlying_price`; they now return
+  `StrategyError::OperationError(NotSupported { .. })`, like the other
+  defaults of the trait. A `CustomStrategy` with no legs (its `positions`
+  field is `pub` and it derives `Deserialize`) returns
+  `StrategyError::EmptyCollection` from `one_option`, `one_option_mut` and
+  `get_type` instead of `index out of bounds`; `get_symbol` and
+  `get_underlying_price` answer from its own `symbol` and
+  `underlying_price`, and `get_strike`, `get_risk_free_rate` and
+  `get_dividend_yield` return an empty map. Every shipped strategy, `Options`
+  and `Position` return `Ok` with the same values as before.
+  `Optimizable::is_valid_optimal_option` admits no strike on the `Upper` or
+  `Lower` side of a strategy without a spot. Migration: add `?` after each
+  of these calls, return `Ok(..)` from an override, and override
+  `one_option` / `one_option_mut` in a custom strategy that holds options.
+
 - **Package contents and metadata are verified for 0.22.0** (M8-03, #559),
   with the evidence in `docs/release/0.22/packages.md`.
   - **Rust 1.89 is the declared minimum.** The workspace sets
@@ -1506,6 +1549,78 @@ summarize the release.
   `()`, so the failure is not reported to the caller. A run where every
   recomputation succeeds returns the same result as before. No signature
   changes.
+
+- **Strategies, backtesting and visualization no longer abort on extreme
+  or degenerate input** (#788). Every site below panicked; each now
+  returns a typed error or, where the API has no error channel, the
+  answer the input defines. Values for every input that worked before
+  are unchanged.
+  - `Strategies::get_volume` (the trait default, `LongStrangle`,
+    `ShortStrangle`) sums the quantities with `checked_add`; legs at
+    `Positive::MAX` aborted with `Positive arithmetic overflow in add`.
+  - `LongButterflySpread::new` / `ShortButterflySpread::new` double the
+    wing quantity with `checked_mul_dec` and report the overflow; their
+    `validate` treats a doubled wing past `Positive::MAX` as not matching
+    the body.
+  - `calculate_profit_ratio` divides and scales with `d_div` / `d_mul`
+    (`Division overflowed` before); `ShortButterflySpread::get_profit_area`
+    adds the two wing profits with `d_add`;
+    `AdjustmentTarget::is_satisfied` reads a deviation past `Decimal` as
+    not met.
+  - `CustomStrategy` with no legs no longer indexes `positions[0]`; see the
+    `BasicAble` entry under "Changed — breaking".
+  - Numbers that were made up are reported or justified. `get_profit_area`
+    and `get_profit_ratio` of `LongCall`, `LongPut`, `ShortCall`,
+    `ShortPut`, the four verticals, the two butterflies, `IronCondor`,
+    `IronButterfly` and `BullCallLadder` turned a `NaN`, infinite or
+    out-of-range `f64` into `0` through `Decimal::from_f64(..)
+    .unwrap_or(Decimal::ZERO)`; they now return
+    `StrategyError::NumericConversion` (the profit ratio of a long call or
+    put, whose maximum profit is unlimited, is one such case). The
+    `Positive::new_decimal(x).unwrap_or(Positive::ZERO)` fallbacks (premium
+    refreshes, max-profit and max-loss figures, delta adjustment
+    quantities, the probability analysis `risk_reward_ratio`,
+    `BullCallLadder`'s profit-area bases) now propagate the error: for an
+    `abs()` or an already checked sign the value is unchanged, and a
+    negative ratio or a crossed base is an error instead of zero. The max
+    profit / max loss floors of `Collar`, `CoveredCall` and `ProtectivePut`
+    (`x.max(Decimal::ZERO)`) stay: a worst case that still gains loses
+    nothing, and the comment at each site says so. The single-contract
+    chart leaves out a price whose payoff cannot be computed instead of
+    drawing it at zero.
+  - The profit area and profit ratio of every strategy no longer read a
+    failed `get_max_profit` / `get_max_loss` as zero (44
+    `unwrap_or(Positive::ZERO)` calls and four `Err(_) => 0` arms). A
+    strategy reporting the sign of its own extreme (`MaxProfitError`: the
+    best case still loses; `MaxLossError`: the worst case still gains)
+    keeps its existing meaning, zero profit or zero loss (shown as an
+    unbounded ratio where the strategy already did so); every other error
+    (pricing, overflow, empty break-evens) is now returned. No test
+    expectation changed. The payoff chart omits its current-price marker
+    and label when the payoff there cannot be computed, instead of
+    labelling it `0.00`.
+  - `ProtectivePut`'s `Display` skips the break-even line when the `pub`
+    `break_even_points` is empty.
+  - The payoff chart (`impl_graph_for_payoff_strategy!`) pads its vertical
+    extent with checked arithmetic; a range where no price could be scored,
+    or an extent past `Decimal`, charts as empty like the macro's other
+    failures (`Subtraction overflowed` before). The single-contract chart's
+    fallback range around a strike near `Positive::MAX` does the same.
+  - `Graph::show` writes the page and starts the platform opener itself and
+    returns `GraphError::Io` when either fails; `plotly`'s `Plot::show`
+    aborted when the temp file could not be written or no opener exists
+    (`xdg-open` on a headless server).
+  - The single-leg backtest rejects a walk step with a negative index
+    (`Xstep::previous` from the first step) with a `SimulationError`;
+    `as usize` wrapped it into a holding period near `usize::MAX`.
+  - Every scoped `#![allow(clippy::indexing_slicing)]` in
+    `optionstratlib-strategies` (23 files) and `optionstratlib-visualization`
+    (3 files) is gone: the positional reads use slice patterns, `.get()` or
+    iterator zips.
+  - `make scan-banned` bans `pos_or_panic!` in production code, recognizes
+    `#[cfg(all(test, ...))]` as a test gate and no longer counts braces
+    inside one-line string literals, which ended or extended a skipped test
+    body at the wrong line.
 
 - **`CustomStrategy` no longer discards a failed break-even recomputation
   after an edit** (#784). `add_position`, `modify_position` and

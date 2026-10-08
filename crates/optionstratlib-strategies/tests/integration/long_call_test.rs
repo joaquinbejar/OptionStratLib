@@ -6,6 +6,7 @@ use optionstratlib_core::model::{
     types::{OptionStyle, OptionType, Side},
 };
 use optionstratlib_pricing::pricing::Profit;
+use optionstratlib_strategies::error::StrategyError;
 use optionstratlib_strategies::strategies::{
     BasicAble, Strategies, Validable,
     base::{BreakEvenable, Positionable, StrategyType},
@@ -144,7 +145,7 @@ fn test_long_call_get_quantity() {
 #[test]
 fn test_long_call_one_option() {
     let long_call = create_test_long_call();
-    let option = long_call.one_option();
+    let option = long_call.one_option().unwrap();
     assert_eq!(option.strike_price, Positive::new(100.0).unwrap());
     assert_eq!(option.option_style, OptionStyle::Call);
     assert_eq!(option.side, Side::Long);
@@ -302,10 +303,12 @@ fn test_long_call_get_positions() {
 #[test]
 fn test_long_call_get_profit_ratio() {
     let long_call = create_test_long_call();
-    let ratio = long_call.get_profit_ratio().unwrap();
-    // max_profit = INFINITY, so INFINITY / max_loss * 100 overflows Decimal → unwrap_or(ZERO)
+    // max_profit is unlimited (`Positive::MAX`), so max_profit / max_loss * 100
+    // leaves the `Decimal` range. Until #788 that came back as a ratio of zero,
+    // a number nobody computed; it is now reported.
+    let ratio = long_call.get_profit_ratio();
     assert!(
-        ratio < Decimal::new(1, 1),
-        "Expected near-zero ratio for unlimited profit strategy, got {ratio}"
+        matches!(ratio, Err(StrategyError::NumericConversion { .. })),
+        "Expected a numeric conversion error for an unlimited profit strategy, got {ratio:?}"
     );
 }

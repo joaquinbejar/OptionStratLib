@@ -144,7 +144,7 @@ fn test_long_put_get_quantity() {
 #[test]
 fn test_long_put_one_option() {
     let long_put = create_test_long_put();
-    let option = long_put.one_option();
+    let option = long_put.one_option().unwrap();
     assert_eq!(option.option_style, OptionStyle::Put);
     assert_eq!(option.side, Side::Long);
 }
@@ -155,7 +155,10 @@ fn test_long_put_set_expiration_date() {
     let new_expiration = ExpirationDate::Days(Positive::new(45.0).unwrap());
     let result = long_put.set_expiration_date(new_expiration);
     assert!(result.is_ok());
-    assert_eq!(long_put.one_option().expiration_date, new_expiration);
+    assert_eq!(
+        long_put.one_option().unwrap().expiration_date,
+        new_expiration
+    );
 }
 
 #[test]
@@ -164,7 +167,7 @@ fn test_long_put_set_underlying_price() {
     let new_price = Positive::new(110.0).unwrap();
     let result = long_put.set_underlying_price(&new_price);
     assert!(result.is_ok());
-    assert_eq!(long_put.one_option().underlying_price, new_price);
+    assert_eq!(long_put.one_option().unwrap().underlying_price, new_price);
 }
 
 #[test]
@@ -173,7 +176,7 @@ fn test_long_put_set_implied_volatility() {
     let new_iv = Positive::new(0.4).unwrap();
     let result = long_put.set_implied_volatility(&new_iv);
     assert!(result.is_ok());
-    assert_eq!(long_put.one_option().implied_volatility, new_iv);
+    assert_eq!(long_put.one_option().unwrap().implied_volatility, new_iv);
 }
 
 #[test]

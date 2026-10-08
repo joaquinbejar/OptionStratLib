@@ -9,11 +9,6 @@ Key characteristics:
 - High cost due to purchasing both a call and a put
 - Profitable only with a large move in either direction
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -21,6 +16,7 @@ use super::base::{
 use super::shared::StraddleStrategy;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::is_extreme_sign_error;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
@@ -631,10 +627,10 @@ impl BasicAble for LongStraddle {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.long_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.long_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -648,23 +644,19 @@ impl BasicAble for LongStraddle {
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.implied_volatility = *volatility;
         self.long_put.option.implied_volatility = *volatility;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -725,7 +717,8 @@ impl Strategies for LongStraddle {
                 .checked_div(&max_loss)?
                 .checked_mul_f64(100.0)?
                 .to_f64(),
-            Err(_) => ZERO,
+            Err(error) if is_extreme_sign_error(&error) => ZERO,
+            Err(error) => return Err(error),
         };
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
@@ -747,7 +740,7 @@ impl Optimizable for LongStraddle {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.long_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_single_iter()
@@ -945,7 +938,7 @@ impl ProbabilityAnalysis for LongStraddle {
             ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -959,7 +952,7 @@ impl ProbabilityAnalysis for LongStraddle {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1000,7 +993,7 @@ impl ProbabilityAnalysis for LongStraddle {
         )?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1133,7 +1126,12 @@ mod tests_long_straddle_probability {
     fn test_get_risk_free_rate() {
         let straddle = create_test_long_straddle();
         assert_eq!(
-            **straddle.get_risk_free_rate().values().next().unwrap(),
+            **straddle
+                .get_risk_free_rate()
+                .unwrap()
+                .values()
+                .next()
+                .unwrap(),
             dec!(0.05)
         );
     }

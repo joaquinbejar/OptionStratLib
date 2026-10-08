@@ -496,6 +496,9 @@ release-gates-render:
 #   * `panic!` / `unreachable!` / `todo!` / `unimplemented!` — the same,
 #     spelled out. The pattern requires a non-word, non-`_` character before
 #     the macro name so `pos_or_panic!` is not swept up with `panic!`.
+#   * `pos_or_panic!` — `positive`'s test-literal constructor, which aborts on
+#     a negative or non-finite value; production code builds a `Positive`
+#     with `Positive::new` / `new_decimal` and `?` (#788).
 #   * `println!` / `eprintln!` / `print!` / `eprint!` / `dbg!` and
 #     `tracing_subscriber` — library code logs through `tracing` and never
 #     writes to stdout or installs a global subscriber (rules/global_rules.md,
@@ -522,6 +525,10 @@ release-gates-render:
 # body-less item behind `#[cfg(test)]` (`use`, `const`, `static`, `type`
 # alias, or a `;`-terminated declaration such as a tuple struct or a trait
 # method signature) skips nothing; scanning resumes right after it as usual.
+# `#[cfg(all(test, ...))]` gates an item the same way `#[cfg(test)]` does.
+# Braces inside a string literal that opens and closes on the same line (a
+# `format!("{x}")` argument, a `"... }"` message) are not counted, so they
+# cannot end a skipped body early or keep it open past its end (#788).
 #
 # Line comments (`///`, `//!`, `//`) are skipped, and so is the closing line
 # of a `/*** … ***/` banner (`*`-run followed by `/`). The filter used to skip
@@ -536,9 +543,10 @@ scan-banned:
 	@found=$$(for f in $$(find src crates/*/src -name '*.rs'); do \
 		awk -v file="$$f" ' \
 			BEGIN { skip = 0; depth = 0; pending = 0; awaiting = 0 } \
-			function braces(line,   tmp, o, c) { \
-				tmp = line; o = gsub(/{/, "{", tmp); \
-				tmp = line; c = gsub(/}/, "}", tmp); \
+			function braces(line,   code, tmp, o, c) { \
+				code = line; gsub(/\\./, "", code); gsub(/"[^"]*"/, "", code); \
+				tmp = code; o = gsub(/{/, "{", tmp); \
+				tmp = code; c = gsub(/}/, "}", tmp); \
 				return o - c; \
 			} \
 			{ \
@@ -571,12 +579,12 @@ scan-banned:
 						next; \
 					} \
 				} \
-				if (raw ~ /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$$/) { pending = 1; next } \
+				if (raw ~ /^[[:space:]]*#\[cfg\((test|all\(test,[^]]*\))\)\][[:space:]]*$$/) { pending = 1; next } \
 				print file ":" NR ":" raw; \
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber' \
+		| grep -E '\.unwrap\(\)|\.expect\(|pos_or_panic!|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	malformed=$$(grep -rn 'scan-banned: allow' src crates/*/src \
@@ -591,7 +599,7 @@ scan-banned:
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,
