@@ -147,6 +147,7 @@ fn european_at_expiry(option: &Options) -> Result<Decimal, PricingError> {
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: option.exotic_params.clone(),
     };
     Ok(option.option_type.payoff(&info)?)
 }
