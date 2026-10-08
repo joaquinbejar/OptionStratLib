@@ -5,6 +5,27 @@
 // Unit tests routinely index into `Vec`s they just pushed into, so the lint
 // is silenced in `#[cfg(test)]` only.
 #![cfg_attr(test, allow(clippy::indexing_slicing))]
+// Per rules/global_rules.md §Arithmetic, an operator that overflows, divides
+// by zero or breaks the `Positive` invariant aborts the caller, so every
+// operation on `Decimal`, `Positive` and the integers goes through its
+// checked form (#788, #808). `clippy.toml` exempts the unary minus on
+// `Decimal`, which cannot overflow. Casts that truncate, wrap or drop the
+// sign are denied for the same reason. Unit tests are exempt, as above.
+#![deny(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss
+)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )
+)]
 
 //! # optionstratlib-visualization
 //!

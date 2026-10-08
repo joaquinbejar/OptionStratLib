@@ -206,14 +206,15 @@ impl From<Vec<Curve>> for GraphData {
         let series: Vec<Series2D> = curves
             .into_iter()
             .enumerate()
-            .map(|(idx, c)| {
+            .zip(1usize..)
+            .map(|((idx, c), number)| {
                 let color = get_color_from_scheme(&color_scheme, idx)
                     .unwrap_or_else(|| "#1f77b4".to_string());
 
                 Series2D {
                     x: c.points.iter().map(|p| p.x).collect(),
                     y: c.points.iter().map(|p| p.y).collect(),
-                    name: format!("Curve {}", idx + 1),
+                    name: format!("Curve {number}"),
                     mode: TraceMode::Lines,
                     line_color: Some(color),
                     line_width: Some(2.0),

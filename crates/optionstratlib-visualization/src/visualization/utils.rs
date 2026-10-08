@@ -226,7 +226,7 @@ pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String>
                 "#307B8E", "#34B778", "#C6DE2F", "#432D7A", "#288A8D", "#42C675", "#E3E419",
                 "#3F4889", "#21968A", "#5DC864", "#F0E51B", "#461C74",
             ];
-            let color = colors.get(idx % colors.len())?;
+            let color = colors.get(idx.checked_rem(colors.len())?)?;
             Some(color.to_string())
         }
         ColorScheme::Plasma => {
@@ -239,17 +239,13 @@ pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String>
                 "#FDC229", "#7B04A7", "#E36159", "#FED330", "#8D0BA2", "#E7704F", "#FEE54F",
                 "#9E189B", "#EC7F45", "#FEF06F", "#1C0377", "#AC2294",
             ];
-            let color = colors.get(idx % colors.len())?;
+            let color = colors.get(idx.checked_rem(colors.len())?)?;
             Some(color.to_string())
         }
         ColorScheme::Custom(list) => {
             // Guard against `Custom(Vec::new())` — `idx % 0` would
             // otherwise panic on integer division by zero.
-            if list.is_empty() {
-                None
-            } else {
-                list.get(idx % list.len()).cloned()
-            }
+            list.get(idx.checked_rem(list.len())?).cloned()
         }
         ColorScheme::White => Some("#FFFFFF".to_string()),
         ColorScheme::HighContrast => {
@@ -262,7 +258,7 @@ pub fn get_color_from_scheme(scheme: &ColorScheme, idx: usize) -> Option<String>
                 "#9ACD32", "#B22222", "#A52A2A", "#6A5ACD", "#778899", "#FF6347", "#7CFC00",
                 "#87CEFA", "#FFA500", "#9932CC", "#008B8B",
             ];
-            let color = colors.get(idx % colors.len())?;
+            let color = colors.get(idx.checked_rem(colors.len())?)?;
             Some(color.to_string())
         }
     }
