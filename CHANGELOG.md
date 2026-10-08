@@ -1812,6 +1812,50 @@ summarize the release.
 
 ### Fixed
 
+- **Compound options are priced by the Geske closed form they claim, and
+  the price is continuous at expiry** (#845).
+  - **The bug.** A put with `S = 105`, `K = 100` was priced near 62.3 at
+    every maturity from 90 days down to one minute, but 100 at expiry.
+    Checked against an independent quadrature of
+    `e^(-r T1) E[max(±(V(S_T1) - K1), 0)]`, the closed form was wrong in
+    three ways:
+    - it valued every underlying as a call, so a put was a put on a call
+      while its value at expiry is a put on a put;
+    - it approximated the critical spot as the forward scaled by
+      `1 ± 0.4 σ√T1` instead of solving `V(I) = K1`;
+    - its bivariate normal CDF integrated with five mis-weighted points
+      (`M(0, 0; 0.5) = 0.2633` against the exact 1/3) and returned `NaN`
+      for large arguments.
+  - **The fix.**
+    - The underlying takes the compound's style, as the expiry and
+      zero-volatility branches already did: a call is a call on a call, a
+      put a put on a put.
+    - The critical spot is solved by bisection. A put underlying worth
+      less than `K1` everywhere makes the compound put a forward on it and
+      the compound call worthless.
+    - The CDF is Genz's algorithm, accurate to about `1e-15`, and handles
+      `ρ = -1` exactly.
+  - **Values** (`σ = 25 %`, `r = 5 %`, `q = 0`), before → after; each
+    "after" value matches the quadrature to `1e-6`:
+
+    | `S`, `K`, `T1` | Put | Call |
+    | --- | --- | --- |
+    | 105, 100, 90 days | 62.3209 → 94.7987 | 0 → 0.000001 |
+    | 100, 5, 91.25 days | 0 → 4.9379 | 61.9417 → 90.1856 |
+    | 100, 10, 182.5 days | 0 → 9.7531 | 57.1621 → 80.7346 |
+    | 100, 105, 182.5 days | 66.7444 → 92.5262 | 0 → 0.000191 |
+
+    The values at expiry are unchanged.
+  - **Errors.** A `d1` / `d2` rejection surfaces as `PricingError::Greeks`
+    instead of a `MethodError` string.
+  - **Tests.**
+    - The four Geske contracts with distinct strikes and `T2 ≠ 2 T1`, and
+      the no-critical-spot branch, are checked against the quadrature.
+    - Compound put-call parity is checked.
+    - The bivariate CDF is checked against a one-dimensional quadrature
+      for both signs of `ρ` and all three Gauss-Legendre rules.
+    - The price one minute out matches the price at expiry to `1e-4`.
+
 - **`pricing::black_scholes()` prices every exotic option at expiry**
   (#843). The dispatcher computed `d1` / `d2` before it looked at the
   option type. Both divide by `σ√T`, so at `T = 0` every exotic failed with
