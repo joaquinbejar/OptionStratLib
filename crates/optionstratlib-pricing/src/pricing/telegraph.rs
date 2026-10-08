@@ -1160,6 +1160,20 @@ mod tests_telegraph_seeded {
     /// `8.8e-17` from `40.237916421487854842265370875`.
     const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.237916421487854754626272623);
 
+    /// How far [`PINNED_TELEGRAPH_PRICE`] may move across platforms. The
+    /// seeded draws and every `f64` operation but one are bit-identical on
+    /// every target; the exception is `log_return.exp()`, which comes from
+    /// the platform libm and is not required to be correctly rounded. On
+    /// this pin 16 of the 10 000 paths get an `exp` one ulp apart between
+    /// Apple's libm and glibc, which moves the price by `1e-17`. One ulp of
+    /// a growth factor `g` is at most `g * 2^-52`, so the mean payoff moves
+    /// by at most `spot * 2^-52 * mean(g)`, about `2.2e-14` for a spot of
+    /// 100. The tolerance keeps a 4x margin over that bound for a libm off
+    /// by a few ulp and stays ten orders of magnitude below the
+    /// Monte-Carlo standard error, so any change to the kernel still trips
+    /// it.
+    const PINNED_TELEGRAPH_TOLERANCE: Decimal = dec!(1e-13);
+
     fn option_30d() -> Options {
         Options {
             option_type: OptionType::European,
@@ -1271,7 +1285,11 @@ mod tests_telegraph_seeded {
             &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
         )
         .unwrap();
-        assert_eq!(price, PINNED_TELEGRAPH_PRICE);
+        optionstratlib_core::assert_decimal_eq!(
+            price,
+            PINNED_TELEGRAPH_PRICE,
+            PINNED_TELEGRAPH_TOLERANCE
+        );
     }
 
     #[test]
