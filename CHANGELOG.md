@@ -3105,6 +3105,31 @@ summarize the release.
 
 ### Changed
 
+- **Chain construction and the greek refreshes price strikes in
+  parallel** (#861, K3). From `PARALLEL_STRIKE_THRESHOLD` (8) strikes up,
+  `OptionChain::build_chain`, `update_greeks` and `update_greek_snapshots`
+  price their strikes on the rayon pool; below it they stay serial, and so
+  does a call already running on a rayon worker, so the per-step builds of
+  `generator_optionchain` and `generator_optionseries` are not split again.
+  `build_chain` prices a batch of grid steps at a time and admits them in
+  grid order with the serial walk's stops, so the chain, its errors and its
+  pricing warnings are those of the serial build. The output is
+  bit-identical: the tests compare every strike's `Debug` form (each
+  `Decimal` at its scale) with a serial build on the SP500 fixture and on
+  synthetic chains of 21 and 201 strikes, with and without greek snapshots,
+  and with a grid that stops early. The threshold is the crossover measured
+  on flumix (i7-12650H, 16 threads, idle): parallel is level at 3 strikes
+  and ahead from 5. Criterion on flumix (Ubuntu 24.04, rustc 1.99.0, load
+  average under 2 before each serial run), median of three alternating
+  rounds, before and after: `market/chain_build/build_chain/{21,51,101,201}`
+  1.68 / 4.21 / 8.40 / 16.75 ms to 0.485 / 0.975 / 2.06 / 3.60 ms
+  (3.5x to 4.7x), `build_chain_with_greeks/{21,201}` 2.50 / 24.59 ms to
+  0.703 / 5.12 ms, `market/chain_refresh/update_greeks/{21,101}` 695 µs /
+  3.48 ms to 194 / 638 µs. `market/synthetic/generator_optionchain` is
+  unchanged within 0.5% (30 steps, half-width 25: 21.20 ms before, 21.26 ms
+  after). `optionstratlib-market` now declares `rayon`, which the pricing
+  crate below it already brought into every market graph.
+
 - **`Simulator::new` builds its walks in parallel** (#860). From
   `PARALLEL_MIN_WALKS` (3) walks up, the walks are built on the rayon pool,
   in rounds of 1024, and collected in index order; below it they are built
