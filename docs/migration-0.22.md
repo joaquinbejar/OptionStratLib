@@ -365,7 +365,9 @@ and position fees stay per contract. `Trade` and `pnl::Transaction` carry
 their own `contract_size`, and strategies expose `get_contract_size` /
 `set_contract_size` through `BasicAble`. A struct literal `Options { .. }`
 or `Trade { .. }` must name the field (`contract_size: Positive::ONE`
-keeps 0.21 results); `Options::new` and `Trade::new` keep their signatures.
+keeps 0.21 results); `Options::new` keeps its signature. `Trade::new` and
+`Trade::set_timestamp` return a `Result` (#771): a timestamp outside the
+`i64` nanosecond range is a `TradeError::ArithmeticOverflow`.
 
 `CoveredCall`, `Collar` and `ProtectivePut` size their option legs in shares
 with option fees per share (#731): in 0.21 the first two used a hundredth of

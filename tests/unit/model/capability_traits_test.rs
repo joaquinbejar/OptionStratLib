@@ -225,7 +225,8 @@ mod leg_greeks_and_trade_pnl_from_owning_layers {
             pos_or_panic!(190.0),
             None,
             TradeStatus::Open,
-        );
+        )
+        .unwrap();
         let pnl = PnL::try_from(&trade).unwrap();
         assert_eq!(pnl.realized, Some(trade.net().unwrap()));
     }

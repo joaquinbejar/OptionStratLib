@@ -261,6 +261,38 @@ summarize the release.
   `trade.try_into()?`. A `match` on `TradeError` needs an arm for
   `ArithmeticOverflow`.
 
+- **`CoveredCall` handles partial cover, covered strategies recompute their
+  break-evens on edits, and the `Trade` timestamp is checked** (#771),
+  closing the follow-ups #765 left.
+  - `Trade::new` returns `Result<Trade, TradeError>` and
+    `Trade::set_timestamp` returns `Result<(), TradeError>`. When the exact
+    nanosecond timestamp leaves the `i64` range they still fall back to the
+    whole seconds in nanoseconds, but that product is now checked: a date
+    before 1677 or after 2262 returns `TradeError::ArithmeticOverflow`
+    instead of overflowing `i64`, and `set_timestamp` leaves the timestamp
+    unchanged.
+  - `CoveredCall` break-evens are the zeros of the expiry P&L for any call
+    size: below the strike and, when the call covers more units than the
+    shares, above it too. An under-covered call (`quantity × contract_size`
+    below the spot quantity) reports an unbounded max profit
+    (`Positive::MAX`), an over-covered call an unbounded max loss
+    (`Positive::MAX`), and otherwise the extreme of the P&L at zero and at
+    the strike. Its profit and loss zones with a mismatched call are the
+    pieces between the break-evens, as for `ProtectivePut` and `Collar`.
+  - `Collar::add_position` / `modify_position` and
+    `CoveredCall::add_position` / `modify_position` recompute the
+    break-evens, which used to stay stale after an edit.
+    `ProtectivePut::add_position` / `modify_position` already recomputed
+    them but discarded a failure, leaving them cleared. All three now
+    return the failure as a `PositionError` and leave the strategy as it
+    was before the edit.
+
+  With a contract size of 1 and a call that covers the shares exactly
+  every result is unchanged. Migration: add `?` (or handle the error) to
+  calls of `Trade::new(..)` and `trade.set_timestamp(..)`. Code that called
+  `update_break_even_points` after `add_position` / `modify_position` on a
+  `Collar` or `CoveredCall` can drop the call.
+
 - **Stochastic pricing entry points take the generator from the caller**
   (#638). No public function of `optionstratlib-pricing` draws from the
   thread-local RNG implicitly any more, so a seeded generator reproduces

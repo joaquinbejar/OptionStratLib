@@ -742,6 +742,7 @@ mod tests_try_from_trade {
             None,
             TradeStatus::Open,
         )
+        .unwrap()
         .with_contract_size(Positive::HUNDRED)
     }
 

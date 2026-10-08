@@ -1,7 +1,8 @@
 //! Covered strategies whose option legs do not cover the shares exactly
-//! (#765).
+//! (#765, #771).
 //!
-//! `ProtectivePut` and `Collar` on 100 shares bought at 100, with option
+//! `ProtectivePut`, `Collar` and `CoveredCall` on 100 shares bought at 100,
+//! with option
 //! legs of 100-unit contracts covering half, all or twice the shares. Each
 //! figure is checked against a hand-computed value and against the expiry
 //! P&L itself: the break-evens are its zeros, the max profit and max loss
@@ -16,7 +17,7 @@ use optionstratlib_core::pos_or_panic;
 use optionstratlib_pricing::pricing::Profit;
 use optionstratlib_strategies::strategies::base::{BreakEvenable, Positionable};
 use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
-use optionstratlib_strategies::strategies::{Collar, ProtectivePut, Strategies};
+use optionstratlib_strategies::strategies::{Collar, CoveredCall, ProtectivePut, Strategies};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -271,9 +272,7 @@ fn collar(put: Positive, call: Positive) -> Collar {
             .modify_position(&leg)
             .unwrap_or_else(|e| panic!("{e}"));
     }
-    strategy
-        .update_break_even_points()
-        .unwrap_or_else(|e| panic!("{e}"));
+    // `modify_position` recomputes the break-evens itself (#771).
     strategy
 }
 
@@ -366,4 +365,205 @@ fn test_collar_over_covered_call_loss_is_unbounded() {
     assert_eq!(grid_max(&strategy), max_profit(&strategy).to_dec());
     assert_break_evens_are_zeros(&strategy);
     assert_zones(&strategy);
+}
+
+// --- CoveredCall ------------------------------------------------------------
+
+/// A covered call on 100 shares bought at 100 and a call struck at 105 sold
+/// at 2.4, whose call is `contracts` contracts of 100 units with fees of
+/// 0.01 + 0.01 per contract.
+fn covered_call(contracts: Positive) -> CoveredCall {
+    let mut strategy = CoveredCall::new(
+        "TEST".to_string(),
+        Positive::HUNDRED,
+        pos_or_panic!(105.0),
+        expiry(),
+        pos_or_panic!(0.2),
+        dec!(0.05),
+        Positive::ZERO,
+        SHARES,
+        pos_or_panic!(2.4),
+        Positive::ONE,
+        Positive::ONE,
+        pos_or_panic!(0.01),
+        pos_or_panic!(0.01),
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    let mut call = strategy.short_call.clone();
+    call.option.quantity = contracts;
+    call.option.contract_size = CONTRACT;
+    strategy
+        .modify_position(&call)
+        .unwrap_or_else(|e| panic!("{e}"));
+    strategy
+}
+
+fn covered_call_break_evens(strategy: &CoveredCall) -> Vec<Positive> {
+    strategy
+        .get_break_even_points()
+        .unwrap_or_else(|e| panic!("{e}"))
+        .clone()
+}
+
+#[test]
+fn test_covered_call_exact_cover_figures_unchanged() {
+    // P = 240, F = 2.02: break-even 100 - 237.98 / 100, max profit
+    // 500 + 240 - 2.02, max loss 10000 - 240 + 2.02 at zero.
+    let strategy = covered_call(Positive::ONE);
+    assert_eq!(
+        covered_call_break_evens(&strategy),
+        vec![pos_or_panic!(97.62)]
+    );
+    assert_eq!(max_profit(&strategy), pos_or_panic!(737.98));
+    assert_eq!(max_loss(&strategy), pos_or_panic!(9762.02));
+    assert_eq!(grid_max(&strategy), max_profit(&strategy).to_dec());
+    assert_eq!(-grid_min(&strategy), max_loss(&strategy).to_dec());
+    assert_break_evens_are_zeros(&strategy);
+    let loss = strategy.get_loss_ranges().unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(loss.len(), 1);
+    assert_eq!(loss[0].lower_bound, Some(Positive::ZERO));
+    assert_eq!(loss[0].upper_bound, Some(pos_or_panic!(97.62)));
+    let profit = strategy
+        .get_profit_ranges()
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(profit.len(), 1);
+    assert_eq!(profit[0].lower_bound, Some(pos_or_panic!(97.62)));
+    assert_eq!(profit[0].upper_bound, Some(pos_or_panic!(105.0)));
+}
+
+#[test]
+fn test_covered_call_under_covered_profit_is_unbounded() {
+    // 50 call units: P = 120, F = 2.01. Break-even 100 - 117.99 / 100;
+    // above the strike half the shares keep rising, so the profit has no
+    // cap and the worst case is at zero, -10000 + 117.99.
+    let strategy = covered_call(pos_or_panic!(0.5));
+    assert_eq!(
+        covered_call_break_evens(&strategy),
+        vec![pos_or_panic!(98.82)]
+    );
+    assert_eq!(max_profit(&strategy), Positive::MAX);
+    assert_eq!(max_loss(&strategy), pos_or_panic!(9882.01));
+    assert_eq!(-grid_min(&strategy), max_loss(&strategy).to_dec());
+    let pnl = |price: f64| {
+        strategy
+            .calculate_profit_at(&pos_or_panic!(price))
+            .unwrap_or_else(|e| panic!("{e}"))
+    };
+    assert!(pnl(300.0) > pnl(200.0));
+    assert_break_evens_are_zeros(&strategy);
+    assert_zones(&strategy);
+}
+
+#[test]
+fn test_covered_call_over_covered_loss_is_unbounded() {
+    // 200 call units: net short 100 units above the strike. P = 480,
+    // F = 2.04. Zeros at 100 - 477.96 / 100 and, above the strike,
+    // (10000 - 477.96 - 21000) / -100; the peak is at the strike,
+    // 500 + 477.96.
+    let strategy = covered_call(Positive::TWO);
+    assert_eq!(
+        covered_call_break_evens(&strategy),
+        vec![pos_or_panic!(95.22), pos_or_panic!(114.78)]
+    );
+    assert_eq!(max_loss(&strategy), Positive::MAX);
+    assert_eq!(max_profit(&strategy), pos_or_panic!(977.96));
+    assert_eq!(grid_max(&strategy), max_profit(&strategy).to_dec());
+    assert_break_evens_are_zeros(&strategy);
+    let profit = strategy
+        .get_profit_ranges()
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(profit.len(), 1);
+    assert_eq!(profit[0].lower_bound, Some(pos_or_panic!(95.22)));
+    assert_eq!(profit[0].upper_bound, Some(pos_or_panic!(114.78)));
+    assert_zones(&strategy);
+}
+
+// --- Edits recompute the break-evens ----------------------------------------
+
+#[test]
+fn test_collar_edit_updates_break_evens() {
+    // Selling the call at 3.4 instead of 2.4 adds 100 of credit: the
+    // break-even of the exact collar moves from 99.12 to 98.12, the value a
+    // collar built at 3.4 reports.
+    for add in [false, true] {
+        let mut strategy = collar(Positive::ONE, Positive::ONE);
+        assert_eq!(break_evens(&strategy), vec![pos_or_panic!(99.12)]);
+        let mut call = strategy.short_call.clone();
+        call.premium = pos_or_panic!(3.4);
+        if add {
+            strategy.add_position(&call)
+        } else {
+            strategy.modify_position(&call)
+        }
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(break_evens(&strategy), vec![pos_or_panic!(98.12)]);
+        assert_break_evens_are_zeros(&strategy);
+    }
+}
+
+#[test]
+fn test_covered_call_edit_updates_break_evens() {
+    // Selling the call at 3.4 moves the break-even from 97.62 to 96.62.
+    for add in [false, true] {
+        let mut strategy = covered_call(Positive::ONE);
+        let mut call = strategy.short_call.clone();
+        call.premium = pos_or_panic!(3.4);
+        if add {
+            strategy.add_position(&call)
+        } else {
+            strategy.modify_position(&call)
+        }
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(
+            covered_call_break_evens(&strategy),
+            vec![pos_or_panic!(96.62)]
+        );
+        assert_break_evens_are_zeros(&strategy);
+    }
+}
+
+#[test]
+fn test_covered_call_failed_edit_leaves_strategy_unchanged() {
+    // A premium whose total overflows cannot be priced: the edit is
+    // rejected and the call and break-even stay as they were.
+    let mut strategy = covered_call(Positive::ONE);
+    let mut call = strategy.short_call.clone();
+    call.premium = Positive::MAX;
+    assert!(strategy.modify_position(&call).is_err());
+    assert_eq!(strategy.short_call.premium, pos_or_panic!(2.4));
+    assert_eq!(
+        covered_call_break_evens(&strategy),
+        vec![pos_or_panic!(97.62)]
+    );
+}
+
+#[test]
+fn test_protective_put_failed_edit_leaves_strategy_unchanged() {
+    // The recomputation's error used to be discarded, leaving the
+    // break-evens cleared.
+    let mut strategy = protective_put(95.0, 1.5, Positive::ONE);
+    let before = strategy
+        .get_break_even_points()
+        .unwrap_or_else(|e| panic!("{e}"))
+        .clone();
+    let mut put = strategy.long_put.clone();
+    put.premium = Positive::MAX;
+    assert!(strategy.modify_position(&put).is_err());
+    assert_eq!(strategy.long_put.premium, pos_or_panic!(1.5));
+    assert_eq!(strategy.get_break_even_points().ok(), Some(&before));
+}
+
+#[test]
+fn test_mismatched_cover_with_unpriceable_premium_reports_error() {
+    // An unbounded figure is reported only for a leg that can be priced:
+    // an over-covered call whose premium total overflows is an error, not
+    // `Positive::MAX`.
+    let mut cc = covered_call(Positive::TWO);
+    cc.short_call.premium = Positive::MAX;
+    assert!(cc.get_max_loss().is_err());
+    assert!(cc.get_max_profit().is_err());
+    let mut strategy = collar(Positive::ONE, Positive::TWO);
+    strategy.short_call.premium = Positive::MAX;
+    assert!(strategy.get_max_loss().is_err());
+    assert!(strategy.get_max_profit().is_err());
 }
