@@ -566,7 +566,7 @@ release-gates-render:
 #
 # A reviewed exception carries a trailing
 # `// scan-banned: allow -- <reason>` marker on the same line.
-SCAN_STRICT_DIRS := crates/optionstratlib-core/src|crates/optionstratlib-math/src|crates/optionstratlib-pricing/src|crates/optionstratlib-simulation/src|crates/optionstratlib-market/src|crates/optionstratlib-analytics/src|crates/optionstratlib-strategies/src|crates/optionstratlib-backtest/src|crates/optionstratlib-visualization/src
+SCAN_STRICT_DIRS := crates/optionstratlib-core/src|crates/optionstratlib-math/src|crates/optionstratlib-pricing/src|crates/optionstratlib-simulation/src|crates/optionstratlib-market/src|crates/optionstratlib-analytics/src|crates/optionstratlib-strategies/src|crates/optionstratlib-backtest/src|crates/optionstratlib-visualization/src|src
 SCAN_STRICT_PATTERN := (saturating|wrapping)_[a-z]+\(|spos!|Duration::(days|hours|minutes|seconds|milliseconds|weeks)\(|\.(ceiling|round_to|round_to_nice_number)\(|\.(sin|cos|tan)\(\)|[^_[:alnum:]](assert|assert_eq|assert_ne)!|\.(sum|product)::<(Decimal|Positive)>\(
 
 .PHONY: scan-banned
