@@ -25,7 +25,7 @@
 //! # Ok::<(), optionstratlib_pricing::error::GreeksError>(())
 //! ```
 
-use crate::error::GreeksError;
+use crate::error::{GreeksError, PricingError};
 use crate::greeks::Greeks;
 use optionstratlib_core::model::Side;
 use optionstratlib_core::model::leg::traits::{Expirable, Fundable};
@@ -121,9 +121,13 @@ impl LegGreeks for FuturePosition {
     }
 
     /// Rate sensitivity of the notional over the remaining life, per one
-    /// percentage point.
+    /// percentage point. A remaining life that cannot be computed is reported
+    /// as [`GreeksError::Pricing`] carrying the position error, never as a
+    /// zero rho.
     fn rho(&self) -> Result<Decimal, GreeksError> {
-        let time_to_exp = self.time_to_expiration_years();
+        let time_to_exp = self
+            .time_to_expiration_years()
+            .map_err(PricingError::from)?;
         let notional = self.notional_value_at_entry().to_dec();
 
         let rho_value = match self.side {
@@ -276,6 +280,13 @@ mod tests {
             "a long future gains with rates: {long}"
         );
         assert_eq!(long, -short);
+    }
+
+    #[test]
+    fn test_future_rho_with_an_uncomputable_life_is_an_error_not_zero() {
+        let mut future = future(true);
+        future.expiration_date = ExpirationDate::Days(Positive::MAX);
+        assert!(matches!(future.rho(), Err(GreeksError::Pricing(_))));
     }
 
     #[test]

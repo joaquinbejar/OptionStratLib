@@ -141,8 +141,18 @@ pub trait Marginable: LegAble {
     ///
     /// # Returns
     ///
-    /// The price at which the position would be liquidated.
-    fn liquidation_price(&self, current_price: Positive) -> Positive;
+    /// `Some(price)` with the price at which the position would be
+    /// liquidated, or `None` when no non-negative price reaches liquidation:
+    /// a long whose margin buffer is wider than its entry price survives a
+    /// fall all the way to zero. `None` is not a price of zero; a price of
+    /// zero would be a liquidation level a spot of zero crosses.
+    ///
+    /// A threshold that falls below zero on the short side is reported as
+    /// `Some(Positive::ZERO)`. That is a domain floor, not a substitute: a
+    /// short is liquidated once the price rises to the threshold, every
+    /// non-negative price already sits at or above a negative one, and zero
+    /// is the lowest price where the comparison holds.
+    fn liquidation_price(&self, current_price: Positive) -> Option<Positive>;
 
     /// Checks if the position is at risk of liquidation.
     ///
@@ -151,6 +161,27 @@ pub trait Marginable: LegAble {
     /// * `current_price` - The current market price
     /// * `margin_ratio` - Current margin ratio (margin / notional)
     fn is_liquidation_risk(&self, current_price: Positive, margin_ratio: Decimal) -> bool;
+}
+
+/// Turns a computed liquidation threshold into the value
+/// [`Marginable::liquidation_price`] reports.
+///
+/// A non-negative threshold is the liquidation price itself. A negative one
+/// depends on the side: a long is liquidated once the price falls to the
+/// threshold, which no non-negative price does, so there is no liquidation
+/// price (`None`); a short is liquidated once the price rises to it, which
+/// every non-negative price already has, so zero is the floor
+/// (`Some(Positive::ZERO)`).
+#[must_use]
+pub(crate) fn liquidation_threshold(threshold: Decimal, side: Side) -> Option<Positive> {
+    match Positive::new_decimal(threshold) {
+        Ok(price) => Some(price),
+        // `new_decimal` rejects only a negative value here.
+        Err(_) => match side {
+            Side::Long => None,
+            Side::Short => Some(Positive::ZERO),
+        },
+    }
 }
 
 /// Trait for positions that have funding rate payments.
@@ -193,14 +224,25 @@ pub trait Expirable: LegAble {
     fn expiration_timestamp(&self) -> i64;
 
     /// Returns the number of days until expiration.
-    fn days_to_expiration(&self) -> Positive;
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PositionError`] when the time to expiration cannot be
+    /// computed. The day count is never replaced by zero, which would read
+    /// as an expired position.
+    fn days_to_expiration(&self) -> Result<Positive, PositionError>;
 
     /// Checks if the position has expired.
     fn is_expired(&self) -> bool;
 
     /// Returns the time to expiration in years (for pricing calculations).
-    fn time_to_expiration_years(&self) -> Decimal {
-        self.days_to_expiration().to_dec() / Decimal::from(365)
+    ///
+    /// # Errors
+    ///
+    /// Propagates the [`PositionError`] of
+    /// [`Expirable::days_to_expiration`].
+    fn time_to_expiration_years(&self) -> Result<Decimal, PositionError> {
+        Ok(self.days_to_expiration()?.to_dec() / Decimal::from(365))
     }
 }
 

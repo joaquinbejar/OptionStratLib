@@ -40,11 +40,11 @@
 //! );
 //! ```
 
-use crate::error::PositionError;
+use crate::error::{DecimalError, PositionError};
 use crate::model::ExpirationDate;
 use crate::model::decimal::{d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
-use crate::model::leg::traits::{Expirable, LegAble, Marginable};
+use crate::model::leg::traits::{Expirable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -366,24 +366,26 @@ impl Marginable for FuturePosition {
         Positive::new_decimal(lev).unwrap_or(positive::Positive::ONE)
     }
 
-    fn liquidation_price(&self, _current_price: Positive) -> Positive {
+    /// `None` for a long whose margin buffer per unit exceeds the entry
+    /// price: no non-negative price liquidates it. A short threshold below
+    /// zero is floored at zero, the documented domain floor of
+    /// [`Marginable::liquidation_price`].
+    fn liquidation_price(&self, _current_price: Positive) -> Option<Positive> {
         let margin_buffer = self.initial_margin().to_dec() - self.maintenance_margin().to_dec();
         let price_buffer = margin_buffer / (self.quantity.to_dec() * self.contract_size.to_dec());
 
-        match self.side {
-            Side::Long => {
-                let liq = self.entry_price.to_dec() - price_buffer;
-                Positive::new_decimal(liq).unwrap_or(Positive::ZERO)
-            }
-            Side::Short => {
-                let liq = self.entry_price.to_dec() + price_buffer;
-                Positive::new_decimal(liq).unwrap_or(Positive::ZERO)
-            }
-        }
+        let threshold = match self.side {
+            Side::Long => self.entry_price.to_dec() - price_buffer,
+            Side::Short => self.entry_price.to_dec() + price_buffer,
+        };
+        liquidation_threshold(threshold, self.side)
     }
 
     fn is_liquidation_risk(&self, current_price: Positive, _margin_ratio: Decimal) -> bool {
-        let liq_price = self.liquidation_price(current_price);
+        // No reachable liquidation price means no price is at risk.
+        let Some(liq_price) = self.liquidation_price(current_price) else {
+            return false;
+        };
 
         match self.side {
             Side::Long => current_price <= liq_price,
@@ -403,8 +405,17 @@ impl Expirable for FuturePosition {
             .unwrap_or(0)
     }
 
-    fn days_to_expiration(&self) -> Positive {
-        self.expiration_date.get_years().unwrap_or(Positive::ZERO) * Decimal::from(365)
+    fn days_to_expiration(&self) -> Result<Positive, PositionError> {
+        let years = self
+            .expiration_date
+            .get_years()
+            .map_err(DecimalError::from)?;
+        let days = d_mul(
+            years.to_dec(),
+            Decimal::from(365),
+            "FuturePosition::days_to_expiration",
+        )?;
+        Ok(Positive::new_decimal(days)?)
     }
 
     fn is_expired(&self) -> bool {
@@ -654,5 +665,137 @@ mod tests {
         assert!(display.contains("Long"));
         assert!(display.contains("ES"));
         assert!(display.contains("4500"));
+    }
+
+    fn future_with_margins(
+        side: Side,
+        entry_price: Positive,
+        initial_margin_req: Positive,
+        maintenance_margin_req: Positive,
+    ) -> FuturePosition {
+        FuturePosition::new(
+            "ES".to_string(),
+            Positive::ONE,
+            entry_price,
+            side,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            Positive::ONE,
+            initial_margin_req,
+            maintenance_margin_req,
+            Utc::now(),
+            Positive::ZERO,
+        )
+    }
+
+    #[test]
+    fn test_future_liquidation_price_reachable_is_unchanged() {
+        let long = FuturePosition::long(
+            "ES".to_string(),
+            Positive::ONE,
+            pos_or_panic!(4500.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            pos_or_panic!(15000.0),
+        );
+        let short = FuturePosition::short(
+            "ES".to_string(),
+            Positive::ONE,
+            pos_or_panic!(4500.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            pos_or_panic!(15000.0),
+        );
+
+        // (15000 - 12000) / 50 = 60 of price buffer either side of 4500.
+        assert_eq!(
+            long.liquidation_price(pos_or_panic!(4500.0)),
+            Some(pos_or_panic!(4440.0))
+        );
+        assert_eq!(
+            short.liquidation_price(pos_or_panic!(4500.0)),
+            Some(pos_or_panic!(4560.0))
+        );
+        assert!(long.is_liquidation_risk(pos_or_panic!(4440.0), Decimal::ZERO));
+        assert!(!long.is_liquidation_risk(pos_or_panic!(4441.0), Decimal::ZERO));
+        assert!(short.is_liquidation_risk(pos_or_panic!(4560.0), Decimal::ZERO));
+        assert!(!short.is_liquidation_risk(pos_or_panic!(4559.0), Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_future_long_liquidation_price_below_zero_is_unreachable() {
+        // A buffer of 90 per unit under an entry of 10 puts the threshold at
+        // -80: the long survives a fall all the way to zero.
+        let long = future_with_margins(
+            Side::Long,
+            pos_or_panic!(10.0),
+            pos_or_panic!(100.0),
+            pos_or_panic!(10.0),
+        );
+
+        assert_eq!(long.liquidation_price(pos_or_panic!(10.0)), None);
+        assert!(!long.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
+        assert!(!long.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_future_short_liquidation_price_below_zero_floors_at_zero() {
+        // A maintenance requirement 90 above the initial one puts the short
+        // threshold at -80: every non-negative price already crosses it.
+        let short = future_with_margins(
+            Side::Short,
+            pos_or_panic!(10.0),
+            pos_or_panic!(10.0),
+            pos_or_panic!(100.0),
+        );
+
+        assert_eq!(
+            short.liquidation_price(pos_or_panic!(10.0)),
+            Some(Positive::ZERO)
+        );
+        assert!(short.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
+        assert!(short.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_future_days_to_expiration_is_unchanged() {
+        let future = future_with_margins(
+            Side::Long,
+            pos_or_panic!(4500.0),
+            pos_or_panic!(15000.0),
+            pos_or_panic!(12000.0),
+        );
+        let expected = ExpirationDate::Days(pos_or_panic!(30.0))
+            .get_years()
+            .expect("30 days")
+            * Decimal::from(365);
+
+        let days = future.days_to_expiration().expect("30 days");
+        assert_eq!(days, expected);
+        assert_eq!(
+            future.time_to_expiration_years().expect("30 days"),
+            expected.to_dec() / Decimal::from(365)
+        );
+    }
+
+    #[test]
+    fn test_future_days_to_expiration_overflow_is_an_error_not_zero() {
+        let mut future = future_with_margins(
+            Side::Long,
+            pos_or_panic!(4500.0),
+            pos_or_panic!(15000.0),
+            pos_or_panic!(12000.0),
+        );
+        future.expiration_date = ExpirationDate::Days(Positive::MAX);
+
+        // `get_years` resolves, its product with 365 does not fit `Decimal`.
+        let result = future.days_to_expiration();
+        assert!(
+            matches!(
+                result,
+                Err(PositionError::DecimalError(DecimalError::Overflow { .. }))
+            ),
+            "{result:?}"
+        );
+        assert!(future.time_to_expiration_years().is_err());
     }
 }

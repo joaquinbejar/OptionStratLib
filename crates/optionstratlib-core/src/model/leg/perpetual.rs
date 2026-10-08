@@ -42,7 +42,7 @@
 
 use crate::error::PositionError;
 use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
-use crate::model::leg::traits::{Fundable, LegAble, Marginable};
+use crate::model::leg::traits::{Fundable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
 use positive::Positive;
@@ -452,25 +452,26 @@ impl Marginable for PerpetualPosition {
         self.leverage
     }
 
-    fn liquidation_price(&self, _current_price: Positive) -> Positive {
+    /// `None` for a long whose margin buffer per unit exceeds the entry
+    /// price: no non-negative price liquidates it. A short threshold below
+    /// zero is floored at zero, the documented domain floor of
+    /// [`Marginable::liquidation_price`].
+    fn liquidation_price(&self, _current_price: Positive) -> Option<Positive> {
         let maintenance = self.maintenance_margin();
+        let price_buffer = (self.margin.to_dec() - maintenance.to_dec()) / self.quantity.to_dec();
 
-        match self.side {
-            Side::Long => {
-                let liq_price = self.entry_price.to_dec()
-                    - (self.margin.to_dec() - maintenance.to_dec()) / self.quantity.to_dec();
-                Positive::new_decimal(liq_price).unwrap_or(Positive::ZERO)
-            }
-            Side::Short => {
-                let liq_price = self.entry_price.to_dec()
-                    + (self.margin.to_dec() - maintenance.to_dec()) / self.quantity.to_dec();
-                Positive::new_decimal(liq_price).unwrap_or(Positive::ZERO)
-            }
-        }
+        let threshold = match self.side {
+            Side::Long => self.entry_price.to_dec() - price_buffer,
+            Side::Short => self.entry_price.to_dec() + price_buffer,
+        };
+        liquidation_threshold(threshold, self.side)
     }
 
     fn is_liquidation_risk(&self, current_price: Positive, _margin_ratio: Decimal) -> bool {
-        let liq_price = self.liquidation_price(current_price);
+        // No reachable liquidation price means no price is at risk.
+        let Some(liq_price) = self.liquidation_price(current_price) else {
+            return false;
+        };
 
         match self.side {
             Side::Long => current_price <= liq_price,
@@ -733,9 +734,27 @@ mod tests {
             pos_or_panic!(5000.0),
         );
 
+        // Maintenance 0.5% of 50000 = 250; (5000 - 250) / 1 = 4750 below entry.
         let liq_price = perp.liquidation_price(pos_or_panic!(50000.0));
-        assert!(liq_price < pos_or_panic!(50000.0));
-        assert!(liq_price > Positive::ZERO);
+        assert_eq!(liq_price, Some(pos_or_panic!(45250.0)));
+        assert!(perp.is_liquidation_risk(pos_or_panic!(45250.0), Decimal::ZERO));
+        assert!(!perp.is_liquidation_risk(pos_or_panic!(45251.0), Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_liquidation_price_long_below_zero_is_unreachable() {
+        // A margin of 200 on a notional of 100 leaves 199.5 of buffer per
+        // unit under an entry of 100: no non-negative price liquidates it.
+        let perp = PerpetualPosition::long(
+            "BTC-USDT-PERP".to_string(),
+            Positive::ONE,
+            pos_or_panic!(100.0),
+            pos_or_panic!(0.5),
+            pos_or_panic!(200.0),
+        );
+
+        assert_eq!(perp.liquidation_price(pos_or_panic!(100.0)), None);
+        assert!(!perp.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
     }
 
     #[test]
@@ -749,7 +768,9 @@ mod tests {
         );
 
         let liq_price = perp.liquidation_price(pos_or_panic!(50000.0));
-        assert!(liq_price > pos_or_panic!(50000.0));
+        assert_eq!(liq_price, Some(pos_or_panic!(54750.0)));
+        assert!(perp.is_liquidation_risk(pos_or_panic!(54750.0), Decimal::ZERO));
+        assert!(!perp.is_liquidation_risk(pos_or_panic!(54749.0), Decimal::ZERO));
     }
 
     #[test]

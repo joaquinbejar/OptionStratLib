@@ -4,9 +4,10 @@
    Date: 22/9/25
 ******************************************************************************/
 
+use crate::error::DecimalError;
+use crate::model::decimal::{d_div, d_mul};
 use crate::model::types::UnderlyingAssetType;
-use num_traits::ToPrimitive;
-use positive::Positive;
+use positive::{Positive, PositiveError};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -79,29 +80,17 @@ impl Balance {
     /// # Returns
     ///
     /// The total value (quantity * current_premium) if current_premium is available,
-    /// otherwise returns the cost basis (quantity * average_premium)
-    #[must_use]
-    pub fn get_total_value(&self) -> Positive {
-        match self.current_premium {
-            Some(current_price) => {
-                // Safe to unwrap as both quantity and current_price are Positive
-                Positive::new(
-                    (self.quantity.value() * current_price.value())
-                        .to_f64()
-                        .unwrap_or(0.0),
-                )
-                .unwrap_or(Positive::ZERO)
-            }
-            None => {
-                // Use average premium if current premium is not available
-                Positive::new(
-                    (self.quantity.value() * self.average_premium.value())
-                        .to_f64()
-                        .unwrap_or(0.0),
-                )
-                .unwrap_or(Positive::ZERO)
-            }
-        }
+    /// otherwise returns the cost basis (quantity * average_premium). The
+    /// product is formed in `Decimal`, with no `f64` step.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError::ArithmeticError`] when the product overflows
+    /// `Decimal`.
+    pub fn get_total_value(&self) -> Result<Positive, PositiveError> {
+        // Use average premium if current premium is not available
+        let premium = self.current_premium.unwrap_or(self.average_premium);
+        self.quantity.checked_mul(&premium)
     }
 
     /// Calculates the unrealized profit or loss of the position.
@@ -146,35 +135,50 @@ impl Balance {
     ///
     /// # Returns
     ///
-    /// The total cost basis (quantity * average_premium)
-    #[must_use]
-    pub fn get_cost_basis(&self) -> Positive {
-        Positive::new(
-            (self.quantity.value() * self.average_premium.value())
-                .to_f64()
-                .unwrap_or(0.0),
-        )
-        .unwrap_or(Positive::ZERO)
+    /// The total cost basis (quantity * average_premium), formed in
+    /// `Decimal` with no `f64` step.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError::ArithmeticError`] when the product overflows
+    /// `Decimal`.
+    pub fn get_cost_basis(&self) -> Result<Positive, PositiveError> {
+        self.quantity.checked_mul(&self.average_premium)
     }
 
     /// Gets the percentage return of the position.
     ///
     /// # Returns
     ///
-    /// The percentage return as a Decimal. Returns zero if current_price is not available.
-    #[must_use]
-    pub fn get_percentage_return(&self) -> Decimal {
+    /// The percentage return as a Decimal. Returns zero if current_price is
+    /// not available, and zero for a zero cost basis, where no return is
+    /// defined.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DecimalError::Overflow`] when the cost basis, the ratio of
+    /// the P&L to it, or its scaling to a percentage overflows `Decimal`.
+    pub fn get_percentage_return(&self) -> Result<Decimal, DecimalError> {
         match self.current_premium {
             Some(_current_price) => {
                 let pnl = self.get_unrealized_pnl();
-                let cost_basis = self.get_cost_basis().value();
+                let cost_basis = d_mul(
+                    self.quantity.to_dec(),
+                    self.average_premium.to_dec(),
+                    "Balance::get_percentage_return/cost_basis",
+                )?;
                 if cost_basis > Decimal::ZERO {
-                    (pnl / cost_basis) * Decimal::from(100)
+                    let ratio = d_div(pnl, cost_basis, "Balance::get_percentage_return/ratio")?;
+                    d_mul(
+                        ratio,
+                        Decimal::ONE_HUNDRED,
+                        "Balance::get_percentage_return/percent",
+                    )
                 } else {
-                    Decimal::ZERO
+                    Ok(Decimal::ZERO)
                 }
             }
-            None => Decimal::ZERO,
+            None => Ok(Decimal::ZERO),
         }
     }
 }
@@ -301,16 +305,19 @@ impl Portfolio {
     ///
     /// # Returns
     ///
-    /// The sum of all balance values in the portfolio
-    #[must_use]
-    pub fn get_total_value(&self) -> Positive {
-        let total_value: f64 = self
-            .balances
+    /// The sum of all balance values in the portfolio, accumulated in
+    /// `Decimal` with no `f64` step. An empty portfolio is worth zero.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositiveError::ArithmeticError`] when a balance value or the
+    /// running sum overflows `Decimal`.
+    pub fn get_total_value(&self) -> Result<Positive, PositiveError> {
+        self.balances
             .iter()
-            .map(|balance| balance.get_total_value().value().to_f64().unwrap_or(0.0))
-            .sum();
-
-        Positive::new(total_value).unwrap_or(Positive::ZERO)
+            .try_fold(Positive::ZERO, |total, balance| {
+                total.checked_add(&balance.get_total_value()?)
+            })
     }
 
     /// Calculates the total unrealized PnL for the portfolio.
@@ -420,7 +427,7 @@ mod tests {
             None,
         );
 
-        let total_value = balance.get_total_value();
+        let total_value = balance.get_total_value().expect("finite product");
         assert_eq!(total_value, pos_or_panic!(62.5)); // 5 * 12.50
     }
 
@@ -519,7 +526,7 @@ mod tests {
         portfolio.add_balance(balance1);
         portfolio.add_balance(balance2);
 
-        let total_value = portfolio.get_total_value();
+        let total_value = portfolio.get_total_value().expect("finite sum");
         assert_eq!(total_value, pos_or_panic!(132.5)); // 70.0 + 62.5
     }
 
@@ -544,5 +551,122 @@ mod tests {
 
         let not_found = portfolio.get_balance("TSLA240315C00200000", "CBOE");
         assert!(not_found.is_none());
+    }
+
+    fn overflowing_balance(current_premium: Option<Positive>) -> Balance {
+        Balance::new(
+            "BIG".to_string(),
+            Positive::MAX,
+            pos_or_panic!(2.0),
+            current_premium,
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_balance_values_are_exact_decimal_products() {
+        let balance = Balance::new(
+            "AAPL240315C00150000".to_string(),
+            pos_or_panic!(3.0),
+            pos_or_panic!(0.1),
+            Some(pos_or_panic!(0.2)),
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        );
+
+        assert_eq!(
+            balance.get_total_value().expect("finite product").to_dec(),
+            dec!(0.6)
+        );
+        assert_eq!(
+            balance.get_cost_basis().expect("finite product").to_dec(),
+            dec!(0.3)
+        );
+        assert_eq!(
+            balance.get_percentage_return().expect("finite ratio"),
+            dec!(100)
+        );
+    }
+
+    #[test]
+    fn test_balance_without_current_premium_values_at_cost() {
+        let balance = Balance::new(
+            "AAPL240315C00150000".to_string(),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            None,
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        );
+
+        assert_eq!(
+            balance.get_total_value().expect("finite product"),
+            pos_or_panic!(55.0)
+        );
+        assert_eq!(
+            balance.get_percentage_return().expect("no premium"),
+            Decimal::ZERO
+        );
+    }
+
+    #[test]
+    fn test_balance_total_value_overflow_is_an_error_not_zero() {
+        let balance = overflowing_balance(Some(pos_or_panic!(2.0)));
+        assert!(matches!(
+            balance.get_total_value(),
+            Err(PositiveError::ArithmeticError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_balance_cost_basis_overflow_is_an_error_not_zero() {
+        let balance = overflowing_balance(None);
+        assert!(matches!(
+            balance.get_cost_basis(),
+            Err(PositiveError::ArithmeticError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_balance_percentage_return_ratio_overflow_is_an_error() {
+        // A P&L of about 1e10 over a cost basis of 1e-20 is a ratio of 1e30,
+        // past `Decimal::MAX`.
+        let balance = Balance::new(
+            "TINY".to_string(),
+            Positive::ONE,
+            pos_or_panic!(0.000_000_000_000_000_000_01),
+            Some(pos_or_panic!(10_000_000_000.0)),
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        );
+        assert!(matches!(
+            balance.get_percentage_return(),
+            Err(DecimalError::Overflow { .. })
+        ));
+    }
+
+    #[test]
+    fn test_portfolio_total_value_overflow_is_an_error_not_zero() {
+        let mut portfolio = Portfolio::new("Overflow".to_string());
+        portfolio.add_balance(overflowing_balance(Some(pos_or_panic!(1.0))));
+        portfolio.add_balance(overflowing_balance(Some(pos_or_panic!(1.0))));
+        assert!(matches!(
+            portfolio.get_total_value(),
+            Err(PositiveError::ArithmeticError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_empty_portfolio_total_value_is_zero() {
+        let portfolio = Portfolio::new("Empty".to_string());
+        assert_eq!(
+            portfolio.get_total_value().expect("empty sum"),
+            Positive::ZERO
+        );
     }
 }
