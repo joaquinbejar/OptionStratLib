@@ -8,13 +8,13 @@
 use crate::constants::ZERO;
 use crate::error::{OptionsError, OptionsResult};
 use crate::model::decimal::finite_decimal;
+use crate::model::option::ExoticParams;
 use crate::model::types::{
-    AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
+    AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType,
+    RainbowType, Side,
 };
-use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rust_decimal::Decimal;
-use tracing::{trace, warn};
 
 /// Defines a contract for calculating the payoff value of an option.
 ///
@@ -117,6 +117,13 @@ pub struct PayoffInfo {
     ///   (`UpAndIn`, `UpAndOut`) is hit when it is at or above the barrier level.
     ///   When `None`, an up barrier is judged from `spot` alone.
     pub spot_max: Option<Positive>, // Lookback / up barriers
+    /// * `exotic_params` - The exotic parameters of the contract, for the
+    ///   payoffs that read more than the spot and strike: a two-asset
+    ///   rainbow reads `rainbow_second_asset_price`, a cliquet its global
+    ///   cap and floor (#844). [`crate::model::Options::payoff`] passes the
+    ///   option's own; the other families ignore it, and `None` is the
+    ///   default.
+    pub exotic_params: Option<ExoticParams>,
 }
 
 impl Default for PayoffInfo {
@@ -129,6 +136,7 @@ impl Default for PayoffInfo {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         }
     }
 }
@@ -166,6 +174,7 @@ impl PayoffInfo {
     ///     ]),
     ///     spot_min: None,
     ///     spot_max: None,
+    ///     exotic_params: None,
     /// };
     ///
     /// assert_eq!(payoff_info.spot_prices_len(), Some(4));
@@ -179,73 +188,67 @@ impl PayoffInfo {
     }
 }
 
-/// Calculates the standard payoff for an option given its information.
+/// The vanilla intrinsic value `max(S - K, 0)` (call) or `max(K - S, 0)`
+/// (put) of a long position, in `Decimal`.
 ///
-/// # Arguments
-///
-/// * `info` - A reference to a `PayoffInfo` struct that contains the essential details of the option such as its style, spot price, and strike price.
-///
-/// # Returns
-///
-/// * `f64` - The payoff value based on the type of the option (call or put).
-///
-/// This function evaluates the payoff based on the option style:
-/// - For a call option: Max(spot price - strike price, 0)
-/// - For a put option: Max(strike price - spot price, 0)
+/// Both operands live in `[0, Decimal::MAX]`, so the difference is always
+/// representable; the checked form keeps the raw operator out of the kernel.
 #[inline]
-pub(crate) fn standard_payoff(info: &PayoffInfo) -> f64 {
-    let spot: Decimal = info.spot.into();
-    let strike: Decimal = info.strike.into();
-
-    // `Positive - Positive` aborts whenever the result would be negative, i.e.
-    // on every out-of-the-money call, so the moneyness is traced on the
-    // `Decimal` values. Both operands live in `[0, Decimal::MAX]`, which makes
-    // the difference always representable; the checked form keeps the raw
-    // operator out of the kernel.
-    let moneyness = spot.checked_sub(strike).unwrap_or(Decimal::ZERO);
-    trace!("standard_payoff - spot: {}", spot);
-    trace!("standard_payoff - info.strike: {}", strike);
-    trace!("standard_payoff - (info.spot - info.strike): {}", moneyness);
-
-    // The result of `(spot - strike).max(ZERO)` is a non-negative finite Decimal whenever
-    // the inputs are themselves finite (which Positive guarantees), so to_f64 is expected
-    // to succeed. We log and fall back to 0.0 instead of panicking if conversion ever fails.
-    let payoff = match info.style {
-        OptionStyle::Call => moneyness.max(Decimal::ZERO).to_f64().unwrap_or_else(|| {
-            warn!(
-                spot = %spot,
-                strike = %strike,
-                "standard_payoff(Call): to_f64 returned None; defaulting to 0.0"
-            );
-            0.0
-        }),
-        OptionStyle::Put => strike
-            .checked_sub(spot)
-            .unwrap_or(Decimal::ZERO)
-            .max(Decimal::ZERO)
-            .to_f64()
-            .unwrap_or_else(|| {
-                warn!(
-                    spot = %spot,
-                    strike = %strike,
-                    "standard_payoff(Put): to_f64 returned None; defaulting to 0.0"
-                );
-                0.0
-            }),
+fn intrinsic(spot: Decimal, strike: Decimal, style: OptionStyle) -> Decimal {
+    let moneyness = match style {
+        OptionStyle::Call => spot.checked_sub(strike),
+        OptionStyle::Put => strike.checked_sub(spot),
     };
+    moneyness.unwrap_or(Decimal::ZERO).max(Decimal::ZERO)
+}
 
-    match info.side {
-        Side::Long => payoff,
-        Side::Short => -payoff,
+/// The vanilla intrinsic value of `info` for a long position.
+#[inline]
+fn vanilla(info: &PayoffInfo) -> Decimal {
+    intrinsic(info.spot.to_dec(), info.strike.to_dec(), info.style)
+}
+
+/// `value` for a long position, `-value` for a short one. A zero payoff is
+/// zero for either side: `Decimal` negation would give a negative zero.
+#[inline]
+fn signed(value: Decimal, side: Side) -> Decimal {
+    match side {
+        Side::Short if !value.is_zero() => -value,
+        _ => value,
     }
 }
 
 impl Payoff for OptionType {
-    /// Evaluates the payoff in the private `f64` kernel and converts the
-    /// result through the checked [`finite_decimal`] at the boundary.
+    /// The payoff at expiry of one unit of the contract, signed by
+    /// `info.side`.
+    ///
+    /// Every family is valued for a long position by the private kernel and
+    /// signed once here, so a short position's payoff is always the negated
+    /// long payoff (#844). The kernel is the contract's terminal payoff, the
+    /// value the pricing kernels of `optionstratlib-pricing` return at
+    /// `T = 0`:
+    ///
+    /// | Family | Long payoff |
+    /// | --- | --- |
+    /// | European, American, Bermuda, fixed-strike Lookback | `max(S - K, 0)` call, `max(K - S, 0)` put |
+    /// | Asian | the vanilla payoff on the average of `spot_prices`; with no fixings the averaging window is the expiry instant, whose average is `S` |
+    /// | Barrier | the vanilla payoff or the rebate, by the barrier state (see the barrier kernel) |
+    /// | Binary | cash-or-nothing `1`, asset-or-nothing `S`, gap `\|S - K\|`, when in the money |
+    /// | Floating-strike Lookback | `S - min(S_min, S)` call, `max(S_max, S) - S` put: `0` with no observed extremes |
+    /// | Compound | the vanilla payoff of the compound strike on the underlying option's own long payoff `U`: `max(U - K, 0)` call, `max(K - U, 0)` put |
+    /// | Chooser | `max(S - K, K - S, 0)` |
+    /// | Cliquet | `0` accrued (no reset fixings are known), clamped by the global floor and cap of `exotic_params` |
+    /// | Rainbow (two assets) | the vanilla payoff on `max(S, S2)` (best of) or `min(S, S2)` (worst of), `S2` the `rainbow_second_asset_price` of `exotic_params` |
+    /// | Spread | `max(S - S2 - K, 0)` call, `max(K - (S - S2), 0)` put |
+    /// | Exchange | `max(S - S2, 0)` for either style |
+    /// | Quanto | the vanilla payoff times the fixed exchange rate |
+    /// | Power | `max(S^n - K, 0)` call, `max(K - S^n, 0)` put |
+    ///
+    /// The result is normalized (no trailing zeros), the form the `f64`
+    /// kernel produced through `Decimal::from_f64` before #844, so an exact
+    /// payoff keeps the representation it serialized and displayed with.
     fn payoff(&self, info: &PayoffInfo) -> OptionsResult<Decimal> {
-        let value = option_type_payoff(self, info);
-        finite_decimal(value).ok_or_else(|| payoff_not_representable(value))
+        Ok(signed(long_payoff(self, info)?, info.side).normalize())
     }
 }
 
@@ -260,154 +263,132 @@ fn payoff_not_representable(value: f64) -> OptionsError {
     }
 }
 
-/// The `f64` payoff kernel behind [`Payoff`] for [`OptionType`].
+/// Error for a payoff that needs data `info` does not carry.
+#[cold]
+#[inline(never)]
+fn payoff_missing(reason: &str) -> OptionsError {
+    OptionsError::PayoffError {
+        reason: reason.to_string(),
+    }
+}
+
+/// Error for a payoff whose checked arithmetic leaves the `Decimal` range.
+#[cold]
+#[inline(never)]
+fn payoff_overflow(operation: &str) -> OptionsError {
+    OptionsError::PayoffError {
+        reason: format!("{operation} left the Decimal range"),
+    }
+}
+
+/// An `f64` kernel value at the `Decimal` boundary.
+fn from_kernel(value: f64) -> OptionsResult<Decimal> {
+    finite_decimal(value).ok_or_else(|| payoff_not_representable(value))
+}
+
+/// The payoff of one unit of `option_type` for a long position: the
+/// contract's terminal payoff, in `Decimal`. [`Payoff::payoff`] signs it.
 ///
-/// Private: the public boundary is the `Decimal` returned by
-/// [`Payoff::payoff`]. The `Positive` spot inputs of [`PayoffInfo`] are
-/// widened to `f64` here, which is exact for every value an `f64` literal
-/// can spell.
-fn option_type_payoff(option_type: &OptionType, info: &PayoffInfo) -> f64 {
+/// `f64` is used only where the pricing kernels use it too: the Asian
+/// averages of observed fixings and the power `S^n`.
+fn long_payoff(option_type: &OptionType, info: &PayoffInfo) -> OptionsResult<Decimal> {
     match option_type {
-        OptionType::European | OptionType::American => standard_payoff(info),
-        OptionType::Bermuda { .. } => standard_payoff(info),
-        OptionType::Asian { averaging_type } => calculate_asian_payoff(averaging_type, info),
+        OptionType::European | OptionType::American | OptionType::Bermuda { .. } => {
+            Ok(vanilla(info))
+        }
+        OptionType::Asian { averaging_type } => asian_payoff(averaging_type, info),
         OptionType::Barrier {
             barrier_type,
             barrier_level,
             rebate,
-        } => calculate_barrier_payoff(barrier_type, barrier_level, rebate, info),
-        OptionType::Binary { binary_type } => calculate_binary_payoff(binary_type, info),
-        OptionType::Lookback { lookback_type } => match lookback_type {
-            LookbackType::FixedStrike => standard_payoff(info),
-            LookbackType::FloatingStrike => calculate_floating_strike_payoff(info),
-            // `LookbackType` is `#[non_exhaustive]`.
-            _ => standard_payoff(info),
-        },
-        OptionType::Compound { underlying_option } => option_type_payoff(underlying_option, info),
+        } => Ok(barrier_payoff(barrier_type, barrier_level, rebate, info)),
+        OptionType::Binary { binary_type } => Ok(binary_payoff(binary_type, info)),
+        OptionType::Lookback {
+            lookback_type: LookbackType::FloatingStrike,
+        } => Ok(floating_strike_payoff(info)),
+        // A fixed strike at expiry is the vanilla payoff, the extremum being
+        // the spot; `LookbackType` is `#[non_exhaustive]`.
+        OptionType::Lookback { .. } => Ok(vanilla(info)),
+        OptionType::Compound { underlying_option } => {
+            // The underlying option expires with the compound here, so it is
+            // worth its own long payoff at the spot, and the compound is the
+            // vanilla payoff of its strike on that value, as
+            // `compound_black_scholes` prices it at `T = 0` (#844).
+            let underlying = long_payoff(underlying_option, info)?;
+            Ok(intrinsic(underlying, info.strike.to_dec(), info.style))
+        }
         OptionType::Chooser { .. } => {
-            // The chooser is worth the better of the two intrinsics at
-            // expiry. `Positive - Positive` aborts whenever the result
-            // would be negative, i.e. for every out-of-the-money chooser,
-            // so both legs are formed on `Decimal` — where the difference
-            // of two values in `[0, Decimal::MAX]` is always
-            // representable — and floored at zero before the comparison.
-            let call_intrinsic = info
+            Ok(
+                intrinsic(info.spot.to_dec(), info.strike.to_dec(), OptionStyle::Call).max(
+                    intrinsic(info.spot.to_dec(), info.strike.to_dec(), OptionStyle::Put),
+                ),
+            )
+        }
+        OptionType::Cliquet { .. } => Ok(cliquet_payoff(info)),
+        OptionType::Rainbow {
+            num_assets,
+            rainbow_type,
+        } => rainbow_payoff(*num_assets, rainbow_type, info),
+        OptionType::Spread { second_asset } => {
+            let spread = info
                 .spot
                 .to_dec()
-                .checked_sub(info.strike.to_dec())
-                .unwrap_or(Decimal::ZERO)
-                .max(Decimal::ZERO);
-            let put_intrinsic = info
-                .strike
-                .to_dec()
-                .checked_sub(info.spot.to_dec())
-                .unwrap_or(Decimal::ZERO)
-                .max(Decimal::ZERO);
-            Positive::new_decimal(call_intrinsic.max(put_intrinsic))
-                .unwrap_or(Positive::ZERO)
-                .to_f64()
-        }
-        OptionType::Cliquet { .. } => standard_payoff(info),
-        OptionType::Rainbow { .. } | OptionType::Spread { .. } | OptionType::Exchange { .. } => {
-            standard_payoff(info)
-        }
-        OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate.to_f64(),
-        OptionType::Power { exponent } => match info.style {
-            OptionStyle::Call => {
-                (info.spot.to_f64().powf(exponent.to_f64()) - info.strike.to_f64()).max(ZERO)
+                .checked_sub(second_asset.to_dec())
+                .ok_or_else(|| payoff_overflow("spread S1 - S2"))?;
+            let strike = info.strike.to_dec();
+            let value = match info.style {
+                OptionStyle::Call => spread.checked_sub(strike),
+                OptionStyle::Put => strike.checked_sub(spread),
             }
-            OptionStyle::Put => {
-                // `Positive - f64` aborts whenever the result would be
-                // negative, i.e. for every out-of-the-money power put, and
-                // also when `S^n` has no `Decimal` representation. The
-                // difference keeps the `Decimal` arithmetic the `Positive`
-                // operator performed and is floored at zero; an `S^n` that
-                // leaves the representable range is `+∞` in the limit,
-                // where the put is worthless.
-                let powered = info.spot.to_f64().powf(exponent.to_f64());
-                match finite_decimal(powered) {
-                    Some(powered_dec) => Positive::new_decimal(
-                        info.strike
-                            .to_dec()
-                            .checked_sub(powered_dec)
-                            .unwrap_or(Decimal::ZERO)
-                            .max(Decimal::ZERO),
-                    )
-                    .unwrap_or(Positive::ZERO)
-                    .to_f64(),
-                    None => ZERO,
-                }
-            }
-        },
+            .ok_or_else(|| payoff_overflow("spread payoff"))?;
+            Ok(value.max(Decimal::ZERO))
+        }
+        // The right to exchange the second asset for the first: no strike,
+        // and the same payoff for either style, as `exchange_black_scholes`
+        // prices it.
+        OptionType::Exchange { second_asset } => Ok(intrinsic(
+            info.spot.to_dec(),
+            second_asset.to_dec(),
+            OptionStyle::Call,
+        )),
+        OptionType::Quanto { exchange_rate } => vanilla(info)
+            .checked_mul(exchange_rate.to_dec())
+            .ok_or_else(|| payoff_overflow("quanto payoff times the exchange rate")),
+        OptionType::Power { exponent } => power_payoff(*exponent, info),
         // `OptionType` is `#[non_exhaustive]`: a variant added upstream falls
         // back to the plain intrinsic value until it gets its own arm.
-        _ => standard_payoff(info),
+        _ => Ok(vanilla(info)),
     }
 }
 
-/// Calculates the payoff of an Asian option based on the average spot prices.
+/// The long payoff of an Asian option.
 ///
-/// # Parameters
-/// - `averaging_type`: Specifies the method of averaging the spot prices. It can either be:
-///   - `AsianAveragingType::Arithmetic`: Uses arithmetic mean for averaging.
-///   - `AsianAveragingType::Geometric`: Uses geometric mean for averaging.
-/// - `info`: A reference to a `PayoffInfo` object containing the details about the option such as
-///   the spot prices, strike price, and option style (Call or Put).
-///
-/// # Returns
-/// - The calculated payoff as a `f64`. If the spot prices are not present or their length is zero,
-///   it will return ZERO (assumed to be a constant defined elsewhere).
-///
-/// # Calculation
-/// - The function first calculates the average of the given spot prices based on the specified `averaging_type`.
-/// - For arithmetic averaging, the sum of the spot prices is computed, divided by the number of prices.
-/// - For geometric averaging, the mean is the log-sum `exp(mean(ln x_i))`; see
-///   [`geometric_mean`].
-/// - If the averaging fails due to invalid input (e.g., missing or zero-length spot prices), the result is ZERO.
-///
-/// - Once the average is calculated, the payoff is computed based on the option style:
-///   - For a `Call` option: The payoff is the maximum of `(average - strike)` or ZERO.
-///   - For a `Put` option: The payoff is the maximum of `(strike - average)` or ZERO.
-///
-/// # Assumptions:
-/// - The `spot_prices` and their length (`spot_prices_len()`) are correctly passed via the `PayoffInfo` object.
-/// - Constants `ZERO` and behavior for `Positive::ZERO.into()` are defined elsewhere in the code base.
-///
-fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> f64 {
-    let average = match (&info.spot_prices, info.spot_prices_len()) {
-        (Some(spot_prices), Some(len)) if len > 0 => match averaging_type {
-            AsianAveragingType::Arithmetic => {
-                spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64
-            }
-            AsianAveragingType::Geometric => geometric_mean(spot_prices),
-            // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
-            // arithmetic mean, the conventional default for Asian options.
-            _ => spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64,
-        },
-        _ => return ZERO,
+/// With observed fixings in `spot_prices` the payoff is the vanilla payoff
+/// on their average (arithmetic, or geometric through [`geometric_mean`]),
+/// computed in `f64` as before #844. With none, the averaging window ends at
+/// the expiry instant it starts from, so the average is the spot itself and
+/// the payoff is the vanilla intrinsic value: the value
+/// `asian_black_scholes` prices a contract at `T = 0`. It used to be `0`
+/// (#844).
+fn asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> OptionsResult<Decimal> {
+    let fixings = match info.spot_prices.as_deref() {
+        Some(fixings) if !fixings.is_empty() => fixings,
+        _ => return Ok(vanilla(info)),
+    };
+    let average = match averaging_type {
+        AsianAveragingType::Geometric => geometric_mean(fixings),
+        // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
+        // arithmetic mean, the conventional default for Asian options.
+        _ => fixings.iter().map(Positive::to_f64).sum::<f64>() / fixings.len() as f64,
     };
     match info.style {
-        OptionStyle::Call => (average - info.strike.to_f64()).max(ZERO),
-        // `Positive - f64` aborted on every out-of-the-money Asian put, where
-        // the average is above the strike, and on a non-finite average
-        // (#788). The difference is the one that operator formed, on
-        // `Decimal`, floored at zero. A non-finite average (the geometric
-        // product left the `f64` range before #806 took the mean as a
-        // log-sum) has no put value, so it goes out as `NaN`, which the
-        // `Decimal` boundary of `Payoff::payoff` reports as an error, as it
-        // already does for the call.
-        OptionStyle::Put => match Decimal::from_f64(average) {
-            Some(average) => Positive::new_decimal(
-                info.strike
-                    .to_dec()
-                    .checked_sub(average)
-                    .unwrap_or(Decimal::ZERO)
-                    .max(Decimal::ZERO),
-            )
-            .unwrap_or(Positive::ZERO)
-            .to_f64(),
-            None => f64::NAN,
-        },
+        OptionStyle::Call => from_kernel((average - info.strike.to_f64()).max(ZERO)),
+        // The put is formed on `Decimal`, as since #788; a non-finite average
+        // has no put value and is reported as unrepresentable.
+        OptionStyle::Put => {
+            let average = from_kernel(average)?;
+            Ok(intrinsic(average, info.strike.to_dec(), OptionStyle::Put))
+        }
     }
 }
 
@@ -440,8 +421,8 @@ fn geometric_mean(fixings: &[Positive]) -> f64 {
     centre * (log_sum / fixings.len() as f64).exp() // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite payoff is rejected at the `Decimal` boundary
 }
 
-/// The payoff at expiry of a barrier option (Reiner-Rubinstein contract
-/// terms), signed by `info.side` like every other payoff in this module.
+/// The long payoff at expiry of a barrier option (Reiner-Rubinstein contract
+/// terms); [`Payoff::payoff`] signs it by `info.side`, rebate included.
 ///
 /// # Barrier state at expiry
 ///
@@ -463,177 +444,159 @@ fn geometric_mean(fixings: &[Positive]) -> f64 {
 ///
 /// The rebate is `rebate` (zero when `None`): a knock-in pays it at expiry
 /// when it never came alive (Haug's `E` term), a knock-out pays it on the
-/// hit (`F`). A long position receives it and a short one pays it, so the
-/// rebate carries the side's sign, as the vanilla payoff does. A barrier
+/// hit (`F`). A long position receives it and a short one pays it. A barrier
 /// type added upstream (`BarrierType` is `#[non_exhaustive]`) pays the
 /// vanilla payoff.
 ///
 /// Until #826 an unhit knock-in paid zero instead of its rebate, and the
 /// rebate of a hit knock-out was not signed by the side, so the payoff
 /// disagreed with the Reiner-Rubinstein price as `T → 0`.
-fn calculate_barrier_payoff(
+fn barrier_payoff(
     barrier_type: &BarrierType,
     barrier_level: &Positive,
     rebate: &Option<Positive>,
     info: &PayoffInfo,
-) -> f64 {
-    let level = barrier_level.to_f64();
-    let barrier_condition = match barrier_type {
+) -> Decimal {
+    let hit = match barrier_type {
         BarrierType::UpAndIn | BarrierType::UpAndOut => {
-            // Use spot_max if available, otherwise just current spot
-            info.spot_max.unwrap_or(info.spot).to_f64() >= level
+            info.spot_max.unwrap_or(info.spot) >= *barrier_level
         }
         BarrierType::DownAndIn | BarrierType::DownAndOut => {
-            // Use spot_min if available, otherwise just current spot
-            info.spot_min.unwrap_or(info.spot).to_f64() <= level
+            info.spot_min.unwrap_or(info.spot) <= *barrier_level
         }
-        // `BarrierType` is `#[non_exhaustive]`: an unknown barrier is treated as
-        // never triggered, so the "In" arms below pay nothing and the "Out" arms
-        // pay the standard payoff.
+        // `BarrierType` is `#[non_exhaustive]`: an unknown barrier is never
+        // triggered, and pays the vanilla payoff below.
         _ => false,
     };
-    let std_payoff = standard_payoff(info);
-    // Received by a long, paid by a short.
-    let signed_rebate = match rebate {
-        Some(amount) if !amount.is_zero() => match info.side {
-            Side::Long => amount.to_f64(),
-            Side::Short => -amount.to_f64(),
-        },
-        _ => 0.0,
-    };
+    let rebate = rebate.map_or(Decimal::ZERO, |amount| amount.to_dec());
     match barrier_type {
-        BarrierType::UpAndIn | BarrierType::DownAndIn => {
-            if barrier_condition {
-                std_payoff
-            } else {
-                signed_rebate
-            }
-        }
-        BarrierType::UpAndOut | BarrierType::DownAndOut => {
-            if barrier_condition {
-                signed_rebate
-            } else {
-                std_payoff
-            }
-        }
-        _ => std_payoff,
+        BarrierType::UpAndIn | BarrierType::DownAndIn if !hit => rebate,
+        BarrierType::UpAndOut | BarrierType::DownAndOut if hit => rebate,
+        _ => vanilla(info),
     }
 }
 
-/// Calculates the payout for a binary option based on its type and associated payoff details.
+/// The long payoff of a binary option when it expires in the money (`S > K`
+/// for a call, `S < K` for a put), and zero otherwise:
 ///
-/// # Parameters
+/// - **CashOrNothing**: `1`.
+/// - **AssetOrNothing**: the spot `S`.
+/// - **Gap**: `|S - K|`, the trigger and the payoff strike being the same
+///   `K`, as `binary_black_scholes` prices it.
 ///
-/// - `binary_type`: An enum (`BinaryType`) representing the type of binary option. Supported types are:
-///   - `CashOrNothing`: Pays a fixed amount (1.0) if the option expires in-the-money; otherwise, pays 0.0.
-///   - `AssetOrNothing`: Pays the current spot price of the asset if the option expires in-the-money; otherwise, pays 0.0.
-///   - `Gap`: Pays the absolute difference between the spot price and the strike price (if in-the-money); otherwise, pays 0.0.
-///
-/// - `info`: A reference to a `PayoffInfo` struct containing the following fields:
-///   - `spot`: The current price of the underlying asset.
-///   - `strike`: The strike price of the option.
-///   - `style`: An enum (`OptionStyle`) representing whether the option is a call (long) or put (short):
-///     - `Call`: In-the-money if `spot > strike`.
-///     - `Put`: In-the-money if `spot < strike`.
-///
-/// # Returns
-///
-/// - A `f64` value representing the calculated payoff of the binary option based on the provided conditions.
-///
-/// # Logic
-///
-/// 1. Determine whether the option is in-the-money based on its style (`Call` or `Put`) and the relationship
-///    between the `spot` price and the `strike` price.
-///
-/// 2. Calculate the payoff based on the type of binary option:
-///
-///    - **CashOrNothing**: Returns `1.0` if the option is in-the-money; otherwise, returns `0.0`.
-///    - **AssetOrNothing**: Returns the `spot` price (converted into `f64`) if the option is in-the-money; otherwise, returns `0.0`.
-///    - **Gap**: Returns the absolute difference between the `spot` and `strike` prices (converted into `f64`) if the option is in-the-money; otherwise, returns `0.0`.
-///
-/// # Notes
-///
-/// - The `to_f64` method is assumed to be implemented for the type of `spot` and `strike` to ensure compatibility with the calculations.
-/// - The definition and behavior of `BinaryType`, `PayoffInfo`, and `OptionStyle` are external to this function.
-///
-fn calculate_binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> f64 {
-    let is_in_the_money = match info.style {
+/// A binary type added upstream (`BinaryType` is `#[non_exhaustive]`) pays
+/// the cash-or-nothing amount, the most conservative of the three.
+fn binary_payoff(binary_type: &BinaryType, info: &PayoffInfo) -> Decimal {
+    let in_the_money = match info.style {
         OptionStyle::Call => info.spot > info.strike,
         OptionStyle::Put => info.spot < info.strike,
     };
+    if !in_the_money {
+        return Decimal::ZERO;
+    }
     match binary_type {
-        BinaryType::CashOrNothing => {
-            if is_in_the_money {
-                1.0
-            } else {
-                0.0
-            }
+        BinaryType::AssetOrNothing => info.spot.to_dec(),
+        BinaryType::Gap => vanilla(info),
+        _ => Decimal::ONE,
+    }
+}
+
+/// The long payoff of a floating-strike lookback option.
+///
+/// A call buys at the lowest price of the path, `S - S_min`; a put sells at
+/// the highest, `S_max - S`. The path ends at the expiry spot, so the
+/// extremes include it: `S_min` is `min(spot_min, S)` and `S_max` is
+/// `max(spot_max, S)`, and a missing extreme is the spot alone. With no
+/// observed extremes the payoff is `0`, the value `lookback_black_scholes`
+/// prices a new contract at `T = 0`; it used to be `±S` (#844).
+fn floating_strike_payoff(info: &PayoffInfo) -> Decimal {
+    let spot = info.spot.to_dec();
+    match info.style {
+        OptionStyle::Call => {
+            let low = info.spot_min.map_or(spot, |low| low.to_dec().min(spot));
+            spot.checked_sub(low).unwrap_or(Decimal::ZERO)
         }
-        BinaryType::AssetOrNothing => {
-            if is_in_the_money {
-                info.spot.to_f64()
-            } else {
-                0.0
-            }
-        }
-        BinaryType::Gap => {
-            if is_in_the_money {
-                // For Gap options, the payoff is proportional to how far above/below the strike price
-                // the underlying asset is at expiration
-                (info.spot.to_f64() - info.strike.to_f64()).abs()
-            } else {
-                0.0
-            }
-        }
-        // `BinaryType` is `#[non_exhaustive]`: an unknown binary type pays the
-        // cash-or-nothing amount, the most conservative of the three.
-        _ => {
-            if is_in_the_money {
-                1.0
-            } else {
-                0.0
-            }
+        OptionStyle::Put => {
+            let high = info.spot_max.map_or(spot, |high| high.to_dec().max(spot));
+            high.checked_sub(spot).unwrap_or(Decimal::ZERO)
         }
     }
 }
 
-/// Calculates the payoff for a floating strike option based on the provided option information.
+/// The long payoff of a cliquet option at expiry.
 ///
-/// # Parameters
-/// - `info`: A reference to a `PayoffInfo` struct that contains all necessary information for
-///   calculating the payoff. The struct includes details such as the option style (call or put),
-///   the spot value, and the minimum or maximum spot observed (as applicable).
+/// A cliquet pays the sum of its capped and floored period returns. No reset
+/// fixings reach [`PayoffInfo`], so no period has accrued and the sum is `0`,
+/// clamped by the global cap and then the global floor of `exotic_params`
+/// when set: the value `cliquet_black_scholes` prices at `T = 0`. It used to
+/// be the vanilla payoff on the spot (#844).
+fn cliquet_payoff(info: &PayoffInfo) -> Decimal {
+    let mut total = Decimal::ZERO;
+    if let Some(params) = &info.exotic_params {
+        if let Some(cap) = params.cliquet_global_cap {
+            total = total.min(cap);
+        }
+        if let Some(floor) = params.cliquet_global_floor {
+            total = total.max(floor);
+        }
+    }
+    total
+}
+
+/// The long payoff of a two-asset rainbow option: the vanilla payoff on the
+/// best (`max(S, S2)`) or the worst (`min(S, S2)`) of the two assets, `S2`
+/// being `exotic_params.rainbow_second_asset_price`. It used to be the
+/// vanilla payoff on `S` alone (#844).
 ///
-/// # Returns
-/// - A `f64` representing the calculated payoff amount for the floating strike option.
+/// # Errors
 ///
-/// # Logic
-/// 1. Determines the "extremum" based on the option style:
-///    - For a call option (`OptionStyle::Call`), the extremum is the minimum spot value (`info.spot_min`).
-///    - For a put option (`OptionStyle::Put`), the extremum is the maximum spot value (`info.spot_max`).
-/// 2. Calculates the payoff based on the difference between the spot price (`info.spot.to_f64()`)
-///    and the extremum:
-///    - For a call option, the payoff is `spot - extremum` (or `spot` if `extremum` is unavailable).
-///    - For a put option, the payoff is `extremum - spot` (or `-spot` if `extremum` is unavailable).
-///
-/// # Assumptions
-/// - `info.to_f64()` correctly converts the spot value to a floating-point number (`f64`).
-/// - `info.spot_min` and `info.spot_max` are `Option<f64>` values that might be `None`, in which case
-///   the fallback value (`ZERO`) is used in the payoff calculation.
-///
-/// # Notes
-/// - Ensure that the `info.spot.to_f64()` implementation and the extremum values (`spot_min`, `spot_max`)
-///   are compatible with your application's floating-point requirements.
-/// - The function handles missing extremum values gracefully using a default value of `ZERO`.
-///
-fn calculate_floating_strike_payoff(info: &PayoffInfo) -> f64 {
-    let extremum = match info.style {
-        OptionStyle::Call => info.spot_min,
-        OptionStyle::Put => info.spot_max,
+/// Returns [`OptionsError::PayoffError`] when the contract is not on two
+/// assets, when `exotic_params` carries no second asset price, or for a
+/// rainbow type added upstream (`RainbowType` is `#[non_exhaustive]`), as
+/// `rainbow_black_scholes` rejects them.
+fn rainbow_payoff(
+    num_assets: usize,
+    rainbow_type: &RainbowType,
+    info: &PayoffInfo,
+) -> OptionsResult<Decimal> {
+    if num_assets != 2 {
+        return Err(payoff_missing(
+            "a rainbow payoff is defined on two assets only",
+        ));
+    }
+    let second = info
+        .exotic_params
+        .as_ref()
+        .and_then(|params| params.rainbow_second_asset_price)
+        .ok_or_else(|| {
+            payoff_missing("a rainbow payoff needs exotic_params.rainbow_second_asset_price")
+        })?
+        .to_dec();
+    let first = info.spot.to_dec();
+    let reference = match rainbow_type {
+        RainbowType::BestOf => first.max(second),
+        RainbowType::WorstOf => first.min(second),
+        _ => return Err(payoff_missing("unsupported rainbow type")),
     };
-    match info.style {
-        OptionStyle::Call => info.spot.to_f64() - extremum.map_or(ZERO, |e| e.to_f64()),
-        OptionStyle::Put => extremum.map_or(ZERO, |e| e.to_f64()) - info.spot.to_f64(),
+    Ok(intrinsic(reference, info.strike.to_dec(), info.style))
+}
+
+/// The long payoff of a power option, `max(S^n - K, 0)` (call) or
+/// `max(K - S^n, 0)` (put), with `S^n` formed in `f64` and taken to
+/// `Decimal` before the strike is subtracted, as `power_black_scholes` does
+/// at `T = 0`.
+///
+/// # Errors
+///
+/// Returns [`OptionsError::PayoffError`] for a call whose `S^n` has no
+/// `Decimal` representation. The put is worthless there: `S^n` is `+∞` in
+/// the limit.
+fn power_payoff(exponent: Positive, info: &PayoffInfo) -> OptionsResult<Decimal> {
+    let powered = info.spot.to_f64().powf(exponent.to_f64());
+    match (finite_decimal(powered), info.style) {
+        (Some(powered), style) => Ok(intrinsic(powered, info.strike.to_dec(), style)),
+        (None, OptionStyle::Put) => Ok(Decimal::ZERO),
+        (None, OptionStyle::Call) => Err(payoff_not_representable(powered)),
     }
 }
 
@@ -887,6 +850,7 @@ mod tests_payoff {
 mod tests_calculate_floating_strike_payoff {
     use super::*;
     use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_call_option_with_spot_min() {
@@ -898,8 +862,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: Some(pos_or_panic!(80.0)),
             spot_max: None,
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
+        assert_eq!(floating_strike_payoff(&info), dec!(20));
     }
 
     #[test]
@@ -912,8 +877,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), 100.0);
+        assert_eq!(floating_strike_payoff(&info), Decimal::ZERO);
     }
 
     #[test]
@@ -926,8 +892,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: Some(pos_or_panic!(120.0)),
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), 20.0);
+        assert_eq!(floating_strike_payoff(&info), dec!(20));
     }
 
     #[test]
@@ -940,8 +907,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), -100.0);
+        assert_eq!(floating_strike_payoff(&info), Decimal::ZERO);
     }
 
     #[test]
@@ -954,8 +922,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: Some(pos_or_panic!(100.0)),
             spot_max: None,
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
+        assert_eq!(floating_strike_payoff(&info), Decimal::ZERO);
     }
 
     #[test]
@@ -968,8 +937,9 @@ mod tests_calculate_floating_strike_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: Some(pos_or_panic!(100.0)),
+            exotic_params: None,
         };
-        assert_eq!(calculate_floating_strike_payoff(&info), 0.0);
+        assert_eq!(floating_strike_payoff(&info), Decimal::ZERO);
     }
 }
 
@@ -1071,7 +1041,9 @@ mod test_cliquet_options {
     use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
 
+    use crate::model::option::ExoticParams;
     use crate::model::payoff::{Payoff, PayoffInfo};
+    use rust_decimal::Decimal;
 
     #[test]
     fn test_cliquet_option_with_resets() {
@@ -1090,17 +1062,47 @@ mod test_cliquet_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
+        // No reset fixings reach the payoff, so nothing has accrued: 0, the
+        // value `cliquet_black_scholes` gives at `T = 0`. It was the vanilla
+        // payoff on the spot, 20 (#844).
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::ZERO);
+
+        // The global floor and cap of the exotic parameters clamp it.
+        let floored = PayoffInfo {
+            exotic_params: Some(ExoticParams {
+                cliquet_global_floor: Some(dec!(2)),
+                ..ExoticParams::default()
+            }),
+            ..info.clone()
+        };
+        assert_eq!(option.payoff(&floored).unwrap(), dec!(2));
+        let capped = PayoffInfo {
+            exotic_params: Some(ExoticParams {
+                cliquet_global_cap: Some(dec!(-1)),
+                ..ExoticParams::default()
+            }),
+            ..info
+        };
+        assert_eq!(option.payoff(&capped).unwrap(), dec!(-1));
     }
 }
 
 #[cfg(test)]
 mod test_rainbow_options {
+    use crate::error::OptionsError;
+    use crate::model::option::ExoticParams;
     use crate::model::{OptionStyle, OptionType, RainbowType, Side};
     use positive::{Positive, pos_or_panic};
     use rust_decimal_macros::dec;
 
     use crate::model::payoff::{Payoff, PayoffInfo};
+
+    fn second_asset(price: f64) -> Option<ExoticParams> {
+        Some(ExoticParams {
+            rainbow_second_asset_price: Some(pos_or_panic!(price)),
+            ..ExoticParams::default()
+        })
+    }
 
     #[test]
     fn test_rainbow_option_best_of() {
@@ -1114,9 +1116,23 @@ mod test_rainbow_options {
             style: OptionStyle::Call,
             side: Side::Long,
             spot_prices: None,
+            exotic_params: second_asset(130.0),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
+        // The best of 120 and 130 against 100 (#844); on the first asset
+        // alone it read 20.
+        assert_eq!(option.payoff(&info).unwrap(), dec!(30));
+
+        // Without the second asset the payoff is undefined, as the pricer
+        // rejects it.
+        let missing = PayoffInfo {
+            exotic_params: None,
+            ..info
+        };
+        assert!(matches!(
+            option.payoff(&missing),
+            Err(OptionsError::PayoffError { .. })
+        ));
     }
 
     #[test]
@@ -1131,9 +1147,11 @@ mod test_rainbow_options {
             style: OptionStyle::Put,
             side: Side::Long,
             spot_prices: None,
+            exotic_params: second_asset(70.0),
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
+        // A put on the worst of 80 and 70 against 100 (#844).
+        assert_eq!(option.payoff(&info).unwrap(), dec!(30));
     }
 }
 
@@ -1158,7 +1176,9 @@ mod test_exchange_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(20));
+        // `max(S1 - S2, 0) = 120 - 90`, with no strike; it was the vanilla
+        // call on 120 at 100, 20 (#844).
+        assert_eq!(option.payoff(&info).unwrap(), dec!(30));
     }
 
     #[test]
@@ -1174,7 +1194,9 @@ mod test_exchange_options {
             spot_prices: None,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
+        // Both assets at 110: nothing to gain from the exchange, 0; it was
+        // the vanilla call on 110 at 100, 10 (#844).
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
     }
 }
 
@@ -1272,7 +1294,20 @@ mod tests_option_type {
             side: Side::Long,
             ..Default::default()
         };
-        assert_eq!(option.payoff(&info).unwrap(), dec!(10));
+        // The underlying call is worth 10 at expiry; a call on it struck at
+        // 100 is out of the money, 0. It returned the underlying's 10,
+        // ignoring the compound strike (#844).
+        assert_eq!(option.payoff(&info).unwrap(), dec!(0));
+        let cheap = PayoffInfo {
+            spot: pos_or_panic!(110.0),
+            strike: pos_or_panic!(4.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        // Strike 4: the underlying call on 110 at 4 is worth 106, so the
+        // compound call pays `106 - 4 = 102`.
+        assert_eq!(option.payoff(&cheap).unwrap(), dec!(102));
     }
 
     #[test]
@@ -1324,6 +1359,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(10));
     }
@@ -1339,6 +1375,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
@@ -1354,6 +1391,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
@@ -1369,6 +1407,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(10));
     }
@@ -1384,6 +1423,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
@@ -1399,6 +1439,7 @@ mod tests_standard_payoff {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         assert_eq!(option_type.payoff(&info).unwrap(), dec!(0));
     }
@@ -1698,16 +1739,14 @@ mod tests_decimal_boundary_equivalence {
         ));
     }
 
-    /// The `f64` nearest to a call payoff at `Positive::MAX` rounds above
-    /// `Decimal::MAX`, so the payoff has no `Decimal` representation.
+    /// A call at `Positive::MAX` struck at zero pays `Decimal::MAX`
+    /// exactly. Through the `f64` kernel before #844 the nearest `f64`
+    /// rounded above `Decimal::MAX` and the payoff was an error.
     #[test]
-    fn test_payoff_beyond_decimal_range_is_error() {
+    fn test_payoff_at_decimal_max_is_exact() {
         let option = OptionType::European;
         let info = info(Positive::MAX, Positive::ZERO, OptionStyle::Call, Side::Long);
-        assert!(matches!(
-            option.payoff(&info),
-            Err(OptionsError::PayoffError { .. })
-        ));
+        assert_eq!(option.payoff(&info).unwrap(), Decimal::MAX);
     }
 }
 
@@ -1799,5 +1838,134 @@ mod tests_geometric_mean {
             assert_eq!(geometric_mean(&values), 0.0);
         }
         assert_eq!(geometric_mean(&[]), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tests_terminal_payoff {
+    //! The payoff of each family is its contract's terminal payoff, signed by
+    //! the side (#844). `optionstratlib-pricing`'s `terminal_payoff_test`
+    //! checks each against its kernel at `T = 0`; these pin the values.
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    fn info(spot: f64, style: OptionStyle, side: Side) -> PayoffInfo {
+        PayoffInfo {
+            spot: pos_or_panic!(spot),
+            strike: Positive::HUNDRED,
+            style,
+            side,
+            ..Default::default()
+        }
+    }
+
+    /// A short cash-or-nothing call in the money pays out 1; it read `+1`.
+    #[test]
+    fn test_short_binary_chooser_and_power_are_signed() {
+        let short_call = info(105.0, OptionStyle::Call, Side::Short);
+        let binary = OptionType::Binary {
+            binary_type: BinaryType::CashOrNothing,
+        };
+        assert_eq!(binary.payoff(&short_call).unwrap(), dec!(-1));
+        let chooser = OptionType::Chooser {
+            choice_date: pos_or_panic!(30.0),
+        };
+        assert_eq!(chooser.payoff(&short_call).unwrap(), dec!(-5));
+        let power = OptionType::Power {
+            exponent: Positive::ONE,
+        };
+        assert_eq!(power.payoff(&short_call).unwrap(), dec!(-5));
+        // Out of the money the short pays nothing, as an unsigned zero.
+        let otm = info(95.0, OptionStyle::Call, Side::Short);
+        let zero = binary.payoff(&otm).unwrap();
+        assert!(zero.is_zero() && !zero.is_sign_negative());
+    }
+
+    /// With no observed extremes a floating-strike lookback locks nothing in:
+    /// `0`, where it paid `S` (call) or `-S` (put). The extremes include the
+    /// expiry spot.
+    #[test]
+    fn test_floating_strike_lookback_without_extremes_is_zero() {
+        let lookback = OptionType::Lookback {
+            lookback_type: LookbackType::FloatingStrike,
+        };
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            assert_eq!(
+                lookback.payoff(&info(105.0, style, Side::Long)).unwrap(),
+                Decimal::ZERO
+            );
+        }
+        let call = PayoffInfo {
+            spot_min: Some(pos_or_panic!(90.0)),
+            ..info(105.0, OptionStyle::Call, Side::Short)
+        };
+        assert_eq!(lookback.payoff(&call).unwrap(), dec!(-15));
+        // A minimum above the spot is not the path's minimum: the spot is.
+        let stale = PayoffInfo {
+            spot_min: Some(pos_or_panic!(110.0)),
+            ..info(105.0, OptionStyle::Call, Side::Long)
+        };
+        assert_eq!(lookback.payoff(&stale).unwrap(), Decimal::ZERO);
+    }
+
+    /// With no fixings the averaging window is the expiry instant, so the
+    /// average is the spot: intrinsic value, 5, where it paid 0. With
+    /// fixings a short position pays the long payoff; it received it.
+    #[test]
+    fn test_asian_payoff_without_fixings_is_intrinsic_and_signed() {
+        let asian = OptionType::Asian {
+            averaging_type: AsianAveragingType::Arithmetic,
+        };
+        assert_eq!(
+            asian
+                .payoff(&info(105.0, OptionStyle::Call, Side::Long))
+                .unwrap(),
+            dec!(5)
+        );
+        let fixed = PayoffInfo {
+            spot_prices: Some(vec![pos_or_panic!(104.0), pos_or_panic!(108.0)]),
+            ..info(105.0, OptionStyle::Call, Side::Short)
+        };
+        assert_eq!(asian.payoff(&fixed).unwrap(), dec!(-6));
+    }
+
+    /// A call on a call, both struck at 100, with the spot at 105: the
+    /// underlying is worth 5, below the compound strike, so the compound pays
+    /// 0. It paid the underlying's 5 (#844).
+    #[test]
+    fn test_compound_pays_on_its_strike() {
+        let compound = OptionType::Compound {
+            underlying_option: Box::new(OptionType::European),
+        };
+        assert_eq!(
+            compound
+                .payoff(&info(105.0, OptionStyle::Call, Side::Long))
+                .unwrap(),
+            Decimal::ZERO
+        );
+        // The underlying takes the compound's style, as in
+        // `compound_black_scholes`: a put on a put at 105 is a put struck at
+        // 100 on a worthless put, `100 - 0 = 100`.
+        assert_eq!(
+            compound
+                .payoff(&info(105.0, OptionStyle::Put, Side::Long))
+                .unwrap(),
+            dec!(100)
+        );
+    }
+
+    /// The vanilla payoff is the exact `Decimal` difference: `50.07 - 50` was
+    /// `0.0700000000000003` through `f64`.
+    #[test]
+    fn test_vanilla_payoff_is_exact() {
+        let call = PayoffInfo {
+            spot: Positive::new_decimal(dec!(50.07)).unwrap(),
+            strike: pos_or_panic!(50.0),
+            style: OptionStyle::Call,
+            side: Side::Long,
+            ..Default::default()
+        };
+        assert_eq!(OptionType::European.payoff(&call).unwrap(), dec!(0.07));
     }
 }

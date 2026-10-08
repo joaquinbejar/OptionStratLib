@@ -990,6 +990,10 @@ fn test_deterministic_seeded_mc_price_matches_pinned() {
         .get_mc_option_price(&option)
         .unwrap_or_else(|e| panic!("pricing failed: {e}"))
         .to_dec();
-    let pinned = dec!(2.3259914839804568426769173659);
+    // Re-baselined by #844: each path's payoff is the exact `Decimal`
+    // intrinsic value instead of an `f64` difference taken back to
+    // `Decimal`, which moves the mean by `8.0e-16` from
+    // `2.3259914839804568426769173659`.
+    let pinned = dec!(2.3259914839804576472702068362);
     assert_bit_identical(&[price], &[pinned], "Monte-Carlo price");
 }

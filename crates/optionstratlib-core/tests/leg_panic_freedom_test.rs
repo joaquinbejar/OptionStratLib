@@ -254,6 +254,7 @@ proptest! {
             spot_prices: Some(prices),
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         let _ = OptionType::Asian { averaging_type }.payoff(&info);
     }
