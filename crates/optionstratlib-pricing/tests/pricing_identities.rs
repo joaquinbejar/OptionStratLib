@@ -1482,14 +1482,21 @@ fn test_binomial_american_call_without_dividend_equals_european() {
 
 /// The closed forms divide by `σ√T`; at `T = 0` or `σ = 0` they report a
 /// `PricingError` rather than a limit value. Asserted so the behaviour is
-/// pinned: a silent switch to a limit would be a numerical change.
+/// pinned: a silent switch to a limit would be a numerical change. The one
+/// deliberate exception is `black_scholes` at `T = 0`, which returns the
+/// intrinsic value, per unit and signed by the side, since #843.
 #[test]
 fn test_closed_forms_at_zero_time_or_zero_volatility_return_error() {
-    for style in [OptionStyle::Call, OptionStyle::Put] {
+    for (style, intrinsic) in [(OptionStyle::Call, dec!(10)), (OptionStyle::Put, dec!(0))] {
         let expired = european(style, Side::Long, 110.0, 100.0, 0.0, 0.2, dec!(0.05), 0.0);
         let frozen = european(style, Side::Long, 110.0, 100.0, 30.0, 0.0, dec!(0.05), 0.0);
+        assert_eq!(
+            black_scholes(&expired).ok(),
+            Some(intrinsic),
+            "bs {style:?} at expiry"
+        );
+        assert!(black_scholes(&frozen).is_err(), "bs {style:?}");
         for opt in [&expired, &frozen] {
-            assert!(black_scholes(opt).is_err(), "bs {style:?}");
             assert!(black_76(opt).is_err(), "b76 {style:?}");
             assert!(garman_kohlhagen(opt).is_err(), "gk {style:?}");
         }

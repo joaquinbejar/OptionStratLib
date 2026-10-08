@@ -300,8 +300,11 @@ pub trait OptionPricing {
     ///   floor needs).
     /// - [`VolatilityError::DecimalError`] when a bracket or residual step
     ///   overflows `Decimal` (a target near `Decimal::MAX`).
+    /// - [`VolatilityError::Options`] carrying [`OptionsError::TimeError`]
+    ///   for an expired option: at `T = 0` the price is the intrinsic value
+    ///   whatever the volatility, so no volatility is implied (#843).
     /// - [`VolatilityError::Options`] from the underlying Black–Scholes
-    ///   evaluation or the band (an expired option, for instance), wrapped
+    ///   evaluation or the band, wrapped
     ///   as [`OptionsError::ImpliedVolatilityInvariant`] when the midpoint
     ///   invariant check fails.
     fn calculate_implied_volatility(
@@ -391,6 +394,19 @@ impl OptionPricing for Options {
         &self,
         market_price: Decimal,
     ) -> Result<Positive, VolatilityError> {
+        // At expiry the price is the intrinsic value for every volatility
+        // (#843), so a market price implies none. Rejected up front, as the
+        // Black-Scholes error at `T = 0` used to do inside the bisection.
+        if self.time_to_expiration()?.is_zero() {
+            return Err(OptionsError::TimeError {
+                operation: "calculate_implied_volatility".to_string(),
+                reason:
+                    "the option has expired: at T = 0 the price does not depend on the volatility"
+                        .to_string(),
+            }
+            .into());
+        }
+
         let is_short = self.is_short();
         let target_price = if is_short {
             -market_price

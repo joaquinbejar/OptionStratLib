@@ -1705,6 +1705,35 @@ summarize the release.
 
 ### Fixed
 
+- **`pricing::black_scholes()` prices every exotic option at expiry**
+  (#843). The dispatcher computed `d1` / `d2` before it looked at the
+  option type. Both divide by `σ√T`, so at `T = 0` every exotic failed with
+  `PricingError::Greeks(InputError(InvalidTime))`, although each exotic
+  kernel defines its value at expiry.
+  - **The change.** At `T = 0` an exotic is now dispatched straight to its
+    kernel, and so are `price_option_with(ClosedFormBS)` and
+    `OptionPricing::calculate_price_black_scholes`, which call
+    `black_scholes()`. Each family returns its payoff at the spot, per unit
+    and signed by the side. For example, a quanto call at `S = 105`,
+    `K = 100` and a rate of 1.5 is 7.5, and a power call with exponent 2 is
+    10925.
+  - **What is unchanged.**
+    - For `T > 0` the dispatch is unchanged: `d1` / `d2` are still computed
+      first and the kernel's price is returned as before.
+    - American and Bermuda options keep the errors they returned before.
+  - **European options at `T = 0`.** A European option at expiry returns
+    its intrinsic value, per unit and signed by the side, instead of
+    `InvalidTime`, so every type with a closed form has a value at
+    expiry. For example, a call at `S = 105`, `K = 100` is 5, and the short
+    call is −5.
+  - **Tests.** `tests/expiry_dispatch_test.rs` checks every exotic family:
+    the price at expiry equals the contract payoff and the kernel, for both
+    styles and sides. For the families whose price is continuous there, the
+    price one minute out matches it to three places. It also checks that
+    for `T > 0` the dispatcher returns exactly the kernel's price. It
+    checks the European intrinsic at `T = 0` for call and put, long and
+    short.
+
 - **A barrier option's payoff at expiry pays its rebate, and its price at
   `T = 0` agrees with the Reiner-Rubinstein price as `T → 0`** (#826).
   - **The unhit knock-in rebate.** An `UpAndIn` / `DownAndIn` whose barrier
