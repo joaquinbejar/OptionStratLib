@@ -1856,6 +1856,20 @@ summarize the release.
       for both signs of `ρ` and all three Gauss-Legendre rules.
     - The price one minute out matches the price at expiry to `1e-4`.
 
+- **`pricing::monte_carlo_option_pricing` prices puts and short positions**
+  (#864). Every path was paid `max(S_T - K, 0)` and the result was never
+  signed, so a put was priced as the call (10.45 for the at-the-money put
+  whose Black-Scholes price is 5.57) and a short position as the long one.
+  The payoff now follows `option_style` (`max(K - S_T, 0)` for a put) and
+  the side is applied once, to the discounted mean, as `black_scholes`
+  applies it: a short position returns the negated long price. Long calls
+  are unchanged, bit for bit, including the pinned seeded price. New seeded
+  tests check the put and the call against Black-Scholes, put-call parity
+  with a dividend yield, and short as the exact negation of long.
+  Migration: a caller that priced a put or a short position through this
+  function was getting the long call; the value it now returns is the
+  instrument's.
+
 - **`pricing::black_scholes()` prices every exotic option at expiry**
   (#843). The dispatcher computed `d1` / `d2` before it looked at the
   option type. Both divide by `σ√T`, so at `T = 0` every exotic failed with

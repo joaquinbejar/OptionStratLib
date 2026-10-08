@@ -5,6 +5,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, finite_decimal};
+use optionstratlib_core::model::types::{OptionStyle, Side};
 use rand::Rng;
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
@@ -24,7 +25,10 @@ use tracing::instrument;
 ///
 /// # Returns
 ///
-/// * A floating-point number representing the estimated price of the option.
+/// * The estimated price of one unit of the option, signed by its side as
+///   [`crate::pricing::black_scholes`] signs it: a long position returns the
+///   discounted mean payoff, a short position its negation. The quantity is
+///   not applied.
 ///
 /// # Description
 ///
@@ -38,9 +42,12 @@ use tracing::instrument;
 ///         - Calculate a Wiener process increment `w`.
 ///         - Update the stock price `st` using the Euler discretisation of geometric Brownian motion,
 ///           `st <- st * (1 + (r - q) dt + sigma dW)`, with `q` the option's dividend yield.
-///     - Calculate the payoff of the option for this simulation (for a call option, this is `max(st - strike_price, 0)`).
+///     - Calculate the payoff of the option for this simulation:
+///       `max(st - strike_price, 0)` for a call, `max(strike_price - st, 0)`
+///       for a put.
 ///     - Add the payoff to the `payoff_sum`.
-/// 4. Return the average payoff discounted to its present value.
+/// 4. Discount the average payoff to its present value and negate it for a
+///    short position. Until #864 every option was paid as a long call.
 ///
 /// # Errors
 ///
@@ -84,6 +91,7 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
         "pricing::monte_carlo::gbm::carry",
     )?;
     let drift = d_mul(carry, dt_dec, "pricing::monte_carlo::gbm::drift")?;
+    let strike = option.strike_price.to_dec();
     for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps_raw {
@@ -104,12 +112,12 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
             )?;
             st = d_mul(st, growth, "pricing::monte_carlo::gbm::step")?;
         }
-        // Calculate the payoff for a call option
-        let payoff_dec = d_sub(
-            st,
-            option.strike_price.to_dec(),
-            "pricing::monte_carlo::gbm::payoff",
-        )?
+        // The payoff of the option's style; it was always the call payoff
+        // until #864, so a put was priced as a call.
+        let payoff_dec = match option.option_style {
+            OptionStyle::Call => d_sub(st, strike, "pricing::monte_carlo::gbm::call_payoff")?,
+            OptionStyle::Put => d_sub(strike, st, "pricing::monte_carlo::gbm::put_payoff")?,
+        }
         .max(Decimal::ZERO);
         let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
             PricingError::non_finite("pricing::monte_carlo::gbm::payoff_cast", f64::NAN)
@@ -157,8 +165,14 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
             average_payoff,
         ));
     }
-    finite_decimal(average_payoff).ok_or_else(|| {
+    let long_price = finite_decimal(average_payoff).ok_or_else(|| {
         PricingError::non_finite("pricing::monte_carlo::average_payoff::cast", average_payoff)
+    })?;
+    // The side is applied once, to the discounted mean, as `black_scholes`
+    // applies it: a short position is the negated long price (#864).
+    Ok(match option.side {
+        Side::Long => long_price,
+        Side::Short => -long_price,
     })
 }
 
@@ -416,6 +430,79 @@ mod tests {
         .unwrap();
         let reference = black_scholes(&option).unwrap();
         assert_decimal_eq!(price, reference, dec!(0.41));
+    }
+
+    /// Seeded estimate over 12 steps and 20 000 paths, the setting of the
+    /// dividend-yield convergence test above.
+    fn seeded_price(option: &Options) -> Decimal {
+        monte_carlo_option_pricing(
+            option,
+            optionstratlib_core::nz!(12),
+            optionstratlib_core::nz!(20_000),
+            &mut deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_put_converges_to_black_scholes() {
+        use crate::pricing::black_scholes_model::black_scholes;
+        // #864: a put was paid `max(S_T - K, 0)` and priced as the call,
+        // 10.45 here. Black-Scholes put, S = K = 100, r = 5%, sigma = 20%,
+        // T = 1: 5.5735. The discounted put payoff has a standard deviation
+        // of about 8.7, so with 20 000 paths the standard error is about
+        // 0.062; the band is 4.5 of them and absorbs the Euler bias of 12
+        // steps.
+        let mut option = create_test_option();
+        option.option_style = OptionStyle::Put;
+        let reference = black_scholes(&option).unwrap();
+        assert_decimal_eq!(reference, dec!(5.5735), dec!(0.0001));
+        assert_decimal_eq!(seeded_price(&option), reference, dec!(0.28));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_call_converges_to_black_scholes_20k() {
+        use crate::pricing::black_scholes_model::black_scholes;
+        // The call at the same setting: payoff standard deviation about
+        // 14.5, standard error about 0.10, band 4.5 of them.
+        let option = create_test_option();
+        let reference = black_scholes(&option).unwrap();
+        assert_decimal_eq!(seeded_price(&option), reference, dec!(0.46));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_put_call_parity() {
+        // C - P = S e^(-qT) - K e^(-rT). Both estimates run on the same
+        // seeded paths, so their difference is exactly the discounted mean
+        // of S_T - K and the only error left is that of the sample mean of
+        // S_T: standard deviation about 20, standard error about 0.14 over
+        // 20 000 paths; the band is 4.5 of them. With q = 3% the forward
+        // term is 100 e^(-0.03) - 100 e^(-0.05) = 1.9216.
+        let mut call = create_test_option();
+        call.dividend_yield = pos_or_panic!(0.03);
+        let mut put = call.clone();
+        put.option_style = OptionStyle::Put;
+        let forward = dec!(100) * (-dec!(0.03)).exp() - dec!(100) * (-dec!(0.05)).exp();
+        assert_decimal_eq!(forward, dec!(1.9216), dec!(0.0001));
+        let parity = seeded_price(&call) - seeded_price(&put);
+        assert_decimal_eq!(parity, forward, dec!(0.61));
+    }
+
+    #[test]
+    fn test_monte_carlo_option_pricing_short_is_negated_long() {
+        // #864: a short position was priced as the long one. The side is
+        // applied once, to the discounted mean, so on the same seeded paths
+        // the short price is exactly the negated long price, as in
+        // `black_scholes`.
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let mut long = create_test_option();
+            long.option_style = style;
+            let mut short = long.clone();
+            short.side = Side::Short;
+            let long_price = seeded_price(&long);
+            assert!(long_price > Decimal::ZERO, "{style:?}: {long_price}");
+            assert_eq!(seeded_price(&short), -long_price, "{style:?}");
+        }
     }
 }
 
