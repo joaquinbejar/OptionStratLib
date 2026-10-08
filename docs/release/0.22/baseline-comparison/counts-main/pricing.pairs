@@ -1,0 +1,62 @@
+approx v0.5.1
+arrayvec v0.7.8
+bytemuck v1.25.2
+cfg-if v1.0.5
+chacha20 v0.10.2
+chrono v0.4.45
+cpufeatures v0.3.1
+crossbeam-deque v0.8.8
+crossbeam-epoch v0.9.21
+crossbeam-utils v0.8.23
+either v1.19.0
+expiration_date v0.4.2
+financial_types v0.3.0
+getrandom v0.4.3
+iana-time-zone v0.1.65
+itertools v0.15.0
+itoa v1.0.18
+libc v0.2.190
+libm v0.2.16
+matrixmultiply v0.3.11
+memchr v2.8.3
+nalgebra v0.35.0
+num-complex v0.4.6
+num-integer v0.1.47
+num-rational v0.4.2
+num-traits v0.2.19
+once_cell v1.21.4
+optionstratlib-core v0.22.0 (/home/joaquin/osl-bench/b563/wt-main/crates/optionstratlib-core)
+optionstratlib-math v0.22.0 (/home/joaquin/osl-bench/b563/wt-main/crates/optionstratlib-math)
+optionstratlib-pricing v0.22.0 (/home/joaquin/osl-bench/b563/wt-main/crates/optionstratlib-pricing)
+option_type v0.4.0
+pin-project-lite v0.2.17
+positive v0.7.1
+proc-macro2 v1.0.107
+quote v1.0.47
+rand_core v0.10.1
+rand_distr v0.6.0
+rand v0.10.3
+rawpointer v0.2.1
+rayon-core v1.13.0
+rayon v1.12.0
+rust_decimal_macros v1.40.0 (proc-macro)
+rust_decimal v1.43.0
+safe_arch v1.2.0
+serde_core v1.0.229
+serde_derive v1.0.229 (proc-macro)
+serde_json v1.0.151
+serde v1.0.229
+simba v0.10.2
+statrs v0.19.1
+syn v2.0.119
+syn v3.0.6
+thiserror-impl v2.0.21 (proc-macro)
+thiserror v2.0.21
+tracing-attributes v0.1.31 (proc-macro)
+tracing-core v0.1.36
+tracing v0.1.44
+typenum v1.20.1
+unicode-ident v1.0.26
+uuid v1.27.0
+wide v1.7.1
+zmij v1.0.23

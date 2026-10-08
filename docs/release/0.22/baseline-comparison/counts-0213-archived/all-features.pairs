@@ -1,0 +1,287 @@
+aes v0.9.3
+aho-corasick v1.1.5
+anyhow v1.0.104
+approx v0.5.1
+arrayvec v0.7.8
+askama_derive v0.15.6
+askama_macros v0.15.6 (proc-macro)
+askama_parser v0.15.6
+askama v0.15.6
+async-trait v0.1.92 (proc-macro)
+atomic-waker v1.1.2
+aws-lc-rs v1.18.1
+aws-lc-sys v0.45.0
+base64 v0.22.1
+base64 v0.23.1
+basic-toml v0.1.10
+bitflags v2.13.2
+block-buffer v0.12.1
+bumpalo v3.20.3
+bytemuck v1.25.2
+bytes v1.12.1
+bzip2 v0.6.1
+cfg-if v1.0.5
+chacha20 v0.10.2
+chrono v0.4.45
+cipher v0.5.2
+cmov v0.5.4
+console v0.16.6
+constant_time_eq v0.4.2
+const-oid v0.10.2
+cookie v0.16.2
+cookie v0.18.2
+core_detect v1.0.0
+core_maths v0.1.1
+cpubits v0.1.1
+cpufeatures v0.3.1
+crc32fast v1.5.2
+crossbeam-deque v0.8.8
+crossbeam-epoch v0.9.21
+crossbeam-utils v0.8.23
+crypto-common v0.2.2
+csv-core v0.1.13
+csv v1.4.0
+ctutils v0.4.2
+darling_core v0.23.0
+darling_core v0.24.1
+darling_macro v0.23.0 (proc-macro)
+darling_macro v0.24.1 (proc-macro)
+darling v0.23.0
+darling v0.24.1
+deflate64 v0.1.12
+deranged v0.5.8
+digest v0.11.3
+dirs-next v2.0.0
+dirs-sys-next v0.1.2
+displaydoc v0.2.7 (proc-macro)
+dyn-clone v1.0.20
+either v1.18.0
+encode_unicode v1.0.0
+encoding_rs v0.8.41
+equivalent v1.0.2
+erased-serde v0.4.10
+errno v0.3.14
+expiration_date v0.3.1
+fantoccini v0.22.1
+financial_types v0.2.3
+flate2 v1.1.10
+fnv v1.0.7
+foreign-types-shared v0.1.1
+foreign-types v0.3.2
+form_urlencoded v1.2.2
+futures-channel v0.3.34
+futures-core v0.3.34
+futures-executor v0.3.34
+futures-io v0.3.34
+futures-macro v0.3.34 (proc-macro)
+futures-sink v0.3.34
+futures-task v0.3.34
+futures-util v0.3.34
+futures v0.3.34
+getrandom v0.3.4
+getrandom v0.4.3
+h2 v0.4.19
+hashbrown v0.17.1
+hmac v0.13.0
+httparse v1.10.1
+http-body-util v0.1.5
+http-body v1.1.0
+http v0.2.12
+http v1.5.0
+hybrid-array v0.4.15
+hyper-rustls v0.27.9
+hyper-tls v0.6.0
+hyper-util v0.1.20
+hyper v1.11.1
+iana-time-zone v0.1.65
+icu_collections v1.5.0
+icu_collections v2.3.0
+icu_locale_core v2.3.0
+icu_locid v1.5.0
+icu_normalizer_data v2.3.0
+icu_normalizer v2.3.0
+icu_properties_data v2.3.0
+icu_properties v2.3.0
+icu_provider_macros v1.5.0 (proc-macro)
+icu_provider v1.5.0
+icu_provider v2.3.1
+icu_segmenter_data v1.5.1
+icu_segmenter v1.5.0
+ident_case v1.0.1
+idna_adapter v1.2.2
+idna v1.1.0
+indexmap v2.14.2
+indicatif v0.18.6
+inout v0.2.2
+ipnet v2.12.2
+is-terminal v0.4.17
+itertools v0.15.0
+itoa v1.0.18
+lazy_static v1.5.0
+libbz2-rs-sys v0.2.5
+libc v0.2.189
+libm v0.2.16
+litemap v0.7.5
+litemap v0.8.3
+lock_api v0.4.14
+log v0.4.34
+lzma-rust2 v0.16.5
+matrixmultiply v0.3.11
+memchr v2.8.3
+mime v0.3.17
+mio v1.2.3
+multiversion-macros v0.9.0 (proc-macro)
+multiversion_no_op v1.0.0 (proc-macro)
+multiversion v0.9.0
+nalgebra v0.35.0
+native-tls v0.2.18
+nu-ansi-term v0.50.3
+num-complex v0.4.6
+num-conv v0.2.2
+num-integer v0.1.47
+num-rational v0.4.2
+num-traits v0.2.19
+once_cell v1.21.4
+openssl-macros v0.1.1 (proc-macro)
+openssl-probe v0.2.1
+openssl-sys v0.9.117
+openssl v0.10.81
+optionstratlib v0.21.3 (/home/joaquin/osl-bench/b563/wt-0213)
+option_type v0.3.1
+parking_lot_core v0.9.12
+parking_lot v0.12.5
+pbkdf2 v0.13.0
+percent-encoding v2.3.2
+pin-project-lite v0.2.17
+plotly_derive v0.14.1 (proc-macro)
+plotly_static v0.1.0
+plotly v0.14.1
+portable-atomic v1.15.0
+positive v0.6.1
+potential_utf v0.1.6
+powerfmt v0.2.0
+ppmd-rust v1.5.0
+ppv-lite86 v0.2.21
+pretty-simple-display v0.1.1 (proc-macro)
+prettytable-rs v0.10.0
+proc-macro2 v1.0.107
+quote v1.0.47
+rand_chacha v0.9.0
+rand_core v0.10.1
+rand_core v0.9.5
+rand_distr v0.6.0
+rand v0.10.2
+rand v0.9.5
+rawpointer v0.2.1
+rayon-core v1.13.0
+rayon v1.12.0
+regex-automata v0.4.18
+regex-syntax v0.8.11
+regex v1.13.1
+reqwest v0.12.28
+reqwest v0.13.5
+rustc-hash v2.1.3
+rust_decimal_macros v1.40.0 (proc-macro)
+rust_decimal v1.43.0
+rustls-native-certs v0.8.4
+rustls-pki-types v1.15.1
+rustls-platform-verifier v0.7.0
+rustls v0.23.45
+rustls-webpki v0.103.15
+rustversion v1.0.23 (proc-macro)
+ryu v1.0.23
+safe_arch v1.2.0
+scopeguard v1.2.0
+serde_core v1.0.229
+serde_derive v1.0.229 (proc-macro)
+serde_json v1.0.151
+serde_repr v0.1.21 (proc-macro)
+serde_urlencoded v0.7.1
+serde v1.0.229
+serde_with_macros v3.23.0 (proc-macro)
+serde_with v3.23.0
+sha1 v0.11.0
+sha2 v0.11.0
+sharded-slab v0.1.7
+signal-hook-registry v1.4.8
+simba v0.10.2
+simd-adler32 v0.3.10
+simdutf8 v0.1.5
+slab v0.4.12
+smallvec v1.16.1
+socket2 v0.6.5
+stable_deref_trait v1.2.1
+statrs v0.19.1
+strsim v0.11.1
+subtle v2.6.1
+sync_wrapper v1.0.2
+synstructure v0.13.2
+synstructure v0.14.0
+syn v2.0.119
+syn v3.0.6
+term v0.7.0
+thiserror-impl v1.0.69 (proc-macro)
+thiserror-impl v2.0.20 (proc-macro)
+thiserror v1.0.69
+thiserror v2.0.20
+thread_local v1.1.10
+time-core v0.1.9
+time-macros v0.2.32 (proc-macro)
+time v0.3.55
+tinystr v0.7.6
+tinystr v0.8.4
+tokio-macros v2.7.2 (proc-macro)
+tokio-native-tls v0.3.1
+tokio-rustls v0.26.5
+tokio-util v0.7.19
+tokio v1.53.1
+tower-http v0.6.11
+tower-layer v0.3.3
+tower-service v0.3.3
+tower v0.5.3
+tracing-attributes v0.1.31 (proc-macro)
+tracing-core v0.1.36
+tracing-log v0.2.0
+tracing-subscriber v0.3.23
+tracing v0.1.44
+try-lock v0.2.5
+typed-path v0.12.3
+typeid v1.0.3
+typenum v1.20.1
+unicode-ident v1.0.26
+unicode-width v0.1.14
+unicode-width v0.2.2
+unit-prefix v0.5.2
+untrusted v0.9.0
+urlencoding v2.1.3
+url v2.5.8
+utf8_iter v1.0.4
+utoipa-gen v5.5.0 (proc-macro)
+utoipa v5.5.0
+uuid v1.26.1
+want v0.3.1
+webdriver v0.53.0
+wide v1.7.1
+winnow v1.0.4
+writeable v0.5.5
+writeable v0.6.4
+yoke-derive v0.7.5 (proc-macro)
+yoke-derive v0.8.3 (proc-macro)
+yoke v0.7.5
+yoke v0.8.3
+zerocopy v0.8.57
+zerofrom-derive v0.1.8 (proc-macro)
+zerofrom v0.1.8
+zeroize v1.9.0
+zerotrie v0.2.5
+zerovec-derive v0.10.4 (proc-macro)
+zerovec-derive v0.11.6 (proc-macro)
+zerovec v0.10.4
+zerovec v0.11.8
+zip v8.6.0
+zlib-rs v0.6.8
+zmij v1.0.23
+zopfli v0.8.3
+zstd-safe v7.3.0
+zstd-sys v2.1.0+zstd.1.5.7
+zstd v0.13.3

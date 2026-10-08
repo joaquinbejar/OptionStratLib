@@ -2,8 +2,7 @@
 
 > **Draft.** Nothing described here is tagged, released or published yet.
 > The crates.io and docs.rs links below resolve once the owner publishes
-> 0.22.0, and the "Measured baseline" section is filled only after #563
-> validates its measurements.
+> 0.22.0.
 
 OptionStratLib 0.22.0 splits the library into nine component crates behind
 the `optionstratlib` facade, gives every public concept one owning crate and
@@ -448,7 +447,44 @@ says whether any value moves.
 
 ## Measured baseline
 
-> **Placeholder: not filled in.** Build-time, dependency-count and runtime
-> comparisons with 0.21 are added here only after #563 (M8-07) validates
-> the measurements. Until then this release makes no performance or build
-> size claim.
+0.22 and 0.21.3 (`80efdc02`, the Milestone 0 base) were re-measured with
+the Milestone 0 commands on one host and toolchain: x86_64 Linux, 16
+threads, Rust 1.99.0, fresh lockfiles of the same day, debug profile, cache
+cleaned before every clean sample. Values are medians of six samples
+(default and all features) or three (focused profiles). Every focused
+profile is compared with the 0.21.3 default, the smallest thing a 0.21.3
+consumer could depend on. The
+[comparison](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/baseline-comparison.md)
+has the method, ranges, raw samples, artifact sizes and confounders.
+
+| Profile | Resolved packages | Clean check (s) | Clean build (s) |
+| --- | ---: | ---: | ---: |
+| 0.21.3 default | 131 | 17.5 | 23.4 |
+| `optionstratlib-core` | 41 | 4.1 | 4.9 |
+| `optionstratlib-pricing` | 62 | 8.7 | 11.2 |
+| `optionstratlib-market` | 63 | 9.2 | 11.7 |
+| `optionstratlib-simulation` | 63 | 9.1 | 11.1 |
+| `optionstratlib-analytics` | 65 | 9.6 | 12.1 |
+| facade, `--no-default-features --features backtest` | 69 | 11.3 | 15.1 |
+| facade default | 124 | 15.7 | 21.3 |
+| 0.21.3 all features | 284 | 42.8 | 55.2 |
+| facade all features | 264 | 34.5 | 42.8 |
+
+- A focused consumer resolves 41 to 69 packages instead of 131 and checks
+  from clean in 23 % to 65 % of the 0.21.3 time; each focused graph
+  excludes the capabilities it does not use (no market data, I/O or charts
+  under pricing, no simulation under market, no strategies under
+  simulation).
+- The facade default resolves 7 fewer packages and checks about 10 % faster
+  than the 0.21.3 default, although it compiles more features (`io`,
+  `synthetic`, `schema`, terminal reports). With all features, 0.22
+  resolves 20 fewer packages and checks 19 % and builds 22 % faster.
+- A one-file change inside a component re-checks in 0.1 to 0.3 s, against
+  2.0 s for the 0.21.3 crate; a change to `optionstratlib-core` still takes
+  1.2 to 1.6 s through the facade.
+
+These compare the two releases as a whole: 0.22 also carries 14 % more
+production code and other changes besides the crate split, so the deltas
+do not isolate the split's own effect. No runtime performance comparison
+with 0.21 is claimed; the 0.22 Criterion results are in
+[`benchmarks.md`](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/benchmarks.md).

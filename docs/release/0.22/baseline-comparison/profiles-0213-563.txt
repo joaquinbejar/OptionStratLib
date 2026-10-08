@@ -1,0 +1,2 @@
+default|-p optionstratlib|src/lib.rs
+all-features|-p optionstratlib --all-features|src/lib.rs

@@ -3042,6 +3042,27 @@ summarize the release.
   on the missing `rust_decimal` and compiles once the dependency is added.
   No code changes.
 
+- **The 0.22 build and dependency baseline comparison** (#563, M8-07).
+  `docs/release/0.22/baseline-comparison.md` re-runs the Milestone 0
+  commands (`doc/BASELINE.md`) for 0.21.3 (`80efdc02`) and 0.22
+  (`d274e8f7`) on one host (x86_64 Linux, 16 threads) and one toolchain
+  (Rust 1.99.0), with same-day fresh lockfiles, `cargo clean` before every
+  clean sample, three samples per cell and six for the default and
+  all-features facade. Focused profiles (core, pricing, market, simulation,
+  analytics, a headless facade) are compared with the 0.21.3 default, the
+  smallest 0.21.3 surface: they resolve 41 to 69 package pairs against 131
+  and check from clean in 4.1 to 11.3 s against 17.5 s. The facade default
+  resolves 124 against 131 and checks in 15.7 s; all features 264 against
+  284, checking in 34.5 s against 42.8 s. Each focused graph is verified to
+  exclude the capabilities it does not use. The document records medians,
+  ranges, raw samples, artifact sizes, the `plotly_static` build-script stub
+  used for both revisions, and the confounders (14 % more production code,
+  a larger default feature set, host and toolchain differing from M0); the
+  raw logs, scripts and package lists are under
+  `docs/release/0.22/baseline-comparison/`. The release notes' "Measured
+  baseline" section carries the headline values without attributing them to
+  the split alone.
+
 - **Draft 0.22.0 release notes** (#562). `docs/release/0.22/RELEASE-NOTES.md`
   lists the ten packages at 0.22.0 in dependency order with their crates.io
   and docs.rs links, the layer graph, the API policy, the facade defaults
