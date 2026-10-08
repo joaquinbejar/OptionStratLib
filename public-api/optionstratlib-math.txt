@@ -236,6 +236,8 @@ pub optionstratlib_math::error::MetricsError::RiskError(alloc::string::String)
 pub optionstratlib_math::error::MetricsError::ShapeError(alloc::string::String)
 pub optionstratlib_math::error::MetricsError::Surface(optionstratlib_math::error::SurfaceError)
 pub optionstratlib_math::error::MetricsError::TrendError(alloc::string::String)
+pub optionstratlib_math::error::MetricsError::ZeroMean
+pub optionstratlib_math::error::MetricsError::ZeroMean::metric: &'static str
 impl core::convert::From<optionstratlib_math::error::MetricsError> for optionstratlib_math::error::CurveError
 pub fn optionstratlib_math::error::CurveError::from(optionstratlib_math::error::MetricsError) -> Self
 pub enum optionstratlib_math::error::SurfaceError
@@ -356,7 +358,7 @@ pub fn optionstratlib_math::geometrics::RangeMetrics::schemas(&mut alloc::vec::V
 impl utoipa::__dev::ComposeSchema for optionstratlib_math::geometrics::RangeMetrics
 pub fn optionstratlib_math::geometrics::RangeMetrics::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_math::geometrics::RiskMetrics
-pub optionstratlib_math::geometrics::RiskMetrics::beta: rust_decimal::decimal::Decimal
+pub optionstratlib_math::geometrics::RiskMetrics::coefficient_of_variation: rust_decimal::decimal::Decimal
 pub optionstratlib_math::geometrics::RiskMetrics::expected_shortfall: rust_decimal::decimal::Decimal
 pub optionstratlib_math::geometrics::RiskMetrics::sharpe_ratio: rust_decimal::decimal::Decimal
 pub optionstratlib_math::geometrics::RiskMetrics::value_at_risk: rust_decimal::decimal::Decimal

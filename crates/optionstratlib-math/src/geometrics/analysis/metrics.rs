@@ -1,6 +1,7 @@
 use crate::curves::Point2D;
-use crate::error::CurveError;
+use crate::error::{CurveError, MetricsError};
 use crate::geometrics::AnalysisResult;
+use optionstratlib_core::model::decimal::d_div;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -53,7 +54,7 @@ use serde::Serialize;
 /// ## Examples of Associated Tools
 /// - Statistical Analysis: Plots, descriptive statistics, trend analysis.
 /// - Visualizations: Understand curve behavior (e.g., peaks, valleys).
-/// - Financial Metrics: Sharpe ratio, beta, and VaR for understanding portfolio risks.
+/// - Financial Metrics: Sharpe ratio, coefficient of variation, and VaR for understanding portfolio risks.
 ///
 /// ## Remarks
 /// The `CurveMetrics` struct is designed to be reusable across various analytical contexts,
@@ -82,7 +83,7 @@ pub struct Metrics {
     pub trend: TrendMetrics,
     /// - **Risk Metrics (`risk`)**:
     ///   Quantifies curve risk using various financial metrics, such as volatility, value-at-risk (VaR),
-    ///   expected shortfall, beta, and the Sharpe ratio. These metrics are often used to evaluate
+    ///   expected shortfall, coefficient of variation, and the Sharpe ratio. These metrics are often used to evaluate
     ///   the risk-return profile in financial contexts.
     pub risk: RiskMetrics,
 }
@@ -105,7 +106,7 @@ impl_json_display!(Metrics);
 /// - `trend`: Metrics related to overall trends in the curve, such as slope,
 ///   intercept, R-squared value, and moving average data points.
 /// - `risk`: Risk-related metrics, including volatility, value at risk (VaR),
-///   expected shortfall, beta, and the Sharpe ratio.
+///   expected shortfall, coefficient of variation, and the Sharpe ratio.
 ///
 /// ## Notes
 /// This implementation ensures modularity by separating distinct aspects of curve
@@ -487,10 +488,16 @@ pub struct RiskMetrics {
     /// Provides a more comprehensive assessment of tail risk than VaR alone.
     pub expected_shortfall: Decimal,
 
-    /// Measures the sensitivity of an asset's returns to market returns.
-    /// A beta greater than 1 indicates higher volatility compared to the market,
-    /// while a beta less than 1 indicates lower volatility.
-    pub beta: Decimal,
+    /// The coefficient of variation, `std_dev / mean`: the population
+    /// standard deviation of the values (`sqrt(sum((x - mean)^2) / n)`, the
+    /// `std_dev` of [`BasicMetrics`]) over their mean, signed as the mean.
+    /// It measures dispersion relative to level and is unitless. Curves and
+    /// surfaces compute it the same way; it is undefined at a zero mean,
+    /// which the computation reports as [`MetricsError::ZeroMean`], and zero
+    /// for empty data, like every field here. It replaces `beta`, which
+    /// promised a sensitivity to market returns that no curve or surface has
+    /// the data for (#824).
+    pub coefficient_of_variation: Decimal,
 
     /// Indicates the risk-adjusted return by comparing the portfolio's excess return
     /// (return above the risk-free rate) to its volatility.
@@ -500,6 +507,27 @@ pub struct RiskMetrics {
 
 impl_json_debug_pretty!(RiskMetrics);
 impl_json_display!(RiskMetrics);
+
+/// The coefficient of variation `std_dev / mean` of
+/// [`RiskMetrics::coefficient_of_variation`], shared so curves and surfaces
+/// compute it the same way (#824).
+///
+/// # Errors
+///
+/// Returns [`MetricsError::ZeroMean`] when `mean` is zero and
+/// [`MetricsError::RiskError`] when the quotient leaves the `Decimal` range.
+pub(crate) fn coefficient_of_variation(
+    std_dev: Decimal,
+    mean: Decimal,
+    op: &'static str,
+) -> Result<Decimal, MetricsError> {
+    if mean.is_zero() {
+        return Err(MetricsError::ZeroMean {
+            metric: "coefficient of variation",
+        });
+    }
+    d_div(std_dev, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))
+}
 
 #[cfg(test)]
 mod tests {
@@ -678,14 +706,14 @@ mod tests {
                 volatility: dec!(0.15),
                 value_at_risk: dec!(0.05),
                 expected_shortfall: dec!(0.07),
-                beta: dec!(1.2),
+                coefficient_of_variation: dec!(1.2),
                 sharpe_ratio: dec!(2.5),
             };
 
             assert_eq!(metrics.volatility, dec!(0.15));
             assert_eq!(metrics.value_at_risk, dec!(0.05));
             assert_eq!(metrics.expected_shortfall, dec!(0.07));
-            assert_eq!(metrics.beta, dec!(1.2));
+            assert_eq!(metrics.coefficient_of_variation, dec!(1.2));
             assert_eq!(metrics.sharpe_ratio, dec!(2.5));
         }
 
@@ -695,7 +723,7 @@ mod tests {
                 volatility: dec!(0.15),
                 value_at_risk: dec!(0.05),
                 expected_shortfall: dec!(0.07),
-                beta: dec!(1.2),
+                coefficient_of_variation: dec!(1.2),
                 sharpe_ratio: dec!(2.5),
             };
 
@@ -706,7 +734,10 @@ mod tests {
                 metrics.expected_shortfall,
                 cloned_metrics.expected_shortfall
             );
-            assert_eq!(metrics.beta, cloned_metrics.beta);
+            assert_eq!(
+                metrics.coefficient_of_variation,
+                cloned_metrics.coefficient_of_variation
+            );
             assert_eq!(metrics.sharpe_ratio, cloned_metrics.sharpe_ratio);
         }
     }
@@ -746,7 +777,7 @@ mod tests {
                     volatility: dec!(0.15),
                     value_at_risk: dec!(0.05),
                     expected_shortfall: dec!(0.07),
-                    beta: dec!(1.2),
+                    coefficient_of_variation: dec!(1.2),
                     sharpe_ratio: dec!(2.5),
                 },
             }
@@ -823,7 +854,7 @@ mod tests {
                 volatility: dec!(0.15),
                 value_at_risk: dec!(0.05),
                 expected_shortfall: dec!(0.07),
-                beta: dec!(1.2),
+                coefficient_of_variation: dec!(1.2),
                 sharpe_ratio: dec!(2.5),
             };
 

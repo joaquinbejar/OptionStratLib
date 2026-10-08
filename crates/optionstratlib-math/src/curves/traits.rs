@@ -694,7 +694,7 @@ mod tests {
                 volatility: Default::default(),
                 value_at_risk: Default::default(),
                 expected_shortfall: Default::default(),
-                beta: Default::default(),
+                coefficient_of_variation: Default::default(),
                 sharpe_ratio: Default::default(),
             })
         }
@@ -1020,7 +1020,7 @@ mod tests_statistical_curve_generation {
                 volatility: dec!(0.5),
                 value_at_risk: dec!(1.0),
                 expected_shortfall: dec!(1.5),
-                beta: dec!(0.8),
+                coefficient_of_variation: dec!(0.8),
                 sharpe_ratio: dec!(1.2),
             })
         }
@@ -1114,9 +1114,13 @@ mod tests_statistical_curve_generation {
         assert!(result.is_ok(), "Failed to generate curve with trend");
     }
 
+    /// `verify_curve_metrics` recomputes the metrics of the curve it is
+    /// given, so the generator's failing `compute_basic_metrics` plays no
+    /// part: the curve `(0, 0), (1, 1)` has mean 0.5 and standard deviation
+    /// 0.5, which miss the zero targets, so the verification is `Ok(false)`;
+    /// the asserted `is_ok()` passed either way (#824).
     #[test]
     fn test_verify_curve_metrics_failure() {
-        // Test verifying curve metrics when computation fails (lines 150-151, 154-155)
         let generator = EnhancedTestCurveGenerator::new(true);
 
         // Create a simple curve for testing
@@ -1134,9 +1138,18 @@ mod tests_statistical_curve_generation {
             std_dev: dec!(0.0),
         };
 
-        // Since compute_basic_metrics is set to fail, verification should also fail
         let result = generator.verify_curve_metrics(&curve, &target_metrics, dec!(0.0000001));
-        assert!(result.is_ok()); // TODO: fix this
+        assert!(matches!(result, Ok(false)));
+
+        // The curve's own metrics verify.
+        let matching = BasicMetrics {
+            mean: dec!(0.5),
+            median: dec!(0.5),
+            mode: dec!(0.0),
+            std_dev: dec!(0.5),
+        };
+        let result = generator.verify_curve_metrics(&curve, &matching, dec!(0.0000001));
+        assert!(matches!(result, Ok(true)));
     }
 
     #[test]
@@ -1246,7 +1259,7 @@ mod tests_statistical_curve_edge_cases {
                 volatility: dec!(0.0),
                 value_at_risk: dec!(0.0),
                 expected_shortfall: dec!(0.0),
-                beta: dec!(0.0),
+                coefficient_of_variation: dec!(0.0),
                 sharpe_ratio: dec!(0.0),
             })
         }
@@ -1326,7 +1339,7 @@ mod tests_statistical_curve_edge_cases {
                 volatility: dec!(0.0),
                 value_at_risk: dec!(0.0),
                 expected_shortfall: dec!(0.0),
-                beta: dec!(0.0),
+                coefficient_of_variation: dec!(0.0),
                 sharpe_ratio: dec!(0.0),
             })
         }

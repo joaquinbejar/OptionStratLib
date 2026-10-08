@@ -42,6 +42,7 @@ mod statistics;
 mod traits;
 
 pub use metrics::Metrics;
+pub(crate) use metrics::coefficient_of_variation;
 pub use metrics::{BasicMetrics, RangeMetrics, RiskMetrics, ShapeMetrics, TrendMetrics};
 pub use statistics::AnalysisResult;
 pub use traits::MetricsExtractor;

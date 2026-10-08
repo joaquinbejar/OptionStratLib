@@ -25,6 +25,7 @@ use thiserror::Error;
 /// * `RangeError` - Errors when data falls outside of expected/valid ranges
 /// * `TrendError` - Errors in trend analysis, regression, or pattern detection
 /// * `RiskError` - Errors in risk metrics calculations (like VaR, Sharpe ratio, etc.)
+/// * `ZeroMean` - A ratio over the mean, such as the coefficient of variation, asked of data whose mean is zero
 /// * `Curve` - Errors related to curve-fitting or curve-based calculations
 /// * `Surface` - Errors in surface modeling or multi-dimensional metrics
 ///
@@ -61,6 +62,15 @@ pub enum MetricsError {
     /// such as Value at Risk (VaR), Conditional VaR, or Sharpe ratio.
     #[error("Risk Error: {0}")]
     RiskError(String),
+
+    /// A ratio over the mean, such as the coefficient of variation in
+    /// [`crate::geometrics::RiskMetrics`], asked of data whose mean is zero,
+    /// where the ratio is undefined (#824).
+    #[error("{metric} is undefined: the mean is zero")]
+    ZeroMean {
+        /// The metric that divides by the mean.
+        metric: &'static str,
+    },
 
     /// Errors encountered during curve-fitting or curve-based calculations,
     /// such as yield curves or volatility curves.
