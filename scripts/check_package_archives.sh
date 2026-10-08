@@ -35,6 +35,12 @@ osl_package_archives "$TARGET"
 work="$(mktemp -d "${TMPDIR:-/tmp}/osl-package-archives.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 osl_unpack_archives "$TARGET" "$work"
+# `cargo package` stamps every archived file with the same fixed mtime (2006),
+# and the members below keep the same relative paths on every run, so the
+# artifacts of an earlier run in the persistent target directories would pass
+# for up to date and the checks would build stale code (#558). A fresh mtime
+# makes cargo rebuild the ten crates; the dependencies stay cached.
+find "$work" -type f -exec touch {} +
 
 {
     echo "[workspace]"

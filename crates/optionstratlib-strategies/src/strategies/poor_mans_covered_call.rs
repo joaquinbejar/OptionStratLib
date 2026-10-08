@@ -1455,7 +1455,7 @@ mod tests_pmcc_best_area {
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), StrategyError> {
         let option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         let underlying_price = option_chain.underlying_price;
@@ -1545,7 +1545,7 @@ mod tests_pmcc_best_ratio {
     fn set_up() -> Result<(PoorMansCoveredCall, OptionChain), StrategyError> {
         let option_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
         let underlying_price = option_chain.underlying_price;
