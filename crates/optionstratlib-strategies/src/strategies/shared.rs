@@ -382,7 +382,11 @@ pub fn calculate_profit_ratio(
 
 /// Whether `error` is a strategy reporting the sign of its own extreme: a
 /// best case that still loses (`MaxProfitError`) or a worst case that still
-/// gains (`MaxLossError`), or legs too inverted to have one.
+/// gains (`MaxLossError`).
+///
+/// Those two kinds carry only sign reports. Legs that do not form the
+/// strategy (an inverted vertical) are `StrategyError::InvalidStrategy`
+/// (#803) and propagate like any other error.
 ///
 /// The profit area and the profit ratio read such a strategy as having no
 /// profit, or no loss, to measure: zero, with zero loss shown as an

@@ -674,11 +674,12 @@ impl Strategies for BullPutSpread {
         let short_strike = self.short_put.option.strike_price.to_dec();
         let long_strike = self.long_put.option.strike_price.to_dec();
         let width = short_strike - long_strike;
+        // An inverted vertical is not a bull put spread: a structural
+        // failure, not a report on the sign of the loss (#803).
         if width < Decimal::ZERO {
-            return Err(StrategyError::ProfitLossError(
-                ProfitLossErrorKind::MaxLossError {
-                    reason: "Short put strike must be above long put strike".to_string(),
-                },
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::BullPutSpread,
+                "get_max_loss: the short put strike must be above the long put strike",
             ));
         }
         let qty = self.short_put.option.position_size()?.to_dec();
@@ -1178,6 +1179,28 @@ mod tests_bull_put_spread_strategy {
     use approx::assert_relative_eq;
     use num_traits::ToPrimitive;
     use rust_decimal_macros::dec;
+
+    /// An inverted vertical (the short strike below the long one, reachable
+    /// through the `pub` legs) is a structural failure: `get_max_loss`
+    /// reports it as `InvalidStrategy`, and the profit ratio passes it on
+    /// instead of reading it as zero loss (#803).
+    #[test]
+    fn test_inverted_strikes_propagate_as_invalid_strategy() {
+        let mut spread = bull_put_spread_test();
+        spread.short_put.option.strike_price = pos_or_panic!(5700.0);
+
+        let is_invalid = |error: StrategyError| {
+            matches!(
+                error,
+                StrategyError::InvalidStrategy {
+                    strategy: StrategyType::BullPutSpread,
+                    ..
+                }
+            )
+        };
+        assert!(spread.get_max_loss().is_err_and(is_invalid));
+        assert!(spread.get_profit_ratio().is_err_and(is_invalid));
+    }
 
     #[test]
     fn test_new_bull_put_spread() {
