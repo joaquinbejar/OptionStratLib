@@ -6278,7 +6278,10 @@ mod tests_gamma_calculations {
             "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
-        option_chain.expiration_date = get_x_days_formatted(30);
+        option_chain.expiration_date = match get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        };
         option_chain
     }
 
@@ -7750,7 +7753,7 @@ mod tests_to_build_params_bis {
     /// collapsed ~140x because `to_build_params` reset the skew to
     /// constants).
     #[test]
-    fn test_round_trip_preserves_smile_width() {
+    fn test_round_trip_preserves_smile_width() -> Result<(), Box<dyn std::error::Error>> {
         use optionstratlib_core::utils::time::get_x_days_formatted;
 
         let mut chain = match OptionChain::load_from_json(concat!(
@@ -7760,7 +7763,7 @@ mod tests_to_build_params_bis {
             Ok(chain) => chain,
             Err(e) => panic!("fixture load failed: {e}"),
         };
-        chain.update_expiration_date(get_x_days_formatted(30));
+        chain.update_expiration_date(get_x_days_formatted(30)?);
 
         let iv_span = |c: &OptionChain| -> Positive {
             let ivs: Vec<Positive> = c
@@ -7804,6 +7807,7 @@ mod tests_to_build_params_bis {
             rebuilt_span.to_dec() >= source_span.to_dec() * dec!(0.3),
             "smile collapsed on round-trip: source span {source_span}, rebuilt span {rebuilt_span}"
         );
+        Ok(())
     }
 
     /// A pathological `chain_size` must surface as a typed error from the

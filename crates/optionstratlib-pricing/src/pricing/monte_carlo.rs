@@ -65,7 +65,14 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
 ) -> Result<Decimal, PricingError> {
     let steps_raw = steps.get();
     let simulations_raw = simulations.get();
-    let dt = option.expiration_date.get_years()? / steps_raw as f64;
+    // `Positive / f64` aborted when the step count had no `Decimal` image;
+    // the same conversion and division, checked (#788).
+    let steps_dec = Decimal::from_f64(steps_raw as f64)
+        .ok_or_else(|| PricingError::non_finite("pricing::monte_carlo::steps", steps_raw as f64))?;
+    let dt = option
+        .expiration_date
+        .get_years()?
+        .checked_div_dec(steps_dec)?;
     let mut payoff_sum = 0.0;
 
     let dt_dec = dt.to_dec();

@@ -212,7 +212,11 @@ pub fn delta_gk(option: &Options) -> Result<Decimal, GreeksError> {
     let Some(t_pos) = time_to_expiry(option)? else {
         // Mirror BSM: at expiration the option is a binary intrinsic state.
         let qty = position_size(option)?;
-        return Ok(delta_at_expiry(option) * qty);
+        return Ok(d_mul(
+            delta_at_expiry(option),
+            qty,
+            "greeks::gk::delta::at_expiry",
+        )?);
     };
     let t = t_pos.to_dec();
     let (d1_v, _d2) = calculate_d_values_gk(option)?;

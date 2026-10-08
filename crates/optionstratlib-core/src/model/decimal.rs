@@ -33,7 +33,7 @@ pub const ONE_DAY: Decimal = dec!(0.00396825397);
 macro_rules! assert_decimal_eq {
     ($left:expr, $right:expr, $epsilon:expr) => {
         let diff = ($left - $right).abs();
-        assert!(
+        assert!( // scan-banned: allow -- test assertion macro; it expands at the caller and no library code uses it
             diff <= $epsilon,
             "assertion failed: `(left == right)`\n  left: `{}`\n right: `{}`\n  diff: `{}`\n epsilon: `{}`",
             $left,
@@ -150,10 +150,14 @@ impl DecimalStats for Vec<Decimal> {
             let centred_sq = d_mul(centred, centred, "decimal::stats::std_dev::centred_sq")?;
             sq_total = d_add(sq_total, centred_sq, "decimal::stats::std_dev::sq_total")?;
         }
-        // `len() >= 2` above, so `len() - 1` neither underflows nor is zero.
+        // `len() >= 2` above, so `len() - 1` neither underflows nor is zero;
+        // the checked form keeps that proof local.
+        let degrees_of_freedom = self.len().checked_sub(1).ok_or_else(|| {
+            DecimalError::arithmetic_error("decimal::stats::std_dev", "sample is empty")
+        })?;
         let variance = d_div(
             sq_total,
-            Decimal::from(self.len() - 1),
+            Decimal::from(degrees_of_freedom),
             "decimal::stats::std_dev::variance",
         )?;
         d_sqrt(variance, "decimal::stats::std_dev")
@@ -277,14 +281,19 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
     // Keep the top 53 bits and round on the rest: above half rounds up, a
     // tie (dropped bits exactly half and nothing in the remainder) rounds to
     // an even significand.
-    let excess = (u128::BITS - quotient.leading_zeros())
-        .checked_sub(F64_SIGNIFICAND_BITS)
+    let excess = u128::BITS
+        .checked_sub(quotient.leading_zeros())
+        .and_then(|bits| bits.checked_sub(F64_SIGNIFICAND_BITS))
         .ok_or_else(out_of_range)?;
     let half = excess
         .checked_sub(1)
         .and_then(|bits| 1_u128.checked_shl(bits))
         .ok_or_else(out_of_range)?;
-    let dropped = quotient & ((half << 1) - 1);
+    let dropped_mask = half
+        .checked_shl(1)
+        .and_then(|bit| bit.checked_sub(1))
+        .ok_or_else(out_of_range)?;
+    let dropped = quotient & dropped_mask;
     let mut significand = quotient >> excess;
     if dropped > half || (dropped == half && (remainder != 0 || significand & 1 == 1)) {
         significand = significand.checked_add(1).ok_or_else(out_of_range)?;
@@ -794,7 +803,7 @@ fn sqrt_with_iterations(x: Decimal, op: &'static str) -> Result<(Decimal, u32), 
             .unwrap_or(Decimal::MAX)
     };
     while last != result {
-        iterations += 1;
+        iterations = iterations.checked_add(1).ok_or_else(overflow)?;
         // A period-2 cycle (`result` back to the value two steps ago) is how
         // the upstream iteration fails to converge; resolve it as soon as it
         // appears. The iteration bound is the backstop for anything else.

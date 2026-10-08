@@ -85,7 +85,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
 
     let mut initial_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    initial_chain.update_expiration_date(get_x_days_formatted(2));
+    initial_chain.update_expiration_date(get_x_days_formatted(2)?);
 
     assert_eq!(initial_chain.underlying_price, pos_or_panic!(5781.88));
     assert_eq!(initial_chain.symbol, "SP500");
@@ -101,7 +101,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?,
             drift: dec!(0.0),
             volatility: std_dev,
         },

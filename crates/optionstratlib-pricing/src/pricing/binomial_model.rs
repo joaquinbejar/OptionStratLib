@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::PricingError;
 use crate::pricing::utils::*;
 use optionstratlib_core::f2d;
@@ -142,7 +136,10 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     }
 
     let no_steps_raw = params.no_steps.get();
-    let dt = (params.expiry / Positive::new(no_steps_raw as f64)?).to_dec();
+    let dt = params
+        .expiry
+        .checked_div(&Positive::new(no_steps_raw as f64)?)?
+        .to_dec();
     let u = calculate_up_factor(params.volatility, dt)?;
     let d = calculate_down_factor(params.volatility, dt)?;
     if u == d {
@@ -172,8 +169,9 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::half_dt")?;
     for step in (0..no_steps_raw).rev() {
         for i in 0..=step {
-            let price_up = *prices
-                .get(i + 1)
+            let price_up = *i
+                .checked_add(1)
+                .and_then(|up| prices.get(up))
                 .ok_or(PricingError::BinomialNodeMissing { node: "price_up" })?;
             let price_down = *prices
                 .get(i)
@@ -418,7 +416,8 @@ fn lattice_spot(
 /// be represented, [`PricingError::BinomialNodeMissing`] when an
 /// intermediate node of the lattice is unexpectedly absent, and
 /// [`PricingError::Positive`] when a `Positive` construction
-/// downstream underflows.
+/// downstream underflows. Returns [`PricingError::InvalidParameter`] when
+/// the `(no_steps + 1)²` lattice cannot be allocated.
 pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeResult {
     // Valued from the holder's side, then signed once at the end (#648): the
     // early-exercise maximum must be taken over the holder's values.
@@ -433,17 +432,23 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
     };
 
     let no_steps_raw = params.no_steps.get();
-    let dt = (params.expiry / f2d!(no_steps_raw as f64)).to_dec();
+    let dt = params
+        .expiry
+        .checked_div_dec(f2d!(no_steps_raw as f64))?
+        .to_dec();
     let up_factor = calculate_up_factor(params.volatility, dt)?;
     let down_factor = calculate_down_factor(params.volatility, dt)?;
     let probability = calculate_probability(params.int_rate, dt, down_factor, up_factor)?;
     let discount_factor = calculate_discount_factor(params.int_rate, dt)?;
 
-    let mut asset_tree = vec![vec![Decimal::ZERO; no_steps_raw + 1]; no_steps_raw + 1];
-    let mut option_tree = vec![vec![Decimal::ZERO; no_steps_raw + 1]; no_steps_raw + 1];
+    let mut asset_tree = lattice(no_steps_raw)?;
+    let mut option_tree = lattice(no_steps_raw)?;
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
-        for (node, node_val) in step_vec.iter_mut().enumerate().take(step + 1) {
+        let nodes = step_vec
+            .get_mut(..=step)
+            .ok_or(PricingError::BinomialNodeMissing { node: "asset_step" })?;
+        for (node, node_val) in nodes.iter_mut().enumerate() {
             // `node` counts down moves. The spot is `lattice_spot`'s, so it
             // is the same `Decimal` `price_binomial` values at this node and
             // the root of the tree is `price_binomial` digit for digit (#716).
@@ -467,7 +472,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
             .ok_or(PricingError::BinomialNodeMissing {
                 node: "terminal_step",
             })?;
-    for (node, node_val) in terminal_assets.iter().enumerate().take(no_steps_raw + 1) {
+    for (node, node_val) in terminal_assets.iter().enumerate() {
         info.spot = Positive::new_decimal(*node_val)?;
         let slot = terminal_options
             .get_mut(node)
@@ -483,13 +488,19 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
             .get(step)
             .ok_or(PricingError::BinomialNodeMissing { node: "asset_step" })?
             .clone();
-        let (current_step_arr, next_step_arr) = option_tree.split_at_mut(step + 1);
-        let current = current_step_arr
-            .get_mut(step)
+        let (current_step_arr, next_step_arr) = step
+            .checked_add(1)
+            .and_then(|mid| option_tree.split_at_mut_checked(mid))
             .ok_or(PricingError::BinomialNodeMissing {
                 node: "option_step",
             })?;
-        for (node_idx, node_val) in current.iter_mut().enumerate().take(step + 1) {
+        let current = current_step_arr
+            .get_mut(step)
+            .and_then(|row| row.get_mut(..=step))
+            .ok_or(PricingError::BinomialNodeMissing {
+                node: "option_step",
+            })?;
+        for (node_idx, node_val) in current.iter_mut().enumerate() {
             let node_value =
                 option_node_value_wrapper(probability, next_step_arr, node_idx, discount_factor)?;
             let node_asset = || -> Result<Positive, PricingError> {
@@ -558,6 +569,31 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
     }
 
     Ok((asset_tree, option_tree))
+}
+
+/// A square lattice of `no_steps + 1` rows of `no_steps + 1` zeros. The
+/// rows are reserved fallibly: `vec![vec![..; n + 1]; n + 1]` overflowed
+/// `n + 1` at `usize::MAX` and aborted with `capacity overflow` on a row
+/// wider than the address space (#788); an allocation the system refuses
+/// is reported the same way rather than aborting the process.
+fn lattice(no_steps: usize) -> Result<Vec<Vec<Decimal>>, PricingError> {
+    let too_large = || {
+        PricingError::invalid_parameter(
+            "no_steps",
+            Decimal::from(no_steps),
+            "a binomial tree of this many steps cannot be allocated",
+        )
+    };
+    let width = no_steps.checked_add(1).ok_or_else(too_large)?;
+    let mut rows: Vec<Vec<Decimal>> = Vec::new();
+    rows.try_reserve_exact(width).map_err(|_| too_large())?;
+    for _ in 0..width {
+        let mut row = Vec::new();
+        row.try_reserve_exact(width).map_err(|_| too_large())?;
+        row.resize(width, Decimal::ZERO);
+        rows.push(row);
+    }
+    Ok(rows)
 }
 
 #[cfg(test)]

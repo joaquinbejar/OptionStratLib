@@ -9,7 +9,9 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    option_chain.update_expiration_date(get_x_days_formatted(30));
+    option_chain.update_expiration_date(
+        get_x_days_formatted(30).map_err(optionstratlib::error::DecimalError::from)?,
+    );
     let chain_params = option_chain.to_build_params()?;
     info!("Chain params: {:#?}", chain_params);
     let mut option_chain = OptionChain::build_chain(&chain_params)?;

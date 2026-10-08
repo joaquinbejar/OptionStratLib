@@ -10,7 +10,9 @@ fn main() -> Result<(), Error> {
     let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     let underlying_price = option_chain.underlying_price;
-    option_chain.update_expiration_date(get_x_days_formatted(30));
+    option_chain.update_expiration_date(
+        get_x_days_formatted(30).map_err(optionstratlib::error::DecimalError::from)?,
+    );
 
     let mut strategy = ShortStrangle::new(
         "SP500".to_string(),

@@ -3,11 +3,6 @@
    Email: jb@taunais.com
    Date: 15/8/24
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use crate::error::VolatilityError;
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -81,9 +76,10 @@ pub fn constant_volatility(returns: &[Decimal]) -> Result<Positive, VolatilityEr
         let centred_sq = d_mul(centred, centred, "volatility::constant::centred_sq")?;
         sq_total = d_add(sq_total, centred_sq, "volatility::constant::sq_total")?;
     }
+    let degrees_of_freedom = d_sub(n.to_dec(), Decimal::ONE, "volatility::constant::dof")?;
     let variance = d_div(
         sq_total,
-        (n - Decimal::ONE).to_dec(),
+        degrees_of_freedom,
         "volatility::constant::variance",
     )?;
 
@@ -180,7 +176,7 @@ pub fn ewma_volatility(
     // cannot fire.
     let mut volatilities = vec![Positive::new_decimal(initial_std_dev)?];
 
-    for &return_value in &returns[1..] {
+    for &return_value in returns.iter().skip(1) {
         // EWMA variance recursion: v' = λ·v + (1 - λ) · r².
         // `r²` is built via `d_mul(r, r, ..)` so that a saturating
         // squaring cannot feed a silently capped value into the
@@ -275,10 +271,11 @@ pub fn implied_volatility(
                 option.implied_volatility = iv;
 
                 // A candidate Black–Scholes rejects is dropped, as documented.
-                Ok(option
-                    .calculate_price_black_scholes()
-                    .ok()
-                    .map(|price| (iv, (price - market_price.to_dec()).abs())))
+                let Ok(price) = option.calculate_price_black_scholes() else {
+                    return Ok(None);
+                };
+                let gap = d_sub(price, market_price.to_dec(), "volatility::iv_grid::gap")?;
+                Ok(Some((iv, gap.abs())))
             },
         )
         .filter_map(Result::transpose)
@@ -308,11 +305,17 @@ pub fn implied_volatility(
             return Err(VolatilityError::IvNotFound);
         }
     }
-    let iv = best_iv.clamp(*MIN_VOLATILITY, MAX_VOLATILITY);
+    let iv = best_iv.checked_clamp(*MIN_VOLATILITY, MAX_VOLATILITY)?;
     // The nearest price sits on an edge of the grid: the root is at or
     // beyond that edge, so the grid did not find it.
     let lowest = Positive::new(1f64 / iterations as f64)?;
-    let highest = Positive::new((iterations - 1) as f64 / iterations as f64)?;
+    let last_point =
+        iterations
+            .checked_sub(1)
+            .ok_or_else(|| VolatilityError::NumericalFailure {
+                reason: format!("implied_volatility: grid size {iterations} has no last point"),
+            })?;
+    let highest = Positive::new(last_point as f64 / iterations as f64)?;
     if iv == lowest || iv == highest {
         Err(VolatilityError::IvNotFound)
     } else {
@@ -831,7 +834,7 @@ pub fn adjust_volatility(
 ///
 /// let annual_vol = pos_or_panic!(0.20); // 20% annual volatility
 /// let days = pos_or_panic!(7.0);
-/// let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day);
+/// let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?;
 ///
 /// // Get volatility for daily timeframe (random walk will scale by sqrt(dt))
 /// let vol_for_walk = volatility_for_dt(

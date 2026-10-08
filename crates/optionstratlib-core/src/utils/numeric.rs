@@ -87,9 +87,10 @@ pub fn calculate_log_returns(close_prices: &[Positive]) -> Result<Vec<Decimal>, 
         return Ok(Vec::new());
     }
 
-    let mut log_returns = Vec::with_capacity(close_prices.len() - 1);
+    let windows = close_prices.windows(2);
+    let mut log_returns = Vec::with_capacity(windows.len());
 
-    for window in close_prices.windows(2) {
+    for window in windows {
         let [previous_price, current_price] = window else {
             // `windows(2)` only ever yields pairs; the arm exists so the
             // destructuring stays irrefutable without an index.

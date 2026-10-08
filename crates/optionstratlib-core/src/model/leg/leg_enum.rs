@@ -302,9 +302,18 @@ impl LegAble for Leg {
     /// Notional value at `price`. An option leg covers
     /// `quantity × contract_size` units of the underlying, so its notional is
     /// that size times `price`; the other legs keep `quantity × price`.
-    fn notional_value(&self, price: Positive) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    fn notional_value(&self, price: Positive) -> Result<Positive, PositionError> {
         match self {
-            Self::Option(pos) => pos.option.quantity * pos.option.contract_size * price,
+            Self::Option(pos) => Ok(pos
+                .option
+                .quantity
+                .checked_mul(&pos.option.contract_size)?
+                .checked_mul(&price)?),
             Self::Spot(pos) => pos.notional_value(price),
             Self::Future(pos) => pos.notional_value(price),
             Self::Perpetual(pos) => pos.notional_value(price),
@@ -600,5 +609,19 @@ mod tests {
         );
         let leg = Leg::spot(spot);
         assert_eq!(leg.fees().ok(), Some(pos_or_panic!(25.0)));
+    }
+
+    // `quantity * contract_size * price` aborted with `Positive arithmetic
+    // overflow in mul` on an option leg (#788).
+    #[test]
+    fn test_leg_notional_value_option_overflow_is_error() {
+        let mut position = create_test_option_position();
+        position.option.quantity = Positive::TWO;
+        let leg = Leg::option(position);
+        assert!(leg.notional_value(Positive::MAX).is_err());
+        assert_eq!(
+            leg.notional_value(Positive::HUNDRED).ok(),
+            Some(pos_or_panic!(200.0))
+        );
     }
 }

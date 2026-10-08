@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
     let iv = pos_or_panic!(0.27);
     let walker = Box::new(Walker::new());
     let days = pos_or_panic!(7.0);
-    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day);
+    let dt = convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day)?;
     let volatility_dt = volatility_for_dt(iv, dt, TimeFrame::Hour, TimeFrame::Day)?;
 
     let walk_params = WalkParams {

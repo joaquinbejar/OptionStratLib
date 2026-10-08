@@ -7,7 +7,7 @@
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
 use expiration_date::error::ExpirationDateError;
-use positive::Positive;
+use positive::{Positive, PositiveError};
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -97,32 +97,32 @@ impl TimeFrame {
     /// ```
     #[must_use]
     pub fn periods_per_year(&self) -> Positive {
-        // Copy the `LazyLock<Positive>` values into locals once to avoid
-        // repeating the lazy-check on every factor of the match-arm products.
-        // `Positive: Copy`, so this is a trivial byte copy after the first
-        // access to each cell.
-        let trading_days = *TRADING_DAYS;
-        let trading_hours = *TRADING_HOURS;
-        let seconds_per_hour = *SECONDS_PER_HOUR;
-        let microseconds_per_second = *MICROSECONDS_PER_SECOND;
-        let weeks_per_year = *WEEKS_PER_YEAR;
-        let months_per_year = *MONTHS_PER_YEAR;
+        // The sub-day frames are products of `TRADING_DAYS` (252.0),
+        // `TRADING_HOURS` (6.5), `SECONDS_PER_HOUR` (3600.0),
+        // `MINUTES_PER_HOUR` (60), `MILLISECONDS_PER_SECOND` (1000) and
+        // `MICROSECONDS_PER_SECOND` (1_000_000.0). They are spelled out as
+        // literals, with the scale the `Positive` product carried, rather
+        // than multiplied here: `Positive * Positive` aborts on overflow and
+        // this method has no error channel, while the literals need no
+        // arithmetic at all (#788). `test_periods_per_year_matches_products`
+        // pins each literal to the product of the constants.
         match self {
-            TimeFrame::Microsecond => {
-                trading_days * trading_hours * seconds_per_hour * microseconds_per_second
-            } // Microseconds in trading year
-            TimeFrame::Millisecond => {
-                trading_days * trading_hours * seconds_per_hour * MILLISECONDS_PER_SECOND
-            } // Milliseconds in trading year
-            TimeFrame::Second => trading_days * trading_hours * seconds_per_hour, // Seconds in trading year
-            TimeFrame::Minute => trading_days * trading_hours * MINUTES_PER_HOUR, // Minutes in trading year
-            TimeFrame::Hour => trading_days * trading_hours, // Hours in trading year
-            TimeFrame::Day => trading_days,                  // Trading days in a year
-            TimeFrame::Week => weeks_per_year,               // Weeks in a year
-            TimeFrame::Month => months_per_year,             // Months in a year
-            TimeFrame::Quarter => QUARTERS_PER_YEAR,         // Quarters in a year
-            TimeFrame::Year => Positive::ONE,                // Base unit
-            TimeFrame::Custom(periods) => *periods,          // Custom periods per year
+            // 252.0 × 6.5 × 3600.0 × 1_000_000.0 microseconds in a trading year
+            TimeFrame::Microsecond => pos_lit(dec!(5896800000000.0000)),
+            // 252.0 × 6.5 × 3600.0 × 1000 milliseconds in a trading year
+            TimeFrame::Millisecond => pos_lit(dec!(5896800000.000)),
+            // 252.0 × 6.5 × 3600.0 seconds in a trading year
+            TimeFrame::Second => pos_lit(dec!(5896800.000)),
+            // 252.0 × 6.5 × 60 minutes in a trading year
+            TimeFrame::Minute => pos_lit(dec!(98280.00)),
+            // 252.0 × 6.5 hours in a trading year
+            TimeFrame::Hour => pos_lit(dec!(1638.00)),
+            TimeFrame::Day => *TRADING_DAYS, // Trading days in a year
+            TimeFrame::Week => *WEEKS_PER_YEAR, // Weeks in a year
+            TimeFrame::Month => *MONTHS_PER_YEAR, // Months in a year
+            TimeFrame::Quarter => QUARTERS_PER_YEAR, // Quarters in a year
+            TimeFrame::Year => Positive::ONE, // Base unit
+            TimeFrame::Custom(periods) => *periods, // Custom periods per year
         }
     }
 }
@@ -170,23 +170,14 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
         TimeFrame::Minute => pos_lit(dec!(525600.0)),              // 365 * 24 * 60
         TimeFrame::Hour => pos_lit(dec!(8760.0)),                  // 365 * 24
         TimeFrame::Day => pos_lit(dec!(365.0)),                    // 365
-        // 365 / 7 — kept as exact Decimal arithmetic to preserve the
-        // round-trip identity Week→Day→Week (an f64 literal would
-        // accumulate ~1 ulp of error and break the strict assertion in
-        // tests like `test_step_next_with_weeks`).
-        //
-        // Both operands are `dec!()` literals fixed at compile time, so the
-        // division has no runtime input: the divisor is 7, never zero, and
-        // the quotient 52.142857… is positive and far inside the `Decimal`
-        // range. `Positive::new_decimal` rejects only a value below the
-        // lower bound, so nothing reaches the `Err` arm, and there is no
-        // value to return there — `units_per_year` is infallible by
-        // signature and a stand-in would make every weekly annualisation
-        // silently wrong.
-        TimeFrame::Week => match Positive::new_decimal(dec!(365.0) / dec!(7.0)) {
-            Ok(v) => v,
-            Err(_) => unreachable!("365/7 is structurally positive non-zero"), // scan-banned: allow -- both operands are compile-time literals; see the comment above
-        },
+        // 365 / 7: the exact `Decimal` quotient `dec!(365.0) / dec!(7.0)`
+        // (28 significant digits, scale 27), spelled out so that no division
+        // runs here (#788). Exact `Decimal` keeps the round-trip identity
+        // Week→Day→Week (an f64 literal would accumulate ~1 ulp of error and
+        // break the strict assertion in tests like
+        // `test_step_next_with_weeks`). `test_units_per_year_week_is_365_over_7`
+        // pins the literal to the quotient.
+        TimeFrame::Week => pos_lit(dec!(52.142857142857142857142857143)),
         TimeFrame::Month => pos_lit(dec!(12.0)),  // 12
         TimeFrame::Quarter => pos_lit(dec!(4.0)), // 4
         TimeFrame::Year => Positive::ONE,         // 1
@@ -206,6 +197,14 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 ///
 /// A Decimal representing the converted value
 ///
+/// # Errors
+///
+/// Returns [`PositiveError`] when the source frame has no units in a year
+/// (`TimeFrame::Custom(Positive::ZERO)`), so the conversion factor is
+/// undefined, and when the factor or the converted value leaves the
+/// `Positive` range. Both aborted inside the `Positive` operators before
+/// #788.
+///
 /// # Examples
 ///
 /// ```
@@ -215,26 +214,26 @@ pub fn units_per_year(time_frame: &TimeFrame) -> Positive {
 /// use positive::{pos_or_panic, Positive, assert_pos_relative_eq};
 ///
 /// // Convert 60 seconds to minutes
-/// let result = convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
+/// let result = convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute)?;
 /// assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(0.0000001));
 ///
 /// // Convert 12 hours to days
-/// let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
+/// let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day)?;
 /// assert_pos_relative_eq!(result, pos_or_panic!(0.5), pos_or_panic!(0.0000001));
+/// # Ok::<(), positive::PositiveError>(())
 /// ```
-#[must_use]
 pub fn convert_time_frame(
     value: Positive,
     from_time_frame: &TimeFrame,
     to_time_frame: &TimeFrame,
-) -> Positive {
+) -> Result<Positive, PositiveError> {
     // If the time frames are the same, return the original value
     if from_time_frame == to_time_frame {
-        return value;
+        return Ok(value);
     }
 
     if value.is_zero() {
-        return Positive::ZERO;
+        return Ok(Positive::ZERO);
     }
 
     // Get the units per year for each time frame
@@ -246,9 +245,9 @@ pub fn convert_time_frame(
     // For example, to convert from seconds to minutes:
     // seconds per year / minutes per year = 31536000 / 525600 = 60
     // So 60 seconds = 1 minute
-    let conversion_factor = to_units_per_year / from_units_per_year;
+    let conversion_factor = to_units_per_year.checked_div(&from_units_per_year)?;
     // Apply the conversion
-    value * conversion_factor
+    value.checked_mul(&conversion_factor)
 }
 
 /// Returns tomorrow's date in "dd-mmm-yyyy" format (lowercase).
@@ -258,13 +257,17 @@ pub fn convert_time_frame(
 /// ```
 /// use tracing::info;
 /// use optionstratlib_core::utils::time::get_tomorrow_formatted;
-/// let tomorrow = get_tomorrow_formatted();
+/// let tomorrow = get_tomorrow_formatted()?;
 /// info!("{}", tomorrow); // Output will vary depending on the current date.
+/// # Ok::<(), optionstratlib_core::model::ExpirationDateError>(())
 /// ```
-#[must_use]
-pub fn get_tomorrow_formatted() -> String {
-    let tomorrow = Local::now().date_naive() + Duration::days(1);
-    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+///
+/// # Errors
+///
+/// Returns [`ExpirationDateError::ArithmeticOverflow`] when today is the last
+/// date the calendar can hold; see [`get_x_days_formatted`].
+pub fn get_tomorrow_formatted() -> Result<String, ExpirationDateError> {
+    get_x_days_formatted(1)
 }
 
 /// Formats a date a specified number of days from the current date.
@@ -283,10 +286,21 @@ pub fn get_tomorrow_formatted() -> String {
 ///
 /// A lowercase string representing the calculated date in "dd-mmm-yyyy" format.
 ///
-#[must_use]
-pub fn get_x_days_formatted(days: i64) -> String {
-    let tomorrow = Local::now().date_naive() + Duration::days(days);
-    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+/// # Errors
+///
+/// Returns [`ExpirationDateError::ArithmeticOverflow`] when `days` is beyond
+/// the range of a day count (`TimeDelta::days` aborted on it) or the date
+/// it lands on is outside the calendar (`NaiveDate + TimeDelta` aborted on
+/// it), both before #788.
+pub fn get_x_days_formatted(days: i64) -> Result<String, ExpirationDateError> {
+    let target = Duration::try_days(days)
+        .and_then(|delta| Local::now().date_naive().checked_add_signed(delta))
+        .ok_or_else(|| {
+            ExpirationDateError::ArithmeticOverflow(format!(
+                "a date {days} days from today is outside the representable calendar range"
+            ))
+        })?;
+    Ok(target.format("%d-%b-%Y").to_string().to_lowercase())
 }
 
 /// Returns a formatted date string representing the date `x` days in the future.
@@ -319,9 +333,12 @@ pub fn get_x_days_formatted(days: i64) -> String {
 /// - The function uses the local time zone and the `chrono` crate for date manipulation.
 /// - The `Positive` type is expected to provide a `.ceiling()` method that converts it to an integer-compatible representation.
 pub fn get_x_days_formatted_pos(days: Positive) -> Result<String, ExpirationDateError> {
+    // `checked_ceiling` rather than `ceiling`, which aborts when the result
+    // leaves the `Positive` range (#788).
     let ceiling = days
-        .ceiling()
-        .to_i64_checked()
+        .checked_ceiling()
+        .ok()
+        .and_then(|whole| whole.to_i64_checked())
         .ok_or_else(|| unrepresentable_day_offset(days))?;
     let today = Local::now().date_naive();
     let target = Duration::try_days(ceiling)
@@ -357,6 +374,18 @@ pub fn get_today_formatted() -> String {
     today.format("%d-%b-%Y").to_string().to_lowercase()
 }
 
+/// UTC time of day after which [`get_today_or_tomorrow_formatted`] rolls
+/// over to the next date.
+///
+/// `NaiveTime::from_hms_opt` is a `const fn`, so the `match` is evaluated by
+/// the compiler: a literal outside chrono's ranges would fail the build with
+/// `evaluation of constant value failed`, and no run time reaches the `None`
+/// arm (#788), as with `DEFAULT_BINOMIAL_STEPS`.
+const TODAY_CUTOFF: NaiveTime = match NaiveTime::from_hms_opt(18, 30, 0) {
+    Some(t) => t,
+    None => unreachable!(), // scan-banned: allow -- `const` context: an unreachable arm here fails compilation, it cannot abort at run time
+};
+
 /// Formats the current date or the next day's date based on the current UTC time.
 ///
 /// The function checks the current UTC time against a cutoff time of 18:30:00.
@@ -380,15 +409,7 @@ pub fn get_today_formatted() -> String {
 /// ```
 #[must_use]
 pub fn get_today_or_tomorrow_formatted() -> String {
-    // `NaiveTime::from_hms_opt` returns `None` only for `hour > 23`,
-    // `min > 59` or `sec > 59` (leap seconds aside). All three arguments are
-    // literals inside those ranges, so the `None` arm has no input that can
-    // select it, and `get_today_or_tomorrow_formatted` is infallible by
-    // signature so there is no cutoff to fall back to.
-    let cutoff_time = match NaiveTime::from_hms_opt(18, 30, 0) {
-        Some(t) => t,
-        None => unreachable!("18:30:00 is always a valid NaiveTime"), // scan-banned: allow -- literal arguments inside chrono's documented ranges
-    };
+    let cutoff_time = TODAY_CUTOFF;
     let now = Utc::now();
     // Get the date we should use based on current UTC time
     let target_date = if now.time() > cutoff_time {
@@ -438,6 +459,37 @@ mod tests_timeframe {
     #[test]
     fn test_day_periods() {
         assert_eq!(TimeFrame::Day.periods_per_year(), *TRADING_DAYS);
+    }
+
+    // The literals replaced `Positive` products (#788); they must carry the
+    // same value and the same scale, so the comparison is on the decimal
+    // representation, not only on numeric equality.
+    #[test]
+    fn test_periods_per_year_matches_products() {
+        let hours = *TRADING_DAYS * *TRADING_HOURS;
+        let seconds = hours * *SECONDS_PER_HOUR;
+        let cases = [
+            (TimeFrame::Microsecond, seconds * *MICROSECONDS_PER_SECOND),
+            (TimeFrame::Millisecond, seconds * MILLISECONDS_PER_SECOND),
+            (TimeFrame::Second, seconds),
+            (TimeFrame::Minute, hours * MINUTES_PER_HOUR),
+            (TimeFrame::Hour, hours),
+        ];
+        for (frame, product) in cases {
+            assert_eq!(
+                frame.periods_per_year().to_dec().to_string(),
+                product.to_dec().to_string(),
+                "{frame}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_units_per_year_week_is_365_over_7() {
+        assert_eq!(
+            units_per_year(&TimeFrame::Week).to_dec().to_string(),
+            (dec!(365.0) / dec!(7.0)).to_string()
+        );
     }
 
     #[test]
@@ -565,37 +617,42 @@ mod tests_timeframe_convert {
     #[test]
     fn test_convert_seconds_to_minutes() {
         let result =
-            convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute);
+            convert_time_frame(pos_or_panic!(60.0), &TimeFrame::Second, &TimeFrame::Minute)
+                .unwrap();
         assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_hours_to_days() {
-        let result = convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day);
+        let result =
+            convert_time_frame(pos_or_panic!(12.0), &TimeFrame::Hour, &TimeFrame::Day).unwrap();
         assert_pos_relative_eq!(result, pos_or_panic!(0.5), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_days_to_weeks() {
-        let result = convert_time_frame(pos_or_panic!(7.0), &TimeFrame::Day, &TimeFrame::Week);
+        let result =
+            convert_time_frame(pos_or_panic!(7.0), &TimeFrame::Day, &TimeFrame::Week).unwrap();
         assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_weeks_to_days() {
-        let result = convert_time_frame(Positive::TWO, &TimeFrame::Week, &TimeFrame::Day);
+        let result = convert_time_frame(Positive::TWO, &TimeFrame::Week, &TimeFrame::Day).unwrap();
         assert_pos_relative_eq!(result, pos_or_panic!(14.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_months_to_quarters() {
-        let result = convert_time_frame(pos_or_panic!(3.0), &TimeFrame::Month, &TimeFrame::Quarter);
+        let result =
+            convert_time_frame(pos_or_panic!(3.0), &TimeFrame::Month, &TimeFrame::Quarter).unwrap();
         assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_minutes_to_hours() {
-        let result = convert_time_frame(pos_or_panic!(120.0), &TimeFrame::Minute, &TimeFrame::Hour);
+        let result =
+            convert_time_frame(pos_or_panic!(120.0), &TimeFrame::Minute, &TimeFrame::Hour).unwrap();
         assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
@@ -605,7 +662,8 @@ mod tests_timeframe_convert {
             pos_or_panic!(10.0),
             &TimeFrame::Custom(pos_or_panic!(365.0)),
             &TimeFrame::Day,
-        );
+        )
+        .unwrap();
         assert_pos_relative_eq!(result, pos_or_panic!(10.0), pos_or_panic!(1e-10));
     }
 
@@ -615,19 +673,22 @@ mod tests_timeframe_convert {
             Positive::TWO,
             &TimeFrame::Day,
             &TimeFrame::Custom(pos_or_panic!(365.0)),
-        );
+        )
+        .unwrap();
         assert_pos_relative_eq!(result, Positive::TWO, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_same_timeframe() {
-        let result = convert_time_frame(pos_or_panic!(42.0), &TimeFrame::Hour, &TimeFrame::Hour);
+        let result =
+            convert_time_frame(pos_or_panic!(42.0), &TimeFrame::Hour, &TimeFrame::Hour).unwrap();
         assert_pos_relative_eq!(result, pos_or_panic!(42.0), pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_convert_weeks_to_months() {
-        let result = convert_time_frame(pos_or_panic!(4.0), &TimeFrame::Week, &TimeFrame::Month);
+        let result =
+            convert_time_frame(pos_or_panic!(4.0), &TimeFrame::Week, &TimeFrame::Month).unwrap();
         // Approximately 0.92 months (4 weeks / 4.33 weeks per month)
         assert_pos_relative_eq!(
             result,
@@ -642,14 +703,16 @@ mod tests_timeframe_convert {
             pos_or_panic!(1000.0),
             &TimeFrame::Millisecond,
             &TimeFrame::Second,
-        );
+        )
+        .unwrap();
         assert_pos_relative_eq!(result, Positive::ONE, pos_or_panic!(1e-10));
     }
 
     #[test]
     fn test_zero() {
         let result =
-            convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second);
+            convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second)
+                .unwrap();
         assert_pos_relative_eq!(result, Positive::ZERO, pos_or_panic!(1e-10));
     }
 }
@@ -661,7 +724,7 @@ mod tests_x_days_formatted_pos {
     #[test]
     fn test_get_x_days_formatted_pos_rounds_up_and_matches_the_integer_form() {
         let date = get_x_days_formatted_pos(pos_or_panic!(6.2)).expect("seven days ahead");
-        assert_eq!(date, get_x_days_formatted(7));
+        assert_eq!(Some(date), get_x_days_formatted(7).ok());
     }
 
     #[test]
@@ -687,5 +750,77 @@ mod tests_x_days_formatted_pos {
             result,
             Err(ExpirationDateError::ArithmeticOverflow(_))
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests_panic_paths {
+    use super::*;
+    use chrono::{Duration, Local};
+
+    // `to / from` with a zero `from` aborted with `Positive invariant broken
+    // in div: result would be non-positive` (#788).
+    #[test]
+    fn test_convert_time_frame_from_custom_zero_is_error() {
+        let result = convert_time_frame(
+            Positive::ONE,
+            &TimeFrame::Custom(Positive::ZERO),
+            &TimeFrame::Day,
+        );
+        assert!(result.is_err());
+    }
+
+    // `value * factor` aborted with `Positive arithmetic overflow in mul`
+    // (#788).
+    #[test]
+    fn test_convert_time_frame_overflow_is_error() {
+        let result = convert_time_frame(Positive::MAX, &TimeFrame::Year, &TimeFrame::Day);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_convert_time_frame_values_unchanged() {
+        let result = convert_time_frame(Positive::TWO, &TimeFrame::Week, &TimeFrame::Day);
+        assert_eq!(
+            result.ok(),
+            Some(
+                Positive::TWO * units_per_year(&TimeFrame::Day) / units_per_year(&TimeFrame::Week)
+            )
+        );
+    }
+
+    // `Duration::days(i64::MAX)` aborted with `TimeDelta::days out of
+    // bounds` (#788).
+    #[test]
+    fn test_get_x_days_formatted_i64_max_is_error() {
+        assert!(matches!(
+            get_x_days_formatted(i64::MAX),
+            Err(ExpirationDateError::ArithmeticOverflow(_))
+        ));
+        assert!(get_x_days_formatted(i64::MIN).is_err());
+    }
+
+    // `NaiveDate + TimeDelta` aborted with `` `NaiveDate + TimeDelta`
+    // overflowed `` a billion days out (#788).
+    #[test]
+    fn test_get_x_days_formatted_billion_days_is_error() {
+        assert!(matches!(
+            get_x_days_formatted(1_000_000_000),
+            Err(ExpirationDateError::ArithmeticOverflow(_))
+        ));
+    }
+
+    #[test]
+    fn test_get_x_days_formatted_values_unchanged() {
+        let expected = (Local::now().date_naive() + Duration::days(2))
+            .format("%d-%b-%Y")
+            .to_string()
+            .to_lowercase();
+        assert_eq!(get_x_days_formatted(2).ok(), Some(expected));
+        let tomorrow = (Local::now().date_naive() + Duration::days(1))
+            .format("%d-%b-%Y")
+            .to_string()
+            .to_lowercase();
+        assert_eq!(get_tomorrow_formatted().ok(), Some(tomorrow));
     }
 }

@@ -75,9 +75,8 @@ pub enum BasicAxisTypes {
 /// components, or performing operations that need to be applied to all axis types.
 ///
 pub struct BasicAxisTypesIter {
-    /// Current position in the iteration sequence.
-    /// Starts at 0 and increments with each call to `next()`.
-    index: usize,
+    /// The variants not yet yielded, in declaration order.
+    remaining: std::slice::Iter<'static, BasicAxisTypes>,
 }
 
 /// Provides implementation for the BasicAxisTypes enumeration.
@@ -127,7 +126,9 @@ impl BasicAxisTypes {
     /// ```
     #[must_use]
     pub fn iter() -> BasicAxisTypesIter {
-        BasicAxisTypesIter { index: 0 }
+        BasicAxisTypesIter {
+            remaining: Self::VALUES.iter(),
+        }
     }
 }
 
@@ -135,9 +136,7 @@ impl Iterator for BasicAxisTypesIter {
     type Item = BasicAxisTypes;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let value = *BasicAxisTypes::VALUES.get(self.index)?;
-        self.index += 1;
-        Some(value)
+        self.remaining.next().copied()
     }
 }
 
@@ -267,13 +266,18 @@ mod tests_basic_axis_types {
 #[cfg(test)]
 mod tests_basic_axis_types_extended {
     use super::*;
+
+    /// How many variants the iterator has yielded so far.
+    fn consumed(iterator: &BasicAxisTypesIter) -> usize {
+        BasicAxisTypes::VALUES.len() - iterator.remaining.len()
+    }
     use std::collections::HashSet;
 
     #[test]
     fn test_iterator_creation() {
         // Test that the iterator is created correctly
         let iterator = BasicAxisTypes::iter();
-        assert_eq!(iterator.index, 0);
+        assert_eq!(consumed(&iterator), 0);
     }
 
     #[test]
@@ -281,7 +285,7 @@ mod tests_basic_axis_types_extended {
         // Test that the iterator returns the correct first element
         let mut iterator = BasicAxisTypes::iter();
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Delta));
-        assert_eq!(iterator.index, 1);
+        assert_eq!(consumed(&iterator), 1);
     }
 
     #[test]
@@ -321,7 +325,7 @@ mod tests_basic_axis_types_extended {
         // Should return None on subsequent calls
         assert_eq!(iterator.next(), None);
         assert_eq!(iterator.next(), None);
-        assert_eq!(iterator.index, BasicAxisTypes::VALUES.len());
+        assert_eq!(consumed(&iterator), BasicAxisTypes::VALUES.len());
     }
 
     #[test]
@@ -390,7 +394,7 @@ mod tests_basic_axis_types_extended {
 
         // Check next element
         assert_eq!(iterator.next(), Some(BasicAxisTypes::Vega));
-        assert_eq!(iterator.index, 4);
+        assert_eq!(consumed(&iterator), 4);
     }
 
     #[test]
@@ -409,8 +413,8 @@ mod tests_basic_axis_types_extended {
         assert_eq!(iterator1.next(), Some(BasicAxisTypes::Theta));
 
         // Iterators should maintain independent state
-        assert_eq!(iterator1.index, 3);
-        assert_eq!(iterator2.index, 1);
+        assert_eq!(consumed(&iterator1), 3);
+        assert_eq!(consumed(&iterator2), 1);
     }
 
     #[test]

@@ -558,7 +558,8 @@ mod tests {
     /// from the terminal values of a simulated year of paths lands near
     /// the Black-Scholes price.
     #[test]
-    fn test_monte_carlo_price_from_simulator_matches_black_scholes() {
+    fn test_monte_carlo_price_from_simulator_matches_black_scholes()
+    -> Result<(), Box<dyn std::error::Error>> {
         use optionstratlib_core::assert_pos_relative_eq;
         use optionstratlib_core::model::utils::create_sample_option;
         use optionstratlib_core::model::{OptionStyle, Side};
@@ -585,7 +586,7 @@ mod tests {
             y: Ystep::new(0, initial_price),
         };
 
-        let dt = convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Year);
+        let dt = convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Year)?;
         let walk_params = WalkParams {
             size: 365,
             init_step,
@@ -621,11 +622,12 @@ mod tests {
             Positive::new_decimal(bs).unwrap(),
             pos_or_panic!(10.0)
         );
+        Ok(())
     }
 
     // Test Simulator creation
     #[test]
-    fn test_simulator_creation() {
+    fn test_simulator_creation() -> Result<(), Box<dyn std::error::Error>> {
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -645,7 +647,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -665,11 +667,12 @@ mod tests {
         assert_eq!(simulator.get_title(), "Test Simulator");
         assert_eq!(simulator.len(), 5);
         assert!(!simulator.is_empty());
+        Ok(())
     }
 
     // Test title methods
     #[test]
-    fn test_simulator_title_methods() {
+    fn test_simulator_title_methods() -> Result<(), Box<dyn std::error::Error>> {
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -689,7 +692,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -710,11 +713,12 @@ mod tests {
 
         simulator.set_title("New Title".to_string());
         assert_eq!(simulator.get_title(), "New Title");
+        Ok(())
     }
 
     // Test step access methods
     #[test]
-    fn test_simulator_step_access() {
+    fn test_simulator_step_access() -> Result<(), Box<dyn std::error::Error>> {
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -734,7 +738,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -774,11 +778,12 @@ mod tests {
             simulator.last().expect("should be Ok").get_title(),
             "Test Simulator_2"
         );
+        Ok(())
     }
 
     // Test Index and IndexMut traits
     #[test]
-    fn test_simulator_indexing() {
+    fn test_simulator_indexing() -> Result<(), Box<dyn std::error::Error>> {
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -798,7 +803,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -823,11 +828,12 @@ mod tests {
         // Test mutable indexing
         simulator[1].set_title("Modified Title".to_string());
         assert_eq!(simulator[1].get_title(), "Modified Title");
+        Ok(())
     }
 
     // Test display formatting
     #[test]
-    fn test_simulator_display() {
+    fn test_simulator_display() -> Result<(), Box<dyn std::error::Error>> {
         let walker = Box::new(TestWalker);
         let initial_price = Positive::HUNDRED;
         let init_step = Step {
@@ -847,7 +853,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -865,6 +871,7 @@ mod tests {
         assert!(display_output.starts_with("Display Test"));
         assert!(display_output.contains("Display Test_0"));
         assert!(display_output.contains("Display Test_1"));
+        Ok(())
     }
 
     // Test simulator with empty collection
@@ -883,7 +890,8 @@ mod tests {
     }
 
     #[test]
-    fn test_simulator_new_propagates_generator_error_short_circuits() {
+    fn test_simulator_new_propagates_generator_error_short_circuits()
+    -> Result<(), Box<dyn std::error::Error>> {
         // Regression for #349: ensure the simulator constructor returns
         // the first generator error and does not silently build a
         // partial simulator.
@@ -907,7 +915,7 @@ mod tests {
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                )?,
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -934,6 +942,7 @@ mod tests {
         // Generator should have been called twice (success then failure)
         // and not five times — short-circuited.
         assert_eq!(calls.get(), 2);
+        Ok(())
     }
 
     // Test panic scenarios (these would typically be in separate test functions)
@@ -955,11 +964,14 @@ mod tests {
             size: 3,
             init_step,
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(
+                dt: match convert_time_frame(
                     Positive::ONE / pos_or_panic!(30.0),
                     &TimeFrame::Minute,
                     &TimeFrame::Day,
-                ),
+                ) {
+                    Ok(value) => value,
+                    Err(error) => panic!("convert_time_frame failed: {error}"),
+                },
                 drift: dec!(0.0),
                 volatility: pos_or_panic!(0.2),
             },
@@ -993,7 +1005,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day)?,
                 drift: dec!(0.0),
                 volatility: std_dev,
             },

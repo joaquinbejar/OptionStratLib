@@ -14,9 +14,16 @@
 //! instrument types.
 
 use crate::error::PositionError;
+use crate::model::decimal::{d_div, d_mul};
 use crate::model::types::Side;
 use positive::Positive;
 use rust_decimal::Decimal;
+
+/// Hours in a 365-day year, the numerator of the funding-period count.
+const HOURS_PER_YEAR: u32 = 24 * 365;
+
+/// Days in the year [`Expirable::time_to_expiration_years`] divides by.
+const DAYS_PER_YEAR: u32 = 365;
 
 /// Common trait for all leg types in a trading strategy.
 ///
@@ -114,8 +121,15 @@ pub trait LegAble {
     /// Returns the notional value of the position at a given price.
     ///
     /// Notional = quantity × price
-    fn notional_value(&self, price: Positive) -> Positive {
-        self.get_quantity() * price
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range. The quantity and the price are both caller data,
+    /// so the product is not bounded; `Positive * Positive` aborted on it
+    /// (#788).
+    fn notional_value(&self, price: Positive) -> Result<Positive, PositionError> {
+        Ok(self.get_quantity().checked_mul(&price)?)
     }
 }
 
@@ -123,15 +137,39 @@ pub trait LegAble {
 ///
 /// This applies to futures, perpetuals, and CFDs where positions
 /// are leveraged and require margin collateral.
+///
+/// # Decision (issue #788): every method is fallible
+///
+/// Each implementor scales a `pub` margin, price or quantity field by
+/// another, and divides by the quantity for the liquidation price, so the
+/// infallible signatures aborted on an overflow or on a zero quantity
+/// (`PerpetualPosition::default().liquidation_price(..)` divided by zero).
+/// The methods return [`PositionError`] instead, as `pnl_at_price` has since
+/// #471.
 pub trait Marginable: LegAble {
     /// Returns the initial margin requirement.
-    fn initial_margin(&self) -> Positive;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the margin computation leaves the
+    /// `Positive` range.
+    fn initial_margin(&self) -> Result<Positive, PositionError>;
 
     /// Returns the maintenance margin requirement.
-    fn maintenance_margin(&self) -> Positive;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the margin computation leaves the
+    /// `Positive` or `Decimal` range.
+    fn maintenance_margin(&self) -> Result<Positive, PositionError>;
 
     /// Returns the current leverage applied to the position.
-    fn leverage(&self) -> Positive;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the leverage computation leaves the
+    /// `Decimal` range.
+    fn leverage(&self) -> Result<Positive, PositionError>;
 
     /// Calculates the liquidation price for this position.
     ///
@@ -152,7 +190,14 @@ pub trait Marginable: LegAble {
     /// short is liquidated once the price rises to the threshold, every
     /// non-negative price already sits at or above a negative one, and zero
     /// is the lowest price where the comparison holds.
-    fn liquidation_price(&self, current_price: Positive) -> Option<Positive>;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::DecimalError`] when the quantity is zero, so
+    /// the per-unit margin buffer is undefined, or when the buffer leaves the
+    /// `Decimal` range.
+    fn liquidation_price(&self, current_price: Positive)
+    -> Result<Option<Positive>, PositionError>;
 
     /// Checks if the position is at risk of liquidation.
     ///
@@ -160,7 +205,15 @@ pub trait Marginable: LegAble {
     ///
     /// * `current_price` - The current market price
     /// * `margin_ratio` - Current margin ratio (margin / notional)
-    fn is_liquidation_risk(&self, current_price: Positive, margin_ratio: Decimal) -> bool;
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`Marginable::liquidation_price`].
+    fn is_liquidation_risk(
+        &self,
+        current_price: Positive,
+        margin_ratio: Decimal,
+    ) -> Result<bool, PositionError>;
 }
 
 /// Turns a computed liquidation threshold into the value
@@ -202,17 +255,41 @@ pub trait Fundable: LegAble {
     /// # Arguments
     ///
     /// * `mark_price` - The current mark price for funding calculation
-    fn funding_payment(&self, mark_price: Positive) -> Decimal;
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::DecimalError`] when the notional or the
+    /// payment leaves the `Decimal` range (#788).
+    fn funding_payment(&self, mark_price: Positive) -> Result<Decimal, PositionError>;
 
     /// Calculates the annualized funding cost/income.
     ///
     /// # Arguments
     ///
     /// * `mark_price` - The current mark price
-    fn annualized_funding(&self, mark_price: Positive) -> Decimal {
-        let payment = self.funding_payment(mark_price);
-        let periods_per_year = Decimal::from(24 * 365 / self.funding_interval_hours());
-        payment * periods_per_year
+    ///
+    /// The number of funding periods in a year is `24 × 365` hours divided
+    /// by [`Fundable::funding_interval_hours`], truncated to a whole number
+    /// of periods.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::ValidationError`] when
+    /// [`Fundable::funding_interval_hours`] is zero, so a year has no whole
+    /// number of periods (the integer division aborted on it, #788), and
+    /// propagates [`Fundable::funding_payment`] and the
+    /// [`PositionError::DecimalError`] of an annualised payment outside the
+    /// `Decimal` range.
+    fn annualized_funding(&self, mark_price: Positive) -> Result<Decimal, PositionError> {
+        let payment = self.funding_payment(mark_price)?;
+        let periods_per_year = HOURS_PER_YEAR
+            .checked_div(self.funding_interval_hours())
+            .ok_or_else(|| PositionError::invalid_position("funding interval is zero hours"))?;
+        Ok(d_mul(
+            payment,
+            Decimal::from(periods_per_year),
+            "Fundable::annualized_funding",
+        )?)
     }
 }
 
@@ -242,7 +319,11 @@ pub trait Expirable: LegAble {
     /// Propagates the [`PositionError`] of
     /// [`Expirable::days_to_expiration`].
     fn time_to_expiration_years(&self) -> Result<Decimal, PositionError> {
-        Ok(self.days_to_expiration()?.to_dec() / Decimal::from(365))
+        Ok(d_div(
+            self.days_to_expiration()?.to_dec(),
+            Decimal::from(DAYS_PER_YEAR),
+            "Expirable::time_to_expiration_years",
+        )?)
     }
 }
 
@@ -365,6 +446,76 @@ mod tests {
         };
 
         let notional = leg.notional_value(positive::pos_or_panic!(55000.0));
-        assert_eq!(notional, positive::pos_or_panic!(110000.0));
+        assert_eq!(notional.ok(), Some(positive::pos_or_panic!(110000.0)));
+    }
+
+    #[test]
+    fn test_notional_value_overflow_is_error() {
+        let leg = MockLeg {
+            symbol: "BTC".to_string(),
+            quantity: positive::Positive::TWO,
+            side: Side::Long,
+            cost_basis: positive::Positive::ONE,
+            fees: positive::Positive::ZERO,
+        };
+        assert!(leg.notional_value(Positive::MAX).is_err());
+    }
+
+    struct ZeroIntervalLeg(MockLeg);
+
+    impl LegAble for ZeroIntervalLeg {
+        fn get_symbol(&self) -> &str {
+            self.0.get_symbol()
+        }
+
+        fn get_quantity(&self) -> Positive {
+            self.0.get_quantity()
+        }
+
+        fn get_side(&self) -> Side {
+            self.0.get_side()
+        }
+
+        fn pnl_at_price(&self, price: Positive) -> Result<Decimal, PositionError> {
+            self.0.pnl_at_price(price)
+        }
+
+        fn total_cost(&self) -> Result<Positive, PositionError> {
+            self.0.total_cost()
+        }
+
+        fn fees(&self) -> Result<Positive, PositionError> {
+            self.0.fees()
+        }
+    }
+
+    impl Fundable for ZeroIntervalLeg {
+        fn funding_rate(&self) -> Decimal {
+            Decimal::ONE
+        }
+
+        fn funding_interval_hours(&self) -> u32 {
+            0
+        }
+
+        fn funding_payment(&self, _mark_price: Positive) -> Result<Decimal, PositionError> {
+            Ok(Decimal::ONE)
+        }
+    }
+
+    // `24 * 365 / 0` aborted with `attempt to divide by zero` (#788).
+    #[test]
+    fn test_annualized_funding_zero_interval_is_error() {
+        let leg = ZeroIntervalLeg(MockLeg {
+            symbol: "BTC".to_string(),
+            quantity: positive::Positive::ONE,
+            side: Side::Long,
+            cost_basis: positive::Positive::ONE,
+            fees: positive::Positive::ZERO,
+        });
+        assert!(matches!(
+            leg.annualized_funding(Positive::ONE),
+            Err(PositionError::ValidationError(_))
+        ));
     }
 }

@@ -457,7 +457,7 @@ impl OptionPricing for Options {
             }
 
             // Check if our range is too small (meaning we've converged)
-            if (high - low).to_dec() < IV_BISECTION_BRACKET {
+            if d_sub(high.to_dec(), low.to_dec(), "pricing::iv::bracket")? < IV_BISECTION_BRACKET {
                 if !high_moved {
                     // Every midpoint priced below the target. The root is
                     // bracketed only if the bracket top still prices at or
@@ -481,7 +481,7 @@ impl OptionPricing for Options {
         // If we haven't found a solution after max iterations
         Err(VolatilityError::NoConvergence {
             iterations: MAX_ITERATIONS_IV,
-            last_volatility: (high + low) / Positive::TWO,
+            last_volatility: high.checked_add(&low)?.checked_div(&Positive::TWO)?,
         })
     }
 }

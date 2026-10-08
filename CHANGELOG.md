@@ -16,6 +16,54 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Core helpers that aborted on extreme inputs now return `Result`**
+  (#788, core, math and pricing). Each of these panicked inside a
+  `Decimal` or `Positive` operator, an integer division or a `chrono`
+  addition. A probe reproduced every case, for example
+  `PerpetualPosition::default().liquidation_price(..)` with `Division by
+  zero` and an out-of-the-money Asian put payoff with `Positive invariant
+  broken in sub_f64`. Values for inputs that worked before are unchanged.
+  - **Leg traits.** These methods now return
+    `Result<_, PositionError>`:
+    - `LegAble::notional_value`;
+    - `Marginable::{initial_margin, maintenance_margin, leverage,
+      is_liquidation_risk}`, and `Marginable::liquidation_price` returns
+      `Result<Option<Positive>, PositionError>` (the `Option` of #805,
+      below, inside the error channel);
+    - `Fundable::{funding_payment, annualized_funding}`.
+
+    `annualized_funding` rejects a zero `funding_interval_hours` with
+    `PositionError::ValidationError`. A zero quantity in
+    `liquidation_price` is a `PositionError::DecimalError`.
+    `Expirable::time_to_expiration_years` divides with the checked `d_div`.
+  - **Leg structs.** `SpotPosition::{initial_value, market_value,
+    percentage_return, break_even_price}` and
+    `FuturePosition::{notional_value_at_entry, notional_value_at_price,
+    tick_value, total_margin_required, implied_leverage}` return
+    `Result<_, PositionError>`, and so does
+    `PerpetualPosition::{notional_value_at_entry,
+    notional_value_at_price}`.
+  - **Balances.** `Balance::{get_unrealized_pnl, is_profitable}` and
+    `Portfolio::{get_total_unrealized_pnl, has_profitable_positions}`
+    return `Result<_, DecimalError>`; the other balance values became
+    fallible in #805.
+  - **Time helpers.**
+    - `utils::time::convert_time_frame` returns
+      `Result<Positive, PositiveError>`. It reports a source
+      `TimeFrame::Custom(Positive::ZERO)` and an out-of-range result.
+    - `get_x_days_formatted` and `get_tomorrow_formatted` return
+      `Result<String, ExpirationDateError>`, with
+      `ExpirationDateError::ArithmeticOverflow` for a day offset beyond the
+      calendar, as `get_x_days_formatted_pos` does since #805.
+  - **Price grid.** `model::utils::generate_price_points` returns
+    `Result<Vec<Decimal>, DecimalError>` and rejects fewer than two points.
+
+  Migration: add `?` (or handle the `Err`) at each call.
+  `optionstratlib::error::Error` has no `From<ExpirationDateError>`. In a
+  function returning it, map the date helpers through
+  `DecimalError::from`. `Xstep::next` / `previous` already return
+  `SimulationError` and propagate the new `PositiveError`.
+
 - **`Optimizable::find_optimal`, `get_best_ratio` and `get_best_area`
   return `Result<(), StrategyError>`** (#793). They returned `()`, so a
   search that changed nothing could not be told from one that worked:
@@ -1586,6 +1634,43 @@ summarize the release.
   `rust-version` every crate declares since #559.
 
 ### Fixed
+
+- **No arithmetic operator in core, math or pricing can abort the caller**
+  (#788).
+  - **Lints.** The three crates deny `clippy::arithmetic_side_effects` and
+    the truncating, wrapping and sign-dropping cast lints in production
+    code. Every `+ - * /` on `Decimal`, `Positive` and the integers goes
+    through `d_*` / `checked_*`. `clippy.toml` exempts only the unary minus
+    on `Decimal`, which cannot overflow.
+  - **Panics removed without a signature change.**
+    - `Options` and `SpotPosition` `Display` printed a percentage or a fee
+      total that aborted on overflow. They now print the fraction or the
+      two fees.
+    - `generate_binomial_tree` overflowed `no_steps + 1`. It now reserves
+      its lattice fallibly and returns `PricingError::InvalidParameter`.
+    - `simulate_returns` aborted with `capacity overflow` on a huge
+      `length`. It now returns `DecimalError`.
+    - The future and perpetual `LegGreeks` (`delta`, `rho`, `theta`)
+      overflowed on extreme legs. They now return `GreeksError`.
+    - `calculate_delta_neutral_sizes` reports `NegativePositionSize` when
+      the first size rounds above the total.
+    - The peak detection behind `Curve` shape metrics is checked.
+  - **Scoped `#![allow(clippy::indexing_slicing)]` exceptions (#341).**
+    The seven in `curves/utils.rs`, `volatility/utils.rs`, `telegraph.rs`,
+    `cliquet.rs`, `binomial_model.rs`, `pricing/utils.rs` and `compound.rs`
+    are gone.
+  - **Test-only fixtures.** The unused `surfaces::utils` fixtures are
+    `#[cfg(test)]`.
+  - **`make scan-banned`.** It now also rejects the following in these
+    three crates, with reviewed `scan-banned: allow` exceptions for
+    modular RNG seeds:
+    - `saturating_*` / `wrapping_*`;
+    - `pos_or_panic!` / `spos!`;
+    - `Duration::days(` and its siblings;
+    - the aborting `Positive` helpers;
+    - `Decimal` trig;
+    - `assert!`;
+    - `sum` / `product` over `Decimal` and `Positive`.
 
 - **Unlimited amounts render as `Unlimited`, and handled data conditions
   no longer log as errors or warnings** (#801). Returned values do not

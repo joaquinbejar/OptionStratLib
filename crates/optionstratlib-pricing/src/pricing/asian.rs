@@ -542,7 +542,11 @@ fn growth_average_series(w: Decimal) -> Result<Decimal, PricingError> {
         w_power = d_mul(w_power, w, "pricing::asian::phi::series::power")?;
         factorial = d_mul(
             factorial,
-            Decimal::from(n + 1),
+            d_add(
+                Decimal::from(n),
+                Decimal::ONE,
+                "pricing::asian::phi::series::index",
+            )?,
             "pricing::asian::phi::series::factorial",
         )?;
         correction = d_add(
@@ -679,7 +683,11 @@ fn second_moment_series(x: Decimal, z: Decimal) -> Result<Decimal, PricingError>
         )?;
         factorial = d_mul(
             factorial,
-            Decimal::from(k + 2),
+            d_add(
+                Decimal::from(k),
+                Decimal::TWO,
+                "pricing::asian::m2::series::index",
+            )?,
             "pricing::asian::m2::series::factorial",
         )?;
         correction = d_add(

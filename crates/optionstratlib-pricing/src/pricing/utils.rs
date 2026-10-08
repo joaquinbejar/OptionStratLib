@@ -3,11 +3,6 @@
    Email: jb@taunais.com
    Date: 5/8/24
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use crate::error::PricingError;
 use crate::kernels::{big_n, d2, discount_factor};
@@ -51,7 +46,8 @@ use rust_decimal_macros::dec;
 /// Returns [`DecimalError::ConversionError`] when the sampled normal
 /// variate cannot be represented as a `Decimal` (e.g. NaN or out-of-range
 /// float), and [`DecimalError::ArithmeticError`] when the
-/// `mean + std_dev * z` combination overflows the `Decimal` range.
+/// `mean + std_dev * z` combination overflows the `Decimal` range or
+/// `length` returns cannot be allocated.
 pub fn simulate_returns<R: Rng + ?Sized>(
     mean: Decimal,
     std_dev: Positive,
@@ -89,8 +85,24 @@ pub fn simulate_returns<R: Rng + ?Sized>(
             "pricing::utils::box_muller::theta",
         )?;
 
-        let x1 = d_mul(r, theta.cos(), "pricing::utils::box_muller::x1")?;
-        let x2 = d_mul(r, theta.sin(), "pricing::utils::box_muller::x2")?;
+        // `theta` lies in `[0, 2π)`, where the series converge; the checked
+        // forms report rather than abort if that ever stops holding (#788).
+        let trig = || {
+            DecimalError::arithmetic_error(
+                "pricing::utils::box_muller",
+                "trigonometric series overflowed",
+            )
+        };
+        let x1 = d_mul(
+            r,
+            theta.checked_cos().ok_or_else(trig)?,
+            "pricing::utils::box_muller::x1",
+        )?;
+        let x2 = d_mul(
+            r,
+            theta.checked_sin().ok_or_else(trig)?,
+            "pricing::utils::box_muller::x2",
+        )?;
 
         Ok((x1, x2))
     }
@@ -112,12 +124,22 @@ pub fn simulate_returns<R: Rng + ?Sized>(
         "pricing::utils::simulate::adjusted_std",
     )?;
 
+    // Reserved fallibly: `vec![..; length]` and `Vec::with_capacity(length)`
+    // aborted with `capacity overflow` on a length wider than the address
+    // space (#788), and a refused allocation is reported the same way.
+    let mut returns: Vec<Decimal> = Vec::new();
+    returns.try_reserve_exact(length).map_err(|_| {
+        DecimalError::arithmetic_error(
+            "pricing::utils::simulate_returns",
+            &format!("cannot allocate {length} returns"),
+        )
+    })?;
+
     // Special case: if std_dev is 0, return a vector of constant values
     if adjusted_std == Decimal::ZERO {
-        return Ok(vec![adjusted_mean; length]);
+        returns.resize(length, adjusted_mean);
+        return Ok(returns);
     }
-
-    let mut returns = Vec::with_capacity(length);
 
     // Generate pairs of normally distributed random numbers using Box-Muller transform
     for _ in 0..length.div_ceil(2) {
@@ -310,9 +332,12 @@ pub(crate) fn option_node_value_wrapper(
     let price_up = *next_step.get(node).ok_or_else(|| {
         DecimalError::arithmetic_error("pricing::binomial::node", "missing up node")
     })?;
-    let price_down = *next_step.get(node + 1).ok_or_else(|| {
-        DecimalError::arithmetic_error("pricing::binomial::node", "missing down node")
-    })?;
+    let price_down = *node
+        .checked_add(1)
+        .and_then(|down| next_step.get(down))
+        .ok_or_else(|| {
+            DecimalError::arithmetic_error("pricing::binomial::node", "missing down node")
+        })?;
     option_node_value(probability, price_up, price_down, discount_factor)
 }
 

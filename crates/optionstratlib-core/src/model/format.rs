@@ -7,7 +7,6 @@ use crate::model::option::ExoticParams;
 use crate::model::{Options, Position};
 use positive::Positive;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use std::fmt;
 
 /// The label shown in place of an amount that stands for "unlimited".
@@ -79,6 +78,16 @@ impl fmt::Display for DisplayMoney {
     }
 }
 
+/// Writes `fraction` as a percentage with two decimals. A fraction whose
+/// percentage leaves the `Decimal` range is written as the fraction itself,
+/// marked as such; the multiplication aborted on it (#788).
+fn write_percentage(f: &mut fmt::Formatter<'_>, fraction: Decimal) -> fmt::Result {
+    match fraction.checked_mul(Decimal::ONE_HUNDRED) {
+        Some(percent) => write!(f, "{percent:.2}%"),
+        None => write!(f, "{fraction} (fraction)"),
+    }
+}
+
 impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
@@ -93,23 +102,20 @@ impl fmt::Display for Options {
         )?;
         writeln!(f, "Strike: ${:.2}", self.strike_price)?;
         writeln!(f, "Expiration: {}", self.expiration_date)?;
-        writeln!(
-            f,
-            "Implied Volatility: {:.2}%",
-            self.implied_volatility * 100.0
-        )?;
+        write!(f, "Implied Volatility: ")?;
+        write_percentage(f, self.implied_volatility.to_dec())?;
+        writeln!(f)?;
         writeln!(f, "Quantity: {}", self.quantity)?;
         // Shown only when it departs from the default of one unit per
         // contract, so the rendering of every pre-existing option is unchanged.
         if self.contract_size != Positive::ONE {
             writeln!(f, "Contract Size: {}", self.contract_size)?;
         }
-        writeln!(
-            f,
-            "Risk-free Rate: {:.2}%",
-            self.risk_free_rate * dec!(100.0)
-        )?;
-        write!(f, "Dividend Yield: {:.2}%", self.dividend_yield * 100.0)?;
+        write!(f, "Risk-free Rate: ")?;
+        write_percentage(f, self.risk_free_rate)?;
+        writeln!(f)?;
+        write!(f, "Dividend Yield: ")?;
+        write_percentage(f, self.dividend_yield.to_dec())?;
         if let Some(exotic) = &self.exotic_params {
             write!(f, "\nExotic Parameters: {exotic:?}")?;
         }
@@ -266,6 +272,22 @@ mod tests_options {
     use chrono::{NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
+
+    // `Positive * 100.0` aborted with `Positive arithmetic overflow in
+    // mul_f64` on a volatility above `Decimal::MAX / 100` (#788).
+    #[test]
+    fn test_display_options_out_of_range_percentages() {
+        let mut options =
+            crate::model::utils::create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        options.implied_volatility = Positive::MAX;
+        options.dividend_yield = Positive::MAX;
+        options.risk_free_rate = Decimal::MIN;
+        let shown = options.to_string();
+        assert!(shown.contains(&format!("Implied Volatility: {} (fraction)", Positive::MAX)));
+        assert!(shown.contains(&format!("Risk-free Rate: {} (fraction)", Decimal::MIN)));
+        assert!(shown.contains(&format!("Dividend Yield: {} (fraction)", Positive::MAX)));
+    }
 
     #[test]
     fn test_debug_options() {
@@ -493,6 +515,7 @@ mod tests_position_type_display_debug {
     use chrono::{DateTime, NaiveDate, TimeZone, Utc};
     use expiration_date::ExpirationDate;
     use positive::{Positive, pos_or_panic};
+    use rust_decimal_macros::dec;
 
     fn get_option() -> (Options, DateTime<Utc>) {
         let naive_date = NaiveDate::from_ymd_opt(2024, 8, 8)
@@ -592,6 +615,7 @@ mod tests_position_type_display_debug {
 #[cfg(test)]
 mod tests_display_money {
     use super::*;
+    use rust_decimal_macros::dec;
 
     #[test]
     fn test_display_money_finite_amount_keeps_precision() {

@@ -4,12 +4,6 @@
    Date: 13/01/26
 ******************************************************************************/
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 //! Compound option pricing module.
 //!
 //! Compound options are options on options (also called split-fee options).
@@ -125,11 +119,11 @@ fn drezner_bivariate_normal(a: f64, b: f64, rho: f64) -> f64 {
         let hs = (h * h + k * k) / 2.0;
         let asr = rho.asin();
 
-        for i in 0..5 {
-            let sn = (asr * (1.0 - x[i]) / 2.0).sin();
-            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
-            let sn = (asr * (1.0 + x[i]) / 2.0).sin();
-            bvn += w[i] * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+        for (&xi, &wi) in x.iter().zip(w.iter()) {
+            let sn = (asr * (1.0 - xi) / 2.0).sin(); // scan-banned: allow -- f64 `sin`: total, it does not abort
+            bvn += wi * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+            let sn = (asr * (1.0 + xi) / 2.0).sin(); // scan-banned: allow -- f64 `sin`: total, it does not abort
+            bvn += wi * (sn * hk / (1.0 - sn * sn)).exp() * (-hs / (1.0 - sn * sn)).exp(); // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         }
         bvn *= asr / (4.0 * PI);
         bvn += standard_normal_cdf(-h) * standard_normal_cdf(-k);
@@ -176,24 +170,24 @@ fn high_correlation_bvn(h: f64, k: f64, hk: f64, rho: f64, x: &[f64; 5], w: &[f6
         }
 
         let xs = (a / 2.0) * (h - k);
-        for i in 0..5 {
-            let xs_tmp = xs * (1.0 - x[i]);
+        for (&xi, &wi) in x.iter().zip(w.iter()) {
+            let xs_tmp = xs * (1.0 - xi);
             let rs = xs_tmp.powi(2);
             let asr_tmp = -(bs / rs + hk) / 2.0;
             if asr_tmp > -100.0 {
                 bvn += a
-                    * w[i]
+                    * wi
                     * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                     * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         / (1.0 + (1.0 - rs).sqrt()) // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         - (1.0 + c * rs * (1.0 + d * rs)));
             }
-            let xs_tmp = xs * (1.0 + x[i]);
+            let xs_tmp = xs * (1.0 + xi);
             let rs = xs_tmp.powi(2);
             let asr_tmp = -(bs / rs + hk) / 2.0;
             if asr_tmp > -100.0 {
                 bvn += a
-                    * w[i]
+                    * wi
                     * asr_tmp.exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                     * ((-hk * (1.0 - rs) / (2.0 * (1.0 + (1.0 - rs).sqrt()))).exp() // scan-banned: allow -- f64 `exp`: returns inf/NaN on overflow, it does not abort; the non-finite value is rejected at the `Decimal` boundary
                         / (1.0 + (1.0 - rs).sqrt()) // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary

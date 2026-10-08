@@ -232,6 +232,15 @@ fn interp_err(
 
 /// Reads one sample of a sorted metric series, naming the statistic on the
 /// out-of-bounds path instead of panicking.
+/// `3 * len / 4`, the index of the third quartile of `len` sorted samples.
+fn third_quartile_index(len: usize) -> Result<usize, MetricsError> {
+    len.checked_mul(3)
+        .map(|three_len| three_len / 4)
+        .ok_or_else(|| {
+            MetricsError::BasicError(format!("third quartile index of {len} samples overflowed"))
+        })
+}
+
 fn sample_at(
     values: &[Decimal],
     index: usize,
@@ -287,6 +296,21 @@ fn standardized_moment(
 
 /// Reads one slot of a spline working band, naming the band on the
 /// out-of-bounds path instead of panicking.
+/// Shifts a loop index by `by` positions. The interpolation loops keep every
+/// shifted index inside the curve, so this never fails for them; the checked
+/// form keeps a wrong bound from wrapping or aborting (#788).
+fn shift_index(
+    index: usize,
+    by: isize,
+    kind: fn(String) -> InterpolationError,
+) -> Result<usize, InterpolationError> {
+    index.checked_add_signed(by).ok_or_else(|| {
+        kind(format!(
+            "index {index} shifted by {by} leaves the usize range"
+        ))
+    })
+}
+
 fn band_at(
     band: &[Decimal],
     index: usize,
@@ -490,6 +514,12 @@ impl GeometricObject<Point2D, Decimal> for Curve {
 ///
 /// # Key Implementations
 /// - **`Index<usize>`**: Provides indexing-based access to curve points.
+///
+/// # Panics
+///
+/// Panics if `index >= self.points.len()`, the contract of
+/// [`std::ops::Index`] and of `Vec`. `Index` has no error channel; for a
+/// lookup that reports a missing index, use `get_points().into_iter().nth(index)`.
 impl Index<usize> for Curve {
     type Output = Point2D;
 
@@ -845,12 +875,13 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
         // last two segments that one runs past the end and is clamped to the
         // curve's last segment, `len - 2`. The four-sample check above keeps
         // that subtraction in range.
-        let far = (i + 2).min(len - 2);
+        let bilinear = InterpolationError::Bilinear;
+        let far = shift_index(i, 2, bilinear)?.min(shift_index(len, -2, bilinear)?);
 
-        let p11 = self.point_at(i, InterpolationError::Bilinear)?; // Near edge, left
-        let p12 = self.point_at(i + 1, InterpolationError::Bilinear)?; // Near edge, right
-        let p21 = self.point_at(far, InterpolationError::Bilinear)?; // Far edge, left
-        let p22 = self.point_at(far + 1, InterpolationError::Bilinear)?; // Far edge, right
+        let p11 = self.point_at(i, bilinear)?; // Near edge, left
+        let p12 = self.point_at(shift_index(i, 1, bilinear)?, bilinear)?; // Near edge, right
+        let p21 = self.point_at(far, bilinear)?; // Far edge, left
+        let p22 = self.point_at(shift_index(far, 1, bilinear)?, bilinear)?; // Far edge, right
 
         let span = d_sub(p12.x, p11.x, "Curve::bilinear_interpolate::span")
             .map_err(interp_err(InterpolationError::Bilinear))?;
@@ -1046,13 +1077,22 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
 
         // Select four points for interpolation
         // Ensuring we always have enough points before and after
-        let window = if i == 0 {
-            [0, 1, 2, 3]
-        } else if i == len - 2 {
-            [len - 4, len - 3, len - 2, len - 1]
+        // The window starts at 0 for the first segment, at `len - 4` for the
+        // last one and at `i - 1` otherwise, and spans four samples.
+        let cubic = InterpolationError::Cubic;
+        let first = if i == 0 {
+            0
+        } else if i == shift_index(len, -2, cubic)? {
+            shift_index(len, -4, cubic)?
         } else {
-            [i - 1, i, i + 1, i + 2]
+            shift_index(i, -1, cubic)?
         };
+        let window = [
+            first,
+            shift_index(first, 1, cubic)?,
+            shift_index(first, 2, cubic)?,
+            shift_index(first, 3, cubic)?,
+        ];
         let p0 = self.point_at(window[0], InterpolationError::Cubic)?;
         let p1 = self.point_at(window[1], InterpolationError::Cubic)?;
         let p2 = self.point_at(window[2], InterpolationError::Cubic)?;
@@ -1301,7 +1341,9 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
 
         // Check if x is within the valid range
         let first = self.point_at(0, InterpolationError::Spline)?;
-        let last = self.point_at(len - 1, InterpolationError::Spline)?;
+        let spline = InterpolationError::Spline;
+        let last_index = shift_index(len, -1, spline)?;
+        let last = self.point_at(last_index, spline)?;
         if x < first.x || x > last.x {
             return Err(InterpolationError::Spline(
                 "x is outside the range of points".to_string(),
@@ -1334,10 +1376,10 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         let mut r = vec![Decimal::ZERO];
 
         // Fill the matrices
-        for i in 1..n - 1 {
-            let prev = at(i - 1)?;
+        for i in 1..last_index {
+            let prev = at(shift_index(i, -1, spline)?)?;
             let curr = at(i)?;
-            let next = at(i + 1)?;
+            let next = at(shift_index(i, 1, spline)?)?;
 
             let hi = d_sub(curr.x, prev.x, "Curve::spline_interpolate::hi")
                 .map_err(interp_err(InterpolationError::Spline))?;
@@ -1386,23 +1428,24 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
         // Solve tridiagonal system using Thomas algorithm
         let mut m = vec![Decimal::ZERO; n];
 
-        for i in 1..n - 1 {
+        for i in 1..last_index {
+            let prev = shift_index(i, -1, spline)?;
             let a_i = band_at(&a, i, "a")?;
-            let b_prev = band_at(&b, i - 1, "b")?;
+            let b_prev = band_at(&b, prev, "b")?;
             if b_prev.is_zero() {
                 return Err(InterpolationError::DegenerateInterval);
             }
             let w = d_div(a_i, b_prev, "Curve::spline_interpolate::w")
                 .map_err(interp_err(InterpolationError::Spline))?;
 
-            let c_prev = band_at(&c, i - 1, "c")?;
+            let c_prev = band_at(&c, prev, "c")?;
             let wc = d_mul(w, c_prev, "Curve::spline_interpolate::wc")
                 .map_err(interp_err(InterpolationError::Spline))?;
             let b_i = band_at(&b, i, "b")?;
             *band_at_mut(&mut b, i, "b")? = d_sub(b_i, wc, "Curve::spline_interpolate::b_i")
                 .map_err(interp_err(InterpolationError::Spline))?;
 
-            let r_prev = band_at(&r, i - 1, "r")?;
+            let r_prev = band_at(&r, prev, "r")?;
             let wr = d_mul(w, r_prev, "Curve::spline_interpolate::wr")
                 .map_err(interp_err(InterpolationError::Spline))?;
             let r_i = band_at(&r, i, "r")?;
@@ -1410,17 +1453,17 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
                 .map_err(interp_err(InterpolationError::Spline))?;
         }
 
-        let b_last = band_at(&b, n - 1, "b")?;
+        let b_last = band_at(&b, last_index, "b")?;
         if b_last.is_zero() {
             return Err(InterpolationError::DegenerateInterval);
         }
-        let r_last = band_at(&r, n - 1, "r")?;
-        *band_at_mut(&mut m, n - 1, "m")? =
+        let r_last = band_at(&r, last_index, "r")?;
+        *band_at_mut(&mut m, last_index, "m")? =
             d_div(r_last, b_last, "Curve::spline_interpolate::m_last")
                 .map_err(interp_err(InterpolationError::Spline))?;
-        for i in (1..n - 1).rev() {
+        for i in (1..last_index).rev() {
             let c_i = band_at(&c, i, "c")?;
-            let m_next = band_at(&m, i + 1, "m")?;
+            let m_next = band_at(&m, shift_index(i, 1, spline)?, "m")?;
             let cm = d_mul(c_i, m_next, "Curve::spline_interpolate::cm")
                 .map_err(interp_err(InterpolationError::Spline))?;
             let r_i = band_at(&r, i, "r")?;
@@ -1436,8 +1479,8 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
 
         // Find segment for interpolation
         let mut segment = None;
-        for i in 0..n - 1 {
-            if at(i)?.x <= x && x <= at(i + 1)?.x {
+        for i in 0..last_index {
+            if at(i)?.x <= x && x <= at(shift_index(i, 1, spline)?)?.x {
                 segment = Some(i);
                 break;
             }
@@ -1449,7 +1492,7 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
 
         // Calculate interpolated value
         let left = at(segment)?;
-        let right = at(segment + 1)?;
+        let right = at(shift_index(segment, 1, spline)?)?;
         let h = d_sub(right.x, left.x, "Curve::spline_interpolate::h")
             .map_err(interp_err(InterpolationError::Spline))?;
         if h.is_zero() {
@@ -1461,7 +1504,7 @@ impl SplineInterpolation<Point2D, Decimal> for Curve {
             .map_err(interp_err(InterpolationError::Spline))?;
 
         let m_left = band_at(&m, segment, "m")?;
-        let m_right = band_at(&m, segment + 1, "m")?;
+        let m_right = band_at(&m, shift_index(segment, 1, spline)?, "m")?;
         let six_h = d_mul(dec!(6), h, "Curve::spline_interpolate::six_h")
             .map_err(interp_err(InterpolationError::Spline))?;
 
@@ -1538,7 +1581,10 @@ impl MetricsExtractor for Curve {
         let mode = {
             let mut freq_map = std::collections::HashMap::new();
             for &val in &y_values {
-                *freq_map.entry(val).or_insert(0) += 1;
+                let count = freq_map.entry(val).or_insert(0usize);
+                *count = count.checked_add(1).ok_or_else(|| {
+                    MetricsError::BasicError("mode: frequency count overflowed".to_string())
+                })?;
             }
             freq_map
                 .into_iter()
@@ -1622,7 +1668,8 @@ impl MetricsExtractor for Curve {
         .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         // Peaks and Valleys detection
-        let (peaks, valleys) = detect_peaks_and_valleys(&self.points, dec!(0.1), 2);
+        let (peaks, valleys) = detect_peaks_and_valleys(&self.points, dec!(0.1), 2)
+            .map_err(|e| MetricsError::ShapeError(e.to_string()))?;
 
         Ok(ShapeMetrics {
             skewness,
@@ -1672,7 +1719,7 @@ impl MetricsExtractor for Curve {
         // Quartiles
         let q1 = sample_at(&y_values, len / 4, "first quartile")?;
         let q2 = sample_at(&y_values, len / 2, "median")?;
-        let q3 = sample_at(&y_values, 3 * len / 4, "third quartile")?;
+        let q3 = sample_at(&y_values, third_quartile_index(len)?, "third quartile")?;
 
         let interquartile_range = d_sub(q3, q1, "Curve::compute_range_metrics::iqr")
             .map_err(|e| MetricsError::RangeError(e.to_string()))?;

@@ -55,7 +55,9 @@ fn main() -> Result<(), Error> {
         implied_volatility,
     );
     let mut initial_chain = OptionChain::build_chain(&build_params)?;
-    initial_chain.update_expiration_date(get_x_days_formatted(2));
+    initial_chain.update_expiration_date(
+        get_x_days_formatted(2).map_err(optionstratlib::error::DecimalError::from)?,
+    );
     let walker = Box::new(Walker::new());
 
     let walk_params = WalkParams {
@@ -65,7 +67,7 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?,
             drift: dec!(0.0),
             volatility: implied_volatility,
         },

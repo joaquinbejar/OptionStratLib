@@ -75,7 +75,9 @@ fn main() -> Result<(), Error> {
         implied_volatility,
     );
     let mut initial_chain = OptionChain::build_chain(&build_params)?;
-    initial_chain.update_expiration_date(get_x_days_formatted(2));
+    initial_chain.update_expiration_date(
+        get_x_days_formatted(2).map_err(optionstratlib::error::DecimalError::from)?,
+    );
     let walker = Box::new(Walker::new());
 
     let walk_params = WalkParams {
