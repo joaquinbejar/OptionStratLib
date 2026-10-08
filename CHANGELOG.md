@@ -3154,6 +3154,16 @@ summarize the release.
   interleaved base/branch runs, control `curve_translate/512` 21.7 to
   23.6 µs on both).
 
+- **Monte-Carlo pricing computes `sqrt(dt)` once per call** (#859).
+  `monte_carlo_option_pricing` took the square root of the time step inside
+  every Wiener increment, once per step of every path, although it never
+  changes. It is now computed once and passed in; a test asserts the
+  increments equal the per-step version's digit for digit on the same
+  seeded generator. The square root was about two thirds of a step:
+  Criterion on the bench host of `docs/release/0.22/benchmarks.md`, before
+  and after, 30 steps x 10 000 paths 418 ms to 132 ms (-68.5%), 252 steps x
+  1 000 paths 356 ms to 110 ms (-69.0%).
+
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
   instead of collecting the points into a `Vec` and scanning it, and reads

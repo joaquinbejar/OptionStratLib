@@ -1,6 +1,6 @@
 use crate::error::PricingError;
 use crate::kernels::discount_factor;
-use crate::pricing::utils::wiener_increment;
+use crate::pricing::utils::{wiener_increment, wiener_sqrt_dt};
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
@@ -92,10 +92,13 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
     )?;
     let drift = d_mul(carry, dt_dec, "pricing::monte_carlo::gbm::drift")?;
     let strike = option.strike_price.to_dec();
+    // Loop invariant: computed inside every step until #859, where it was
+    // about two thirds of the cost of a step.
+    let sqrt_dt = wiener_sqrt_dt(dt_dec)?;
     for _ in 0..simulations_raw {
         let mut st = option.underlying_price.to_dec();
         for _ in 0..steps_raw {
-            let w = wiener_increment(dt_dec, rng)?;
+            let w = wiener_increment(sqrt_dt, rng)?;
             let diffusion = d_mul(
                 option.implied_volatility.to_dec(),
                 w,
