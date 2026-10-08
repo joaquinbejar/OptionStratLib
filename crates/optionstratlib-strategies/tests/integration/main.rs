@@ -11,6 +11,7 @@
 //! from `examples/Chains` at the workspace root; market's `io` is a
 //! dev-dependency of this crate, so they always run here.
 
+mod break_even_refresh_test;
 mod contract_size_followups_test;
 mod contract_size_test;
 mod covered_leg_errors_test;

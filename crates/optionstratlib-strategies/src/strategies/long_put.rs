@@ -6,7 +6,9 @@
 
 use super::base::{BreakEvenable, Positionable, StrategyType};
 use crate::strategies::base::lower_break_even;
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use optionstratlib_core::model::decimal::d_div;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 
@@ -118,6 +120,9 @@ impl LongPut {
     /// unreachable for a freshly-built single-leg strategy and is surfaced
     /// only to keep the constructor panic-free.
     ///
+    /// Returns `StrategyError` when the break-even computation fails, for
+    /// example on a premium whose total overflows.
+    ///
     #[allow(clippy::too_many_arguments, dead_code)]
     fn new(
         underlying_symbol: String,
@@ -157,7 +162,7 @@ impl LongPut {
             None,
             None,
         );
-        strategy.add_position(&long_put)?;
+        strategy.place_leg(&long_put)?;
 
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -165,6 +170,7 @@ impl LongPut {
                 "the legs built by `new` fail validation",
             ));
         }
+        strategy.update_break_even_points()?;
         Ok(strategy)
     }
 }
@@ -358,8 +364,11 @@ impl Profit for LongPut {
     }
 }
 
-impl Positionable for LongPut {
-    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+impl LongPut {
+    /// Places `position` in the leg its side and style select, without
+    /// refreshing the break-evens: the constructors fill the legs through
+    /// it, and [`Positionable::add_position`] wraps it.
+    fn place_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         match (position.option.option_style, position.option.side) {
             (OptionStyle::Put, Side::Long) => {
                 self.long_put = position.clone();
@@ -370,6 +379,50 @@ impl Positionable for LongPut {
                 "Position is a Put or Long, it is not valid for LongPut".to_string(),
             )),
         }
+    }
+
+    /// Replaces the leg matching `position`, without refreshing the
+    /// break-evens; [`Positionable::modify_position`] wraps it.
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        match (
+            &position.option.side,
+            &position.option.option_style,
+            &position.option.strike_price,
+        ) {
+            (Side::Long, OptionStyle::Put, strike)
+                if *strike == self.long_put.option.strike_price =>
+            {
+                self.long_put = position.clone();
+            }
+            _ => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side,
+                    "Position not found".to_string(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl CachedBreakEvens for LongPut {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
+    }
+}
+
+impl Positionable for LongPut {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.place_leg(position))
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -414,33 +467,7 @@ impl Positionable for LongPut {
     /// * `Ok(())` if position was successfully modified
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
-            ));
-        }
-
-        match (
-            &position.option.side,
-            &position.option.option_style,
-            &position.option.strike_price,
-        ) {
-            (Side::Long, OptionStyle::Put, strike)
-                if *strike == self.long_put.option.strike_price =>
-            {
-                self.long_put = position.clone();
-            }
-            _ => {
-                return Err(PositionError::invalid_position_type(
-                    position.option.side,
-                    "Position not found".to_string(),
-                ));
-            }
-        }
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
     }
 }
 

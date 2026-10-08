@@ -9,7 +9,9 @@ use super::base::{
 };
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -217,7 +219,7 @@ impl BullCallLadder {
             None,
             None,
         );
-        strategy.add_position(&long_call)?;
+        strategy.place_leg(&long_call)?;
         strategy.long_call = long_call;
 
         let short_call_low_option = Options::new(
@@ -243,7 +245,7 @@ impl BullCallLadder {
             None,
             None,
         );
-        strategy.add_position(&short_call_low)?;
+        strategy.place_leg(&short_call_low)?;
         strategy.short_call_low = short_call_low;
 
         let short_call_high_option = Options::new(
@@ -269,7 +271,7 @@ impl BullCallLadder {
             None,
             None,
         );
-        strategy.add_position(&short_call_high)?;
+        strategy.place_leg(&short_call_high)?;
         strategy.short_call_high = short_call_high;
 
         if !strategy.validate() {
@@ -455,8 +457,11 @@ impl BreakEvenable for BullCallLadder {
     }
 }
 
-impl Positionable for BullCallLadder {
-    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+impl BullCallLadder {
+    /// Places `position` in the leg its side and style select, without
+    /// refreshing the break-evens: the constructors fill the legs through
+    /// it, and [`Positionable::add_position`] wraps it.
+    fn place_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 // Both short calls sit above the long one, so comparing with
@@ -481,6 +486,60 @@ impl Positionable for BullCallLadder {
                 Ok(())
             }
         }
+    }
+
+    /// Replaces the leg matching `position`, without refreshing the
+    /// break-evens; [`Positionable::modify_position`] wraps it.
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.strike_price != self.long_call.option.strike_price
+            && position.option.strike_price != self.short_call_low.option.strike_price
+            && position.option.strike_price != self.short_call_high.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Put is not valid for BullCallLadder".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call && position.option.side == Side::Long {
+            self.long_call = position.clone();
+        }
+
+        if position.option.strike_price == self.short_call_low.option.strike_price {
+            self.short_call_low = position.clone();
+        }
+        if position.option.strike_price == self.short_call_high.option.strike_price {
+            self.short_call_high = position.clone();
+        }
+
+        Ok(())
+    }
+}
+
+impl CachedBreakEvens for BullCallLadder {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
+    }
+}
+
+impl Positionable for BullCallLadder {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.place_leg(position))
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -543,43 +602,7 @@ impl Positionable for BullCallLadder {
     /// * `Ok(())` if position was successfully modified
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
-            ));
-        }
-
-        if position.option.strike_price != self.long_call.option.strike_price
-            && position.option.strike_price != self.short_call_low.option.strike_price
-            && position.option.strike_price != self.short_call_high.option.strike_price
-        {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Strike not found in positions".to_string(),
-            ));
-        }
-
-        if position.option.option_style == OptionStyle::Put {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Put is not valid for BullCallLadder".to_string(),
-            ));
-        }
-
-        if position.option.option_style == OptionStyle::Call && position.option.side == Side::Long {
-            self.long_call = position.clone();
-        }
-
-        if position.option.strike_price == self.short_call_low.option.strike_price {
-            self.short_call_low = position.clone();
-        }
-        if position.option.strike_price == self.short_call_high.option.strike_price {
-            self.short_call_high = position.clone();
-        }
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
     }
 }
 

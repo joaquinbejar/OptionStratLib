@@ -4,7 +4,9 @@
 // indices (fixed-length buffers, just-pushed slices, etc.).
 #![allow(clippy::indexing_slicing)]
 
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 /*
@@ -234,7 +236,7 @@ impl ShortStrangle {
             None,
             None,
         );
-        strategy.add_position(&short_call)?;
+        strategy.place_leg(&short_call)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -259,7 +261,7 @@ impl ShortStrangle {
             None,
             None,
         );
-        strategy.add_position(&short_put)?;
+        strategy.place_leg(&short_put)?;
 
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -426,8 +428,11 @@ impl BreakEvenable for ShortStrangle {
     }
 }
 
-impl Positionable for ShortStrangle {
-    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+impl ShortStrangle {
+    /// Places `position` in the leg its side and style select, without
+    /// refreshing the break-evens: the constructors fill the legs through
+    /// it, and [`Positionable::add_position`] wraps it.
+    fn place_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         match (&position.option.option_style, &position.option.side) {
             (OptionStyle::Call, Side::Short) => {
                 self.short_call = position.clone();
@@ -442,6 +447,88 @@ impl Positionable for ShortStrangle {
                 "Position side is Long, it is not valid for ShortStrangle".to_string(),
             )),
         }
+    }
+
+    /// Replaces the leg matching `position`, without refreshing the
+    /// break-evens; [`Positionable::modify_position`] wraps it.
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            let err_msg = format!("modify_position: Invalid position data: \n{position}");
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            ));
+        }
+
+        if position.option.strike_price != self.one_option().strike_price
+            && position.option.strike_price != self.short_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        Ok(())
+    }
+
+    /// Replaces the leg matching `position` and applies its market
+    /// data, without refreshing the break-evens;
+    /// [`Positionable::replace_position`] wraps it.
+    fn replace_leg_and_market(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            let err_msg = format!("modify_position: Invalid position data: \n{position}");
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Position side is Long, it is not valid for ShortStrangle".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        // Update values passed in new position
+        self.set_implied_volatility(&position.option.implied_volatility)?;
+        self.set_expiration_date(position.option.expiration_date)?;
+        self.set_underlying_price(&position.option.underlying_price)?;
+        Ok(())
+    }
+}
+
+impl CachedBreakEvens for ShortStrangle {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
+    }
+}
+
+impl Positionable for ShortStrangle {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.place_leg(position))
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -525,72 +612,11 @@ impl Positionable for ShortStrangle {
     /// * `Ok(())` if position was successfully modified
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            let err_msg = format!("modify_position: Invalid position data: \n{position}");
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
-            ));
-        }
-
-        if position.option.side == Side::Long {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Position side is Long, it is not valid for ShortStrangle".to_string(),
-            ));
-        }
-
-        if position.option.strike_price != self.one_option().strike_price
-            && position.option.strike_price != self.short_put.option.strike_price
-        {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Strike not found in positions".to_string(),
-            ));
-        }
-
-        if position.option.option_style == OptionStyle::Call {
-            self.short_call = position.clone();
-        }
-
-        if position.option.option_style == OptionStyle::Put {
-            self.short_put = position.clone();
-        }
-
-        self.update_break_even_points()?;
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
     }
 
     fn replace_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            let err_msg = format!("modify_position: Invalid position data: \n{position}");
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition { reason: err_msg },
-            ));
-        }
-
-        if position.option.side == Side::Long {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Position side is Long, it is not valid for ShortStrangle".to_string(),
-            ));
-        }
-
-        if position.option.option_style == OptionStyle::Call {
-            self.short_call = position.clone();
-        }
-
-        if position.option.option_style == OptionStyle::Put {
-            self.short_put = position.clone();
-        }
-
-        // Update values passed in new position
-        self.set_implied_volatility(&position.option.implied_volatility)?;
-        self.set_expiration_date(position.option.expiration_date)?;
-        self.set_underlying_price(&position.option.underlying_price)?;
-        self.update_break_even_points()?;
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg_and_market(position))
     }
 }
 

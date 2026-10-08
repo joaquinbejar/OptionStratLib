@@ -21,7 +21,9 @@ use super::base::{
 use super::shared::StraddleStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -238,7 +240,7 @@ impl ShortStraddle {
             None,
             None,
         );
-        strategy.add_position(&short_call)?;
+        strategy.place_leg(&short_call)?;
 
         let short_put_option = Options::new(
             OptionType::European,
@@ -263,7 +265,7 @@ impl ShortStraddle {
             None,
             None,
         );
-        strategy.add_position(&short_put)?;
+        strategy.place_leg(&short_put)?;
 
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -429,8 +431,11 @@ impl BreakEvenable for ShortStraddle {
     }
 }
 
-impl Positionable for ShortStraddle {
-    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+impl ShortStraddle {
+    /// Places `position` in the leg its side and style select, without
+    /// refreshing the break-evens: the constructors fill the legs through
+    /// it, and [`Positionable::add_position`] wraps it.
+    fn place_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.option_style {
             OptionStyle::Call => {
                 self.short_call = position.clone();
@@ -441,6 +446,56 @@ impl Positionable for ShortStraddle {
                 Ok(())
             }
         }
+    }
+
+    /// Replaces the leg matching `position`, without refreshing the
+    /// break-evens; [`Positionable::modify_position`] wraps it.
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        if position.option.side == Side::Long {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Position side is Long, it is not valid for ShortStraddle".to_string(),
+            ));
+        }
+
+        if position.option.strike_price != self.short_call.option.strike_price
+            && position.option.strike_price != self.short_put.option.strike_price
+        {
+            return Err(PositionError::invalid_position_type(
+                position.option.side,
+                "Strike not found in positions".to_string(),
+            ));
+        }
+
+        if position.option.option_style == OptionStyle::Call {
+            self.short_call = position.clone();
+        }
+
+        if position.option.option_style == OptionStyle::Put {
+            self.short_put = position.clone();
+        }
+
+        Ok(())
+    }
+}
+
+impl CachedBreakEvens for ShortStraddle {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
+    }
+}
+
+impl Positionable for ShortStraddle {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.place_leg(position))
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -494,39 +549,7 @@ impl Positionable for ShortStraddle {
     /// * `Ok(())` if position was successfully modified
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
-            ));
-        }
-
-        if position.option.side == Side::Long {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Position side is Long, it is not valid for ShortStraddle".to_string(),
-            ));
-        }
-
-        if position.option.strike_price != self.short_call.option.strike_price
-            && position.option.strike_price != self.short_put.option.strike_price
-        {
-            return Err(PositionError::invalid_position_type(
-                position.option.side,
-                "Strike not found in positions".to_string(),
-            ));
-        }
-
-        if position.option.option_style == OptionStyle::Call {
-            self.short_call = position.clone();
-        }
-
-        if position.option.option_style == OptionStyle::Put {
-            self.short_put = position.clone();
-        }
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
     }
 }
 
