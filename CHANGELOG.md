@@ -3173,7 +3173,13 @@ summarize the release.
   so an error branch is never measured as the path. `criterion` moves to
   `[workspace.dependencies]`; no dependency is added. `make bench-build`
   compiles every bench target and runs in the Lint workflow, and
-  `make bench-workspace` runs them all.
+  `make bench-workspace` runs them all. The first full run, on a dedicated
+  Linux host, is recorded in `docs/release/0.22/benchmarks.md`: machine,
+  toolchain, command, a summary per crate, the bottlenecks it found (filed
+  as follow-up issues per crate) and the full Criterion output. The facade's
+  `curve_merge_multiply` and `surface_merge_multiply` now assert that the
+  merge succeeds before timing it; they timed `is_ok()`, so a failing merge
+  was measured as its error branch.
 
 - **The 0.22 release gates are one command, and their evidence is tracked**
   (#557). `make release-gates` (`scripts/release_gates.py`) runs every gate of
