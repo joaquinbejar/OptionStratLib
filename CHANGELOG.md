@@ -2155,6 +2155,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Executable 0.22 consumers and `make test-022-consumers`** (#552). Every
+  directory under `fixtures/consumers/` is a downstream crate with the
+  manifest a 0.22 user writes, built outside the workspace with a target dir
+  of its own. New and extended consumers:
+  - `facade-plotly/tests/strategy_workflow.rs`: the complete
+    strategy-construction-to-chart workflow. A `StrategyRequest` is analysed
+    through `get_strategy()` as a `Box<dyn Strategable>` (break-even points,
+    profit bounds, payoff, fees across a `Vec` of trait objects) and charted
+    by dispatching on its `strategy_type` to a function generic over
+    `S: StrategyConstructor + Graph`, since `Graph` is no longer a supertrait
+    of the strategy contract (#658). The tests prove the chart is the
+    analysis: every point of every payoff segment, the current-price marker
+    and the break-even labels equal `calculate_profit_at` and
+    `get_break_even_points` on the trait object, the Plotly figure and the
+    HTML page carry the same traces, and a request without a builder or with
+    the wrong legs fails on both sides with `StrategyError`. The dispatch
+    names every `StrategyType`, the seven without a builder included, so a
+    strategy that gains a builder does not compile there until it is
+    chartable.
+  - `headless-full/tests/workflow.rs`: on the facade defaults, Greeks
+    through a generic bound and through `dyn Greeks` over an option and a
+    strategy, the `synthetic` chain generator through
+    `chains::generator_optionchain` with each generated chain rendered as a
+    terminal table, and a backtest read as data and rendered with
+    `visualization::terminal::SimulationReport`.
+  - `facade-async`: the facade with `async` alone, which resolves `tokio`,
+    `csv` and `zip` and no simulation, strategy, backtest or chart crate. A
+    chain round-trips through JSON and CSV with the `*_async` wrappers, two
+    loads run concurrently, the async OHLCV reader agrees with the
+    synchronous one, and missing files arrive as `ChainError::FileError` and
+    `OhlcvError::IoError`.
+  - `market-io`: `optionstratlib-market` with `io` alone (ADR-0002
+    `osl-fixture-market-io`), with JSON and CSV round-trips, OHLCV reads with
+    and without date bounds and the documented error paths. Both I/O
+    fixtures read a nine-candle `tests/data/ohlcv-sample.zip` cut from
+    `examples/Data/cl-1m-sample.zip`, so a copy built outside the repository
+    reads the same data.
+
+  `make test-022-consumers` asserts every fixture's graph
+  (`check-fixtures`), then lints (`-D warnings`) and tests each fixture
+  under its defaults and, when it declares features of its own, with none
+  and with all (`scripts/test_consumers.py`, with a self-test), and finally
+  tests a copy of every fixture outside the repository against the packaged
+  crates (`make check-022-consumers-packaged`). That reuses the
+  `[patch.crates-io]` mechanism of the direct-component examples (#555):
+  `scripts/check_packaged_examples.sh` now also packages the facade, copies a
+  scenario's `tests/`, runs a scenario only when it is a binary, and reads
+  its scenarios from `OSL_PACKAGED_SOURCE` (default `examples/direct`, whose
+  build dir is now `target/packaged-direct`). A new fixture directory is
+  picked up without a Makefile change. The per-fixture
+  targets `check-consumer-core-pricing`, `check-consumer-core-pricing-minimal`,
+  `test-consumer-core-pricing`, `check-consumer-analytics-only`,
+  `check-consumer-analytics-only-minimal`, `test-consumer-analytics-only`,
+  `test-consumer-simulation-only`, `test-consumer-full-backtest`,
+  `check-consumer-market`, `test-consumer-market`, `check-consumer-facade`
+  and `test-consumer-facade` are retired in its favour, and the
+  `tree-consumer-*` targets become `make tree-consumer FIXTURE=<scenario>`;
+  the Components workflow runs `OSL_REUSE_PACKAGES=1 make test-022-consumers`
+  after `check-components`.
+
 - **A published, checked ownership map of the public API** (#556).
   `docs/ownership.md` records, for every concept group (domain model,
   utilities, constants, curves, surfaces, geometry, pricing models, Greeks,

@@ -1,0 +1,20 @@
+# Consumer fixture: `optionstratlib-market` with only its `io` feature
+# (ADR-0002 section 5 `osl-fixture-market-io`, ADR-0003, #552): the CSV,
+# JSON and ZIP readers and writers, with no simulation engine and no async
+# runtime. Excluded from the root workspace so feature unification with the
+# other members cannot widen its graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-market-io"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: option chain and OHLCV file I/O from optionstratlib-market with the io feature."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
+optionstratlib-market = { path = "../../../crates/optionstratlib-market", version = "0.22.0", default-features = false, features = ["io"] }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

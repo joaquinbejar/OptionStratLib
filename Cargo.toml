@@ -166,6 +166,7 @@ crate-type = ["rlib"]
 exclude = [
     "fixtures/consumers/analytics-only",
     "fixtures/consumers/facade-analytics",
+    "fixtures/consumers/facade-async",
     "fixtures/consumers/facade-backtest",
     "fixtures/consumers/facade-market",
     "fixtures/consumers/facade-plotly",
@@ -177,6 +178,7 @@ exclude = [
     "fixtures/consumers/facade-visualization",
     "fixtures/consumers/full-backtest",
     "fixtures/consumers/headless-full",
+    "fixtures/consumers/market-io",
     "fixtures/consumers/market-minimal",
     "fixtures/consumers/market-synthetic",
     "fixtures/consumers/pricing-only",
