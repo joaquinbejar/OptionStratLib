@@ -163,7 +163,7 @@ pub optionstratlib_market::chains::utils::RandomPositionsParams::qty_puts_short:
 pub optionstratlib_market::chains::utils::RandomPositionsParams::risk_free_rate: rust_decimal::decimal::Decimal
 impl optionstratlib_market::chains::utils::RandomPositionsParams
 pub fn optionstratlib_market::chains::utils::RandomPositionsParams::new(core::option::Option<usize>, core::option::Option<usize>, core::option::Option<usize>, core::option::Option<usize>, expiration_date::ExpirationDate, positive::positive::Positive, rust_decimal::decimal::Decimal, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, core::option::Option<alloc::string::String>, core::option::Option<serde_json::value::Value>) -> Self
-pub fn optionstratlib_market::chains::utils::RandomPositionsParams::total_positions(&self) -> usize
+pub fn optionstratlib_market::chains::utils::RandomPositionsParams::total_positions(&self) -> core::result::Result<usize, optionstratlib_market::error::chains::ChainError>
 pub trait optionstratlib_market::chains::utils::OptionChainParams
 pub fn optionstratlib_market::chains::utils::OptionChainParams::get_params(&self, positive::positive::Positive) -> core::result::Result<optionstratlib_market::chains::utils::OptionDataPriceParams, optionstratlib_market::error::chains::ChainError>
 impl optionstratlib_market::chains::utils::OptionChainParams for optionstratlib_market::chains::chain::OptionChain

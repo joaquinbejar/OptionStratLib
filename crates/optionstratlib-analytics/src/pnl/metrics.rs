@@ -164,6 +164,10 @@ impl fmt::Display for PnLMetricsStep {
             format!("[{}]", formatted.join(", "))
         }
 
+        // `Positive::round_to` goes through `unwrap_or_panic`; rounding the
+        // `Decimal` and normalising it prints the same digits and is total
+        // (#788).
+        let rounded = |value: Positive| value.to_dec().round_dp(3).normalize();
         write!(
             f,
             "PnLMetricsStep: {{\
@@ -185,13 +189,13 @@ impl fmt::Display for PnLMetricsStep {
             self.pnl,
             self.win,
             self.step_number,
-            self.step_duration.round_to(3),
-            self.max_unrealized_pnl.round_to(3),
-            self.min_unrealized_pnl.round_to(3),
+            rounded(self.step_duration),
+            rounded(self.max_unrealized_pnl),
+            rounded(self.min_unrealized_pnl),
             self.winning_steps,
             self.losing_steps,
-            self.initial_price.round_to(3),
-            self.final_price.round_to(3),
+            rounded(self.initial_price),
+            rounded(self.final_price),
             format_vec(&self.strikes),
             format_vec(&self.initial_volumes),
             format_vec(&self.final_volumes),

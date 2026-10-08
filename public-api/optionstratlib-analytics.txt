@@ -772,21 +772,11 @@ impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::iter::traits::accum::Sum for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = Self>>(I) -> Self
-impl core::ops::arith::Add for &optionstratlib_analytics::pnl::utils::PnL
-pub type &optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
-pub fn &optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> optionstratlib_analytics::pnl::utils::PnL
-impl core::ops::arith::Add for optionstratlib_analytics::pnl::utils::PnL
-pub type optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> Self
 impl utoipa::ToSchema for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::name() -> alloc::borrow::Cow<'static, str>
 pub fn optionstratlib_analytics::pnl::utils::PnL::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<'a> core::iter::traits::accum::Sum<&'a optionstratlib_analytics::pnl::utils::PnL> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = &'a optionstratlib_analytics::pnl::utils::PnL>>(I) -> Self
 pub trait optionstratlib_analytics::pnl::utils::PnLCalculator
 pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::adjustments_pnl(&self, &optionstratlib_analytics::pnl::adjustment::DeltaAdjustment) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
 pub fn optionstratlib_analytics::pnl::utils::PnLCalculator::calculate_pnl(&self, &positive::positive::Positive, expiration_date::ExpirationDate, &positive::positive::Positive) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
@@ -856,21 +846,11 @@ impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::iter::traits::accum::Sum for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = Self>>(I) -> Self
-impl core::ops::arith::Add for &optionstratlib_analytics::pnl::utils::PnL
-pub type &optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
-pub fn &optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> optionstratlib_analytics::pnl::utils::PnL
-impl core::ops::arith::Add for optionstratlib_analytics::pnl::utils::PnL
-pub type optionstratlib_analytics::pnl::utils::PnL::Output = optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::add(self, Self) -> Self
 impl utoipa::ToSchema for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::name() -> alloc::borrow::Cow<'static, str>
 pub fn optionstratlib_analytics::pnl::utils::PnL::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
-impl<'a> core::iter::traits::accum::Sum<&'a optionstratlib_analytics::pnl::utils::PnL> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::sum<I: core::iter::traits::iterator::Iterator<Item = &'a optionstratlib_analytics::pnl::utils::PnL>>(I) -> Self
 pub struct optionstratlib_analytics::pnl::PnLMetrics
 pub optionstratlib_analytics::pnl::PnLMetrics::avg_loss: rust_decimal::decimal::Decimal
 pub optionstratlib_analytics::pnl::PnLMetrics::avg_win: rust_decimal::decimal::Decimal

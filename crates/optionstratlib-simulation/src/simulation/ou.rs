@@ -6,6 +6,7 @@
 //! 0.21 path is unchanged.
 
 use crate::error::SimulationError;
+use crate::simulation::path_buffer;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, decimal_normal_sample_with, p_sqrt};
 use optionstratlib_core::model::utils::sub_floor_zero;
@@ -49,6 +50,8 @@ use rust_decimal::Decimal;
 /// reversion term `theta * (mu - x) * dt` leaves the representable `Positive`
 /// range, and [`SimulationError::Decimal`] when the diffusion term or the
 /// accumulated level leaves the representable `Decimal` range.
+/// Returns [`SimulationError::InvalidParameters`] when a path of `steps`
+/// points cannot be allocated.
 ///
 /// There is no limit to return in their place: the process level is the state
 /// being simulated, so a step that cannot be represented ends the path rather
@@ -107,7 +110,7 @@ pub(crate) fn ou_path<R: Rng + ?Sized>(
 ) -> Result<Vec<Positive>, SimulationError> {
     let sqrt_dt = p_sqrt(&dt, "volatility::utils::generate_ou_process")?;
     let mut x = x0.to_dec();
-    let mut result = Vec::with_capacity(steps);
+    let mut result = path_buffer(steps, 0)?;
     result.push(Positive::new_decimal(x).unwrap_or(Positive::ZERO));
 
     for _ in 1..steps {

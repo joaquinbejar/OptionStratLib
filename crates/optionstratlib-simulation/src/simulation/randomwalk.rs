@@ -4,12 +4,6 @@
    Date: 23/3/25
 ******************************************************************************/
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::simulation::WalkParams;
 use crate::simulation::steps::Step;
 use optionstratlib_core::model::Positive;
@@ -242,8 +236,14 @@ where
     ///
     /// # Panics
     ///
-    /// Panics if the index is out of bounds.
+    /// Panics if the index is out of bounds, as indexing a `Vec` does. Use
+    /// [`RandomWalk::get_step`] for the checked form, which returns `None`
+    /// instead.
+    #[allow(clippy::indexing_slicing)]
     fn index(&self, index: usize) -> &Self::Output {
+        // `Index` / `IndexMut` follow the std contract: an out-of-bounds index
+        // is a caller bug and panics, exactly like `Vec`. The checked
+        // accessor is `get_step`, which returns `None` instead (#341, #788).
         &self.steps[index]
     }
 }
@@ -274,8 +274,14 @@ where
     ///
     /// # Panics
     ///
-    /// Panics if the index is out of bounds.
+    /// Panics if the index is out of bounds, as indexing a `Vec` does. Use
+    /// [`RandomWalk::get_step_mut`] for the checked form, which returns `None`
+    /// instead.
+    #[allow(clippy::indexing_slicing)]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        // `Index` / `IndexMut` follow the std contract: an out-of-bounds index
+        // is a caller bug and panics, exactly like `Vec`. The checked
+        // accessor is `get_step_mut`, which returns `None` instead (#341, #788).
         &mut self.steps[index]
     }
 }

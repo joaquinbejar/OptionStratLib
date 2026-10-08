@@ -16,7 +16,7 @@ use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::d_add;
+use optionstratlib_core::model::decimal::{d_add, d_div};
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
     reject_unrepresentable_expiration,
@@ -604,7 +604,12 @@ impl OptionChain {
             {
                 break;
             }
-            counter += Positive::ONE;
+            counter = counter.checked_add(&Positive::ONE).map_err(|e| {
+                ChainError::invalid_parameters(
+                    "chain_size",
+                    &format!("strike counter overflows at step {counter}: {e}"),
+                )
+            })?;
         }
         debug!("Option chain: {}", option_chain);
         Ok(option_chain)
@@ -705,7 +710,9 @@ impl OptionChain {
     /// Returns [`ChainError::ChainBuildError`] when the chain is empty,
     /// when no valid strike interval can be inferred from existing
     /// strikes, or when the volatility-surface sampler fails to produce a
-    /// skew for the generated parameters.
+    /// skew for the generated parameters. Returns
+    /// [`ChainError::OptionDataError`] when the summed bid-ask spreads leave
+    /// the `Decimal` range.
     pub fn to_build_params(&self) -> Result<OptionChainBuildParams, ChainError> {
         // Calculate chain size based on the distance from ATM strike
         let atm_strike = self.atm_strike()?;
@@ -719,17 +726,26 @@ impl OptionChain {
         if let Some((min_strike, max_strike)) =
             strike_prices.iter().min().zip(strike_prices.iter().max())
         {
-            let strikes_below = ((atm_strike.to_dec() - min_strike.to_dec())
-                / strike_interval.to_dec())
+            // Strikes are non-negative, so each distance is in range; the
+            // division and the `usize` conversion are checked rather than
+            // truncated through `as` (#788).
+            let strikes_below = d_div(
+                atm_strike.to_dec() - min_strike.to_dec(),
+                strike_interval.to_dec(),
+                "OptionChain::to_build_params/strikes_below",
+            )?
             .ceil()
-            .to_u64()
-            .unwrap_or(0) as usize;
+            .to_usize()
+            .unwrap_or(0);
 
-            let strikes_above = ((max_strike.to_dec() - atm_strike.to_dec())
-                / strike_interval.to_dec())
+            let strikes_above = d_div(
+                max_strike.to_dec() - atm_strike.to_dec(),
+                strike_interval.to_dec(),
+                "OptionChain::to_build_params/strikes_above",
+            )?
             .ceil()
-            .to_u64()
-            .unwrap_or(0) as usize;
+            .to_usize()
+            .unwrap_or(0);
 
             chain_size = strikes_below.max(strikes_above);
         }
@@ -745,17 +761,28 @@ impl OptionChain {
         }
 
         // Estimate the average bid-ask spread from the available options
+        // Each spread is a difference of two non-negative quotes and stays in
+        // range; their running total does not, so it is checked. `count` is
+        // at most twice the number of options, so it cannot overflow `usize`.
         let mut total_spread = Decimal::ZERO;
-        let mut count = 0;
+        let mut count: usize = 0;
 
         for option in &self.options {
             if let (Some(ask), Some(bid)) = (option.call_ask, option.call_bid) {
-                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                total_spread = d_add(
+                    total_spread,
+                    (ask.to_dec() - bid.to_dec()).abs(),
+                    "OptionChain::to_build_params/total_spread",
+                )?;
                 count += 1;
             }
 
             if let (Some(ask), Some(bid)) = (option.put_ask, option.put_bid) {
-                total_spread += (ask.to_dec() - bid.to_dec()).abs();
+                total_spread = d_add(
+                    total_spread,
+                    (ask.to_dec() - bid.to_dec()).abs(),
+                    "OptionChain::to_build_params/total_spread",
+                )?;
                 count += 1;
             }
         }
@@ -766,7 +793,12 @@ impl OptionChain {
         // only to keep the call site `.unwrap`-free per §Error Handling.
         let default_spread = Positive::new_decimal(dec!(0.02)).unwrap_or(Positive::ZERO);
         let spread = if count > 0 {
-            Positive::new_decimal(total_spread / Decimal::from(count)).unwrap_or(default_spread)
+            Positive::new_decimal(d_div(
+                total_spread,
+                Decimal::from(count),
+                "OptionChain::to_build_params/spread",
+            )?)
+            .unwrap_or(default_spread)
         } else {
             default_spread
         };
@@ -1641,19 +1673,32 @@ impl OptionChain {
     /// `StrategyErrorKind::InvalidLegs` when the requested position counts
     /// exceed available strikes on either side of the chain, or propagates
     /// any [`ChainError::OptionDataError`] produced while materialising the
-    /// selected strikes into [`Position`] instances.
+    /// selected strikes into [`Position`] instances. Returns
+    /// [`ChainError::ChainBuildError`] naming `total_positions` when the
+    /// quantities sum to zero, sum past `usize::MAX`, or ask for more
+    /// positions than can be allocated.
     pub fn get_random_positions(
         &self,
         params: RandomPositionsParams,
     ) -> Result<Vec<Position>, ChainError> {
-        if params.total_positions() == 0 {
+        let total_positions = params.total_positions()?;
+        if total_positions == 0 {
             return Err(ChainError::invalid_parameters(
                 "total_positions",
                 "The sum of the quantities must be greater than 0",
             ));
         }
 
-        let mut positions = Vec::with_capacity(params.total_positions());
+        // `Vec::with_capacity` aborts the process when the request cannot be
+        // allocated; `try_reserve_exact` reserves the same capacity and
+        // reports the failure instead (#788).
+        let mut positions = Vec::new();
+        positions.try_reserve_exact(total_positions).map_err(|e| {
+            ChainError::invalid_parameters(
+                "total_positions",
+                &format!("cannot allocate {total_positions} positions: {e}"),
+            )
+        })?;
 
         // Add long put positions
         if let Some(qty) = params.qty_puts_long {
@@ -10214,5 +10259,45 @@ mod tests_atm_iv_provider {
                 .to_string()
                 .contains("ATM implied volatility is not available")
         );
+    }
+}
+
+/// `to_build_params` summed the bid-ask spreads with the raw `+=`, which
+/// aborted on a book whose spreads add past the `Decimal` range (#788).
+#[cfg(test)]
+mod tests_to_build_params_panic_freedom {
+    use super::*;
+
+    #[test]
+    fn test_to_build_params_overflowing_spreads_return_error() {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        for strike in [Positive::HUNDRED, pos_or_panic!(110.0)] {
+            chain.add_option(
+                strike,
+                Some(Positive::ZERO),
+                Some(Positive::MAX),
+                Some(Positive::ZERO),
+                Some(Positive::MAX),
+                pos_or_panic!(0.2),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+        }
+        assert!(matches!(
+            chain.to_build_params(),
+            Err(ChainError::OptionDataError(
+                OptionDataErrorKind::PriceCalculationError(_)
+            ))
+        ));
     }
 }

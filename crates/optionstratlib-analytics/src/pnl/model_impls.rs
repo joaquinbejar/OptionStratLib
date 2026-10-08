@@ -321,18 +321,28 @@ impl PnLCalculator for Position {
             &position.option.implied_volatility,
         )?;
 
+        // Two signed P&Ls of opposite sign near the `Decimal` bounds have a
+        // difference past them, so the subtraction is checked (#788).
         let realized_diff = match (self_pnl.realized, other_pnl.realized) {
-            (Some(self_realized), Some(other_realized)) => Some(self_realized - other_realized),
+            (Some(self_realized), Some(other_realized)) => Some(d_sub(
+                self_realized,
+                other_realized,
+                "Position::diff_position_pnl/realized",
+            )?),
             _ => None,
         };
 
         let unrealized_diff = match (self_pnl.unrealized, other_pnl.unrealized) {
-            (Some(self_unrealized), Some(other_unrealized)) => {
-                Some(self_unrealized - other_unrealized)
-            }
+            (Some(self_unrealized), Some(other_unrealized)) => Some(d_sub(
+                self_unrealized,
+                other_unrealized,
+                "Position::diff_position_pnl/unrealized",
+            )?),
             _ => None,
         };
 
+        // Both costs and both incomes are non-negative, so their differences
+        // stay inside the `Decimal` range.
         let cost_diff = self_pnl.initial_costs.to_dec() - other_pnl.initial_costs.to_dec();
         let income_diff = self_pnl.initial_income.to_dec() - other_pnl.initial_income.to_dec();
 
