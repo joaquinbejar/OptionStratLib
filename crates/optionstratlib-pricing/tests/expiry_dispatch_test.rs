@@ -98,13 +98,12 @@ fn kernel(option: &Options) -> Result<Decimal, PricingError> {
 /// Whether the price one minute out is within three places of the value at
 /// expiry. It is not for the lookbacks and the cliquet, whose value at a
 /// fresh start carries a time value of order `σ√T` (0.01 to 0.03 one minute
-/// out; the path extreme or the period return is still open), nor for the
-/// compound, whose Geske price does not tend to the kernel's value at
-/// expiry (reported separately).
+/// out; the path extreme or the period return is still open). The compound
+/// is, since its Geske price was fixed (#845).
 fn continuous(option_type: &OptionType) -> bool {
     !matches!(
         option_type,
-        OptionType::Lookback { .. } | OptionType::Cliquet { .. } | OptionType::Compound { .. }
+        OptionType::Lookback { .. } | OptionType::Cliquet { .. }
     )
 }
 

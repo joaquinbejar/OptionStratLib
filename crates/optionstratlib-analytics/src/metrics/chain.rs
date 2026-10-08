@@ -66,6 +66,14 @@ fn closest_atm_iv(chain: &OptionChain) -> Option<Decimal> {
     closest.map(|(_, iv)| iv)
 }
 
+/// Lowest volatility the smile-dynamics surface reports.
+///
+/// A domain floor, not a stand-in (#822): a volatility must be positive, and
+/// an adjusted smile `atm + skew / sqrt(T / 30)` with a negative skew falls
+/// below zero for short enough `T`. One percent is the floor the surface has
+/// always applied.
+const SMILE_VOL_FLOOR: Decimal = dec!(0.01);
+
 /// Carries a checked-arithmetic failure out of a curve metric.
 ///
 /// A metric over an extreme chain (a spot whose square leaves the `Decimal`
@@ -580,7 +588,17 @@ impl VannaVolgaSurface for OptionChain {
         let mut points = BTreeSet::new();
 
         // Get ATM volatility as reference
-        let atm_vol = closest_atm_iv(self).unwrap_or(dec!(0.20));
+        let atm_vol = closest_atm_iv(self)
+            // The cost is measured from the ATM volatility; a chain without
+            // one used to be measured from a made-up 0.20 (#822, as #619 did
+            // for the probability kernels).
+            .ok_or_else(|| {
+                SurfaceError::invalid_parameters(
+                    "implied_volatility",
+                    "no option in the chain has an implied volatility, so there is \
+                     no ATM volatility to measure the Vanna-Volga cost from",
+                )
+            })?;
 
         let price_step = grid_step(price_range, price_steps, "price_range")?;
         let vol_step = grid_step(vol_range, vol_steps, "vol_range")?;
@@ -814,7 +832,13 @@ impl SmileDynamicsSurface for OptionChain {
         let mut points = BTreeSet::new();
 
         // Get ATM volatility for reference
-        let atm_vol = closest_atm_iv(self).unwrap_or(dec!(0.20));
+        // Without an implied volatility no option contributes a point, so the
+        // surface is empty; that was already the error returned (#822).
+        let Some(atm_vol) = closest_atm_iv(self) else {
+            return Err(SurfaceError::ConstructionError(
+                "No valid points for smile dynamics surface".to_string(),
+            ));
+        };
 
         for opt in self.options.iter() {
             if opt.implied_volatility.is_zero() {
@@ -829,7 +853,8 @@ impl SmileDynamicsSurface for OptionChain {
                 .map_err(surface_math)?;
 
             for days in &days_to_expiry {
-                // Smile dynamics: skew steepens for shorter expirations
+                // Smile dynamics: skew steepens for shorter expirations,
+                // `iv(T) = max(atm + skew / sqrt(T / 30), floor)`.
                 let time_factor = d_sqrt(
                     d_div(
                         days.to_dec(),
@@ -843,8 +868,22 @@ impl SmileDynamicsSurface for OptionChain {
                 let adjusted_skew = if time_factor > Decimal::ZERO {
                     d_div(skew, time_factor, "metrics::chain::smile_dynamics_surface")
                         .map_err(surface_math)?
+                } else if skew.is_zero() {
+                    // `T = 0` (or `T / 30` below the smallest `Decimal`): at
+                    // zero skew the adjustment is zero for every `T > 0`, so
+                    // zero is its `T -> 0` limit.
+                    Decimal::ZERO
                 } else {
-                    skew
+                    // Any other skew diverges as `T -> 0`. The surface used to
+                    // keep the unadjusted skew here, which is not the limit
+                    // (#822).
+                    return Err(SurfaceError::invalid_parameters(
+                        "days_to_expiry",
+                        &format!(
+                            "at {days} days the smile adjustment of strike {strike} \
+                             (skew {skew}) diverges"
+                        ),
+                    ));
                 };
 
                 let adjusted_iv = d_add(
@@ -853,7 +892,9 @@ impl SmileDynamicsSurface for OptionChain {
                     "metrics::chain::smile_dynamics_surface",
                 )
                 .map_err(surface_math)?;
-                let final_iv = adjusted_iv.max(dec!(0.01)); // Ensure positive IV
+                // Domain floor (#822): a volatility must be positive, so the
+                // adjusted smile never goes below `SMILE_VOL_FLOOR`.
+                let final_iv = adjusted_iv.max(SMILE_VOL_FLOOR);
 
                 points.insert(Point3D::new(strike, days.to_dec(), final_iv));
             }
@@ -994,18 +1035,29 @@ impl VolumeProfileSurface for OptionChain {
                     // Volume typically increases closer to expiration
                     // Using a simple model: volume scales inversely with sqrt(time)
                     const OP: &str = "metrics::chain::volume_profile_surface";
-                    let time_factor = if day.to_dec() > Decimal::ZERO {
-                        d_sqrt(
+                    let adjusted_vol = if day.to_dec() > Decimal::ZERO {
+                        let time_factor = d_sqrt(
                             d_div(dec!(30.0), day.to_dec(), OP).map_err(surface_math)?,
                             "metrics::chain::volume_time_factor",
                         )
-                        .map_err(surface_math)?
+                        .map_err(surface_math)?;
+                        d_mul(base_vol.to_dec(), time_factor, OP).map_err(surface_math)?
+                    } else if base_vol == Positive::ZERO {
+                        // `0 * sqrt(30 / T)` is zero for every `T > 0`, so
+                        // zero is the `T -> 0` limit.
+                        Decimal::ZERO
                     } else {
-                        Decimal::ONE
+                        // Any other volume diverges as `T -> 0`. The surface
+                        // used to keep the unadjusted volume here, which is
+                        // not the limit (#822).
+                        return Err(SurfaceError::invalid_parameters(
+                            "days",
+                            &format!(
+                                "at 0 days the volume of strike {} ({base_vol}) diverges",
+                                opt.strike_price
+                            ),
+                        ));
                     };
-
-                    let adjusted_vol =
-                        d_mul(base_vol.to_dec(), time_factor, OP).map_err(surface_math)?;
                     points.insert(Point3D::new(
                         opt.strike_price.to_dec(),
                         day.to_dec(),
@@ -2184,5 +2236,138 @@ mod tests_panic_freedom {
             max_iv.iv_surface(vec![Positive::MAX]),
             Err(SurfaceError::AnalysisError(_))
         ));
+    }
+}
+
+/// The three stand-ins of #822: the hidden ATM volatility, the volatility
+/// floor and the zero-day time adjustment.
+#[cfg(test)]
+mod tests_surface_limits {
+    use super::*;
+    use optionstratlib_core::error::OperationErrorKind;
+
+    fn pos(value: Decimal) -> Positive {
+        Positive::new_decimal(value).expect("a positive literal")
+    }
+
+    /// Strikes 90, 100 and 110 around a spot of 100, with the IVs and
+    /// volumes given; the 100 strike is the ATM one.
+    fn chain(ivs: [Decimal; 3], volumes: [Positive; 3]) -> OptionChain {
+        let mut chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-01".to_string(),
+            None,
+            None,
+        );
+        for ((strike, iv), volume) in [dec!(90), dec!(100), dec!(110)]
+            .into_iter()
+            .zip(ivs)
+            .zip(volumes)
+        {
+            chain.add_option(
+                pos(strike),
+                Some(Positive::ONE),
+                Some(Positive::TWO),
+                Some(Positive::ONE),
+                Some(Positive::TWO),
+                Positive::new_decimal(iv).unwrap_or(Positive::ZERO),
+                None,
+                None,
+                None,
+                Some(volume),
+                None,
+                None,
+            );
+        }
+        chain
+    }
+
+    fn invalid_parameter<T: std::fmt::Debug>(result: Result<T, SurfaceError>) -> String {
+        match result {
+            Err(SurfaceError::OperationError(OperationErrorKind::InvalidParameters {
+                operation,
+                ..
+            })) => operation,
+            other => panic!("expected an invalid-parameter error, got {other:?}"),
+        }
+    }
+
+    fn value_at(surface: &Surface, strike: Decimal, days: Decimal) -> Decimal {
+        surface
+            .points
+            .iter()
+            .find(|p| p.x == strike && p.y == days)
+            .map(|p| p.z)
+            .expect("the point is on the surface")
+    }
+
+    #[test]
+    fn test_vanna_volga_surface_without_implied_volatility_returns_error() {
+        let chain = chain([Decimal::ZERO; 3], [Positive::ONE; 3]);
+        let range = (Positive::HUNDRED, Positive::HUNDRED);
+        assert_eq!(
+            invalid_parameter(chain.vanna_volga_surface(
+                range,
+                (pos(dec!(0.2)), pos(dec!(0.2))),
+                0,
+                0
+            )),
+            "implied_volatility"
+        );
+    }
+
+    #[test]
+    fn test_smile_dynamics_zero_skew_at_zero_days_is_its_limit() -> Result<(), SurfaceError> {
+        // Only the ATM strike has an IV, so every skew is zero.
+        let chain = chain(
+            [Decimal::ZERO, dec!(0.25), Decimal::ZERO],
+            [Positive::ONE; 3],
+        );
+        let tiny = dec!(0.00000000000000000001);
+        let surface = chain.smile_dynamics_surface(vec![Positive::ZERO, pos(tiny)])?;
+        let at_zero = value_at(&surface, dec!(100), Decimal::ZERO);
+        // Continuity: the value at zero days is the value just after it.
+        assert_eq!(at_zero, value_at(&surface, dec!(100), tiny));
+        assert_eq!(at_zero, dec!(0.25));
+        Ok(())
+    }
+
+    #[test]
+    fn test_smile_dynamics_nonzero_skew_at_zero_days_returns_error() {
+        let chain = chain([dec!(0.30), dec!(0.25), dec!(0.22)], [Positive::ONE; 3]);
+        assert_eq!(
+            invalid_parameter(chain.smile_dynamics_surface(vec![Positive::ZERO])),
+            "days_to_expiry"
+        );
+    }
+
+    #[test]
+    fn test_smile_dynamics_floors_a_negative_smile_at_one_percent() -> Result<(), SurfaceError> {
+        // Skew -0.15 over sqrt(1 / 30) is about -0.82, far below the ATM
+        // 0.25: the domain floor holds the volatility at 0.01.
+        let chain = chain([dec!(0.10), dec!(0.25), dec!(0.30)], [Positive::ONE; 3]);
+        let surface = chain.smile_dynamics_surface(vec![Positive::ONE])?;
+        assert_eq!(value_at(&surface, dec!(90), Decimal::ONE), dec!(0.01));
+        Ok(())
+    }
+
+    #[test]
+    fn test_volume_profile_zero_volume_at_zero_days_is_its_limit() -> Result<(), SurfaceError> {
+        let chain = chain([dec!(0.2); 3], [Positive::ZERO; 3]);
+        let tiny = dec!(0.00000000000000000001);
+        let surface = chain.volume_profile_surface(vec![Positive::ZERO, pos(tiny)])?;
+        assert_eq!(value_at(&surface, dec!(100), Decimal::ZERO), Decimal::ZERO);
+        assert_eq!(value_at(&surface, dec!(100), tiny), Decimal::ZERO);
+        Ok(())
+    }
+
+    #[test]
+    fn test_volume_profile_nonzero_volume_at_zero_days_returns_error() {
+        let chain = chain([dec!(0.2); 3], [Positive::HUNDRED; 3]);
+        assert_eq!(
+            invalid_parameter(chain.volume_profile_surface(vec![Positive::ZERO])),
+            "days"
+        );
     }
 }

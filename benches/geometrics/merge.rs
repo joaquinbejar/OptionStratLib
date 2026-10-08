@@ -5,6 +5,7 @@ use optionstratlib::surfaces::{Point3D, Surface};
 use rayon::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::fmt::Debug;
 use std::hint::black_box;
 
 /// Operand counts the merge is measured at.
@@ -72,6 +73,17 @@ fn surface_fixture(side: usize, index: u64) -> Surface {
     Surface::from_vector(samples)
 }
 
+/// Panics unless the merge under measurement succeeds on its fixture.
+///
+/// These benches used to time `merged.is_ok()`, so a merge that failed fast
+/// (the last-grid-point overshoot fixed in #795) was timed as its error
+/// branch and reported as cheap (#789).
+fn assert_merges<T, E: Debug>(label: &str, merged: Result<T, E>) {
+    if let Err(e) = merged {
+        panic!("bench `{label}`: the fixture merge returned an error: {e:?}");
+    }
+}
+
 /// End-to-end cost of `Curve::merge` under `Multiply`, per operand count and
 /// curve size.
 ///
@@ -88,18 +100,16 @@ pub fn benchmark_curve_merge_multiply(c: &mut Criterion) {
                 .map(|i| curve_fixture(size, i as u64))
                 .collect();
             let refs: Vec<&Curve> = curves.iter().collect();
+            let id = BenchmarkId::new(format!("size_{size}"), operands);
+            assert_merges(
+                &format!("curve_merge_multiply/size_{size}/{operands}"),
+                Curve::merge(&refs, MergeOperation::Multiply),
+            );
 
             group.throughput(Throughput::Elements(operands as u64));
-            group.bench_with_input(
-                BenchmarkId::new(format!("size_{size}"), operands),
-                &refs,
-                |b, refs| {
-                    b.iter(|| {
-                        let merged = Curve::merge(black_box(refs), MergeOperation::Multiply);
-                        black_box(merged.is_ok())
-                    })
-                },
-            );
+            group.bench_with_input(id, &refs, |b, refs| {
+                b.iter(|| black_box(Curve::merge(black_box(refs), MergeOperation::Multiply)))
+            });
         }
     }
 
@@ -121,18 +131,16 @@ pub fn benchmark_surface_merge_multiply(c: &mut Criterion) {
                 .map(|i| surface_fixture(side, i as u64))
                 .collect();
             let refs: Vec<&Surface> = surfaces.iter().collect();
+            let id = BenchmarkId::new(format!("side_{side}"), operands);
+            assert_merges(
+                &format!("surface_merge_multiply/side_{side}/{operands}"),
+                Surface::merge(&refs, MergeOperation::Multiply),
+            );
 
             group.throughput(Throughput::Elements(operands as u64));
-            group.bench_with_input(
-                BenchmarkId::new(format!("side_{side}"), operands),
-                &refs,
-                |b, refs| {
-                    b.iter(|| {
-                        let merged = Surface::merge(black_box(refs), MergeOperation::Multiply);
-                        black_box(merged.is_ok())
-                    })
-                },
-            );
+            group.bench_with_input(id, &refs, |b, refs| {
+                b.iter(|| black_box(Surface::merge(black_box(refs), MergeOperation::Multiply)))
+            });
         }
     }
 
