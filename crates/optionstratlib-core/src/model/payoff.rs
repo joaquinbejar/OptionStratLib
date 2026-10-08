@@ -359,8 +359,8 @@ fn option_type_payoff(option_type: &OptionType, info: &PayoffInfo) -> f64 {
 /// # Calculation
 /// - The function first calculates the average of the given spot prices based on the specified `averaging_type`.
 /// - For arithmetic averaging, the sum of the spot prices is computed, divided by the number of prices.
-/// - For geometric averaging, the product of the spot prices is computed and the nth root of the product
-///   is taken, where `n` is the number of prices.
+/// - For geometric averaging, the mean is the log-sum `exp(mean(ln x_i))`; see
+///   [`geometric_mean`].
 /// - If the averaging fails due to invalid input (e.g., missing or zero-length spot prices), the result is ZERO.
 ///
 /// - Once the average is calculated, the payoff is computed based on the option style:
@@ -377,10 +377,7 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
             AsianAveragingType::Arithmetic => {
                 spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64
             }
-            AsianAveragingType::Geometric => {
-                let product = spot_prices.iter().fold(1.0, |acc, x| acc * x.to_f64());
-                product.powf(1.0 / len as f64)
-            }
+            AsianAveragingType::Geometric => geometric_mean(spot_prices),
             // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
             // arithmetic mean, the conventional default for Asian options.
             _ => spot_prices.iter().map(Positive::to_f64).sum::<f64>() / len as f64,
@@ -392,10 +389,11 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
         // `Positive - f64` aborted on every out-of-the-money Asian put, where
         // the average is above the strike, and on a non-finite average
         // (#788). The difference is the one that operator formed, on
-        // `Decimal`, floored at zero. A non-finite average (a geometric
-        // product that left the `f64` range) has no put value, so it goes
-        // out as `NaN`, which the `Decimal` boundary of `Payoff::payoff`
-        // reports as an error, as it already does for the call.
+        // `Decimal`, floored at zero. A non-finite average (the geometric
+        // product left the `f64` range before #806 took the mean as a
+        // log-sum) has no put value, so it goes out as `NaN`, which the
+        // `Decimal` boundary of `Payoff::payoff` reports as an error, as it
+        // already does for the call.
         OptionStyle::Put => match Decimal::from_f64(average) {
             Some(average) => Positive::new_decimal(
                 info.strike
@@ -409,6 +407,35 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
             None => f64::NAN,
         },
     }
+}
+
+/// Geometric mean of the fixings, as the log-sum `exp(mean(ln x_i))` (#806).
+///
+/// The product of the fixings, rooted afterwards, leaves the `f64` range on
+/// realistic inputs (100 fixings at `1e4` multiply to `1e400`), so the mean
+/// is taken in log space. The log-sum is centred on the first fixing `m`,
+/// `m * exp(mean(ln(x_i / m)))`, which is the same quantity: the logarithms
+/// of `x_i / m` sit near zero, where `ln` and `exp` keep their relative
+/// accuracy, whereas `ln x_i` near 9 carries about `1e-15` absolute error,
+/// which `exp` turns into tens of ulps. Against a 60-digit reference over
+/// 2 001 fixing sets (3 to 252 fixings, levels `1e-2` to `1e4`) the centred
+/// form is within 3 ulps (median 0), the uncentred one within 56 (median 2),
+/// and the product overflows or underflows on 297 of them. A zero fixing makes the mean
+/// zero, as it made the product. An empty slice has no mean; the caller
+/// never passes one.
+fn geometric_mean(fixings: &[Positive]) -> f64 {
+    let Some(first) = fixings.first() else {
+        return ZERO;
+    };
+    if fixings.contains(&Positive::ZERO) {
+        return ZERO;
+    }
+    let centre = first.to_f64();
+    let log_sum: f64 = fixings
+        .iter()
+        .map(|fixing| (fixing.to_f64() / centre).ln()) // scan-banned: allow -- f64 `ln` of a positive finite ratio, it does not abort
+        .sum();
+    centre * (log_sum / fixings.len() as f64).exp() // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite payoff is rejected at the `Decimal` boundary
 }
 
 /// Calculates the payoff for a financial instrument with a barrier feature.
@@ -1402,8 +1429,12 @@ mod tests_decimal_boundary_equivalence {
                 Side::Long,
             )
         };
-        // (90 · 100 · 110)^(1/3) - 95 = 4.665549341259606 in `f64`.
-        assert_eq!(option.payoff(&info).unwrap(), dec!(4.66554934125961));
+        // Re-baselined by #806: the geometric mean is the centred log-sum,
+        // 99.66554934125965 in `f64`, where the product form gave
+        // 99.6655493412596; the exact mean is 99.6655493412596363794..., so
+        // the payoff moves from 4.66554934125961 to 4.66554934125965 against
+        // an exact 4.6655493412596363794....
+        assert_eq!(option.payoff(&info).unwrap(), dec!(4.66554934125965));
     }
 
     #[test]
@@ -1552,5 +1583,96 @@ mod tests_decimal_boundary_equivalence {
             option.payoff(&info),
             Err(OptionsError::PayoffError { .. })
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests_geometric_mean {
+    use super::*;
+    use positive::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// Distance between two finite `f64`s of the same sign, in units in the
+    /// last place.
+    fn ulps(a: f64, b: f64) -> u64 {
+        (a.to_bits() as i64 - b.to_bits() as i64).unsigned_abs()
+    }
+
+    fn fixings(values: impl IntoIterator<Item = Decimal>) -> Vec<Positive> {
+        values
+            .into_iter()
+            .map(|value| Positive::new_decimal(value).unwrap())
+            .collect()
+    }
+
+    /// The reference geometric means below are `exp(mean(ln x_i))` evaluated
+    /// in 60-digit decimal arithmetic (Python's `decimal`, whose `ln` and
+    /// `exp` are correctly rounded) on the exact fixings, then rounded to the
+    /// nearest `f64`. The kernel must land within 3 ulps of each, its error
+    /// bound over 2 001 random fixing sets (#806).
+    const REFERENCE_ULPS: u64 = 3;
+
+    #[test]
+    fn test_geometric_mean_matches_the_reference() {
+        let cases: [(Vec<Positive>, f64); 4] = [
+            // 99.665549341259636379441742406...
+            (fixings([dec!(90), dec!(100), dec!(110)]), 99.66554934125963),
+            // 10000 exactly.
+            (fixings(std::iter::repeat_n(dec!(10000), 100)), 10000.0),
+            // 10 000 + 10 i for i < 252: 11231.426621138467604475800653...
+            (
+                fixings((0..252).map(|i| dec!(10000) + Decimal::from(10 * i))),
+                11231.426621138467,
+            ),
+            // Nine orders of magnitude apart: 72.112478515370419616462753...
+            (
+                fixings([dec!(0.01), dec!(1000000), dec!(37.5)]),
+                72.11247851537043,
+            ),
+        ];
+        for (values, reference) in cases {
+            let mean = geometric_mean(&values);
+            assert!(
+                ulps(mean, reference) <= REFERENCE_ULPS,
+                "{} fixings: {mean} against {reference}",
+                values.len()
+            );
+        }
+    }
+
+    /// 100 fixings at `1e4` multiply to `1e400`, past `f64::MAX`: the product
+    /// form returned an infinite average and the payoff an error. The
+    /// log-sum gives the average, `1e4`, exactly (#806).
+    #[test]
+    fn test_geometric_asian_with_100_fixings_at_1e4_prices() {
+        let option = OptionType::Asian {
+            averaging_type: AsianAveragingType::Geometric,
+        };
+        for (style, strike, expected) in [
+            (OptionStyle::Call, dec!(9000), dec!(1000)),
+            (OptionStyle::Put, dec!(10500), dec!(500)),
+        ] {
+            let info = PayoffInfo {
+                spot: pos_or_panic!(10000.0),
+                strike: Positive::new_decimal(strike).unwrap(),
+                style,
+                side: Side::Long,
+                spot_prices: Some(vec![pos_or_panic!(10000.0); 100]),
+                ..Default::default()
+            };
+            assert_eq!(option.payoff(&info).unwrap(), expected, "{style:?}");
+        }
+    }
+
+    /// A zero fixing makes the geometric mean zero, as it made the product.
+    #[test]
+    fn test_geometric_mean_with_a_zero_fixing_is_zero() {
+        for values in [
+            fixings([dec!(0), dec!(100), dec!(110)]),
+            fixings([dec!(90), dec!(100), dec!(0)]),
+        ] {
+            assert_eq!(geometric_mean(&values), 0.0);
+        }
+        assert_eq!(geometric_mean(&[]), 0.0);
     }
 }

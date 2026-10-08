@@ -1651,6 +1651,28 @@ summarize the release.
   days, about 7 % at 1.5 days); the docs say so. `numerical_theta` joins
   the pricing greeks bench.
 
+- **The geometric Asian payoff averages its fixings as a log-sum** (#806).
+  `Payoff::payoff` for `OptionType::Asian { averaging_type: Geometric }`
+  multiplied the fixings in `f64` and took the `n`-th root, so 100 fixings
+  at `1e4` (`1e400`) overflowed and the payoff was an error, and small
+  fixings underflowed. By owner decision the mean is `exp(mean(ln x_i))`,
+  centred on the first fixing (`m * exp(mean(ln(x_i / m)))`, the same
+  quantity) because the uncentred log-sum loses digits: against a 60-digit
+  reference on 2 001 fixing sets (3 to 252 fixings, levels `1e-2` to `1e4`)
+  the centred form is within 3 ulps (median 0), the uncentred one within 56
+  (median 2). A zero fixing still gives a zero mean. Last-ulp changes,
+  accepted by the owner, measured on 2 000 seeded fixing sets: 278 whose
+  product overflowed or underflowed now have a finite mean; of the other
+  1 722, 1 189 move in `f64`, all by at most 6 ulps but one (a 252-fixing set
+  whose product went subnormal at `2e-323`, where the old mean was wrong in
+  its fourth digit, `0.052412` for `0.052419`); at the `Decimal` boundary
+  465 payoffs change, in their last digit (for example `9.80685118896913`
+  to `9.80685118896914`). The pinned `(90, 100, 110)` call at strike 95
+  moves from `4.66554934125961` to `4.66554934125965`; the exact payoff is
+  `4.66554934125963638...`. Only payoffs evaluated on caller-supplied
+  fixings change: the closed-form Kemna-Vorst price of
+  `pricing::asian` reads no fixings and is unchanged.
+
 - **No arithmetic operator in core, math or pricing can abort the caller**
   (#788).
   - **Lints.** The three crates deny `clippy::arithmetic_side_effects` and
