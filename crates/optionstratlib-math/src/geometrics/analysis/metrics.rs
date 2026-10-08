@@ -1,7 +1,8 @@
 use crate::curves::Point2D;
 use crate::error::{CurveError, MetricsError};
-use crate::geometrics::AnalysisResult;
-use optionstratlib_core::model::decimal::d_div;
+use crate::geometrics::{AnalysisResult, powu_checked};
+use optionstratlib_core::error::DecimalError;
+use optionstratlib_core::model::decimal::{d_add, d_div, d_sqrt, d_sub};
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use rust_decimal::Decimal;
 use serde::Serialize;
@@ -507,6 +508,30 @@ pub struct RiskMetrics {
 
 impl_json_debug_pretty!(RiskMetrics);
 impl_json_display!(RiskMetrics);
+
+/// The population standard deviation `sqrt(sum((x - mean)^2) / n)` of a
+/// non-empty sample about `mean`: the [`RiskMetrics::volatility`] of curves
+/// and surfaces, shared so both compute it with the same operations in the
+/// same order (#840).
+///
+/// # Errors
+///
+/// Returns [`DecimalError`] when a deviation, its square, their sum, the
+/// division by `n` or the square root leaves the `Decimal` range, and when
+/// `values` is empty (`n = 0`).
+pub(crate) fn population_std_dev(
+    values: &[Decimal],
+    mean: Decimal,
+    op: &'static str,
+) -> Result<Decimal, DecimalError> {
+    let mut sum_sq = Decimal::ZERO;
+    for &value in values {
+        let centered = d_sub(value, mean, op)?;
+        sum_sq = d_add(sum_sq, powu_checked(centered, 2, op)?, op)?;
+    }
+    let variance = d_div(sum_sq, Decimal::from(values.len()), op)?;
+    d_sqrt(variance, op)
+}
 
 /// The coefficient of variation `std_dev / mean` of
 /// [`RiskMetrics::coefficient_of_variation`], shared so curves and surfaces

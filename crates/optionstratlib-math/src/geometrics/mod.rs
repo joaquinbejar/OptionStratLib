@@ -11,11 +11,11 @@ mod operations;
 
 mod analysis;
 
-pub(crate) use analysis::coefficient_of_variation;
 pub use analysis::{
     AnalysisResult, BasicMetrics, Metrics, MetricsExtractor, RangeMetrics, RiskMetrics,
     ShapeMetrics, TrendMetrics,
 };
+pub(crate) use analysis::{coefficient_of_variation, population_std_dev};
 pub use construction::{ConstructionMethod, ConstructionParams};
 pub use interpolation::bilinear::BiLinearInterpolation;
 pub use interpolation::cubic::CubicInterpolation;
