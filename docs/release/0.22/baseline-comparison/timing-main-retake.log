@@ -1,0 +1,44 @@
+2026-10-08T20:58:29Z host=flumix nproc=16 commit=d274e8f7a5cb48a7a0fad5202daf1cac4ed0e1e4 rustc=rustc 1.99.0 (b940084d7 2026-09-28) cargo=cargo 1.99.0 (5f94df478 2026-08-27)
+2026-10-08T20:58:29Z lockfile_sha256=d827698d7efb577396757c0c32f60d37b8b2f4333a42aa0796c8111a2c59d33f lockfile_packages=522
+2026-10-08T20:58:29Z cargo fetch done
+2026-10-08T20:58:29Z profile=core flags=[-p optionstratlib-core] loadavg=[10.97 9.38 7.95]
+2026-10-08T20:58:29Z guard loadavg=[10.97 9.38 7.95] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:34Z clean-build profile=core sample=1 rc=0 seconds=4.6
+2026-10-08T20:58:34Z guard loadavg=[10.49 9.31 7.93] top=[ 0.4 dockerd; 0.1 kworker/u32:4-ext4-rsv-conversion; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:58:38Z clean-build profile=core sample=2 rc=0 seconds=4.5
+2026-10-08T20:58:38Z guard loadavg=[10.05 9.23 7.92] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:58:43Z clean-build profile=core sample=3 rc=0 seconds=4.5
+2026-10-08T20:58:43Z artifact profile=core top_rlib=liboptionstratlib_core.rlib top_rlib_bytes=7627740 own_rlibs_bytes=7627740 target_bytes=222470043
+2026-10-08T20:58:45Z guard loadavg=[9.41 9.11 7.89] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:45Z incremental-check profile=core touched=crates/optionstratlib-core/src/lib.rs sample=1 rc=0 seconds=0.2
+2026-10-08T20:58:45Z guard loadavg=[9.41 9.11 7.89] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:45Z incremental-check profile=core touched=crates/optionstratlib-core/src/lib.rs sample=2 rc=0 seconds=0.2
+2026-10-08T20:58:45Z guard loadavg=[9.41 9.11 7.89] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:46Z incremental-check profile=core touched=crates/optionstratlib-core/src/lib.rs sample=3 rc=0 seconds=0.2
+2026-10-08T20:58:46Z guard loadavg=[8.73 8.98 7.85] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:49Z clean-check profile=core sample=1 rc=0 seconds=3.8
+2026-10-08T20:58:50Z guard loadavg=[8.73 8.98 7.85] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-ext4-rsv-conversion;]
+2026-10-08T20:58:53Z clean-check profile=core sample=2 rc=0 seconds=3.8
+2026-10-08T20:58:53Z guard loadavg=[8.43 8.91 7.83] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-writeback;]
+2026-10-08T20:58:57Z clean-check profile=core sample=3 rc=0 seconds=3.8
+2026-10-08T20:58:57Z profile=pricing flags=[-p optionstratlib-pricing] loadavg=[7.92 8.80 7.80]
+2026-10-08T20:58:57Z guard loadavg=[7.92 8.80 7.80] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-events_power_efficient;]
+2026-10-08T20:59:09Z clean-build profile=pricing sample=1 rc=0 seconds=11.3
+2026-10-08T20:59:09Z guard loadavg=[7.22 8.62 7.75] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:20Z clean-build profile=pricing sample=2 rc=0 seconds=11.0
+2026-10-08T20:59:20Z guard loadavg=[6.78 8.48 7.72] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:31Z clean-build profile=pricing sample=3 rc=0 seconds=10.8
+2026-10-08T20:59:31Z artifact profile=pricing top_rlib=liboptionstratlib_pricing.rlib top_rlib_bytes=12771888 own_rlibs_bytes=57608004 target_bytes=514120924
+2026-10-08T20:59:38Z guard loadavg=[5.96 8.20 7.64] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:39Z incremental-check profile=pricing touched=crates/optionstratlib-pricing/src/lib.rs sample=1 rc=0 seconds=0.3
+2026-10-08T20:59:39Z guard loadavg=[5.96 8.20 7.64] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:39Z incremental-check profile=pricing touched=crates/optionstratlib-pricing/src/lib.rs sample=2 rc=0 seconds=0.3
+2026-10-08T20:59:39Z guard loadavg=[5.96 8.20 7.64] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:39Z incremental-check profile=pricing touched=crates/optionstratlib-pricing/src/lib.rs sample=3 rc=0 seconds=0.3
+2026-10-08T20:59:39Z guard loadavg=[5.96 8.20 7.64] top=[ 0.4 dockerd; 0.1 kworker/u32:4-flush-252:0; 0.1 kworker/u32:5-flush-252:0;]
+2026-10-08T20:59:48Z clean-check profile=pricing sample=1 rc=0 seconds=9.0
+2026-10-08T20:59:49Z guard loadavg=[5.78 8.10 7.62] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-flush-259:0;]
+2026-10-08T20:59:57Z clean-check profile=pricing sample=2 rc=0 seconds=8.6
+2026-10-08T20:59:57Z guard loadavg=[5.56 7.98 7.58] top=[ 0.4 dockerd; 0.1 kworker/u32:4-events_power_efficient; 0.1 kworker/u32:5-events_power_efficient;]
+2026-10-08T21:00:07Z clean-check profile=pricing sample=3 rc=0 seconds=9.5
+2026-10-08T21:00:07Z DONE

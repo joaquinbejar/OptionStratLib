@@ -3074,9 +3074,10 @@ summarize the release.
   all-features facade. Focused profiles (core, pricing, market, simulation,
   analytics, a headless facade) are compared with the 0.21.3 default, the
   smallest 0.21.3 surface: they resolve 41 to 69 package pairs against 131
-  and check from clean in 4.1 to 11.3 s against 17.5 s. The facade default
+  and check from clean in 3.8 to 11.3 s against 17.1 s. The facade default
   resolves 124 against 131 and checks in 15.7 s; all features 264 against
-  284, checking in 34.5 s against 42.8 s. Each focused graph is verified to
+  284, checking in 34.5 s against 41.7 s. Samples that overlapped another
+  agent's benchmark run on the host were discarded and re-taken. Each focused graph is verified to
   exclude the capabilities it does not use. The document records medians,
   ranges, raw samples, artifact sizes, the `plotly_static` build-script stub
   used for both revisions, and the confounders (14 % more production code,
