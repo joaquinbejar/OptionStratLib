@@ -560,7 +560,7 @@ impl RNDAnalysis for OptionChain {
         let min_interval = strikes
             .windows(2)
             .filter_map(|w| match w {
-                [prev, curr] => Some(*curr - *prev),
+                [prev, curr] => curr.checked_sub(prev).ok(),
                 _ => None,
             })
             .min()
@@ -588,7 +588,8 @@ impl RNDAnalysis for OptionChain {
 
         let now = Utc::now().naive_utc();
         let time_to_expiry =
-            Decimal::from_f64((expiry_date - now).num_days() as f64 / 365.0).unwrap_or_default();
+            Decimal::from_f64(expiry_date.signed_duration_since(now).num_days() as f64 / 365.0)
+                .unwrap_or_default();
 
         // Step 4: Calculate discount factor. `Decimal::exp` aborts on overflow
         // and on underflow; the checked helper flushes an underflowing

@@ -20,7 +20,7 @@ use crate::metrics::{
     VolatilitySensitivitySurface, VolatilitySkewCurve, VolumeProfileCurve, VolumeProfileSurface,
 };
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub};
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, Options, Side};
 use optionstratlib_market::chains::OptionChain;
 use optionstratlib_math::curves::{Curve, Point2D};
@@ -32,7 +32,6 @@ use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::pricing::OptionPricing;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 
@@ -46,6 +45,26 @@ use std::fmt::Display;
 // fails, or a grid point that is not a valid `Positive`, is an error. Both
 // used to read as 1 (or 0.01 for a volatility); for every finite input on
 // which they succeed the result is unchanged.
+
+/// ATM implied volatility: that of the quoted option (non-zero IV) whose
+/// strike is closest to the spot, the first one on a tie. `None` when no option
+/// has a usable IV. A strike-to-spot distance is a difference of two
+/// non-negative values and cannot leave the `Decimal` range.
+fn closest_atm_iv(chain: &OptionChain) -> Option<Decimal> {
+    let spot = chain.underlying_price.to_dec();
+    let mut closest: Option<(Decimal, Decimal)> = None;
+    for opt in chain
+        .options
+        .iter()
+        .filter(|opt| !opt.implied_volatility.is_zero())
+    {
+        let distance = opt.strike_price.to_dec().checked_sub(spot)?.abs();
+        if closest.is_none_or(|(best, _)| distance < best) {
+            closest = Some((distance, opt.implied_volatility.to_dec()));
+        }
+    }
+    closest.map(|(_, iv)| iv)
+}
 
 /// Carries a checked-arithmetic failure out of a curve metric.
 ///
@@ -141,7 +160,8 @@ impl VolatilitySkewCurve for OptionChain {
                 .map_err(curve_math)?;
                 // `ratio >= 0`, so `ratio - 1` cannot leave the range.
                 let moneyness = d_mul(
-                    ratio - Decimal::ONE,
+                    d_sub(ratio, Decimal::ONE, "metrics::chain::volatility_skew")
+                        .map_err(curve_math)?,
                     Decimal::ONE_HUNDRED,
                     "metrics::chain::volatility_skew",
                 )
@@ -372,7 +392,8 @@ impl ImpliedVolatilitySurface for OptionChain {
                 // This projects the current IV to different time horizons
                 // Dividing by a constant above one cannot leave the range.
                 let time_factor = d_sqrt(
-                    days.to_dec() / dec!(365.0),
+                    d_div(days.to_dec(), dec!(365.0), "metrics::chain::iv_time_factor")
+                        .map_err(surface_math)?,
                     "metrics::chain::iv_time_factor",
                 )
                 .map_err(surface_math)?;
@@ -428,21 +449,9 @@ impl RiskReversalCurve for OptionChain {
     /// ```
     fn risk_reversal_curve(&self) -> Result<Curve, CurveError> {
         // Find ATM IV (closest strike to underlying price)
-        let atm_iv = self
-            .options
-            .iter()
-            .filter(|opt| !opt.implied_volatility.is_zero())
-            .min_by(|a, b| {
-                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
-            })
-            .map(|opt| opt.implied_volatility.to_dec())
-            .ok_or_else(|| {
-                CurveError::ConstructionError(
-                    "No options with valid implied volatility".to_string(),
-                )
-            })?;
+        let atm_iv = closest_atm_iv(self).ok_or_else(|| {
+            CurveError::ConstructionError("No options with valid implied volatility".to_string())
+        })?;
 
         // Calculate risk reversal as deviation from ATM IV
         // Positive for OTM calls (strike > spot), negative for OTM puts (strike < spot)
@@ -450,23 +459,23 @@ impl RiskReversalCurve for OptionChain {
             .options
             .iter()
             .filter(|opt| !opt.implied_volatility.is_zero())
-            .map(|opt| {
+            .map(|opt| -> Result<Point2D, CurveError> {
                 let iv = opt.implied_volatility.to_dec();
                 let strike = opt.strike_price.to_dec();
                 let spot = self.underlying_price.to_dec();
 
                 // Risk reversal: IV difference weighted by moneyness direction
                 let rr = if strike > spot {
-                    iv - atm_iv // OTM call premium
+                    d_sub(iv, atm_iv, "metrics::chain::risk_reversal").map_err(curve_math)? // OTM call premium
                 } else if strike < spot {
-                    atm_iv - iv // OTM put premium (inverted for standard RR convention)
+                    d_sub(atm_iv, iv, "metrics::chain::risk_reversal").map_err(curve_math)? // OTM put premium (inverted for standard RR convention)
                 } else {
                     Decimal::ZERO // ATM
                 };
 
-                Point2D::new(strike, rr)
+                Ok(Point2D::new(strike, rr))
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
         if points.is_empty() {
             return Err(CurveError::ConstructionError(
@@ -571,17 +580,7 @@ impl VannaVolgaSurface for OptionChain {
         let mut points = BTreeSet::new();
 
         // Get ATM volatility as reference
-        let atm_vol = self
-            .options
-            .iter()
-            .filter(|opt| !opt.implied_volatility.is_zero())
-            .min_by(|a, b| {
-                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
-            })
-            .map(|opt| opt.implied_volatility.to_dec())
-            .unwrap_or(dec!(0.20));
+        let atm_vol = closest_atm_iv(self).unwrap_or(dec!(0.20));
 
         let price_step = grid_step(price_range, price_steps, "price_range")?;
         let vol_step = grid_step(vol_range, vol_steps, "vol_range")?;
@@ -598,12 +597,14 @@ impl VannaVolgaSurface for OptionChain {
                 // Both differences are of two non-negative values, so they
                 // stay in range; the ratio and the products may not (#788).
                 let moneyness = d_div(
-                    (price - self.underlying_price.to_dec()).abs(),
+                    d_sub(price, self.underlying_price.to_dec(), OP)
+                        .map_err(surface_math)?
+                        .abs(),
                     self.underlying_price.to_dec(),
                     OP,
                 )
                 .map_err(surface_math)?;
-                let vol_diff = (vol - atm_vol).abs();
+                let vol_diff = d_sub(vol, atm_vol, OP).map_err(surface_math)?.abs();
 
                 // Simplified Vanna-Volga cost: combines moneyness and vol effects
                 // Vanna component: moneyness × vol_diff
@@ -813,17 +814,7 @@ impl SmileDynamicsSurface for OptionChain {
         let mut points = BTreeSet::new();
 
         // Get ATM volatility for reference
-        let atm_vol = self
-            .options
-            .iter()
-            .filter(|opt| !opt.implied_volatility.is_zero())
-            .min_by(|a, b| {
-                let diff_a = (a.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                let diff_b = (b.strike_price.to_dec() - self.underlying_price.to_dec()).abs();
-                diff_a.partial_cmp(&diff_b).unwrap_or(Ordering::Equal)
-            })
-            .map(|opt| opt.implied_volatility.to_dec())
-            .unwrap_or(dec!(0.20));
+        let atm_vol = closest_atm_iv(self).unwrap_or(dec!(0.20));
 
         for opt in self.options.iter() {
             if opt.implied_volatility.is_zero() {
@@ -834,12 +825,18 @@ impl SmileDynamicsSurface for OptionChain {
             let base_iv = opt.implied_volatility.to_dec();
 
             // Calculate skew from current smile
-            let skew = base_iv - atm_vol;
+            let skew = d_sub(base_iv, atm_vol, "metrics::chain::smile_dynamics_skew")
+                .map_err(surface_math)?;
 
             for days in &days_to_expiry {
                 // Smile dynamics: skew steepens for shorter expirations
                 let time_factor = d_sqrt(
-                    days.to_dec() / dec!(30.0),
+                    d_div(
+                        days.to_dec(),
+                        dec!(30.0),
+                        "metrics::chain::skew_time_factor",
+                    )
+                    .map_err(surface_math)?,
                     "metrics::chain::skew_time_factor",
                 )
                 .map_err(surface_math)?;
@@ -921,7 +918,11 @@ fn relative_spread(
     bid: Positive,
     ask: Positive,
 ) -> Result<Option<Decimal>, CurveError> {
-    let mid = bid.checked_add(&ask).map_err(curve_math)? / Positive::TWO;
+    let mid = bid
+        .checked_add(&ask)
+        .map_err(curve_math)?
+        .checked_div(&Positive::TWO)
+        .map_err(curve_math)?;
     if mid == Positive::ZERO {
         return Ok(None);
     }
