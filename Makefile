@@ -804,6 +804,22 @@ bench-json: check-cargo-criterion
 bench-clean:
 	rm -rf target/criterion
 
+# Compiles every Criterion target, the facade's and each component crate's,
+# without running it (#789), so a bench that stops compiling fails CI instead
+# of rotting until the next measurement. `--all-features` includes the
+# feature-gated targets (`chains_io` behind `io`, `synthetic` behind
+# `synthetic`).
+.PHONY: bench-build
+bench-build:
+	cargo bench --workspace --all-features --bench '*' --no-run
+
+# Runs every Criterion target of the workspace (#789); the reports land in
+# `target/criterion`. Pass Criterion options through BENCH_ARGS, e.g.
+# `make bench-workspace BENCH_ARGS="--quick"`.
+.PHONY: bench-workspace
+bench-workspace:
+	cargo bench --workspace --all-features --bench '*' -- $(BENCH_ARGS)
+
 
 .PHONY: workflow-coverage
 workflow-coverage:

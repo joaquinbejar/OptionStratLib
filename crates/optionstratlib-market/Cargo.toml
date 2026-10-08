@@ -56,3 +56,18 @@ approx = { workspace = true }
 mockall = { workspace = true }
 tempfile = { workspace = true }
 proptest = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "chains"
+harness = false
+
+[[bench]]
+name = "chains_io"
+harness = false
+required-features = ["io"]
+
+[[bench]]
+name = "synthetic"
+harness = false
+required-features = ["synthetic"]

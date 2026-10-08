@@ -42,3 +42,8 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "backtest"
+harness = false
