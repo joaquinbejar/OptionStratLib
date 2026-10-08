@@ -47,8 +47,8 @@
 //! - [`risk`]: SPAN margin ([`risk::SPANMargin`]) and risk categories.
 //! - [`metrics`]: price, risk, composite, temporal, stress and liquidity
 //!   metrics over an `OptionChain`, as curves and surfaces.
-//! - [`error`]: [`error::ProbabilityError`], [`error::ProjectionError`] and
-//!   [`error::TransactionError`].
+//! - [`error`]: [`error::ProbabilityError`], [`error::ProjectionError`],
+//!   [`error::RNDError`] and [`error::TransactionError`].
 //!
 //! The probability analysis of a concrete strategy (`ProbabilityAnalysis`)
 //! builds on these kernels and lives with the strategies; nothing here names

@@ -102,8 +102,6 @@ use thiserror::Error;
 ///   to select. Reserved for ATM-selection paths; prefer `EmptyChain` for non-ATM lookups.
 /// * `AtmNotFound` - The option chain has options but none could be selected as the ATM
 ///   contract for the given symbol.
-/// * `EmptyDensities` - No valid risk-neutral densities could be produced.
-/// * `EmptySkewData` - No strikes produced valid data points to build a volatility skew.
 /// * `StrikeNotFound` - A requested strike was not present in the current chain.
 /// * `Curve` - A curve-layer error surfaced during chain construction or analytics.
 /// * `Volatility` - A volatility-layer error surfaced during chain construction or analytics.
@@ -169,14 +167,6 @@ pub enum ChainError {
         /// Ticker symbol of the chain for which no ATM contract was found.
         symbol: String,
     },
-
-    /// No valid risk-neutral densities could be produced.
-    #[error("failed to calculate any valid risk-neutral density value")]
-    EmptyDensities,
-
-    /// No strikes produced valid data points to build a volatility skew.
-    #[error("no valid data points available for volatility skew calculation")]
-    EmptySkewData,
 
     /// A requested strike was not present in the current chain.
     #[error("strike {strike} not found in option chain")]
@@ -921,15 +911,6 @@ mod tests_extended {
         assert_eq!(
             format!("{error}"),
             "failed to find ATM option for option chain: SPX"
-        );
-    }
-
-    #[test]
-    fn test_chain_error_empty_densities() {
-        let error = ChainError::EmptyDensities;
-        assert_eq!(
-            format!("{error}"),
-            "failed to calculate any valid risk-neutral density value"
         );
     }
 
