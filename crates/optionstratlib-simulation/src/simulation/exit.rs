@@ -499,7 +499,7 @@ pub fn check_exit_policy(
             }
         }
         ExitPolicy::UnderlyingPrice(price) => {
-            if (underlying_price.to_dec() - price.to_dec()).abs() < dec!(0.01) {
+            if within_fixed_price_tolerance(underlying_price.to_dec(), price.to_dec()) {
                 Some(ExitPolicy::UnderlyingPrice(*price))
             } else {
                 None

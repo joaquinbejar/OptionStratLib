@@ -195,7 +195,11 @@ impl PathStatistics {
             }
             d_div(
                 sum_squared_diff,
-                Decimal::from(total_paths - 1),
+                Decimal::from(total_paths.checked_sub(1).ok_or_else(|| {
+                    SimulationError::invalid_parameters(
+                        "PathStatistics::from_outcomes: variance of an empty sample",
+                    )
+                })?),
                 "PathStatistics::from_outcomes/variance",
             )?
         } else {
