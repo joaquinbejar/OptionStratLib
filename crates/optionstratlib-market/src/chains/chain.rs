@@ -9412,9 +9412,12 @@ mod tests_option_chain_comparison {
 
         chains.sort();
 
-        // Should be sorted by expiration date regardless of symbol
-        assert_eq!(chains[0].get_expiration_date(), "2024-03-15");
-        assert_eq!(chains[1].get_expiration_date(), "2024-02-16");
+        // Should be sorted by expiration date regardless of symbol. The two
+        // 2024 expiries have passed; expiration_date 0.4.1 clamped both to
+        // zero days, so they tied and fell back to symbol order (GOOGL before
+        // MSFT). From 0.4.2 they keep their own dates (#825).
+        assert_eq!(chains[0].get_expiration_date(), "2024-02-16");
+        assert_eq!(chains[1].get_expiration_date(), "2024-03-15");
         assert_eq!(chains[2].get_expiration_date(), "2030-01-19");
         assert_eq!(chains[3].get_expiration_date(), "2030-01-19");
     }

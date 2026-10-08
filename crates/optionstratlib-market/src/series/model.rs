@@ -873,6 +873,48 @@ mod tests_option_series {
             }
         }
 
+        /// Two expiries that have both passed stay two chains, in date order,
+        /// in memory and through a JSON round trip. With `expiration_date`
+        /// 0.4.1 every past date compared equal to every other, so the second
+        /// insert replaced the first and the series kept one chain (#825).
+        #[test]
+        fn test_round_trip_keeps_two_past_expiries() {
+            let expiry = |year, month, day| match NaiveDate::from_ymd_opt(year, month, day)
+                .and_then(|date| date.and_hms_opt(18, 30, 0))
+            {
+                Some(expiry) => ExpirationDate::DateTime(expiry.and_utc()),
+                None => panic!("valid fixture date"),
+            };
+            let mut original = OptionSeries::new("TEST".to_string(), Positive::HUNDRED);
+            original
+                .chains
+                .insert(expiry(2020, 6, 19), chain("TEST", "2020-06-19"));
+            original
+                .chains
+                .insert(expiry(2020, 3, 20), chain("TEST", "2020-03-20"));
+            assert_eq!(original.chains.len(), 2);
+
+            let json = match serde_json::to_string(&original) {
+                Ok(json) => json,
+                Err(error) => panic!("serialize: {error}"),
+            };
+            assert!(json.contains("\"2020-03-20\":"), "{json}");
+            assert!(json.contains("\"2020-06-19\":"), "{json}");
+            let back: OptionSeries = match serde_json::from_str(&json) {
+                Ok(series) => series,
+                Err(error) => panic!("deserialize: {error}"),
+            };
+
+            let keys: Vec<ExpirationDate> = back.chains.keys().copied().collect();
+            assert_eq!(keys, vec![expiry(2020, 3, 20), expiry(2020, 6, 19)]);
+            let expirations: Vec<String> = back
+                .chains
+                .values()
+                .map(OptionChain::get_expiration_date)
+                .collect();
+            assert_eq!(expirations, vec!["2020-03-20", "2020-06-19"]);
+        }
+
         #[test]
         fn test_deserialize_rejects_a_key_in_another_date_format() {
             let chain_json = match serde_json::to_string(&chain("TEST", "2030-01-15")) {
