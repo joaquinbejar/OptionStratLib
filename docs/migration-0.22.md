@@ -673,7 +673,10 @@ reference values in the CHANGELOG:
   mark to market (#728) and size in shares (#731);
 - put spreads chart and price their textbook payoff (#696), butterflies
   their 1/2/1 payoff (#706);
-- `decimal_to_f64` is correctly rounded (#670).
+- `decimal_to_f64` is correctly rounded (#670);
+- `Options::payoff` and the P&L built on it are each family's terminal payoff,
+  the value its pricing kernel gives at `T = 0`, signed by the side, and the
+  vanilla intrinsic value is the exact `Decimal` difference (#844).
 
 ## 7. Where to go next
 

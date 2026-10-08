@@ -669,6 +669,7 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::option::Option
 pub fn optionstratlib_core::model::option::Options::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub mod optionstratlib_core::model::payoff
 pub struct optionstratlib_core::model::payoff::PayoffInfo
+pub optionstratlib_core::model::payoff::PayoffInfo::exotic_params: core::option::Option<optionstratlib_core::model::option::ExoticParams>
 pub optionstratlib_core::model::payoff::PayoffInfo::side: financial_types::Side
 pub optionstratlib_core::model::payoff::PayoffInfo::spot: positive::positive::Positive
 pub optionstratlib_core::model::payoff::PayoffInfo::spot_max: core::option::Option<positive::positive::Positive>

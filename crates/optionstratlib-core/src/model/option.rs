@@ -415,6 +415,16 @@ impl Options {
     /// a path-dependent payoff build a [`PayoffInfo`] with the observed
     /// extremes and call [`crate::model::payoff::Payoff::payoff`] on the
     /// option type.
+    ///
+    /// # Exotic options
+    ///
+    /// The payoff is the contract's terminal payoff, the value its pricing
+    /// kernel returns at `T = 0` (#844), signed by the side for every family.
+    /// The option's `exotic_params` reach the [`PayoffInfo`], so a two-asset
+    /// rainbow reads its second asset price and a cliquet its global cap and
+    /// floor; observed Asian fixings and lookback extremes do not, so an
+    /// Asian pays its intrinsic value on the spot and a floating-strike
+    /// lookback pays `0`, as a new contract does at expiry.
     pub fn payoff(&self) -> OptionsResult<Decimal> {
         let payoff_info = PayoffInfo {
             spot: self.underlying_price,
@@ -424,6 +434,7 @@ impl Options {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: self.exotic_params.clone(),
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
         let size = self.position_size()?;
@@ -466,6 +477,7 @@ impl Options {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: self.exotic_params.clone(),
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
         let size = self.position_size()?;
@@ -506,6 +518,7 @@ impl Options {
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: self.exotic_params.clone(),
         };
         let payoff = self.option_type.payoff(&payoff_info)?;
         let size = self.position_size()?;
@@ -876,11 +889,10 @@ mod tests_options_payoffs {
         );
         option.strike_price = Positive::ZERO;
         option.underlying_price = Positive::MAX;
-        option.quantity = Positive::ONE;
+        option.quantity = Positive::TWO;
 
-        // `Positive::MAX` is representable, but the nearest `f64` to it
-        // rounds above `Decimal::MAX`, so the round trip fails at quantity
-        // one — no extreme quantity is needed.
+        // The unit payoff is `Decimal::MAX` exactly since #844 computes it in
+        // `Decimal`; two contracts of it leave the range.
         assert!(matches!(
             option.payoff(),
             Err(OptionsError::PayoffError { .. })

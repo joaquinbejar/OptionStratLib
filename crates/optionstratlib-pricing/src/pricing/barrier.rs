@@ -99,6 +99,7 @@ pub fn barrier_black_scholes(option: &Options) -> Result<Decimal, PricingError> 
             spot_prices: None,
             spot_min: None,
             spot_max: None,
+            exotic_params: None,
         };
         return Ok(option.option_type.payoff(&info)?);
     }

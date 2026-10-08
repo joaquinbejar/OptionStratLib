@@ -442,6 +442,9 @@ says whether any value moves.
   `uncertain_volatility_bounds` gives a short position its negative bounds
   instead of `(0, 0)` (#715).
 - **Conversions:** `decimal_to_f64` is correctly rounded (#670).
+- **Payoffs:** `Options::payoff` and P&L are each family's terminal payoff,
+  the pricing kernel's value at `T = 0`, signed by the side; the vanilla
+  intrinsic value is exact in `Decimal` (#844).
 
 ## Measured baseline
 

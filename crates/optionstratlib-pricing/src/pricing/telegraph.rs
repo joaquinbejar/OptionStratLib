@@ -1154,8 +1154,11 @@ mod tests_telegraph_seeded {
     /// standard normal shock instead of returning one path driven by a
     /// positive uniform. Re-baselined by #755: the regime selects the
     /// volatility instead of the sign of the shock, so each draw enters
-    /// unsigned (both regimes at 20% here).
-    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.237916421487854842265370875);
+    /// unsigned (both regimes at 20% here). Re-baselined by #844: each
+    /// path's payoff is the exact `Decimal` intrinsic value instead of an
+    /// `f64` difference taken back to `Decimal`, which moves the mean by
+    /// `8.8e-17` from `40.237916421487854842265370875`.
+    const PINNED_TELEGRAPH_PRICE: Decimal = dec!(40.237916421487854754626272623);
 
     fn option_30d() -> Options {
         Options {

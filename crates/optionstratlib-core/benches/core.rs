@@ -173,6 +173,7 @@ fn bench_payoff(c: &mut Criterion) {
         spot_prices: None,
         spot_min: None,
         spot_max: None,
+        exotic_params: None,
     };
     let spot = pos_or_panic!(110.0);
 
