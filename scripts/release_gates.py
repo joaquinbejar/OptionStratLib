@@ -97,6 +97,9 @@ GATES: tuple[Gate, ...] = (
          "the direct-component examples: Clippy, tests, run"),
     Gate("direct-examples-packaged", "Consumers", "make check-direct-examples-packaged",
          "the direct-component examples built outside the repository against the packaged crates"),
+    Gate("release-notes", "Consumers", "make check-release-notes",
+         "every manifest-plus-program pair of RELEASE-NOTES.md built as a standalone crate outside the repository "
+         "(needs network access for the crates.io index)"),
     Gate("components", "Per crate", "make check-components",
          "each component alone with default, no and all features, named feature sets, Clippy, rustdoc "
          "`-D warnings` with and without features, package contents, and the packaged archives"),
