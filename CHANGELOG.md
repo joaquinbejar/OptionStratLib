@@ -16,6 +16,37 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Core time, futures and balance helpers report a failed step instead of
+  inventing a value** (#805). Values for every input that worked before are
+  unchanged, except that the `Balance` products are now exact `Decimal`.
+  - `utils::time::get_x_days_formatted_pos` returns
+    `Result<String, ExpirationDateError>`. A day count past `i64` or past
+    the calendar was replaced by today's date; it is now
+    `ExpirationDateError::ArithmeticOverflow`.
+  - `Marginable::liquidation_price` returns `Option<Positive>`. A long whose
+    margin buffer is wider than its entry price has no reachable
+    liquidation price and returns `None`; it returned `Positive::ZERO`,
+    which `is_liquidation_risk` compared against the spot, so a long was
+    reported at risk at a price of zero it survives. A negative short
+    threshold stays `Some(Positive::ZERO)`, a documented floor: every
+    non-negative price crosses it. `is_liquidation_risk` keeps its
+    signature and returns `false` for `None`.
+  - `Expirable::days_to_expiration` returns `Result<Positive,
+    PositionError>` and `Expirable::time_to_expiration_years` returns
+    `Result<Decimal, PositionError>`. `FuturePosition` turned a `get_years`
+    error into zero days, which reads as expired, and multiplied the years
+    by 365 with a panicking operator; both are now errors. The future rho
+    reports the failure as `GreeksError::Pricing`.
+  - `Balance::get_total_value`, `Balance::get_cost_basis` and
+    `Portfolio::get_total_value` return `Result<Positive, PositiveError>`,
+    and `Balance::get_percentage_return` returns `Result<Decimal,
+    DecimalError>`. They round-tripped through `f64` with `unwrap_or(0)`;
+    they now stay in `Decimal` and report an overflow as an error.
+  - Migration: add `?` (or match the `Err`) at each call; match `None` from
+    `liquidation_price` where a long may have no liquidation level, and
+    implement `days_to_expiration` with the `Result` return in a custom
+    `Expirable`.
+
 - **The strategy width, break-even and aggregation helpers and the
   adjustment-target gaps return a `Result`** (#788). Each one used a
   panicking `Positive` / `Decimal` operator on values the caller controls

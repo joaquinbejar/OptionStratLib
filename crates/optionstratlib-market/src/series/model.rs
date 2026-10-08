@@ -453,7 +453,8 @@ mod tests_option_series {
 
     // Helper function to create a simple OptionChain for testing
     fn create_test_chain(expiration_days: Positive) -> OptionChain {
-        let date = get_x_days_formatted_pos(expiration_days);
+        let date =
+            get_x_days_formatted_pos(expiration_days).expect("test expiration fits the calendar");
         let mut chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
@@ -718,11 +719,11 @@ mod tests_option_series {
             assert!(displaying.contains("risk_free_rate\":\"0.05"));
             assert!(displaying.contains("dividend_yield\":\"0.02\""));
 
-            let date = get_x_days_formatted_pos(Positive::ONE);
+            let date = get_x_days_formatted_pos(Positive::ONE).expect("one day ahead");
             let matches = date.to_string();
             assert!(displaying.contains(&matches));
 
-            let date = get_x_days_formatted_pos(pos_or_panic!(7.0));
+            let date = get_x_days_formatted_pos(pos_or_panic!(7.0)).expect("seven days ahead");
             let matches = date.to_string();
             assert!(displaying.contains(&matches));
 
