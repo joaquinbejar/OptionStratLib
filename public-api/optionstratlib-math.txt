@@ -53,7 +53,7 @@ pub fn optionstratlib_math::curves::Curve::measure_under(&self, &rust_decimal::d
 pub fn optionstratlib_math::curves::Curve::scale(&self, alloc::vec::Vec<&rust_decimal::decimal::Decimal>) -> core::result::Result<Self, Self::Error>
 pub fn optionstratlib_math::curves::Curve::translate(&self, alloc::vec::Vec<&rust_decimal::decimal::Decimal>) -> core::result::Result<Self, Self::Error>
 impl optionstratlib_math::geometrics::Interpolate<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
+pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, rust_decimal::decimal::Decimal) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
 pub fn optionstratlib_math::curves::Curve::interpolate(&self, Input, optionstratlib_math::geometrics::InterpolationType) -> core::result::Result<Point, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::LinearInterpolation<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
 pub fn optionstratlib_math::curves::Curve::linear_interpolate(&self, rust_decimal::decimal::Decimal) -> core::result::Result<optionstratlib_math::curves::Point2D, optionstratlib_math::error::InterpolationError>
@@ -148,7 +148,7 @@ pub fn optionstratlib_math::curves::Curve::translate(&self, alloc::vec::Vec<&rus
 impl optionstratlib_math::geometrics::HasX for optionstratlib_math::curves::Point2D
 pub fn optionstratlib_math::curves::Point2D::get_x(&self) -> rust_decimal::decimal::Decimal
 impl optionstratlib_math::geometrics::Interpolate<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
+pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, rust_decimal::decimal::Decimal) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
 pub fn optionstratlib_math::curves::Curve::interpolate(&self, Input, optionstratlib_math::geometrics::InterpolationType) -> core::result::Result<Point, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::Interpolate<optionstratlib_math::surfaces::Point3D, optionstratlib_math::curves::Point2D> for optionstratlib_math::surfaces::Surface
 pub fn optionstratlib_math::surfaces::Surface::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
@@ -509,7 +509,7 @@ pub trait optionstratlib_math::geometrics::Interpolate<Point, Input> where Input
 pub fn optionstratlib_math::geometrics::Interpolate::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
 pub fn optionstratlib_math::geometrics::Interpolate::interpolate(&self, Input, optionstratlib_math::geometrics::InterpolationType) -> core::result::Result<Point, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::Interpolate<optionstratlib_math::curves::Point2D, rust_decimal::decimal::Decimal> for optionstratlib_math::curves::Curve
-pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
+pub fn optionstratlib_math::curves::Curve::find_bracket_points(&self, rust_decimal::decimal::Decimal) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>
 pub fn optionstratlib_math::curves::Curve::interpolate(&self, Input, optionstratlib_math::geometrics::InterpolationType) -> core::result::Result<Point, optionstratlib_math::error::InterpolationError>
 impl optionstratlib_math::geometrics::Interpolate<optionstratlib_math::surfaces::Point3D, optionstratlib_math::curves::Point2D> for optionstratlib_math::surfaces::Surface
 pub fn optionstratlib_math::surfaces::Surface::find_bracket_points(&self, Input) -> core::result::Result<(usize, usize), optionstratlib_math::error::InterpolationError>

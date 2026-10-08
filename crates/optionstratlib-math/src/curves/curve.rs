@@ -24,9 +24,9 @@ use rayon::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, btree_set};
 use std::fmt::{Display, Formatter};
-use std::ops::Index;
+use std::ops::{Bound, Index};
 
 /// Represents a mathematical curve as a collection of 2D points.
 ///
@@ -201,7 +201,7 @@ impl Curve {
     /// returning the first, which would be the lowest ordinate of the stack.
     /// [`AxisOperations::get_values`] reads all of them.
     fn exact_point_at(&self, x: Decimal) -> Result<Option<Point2D>, InterpolationError> {
-        let mut at_x = self.points.iter().filter(|p| p.x == x);
+        let mut at_x = self.points_at(x);
         let Some(point) = at_x.next() else {
             return Ok(None);
         };
@@ -209,6 +209,131 @@ impl Curve {
             return Err(InterpolationError::DegenerateInterval);
         }
         Ok(Some(*point))
+    }
+
+    /// Every point at the abscissa `x`, in `(x, y)` order.
+    ///
+    /// `Point2D` orders on `(x, y)`, so the points sharing an abscissa are
+    /// contiguous in the tree and a range bounded by the extreme ordinates
+    /// reads them in O(log n) instead of filtering every point (#858).
+    fn points_at(&self, x: Decimal) -> btree_set::Range<'_, Point2D> {
+        self.points
+            .range(Point2D { x, y: Decimal::MIN }..=Point2D { x, y: Decimal::MAX })
+    }
+
+    /// The point immediately after `point` in `(x, y)` order.
+    fn point_after(&self, point: &Point2D) -> Option<&Point2D> {
+        self.points
+            .range((Bound::Excluded(*point), Bound::Unbounded))
+            .next()
+    }
+
+    /// The point immediately before `point` in `(x, y)` order.
+    fn point_before(&self, point: &Point2D) -> Option<&Point2D> {
+        self.points.range(..*point).next_back()
+    }
+
+    /// The two consecutive points
+    /// [`find_bracket_points`](Interpolate::find_bracket_points) selects for
+    /// `x`, read off the tree in O(log n) without collecting the points.
+    ///
+    /// The scan it replaces returns the first window `(i, i + 1)` with
+    /// `x[i] <= x <= x[i + 1]`. With `k` the first point whose abscissa is
+    /// at least `x`, that window is `(k - 1, k)`, or `(0, 1)` when `k` is the
+    /// first point, so the same pair is selected, a stack of ordinates at
+    /// `x` included (#858). The errors are the scan's, in the same order.
+    fn bracket(&self, x: Decimal) -> Result<(&Point2D, &Point2D), InterpolationError> {
+        if self.points.len() < 2 {
+            return Err(InterpolationError::EmptyData);
+        }
+        let (Some(first), Some(last)) = (self.points.first(), self.points.last()) else {
+            return Err(InterpolationError::EmptyData);
+        };
+        if x < first.x || x > last.x {
+            return Err(InterpolationError::OutOfRange {
+                target: x.to_string(),
+            });
+        }
+        let floor = Point2D { x, y: Decimal::MIN };
+        // `x <= last.x`, so some point sits at or after `floor`.
+        let right = self
+            .points
+            .range(floor..)
+            .next()
+            .ok_or(InterpolationError::DegenerateInterval)?;
+        match self.points.range(..floor).next_back() {
+            Some(left) => Ok((left, right)),
+            // `right` is the first point: the window is `(0, 1)`, and the
+            // two-point check above guarantees the second exists.
+            None => self
+                .point_after(right)
+                .map(|second| (right, second))
+                .ok_or(InterpolationError::DegenerateInterval),
+        }
+    }
+
+    /// The four samples [`BiLinearInterpolation::bilinear_interpolate`]
+    /// reads at `x`: the near edge `(i, i + 1)` bracketing `x`, then the far
+    /// edge `(f, f + 1)` with `f = min(i + 2, len - 2)`.
+    ///
+    /// The far edge is `i + 2` exactly when two samples follow the near
+    /// edge, and the curve's last two samples otherwise, so the clamp is
+    /// read off the tree without an index (#858).
+    fn bilinear_cell(&self, x: Decimal) -> Result<[&Point2D; 4], InterpolationError> {
+        let (near_left, near_right) = self.bracket(x)?;
+        let mut beyond = self
+            .points
+            .range((Bound::Excluded(*near_right), Bound::Unbounded));
+        let far = match (beyond.next(), beyond.next()) {
+            (Some(left), Some(right)) => Some((left, right)),
+            _ => {
+                let mut tail = self.points.iter().rev();
+                match (tail.next(), tail.next()) {
+                    (Some(right), Some(left)) => Some((left, right)),
+                    _ => None,
+                }
+            }
+        };
+        let (far_left, far_right) = far.ok_or_else(|| {
+            InterpolationError::Bilinear(format!(
+                "the far edge needs two points, the curve has {}",
+                self.points.len()
+            ))
+        })?;
+        Ok([near_left, near_right, far_left, far_right])
+    }
+
+    /// The four samples [`CubicInterpolation::cubic_interpolate`] reads at
+    /// `x`: with `(i, i + 1)` the bracket, the window starts at 0 for the
+    /// first segment, at `len - 4` for the last one and at `i - 1`
+    /// otherwise.
+    ///
+    /// `i == 0` is a bracket with no sample before it and `i == len - 2` one
+    /// with no sample after it, so the window is read off the tree without
+    /// an index (#858).
+    fn cubic_window(&self, x: Decimal) -> Result<[&Point2D; 4], InterpolationError> {
+        let (left, right) = self.bracket(x)?;
+        let window = match (self.point_before(left), self.point_after(right)) {
+            // `i == 0`: the first four samples.
+            (None, _) => {
+                let mut head = self.points.iter();
+                (head.next(), head.next(), head.next(), head.next())
+            }
+            // `i == len - 2`: the last four samples.
+            (Some(_), None) => {
+                let mut tail = self.points.iter().rev();
+                let (p3, p2, p1, p0) = (tail.next(), tail.next(), tail.next(), tail.next());
+                (p0, p1, p2, p3)
+            }
+            (Some(before), Some(after)) => (Some(before), Some(left), Some(right), Some(after)),
+        };
+        match window {
+            (Some(p0), Some(p1), Some(p2), Some(p3)) => Ok([p0, p1, p2, p3]),
+            _ => Err(InterpolationError::Cubic(format!(
+                "the window needs four points, the curve has {}",
+                self.points.len()
+            ))),
+        }
     }
 }
 
@@ -576,7 +701,19 @@ impl Index<usize> for Curve {
 /// - [`Point2D`]: The fundamental data type for the curve's points.
 /// - [`Interpolate`]: The trait defining interpolation operations.
 ///
-impl Interpolate<Point2D, Decimal> for Curve {}
+impl Interpolate<Point2D, Decimal> for Curve {
+    /// Same contract and same indices as the trait's default, including the
+    /// degenerate window over a repeated abscissa, without collecting the
+    /// points into a `Vec` first: the pair is found in O(log n) and its
+    /// index by counting the points before it (#858).
+    fn find_bracket_points(&self, x: Decimal) -> Result<(usize, usize), InterpolationError> {
+        let (left, _) = self.bracket(x)?;
+        let i = self.points.range(..*left).count();
+        i.checked_add(1)
+            .map(|j| (i, j))
+            .ok_or(InterpolationError::DegenerateInterval)
+    }
+}
 
 /// Implements the `LinearInterpolation` trait for the `Curve` struct.
 ///
@@ -674,10 +811,7 @@ impl LinearInterpolation<Point2D, Decimal> for Curve {
             return Ok(point);
         }
 
-        let (i, j) = self.find_bracket_points(x)?;
-
-        let p1 = self.point_at(i, InterpolationError::Linear)?;
-        let p2 = self.point_at(j, InterpolationError::Linear)?;
+        let (p1, p2) = self.bracket(x)?;
 
         // A curve is meant to be a function of its abscissa, but nothing
         // enforces it: a `BTreeSet<Point2D>` holds two points sharing an
@@ -868,21 +1002,12 @@ impl BiLinearInterpolation<Point2D, Decimal> for Curve {
             return Ok(point);
         }
 
-        let (i, _j) = self.find_bracket_points(x)?;
-
         // The near edge is the segment bracketing `x`, so `dx` below stays in
-        // `[0, 1]`. The far edge is the segment two positions on;
-        // `find_bracket_points` only guarantees `i + 1` exists, so over the
-        // last two segments that one runs past the end and is clamped to the
-        // curve's last segment, `len - 2`. The four-sample check above keeps
-        // that subtraction in range.
-        let bilinear = InterpolationError::Bilinear;
-        let far = shift_index(i, 2, bilinear)?.min(shift_index(len, -2, bilinear)?);
-
-        let p11 = self.point_at(i, bilinear)?; // Near edge, left
-        let p12 = self.point_at(shift_index(i, 1, bilinear)?, bilinear)?; // Near edge, right
-        let p21 = self.point_at(far, bilinear)?; // Far edge, left
-        let p22 = self.point_at(shift_index(far, 1, bilinear)?, bilinear)?; // Far edge, right
+        // `[0, 1]`. The far edge is the segment two positions on, samples
+        // `i + 2` and `i + 3`; over the last two segments that one runs past
+        // the end and is clamped to the curve's last segment, `len - 2`. The
+        // four-sample check above keeps the clamp inside the curve.
+        let [p11, p12, p21, p22] = self.bilinear_cell(x)?;
 
         let span = d_sub(p12.x, p11.x, "Curve::bilinear_interpolate::span")
             .map_err(interp_err(InterpolationError::Bilinear))?;
@@ -1074,30 +1199,7 @@ impl CubicInterpolation<Point2D, Decimal> for Curve {
             return Ok(point);
         }
 
-        let (i, _) = self.find_bracket_points(x)?;
-
-        // Select four points for interpolation
-        // Ensuring we always have enough points before and after
-        // The window starts at 0 for the first segment, at `len - 4` for the
-        // last one and at `i - 1` otherwise, and spans four samples.
-        let cubic = InterpolationError::Cubic;
-        let first = if i == 0 {
-            0
-        } else if i == shift_index(len, -2, cubic)? {
-            shift_index(len, -4, cubic)?
-        } else {
-            shift_index(i, -1, cubic)?
-        };
-        let window = [
-            first,
-            shift_index(first, 1, cubic)?,
-            shift_index(first, 2, cubic)?,
-            shift_index(first, 3, cubic)?,
-        ];
-        let p0 = self.point_at(window[0], InterpolationError::Cubic)?;
-        let p1 = self.point_at(window[1], InterpolationError::Cubic)?;
-        let p2 = self.point_at(window[2], InterpolationError::Cubic)?;
-        let p3 = self.point_at(window[3], InterpolationError::Cubic)?;
+        let [p0, p1, p2, p3] = self.cubic_window(x)?;
 
         let span = d_sub(p2.x, p1.x, "Curve::cubic_interpolate::span")
             .map_err(interp_err(InterpolationError::Cubic))?;
@@ -2170,7 +2272,7 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     /// there. On a curve honouring the one-point-per-abscissa rule of
     /// [`Curve::new`] there is at most one.
     fn contains_point(&self, x: &Decimal) -> bool {
-        self.points.iter().any(|p| &p.x == x)
+        self.points_at(*x).next().is_some()
     }
 
     /// Returns the abscissa of every point, in `(x, y)` order.
@@ -2189,11 +2291,7 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     /// of [`Curve::new`] returns at most one value; anything longer says the
     /// curve is not a function of its abscissa.
     fn get_values(&self, x: Decimal) -> Vec<&Decimal> {
-        self.points
-            .iter()
-            .filter(|p| p.x == x)
-            .map(|p| &p.y)
-            .collect()
+        self.points_at(x).map(|p| &p.y).collect()
     }
 
     fn get_closest_point(&self, x: &Decimal) -> Result<&Point2D, Self::Error> {
@@ -2227,11 +2325,7 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     /// which is the lowest ordinate of the stack, and the rest are invisible
     /// to the caller. Use [`Self::get_values`] to see all of them.
     fn get_point(&self, x: &Decimal) -> Option<&Point2D> {
-        if self.contains_point(x) {
-            self.points.iter().find(|p| p.x == *x)
-        } else {
-            None
-        }
+        self.points_at(*x).next()
     }
 }
 
@@ -2381,10 +2475,7 @@ impl GeometricTransformations<Point2D> for Curve {
     }
 
     fn derivative_at(&self, point: &Point2D) -> Result<Vec<Decimal>, Self::Error> {
-        let (i, j) = self.find_bracket_points(point.x)?;
-
-        let p0 = self.point_at(i, InterpolationError::Linear)?;
-        let p1 = self.point_at(j, InterpolationError::Linear)?;
+        let (p0, p1) = self.bracket(point.x)?;
 
         let op = "Curve::derivative_at";
         let rise = d_sub(p1.y, p0.y, op).map_err(analysis_err)?;
@@ -5408,5 +5499,197 @@ mod tests_risk_volatility {
             curve.compute_risk_metrics().unwrap().volatility,
             curve.compute_basic_metrics().unwrap().std_dev
         );
+    }
+}
+
+/// The O(log n) bracketing of #858 against the scan it replaced: the same
+/// indices, the same points and the same errors, on curves with stacked
+/// abscissas, at every sample, between samples, at the ends and outside.
+#[cfg(test)]
+mod tests_bracket_matches_scan {
+    use super::*;
+
+    /// The scan `Interpolate::find_bracket_points` ran before #858.
+    fn scan_bracket(curve: &Curve, x: Decimal) -> Result<(usize, usize), InterpolationError> {
+        let points: Vec<&Point2D> = curve.points.iter().collect();
+        if points.len() < 2 {
+            return Err(InterpolationError::EmptyData);
+        }
+        let (first, last) = (points[0], points[points.len() - 1]);
+        if x < first.x || x > last.x {
+            return Err(InterpolationError::OutOfRange {
+                target: x.to_string(),
+            });
+        }
+        for (i, pair) in points.windows(2).enumerate() {
+            if pair[0].x <= x && x <= pair[1].x {
+                return Ok((i, i + 1));
+            }
+        }
+        Err(InterpolationError::DegenerateInterval)
+    }
+
+    /// The bilinear cell the index arithmetic selected before #858.
+    fn scan_bilinear_cell(curve: &Curve, i: usize) -> [usize; 4] {
+        let far = (i + 2).min(curve.len() - 2);
+        [i, i + 1, far, far + 1]
+    }
+
+    /// The cubic window the index arithmetic selected before #858.
+    fn scan_cubic_window(curve: &Curve, i: usize) -> [usize; 4] {
+        let len = curve.len();
+        let first = if i == 0 {
+            0
+        } else if i == len - 2 {
+            len - 4
+        } else {
+            i - 1
+        };
+        [first, first + 1, first + 2, first + 3]
+    }
+
+    fn nth(curve: &Curve, index: usize) -> &Point2D {
+        curve.points.iter().nth(index).unwrap()
+    }
+
+    fn same_points(curve: &Curve, got: [&Point2D; 4], want: [usize; 4]) -> bool {
+        got.iter()
+            .zip(want)
+            .all(|(point, index)| *point == nth(curve, index))
+    }
+
+    /// Checks every reader #858 touched against its scan at `x`.
+    fn check(curve: &Curve, x: Decimal) {
+        let scanned = scan_bracket(curve, x);
+        let fast = curve.find_bracket_points(x);
+        assert_eq!(
+            format!("{fast:?}"),
+            format!("{scanned:?}"),
+            "find_bracket_points at {x} on {curve:?}"
+        );
+        let pair = curve.bracket(x);
+        match &scanned {
+            Ok((i, j)) => {
+                let (left, right) = pair.unwrap();
+                assert_eq!((left, right), (nth(curve, *i), nth(curve, *j)));
+                if curve.len() >= 4 {
+                    let cell = curve.bilinear_cell(x).unwrap();
+                    assert!(same_points(curve, cell, scan_bilinear_cell(curve, *i)));
+                    let window = curve.cubic_window(x).unwrap();
+                    assert!(same_points(curve, window, scan_cubic_window(curve, *i)));
+                }
+            }
+            Err(e) => assert_eq!(format!("{:?}", pair.unwrap_err()), format!("{e:?}")),
+        }
+
+        let filtered: Vec<&Point2D> = curve.points.iter().filter(|p| p.x == x).collect();
+        assert_eq!(curve.points_at(x).collect::<Vec<_>>(), filtered);
+        assert_eq!(curve.contains_point(&x), !filtered.is_empty());
+        assert_eq!(curve.get_point(&x), filtered.first().copied());
+        assert_eq!(
+            curve.get_values(x),
+            filtered.iter().map(|p| &p.y).collect::<Vec<_>>()
+        );
+        let exact = match filtered[..] {
+            [] => Ok(None),
+            [only] => Ok(Some(*only)),
+            _ => Err(InterpolationError::DegenerateInterval),
+        };
+        assert_eq!(
+            format!("{:?}", curve.exact_point_at(x)),
+            format!("{exact:?}")
+        );
+    }
+
+    /// Every sample, every midpoint, both ends and beyond them.
+    fn probes(curve: &Curve) -> Vec<Decimal> {
+        let mut xs = vec![dec!(-1000), dec!(1000)];
+        let abscissas: Vec<Decimal> = curve.points.iter().map(|p| p.x).collect();
+        for pair in abscissas.windows(2) {
+            xs.push((pair[0] + pair[1]) / dec!(2));
+        }
+        for x in abscissas {
+            xs.extend([x, x - dec!(0.001), x + dec!(0.001)]);
+        }
+        xs
+    }
+
+    fn curve_of(points: &[(i64, i64)]) -> Curve {
+        Curve::new(
+            points
+                .iter()
+                .map(|&(x, y)| Point2D::new(Decimal::from(x), Decimal::from(y)))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn edge_curves() {
+        let cases: Vec<Vec<(i64, i64)>> = vec![
+            vec![],
+            vec![(1, 1)],
+            vec![(1, 1), (1, 2)],
+            vec![(0, 0), (1, 1)],
+            vec![(0, 0), (1, 1), (2, 4), (3, 9)],
+            vec![(0, 0), (0, 5), (1, 1), (2, 4), (3, 9)],
+            vec![(0, 0), (1, 1), (1, 3), (1, 7), (2, 4), (3, 9)],
+            vec![(0, 0), (1, 1), (2, 4), (3, 9), (3, 10)],
+            vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+            vec![(-3, 2), (-1, 0), (4, 4), (5, -1), (9, 3), (12, 0)],
+        ];
+        for points in cases {
+            let curve = curve_of(&points);
+            for x in probes(&curve) {
+                check(&curve, x);
+            }
+        }
+    }
+
+    #[test]
+    fn decimal_scales_compare_by_value() {
+        // `1.0` and `1` are the same abscissa to both the scan and the tree.
+        let curve = Curve::new(
+            [
+                Point2D::new(dec!(0), dec!(0)),
+                Point2D::new(dec!(1.0), dec!(1)),
+                Point2D::new(dec!(2.00), dec!(4)),
+                Point2D::new(dec!(3), dec!(9)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        for x in [
+            dec!(1),
+            dec!(1.000),
+            dec!(2),
+            dec!(2.0),
+            dec!(0.0),
+            dec!(3.00),
+        ] {
+            check(&curve, x);
+        }
+    }
+
+    #[test]
+    fn random_curves_with_stacked_abscissas() {
+        // A fixed-seed generator: small integer coordinates make stacks of
+        // ordinates at one abscissa common.
+        let mut state: u64 = 0x2545_f491_4f6c_dd1d;
+        let mut next = |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        for _ in 0..2_000 {
+            let len = next(14) as usize;
+            let points: Vec<(i64, i64)> = (0..len)
+                .map(|_| (next(10) as i64 - 3, next(6) as i64 - 2))
+                .collect();
+            let curve = curve_of(&points);
+            for x in probes(&curve) {
+                check(&curve, x);
+            }
+        }
     }
 }

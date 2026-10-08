@@ -27,7 +27,8 @@ use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterato
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::cmp::Reverse;
+use std::collections::{BTreeSet, btree_set};
 use std::ops::Index;
 use std::sync::Arc;
 use tracing::warn;
@@ -347,6 +348,25 @@ impl Surface {
         Ok(interpolated_z)
     }
 
+    /// Every point above the xy-coordinate `xy`, in `(x, y, z)` order.
+    ///
+    /// `Point3D` orders on `(x, y, z)`, so the heights above one cell are
+    /// contiguous in the tree and a range bounded by the extreme heights
+    /// reads them in O(log n) instead of filtering every point (#858).
+    fn points_at(&self, xy: &Point2D) -> btree_set::Range<'_, Point3D> {
+        self.points.range(
+            Point3D {
+                x: xy.x,
+                y: xy.y,
+                z: Decimal::MIN,
+            }..=Point3D {
+                x: xy.x,
+                y: xy.y,
+                z: Decimal::MAX,
+            },
+        )
+    }
+
     /// Fetches the point at `index` without going through the panicking
     /// [`Index`] contract.
     fn point_at(&self, index: usize) -> Result<&Point3D, SurfaceError> {
@@ -464,6 +484,113 @@ fn sort_by_distance<'a>(
         *slot = point;
     }
     Ok(())
+}
+
+/// Position of a point in the tree, relative to the split
+/// [`nearest`] walks outwards from: a point before the split, counted
+/// backwards from it, sorts ahead of every point from the split on, so
+/// ordering on this reproduces the tree's own order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum TreeOrder {
+    Before(Reverse<usize>),
+    From(usize),
+}
+
+/// Whether [`squared_distance`] succeeds from `(x, y)` to every point of
+/// `points`.
+///
+/// Every step of that distance is monotone in the magnitude of the
+/// coordinate offsets, and those offsets are bounded by the extreme
+/// abscissas (the first and last points of the tree) and the extreme
+/// ordinates (one pass, comparisons only). If the distance at those bounds
+/// fits, every point's does.
+fn distances_fit(points: &BTreeSet<Point3D>, x: Decimal, y: Decimal, op: &'static str) -> bool {
+    let (Some(first), Some(last)) = (points.first(), points.last()) else {
+        return true;
+    };
+    let (y_min, y_max) = points
+        .iter()
+        .fold((first.y, first.y), |(lo, hi), p| (lo.min(p.y), hi.max(p.y)));
+    let widest = |lo: Decimal, hi: Decimal, at: Decimal| -> Option<Decimal> {
+        let below = d_sub(lo, at, op).ok()?.abs();
+        let above = d_sub(hi, at, op).ok()?.abs();
+        powu_checked(below.max(above), 2, op).ok()
+    };
+    match (widest(first.x, last.x, x), widest(y_min, y_max, y)) {
+        (Some(dx2), Some(dy2)) => d_add(dx2, dy2, op).is_ok(),
+        _ => false,
+    }
+}
+
+/// The first `k` points of `points` in the order [`sort_by_distance`] leaves
+/// them, ties included, without keying and sorting every point (#858).
+///
+/// The sort is stable over the tree's order, so its first `k` are the `k`
+/// smallest `(squared distance, tree position)` pairs. The tree is sorted by
+/// `x`, so this walks outwards from `x` on each side and stops a side at the
+/// first point whose squared abscissa offset alone exceeds the `k`-th best
+/// distance: that offset never shrinks further out, and a squared distance
+/// is never below its squared abscissa offset, so no point beyond can enter.
+/// The comparison is strict, so a point that ties the `k`-th best on
+/// distance is still keyed and its tree position decides.
+///
+/// When some point's distance would overflow, the sort reports the first
+/// such point in tree order; a walk that stops early cannot, so that case
+/// runs the sort itself and returns the same error.
+fn nearest<'a>(
+    points: &'a BTreeSet<Point3D>,
+    x: Decimal,
+    y: Decimal,
+    k: usize,
+    op: &'static str,
+) -> Result<Vec<&'a Point3D>, DecimalError> {
+    if !distances_fit(points, x, y, op) {
+        let mut all: Vec<&Point3D> = points.iter().collect();
+        sort_by_distance(&mut all, x, y, op)?;
+        all.truncate(k);
+        return Ok(all);
+    }
+
+    let mut best: Vec<(Decimal, TreeOrder, &'a Point3D)> = Vec::with_capacity(k);
+    // Offers `point` to `best`; `false` once no point further out on the
+    // same side can make it.
+    let mut offer = |point: &'a Point3D, order: TreeOrder| -> Result<bool, DecimalError> {
+        let full = best.len() >= k;
+        if full {
+            let reach = powu_checked(d_sub(point.x, x, op)?, 2, op)?;
+            match best.last() {
+                Some(&(kth, _, _)) if reach > kth => return Ok(false),
+                None => return Ok(false),
+                Some(_) => {}
+            }
+        }
+        let distance = squared_distance(point, x, y, op)?;
+        let at = best.partition_point(|&(d, o, _)| (d, o) < (distance, order));
+        if at < k {
+            if full {
+                best.pop();
+            }
+            best.insert(at, (distance, order, point));
+        }
+        Ok(true)
+    };
+
+    let split = Point3D {
+        x,
+        y: Decimal::MIN,
+        z: Decimal::MIN,
+    };
+    for (steps, point) in points.range(split..).enumerate() {
+        if !offer(point, TreeOrder::From(steps))? {
+            break;
+        }
+    }
+    for (steps, point) in points.range(..split).rev().enumerate() {
+        if !offer(point, TreeOrder::Before(Reverse(steps)))? {
+            break;
+        }
+    }
+    Ok(best.into_iter().map(|(_, _, point)| point).collect())
 }
 
 /// Reads one entry of a nearest-neighbour window, naming the slot on the
@@ -925,21 +1052,18 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
             ));
         }
 
-        // Check for degenerate triangle before exact match
-        let unique_coords = self
-            .points
-            .iter()
-            .map(|p| (p.x, p.y))
-            .collect::<BTreeSet<_>>();
-
-        if unique_coords.len() == 1 {
+        // Check for degenerate triangle before exact match. The tree orders
+        // on `(x, y, z)`, so every point shares one xy-coordinate exactly
+        // when the first and the last do.
+        let last = self.points.last().unwrap_or(first);
+        if (first.x, first.y) == (last.x, last.y) {
             return Err(InterpolationError::Linear(
                 "Degenerate triangle detected".to_string(),
             ));
         }
 
         // Check for exact match
-        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
+        if let Some(point) = self.points_at(&xy).next() {
             return Ok(*point);
         }
 
@@ -952,8 +1076,7 @@ impl LinearInterpolation<Point3D, Point2D> for Surface {
         }
 
         let op = "Surface::linear_interpolate";
-        let mut nearest_points: Vec<&Point3D> = self.points.iter().collect();
-        sort_by_distance(&mut nearest_points, xy.x, xy.y, op)
+        let nearest_points = nearest(&self.points, xy.x, xy.y, 3, op)
             .map_err(interp_err(InterpolationError::Linear))?;
 
         let p1 = nth(&nearest_points, 0, InterpolationError::Linear)?;
@@ -1039,33 +1162,22 @@ impl BiLinearInterpolation<Point3D, Point2D> for Surface {
             ));
         }
 
-        // Check for invalid quadrilateral: all points have the same x and y but different z
-        let xy_points: Vec<&Point3D> = self
-            .points
-            .iter()
-            .filter(|p| p.x == xy.x && p.y == xy.y)
-            .collect();
-
-        if xy_points.len() == 4 {
-            let z_values: Vec<Decimal> = xy_points.iter().map(|p| p.z).collect();
-            let unique_z_values: Vec<Decimal> = z_values.clone();
-
-            if unique_z_values.len() > 1 {
-                return Err(InterpolationError::Bilinear(
-                    "Invalid quadrilateral".to_string(),
-                ));
-            }
+        // Check for invalid quadrilateral: exactly four heights above `xy`.
+        // The tree holds no exact duplicate, so those four heights differ.
+        if self.points_at(&xy).count() == 4 {
+            return Err(InterpolationError::Bilinear(
+                "Invalid quadrilateral".to_string(),
+            ));
         }
 
         // For exact matches, return the actual point
-        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
+        if let Some(point) = self.points_at(&xy).next() {
             return Ok(*point);
         }
 
         // Find the four closest points
         let op = "Surface::bilinear_interpolate";
-        let mut sorted_points: Vec<&Point3D> = self.points.iter().collect();
-        sort_by_distance(&mut sorted_points, xy.x, xy.y, op)
+        let sorted_points = nearest(&self.points, xy.x, xy.y, 4, op)
             .map_err(interp_err(InterpolationError::Bilinear))?;
 
         let closest_points = sorted_points.get(0..4).ok_or_else(|| {
@@ -1151,14 +1263,13 @@ impl CubicInterpolation<Point3D, Point2D> for Surface {
         }
 
         // Check for exact point match
-        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
+        if let Some(point) = self.points_at(&xy).next() {
             return Ok(*point);
         }
 
         // Find the 9 closest points for cubic interpolation
         let op = "Surface::cubic_interpolate";
-        let mut sorted_points: Vec<&Point3D> = self.points.iter().collect();
-        sort_by_distance(&mut sorted_points, xy.x, xy.y, op)
+        let sorted_points = nearest(&self.points, xy.x, xy.y, 9, op)
             .map_err(interp_err(InterpolationError::Cubic))?;
 
         let closest_points = sorted_points.get(0..9).ok_or_else(|| {
@@ -1252,7 +1363,7 @@ impl SplineInterpolation<Point3D, Point2D> for Surface {
         }
 
         // Check for exact point match
-        if let Some(point) = self.points.iter().find(|p| p.x == xy.x && p.y == xy.y) {
+        if let Some(point) = self.points_at(&xy).next() {
             return Ok(*point);
         }
 
@@ -1828,7 +1939,7 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     /// heights are stacked there. On a surface honouring the
     /// one-height-per-cell rule of [`Surface::new`] there is at most one.
     fn contains_point(&self, x: &Point2D) -> bool {
-        self.points.iter().any(|p| p.x == x.x && p.y == x.y)
+        self.points_at(x).next().is_some()
     }
 
     /// Returns the xy-coordinate of every point, in `(x, y, z)` order.
@@ -1846,11 +1957,7 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     /// [`Surface::new`] returns at most one value; anything longer says the
     /// surface is not a function of its xy-coordinate.
     fn get_values(&self, x: Point2D) -> Vec<&Decimal> {
-        self.points
-            .iter()
-            .filter(|p| p.x == x.x && p.y == x.y)
-            .map(|p| &p.z)
-            .collect()
+        self.points_at(&x).map(|p| &p.z).collect()
     }
 
     fn get_closest_point(&self, x: &Point2D) -> Result<&Point3D, Self::Error> {
@@ -1885,7 +1992,7 @@ impl AxisOperations<Point3D, Point2D> for Surface {
     /// order, which is the lowest `z` of the stack, and the rest are
     /// invisible to the caller. Use [`Self::get_values`] to see all of them.
     fn get_point(&self, x: &Point2D) -> Option<&Point3D> {
-        self.points.iter().find(|p| p.x == x.x && p.y == x.y)
+        self.points_at(x).next()
     }
 }
 
@@ -1916,9 +2023,8 @@ where
         for xy in &merged_xy_values {
             if self.contains_point(xy) {
                 let pt = self
-                    .points
-                    .iter()
-                    .find(|p| p.x == xy.x && p.y == xy.y)
+                    .points_at(xy)
+                    .next()
                     .ok_or_else(|| {
                         SurfaceError::AnalysisError(format!(
                             "merge_axis_interpolate: missing self point at ({},{}) despite contains_point()",
@@ -1933,9 +2039,8 @@ where
 
             if other.contains_point(xy) {
                 let pt = other
-                    .points
-                    .iter()
-                    .find(|p| p.x == xy.x && p.y == xy.y)
+                    .points_at(xy)
+                    .next()
                     .ok_or_else(|| {
                         SurfaceError::AnalysisError(format!(
                             "merge_axis_interpolate: missing other point at ({},{}) despite contains_point()",
@@ -4680,5 +4785,197 @@ mod tests_coefficient_of_variation {
                 metric: "coefficient of variation"
             })
         ));
+    }
+}
+
+/// The neighbour search of #858 against the full sort it replaced: the same
+/// points in the same order, ties broken the same way, and the same error
+/// when a distance overflows.
+#[cfg(test)]
+mod tests_nearest_matches_sort {
+    use super::*;
+
+    /// What the interpolators did before #858: key every point, sort, keep
+    /// the first `k`.
+    fn sorted_prefix(
+        surface: &Surface,
+        x: Decimal,
+        y: Decimal,
+        k: usize,
+    ) -> Result<Vec<&Point3D>, DecimalError> {
+        let mut all: Vec<&Point3D> = surface.points.iter().collect();
+        sort_by_distance(&mut all, x, y, "test")?;
+        all.truncate(k);
+        Ok(all)
+    }
+
+    fn check(surface: &Surface, x: Decimal, y: Decimal) {
+        for k in [1, 2, 3, 4, 5, 9, 10] {
+            let fast = nearest(&surface.points, x, y, k, "test");
+            let sorted = sorted_prefix(surface, x, y, k);
+            assert_eq!(
+                format!("{fast:?}"),
+                format!("{sorted:?}"),
+                "k = {k} at ({x}, {y}) on {:?}",
+                surface.points
+            );
+        }
+        let xy = Point2D::new(x, y);
+        let filtered: Vec<&Point3D> = surface
+            .points
+            .iter()
+            .filter(|p| p.x == x && p.y == y)
+            .collect();
+        assert_eq!(surface.points_at(&xy).collect::<Vec<_>>(), filtered);
+        assert_eq!(surface.contains_point(&xy), !filtered.is_empty());
+        assert_eq!(surface.get_point(&xy), filtered.first().copied());
+        assert_eq!(
+            surface.get_values(xy),
+            filtered.iter().map(|p| &p.z).collect::<Vec<_>>()
+        );
+    }
+
+    fn surface_of(points: &[(i64, i64, i64)]) -> Surface {
+        Surface::new(
+            points
+                .iter()
+                .map(|&(x, y, z)| {
+                    Point3D::new(Decimal::from(x), Decimal::from(y), Decimal::from(z))
+                })
+                .collect(),
+        )
+    }
+
+    /// Every sample, the cell centres around it, and points outside.
+    fn probes(surface: &Surface) -> Vec<(Decimal, Decimal)> {
+        let mut at = vec![
+            (dec!(-50), dec!(-50)),
+            (dec!(50), dec!(3)),
+            (dec!(0.5), dec!(0.5)),
+        ];
+        for p in &surface.points {
+            at.push((p.x, p.y));
+            at.push((p.x + dec!(0.5), p.y + dec!(0.5)));
+            at.push((p.x - dec!(0.5), p.y));
+        }
+        at
+    }
+
+    #[test]
+    fn grids_with_ties() {
+        // On a regular grid most queries have several neighbours at one
+        // distance, so the tie-break decides which ones are kept.
+        let mut grid = Vec::new();
+        for i in 0..6 {
+            for j in 0..6 {
+                grid.push((i, j, i * j));
+            }
+        }
+        let surface = surface_of(&grid);
+        for (x, y) in probes(&surface) {
+            check(&surface, x, y);
+        }
+        check(&surface, dec!(2.5), dec!(2.5));
+        check(&surface, dec!(3), dec!(2.5));
+    }
+
+    #[test]
+    fn small_and_stacked_surfaces() {
+        let cases: Vec<Vec<(i64, i64, i64)>> = vec![
+            vec![],
+            vec![(1, 1, 1)],
+            vec![(1, 1, 1), (1, 1, 2), (1, 1, 3), (1, 1, 4)],
+            vec![(0, 0, 0), (0, 0, 9), (1, 0, 1), (0, 1, 1), (1, 1, 2)],
+            vec![(0, 0, 0), (2, 0, 0), (-2, 0, 0), (0, 2, 0), (0, -2, 0)],
+        ];
+        for points in cases {
+            let surface = surface_of(&points);
+            for (x, y) in probes(&surface) {
+                check(&surface, x, y);
+            }
+        }
+    }
+
+    #[test]
+    fn random_surfaces() {
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15;
+        let mut next = |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        for _ in 0..400 {
+            let len = next(40) as usize;
+            let points: Vec<(i64, i64, i64)> = (0..len)
+                .map(|_| (next(8) as i64 - 2, next(8) as i64 - 2, next(4) as i64))
+                .collect();
+            let surface = surface_of(&points);
+            for (x, y) in probes(&surface) {
+                check(&surface, x, y);
+            }
+        }
+    }
+
+    #[test]
+    fn distances_that_overflow_report_like_the_sort() {
+        // A distance squared past `Decimal::MAX`: the walk falls back to the
+        // sort, so the error names the same point and operands.
+        let far = Decimal::from(10i64.pow(15));
+        let surface = Surface::new(
+            [
+                Point3D::new(dec!(0), dec!(0), dec!(1)),
+                Point3D::new(dec!(1), dec!(0), dec!(2)),
+                Point3D::new(dec!(0), dec!(1), dec!(3)),
+                Point3D::new(dec!(1), far, dec!(4)),
+                Point3D::new(far, dec!(1), dec!(5)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert!(!distances_fit(
+            &surface.points,
+            dec!(0.5),
+            dec!(0.5),
+            "test"
+        ));
+        let fast = nearest(&surface.points, dec!(0.5), dec!(0.5), 3, "test");
+        assert!(fast.is_err());
+        check(&surface, dec!(0.5), dec!(0.5));
+        // Large coordinates that still fit take the walk and agree.
+        let wide = Decimal::from(10i64.pow(12));
+        let surface = Surface::new(
+            [
+                Point3D::new(dec!(0), dec!(0), dec!(1)),
+                Point3D::new(dec!(1), dec!(0), dec!(2)),
+                Point3D::new(dec!(0), dec!(1), dec!(3)),
+                Point3D::new(dec!(1), wide, dec!(4)),
+                Point3D::new(-wide, dec!(1), dec!(5)),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert!(distances_fit(&surface.points, dec!(0.5), dec!(0.5), "test"));
+        check(&surface, dec!(0.5), dec!(0.5));
+    }
+
+    #[test]
+    fn long_mantissas() {
+        // Thirds do not terminate, so the squared distances round at the
+        // 28th place and can tie after rounding.
+        let third = dec!(1) / dec!(3);
+        let mut points = BTreeSet::new();
+        for i in 0..5i64 {
+            for j in 0..5i64 {
+                let x = third * Decimal::from(i);
+                let y = third * Decimal::from(j);
+                points.insert(Point3D::new(x, y, x + y));
+            }
+        }
+        let surface = Surface::new(points);
+        for (x, y) in probes(&surface) {
+            check(&surface, x, y);
+        }
+        check(&surface, third / dec!(2), third * dec!(1.5));
     }
 }
