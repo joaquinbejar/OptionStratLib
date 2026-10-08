@@ -1012,9 +1012,8 @@ impl PnLCalculator for BullCallSpread {
         expiration_date: ExpirationDate,
         implied_volatility: &Positive,
     ) -> Result<PnL, PricingError> {
-        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
-        // `Positive` range has nowhere to be reported and aborts instead.
-        // `PnL::try_add` adds the same fields and reports it.
+        // `PnL::try_add` adds the legs and reports a total that leaves the
+        // `Positive` range; `PnL` has no `+` since #788.
         let mut total =
             self.long_call
                 .calculate_pnl(market_price, expiration_date, implied_volatility)?;
@@ -1030,9 +1029,8 @@ impl PnLCalculator for BullCallSpread {
         &self,
         underlying_price: &Positive,
     ) -> Result<PnL, PricingError> {
-        // `impl Add for PnL` returns `Self`, so a leg total that leaves the
-        // `Positive` range has nowhere to be reported and aborts instead.
-        // `PnL::try_add` adds the same fields and reports it.
+        // `PnL::try_add` adds the legs and reports a total that leaves the
+        // `Positive` range; `PnL` has no `+` since #788.
         let mut total = self
             .long_call
             .calculate_pnl_at_expiration(underlying_price)?;

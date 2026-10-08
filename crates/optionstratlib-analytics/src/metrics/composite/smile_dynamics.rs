@@ -161,6 +161,13 @@ pub trait SmileDynamicsSurface {
     /// - No options have valid implied volatility values
     /// - The days_to_expiry vector is empty
     /// - No valid surface points can be generated
+    ///
+    /// Returns `SurfaceError::OperationError` (`InvalidParameters`) naming
+    /// `days_to_expiry` when a day count is zero (or too small for
+    /// `sqrt(days / 30)` to be represented) and a strike's skew is not
+    /// zero: the adjustment `skew / sqrt(days / 30)` diverges there. At zero
+    /// skew the adjustment is zero, its limit. The adjusted volatility is
+    /// floored at 0.01, a domain floor: a volatility must be positive.
     fn smile_dynamics_surface(
         &self,
         days_to_expiry: Vec<Positive>,
