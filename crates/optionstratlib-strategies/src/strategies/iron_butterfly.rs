@@ -404,48 +404,48 @@ impl StrategyConstructor for IronButterfly {
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Long
             })
-            .ok_or(StrategyError::OperationError(
-                OperationErrorKind::InvalidParameters {
+            .ok_or_else(|| {
+                StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
                     reason: "Missing long put position".to_string(),
-                },
-            ))?;
+                })
+            })?;
 
         let short_put = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Put && opt.option.side == Side::Short
             })
-            .ok_or(StrategyError::OperationError(
-                OperationErrorKind::InvalidParameters {
+            .ok_or_else(|| {
+                StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
                     reason: "Missing short put position".to_string(),
-                },
-            ))?;
+                })
+            })?;
 
         let short_call = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Short
             })
-            .ok_or(StrategyError::OperationError(
-                OperationErrorKind::InvalidParameters {
+            .ok_or_else(|| {
+                StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
                     reason: "Missing short call position".to_string(),
-                },
-            ))?;
+                })
+            })?;
 
         let long_call = sorted_positions
             .iter()
             .find(|opt| {
                 opt.option.option_style == OptionStyle::Call && opt.option.side == Side::Long
             })
-            .ok_or(StrategyError::OperationError(
-                OperationErrorKind::InvalidParameters {
+            .ok_or_else(|| {
+                StrategyError::OperationError(OperationErrorKind::InvalidParameters {
                     operation: "Iron Butterfly get_strategy".to_string(),
                     reason: "Missing long call position".to_string(),
-                },
-            ))?;
+                })
+            })?;
 
         // Create strategy
         let mut strategy = IronButterfly {

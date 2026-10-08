@@ -3094,11 +3094,14 @@ impl From<&Vec<OptionData>> for OptionChain {
                 return OptionChain::default();
             }
         };
-        let symbol = first_option.clone().symbol.unwrap_or("Unknown".to_string());
+        let symbol = first_option
+            .clone()
+            .symbol
+            .unwrap_or_else(|| "Unknown".to_string());
         let underlying_price = *first_option
             .clone()
             .underlying_price
-            .unwrap_or(Box::new(Positive::ZERO));
+            .unwrap_or_else(|| Box::new(Positive::ZERO));
         let expiration_date = first_option
             .clone()
             .expiration_date

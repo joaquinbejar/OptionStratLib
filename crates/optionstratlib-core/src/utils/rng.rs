@@ -131,7 +131,7 @@ pub fn get_random_element_with<'a, T, R: Rng + ?Sized>(
 /// value is NaN or infinite.
 ///
 pub fn random_decimal<R: Rng + ?Sized>(rng: &mut R) -> Result<Decimal, DecimalError> {
-    Decimal::from_f64(rng.random::<f64>()).ok_or(DecimalError::ConversionError {
+    Decimal::from_f64(rng.random::<f64>()).ok_or_else(|| DecimalError::ConversionError {
         // The source type being converted from
         from_type: "f64".to_string(),
         // The destination type being converted to
