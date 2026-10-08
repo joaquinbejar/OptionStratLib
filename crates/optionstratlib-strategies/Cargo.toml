@@ -2,15 +2,16 @@
 name = "optionstratlib-strategies"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Option strategies of OptionStratLib: spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality and strategy probability analysis."
+description = "Option strategies of OptionStratLib: spreads, butterflies, condors, straddles, strangles, custom strategies, delta neutrality and strategy probability analysis. Re-exported by the optionstratlib facade under its `strategies` feature."
 readme = "README.md"
 keywords = ["finance", "options", "strategies", "spreads", "trading"]
 categories = ["finance", "mathematics"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

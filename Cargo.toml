@@ -2,30 +2,27 @@
 name = "optionstratlib"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
-description = "OptionStratLib is a comprehensive Rust library for options trading and strategy development across multiple asset classes."
+description = "OptionStratLib facade: option pricing, Greeks, option chains, P&L, risk, strategies, simulation, backtesting and charts for trading and strategy development, re-exported from its nine component crates with one feature per capability."
 license.workspace = true
 readme = "README.md"
 repository.workspace = true
 homepage.workspace = true
 keywords = ["finance", "options", "trading"]
 categories = ["finance", "data-structures"]
+# The library source, the documents its rustdoc includes, and the package
+# metadata, anchored at the package root so a README or manifest elsewhere in
+# the tree is not swept in. Tests, benches, examples and local tooling stay in
+# the repository (#559).
 include = [
-    "benches/**/*",
-    "src/**/*",
-    "Cargo.toml",
-    "README.md",
-    "LICENSE",
-    "docs/*.md",
-    "docs/release/0.22/RELEASE-NOTES.md",
-    "examples/**/*.rs",
-    "tests/**/*.rs",
-    "Makefile",
-    "rust-toolchain.toml",
-    "Docker/**/*.Dockerfile",
-    "Docker/**/*.yml",
+    "/src/**/*",
+    "/docs/*.md",
+    "/docs/release/0.22/RELEASE-NOTES.md",
+    "/Cargo.toml",
+    "/README.md",
+    "/LICENSE",
 ]
-
 
 [features]
 # Facade capabilities (ADR-0002 Decision 2). Each one adds the component
@@ -224,6 +221,11 @@ members = [
 # Lockstep version shared by every published workspace crate (ADR-0001 D1).
 version = "0.22.0"
 edition = "2024"
+# The minimum supported Rust version of every published crate (#559), set by
+# the dependency requirements: `uuid` 1.27 and `statrs` 0.19.1 (with its
+# `nalgebra` 0.35 and `wide` 1.7) declare `rust-version = "1.89"`.
+# `scripts/check_package_archives.sh` checks the unpacked archives with it.
+rust-version = "1.89"
 authors = ["Joaquin Bejar <jb@taunais.com>"]
 license = "MIT"
 repository = "https://github.com/joaquinbejar/OptionStratLib"

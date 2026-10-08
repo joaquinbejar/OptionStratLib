@@ -16,6 +16,45 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Package contents and metadata are verified for 0.22.0** (M8-03, #559),
+  with the evidence in `docs/release/0.22/packages.md`.
+  - **Rust 1.89 is the declared minimum.** The workspace sets
+    `rust-version = "1.89"` and all ten packages inherit it. The documented
+    1.88 was not enough: `uuid` 1.27 and `statrs` 0.19.1 (with `nalgebra`
+    0.35 and `wide` 1.7) need 1.89, so a 1.88 build of the published crates
+    fails to resolve. The README, the crate docs and the release notes now
+    say 1.89. Migration: build
+    with Rust 1.89 or newer.
+  - **The facade archive ships only the library.** Its `include` list is
+    anchored at the package root and keeps `src/`, the two `docs/*.md` and
+    the 0.22 release notes its rustdoc includes or its README links,
+    `Cargo.toml`, `README.md` and `LICENSE`. The Makefile,
+    `rust-toolchain.toml`, two nested READMEs, the integration tests and the
+    benches are no longer published (43 files to 13); they stay in the
+    repository and CI. The component `include` lists are anchored the same
+    way.
+  - **Descriptions place each crate.** Every component description ends with
+    the facade feature that re-exports it, and the facade's names its nine
+    component crates.
+  - **New checks.** `make check-packages` (`scripts/check_packages.py`, with a
+    self-test) asserts each archive's contents (source, README and LICENSE
+    present; no local, build or planning artifact), the lockstep metadata,
+    crates.io-valid categories and keywords, versioned path dependencies,
+    additive features that match `docs/ownership.md`, and tracked README
+    links. `make check-package-archives` (`scripts/check_package_archives.sh`)
+    builds, documents with warnings denied and doc-tests the ten crates from
+    their unpacked archives, then checks them with the declared rust-version.
+    Both run in the Components workflow and are release gates
+    (`packages`, `package-archives` in `scripts/release_gates.py`, which now
+    also counts `ignoring benchmark` package notices apart). The packaging is
+    shared with the packaged-example and packaged-consumer checks through
+    `scripts/package_archives.sh`.
+  - **The 53 `ignoring test` / `ignoring benchmark` package notices are
+    accepted**: shipping `tests/` and `benches/` would publish tests that
+    read repository data outside the package, and cargo has no switch to
+    silence the notice short of removing the targets from the repository's
+    test runs. `docs/release/0.22/packages.md` lists them per package.
+
 - **`AdjustmentError` moved to `optionstratlib_strategies::error`, as a
   `thiserror` error** (#556). The delta-neutral optimiser's error was the
   one public error outside a crate's `error` module, and the one with a
@@ -1435,8 +1474,8 @@ summarize the release.
   derives: `positive` 0.6 -> 0.7, `expiration_date` 0.3 -> 0.4,
   `financial_types` 0.2 -> 0.3 and `option_type` 0.3 -> 0.4. The workspace
   resolves a single utoipa 6.0.0. Consumers must move to the same versions
-  in the same step; the minimum supported Rust version follows utoipa 6
-  (1.88).
+  in the same step. The minimum supported Rust version is 1.89, the
+  `rust-version` every crate declares since #559.
 
 ### Fixed
 
@@ -2181,7 +2220,7 @@ summarize the release.
   `cargo-readme` drops the hidden feature gates of those examples.
   Links that leave the crate are absolute, so they work on crates.io and
   docs.rs (the README's license badge was relative). The prerequisites now
-  say Rust 1.88, which utoipa 6 needs. Each README and crate doc carries one
+  state the minimum Rust version (1.89 since #559). Each README and crate doc carries one
   `<!-- #553 ... -->` marker where #553 links the migration guide. No
   ignore rule changes: planning material stays under the locally excluded
   `doc/`, user-facing documents live in the tracked `docs/` (#556).
@@ -2279,8 +2318,8 @@ summarize the release.
   API (`Positive`, `ExpirationDate`, `OptionType`, `Side`, `OptionStyle` and
   the `utoipa::ToSchema` impls on public types), so consumers must move to
   the same versions in the same step; crates still on utoipa 5 should stay on
-  0.21. The sibling crates were already on utoipa 6 and need Rust 1.88 or
-  newer; this crate declares no `rust-version` and builds on stable. No
+  0.21. The sibling crates were already on utoipa 6; the minimum Rust
+  version is 1.89, declared as `rust-version` since #559. No
   source change was required. `uuid` 1.26 -> 1.27; every other dependency was
   already at its latest stable minor.
 - **The two forbidden edges M1-10 owned are removed, not deferred** (#507).

@@ -2,15 +2,16 @@
 name = "optionstratlib-simulation"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Random walks, stochastic processes, simulators, exit policies and path statistics of OptionStratLib, on Decimal and Positive boundaries."
+description = "Random walks, stochastic processes, simulators, exit policies and path statistics of OptionStratLib, on Decimal and Positive boundaries. Re-exported by the optionstratlib facade under its `simulation` feature."
 readme = "README.md"
 keywords = ["finance", "options", "simulation", "random-walk", "monte-carlo"]
 categories = ["finance", "mathematics", "simulation"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

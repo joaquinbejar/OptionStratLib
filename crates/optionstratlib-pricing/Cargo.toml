@@ -2,15 +2,16 @@
 name = "optionstratlib-pricing"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Option pricing models, Greeks and implied volatility of OptionStratLib, on Decimal and Positive boundaries."
+description = "Option pricing models, Greeks and implied volatility of OptionStratLib, on Decimal and Positive boundaries. Re-exported by the optionstratlib facade under its `pricing` feature."
 readme = "README.md"
 keywords = ["finance", "options", "pricing", "greeks"]
 categories = ["finance", "mathematics"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

@@ -57,6 +57,16 @@ jobs:
       - name: Direct-component examples against the packaged crates
         run: OSL_REUSE_PACKAGES=1 make check-direct-examples-packaged
 
+      # The ten published packages: contents and metadata, then a build, the
+      # docs and the doc tests from the unpacked archives, reusing the ones
+      # the step above packaged, and a check with the declared rust-version
+      # (#559).
+      - name: Package contents, metadata and unpacked archives
+        run: |
+          rustup toolchain install 1.89 --profile minimal
+          make check-packages
+          OSL_REUSE_PACKAGES=1 make check-package-archives
+
       # Every manifest-plus-program pair of the 0.22 release notes, built as a
       # standalone crate outside the repository against this checkout; it
       # resolves the crates.io index, so it needs network access (#562, #557).

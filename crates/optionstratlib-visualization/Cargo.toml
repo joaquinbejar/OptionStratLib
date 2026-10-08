@@ -2,15 +2,16 @@
 name = "optionstratlib-visualization"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Backend-neutral chart models, the Graph contract and its implementations for OptionStratLib types, with optional Plotly rendering and static export."
+description = "Backend-neutral chart models, the Graph contract and its implementations for OptionStratLib types, with optional Plotly rendering and static export. Re-exported by the optionstratlib facade under its `visualization` feature."
 readme = "README.md"
 keywords = ["finance", "options", "visualization", "charts", "plotly"]
 categories = ["finance", "visualization"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

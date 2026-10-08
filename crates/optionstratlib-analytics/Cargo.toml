@@ -2,15 +2,16 @@
 name = "optionstratlib-analytics"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Strategy-neutral analytics of OptionStratLib: P&L, risk, probability kernels, option-chain metrics and projections."
+description = "Strategy-neutral analytics of OptionStratLib: P&L, risk, probability kernels, option-chain metrics and projections. Re-exported by the optionstratlib facade under its `analytics` feature."
 readme = "README.md"
 keywords = ["finance", "options", "pnl", "risk", "analytics"]
 categories = ["finance", "mathematics"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []
