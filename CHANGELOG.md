@@ -3111,6 +3111,22 @@ summarize the release.
   `f64_to_decimal` 149 ns to 80 ns (-46%), and the normal CDF `big_n`, which
   returns through it, 200 ns to 128 ns (-36%).
 
+- **Black-Scholes and Black-76 compute `d1` once per price** (#859).
+  `calculate_d_values_with_yield` and `calculate_d_values_black_76` called
+  `d1()` and then `d2()`, and `d2()` recomputed `d1`, so every price paid for
+  the logarithm, the square root and the variance of `d1` twice. `d2` is now
+  derived from the `d1` already computed, through the same steps `d2()`
+  runs, so every price is unchanged digit for digit; a test asserts exact
+  equality against the `d2()` path on a 240-point grid of spot, volatility,
+  time and rate, rejected inputs included. Criterion on the bench host of
+  `docs/release/0.22/benchmarks.md`, before and after: `black_scholes`
+  20.7 µs to 12.1 µs (-41.6%), `black_76` 19.5 µs to 11.0 µs (-43.6%),
+  `garman_kohlhagen` 20.7 µs to 12.1 µs, a 50-strike chain 974 µs to 575 µs,
+  `build_chain` -19% at 21 to 201 strikes, position `calculate_pnl` 40.9 µs
+  to 23.2 µs, SPAN margin 315 µs to 182 µs, a 50-strike implied-volatility
+  smile 15.6 ms to 8.9 ms, and a 1 000-path long-call backtest 619 ms to
+  365 ms.
+
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
   instead of collecting the points into a `Vec` and scanning it, and reads
