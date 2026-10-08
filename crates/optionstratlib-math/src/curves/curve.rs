@@ -2005,7 +2005,13 @@ impl Arithmetic<Curve> for Curve {
             .into_par_iter()
             .map(|i| {
                 let offset = d_mul(step_size, Decimal::from(i), op).map_err(construction_err)?;
-                let x = d_add(min_x, offset, op).map_err(construction_err)?;
+                // `step_size` is rounded at 28 places, so on a span with a
+                // long mantissa `step_size * steps` can land past `max_x`
+                // and fail the interpolation (#795). Clamping moves only
+                // such a point, so every grid that fit before is unchanged.
+                let x = d_add(min_x, offset, op)
+                    .map_err(construction_err)?
+                    .min(max_x);
 
                 // Interpolate y values for each curve
                 let y_values: Result<Vec<Decimal>, CurveError> = curves
@@ -3639,6 +3645,42 @@ mod tests_curve_arithmetic {
             assert!((result[i].x - merged_result[i].x).abs() < dec!(0.001));
             assert!((result[i].y - merged_result[i].y).abs() < dec!(0.001));
         }
+    }
+
+    /// The line `y = x` sampled at `x = (10 / 511) * i`, `i = 0..=511`. The
+    /// last abscissa is `10.000000000000000000000000016`: the span has a
+    /// 27-place mantissa, so `span / 100` rounds up and `step * 100` used to
+    /// land on `10.000000000000000000000000020`, past `max_x` (#795).
+    fn long_mantissa_curve() -> Curve {
+        let step = dec!(10) / dec!(511);
+        let points: Vec<Point2D> = (0..=511i64)
+            .map(|i| {
+                let x = step * Decimal::from(i);
+                Point2D::new(x, x)
+            })
+            .collect();
+        Curve::from_vector(points.iter().collect())
+    }
+
+    #[test]
+    fn test_merge_curves_long_mantissa_range_ends_on_max_x() {
+        let curve = long_mantissa_curve();
+        let max_x = curve.x_range.1;
+        assert_eq!(max_x, dec!(10.000000000000000000000000016));
+
+        let result = curve.merge_with(&curve, MergeOperation::Add).unwrap();
+
+        // 101 grid points from 0 to max_x, none past it; the last is max_x.
+        assert_eq!(result.points.len(), 101);
+        assert!(result.points.iter().all(|p| p.x <= max_x));
+        assert_eq!(result.x_range, (Decimal::ZERO, max_x));
+        // `y = 2x` on the merged line.
+        let last = result.points.last().unwrap();
+        assert!((last.y - dec!(2) * max_x).abs() < dec!(0.0000000001));
+        let mid = result
+            .interpolate(dec!(5), InterpolationType::Linear)
+            .unwrap();
+        assert!((mid.y - dec!(10)).abs() < dec!(0.0000000001));
     }
 
     #[test]

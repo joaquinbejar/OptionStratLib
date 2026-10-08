@@ -58,13 +58,13 @@ fn smile(x: Decimal) -> Decimal {
     dec!(0.2) + centred * centred / dec!(3)
 }
 
-/// The `i`-th of `n` evenly spaced abscissas over `[0, 10]`.
+/// The `i`-th of `n` evenly spaced abscissas over `[0, 10]`, as a caller
+/// writes them: `step * i` with `step = 10 / (n - 1)`.
 ///
-/// Divided last, so both ends are exact: `step * i` overshoots 10 in the
-/// 28th place for most `n`, and `Curve::merge` then fails on its last grid
-/// point (reported under #789).
+/// For most `n` the last one is off 10 in the 28th place, which the merge
+/// grid handles since #795, so the merges below run on the natural grid.
 fn abscissa(i: usize, n: usize) -> Decimal {
-    dec!(10) * Decimal::from(i) / Decimal::from(n - 1)
+    dec!(10) / Decimal::from(n - 1) * Decimal::from(i)
 }
 
 /// `points` samples of the smile spanning `[0, 10]`.
