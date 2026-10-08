@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Upgrading from 0.21: start with the [0.22 architecture and adoption
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md), which
 groups the changes below by the workflow that replaces them. 0.22 keeps no
-compatibility with 0.21.
+compatibility with 0.21. The [0.22.0 release
+notes](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/RELEASE-NOTES.md)
+summarize the release.
 
 ### Changed — breaking
 
@@ -2029,6 +2031,22 @@ compatibility with 0.21.
   which also replaces an older binary restored from the `~/.cargo/bin` cache.
 
 ### Changed
+
+- **Draft 0.22.0 release notes** (#562). `docs/release/0.22/RELEASE-NOTES.md`
+  lists the ten packages at 0.22.0 in dependency order with their crates.io
+  and docs.rs links, the layer graph, the API policy, the facade defaults
+  and every feature, and the source, feature, serialization, toolchain and
+  operational changes of the release, each with its issue, plus the fixes
+  that change numerical results. Its minimal manifests are checked twice:
+  `make check-release-notes` (`scripts/check_release_notes.py`) builds and
+  runs each one as a standalone crate with exactly the `[dependencies]`
+  shown, patched to the checkout, and fails on a manifest without a
+  program; the facade runs the programs as doctests
+  (`ReleaseNotesDoctests`, under `cfg(doctest)` with `visualization`,
+  absent from every build and the public API) and ships the file in its
+  package. The measured-baseline section is a marked placeholder until
+  #563 validates the measurements. Nothing is tagged, released or
+  published.
 
 - **The workspace examples declare only the capabilities they use** (#774).
   Every `examples/examples_*` package depended on the facade with its default

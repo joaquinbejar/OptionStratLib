@@ -17,6 +17,7 @@ include = [
     "README.md",
     "LICENSE",
     "docs/*.md",
+    "docs/release/0.22/RELEASE-NOTES.md",
     "examples/**/*.rs",
     "tests/**/*.rs",
     "Makefile",

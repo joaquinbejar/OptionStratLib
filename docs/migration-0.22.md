@@ -622,6 +622,8 @@ reference values in the CHANGELOG:
 
 ## 7. Where to go next
 
+- [0.22.0 release notes](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/RELEASE-NOTES.md):
+  the release at a glance, with checked minimal manifests.
 - [Ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md):
   where every concept lives.
 - [`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct):
