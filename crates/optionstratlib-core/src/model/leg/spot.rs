@@ -36,7 +36,7 @@
 //! ```
 
 use crate::error::PositionError;
-use crate::model::decimal::{d_mul, d_sub};
+use crate::model::decimal::{d_div, d_mul, d_sub};
 use crate::model::leg::traits::LegAble;
 use crate::model::types::Side;
 use chrono::{DateTime, Utc};
@@ -172,9 +172,13 @@ impl SpotPosition {
     /// Returns the total value of the position at the cost basis.
     ///
     /// This represents the initial investment (for long) or proceeds (for short).
-    #[must_use]
-    pub fn initial_value(&self) -> Positive {
-        self.quantity * self.cost_basis
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range; `Positive * Positive` aborted on it (#788).
+    pub fn initial_value(&self) -> Result<Positive, PositionError> {
+        Ok(self.quantity.checked_mul(&self.cost_basis)?)
     }
 
     /// Returns the current market value at a given price.
@@ -182,9 +186,13 @@ impl SpotPosition {
     /// # Arguments
     ///
     /// * `current_price` - The current market price per unit
-    #[must_use]
-    pub fn market_value(&self, current_price: Positive) -> Positive {
-        self.quantity * current_price
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    pub fn market_value(&self, current_price: Positive) -> Result<Positive, PositionError> {
+        Ok(self.quantity.checked_mul(&current_price)?)
     }
 
     /// Calculates the percentage return on the position.
@@ -196,43 +204,66 @@ impl SpotPosition {
     /// # Returns
     ///
     /// The percentage return as a Decimal (e.g., 0.10 = 10% gain).
-    #[must_use]
-    pub fn percentage_return(&self, current_price: Positive) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::DecimalError`] when the return leaves the
+    /// `Decimal` range: a cost basis near zero against a large price, where
+    /// the division aborted with `Division overflowed` (#788).
+    pub fn percentage_return(&self, current_price: Positive) -> Result<Decimal, PositionError> {
         if self.cost_basis == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        let price_change = current_price.to_dec() - self.cost_basis.to_dec();
-        let return_pct = price_change / self.cost_basis.to_dec();
+        let price_change = d_sub(
+            current_price.to_dec(),
+            self.cost_basis.to_dec(),
+            "SpotPosition::percentage_return/price_change",
+        )?;
+        let return_pct = d_div(
+            price_change,
+            self.cost_basis.to_dec(),
+            "SpotPosition::percentage_return",
+        )?;
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => return_pct,
             Side::Short => -return_pct,
-        }
+        })
     }
 
     /// Calculates the break-even price including fees.
     ///
     /// For long positions: cost_basis + (total_fees / quantity)
-    /// For short positions: cost_basis - (total_fees / quantity)
-    #[must_use]
-    pub fn break_even_price(&self) -> Positive {
+    /// For short positions: cost_basis - (total_fees / quantity), floored
+    /// at zero.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the fee total, the fee
+    /// per unit or the long break-even leaves the `Positive` range: a
+    /// quantity near zero against large fees, where the division aborted
+    /// with `Positive arithmetic overflow in div` (#788).
+    pub fn break_even_price(&self) -> Result<Positive, PositionError> {
         if self.quantity == Positive::ZERO {
-            return self.cost_basis;
+            return Ok(self.cost_basis);
         }
 
-        let fee_per_unit = (self.open_fee + self.close_fee) / self.quantity;
+        let fee_per_unit = self
+            .open_fee
+            .checked_add(&self.close_fee)?
+            .checked_div(&self.quantity)?;
 
-        match self.side {
-            Side::Long => self.cost_basis + fee_per_unit,
+        Ok(match self.side {
+            Side::Long => self.cost_basis.checked_add(&fee_per_unit)?,
             Side::Short => {
                 if self.cost_basis > fee_per_unit {
-                    self.cost_basis - fee_per_unit
+                    self.cost_basis.checked_sub(&fee_per_unit)?
                 } else {
                     Positive::ZERO
                 }
             }
-        }
+        })
     }
 }
 
@@ -295,13 +326,15 @@ impl std::fmt::Display for SpotPosition {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} {} {} @ {} (fees: {})",
-            self.side,
-            self.quantity,
-            self.symbol,
-            self.cost_basis,
-            self.open_fee + self.close_fee
-        )
+            "{} {} {} @ {} (fees: ",
+            self.side, self.quantity, self.symbol, self.cost_basis,
+        )?;
+        // Fees whose total leaves the `Positive` range are shown as the sum
+        // they are; `Positive + Positive` aborted on them (#788).
+        match self.open_fee.checked_add(&self.close_fee) {
+            Ok(total) => write!(f, "{total})"),
+            Err(_) => write!(f, "{} + {})", self.open_fee, self.close_fee),
+        }
     }
 }
 
@@ -372,15 +405,15 @@ mod tests {
     #[test]
     fn test_initial_value() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
-        assert_eq!(spot.initial_value(), pos_or_panic!(15000.0));
+        assert_eq!(spot.initial_value().ok(), Some(pos_or_panic!(15000.0)));
     }
 
     #[test]
     fn test_market_value() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, pos_or_panic!(150.0));
         assert_eq!(
-            spot.market_value(pos_or_panic!(160.0)),
-            pos_or_panic!(16000.0)
+            spot.market_value(pos_or_panic!(160.0)).ok(),
+            Some(pos_or_panic!(16000.0))
         );
     }
 
@@ -494,14 +527,14 @@ mod tests {
     fn test_percentage_return_long() {
         let spot = SpotPosition::long("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
         let return_pct = spot.percentage_return(pos_or_panic!(110.0));
-        assert_eq!(return_pct, Decimal::new(1, 1)); // 10% = 0.1
+        assert_eq!(return_pct.ok(), Some(Decimal::new(1, 1))); // 10% = 0.1
     }
 
     #[test]
     fn test_percentage_return_short() {
         let spot = SpotPosition::short("AAPL".to_string(), Positive::HUNDRED, Positive::HUNDRED);
         let return_pct = spot.percentage_return(pos_or_panic!(90.0));
-        assert_eq!(return_pct, Decimal::new(1, 1)); // 10% profit for short when price drops
+        assert_eq!(return_pct.ok(), Some(Decimal::new(1, 1))); // 10% profit for short when price drops
     }
 
     #[test]
@@ -515,7 +548,7 @@ mod tests {
             pos_or_panic!(50.0),
             pos_or_panic!(50.0),
         );
-        assert_eq!(spot.break_even_price(), pos_or_panic!(151.0)); // 150 + (100/100)
+        assert_eq!(spot.break_even_price().ok(), Some(pos_or_panic!(151.0))); // 150 + (100/100)
     }
 
     #[test]
@@ -529,7 +562,33 @@ mod tests {
             pos_or_panic!(50.0),
             pos_or_panic!(50.0),
         );
-        assert_eq!(spot.break_even_price(), pos_or_panic!(149.0)); // 150 - (100/100)
+        assert_eq!(spot.break_even_price().ok(), Some(pos_or_panic!(149.0))); // 150 - (100/100)
+    }
+
+    // Each of these aborted before #788: `Positive * Positive` with
+    // `Positive arithmetic overflow in mul`, the return with `Division
+    // overflowed`, the fee per unit with `Positive arithmetic overflow in
+    // div` and the `Display` fee total with `... in add`.
+    #[test]
+    fn test_extreme_values_are_errors_not_aborts() {
+        let wide = SpotPosition::long("X".to_string(), Positive::MAX, Positive::TWO);
+        assert!(wide.initial_value().is_err());
+        assert!(wide.market_value(Positive::TWO).is_err());
+
+        let tiny_basis = SpotPosition::long("X".to_string(), Positive::ONE, pos_or_panic!(1e-27));
+        assert!(matches!(
+            tiny_basis.percentage_return(Positive::MAX),
+            Err(PositionError::DecimalError(_))
+        ));
+
+        let mut tiny_quantity =
+            SpotPosition::long("X".to_string(), pos_or_panic!(1e-27), Positive::ONE);
+        tiny_quantity.open_fee = Positive::MAX;
+        assert!(tiny_quantity.break_even_price().is_err());
+
+        tiny_quantity.close_fee = Positive::MAX;
+        let shown = tiny_quantity.to_string();
+        assert!(shown.ends_with(&format!("(fees: {} + {})", Positive::MAX, Positive::MAX)));
     }
 
     #[test]

@@ -949,7 +949,11 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
             (OptionStyle::Put, Side::Short, strike, price) if price < strike => Decimal::ONE,
             (OptionStyle::Put, Side::Short, _, _) => Decimal::ZERO,
         };
-        return Ok(per_contract * position_size(option)?);
+        return Ok(d_mul(
+            per_contract,
+            position_size(option)?,
+            "greeks::delta::at_expiry",
+        )?);
     }
 
     let sign = if option.is_long() {
@@ -969,13 +973,17 @@ pub fn delta(option: &Options) -> Result<Decimal, GreeksError> {
             }
             OptionStyle::Put => {
                 if option.underlying_price <= option.strike_price {
-                    sign * Decimal::NEGATIVE_ONE // Delta is -1 for Put in-the-money
+                    -sign // Delta is -1 for Put in-the-money
                 } else {
                     Decimal::ZERO // Delta is 0 for Put out-of-the-money
                 }
             }
         };
-        return Ok(per_contract * position_size(option)?);
+        return Ok(d_mul(
+            per_contract,
+            position_size(option)?,
+            "greeks::delta::zero_volatility",
+        )?);
     }
 
     let kernels = BlackScholesKernels::new(option, expiration_date)?;

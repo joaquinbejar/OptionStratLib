@@ -536,7 +536,9 @@ impl Position {
     /// day-count is negative (future-dated open date) or cannot be
     /// represented as a `Positive`.
     pub fn days_held(&self) -> Result<Positive, PositionError> {
-        let days = (Utc::now() - self.date).num_days() as f64;
+        // `signed_duration_since` is total: any two `DateTime<Utc>` are
+        // within the `TimeDelta` range.
+        let days = Utc::now().signed_duration_since(self.date).num_days() as f64;
         Positive::new(days).map_err(|e| {
             PositionError::ValidationError(PositionValidationErrorKind::InvalidPosition {
                 reason: format!("failed to calculate days held: {}", e),
@@ -640,7 +642,7 @@ impl Position {
             Side::Short => {
                 let fees = self.fees()?.to_dec();
                 let premium = self.premium_received()?.to_dec();
-                Ok(fees - premium)
+                Ok(d_sub(fees, premium, "Position::net_cost/short")?)
             }
         }
     }
@@ -2710,8 +2712,8 @@ mod tests_position_contract_size {
         let leg = Leg::from(sized_call(Side::Long, Positive::HUNDRED));
         assert_eq!(leg.get_quantity(), Positive::TWO);
         assert_eq!(
-            leg.notional_value(Positive::HUNDRED),
-            pos_or_panic!(20000.0)
+            leg.notional_value(Positive::HUNDRED).ok(),
+            Some(pos_or_panic!(20000.0))
         );
         assert_eq!(
             leg.pnl_at_price(pos_or_panic!(120.0)).ok(),

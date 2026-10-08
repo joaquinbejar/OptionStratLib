@@ -267,7 +267,7 @@ mod tests_generator_optionseries {
     }
 
     #[test]
-    fn test_generator_optionseries_basic() {
+    fn test_generator_optionseries_basic() -> Result<(), Box<dyn std::error::Error>> {
         // Setup
         let n_steps = 5;
         let initial_series = create_test_option_series();
@@ -282,7 +282,7 @@ mod tests_generator_optionseries {
                 y: Ystep::new(0, initial_series),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE, &TimeFrame::Day, &TimeFrame::Day)?,
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -310,6 +310,7 @@ mod tests_generator_optionseries {
             pos_or_panic!(30.0)
         );
         assert_eq!(*first_step.y.index(), 0);
+        Ok(())
     }
 
     #[test]

@@ -281,8 +281,14 @@ impl Surface {
             return Ok(z_selector(first));
         }
 
-        let last_index = sorted_points.len() - 1;
-        let last = sorted_points.last().ok_or_else(|| missing(last_index))?;
+        // Non-empty: `first` above returned otherwise.
+        let last_index = sorted_points
+            .len()
+            .checked_sub(1)
+            .ok_or_else(|| missing(0))?;
+        let last = sorted_points
+            .get(last_index)
+            .ok_or_else(|| missing(last_index))?;
         if target >= x_selector(last) {
             return Ok(z_selector(last));
         }
@@ -476,6 +482,15 @@ fn nth<'a>(
 
 /// Reads one sample of a sorted metric series, naming the statistic on the
 /// out-of-bounds path instead of panicking.
+/// `3 * len / 4`, the index of the third quartile of `len` sorted samples.
+fn third_quartile_index(len: usize) -> Result<usize, MetricsError> {
+    len.checked_mul(3)
+        .map(|three_len| three_len / 4)
+        .ok_or_else(|| {
+            MetricsError::BasicError(format!("third quartile index of {len} samples overflowed"))
+        })
+}
+
 fn sample_at(
     values: &[Decimal],
     index: usize,
@@ -773,7 +788,9 @@ impl GeometricObject<Point3D, Point2D> for Surface {
 /// # Panics
 ///
 /// Panics if `index >= self.points.len()`. This matches the documented
-/// contract of [`std::ops::Index`].
+/// contract of [`std::ops::Index`] and of `Vec`. `Index` has no error
+/// channel; for a lookup that reports a missing index, use
+/// `get_points().into_iter().nth(index)`.
 ///
 /// # Performance
 /// Note that this implementation uses `iter().nth(index)` which has O(n) time complexity
@@ -1343,7 +1360,10 @@ impl MetricsExtractor for Surface {
         let mode = {
             let mut freq_map = std::collections::HashMap::new();
             for &val in &z_values {
-                *freq_map.entry(val).or_insert(0) += 1;
+                let count = freq_map.entry(val).or_insert(0usize);
+                *count = count.checked_add(1).ok_or_else(|| {
+                    MetricsError::BasicError("mode: frequency count overflowed".to_string())
+                })?;
             }
             freq_map
                 .into_iter()
@@ -1453,7 +1473,7 @@ impl MetricsExtractor for Surface {
         let len = sorted.len();
         let q1 = sample_at(&sorted, len / 4, "first quartile")?;
         let q2 = sample_at(&sorted, len / 2, "median")?;
-        let q3 = sample_at(&sorted, 3 * len / 4, "third quartile")?;
+        let q3 = sample_at(&sorted, third_quartile_index(len)?, "third quartile")?;
 
         let range = d_sub(max, min, op).map_err(|e| MetricsError::RangeError(e.to_string()))?;
         let iqr = d_sub(q3, q1, op).map_err(|e| MetricsError::RangeError(e.to_string()))?;

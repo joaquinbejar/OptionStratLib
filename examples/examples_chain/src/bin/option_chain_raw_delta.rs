@@ -16,7 +16,9 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     let mut option_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
     info!("Chain loaded");
-    option_chain.update_expiration_date(get_tomorrow_formatted());
+    option_chain.update_expiration_date(
+        get_tomorrow_formatted().map_err(optionstratlib::error::DecimalError::from)?,
+    );
     option_chain.update_greeks();
     info!("{}", &option_chain);
 

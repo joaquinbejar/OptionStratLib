@@ -6,7 +6,7 @@
 
 use crate::error::greeks::{DeltaNeutralityErrorKind, GreeksError};
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_div, d_exp, d_mul, d_powd, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_powd, d_sub};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -153,7 +153,7 @@ pub fn n(x: Decimal) -> Result<Decimal, GreeksError> {
 #[allow(dead_code)]
 #[inline]
 pub(crate) fn n_prime(x: Decimal) -> Result<Decimal, GreeksError> {
-    Ok(-x * n(x)?) // -x * n(x)
+    Ok(d_mul(-x, n(x)?, "greeks::n_prime")?) // -x * n(x)
 }
 
 /// Calculates the optimal position sizes for two positions to achieve delta neutrality
@@ -226,7 +226,13 @@ pub fn calculate_delta_neutral_sizes(
     )?;
     let spread = d_sub(delta1, delta2, "greeks::delta_neutral::size1::spread")?;
     let size1 = Positive::new_decimal(d_div(weighted, spread, "greeks::delta_neutral::size1")?)?;
-    let size2 = total_size - size1;
+    // `size1` is at most `total_size` in exact arithmetic; a quotient that
+    // rounds above it leaves no room for the second leg, which is the
+    // negative size the check below reports. `Positive - Positive` aborted
+    // on it instead (#788).
+    let Ok(size2) = total_size.checked_sub(&size1) else {
+        return Err(DeltaNeutralityErrorKind::NegativePositionSize.into());
+    };
 
     // Validate results
     if size1 < Decimal::ZERO || size2 < Decimal::ZERO {
@@ -234,13 +240,22 @@ pub fn calculate_delta_neutral_sizes(
     }
 
     // Verify the solution
-    let total_delta: Decimal = size1.to_dec() * delta1 + size2.to_dec() * delta2;
+    let total_delta: Decimal = d_add(
+        d_mul(size1.to_dec(), delta1, "greeks::delta_neutral::check::leg1")?,
+        d_mul(size2.to_dec(), delta2, "greeks::delta_neutral::check::leg2")?,
+        "greeks::delta_neutral::check::total_delta",
+    )?;
     if total_delta.abs() > DELTA_THRESHOLD {
         // Allow small numerical errors
         return Err(DeltaNeutralityErrorKind::NotAchievable.into());
     }
-    let total_size_check = size1 + size2;
-    if (total_size_check.to_dec() - total_size.to_dec()).abs() > DELTA_THRESHOLD {
+    let total_size_check = size1.checked_add(&size2)?;
+    let size_gap = d_sub(
+        total_size_check.to_dec(),
+        total_size.to_dec(),
+        "greeks::delta_neutral::check::size_gap",
+    )?;
+    if size_gap.abs() > DELTA_THRESHOLD {
         return Err(DeltaNeutralityErrorKind::SizeMismatch {
             calculated: total_size_check,
             expected: total_size,

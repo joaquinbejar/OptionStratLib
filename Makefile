@@ -517,6 +517,30 @@ release-gates-render:
 #     `src/model/decimal.rs` are the total forms. `f64::sqrt` call sites
 #     carry a marker saying so, like `exp`/`ln`/`powd`.
 #
+# A stricter set applies to the crates listed in `SCAN_STRICT_DIRS`, the ones
+# already clean of it (#788); a crate joins the list once it is:
+#   * `saturating_*` / `wrapping_*` — they hide an overflow instead of
+#     reporting it (rules/global_rules.md, "Arithmetic"). A modular RNG seed
+#     is the reviewed exception, with a marker.
+#   * `spos!` — wraps `pos_or_panic!` (banned everywhere, above) and aborts
+#     on the same inputs; `Positive::new` / `new_decimal` report them.
+#   * `Duration::days(` and its siblings — `chrono` aborts on a count beyond
+#     the `TimeDelta` range; the `Duration::try_*` forms return `None`.
+#   * `.ceiling()` / `.round_to(` / `.round_to_nice_number(` — `Positive`
+#     helpers that abort on overflow; their `checked_*` forms report it.
+#   * `.sin()` / `.cos()` / `.tan()` — `rust_decimal` aborts when the series
+#     overflows; `checked_sin` and friends report it. `f64` call sites carry
+#     a marker, like `exp`/`ln`.
+#   * `assert!` / `assert_eq!` / `assert_ne!` — an abort by another name
+#     (`debug_assert!` is not matched).
+#   * `.sum::<Decimal>()` / `.product::<Positive>()` and the like — the
+#     `Sum` / `Product` impls add and multiply with the aborting operators;
+#     `d_sum_iter` / `d_product_iter` are the checked forms.
+# The operators themselves (`+ - * /` on `Decimal`, `Positive` and the
+# integers) are not greppable by type; in those crates
+# `#![deny(clippy::arithmetic_side_effects)]` in `lib.rs` rejects them at
+# `make lint`.
+#
 # A bare `#[cfg(test)]` never truncates the scan; only the braced body of the
 # item it actually gates is skipped, brace counted (files may carry several):
 # `mod`/`fn`/`impl`/`trait`/`struct`/`enum`/`union` (any `pub(..)` visibility,
@@ -538,6 +562,9 @@ release-gates-render:
 #
 # A reviewed exception carries a trailing
 # `// scan-banned: allow -- <reason>` marker on the same line.
+SCAN_STRICT_DIRS := crates/optionstratlib-core/src|crates/optionstratlib-math/src|crates/optionstratlib-pricing/src
+SCAN_STRICT_PATTERN := (saturating|wrapping)_[a-z]+\(|spos!|Duration::(days|hours|minutes|seconds|milliseconds|weeks)\(|\.(ceiling|round_to|round_to_nice_number)\(|\.(sin|cos|tan)\(\)|[^_[:alnum:]](assert|assert_eq|assert_ne)!|\.(sum|product)::<(Decimal|Positive)>\(
+
 .PHONY: scan-banned
 scan-banned:
 	@found=$$(for f in $$(find src crates/*/src -name '*.rs'); do \
@@ -584,7 +611,7 @@ scan-banned:
 			} \
 		' "$$f"; \
 	done \
-		| grep -E '\.unwrap\(\)|\.expect\(|pos_or_panic!|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber' \
+		| grep -E '\.unwrap\(\)|\.expect\(|pos_or_panic!|\.exp\(\)|\.ln\(\)|\.powd\(|\.sqrt\(\)|\.checked_sqrt\(\)|[^_[:alnum:]](panic|unreachable|todo|unimplemented|println|eprintln|print|eprint|dbg)!|tracing_subscriber|^($(SCAN_STRICT_DIRS))/[^:]*:[0-9]+:.*($(SCAN_STRICT_PATTERN))' \
 		| grep -v -E ':[0-9]+:[[:space:]]*(///|//!|//|\*+/)' \
 		| grep -v -E 'scan-banned: allow -- [^[:space:]]' || true); \
 	malformed=$$(grep -rn 'scan-banned: allow' src crates/*/src \
@@ -599,7 +626,7 @@ scan-banned:
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt in production code; in $(SCAN_STRICT_DIRS): no saturating/wrapping, spos!, aborting chrono/Positive helpers, Decimal trig, asserts or Decimal/Positive sum/product"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,

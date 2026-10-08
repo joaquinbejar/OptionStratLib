@@ -3,7 +3,9 @@
    Email: jb@taunais.com
    Date: 21/8/24
 ******************************************************************************/
+use crate::error::DecimalError;
 use crate::model::Position;
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
@@ -497,22 +499,102 @@ pub trait ToRound {
     fn round_to(&self, decimal_places: u32) -> Decimal;
 }
 
-/// Generates a price vector for the payoff graph
-#[must_use]
+/// Generates a price vector for the payoff graph: `num_points` prices evenly
+/// spaced from `min_price` to `max_price`, both ends included.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::InvalidValue`] when `num_points` is below two,
+/// so there is no spacing between the ends (one point divided by zero and
+/// zero points underflowed `num_points - 1`, #788), or too large to
+/// allocate, and
+/// [`DecimalError::Overflow`] when the range, the step or a price leaves the
+/// `Decimal` range.
 pub fn generate_price_points(
     min_price: Decimal,
     max_price: Decimal,
     num_points: usize,
-) -> Vec<Decimal> {
-    let step = (max_price - min_price) / Decimal::from(num_points - 1);
-    let mut prices = Vec::with_capacity(num_points);
+) -> Result<Vec<Decimal>, DecimalError> {
+    let Some(intervals) = num_points.checked_sub(1).filter(|n| *n > 0) else {
+        return Err(DecimalError::invalid_value(
+            num_points as f64,
+            "a price grid needs at least two points",
+        ));
+    };
+    let range = d_sub(
+        max_price,
+        min_price,
+        "model::utils::generate_price_points/range",
+    )?;
+    let step = d_div(
+        range,
+        Decimal::from(intervals),
+        "model::utils::generate_price_points/step",
+    )?;
+    // Reserved fallibly: `Vec::with_capacity` aborts with `capacity overflow`
+    // on a count wider than the address space.
+    let mut prices = Vec::new();
+    prices.try_reserve_exact(num_points).map_err(|_| {
+        DecimalError::invalid_value(
+            num_points as f64,
+            "a price grid this large cannot be allocated",
+        )
+    })?;
 
     for i in 0..num_points {
-        let price = min_price + step * Decimal::from(i);
-        prices.push(price);
+        let offset = d_mul(
+            step,
+            Decimal::from(i),
+            "model::utils::generate_price_points/offset",
+        )?;
+        prices.push(d_add(
+            min_price,
+            offset,
+            "model::utils::generate_price_points/price",
+        )?);
     }
 
-    prices
+    Ok(prices)
+}
+
+#[cfg(test)]
+mod tests_generate_price_points {
+    use super::*;
+
+    #[test]
+    fn test_generate_price_points_spans_both_ends() {
+        let prices = generate_price_points(dec!(90), dec!(110), 5);
+        assert_eq!(
+            prices.ok(),
+            Some(vec![dec!(90), dec!(95), dec!(100), dec!(105), dec!(110)])
+        );
+    }
+
+    // One point divided by zero (`Division by zero`) and zero points
+    // underflowed `num_points - 1` (#788).
+    #[test]
+    fn test_generate_price_points_below_two_points_is_error() {
+        for num_points in [0, 1] {
+            assert!(matches!(
+                generate_price_points(dec!(90), dec!(110), num_points),
+                Err(DecimalError::InvalidValue { .. })
+            ));
+        }
+    }
+
+    // `Vec::with_capacity(usize::MAX)` aborted with `capacity overflow`.
+    #[test]
+    fn test_generate_price_points_unallocatable_is_error() {
+        assert!(matches!(
+            generate_price_points(dec!(90), dec!(110), usize::MAX),
+            Err(DecimalError::InvalidValue { .. })
+        ));
+    }
+
+    #[test]
+    fn test_generate_price_points_overflow_is_error() {
+        assert!(generate_price_points(Decimal::MIN, Decimal::MAX, 3).is_err());
+    }
 }
 
 #[cfg(test)]

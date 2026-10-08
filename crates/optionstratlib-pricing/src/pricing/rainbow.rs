@@ -345,7 +345,7 @@ fn monte_carlo_rainbow(
 /// Generates two correlated standard normal random variables using a simple LCG.
 fn generate_correlated_normals(seed: u64, rho: f64) -> (f64, f64) {
     let z1 = box_muller_transform(seed);
-    let z2_ind = box_muller_transform(seed.wrapping_add(1000000));
+    let z2_ind = box_muller_transform(seed.wrapping_add(1000000)); // scan-banned: allow -- seed arithmetic is modular by design, not a financial value
 
     let z2 = rho * z1 + (1.0 - rho * rho).sqrt() * z2_ind; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
@@ -355,7 +355,7 @@ fn generate_correlated_normals(seed: u64, rho: f64) -> (f64, f64) {
 /// Box-Muller transform to generate standard normal from uniform.
 fn box_muller_transform(seed: u64) -> f64 {
     let u1 = lcg_uniform(seed);
-    let u2 = lcg_uniform(seed.wrapping_add(12345));
+    let u2 = lcg_uniform(seed.wrapping_add(12345)); // scan-banned: allow -- seed arithmetic is modular by design, not a financial value
 
     let u1_clamped = u1.clamp(1e-10, 1.0 - 1e-10);
     let u2_clamped = u2.clamp(1e-10, 1.0 - 1e-10);
@@ -368,7 +368,7 @@ fn box_muller_transform(seed: u64) -> f64 {
 fn lcg_uniform(seed: u64) -> f64 {
     let a: u64 = 6364136223846793005;
     let c: u64 = 1442695040888963407;
-    let next = seed.wrapping_mul(a).wrapping_add(c);
+    let next = seed.wrapping_mul(a).wrapping_add(c); // scan-banned: allow -- a linear congruential generator is arithmetic modulo 2^64 by definition
     (next as f64) / (u64::MAX as f64)
 }
 

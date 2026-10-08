@@ -26,7 +26,9 @@ fn main() -> Result<(), Error> {
     let mut initial_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
-    initial_chain.update_expiration_date(get_x_days_formatted(2));
+    initial_chain.update_expiration_date(
+        get_x_days_formatted(2).map_err(optionstratlib::error::DecimalError::from)?,
+    );
     let iv = pos_or_panic!(0.20);
     let walker = Box::new(Walker::new());
     let days = Positive::TWO;
@@ -38,7 +40,7 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_chain),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Hour, &TimeFrame::Day)?,
             drift: dec!(0.0),
             volatility: iv,
         },

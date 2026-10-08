@@ -5,7 +5,7 @@
 ******************************************************************************/
 
 use crate::error::DecimalError;
-use crate::model::decimal::{d_div, d_mul};
+use crate::model::decimal::{d_div, d_mul, d_sub, d_sum_iter};
 use crate::model::types::UnderlyingAssetType;
 use positive::{Positive, PositiveError};
 use rust_decimal::Decimal;
@@ -99,15 +99,28 @@ impl Balance {
     ///
     /// The unrealized PnL as a Decimal. Positive values indicate profit,
     /// negative values indicate loss. Returns zero if current_price is not available.
-    #[must_use]
-    pub fn get_unrealized_pnl(&self) -> Decimal {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DecimalError::Overflow`] when the current value or the cost
+    /// basis leaves the `Decimal` range; the multiplication aborted with
+    /// `Multiplication overflowed` (#788).
+    pub fn get_unrealized_pnl(&self) -> Result<Decimal, DecimalError> {
         match self.current_premium {
             Some(current_price) => {
-                let current_value = self.quantity.value() * current_price.value();
-                let cost_basis = self.quantity.value() * self.average_premium.value();
-                current_value - cost_basis
+                let current_value = d_mul(
+                    self.quantity.value(),
+                    current_price.value(),
+                    "Balance::get_unrealized_pnl/current_value",
+                )?;
+                let cost_basis = d_mul(
+                    self.quantity.value(),
+                    self.average_premium.value(),
+                    "Balance::get_unrealized_pnl/cost_basis",
+                )?;
+                d_sub(current_value, cost_basis, "Balance::get_unrealized_pnl")
             }
-            None => Decimal::ZERO,
+            None => Ok(Decimal::ZERO),
         }
     }
 
@@ -126,9 +139,12 @@ impl Balance {
     ///
     /// `true` if the position has unrealized gains, `false` otherwise.
     /// Returns `false` if current_price is not available.
-    #[must_use]
-    pub fn is_profitable(&self) -> bool {
-        self.get_unrealized_pnl() > Decimal::ZERO
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`Balance::get_unrealized_pnl`].
+    pub fn is_profitable(&self) -> Result<bool, DecimalError> {
+        Ok(self.get_unrealized_pnl()? > Decimal::ZERO)
     }
 
     /// Gets the cost basis of the option position.
@@ -161,7 +177,7 @@ impl Balance {
     pub fn get_percentage_return(&self) -> Result<Decimal, DecimalError> {
         match self.current_premium {
             Some(_current_price) => {
-                let pnl = self.get_unrealized_pnl();
+                let pnl = self.get_unrealized_pnl()?;
                 let cost_basis = d_mul(
                     self.quantity.to_dec(),
                     self.average_premium.to_dec(),
@@ -325,12 +341,19 @@ impl Portfolio {
     /// # Returns
     ///
     /// The sum of all unrealized PnL across all balances
-    #[must_use]
-    pub fn get_total_unrealized_pnl(&self) -> Decimal {
-        self.balances
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`Balance::get_unrealized_pnl`], and returns
+    /// [`DecimalError::Overflow`] when the sum leaves the `Decimal` range;
+    /// `Iterator::sum` aborted with `Addition overflowed` (#788).
+    pub fn get_total_unrealized_pnl(&self) -> Result<Decimal, DecimalError> {
+        let pnls = self
+            .balances
             .iter()
-            .map(|balance| balance.get_unrealized_pnl())
-            .sum()
+            .map(Balance::get_unrealized_pnl)
+            .collect::<Result<Vec<_>, _>>()?;
+        d_sum_iter(pnls, "Portfolio::get_total_unrealized_pnl")
     }
 
     /// Gets all balances from a specific exchange.
@@ -355,9 +378,17 @@ impl Portfolio {
     /// # Returns
     ///
     /// `true` if any balance in the portfolio is profitable
-    #[must_use]
-    pub fn has_profitable_positions(&self) -> bool {
-        self.balances.iter().any(|balance| balance.is_profitable())
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`Balance::is_profitable`].
+    pub fn has_profitable_positions(&self) -> Result<bool, DecimalError> {
+        for balance in &self.balances {
+            if balance.is_profitable()? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// Gets the number of balances in the portfolio.
@@ -444,7 +475,7 @@ mod tests {
         );
 
         let pnl = balance.get_unrealized_pnl();
-        assert_eq!(pnl, dec!(15.0)); // (7.00 - 5.50) * 10
+        assert_eq!(pnl.ok(), Some(dec!(15.0))); // (7.00 - 5.50) * 10
     }
 
     #[test]
@@ -469,8 +500,8 @@ mod tests {
             None,
         );
 
-        assert!(profitable_balance.is_profitable());
-        assert!(!losing_balance.is_profitable());
+        assert_eq!(profitable_balance.is_profitable().ok(), Some(true));
+        assert_eq!(losing_balance.is_profitable().ok(), Some(false));
     }
 
     #[test]
@@ -668,5 +699,58 @@ mod tests {
             portfolio.get_total_value().expect("empty sum"),
             Positive::ZERO
         );
+    }
+
+    // `quantity * premium` aborted with `Multiplication overflowed` and the
+    // portfolio sum with `Addition overflowed` before #788.
+    #[test]
+    fn test_unrealized_pnl_overflow_is_error() {
+        let wide = overflowing_balance(Some(pos_or_panic!(2.0)));
+        assert!(wide.get_unrealized_pnl().is_err());
+        assert!(wide.is_profitable().is_err());
+
+        let half = Positive::new_decimal(Decimal::MAX / dec!(2)).unwrap();
+        let mut portfolio = Portfolio::new("Overflow".to_string());
+        for _ in 0..3 {
+            portfolio.add_balance(Balance::new(
+                "HALF".to_string(),
+                half,
+                Positive::ZERO,
+                Some(Positive::ONE),
+                "CBOE".to_string(),
+                UnderlyingAssetType::Stock,
+                None,
+            ));
+        }
+        assert!(portfolio.get_total_unrealized_pnl().is_err());
+        assert_eq!(portfolio.has_profitable_positions().ok(), Some(true));
+        portfolio.add_balance(wide);
+        assert!(portfolio.has_profitable_positions().is_ok());
+    }
+
+    #[test]
+    fn test_portfolio_total_unrealized_pnl_sums_balances() {
+        let mut portfolio = Portfolio::new("Sum".to_string());
+        portfolio.add_balance(Balance::new(
+            "A".to_string(),
+            pos_or_panic!(10.0),
+            pos_or_panic!(5.50),
+            Some(pos_or_panic!(7.00)),
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        ));
+        portfolio.add_balance(Balance::new(
+            "B".to_string(),
+            pos_or_panic!(3.0),
+            pos_or_panic!(8.00),
+            Some(pos_or_panic!(6.50)),
+            "CBOE".to_string(),
+            UnderlyingAssetType::Stock,
+            None,
+        ));
+        // 15.0 - 4.5
+        assert_eq!(portfolio.get_total_unrealized_pnl().ok(), Some(dec!(10.5)));
+        assert_eq!(portfolio.has_profitable_positions().ok(), Some(true));
     }
 }

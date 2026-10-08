@@ -321,7 +321,7 @@ pub trait StatisticalCurve: MetricsExtractor {
             }
 
             // Try a different seed for the next attempt
-            seed_value = seed_value.wrapping_add(1);
+            seed_value = seed_value.wrapping_add(1); // scan-banned: allow -- the next RNG seed; the seed space is modular, not a financial value
         }
 
         // Return the last generated curve even if it doesn't perfectly match

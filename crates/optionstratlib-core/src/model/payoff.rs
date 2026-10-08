@@ -11,7 +11,7 @@ use crate::model::decimal::finite_decimal;
 use crate::model::types::{
     AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType, Side,
 };
-use num_traits::ToPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 use positive::Positive;
 use rust_decimal::Decimal;
 use tracing::{trace, warn};
@@ -312,7 +312,7 @@ fn option_type_payoff(option_type: &OptionType, info: &PayoffInfo) -> f64 {
         OptionType::Quanto { exchange_rate } => standard_payoff(info) * exchange_rate.to_f64(),
         OptionType::Power { exponent } => match info.style {
             OptionStyle::Call => {
-                (info.spot.to_f64().powf(exponent.to_f64()) - info.strike).max(ZERO)
+                (info.spot.to_f64().powf(exponent.to_f64()) - info.strike.to_f64()).max(ZERO)
             }
             OptionStyle::Put => {
                 // `Positive - f64` aborts whenever the result would be
@@ -388,8 +388,26 @@ fn calculate_asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo
         _ => return ZERO,
     };
     match info.style {
-        OptionStyle::Call => (average - info.strike).max(ZERO),
-        OptionStyle::Put => (info.strike - average).max(Positive::ZERO).into(),
+        OptionStyle::Call => (average - info.strike.to_f64()).max(ZERO),
+        // `Positive - f64` aborted on every out-of-the-money Asian put, where
+        // the average is above the strike, and on a non-finite average
+        // (#788). The difference is the one that operator formed, on
+        // `Decimal`, floored at zero. A non-finite average (a geometric
+        // product that left the `f64` range) has no put value, so it goes
+        // out as `NaN`, which the `Decimal` boundary of `Payoff::payoff`
+        // reports as an error, as it already does for the call.
+        OptionStyle::Put => match Decimal::from_f64(average) {
+            Some(average) => Positive::new_decimal(
+                info.strike
+                    .to_dec()
+                    .checked_sub(average)
+                    .unwrap_or(Decimal::ZERO)
+                    .max(Decimal::ZERO),
+            )
+            .unwrap_or(Positive::ZERO)
+            .to_f64(),
+            None => f64::NAN,
+        },
     }
 }
 

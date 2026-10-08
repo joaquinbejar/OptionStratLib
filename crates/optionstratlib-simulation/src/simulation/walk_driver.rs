@@ -541,7 +541,7 @@ mod tests {
     impl WalkTypeAble<Positive, Positive> for Walker {}
 
     #[test]
-    fn test_generator_positive() {
+    fn test_generator_positive() -> Result<(), Box<dyn std::error::Error>> {
         let n_steps = 100;
         let initial_price = Positive::HUNDRED;
         let std_dev = pos_or_panic!(20.0);
@@ -555,7 +555,7 @@ mod tests {
                 y: Ystep::new(0, initial_price),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?,
                 drift: dec!(0.0),
                 volatility: std_dev,
             },
@@ -566,6 +566,7 @@ mod tests {
             RandomWalk::new("Random Walk".to_string(), &walk_params, generator_positive)
                 .expect("random walk construction");
         assert_eq!(random_walk.len(), n_steps);
+        Ok(())
     }
 
     #[test]

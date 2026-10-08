@@ -238,9 +238,13 @@ impl PerpetualPosition {
     /// Returns the notional value of the position.
     ///
     /// Notional = quantity × entry_price
-    #[must_use]
-    pub fn notional_value_at_entry(&self) -> Positive {
-        self.quantity * self.entry_price
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range; `Positive * Positive` aborted on it (#788).
+    pub fn notional_value_at_entry(&self) -> Result<Positive, PositionError> {
+        Ok(self.quantity.checked_mul(&self.entry_price)?)
     }
 
     /// Returns the current notional value at a given price.
@@ -248,9 +252,16 @@ impl PerpetualPosition {
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn notional_value_at_price(&self, current_price: Positive) -> Positive {
-        self.quantity * current_price
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    pub fn notional_value_at_price(
+        &self,
+        current_price: Positive,
+    ) -> Result<Positive, PositionError> {
+        Ok(self.quantity.checked_mul(&current_price)?)
     }
 
     /// Calculates the unrealized P&L at a given price.
@@ -438,45 +449,81 @@ impl LegAble for PerpetualPosition {
 }
 
 impl Marginable for PerpetualPosition {
-    fn initial_margin(&self) -> Positive {
-        self.margin
+    fn initial_margin(&self) -> Result<Positive, PositionError> {
+        Ok(self.margin)
     }
 
-    fn maintenance_margin(&self) -> Positive {
-        let notional = self.notional_value_at_entry();
+    fn maintenance_margin(&self) -> Result<Positive, PositionError> {
+        let notional = self.notional_value_at_entry()?;
         let maintenance_ratio = Decimal::new(5, 3);
-        Positive::new_decimal(notional.to_dec() * maintenance_ratio).unwrap_or(Positive::ZERO)
+        let maintenance = d_mul(
+            notional.to_dec(),
+            maintenance_ratio,
+            "PerpetualPosition::maintenance_margin",
+        )?;
+        Ok(Positive::new_decimal(maintenance).unwrap_or(Positive::ZERO))
     }
 
-    fn leverage(&self) -> Positive {
-        self.leverage
+    fn leverage(&self) -> Result<Positive, PositionError> {
+        Ok(self.leverage)
     }
 
     /// `None` for a long whose margin buffer per unit exceeds the entry
     /// price: no non-negative price liquidates it. A short threshold below
     /// zero is floored at zero, the documented domain floor of
     /// [`Marginable::liquidation_price`].
-    fn liquidation_price(&self, _current_price: Positive) -> Option<Positive> {
-        let maintenance = self.maintenance_margin();
-        let price_buffer = (self.margin.to_dec() - maintenance.to_dec()) / self.quantity.to_dec();
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::DecimalError`] for a zero quantity, where the
+    /// buffer per unit is undefined (`PerpetualPosition::default()` aborted
+    /// here with `Division by zero`, #788), and when the maintenance margin,
+    /// the buffer or the shifted price leaves the representable range.
+    fn liquidation_price(
+        &self,
+        _current_price: Positive,
+    ) -> Result<Option<Positive>, PositionError> {
+        let maintenance = self.maintenance_margin()?;
+        let margin_buffer = d_sub(
+            self.margin.to_dec(),
+            maintenance.to_dec(),
+            "PerpetualPosition::liquidation_price/margin_buffer",
+        )?;
+        let price_buffer = d_div(
+            margin_buffer,
+            self.quantity.to_dec(),
+            "PerpetualPosition::liquidation_price/price_buffer",
+        )?;
 
         let threshold = match self.side {
-            Side::Long => self.entry_price.to_dec() - price_buffer,
-            Side::Short => self.entry_price.to_dec() + price_buffer,
+            Side::Long => d_sub(
+                self.entry_price.to_dec(),
+                price_buffer,
+                "PerpetualPosition::liquidation_price/long",
+            )?,
+            Side::Short => d_add(
+                self.entry_price.to_dec(),
+                price_buffer,
+                "PerpetualPosition::liquidation_price/short",
+            )?,
         };
-        liquidation_threshold(threshold, self.side)
+        Ok(liquidation_threshold(threshold, self.side))
     }
 
-    fn is_liquidation_risk(&self, current_price: Positive, _margin_ratio: Decimal) -> bool {
+    fn is_liquidation_risk(
+        &self,
+        current_price: Positive,
+        _margin_ratio: Decimal,
+    ) -> Result<bool, PositionError> {
         // No reachable liquidation price means no price is at risk.
-        let Some(liq_price) = self.liquidation_price(current_price) else {
-            return false;
+        let Some(liq_price) = self.liquidation_price(current_price)? else {
+            return Ok(false);
         };
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => current_price <= liq_price,
             Side::Short => current_price >= liq_price,
-        }
+        })
     }
 }
 
@@ -489,14 +536,22 @@ impl Fundable for PerpetualPosition {
         Self::DEFAULT_FUNDING_INTERVAL_HOURS
     }
 
-    fn funding_payment(&self, mark_price: Positive) -> Decimal {
-        let notional = self.quantity.to_dec() * mark_price.to_dec();
-        let payment = notional * self.funding_rate;
+    fn funding_payment(&self, mark_price: Positive) -> Result<Decimal, PositionError> {
+        let notional = d_mul(
+            self.quantity.to_dec(),
+            mark_price.to_dec(),
+            "PerpetualPosition::funding_payment/notional",
+        )?;
+        let payment = d_mul(
+            notional,
+            self.funding_rate,
+            "PerpetualPosition::funding_payment/payment",
+        )?;
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => payment,
             Side::Short => -payment,
-        }
+        })
     }
 }
 
@@ -616,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn test_notional_value() {
+    fn test_notional_value() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
             Positive::TWO,
@@ -625,11 +680,12 @@ mod tests {
             pos_or_panic!(10000.0),
         );
 
-        assert_eq!(perp.notional_value_at_entry(), pos_or_panic!(100000.0));
+        assert_eq!(perp.notional_value_at_entry()?, pos_or_panic!(100000.0));
         assert_eq!(
-            perp.notional_value_at_price(pos_or_panic!(55000.0)),
+            perp.notional_value_at_price(pos_or_panic!(55000.0))?,
             pos_or_panic!(110000.0)
         );
+        Ok(())
     }
 
     #[test]
@@ -687,7 +743,7 @@ mod tests {
     }
 
     #[test]
-    fn test_funding_payment_long() {
+    fn test_funding_payment_long() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::new(
             "BTC-USDT-PERP".to_string(),
             Positive::ONE,
@@ -701,12 +757,13 @@ mod tests {
             Positive::ZERO,
         );
 
-        let payment = perp.funding_payment(pos_or_panic!(50000.0));
+        let payment = perp.funding_payment(pos_or_panic!(50000.0))?;
         assert_eq!(payment, dec!(5));
+        Ok(())
     }
 
     #[test]
-    fn test_funding_payment_short() {
+    fn test_funding_payment_short() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::new(
             "BTC-USDT-PERP".to_string(),
             Positive::ONE,
@@ -720,12 +777,13 @@ mod tests {
             Positive::ZERO,
         );
 
-        let payment = perp.funding_payment(pos_or_panic!(50000.0));
+        let payment = perp.funding_payment(pos_or_panic!(50000.0))?;
         assert_eq!(payment, dec!(-5));
+        Ok(())
     }
 
     #[test]
-    fn test_liquidation_price_long() {
+    fn test_liquidation_price_long() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::long(
             "BTC-USDT-PERP".to_string(),
             Positive::ONE,
@@ -735,14 +793,16 @@ mod tests {
         );
 
         // Maintenance 0.5% of 50000 = 250; (5000 - 250) / 1 = 4750 below entry.
-        let liq_price = perp.liquidation_price(pos_or_panic!(50000.0));
+        let liq_price = perp.liquidation_price(pos_or_panic!(50000.0))?;
         assert_eq!(liq_price, Some(pos_or_panic!(45250.0)));
-        assert!(perp.is_liquidation_risk(pos_or_panic!(45250.0), Decimal::ZERO));
-        assert!(!perp.is_liquidation_risk(pos_or_panic!(45251.0), Decimal::ZERO));
+        assert!(perp.is_liquidation_risk(pos_or_panic!(45250.0), Decimal::ZERO)?);
+        assert!(!perp.is_liquidation_risk(pos_or_panic!(45251.0), Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
-    fn test_liquidation_price_long_below_zero_is_unreachable() {
+    fn test_liquidation_price_long_below_zero_is_unreachable()
+    -> Result<(), Box<dyn std::error::Error>> {
         // A margin of 200 on a notional of 100 leaves 199.5 of buffer per
         // unit under an entry of 100: no non-negative price liquidates it.
         let perp = PerpetualPosition::long(
@@ -753,12 +813,13 @@ mod tests {
             pos_or_panic!(200.0),
         );
 
-        assert_eq!(perp.liquidation_price(pos_or_panic!(100.0)), None);
-        assert!(!perp.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
+        assert_eq!(perp.liquidation_price(pos_or_panic!(100.0))?, None);
+        assert!(!perp.is_liquidation_risk(Positive::ZERO, Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
-    fn test_liquidation_price_short() {
+    fn test_liquidation_price_short() -> Result<(), Box<dyn std::error::Error>> {
         let perp = PerpetualPosition::short(
             "BTC-USDT-PERP".to_string(),
             Positive::ONE,
@@ -767,10 +828,11 @@ mod tests {
             pos_or_panic!(5000.0),
         );
 
-        let liq_price = perp.liquidation_price(pos_or_panic!(50000.0));
+        let liq_price = perp.liquidation_price(pos_or_panic!(50000.0))?;
         assert_eq!(liq_price, Some(pos_or_panic!(54750.0)));
-        assert!(perp.is_liquidation_risk(pos_or_panic!(54750.0), Decimal::ZERO));
-        assert!(!perp.is_liquidation_risk(pos_or_panic!(54749.0), Decimal::ZERO));
+        assert!(perp.is_liquidation_risk(pos_or_panic!(54750.0), Decimal::ZERO)?);
+        assert!(!perp.is_liquidation_risk(pos_or_panic!(54749.0), Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
@@ -807,5 +869,37 @@ mod tests {
         assert!(display.contains("Long"));
         assert!(display.contains("BTC-USDT-PERP"));
         assert!(display.contains("10x"));
+    }
+
+    // The default position has a zero quantity; the per-unit buffer
+    // division aborted with `Division by zero` (#788).
+    #[test]
+    fn test_liquidation_price_default_is_error() {
+        let perp = PerpetualPosition::default();
+        assert!(matches!(
+            perp.liquidation_price(Positive::ONE),
+            Err(PositionError::DecimalError(_))
+        ));
+        assert!(
+            perp.is_liquidation_risk(Positive::ONE, Decimal::ZERO)
+                .is_err()
+        );
+    }
+
+    // `Positive * Positive` aborted with `Positive arithmetic overflow in
+    // mul`, and `Decimal * Decimal` with `Multiplication overflowed` (#788).
+    #[test]
+    fn test_notional_and_funding_overflow_is_error() {
+        let perp = PerpetualPosition {
+            quantity: Positive::MAX,
+            entry_price: Positive::TWO,
+            funding_rate: dec!(2),
+            ..PerpetualPosition::default()
+        };
+        assert!(perp.notional_value_at_entry().is_err());
+        assert!(perp.notional_value_at_price(Positive::TWO).is_err());
+        assert!(perp.maintenance_margin().is_err());
+        assert!(perp.funding_payment(Positive::TWO).is_err());
+        assert!(perp.annualized_funding(Positive::TWO).is_err());
     }
 }

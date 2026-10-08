@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
             y: Ystep::new(0, initial_series),
         },
         walk_type: WalkType::GeometricBrownian {
-            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+            dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?,
             drift: dec!(0.0),
             volatility: implied_volatility,
         },

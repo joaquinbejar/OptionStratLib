@@ -147,7 +147,11 @@ where
                 return Err(InterpolationError::DegenerateInterval);
             };
             if left.get_x() <= x.get_x() && x.get_x() <= right.get_x() {
-                return Ok((i, i + 1));
+                // `i + 1` is the index of `right`, inside the slice.
+                return i
+                    .checked_add(1)
+                    .map(|j| (i, j))
+                    .ok_or(InterpolationError::DegenerateInterval);
             }
         }
         Err(InterpolationError::DegenerateInterval)

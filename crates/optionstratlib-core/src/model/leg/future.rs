@@ -42,7 +42,7 @@
 
 use crate::error::{DecimalError, PositionError};
 use crate::model::ExpirationDate;
-use crate::model::decimal::{d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
 use crate::model::expiration::resolve_expiration_date;
 use crate::model::leg::traits::{Expirable, LegAble, Marginable, liquidation_threshold};
 use crate::model::types::Side;
@@ -174,7 +174,7 @@ impl FuturePosition {
             expiration_date,
             contract_size,
             margin,
-            margin * Decimal::new(8, 1), // 80% of initial margin
+            maintenance_from_initial(margin), // 80% of initial margin
             Utc::now(),
             Positive::ZERO,
         )
@@ -207,7 +207,7 @@ impl FuturePosition {
             expiration_date,
             contract_size,
             margin,
-            margin * Decimal::new(8, 1),
+            maintenance_from_initial(margin),
             Utc::now(),
             Positive::ZERO,
         )
@@ -216,9 +216,17 @@ impl FuturePosition {
     /// Returns the notional value of the position at entry.
     ///
     /// Notional = quantity × entry_price × contract_size
-    #[must_use]
-    pub fn notional_value_at_entry(&self) -> Positive {
-        self.quantity * self.entry_price * self.contract_size
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range. The three factors are `pub` fields, so nothing
+    /// bounds it; `Positive * Positive` aborted on it (#788).
+    pub fn notional_value_at_entry(&self) -> Result<Positive, PositionError> {
+        Ok(self
+            .quantity
+            .checked_mul(&self.entry_price)?
+            .checked_mul(&self.contract_size)?)
     }
 
     /// Returns the notional value at a given price.
@@ -226,9 +234,19 @@ impl FuturePosition {
     /// # Arguments
     ///
     /// * `current_price` - Current market price
-    #[must_use]
-    pub fn notional_value_at_price(&self, current_price: Positive) -> Positive {
-        self.quantity * current_price * self.contract_size
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    pub fn notional_value_at_price(
+        &self,
+        current_price: Positive,
+    ) -> Result<Positive, PositionError> {
+        Ok(self
+            .quantity
+            .checked_mul(&current_price)?
+            .checked_mul(&self.contract_size)?)
     }
 
     /// Calculates the unrealized P&L at a given price.
@@ -277,15 +295,23 @@ impl FuturePosition {
     /// # Arguments
     ///
     /// * `tick_size` - Minimum price increment
-    #[must_use]
-    pub fn tick_value(&self, tick_size: Positive) -> Positive {
-        tick_size * self.contract_size
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    pub fn tick_value(&self, tick_size: Positive) -> Result<Positive, PositionError> {
+        Ok(tick_size.checked_mul(&self.contract_size)?)
     }
 
     /// Returns the total margin required for this position.
-    #[must_use]
-    pub fn total_margin_required(&self) -> Positive {
-        self.initial_margin_req * self.quantity
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::PositiveError`] when the product leaves the
+    /// `Positive` range (#788).
+    pub fn total_margin_required(&self) -> Result<Positive, PositionError> {
+        Ok(self.initial_margin_req.checked_mul(&self.quantity)?)
     }
 
     /// Calculates the basis (futures price - spot price).
@@ -294,22 +320,49 @@ impl FuturePosition {
     ///
     /// * `spot_price` - Current spot price of the underlying
     #[must_use]
+    // Both operands lie in `[0, Decimal::MAX]`, so the difference lies in
+    // `[-Decimal::MAX, Decimal::MAX]` and is always representable.
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "the difference of two values in [0, Decimal::MAX] is representable"
+    )]
     pub fn basis(&self, spot_price: Positive) -> Decimal {
         self.entry_price.to_dec() - spot_price.to_dec()
     }
 
     /// Calculates the implied leverage of the position.
     ///
-    /// Leverage = Notional Value / Margin Required
-    #[must_use]
-    pub fn implied_leverage(&self) -> Decimal {
-        let margin = self.total_margin_required();
+    /// Leverage = Notional Value / Margin Required, and zero when no margin
+    /// is required.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError`] when the notional, the margin or their
+    /// ratio leaves the representable range (#788).
+    pub fn implied_leverage(&self) -> Result<Decimal, PositionError> {
+        let margin = self.total_margin_required()?;
         if margin == Positive::ZERO {
-            return Decimal::ZERO;
+            return Ok(Decimal::ZERO);
         }
 
-        self.notional_value_at_entry().to_dec() / margin.to_dec()
+        Ok(d_div(
+            self.notional_value_at_entry()?.to_dec(),
+            margin.to_dec(),
+            "FuturePosition::implied_leverage",
+        )?)
     }
+}
+
+/// Maintenance margin set by [`FuturePosition::long`] and
+/// [`FuturePosition::short`]: 80% of the initial margin.
+// Scaling a value in `[0, Decimal::MAX]` by `0.8` stays in that range, so the
+// product is representable and keeps the `Positive` invariant.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "0.8 times a value in [0, Decimal::MAX] stays in that range"
+)]
+fn maintenance_from_initial(margin: Positive) -> Positive {
+    margin * Decimal::new(8, 1)
 }
 
 impl LegAble for FuturePosition {
@@ -353,44 +406,79 @@ impl LegAble for FuturePosition {
 }
 
 impl Marginable for FuturePosition {
-    fn initial_margin(&self) -> Positive {
-        self.initial_margin_req * self.quantity
+    fn initial_margin(&self) -> Result<Positive, PositionError> {
+        Ok(self.initial_margin_req.checked_mul(&self.quantity)?)
     }
 
-    fn maintenance_margin(&self) -> Positive {
-        self.maintenance_margin_req * self.quantity
+    fn maintenance_margin(&self) -> Result<Positive, PositionError> {
+        Ok(self.maintenance_margin_req.checked_mul(&self.quantity)?)
     }
 
-    fn leverage(&self) -> Positive {
-        let lev = self.implied_leverage();
-        Positive::new_decimal(lev).unwrap_or(positive::Positive::ONE)
+    fn leverage(&self) -> Result<Positive, PositionError> {
+        let lev = self.implied_leverage()?;
+        Ok(Positive::new_decimal(lev).unwrap_or(positive::Positive::ONE))
     }
 
     /// `None` for a long whose margin buffer per unit exceeds the entry
     /// price: no non-negative price liquidates it. A short threshold below
     /// zero is floored at zero, the documented domain floor of
     /// [`Marginable::liquidation_price`].
-    fn liquidation_price(&self, _current_price: Positive) -> Option<Positive> {
-        let margin_buffer = self.initial_margin().to_dec() - self.maintenance_margin().to_dec();
-        let price_buffer = margin_buffer / (self.quantity.to_dec() * self.contract_size.to_dec());
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PositionError::DecimalError`] for a zero quantity or
+    /// contract size, where the buffer per unit is undefined (the division
+    /// aborted with `Division by zero`, #788), and when a margin, the buffer
+    /// or the shifted price leaves the representable range.
+    fn liquidation_price(
+        &self,
+        _current_price: Positive,
+    ) -> Result<Option<Positive>, PositionError> {
+        let margin_buffer = d_sub(
+            self.initial_margin()?.to_dec(),
+            self.maintenance_margin()?.to_dec(),
+            "FuturePosition::liquidation_price/margin_buffer",
+        )?;
+        let units = d_mul(
+            self.quantity.to_dec(),
+            self.contract_size.to_dec(),
+            "FuturePosition::liquidation_price/units",
+        )?;
+        let price_buffer = d_div(
+            margin_buffer,
+            units,
+            "FuturePosition::liquidation_price/price_buffer",
+        )?;
 
         let threshold = match self.side {
-            Side::Long => self.entry_price.to_dec() - price_buffer,
-            Side::Short => self.entry_price.to_dec() + price_buffer,
+            Side::Long => d_sub(
+                self.entry_price.to_dec(),
+                price_buffer,
+                "FuturePosition::liquidation_price/long",
+            )?,
+            Side::Short => d_add(
+                self.entry_price.to_dec(),
+                price_buffer,
+                "FuturePosition::liquidation_price/short",
+            )?,
         };
-        liquidation_threshold(threshold, self.side)
+        Ok(liquidation_threshold(threshold, self.side))
     }
 
-    fn is_liquidation_risk(&self, current_price: Positive, _margin_ratio: Decimal) -> bool {
+    fn is_liquidation_risk(
+        &self,
+        current_price: Positive,
+        _margin_ratio: Decimal,
+    ) -> Result<bool, PositionError> {
         // No reachable liquidation price means no price is at risk.
-        let Some(liq_price) = self.liquidation_price(current_price) else {
-            return false;
+        let Some(liq_price) = self.liquidation_price(current_price)? else {
+            return Ok(false);
         };
 
-        match self.side {
+        Ok(match self.side {
             Side::Long => current_price <= liq_price,
             Side::Short => current_price >= liq_price,
-        }
+        })
     }
 }
 
@@ -542,7 +630,7 @@ mod tests {
     }
 
     #[test]
-    fn test_notional_value() {
+    fn test_notional_value() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
             "ES".to_string(),
             Positive::TWO,
@@ -552,7 +640,8 @@ mod tests {
             pos_or_panic!(15000.0),
         );
 
-        assert_eq!(future.notional_value_at_entry(), pos_or_panic!(450000.0));
+        assert_eq!(future.notional_value_at_entry()?, pos_or_panic!(450000.0));
+        Ok(())
     }
 
     #[test]
@@ -592,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn test_implied_leverage() {
+    fn test_implied_leverage() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
             "ES".to_string(),
             Positive::ONE,
@@ -602,8 +691,9 @@ mod tests {
             pos_or_panic!(15000.0),
         );
 
-        let leverage = future.implied_leverage();
+        let leverage = future.implied_leverage()?;
         assert_eq!(leverage, Decimal::from(15));
+        Ok(())
     }
 
     #[test]
@@ -622,7 +712,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tick_value() {
+    fn test_tick_value() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
             "ES".to_string(),
             Positive::ONE,
@@ -632,12 +722,13 @@ mod tests {
             pos_or_panic!(15000.0),
         );
 
-        let tick_val = future.tick_value(pos_or_panic!(0.25));
+        let tick_val = future.tick_value(pos_or_panic!(0.25))?;
         assert_eq!(tick_val, pos_or_panic!(12.5));
+        Ok(())
     }
 
     #[test]
-    fn test_total_margin_required() {
+    fn test_total_margin_required() -> Result<(), Box<dyn std::error::Error>> {
         let future = FuturePosition::long(
             "ES".to_string(),
             Positive::TWO,
@@ -647,7 +738,8 @@ mod tests {
             pos_or_panic!(15000.0),
         );
 
-        assert_eq!(future.total_margin_required(), pos_or_panic!(30000.0));
+        assert_eq!(future.total_margin_required()?, pos_or_panic!(30000.0));
+        Ok(())
     }
 
     #[test]
@@ -688,7 +780,8 @@ mod tests {
     }
 
     #[test]
-    fn test_future_liquidation_price_reachable_is_unchanged() {
+    fn test_future_liquidation_price_reachable_is_unchanged()
+    -> Result<(), Box<dyn std::error::Error>> {
         let long = FuturePosition::long(
             "ES".to_string(),
             Positive::ONE,
@@ -708,21 +801,23 @@ mod tests {
 
         // (15000 - 12000) / 50 = 60 of price buffer either side of 4500.
         assert_eq!(
-            long.liquidation_price(pos_or_panic!(4500.0)),
+            long.liquidation_price(pos_or_panic!(4500.0))?,
             Some(pos_or_panic!(4440.0))
         );
         assert_eq!(
-            short.liquidation_price(pos_or_panic!(4500.0)),
+            short.liquidation_price(pos_or_panic!(4500.0))?,
             Some(pos_or_panic!(4560.0))
         );
-        assert!(long.is_liquidation_risk(pos_or_panic!(4440.0), Decimal::ZERO));
-        assert!(!long.is_liquidation_risk(pos_or_panic!(4441.0), Decimal::ZERO));
-        assert!(short.is_liquidation_risk(pos_or_panic!(4560.0), Decimal::ZERO));
-        assert!(!short.is_liquidation_risk(pos_or_panic!(4559.0), Decimal::ZERO));
+        assert!(long.is_liquidation_risk(pos_or_panic!(4440.0), Decimal::ZERO)?);
+        assert!(!long.is_liquidation_risk(pos_or_panic!(4441.0), Decimal::ZERO)?);
+        assert!(short.is_liquidation_risk(pos_or_panic!(4560.0), Decimal::ZERO)?);
+        assert!(!short.is_liquidation_risk(pos_or_panic!(4559.0), Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
-    fn test_future_long_liquidation_price_below_zero_is_unreachable() {
+    fn test_future_long_liquidation_price_below_zero_is_unreachable()
+    -> Result<(), Box<dyn std::error::Error>> {
         // A buffer of 90 per unit under an entry of 10 puts the threshold at
         // -80: the long survives a fall all the way to zero.
         let long = future_with_margins(
@@ -732,13 +827,15 @@ mod tests {
             pos_or_panic!(10.0),
         );
 
-        assert_eq!(long.liquidation_price(pos_or_panic!(10.0)), None);
-        assert!(!long.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
-        assert!(!long.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO));
+        assert_eq!(long.liquidation_price(pos_or_panic!(10.0))?, None);
+        assert!(!long.is_liquidation_risk(Positive::ZERO, Decimal::ZERO)?);
+        assert!(!long.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
-    fn test_future_short_liquidation_price_below_zero_floors_at_zero() {
+    fn test_future_short_liquidation_price_below_zero_floors_at_zero()
+    -> Result<(), Box<dyn std::error::Error>> {
         // A maintenance requirement 90 above the initial one puts the short
         // threshold at -80: every non-negative price already crosses it.
         let short = future_with_margins(
@@ -749,11 +846,12 @@ mod tests {
         );
 
         assert_eq!(
-            short.liquidation_price(pos_or_panic!(10.0)),
+            short.liquidation_price(pos_or_panic!(10.0))?,
             Some(Positive::ZERO)
         );
-        assert!(short.is_liquidation_risk(Positive::ZERO, Decimal::ZERO));
-        assert!(short.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO));
+        assert!(short.is_liquidation_risk(Positive::ZERO, Decimal::ZERO)?);
+        assert!(short.is_liquidation_risk(pos_or_panic!(10.0), Decimal::ZERO)?);
+        Ok(())
     }
 
     #[test]
@@ -797,5 +895,49 @@ mod tests {
             "{result:?}"
         );
         assert!(future.time_to_expiration_years().is_err());
+    }
+
+    fn future_with_quantity(quantity: Positive) -> FuturePosition {
+        FuturePosition::long(
+            "ES".to_string(),
+            quantity,
+            pos_or_panic!(4500.0),
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(50.0),
+            pos_or_panic!(15000.0),
+        )
+    }
+
+    // A zero quantity left the per-unit margin buffer undefined, and the
+    // division aborted with `Division by zero` (#788).
+    #[test]
+    fn test_liquidation_price_zero_quantity_is_error() {
+        let future = future_with_quantity(Positive::ZERO);
+        assert!(matches!(
+            future.liquidation_price(pos_or_panic!(4500.0)),
+            Err(PositionError::DecimalError(_))
+        ));
+        assert!(
+            future
+                .is_liquidation_risk(pos_or_panic!(4500.0), Decimal::ZERO)
+                .is_err()
+        );
+    }
+
+    // `Positive * Positive` aborted with `Positive arithmetic overflow in
+    // mul` (#788).
+    #[test]
+    fn test_notional_and_margins_overflow_is_error() {
+        let future = future_with_quantity(Positive::MAX);
+        assert!(future.notional_value_at_entry().is_err());
+        assert!(future.notional_value_at_price(Positive::TWO).is_err());
+        assert!(future.total_margin_required().is_err());
+        assert!(future.implied_leverage().is_err());
+        assert!(future.initial_margin().is_err());
+        assert!(future.maintenance_margin().is_err());
+        assert!(future.leverage().is_err());
+        let mut wide = future_with_quantity(Positive::ONE);
+        wide.contract_size = Positive::MAX;
+        assert!(wide.tick_value(Positive::TWO).is_err());
     }
 }

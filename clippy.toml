@@ -1,0 +1,7 @@
+# `clippy::arithmetic_side_effects` is denied in the crates that opt in
+# (#788). Negating a `Decimal` flips its sign bit and cannot overflow, so the
+# unary `-` on it is total and needs no checked form. The lint matches the
+# type by the path rustc prints for it, which is `positive::Decimal` in a
+# crate that reaches `rust_decimal` through `positive`'s re-export first and
+# `rust_decimal::Decimal` elsewhere; both name the same type.
+arithmetic-side-effects-allowed-unary = ["rust_decimal::Decimal", "positive::Decimal"]

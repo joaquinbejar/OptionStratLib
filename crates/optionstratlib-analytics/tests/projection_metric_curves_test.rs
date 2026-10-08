@@ -19,7 +19,12 @@ fn sample_chain() -> OptionChain {
         Ok(chain) => chain,
         Err(error) => panic!("sample chain must load: {error}"),
     };
-    chain.set_expiration_date(optionstratlib_core::utils::time::get_x_days_formatted(30));
+    chain.set_expiration_date(
+        match optionstratlib_core::utils::time::get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        },
+    );
     chain
 }
 

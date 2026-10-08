@@ -203,9 +203,11 @@ where
     /// Returns [`SimulationError::ExpirationReached`] when the
     /// current step is already at expiration (no forward step is
     /// possible), [`SimulationError::ExpirationDate`] when the
-    /// underlying [`ExpirationDate::get_days`] call fails, and
-    /// [`SimulationError::StepError`] when the step index overflows
-    /// `i32::MAX`.
+    /// underlying [`ExpirationDate::get_days`] call fails,
+    /// [`SimulationError::PositiveError`] when the step cannot be expressed
+    /// in days (a custom time unit with no periods in a year, or a step
+    /// beyond the `Positive` range), and [`SimulationError::StepError`]
+    /// when the step index overflows `i32::MAX`.
     pub fn next(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         if days == Positive::ZERO {
@@ -217,7 +219,7 @@ where
             })?,
             &self.time_unit,
             &TimeFrame::Day,
-        );
+        )?;
         let datetime = if days_to_rest <= days {
             ExpirationDate::Days(days - days_to_rest)
         } else {
@@ -252,8 +254,9 @@ where
     /// [`ExpirationDate::get_days`] call fails,
     /// [`SimulationError::StepError`] when the step-size conversion to
     /// `Positive` fails or when the step index underflows `i32::MIN`, and
-    /// [`SimulationError::PositiveError`] when rewinding the expiration
-    /// leaves the representable `Positive` range.
+    /// [`SimulationError::PositiveError`] when the step cannot be
+    /// expressed in days or rewinding the expiration leaves the
+    /// representable `Positive` range.
     pub fn previous(&self) -> Result<Self, SimulationError> {
         let days = self.datetime.get_days()?;
         let days_to_rest = convert_time_frame(
@@ -262,7 +265,7 @@ where
             })?,
             &self.time_unit,
             &TimeFrame::Day,
-        );
+        )?;
         // Rewinding adds days back, so a step taken from an expiration
         // already near `Positive::MAX` leaves the representable range.
         let datetime = ExpirationDate::Days(days.checked_add(&days_to_rest)?);

@@ -612,7 +612,10 @@ mod tests_basic_curves {
 
     // Helper function to create a sample OptionChain for testing
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_x_days_formatted(30);
+        let tomorrow_date = match get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        };
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -805,7 +808,10 @@ mod tests_option_chain_surfaces {
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_x_days_formatted(30);
+        let tomorrow_date = match get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        };
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -1064,7 +1070,10 @@ mod tests_option_chain_time_surfaces {
     use rust_decimal_macros::dec;
 
     fn create_test_option_chain() -> OptionChain {
-        let tomorrow_date = get_x_days_formatted(30);
+        let tomorrow_date = match get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        };
         let mut chain = OptionChain::new("TEST", Positive::HUNDRED, tomorrow_date, None, None);
 
         // Add some test options
@@ -1352,7 +1361,10 @@ mod tests_gamma_calculations_projections {
             "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
-        option_chain.set_expiration_date(get_x_days_formatted(30));
+        option_chain.set_expiration_date(match get_x_days_formatted(30) {
+            Ok(value) => value,
+            Err(error) => panic!("get_x_days_formatted failed: {error}"),
+        });
         option_chain
     }
 

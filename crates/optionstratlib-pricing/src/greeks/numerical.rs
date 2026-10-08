@@ -19,6 +19,21 @@ use rust_decimal_macros::dec;
 
 const H: Decimal = dec!(0.01);
 
+/// `2 × H`, the span of the central differences: the literal carries the
+/// mantissa and scale `dec!(2.0) * H` produced, so no multiplication runs.
+const TWO_H: Decimal = dec!(0.020);
+
+/// `x + H` for a bumped input; an input within `H` of `Decimal::MAX`
+/// aborted the raw addition (#788).
+fn bump_up(x: Decimal, op: &'static str) -> Result<Decimal, GreeksError> {
+    Ok(d_add(x, H, op)?)
+}
+
+/// `x - H` for a bumped input.
+fn bump_down(x: Decimal, op: &'static str) -> Result<Decimal, GreeksError> {
+    Ok(d_sub(x, H, op)?)
+}
+
 /// Calculates delta numerically using finite differences.
 ///
 /// Delta measures the rate of change of the option price with respect to
@@ -33,12 +48,22 @@ const H: Decimal = dec!(0.01);
 /// numerical failure.
 pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
-    opt_plus.underlying_price =
-        Positive::new_decimal((option.underlying_price.to_dec() + H).abs())?;
+    opt_plus.underlying_price = Positive::new_decimal(
+        bump_up(
+            option.underlying_price.to_dec(),
+            "greeks::numerical::spot_up",
+        )?
+        .abs(),
+    )?;
 
     let mut opt_minus = option.clone();
-    opt_minus.underlying_price =
-        Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
+    opt_minus.underlying_price = Positive::new_decimal(
+        bump_down(
+            option.underlying_price.to_dec(),
+            "greeks::numerical::spot_down",
+        )?
+        .abs(),
+    )?;
 
     let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
     let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
@@ -48,11 +73,7 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::delta::diff",
     )?;
-    Ok(d_div(
-        diff,
-        dec!(2.0) * H,
-        "greeks::numerical::delta::scaled",
-    )?)
+    Ok(d_div(diff, TWO_H, "greeks::numerical::delta::scaled")?)
 }
 
 /// Calculates gamma numerically using finite differences.
@@ -67,12 +88,22 @@ pub fn numerical_delta(option: &Options) -> Result<Decimal, GreeksError> {
 /// [`GreeksError::Pricing`].
 pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
-    opt_plus.underlying_price =
-        Positive::new_decimal((option.underlying_price.to_dec() + H).abs())?;
+    opt_plus.underlying_price = Positive::new_decimal(
+        bump_up(
+            option.underlying_price.to_dec(),
+            "greeks::numerical::spot_up",
+        )?
+        .abs(),
+    )?;
 
     let mut opt_minus = option.clone();
-    opt_minus.underlying_price =
-        Positive::new_decimal((option.underlying_price.to_dec() - H).abs())?;
+    opt_minus.underlying_price = Positive::new_decimal(
+        bump_down(
+            option.underlying_price.to_dec(),
+            "greeks::numerical::spot_down",
+        )?
+        .abs(),
+    )?;
 
     let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
     let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
@@ -101,12 +132,22 @@ pub fn numerical_gamma(option: &Options) -> Result<Decimal, GreeksError> {
 /// [`GreeksError::Pricing`].
 pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
-    opt_plus.implied_volatility =
-        Positive::new_decimal((option.implied_volatility.to_dec() + H).abs())?;
+    opt_plus.implied_volatility = Positive::new_decimal(
+        bump_up(
+            option.implied_volatility.to_dec(),
+            "greeks::numerical::vol_up",
+        )?
+        .abs(),
+    )?;
 
     let mut opt_minus = option.clone();
-    opt_minus.implied_volatility =
-        Positive::new_decimal((option.implied_volatility.to_dec() - H).abs())?;
+    opt_minus.implied_volatility = Positive::new_decimal(
+        bump_down(
+            option.implied_volatility.to_dec(),
+            "greeks::numerical::vol_down",
+        )?
+        .abs(),
+    )?;
 
     let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
     let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
@@ -116,11 +157,7 @@ pub fn numerical_vega(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::vega::diff",
     )?;
-    Ok(d_div(
-        diff,
-        dec!(2.0) * H,
-        "greeks::numerical::vega::scaled",
-    )?)
+    Ok(d_div(diff, TWO_H, "greeks::numerical::vega::scaled")?)
 }
 
 /// Calculates theta numerically using finite differences.
@@ -159,10 +196,10 @@ pub fn numerical_theta(option: &Options) -> Result<Decimal, GreeksError> {
 /// [`GreeksError::Pricing`].
 pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
     let mut opt_plus = option.clone();
-    opt_plus.risk_free_rate += H;
+    opt_plus.risk_free_rate = bump_up(option.risk_free_rate, "greeks::numerical::rate_up")?;
 
     let mut opt_minus = option.clone();
-    opt_minus.risk_free_rate -= H;
+    opt_minus.risk_free_rate = bump_down(option.risk_free_rate, "greeks::numerical::rate_down")?;
 
     let p_plus = price_option_with(&opt_plus, &ClosedFormEngine::ClosedFormBS)?;
     let p_minus = price_option_with(&opt_minus, &ClosedFormEngine::ClosedFormBS)?;
@@ -172,9 +209,45 @@ pub fn numerical_rho(option: &Options) -> Result<Decimal, GreeksError> {
         p_minus.to_dec(),
         "greeks::numerical::rho::diff",
     )?;
-    Ok(d_div(
-        diff,
-        dec!(2.0) * H,
-        "greeks::numerical::rho::scaled",
-    )?)
+    Ok(d_div(diff, TWO_H, "greeks::numerical::rho::scaled")?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use optionstratlib_core::model::types::{OptionStyle, Side};
+    use optionstratlib_core::model::utils::create_sample_option_simplest;
+
+    #[test]
+    fn test_two_h_is_the_product_it_replaced() {
+        assert_eq!(TWO_H.to_string(), (dec!(2.0) * H).to_string());
+    }
+
+    // The bumps are checked additions; `Decimal::MAX + H` rounds back to
+    // `Decimal::MAX` rather than overflowing, so the extremes come back
+    // as a value or an error, never as an abort.
+    #[test]
+    fn test_bumps_at_the_ends_of_the_range_return() {
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.underlying_price = Positive::MAX;
+        let _ = numerical_delta(&option);
+        let _ = numerical_gamma(&option);
+
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        option.implied_volatility = Positive::MAX;
+        let _ = numerical_vega(&option);
+
+        let mut option = create_sample_option_simplest(OptionStyle::Call, Side::Long);
+        for rate in [Decimal::MAX, Decimal::MIN] {
+            option.risk_free_rate = rate;
+            let _ = numerical_rho(&option);
+        }
+    }
+
+    #[test]
+    fn test_bump_matches_the_operator() {
+        let x = dec!(100.5);
+        assert_eq!(bump_up(x, "test").ok(), Some(x + H));
+        assert_eq!(bump_down(x, "test").ok(), Some(x - H));
+    }
 }

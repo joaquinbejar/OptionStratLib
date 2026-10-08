@@ -28,6 +28,7 @@
 use crate::error::{GreeksError, PricingError};
 use crate::greeks::Greeks;
 use optionstratlib_core::model::Side;
+use optionstratlib_core::model::decimal::{d_div, d_mul};
 use optionstratlib_core::model::leg::traits::{Expirable, Fundable};
 use optionstratlib_core::model::leg::{FuturePosition, Leg, PerpetualPosition, SpotPosition};
 use rust_decimal::Decimal;
@@ -106,7 +107,11 @@ impl LegGreeks for SpotPosition {
             Side::Long => Decimal::ONE,
             Side::Short => -Decimal::ONE,
         };
-        Ok(delta_per_unit * self.quantity.to_dec())
+        Ok(d_mul(
+            delta_per_unit,
+            self.quantity.to_dec(),
+            "greeks::legs::spot::delta",
+        )?)
     }
 }
 
@@ -117,25 +122,44 @@ impl LegGreeks for FuturePosition {
             Side::Long => self.contract_size.to_dec(),
             Side::Short => -self.contract_size.to_dec(),
         };
-        Ok(delta_per_contract * self.quantity.to_dec())
+        Ok(d_mul(
+            delta_per_contract,
+            self.quantity.to_dec(),
+            "greeks::legs::future::delta",
+        )?)
     }
 
     /// Rate sensitivity of the notional over the remaining life, per one
     /// percentage point. A remaining life that cannot be computed is reported
     /// as [`GreeksError::Pricing`] carrying the position error, never as a
     /// zero rho.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::Pricing`] wrapping the position error of a
+    /// notional or a time to expiry outside the representable range, and
+    /// [`GreeksError::CalculationError`] when their product does not fit;
+    /// the raw operators aborted on each before #788.
     fn rho(&self) -> Result<Decimal, GreeksError> {
         let time_to_exp = self
             .time_to_expiration_years()
             .map_err(PricingError::from)?;
-        let notional = self.notional_value_at_entry().to_dec();
+        let notional = self
+            .notional_value_at_entry()
+            .map_err(PricingError::from)?
+            .to_dec();
 
-        let rho_value = match self.side {
-            Side::Long => notional * time_to_exp,
-            Side::Short => -notional * time_to_exp,
+        let signed_notional = match self.side {
+            Side::Long => notional,
+            Side::Short => -notional,
         };
+        let rho_value = d_mul(signed_notional, time_to_exp, "greeks::legs::future::rho")?;
 
-        Ok(rho_value / Decimal::ONE_HUNDRED)
+        Ok(d_div(
+            rho_value,
+            Decimal::ONE_HUNDRED,
+            "greeks::legs::future::rho_per_point",
+        )?)
     }
 }
 
@@ -146,13 +170,24 @@ impl LegGreeks for PerpetualPosition {
             Side::Long => Decimal::ONE,
             Side::Short => -Decimal::ONE,
         };
-        Ok(delta_per_unit * self.quantity.to_dec())
+        Ok(d_mul(
+            delta_per_unit,
+            self.quantity.to_dec(),
+            "greeks::legs::perpetual::delta",
+        )?)
     }
 
     /// A perpetual has no expiry, so its carry is the funding payment: what
     /// the holder pays is what the position decays by.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GreeksError::Pricing`] wrapping the position error of a
+    /// funding payment outside the `Decimal` range (#788).
     fn theta(&self) -> Result<Decimal, GreeksError> {
-        Ok(-self.funding_payment(self.entry_price))
+        Ok(-self
+            .funding_payment(self.entry_price)
+            .map_err(PricingError::from)?)
     }
 }
 
@@ -296,10 +331,28 @@ mod tests {
     }
 
     #[test]
-    fn test_perpetual_theta_is_the_negated_funding_payment() {
+    fn test_perpetual_theta_is_the_negated_funding_payment()
+    -> Result<(), Box<dyn std::error::Error>> {
         let perp = perpetual(true);
-        let expected = -perp.funding_payment(perp.entry_price);
+        let expected = -perp.funding_payment(perp.entry_price)?;
         assert_eq!(ok(perp.theta()), expected);
+        Ok(())
+    }
+
+    // `Positive * Positive` in the notional aborted with `Positive
+    // arithmetic overflow in mul`, and the funding product with
+    // `Multiplication overflowed` (#788).
+    #[test]
+    fn test_leg_greeks_overflow_is_error() {
+        let mut wide_future = future(true);
+        wide_future.quantity = Positive::MAX;
+        assert!(wide_future.rho().is_err());
+        assert!(wide_future.delta().is_err());
+
+        let mut wide_perp = perpetual(true);
+        wide_perp.quantity = Positive::MAX;
+        wide_perp.funding_rate = dec!(2);
+        assert!(wide_perp.theta().is_err());
     }
 
     #[test]

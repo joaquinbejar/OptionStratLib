@@ -3,12 +3,6 @@
    Email: jb@taunais.com
    Date: 9/1/25
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::curves::{Curve, Point2D};
 use crate::error::CurveError;
 use crate::geometrics::GeometricObject;
@@ -199,35 +193,55 @@ pub fn create_constant_curve(
 /// A tuple containing two vectors:
 /// - The first vector contains the peaks (local maxima)
 /// - The second vector contains the valleys (local minima)
+///
+/// # Errors
+///
+/// Returns [`CurveError::ConstructionError`] when `2 * window_size + 1`
+/// leaves the `usize` range, when a window index falls outside the points,
+/// and when a prominence leaves the `Decimal` range (ordinates spanning more
+/// than `Decimal::MAX`); the raw operators aborted on each before #788.
 pub fn detect_peaks_and_valleys(
     points: &BTreeSet<Point2D>,
     min_prominence: Decimal,
     window_size: usize,
-) -> (Vec<Point2D>, Vec<Point2D>) {
+) -> Result<(Vec<Point2D>, Vec<Point2D>), CurveError> {
     let points_vec: Vec<Point2D> = points.iter().cloned().collect();
     let mut peaks = Vec::new();
     let mut valleys = Vec::new();
 
     // Need at least 2*window_size + 1 points to detect peaks and valleys
-    if points_vec.len() < 2 * window_size + 1 {
+    let needed = window_size
+        .checked_mul(2)
+        .and_then(|width| width.checked_add(1))
+        .ok_or_else(|| {
+            CurveError::ConstructionError(format!(
+                "peak window of {window_size} points on each side is too large"
+            ))
+        })?;
+    if points_vec.len() < needed {
         warn!(
             "Not enough points to detect peaks and valleys with window size {}. Need at least {} points, but got {}.",
             window_size,
-            2 * window_size + 1,
+            needed,
             points_vec.len()
         );
-        return (peaks, valleys);
+        return Ok((peaks, valleys));
     }
 
-    for i in window_size..points_vec.len() - window_size {
-        let current = &points_vec[i];
+    // `len >= 2 * window_size + 1` above, so the subtraction stays in range.
+    let last = points_vec
+        .len()
+        .checked_sub(window_size)
+        .ok_or_else(|| window_error(window_size, points_vec.len()))?;
+    for i in window_size..last {
+        let current = window_point(&points_vec, Some(i))?;
         let mut is_peak = true;
         let mut is_valley = true;
 
         // Check if the current point is higher or lower than all points in the window
         for j in 1..=window_size {
-            let before = &points_vec[i - j];
-            let after = &points_vec[i + j];
+            let before = window_point(&points_vec, i.checked_sub(j))?;
+            let after = window_point(&points_vec, i.checked_add(j))?;
 
             // For a peak, current needs to be higher than all points in window
             if current.y <= before.y || current.y <= after.y {
@@ -247,24 +261,49 @@ pub fn detect_peaks_and_valleys(
 
         // Check prominence (how much a peak/valley "stands out")
         if is_peak {
-            let prominence = calculate_prominence(&points_vec, i, true);
+            let prominence = calculate_prominence(&points_vec, i, true)?;
             if prominence >= min_prominence {
                 peaks.push(*current);
             }
         } else if is_valley {
-            let prominence = calculate_prominence(&points_vec, i, false);
+            let prominence = calculate_prominence(&points_vec, i, false)?;
             if prominence >= min_prominence {
                 valleys.push(*current);
             }
         }
     }
 
-    (peaks, valleys)
+    Ok((peaks, valleys))
+}
+
+/// The point at a window index, or the error naming an index outside the
+/// points (`None` is an index that overflowed `usize`).
+fn window_point(points: &[Point2D], index: Option<usize>) -> Result<&Point2D, CurveError> {
+    index
+        .and_then(|i| points.get(i))
+        .ok_or_else(|| window_error(index.unwrap_or(usize::MAX), points.len()))
+}
+
+#[cold]
+#[inline(never)]
+fn window_error(index: usize, len: usize) -> CurveError {
+    CurveError::ConstructionError(format!(
+        "peak window index {index} is outside the {len} points"
+    ))
 }
 
 /// Calculate prominence (vertical distance from a peak/valley to its surroundings)
-fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Decimal {
-    let current = points[index].y;
+///
+/// # Errors
+///
+/// Returns [`CurveError::ConstructionError`] when `index` is outside the
+/// points or the distance leaves the `Decimal` range.
+fn calculate_prominence(
+    points: &[Point2D],
+    index: usize,
+    is_peak: bool,
+) -> Result<Decimal, CurveError> {
+    let current = window_point(points, Some(index))?.y;
 
     // Find highest/lowest points to the left and right
     let left_bound = if is_peak {
@@ -283,27 +322,31 @@ fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Deci
             .unwrap_or(Decimal::MIN)
     };
 
+    // `skip(index).skip(1)` is the points after `index`, with no `index + 1`.
     let right_bound = if is_peak {
         points
             .iter()
-            .skip(index + 1)
+            .skip(index)
+            .skip(1)
             .map(|p| p.y)
             .min()
             .unwrap_or(Decimal::MAX)
     } else {
         points
             .iter()
-            .skip(index + 1)
+            .skip(index)
+            .skip(1)
             .map(|p| p.y)
             .max()
             .unwrap_or(Decimal::MIN)
     };
 
     // Calculate prominence
+    let op = "curves::utils::calculate_prominence";
     if is_peak {
-        current - Decimal::max(left_bound, right_bound)
+        d_sub(current, Decimal::max(left_bound, right_bound), op).map_err(sampling_err)
     } else {
-        Decimal::min(left_bound, right_bound) - current
+        d_sub(Decimal::min(left_bound, right_bound), current, op).map_err(sampling_err)
     }
 }
 
@@ -311,6 +354,7 @@ fn calculate_prominence(points: &[Point2D], index: usize, is_peak: bool) -> Deci
 mod tests_utils {
     use crate::curves::Point2D;
     use crate::curves::utils::{calculate_prominence, detect_peaks_and_valleys};
+    use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
     use std::collections::BTreeSet;
 
@@ -323,7 +367,7 @@ mod tests_utils {
         ]);
 
         // Use window_size = 1, which requires at least 3 points (2*1+1)
-        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1);
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1).unwrap();
 
         // Should return empty vectors with a warning log
         assert!(peaks.is_empty());
@@ -342,11 +386,11 @@ mod tests_utils {
         ];
 
         // Test prominence for a peak
-        let peak_prominence = calculate_prominence(&points, 1, true);
+        let peak_prominence = calculate_prominence(&points, 1, true).unwrap();
         assert_eq!(peak_prominence, dec!(2.0));
 
         // Test prominence for a valley
-        let valley_prominence = calculate_prominence(&points, 3, false);
+        let valley_prominence = calculate_prominence(&points, 3, false).unwrap();
         assert_eq!(valley_prominence, dec!(1.0));
     }
 
@@ -363,20 +407,43 @@ mod tests_utils {
         ]);
 
         // With low prominence threshold, should detect all peaks and valleys
-        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1);
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(0.1), 1).unwrap();
         assert_eq!(peaks.len(), 2);
         assert_eq!(valleys.len(), 2);
 
         // With high prominence threshold, should only detect the most prominent peaks
-        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(4.0), 1);
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(4.0), 1).unwrap();
         assert!(peaks.is_empty());
         assert!(!valleys.is_empty());
 
         // With medium prominence threshold
-        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(2.0), 1);
+        let (peaks, valleys) = detect_peaks_and_valleys(&points, dec!(2.0), 1).unwrap();
         assert_eq!(peaks.len(), 2);
         assert_eq!(valleys.len(), 1);
         assert_eq!(peaks[0].y, dec!(3.0));
         assert_eq!(valleys[0].y, dec!(-2.0));
+    }
+
+    // A peak at `Decimal::MAX` beside a valley at `Decimal::MIN` has a
+    // prominence beyond the `Decimal` range; the subtraction aborted with
+    // `Subtraction overflowed` before #788.
+    #[test]
+    fn test_prominence_overflow_is_error() {
+        let points = vec![
+            Point2D::new(dec!(0.0), Decimal::MIN),
+            Point2D::new(dec!(1.0), Decimal::MAX),
+            Point2D::new(dec!(2.0), Decimal::MIN),
+        ];
+        assert!(calculate_prominence(&points, 1, true).is_err());
+        assert!(calculate_prominence(&points, 3, true).is_err());
+        let set: BTreeSet<Point2D> = points.into_iter().collect();
+        assert!(detect_peaks_and_valleys(&set, dec!(0.1), 1).is_err());
+    }
+
+    // `2 * window_size + 1` overflowed `usize` before #788.
+    #[test]
+    fn test_window_size_overflow_is_error() {
+        let points = BTreeSet::from_iter(vec![Point2D::new(dec!(1.0), dec!(2.0))]);
+        assert!(detect_peaks_and_valleys(&points, dec!(0.1), usize::MAX).is_err());
     }
 }

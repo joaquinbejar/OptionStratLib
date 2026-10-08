@@ -173,13 +173,13 @@ mod tests {
 
     #[cfg(feature = "io")]
     #[test]
-    fn test_create_chain_from_step() {
+    fn test_create_chain_from_step() -> Result<(), Box<dyn std::error::Error>> {
         let mut initial_price = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
-        initial_price.update_expiration_date(get_x_days_formatted(2));
+        initial_price.update_expiration_date(get_x_days_formatted(2)?);
         let new_price: Positive = pos_or_panic!(5790.0);
         let step = Step {
             x: Xstep::new(
@@ -203,6 +203,7 @@ mod tests {
         for option in new_chain.get_single_iter() {
             assert!(option.valid_put() || option.valid_call());
         }
+        Ok(())
     }
 
     #[derive(Clone)]
@@ -216,14 +217,15 @@ mod tests {
 
     #[cfg(feature = "io")]
     #[test]
-    fn test_create_chain_from_step_with_volatility_change() {
+    fn test_create_chain_from_step_with_volatility_change() -> Result<(), Box<dyn std::error::Error>>
+    {
         let n_steps = 4;
         let mut initial_chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
         ))
         .unwrap();
-        initial_chain.update_expiration_date(get_x_days_formatted(2));
+        initial_chain.update_expiration_date(get_x_days_formatted(2)?);
         let days = pos_or_panic!(30.0);
         let std_dev = pos_or_panic!(20.0);
         let walker = Box::new(WalkerOptionChain::new());
@@ -235,7 +237,7 @@ mod tests {
                 y: Ystep::new(0, initial_chain),
             },
             walk_type: WalkType::GeometricBrownian {
-                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day),
+                dt: convert_time_frame(Positive::ONE / days, &TimeFrame::Minute, &TimeFrame::Day)?,
                 drift: dec!(0.0),
                 volatility: std_dev / 100.0,
             },
@@ -250,6 +252,7 @@ mod tests {
         )
         .expect("random walk construction");
         assert_eq!(random_walk.len(), n_steps);
+        Ok(())
     }
 
     /// Regression for #408: under a stochastic-volatility walk the rebuilt
@@ -554,7 +557,7 @@ mod tests {
     /// Contract: an empty walker output yields the init-only walk (no panic,
     /// no error) for the chain generator too.
     #[test]
-    fn test_generator_optionchain_empty_walker_output() {
+    fn test_generator_optionchain_empty_walker_output() -> Result<(), Box<dyn std::error::Error>> {
         use crate::walk_test_support::EmptyWalker;
         use optionstratlib_core::spos;
         use optionstratlib_core::utils::time::get_tomorrow_formatted;
@@ -562,7 +565,7 @@ mod tests {
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -589,6 +592,7 @@ mod tests {
             Err(e) => panic!("empty walker output must not error: {e}"),
         };
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 }
 
@@ -618,12 +622,12 @@ mod generators_coverage_tests {
     impl WalkTypeAble<Positive, OptionChain> for TestWalker {}
 
     #[test]
-    fn test_generator_optionchain_early_return() {
+    fn test_generator_optionchain_early_return() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -653,15 +657,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_brownian() {
+    fn test_generator_optionchain_brownian() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -691,15 +696,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_log_returns() {
+    fn test_generator_optionchain_log_returns() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -730,15 +736,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_mean_reverting() {
+    fn test_generator_optionchain_mean_reverting() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -769,15 +776,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_jump_diffusion() {
+    fn test_generator_optionchain_jump_diffusion() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -810,15 +818,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_garch() {
+    fn test_generator_optionchain_garch() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -850,15 +859,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_heston() {
+    fn test_generator_optionchain_heston() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -892,15 +902,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_custom() {
+    fn test_generator_optionchain_custom() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -933,15 +944,16 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_generator_optionchain_historical() {
+    fn test_generator_optionchain_historical() -> Result<(), Box<dyn std::error::Error>> {
         // Create a small walk with only one step to test early return
         let chain = OptionChain::new(
             "TEST",
             Positive::HUNDRED,
-            get_tomorrow_formatted(),
+            get_tomorrow_formatted()?,
             Some(dec!(0.05)),
             spos!(0.02),
         );
@@ -975,5 +987,6 @@ mod generators_coverage_tests {
 
         // We should just get the initial step back
         assert_eq!(steps.len(), 1);
+        Ok(())
     }
 }
