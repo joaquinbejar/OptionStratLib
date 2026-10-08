@@ -1,0 +1,92 @@
+name: Examples and benches
+
+# Every example binary and every Criterion bench builds and runs once (#787),
+# so neither rots unnoticed. Examples run with no WebDriver (`WEBDRIVER_PATH`
+# points nowhere), so a program that fails only because image export could not
+# start is reported as `needs-webdriver` instead of failing the job; the
+# weekly `static_export.yml` workflow runs them all again with a matching
+# Chrome and chromedriver, where an export failure is a bug.
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  examples:
+    name: Run every example
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      WEBDRIVER_PATH: /nonexistent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-examples-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-examples-
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+
+      - name: Build and run every example
+        run: make smoke-examples
+
+  benches:
+    name: Run every bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-benches-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-benches-
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+
+      - name: Compile and run every bench once
+        run: make smoke-benches
