@@ -353,7 +353,7 @@ macro_rules! impl_graph_for_payoff_strategy {
 
                     // Create series for each segment
                     let mut series_list = Vec::new();
-                    for (i, (segment, sign)) in segments.iter().enumerate() {
+                    for ((segment, sign), number) in segments.iter().zip(1usize..) {
                         let color = if *sign > 0 {
                             "#2ca02c".to_string() // Green for positive values
                         } else if *sign < 0 {
@@ -365,7 +365,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                         let series = Series2D {
                             x: segment.iter().map(|(x, _)| *x).collect(),
                             y: segment.iter().map(|(_, y)| *y).collect(),
-                            name: format!("Segment {}", i + 1),
+                            name: format!("Segment {number}"),
                             mode: TraceMode::Lines,
                             line_color: Some(color),
                             line_width: Some(2.0),
