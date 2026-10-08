@@ -217,15 +217,15 @@ pub fn optionstratlib_core::model::decimal::p_sqrt(&positive::positive::Positive
 pub mod optionstratlib_core::model::leg
 pub mod optionstratlib_core::model::leg::traits
 pub trait optionstratlib_core::model::leg::traits::Expirable: optionstratlib_core::model::leg::traits::LegAble
-pub fn optionstratlib_core::model::leg::traits::Expirable::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Expirable::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::traits::Expirable::expiration_timestamp(&self) -> i64
 pub fn optionstratlib_core::model::leg::traits::Expirable::is_expired(&self) -> bool
-pub fn optionstratlib_core::model::leg::traits::Expirable::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::traits::Expirable::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
-pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
 pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
-pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub trait optionstratlib_core::model::leg::traits::Fundable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::traits::Fundable::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::leg::traits::Fundable::funding_interval_hours(&self) -> u32
@@ -290,19 +290,19 @@ pub trait optionstratlib_core::model::leg::traits::Marginable: optionstratlib_co
 pub fn optionstratlib_core::model::leg::traits::Marginable::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::traits::Marginable::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::traits::Marginable::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::traits::Marginable::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::traits::Marginable::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::traits::Marginable::maintenance_margin(&self) -> positive::positive::Positive
 impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
 impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::PerpetualPosition
 pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
 pub enum optionstratlib_core::model::leg::Leg
 pub optionstratlib_core::model::leg::Leg::Future(optionstratlib_core::model::leg::FuturePosition)
@@ -395,10 +395,10 @@ pub fn optionstratlib_core::model::leg::FuturePosition::default() -> Self
 impl core::fmt::Display for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
-pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
 pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
-pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::LegAble for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::fees(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::get_quantity(&self) -> positive::positive::Positive
@@ -413,7 +413,7 @@ impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core
 pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
 impl utoipa::ToSchema for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::name() -> alloc::borrow::Cow<'static, str>
@@ -469,7 +469,7 @@ impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core
 pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
 impl utoipa::ToSchema for optionstratlib_core::model::leg::PerpetualPosition
 pub fn optionstratlib_core::model::leg::PerpetualPosition::name() -> alloc::borrow::Cow<'static, str>
@@ -514,15 +514,15 @@ pub fn optionstratlib_core::model::leg::SpotPosition::schemas(&mut alloc::vec::V
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::leg::SpotPosition
 pub fn optionstratlib_core::model::leg::SpotPosition::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub trait optionstratlib_core::model::leg::Expirable: optionstratlib_core::model::leg::traits::LegAble
-pub fn optionstratlib_core::model::leg::Expirable::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Expirable::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::Expirable::expiration_timestamp(&self) -> i64
 pub fn optionstratlib_core::model::leg::Expirable::is_expired(&self) -> bool
-pub fn optionstratlib_core::model::leg::Expirable::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::Expirable::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 impl optionstratlib_core::model::leg::traits::Expirable for optionstratlib_core::model::leg::FuturePosition
-pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::days_to_expiration(&self) -> core::result::Result<positive::positive::Positive, optionstratlib_core::error::position::PositionError>
 pub fn optionstratlib_core::model::leg::FuturePosition::expiration_timestamp(&self) -> i64
 pub fn optionstratlib_core::model::leg::FuturePosition::is_expired(&self) -> bool
-pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> rust_decimal::decimal::Decimal
+pub fn optionstratlib_core::model::leg::FuturePosition::time_to_expiration_years(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::position::PositionError>
 pub trait optionstratlib_core::model::leg::Fundable: optionstratlib_core::model::leg::traits::LegAble
 pub fn optionstratlib_core::model::leg::Fundable::annualized_funding(&self, positive::positive::Positive) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::leg::Fundable::funding_interval_hours(&self) -> u32
@@ -587,19 +587,19 @@ pub trait optionstratlib_core::model::leg::Marginable: optionstratlib_core::mode
 pub fn optionstratlib_core::model::leg::Marginable::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::Marginable::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::Marginable::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::Marginable::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::Marginable::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::Marginable::maintenance_margin(&self) -> positive::positive::Positive
 impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::FuturePosition
 pub fn optionstratlib_core::model::leg::FuturePosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::FuturePosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::FuturePosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::FuturePosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::FuturePosition::maintenance_margin(&self) -> positive::positive::Positive
 impl optionstratlib_core::model::leg::traits::Marginable for optionstratlib_core::model::leg::PerpetualPosition
 pub fn optionstratlib_core::model::leg::PerpetualPosition::initial_margin(&self) -> positive::positive::Positive
 pub fn optionstratlib_core::model::leg::PerpetualPosition::is_liquidation_risk(&self, positive::positive::Positive, rust_decimal::decimal::Decimal) -> bool
 pub fn optionstratlib_core::model::leg::PerpetualPosition::leverage(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> positive::positive::Positive
+pub fn optionstratlib_core::model::leg::PerpetualPosition::liquidation_price(&self, positive::positive::Positive) -> core::option::Option<positive::positive::Positive>
 pub fn optionstratlib_core::model::leg::PerpetualPosition::maintenance_margin(&self) -> positive::positive::Positive
 pub mod optionstratlib_core::model::option
 pub struct optionstratlib_core::model::option::ExoticParams
@@ -798,9 +798,9 @@ pub optionstratlib_core::model::Balance::quantity: positive::positive::Positive
 pub optionstratlib_core::model::Balance::symbol: alloc::string::String
 pub optionstratlib_core::model::Balance::underlying_asset_type: financial_types::UnderlyingAssetType
 impl optionstratlib_core::model::Balance
-pub fn optionstratlib_core::model::Balance::get_cost_basis(&self) -> positive::positive::Positive
-pub fn optionstratlib_core::model::Balance::get_percentage_return(&self) -> rust_decimal::decimal::Decimal
-pub fn optionstratlib_core::model::Balance::get_total_value(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Balance::get_cost_basis(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
+pub fn optionstratlib_core::model::Balance::get_percentage_return(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_core::error::DecimalError>
+pub fn optionstratlib_core::model::Balance::get_total_value(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib_core::model::Balance::get_unrealized_pnl(&self) -> rust_decimal::decimal::Decimal
 pub fn optionstratlib_core::model::Balance::is_profitable(&self) -> bool
 pub fn optionstratlib_core::model::Balance::new(alloc::string::String, positive::positive::Positive, positive::positive::Positive, core::option::Option<positive::positive::Positive>, alloc::string::String, financial_types::UnderlyingAssetType, core::option::Option<optionstratlib_core::model::MarginInfo>) -> Self
@@ -882,7 +882,7 @@ pub fn optionstratlib_core::model::Portfolio::get_balance(&self, &str, &str) -> 
 pub fn optionstratlib_core::model::Portfolio::get_balance_mut(&mut self, &str, &str) -> core::option::Option<&mut optionstratlib_core::model::Balance>
 pub fn optionstratlib_core::model::Portfolio::get_balances_by_exchange(&self, &str) -> alloc::vec::Vec<&optionstratlib_core::model::Balance>
 pub fn optionstratlib_core::model::Portfolio::get_total_unrealized_pnl(&self) -> rust_decimal::decimal::Decimal
-pub fn optionstratlib_core::model::Portfolio::get_total_value(&self) -> positive::positive::Positive
+pub fn optionstratlib_core::model::Portfolio::get_total_value(&self) -> core::result::Result<positive::positive::Positive, positive::error::PositiveError>
 pub fn optionstratlib_core::model::Portfolio::has_profitable_positions(&self) -> bool
 pub fn optionstratlib_core::model::Portfolio::is_empty(&self) -> bool
 pub fn optionstratlib_core::model::Portfolio::new(alloc::string::String) -> Self
@@ -1049,7 +1049,7 @@ pub fn optionstratlib_core::utils::time::get_today_formatted() -> alloc::string:
 pub fn optionstratlib_core::utils::time::get_today_or_tomorrow_formatted() -> alloc::string::String
 pub fn optionstratlib_core::utils::time::get_tomorrow_formatted() -> alloc::string::String
 pub fn optionstratlib_core::utils::time::get_x_days_formatted(i64) -> alloc::string::String
-pub fn optionstratlib_core::utils::time::get_x_days_formatted_pos(positive::positive::Positive) -> alloc::string::String
+pub fn optionstratlib_core::utils::time::get_x_days_formatted_pos(positive::positive::Positive) -> core::result::Result<alloc::string::String, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::utils::time::units_per_year(&optionstratlib_core::utils::time::TimeFrame) -> positive::positive::Positive
 pub enum optionstratlib_core::utils::TimeFrame
 pub optionstratlib_core::utils::TimeFrame::Custom(positive::positive::Positive)

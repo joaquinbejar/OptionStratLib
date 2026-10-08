@@ -6,6 +6,7 @@
 
 use crate::constants::*;
 use chrono::{Duration, Local, NaiveTime, Utc};
+use expiration_date::error::ExpirationDateError;
 use positive::Positive;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -306,17 +307,36 @@ pub fn get_x_days_formatted(days: i64) -> String {
 /// - `MMM` is the three-letter abbreviated name of the month.
 /// - `yyyy` is the 4-digit year.
 ///
+/// # Errors
+///
+/// Returns [`ExpirationDateError::ArithmeticOverflow`] when the rounded-up day
+/// count does not fit an `i64`, does not fit a `chrono` day span, or moves the
+/// date outside the calendar range `chrono` can represent. The date is never
+/// replaced by today's: a caller asking for a date `days` ahead either gets
+/// that date or an error.
+///
 /// # Note
 /// - The function uses the local time zone and the `chrono` crate for date manipulation.
 /// - The `Positive` type is expected to provide a `.ceiling()` method that converts it to an integer-compatible representation.
-#[must_use]
-pub fn get_x_days_formatted_pos(days: Positive) -> String {
-    let ceiling = days.ceiling().to_i64_checked().unwrap_or(i64::MAX);
+pub fn get_x_days_formatted_pos(days: Positive) -> Result<String, ExpirationDateError> {
+    let ceiling = days
+        .ceiling()
+        .to_i64_checked()
+        .ok_or_else(|| unrepresentable_day_offset(days))?;
     let today = Local::now().date_naive();
-    let tomorrow = Duration::try_days(ceiling)
+    let target = Duration::try_days(ceiling)
         .and_then(|delta| today.checked_add_signed(delta))
-        .unwrap_or(today);
-    tomorrow.format("%d-%b-%Y").to_string().to_lowercase()
+        .ok_or_else(|| unrepresentable_day_offset(days))?;
+    Ok(target.format("%d-%b-%Y").to_string().to_lowercase())
+}
+
+/// Reports a day offset no calendar date can represent.
+#[cold]
+#[inline(never)]
+fn unrepresentable_day_offset(days: Positive) -> ExpirationDateError {
+    ExpirationDateError::ArithmeticOverflow(format!(
+        "a date {days} days from today is outside the representable calendar range"
+    ))
 }
 
 /// Returns the current date formatted as "dd-mmm-yyyy" in lowercase.
@@ -631,5 +651,41 @@ mod tests_timeframe_convert {
         let result =
             convert_time_frame(Positive::ZERO, &TimeFrame::Millisecond, &TimeFrame::Second);
         assert_pos_relative_eq!(result, Positive::ZERO, pos_or_panic!(1e-10));
+    }
+}
+
+#[cfg(test)]
+mod tests_x_days_formatted_pos {
+    use super::*;
+
+    #[test]
+    fn test_get_x_days_formatted_pos_rounds_up_and_matches_the_integer_form() {
+        let date = get_x_days_formatted_pos(pos_or_panic!(6.2)).expect("seven days ahead");
+        assert_eq!(date, get_x_days_formatted(7));
+    }
+
+    #[test]
+    fn test_get_x_days_formatted_pos_zero_days_is_today() {
+        let date = get_x_days_formatted_pos(Positive::ZERO).expect("today");
+        assert_eq!(date, get_today_formatted());
+    }
+
+    #[test]
+    fn test_get_x_days_formatted_pos_beyond_the_calendar_reports_overflow() {
+        // A billion days is a valid `chrono` span but no `NaiveDate` holds it.
+        let result = get_x_days_formatted_pos(pos_or_panic!(1_000_000_000.0));
+        assert!(matches!(
+            result,
+            Err(ExpirationDateError::ArithmeticOverflow(_))
+        ));
+    }
+
+    #[test]
+    fn test_get_x_days_formatted_pos_beyond_i64_reports_overflow() {
+        let result = get_x_days_formatted_pos(Positive::MAX);
+        assert!(matches!(
+            result,
+            Err(ExpirationDateError::ArithmeticOverflow(_))
+        ));
     }
 }
