@@ -265,9 +265,44 @@ pub mod short_put;
 pub mod short_straddle;
 /// Short Strangle strategy implementation
 pub mod short_strangle;
-// Test-only support (the priced optimiser chain), not public API.
+// Test-only support: a small priced option chain the optimiser unit tests
+// search. Compiled only for this crate's own unit tests, not public API
+// (#814).
 #[cfg(test)]
-mod test_support;
+mod test_support {
+    use optionstratlib_core::model::{ExpirationDate, Positive};
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_market::chains::OptionChain;
+    use optionstratlib_market::chains::utils::{OptionChainBuildParams, OptionDataPriceParams};
+    use rust_decimal_macros::dec;
+
+    /// Thirteen strikes, 85 to 115 every 2.5, on a spot of 100 thirty days
+    /// from expiry, priced by Black-Scholes at a 20% volatility with a mild
+    /// skew. Call quotes fall and put quotes rise with the strike, so every
+    /// searching strategy finds valid candidates in it; the 95 to 105 range
+    /// holds five strikes.
+    pub(crate) fn priced_chain() -> OptionChain {
+        let params = OptionChainBuildParams::new(
+            "TEST".to_string(),
+            Some(Positive::HUNDRED),
+            6,
+            Some(pos_or_panic!(2.5)),
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                Some(Positive::ZERO),
+                Some("TEST".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        );
+        OptionChain::build_chain(&params).unwrap_or_else(|e| panic!("the priced chain builds: {e}"))
+    }
+}
 
 /// Utility functions for options calculations and analysis
 pub mod utils;
