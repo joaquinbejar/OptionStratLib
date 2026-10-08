@@ -86,7 +86,8 @@ pub struct BinomialPricingParams<'a> {
 ///
 /// # Returns
 ///
-/// Returns the calculated price of the option as an `f64`.
+/// Returns the calculated price of the option as a `Decimal`, negated for a
+/// short `side`.
 ///
 /// # Special cases
 ///
@@ -102,13 +103,41 @@ pub struct BinomialPricingParams<'a> {
 /// - This model assumes that the underlying asset follows a multiplicative binomial process.
 /// - For American options, this model accounts for the possibility of early exercise.
 ///
+/// # Cost
+///
+/// `no_steps` has no upper limit: the step count is the caller's choice and
+/// so is its cost (#807). With `N = no_steps`:
+///
+/// - **Time** grows as `N²`. The `N + 1` terminal payoffs each take two
+///   `Decimal` powers; backward induction then values `N (N + 1) / 2` nodes
+///   with a few checked `Decimal` operations each, and an American or a
+///   Bermuda exercise date adds two powers and a payoff per node, which
+///   makes those contracts several times slower than a European and grow
+///   somewhat faster than `N²`, as the powers' exponents grow with `N`.
+///   Measured with Criterion (`cargo bench -p optionstratlib-pricing
+///   --bench pricing -- pricing/binomial`) on an Apple M-series laptop, a
+///   European takes about 2.2 ms at 200 steps and 47 ms at 1 000, an
+///   American put 15 ms and 0.7 s; extrapolated at `N²`, at least 5 s and
+///   70 s at 10 000 steps.
+/// - **Memory** is one vector of `N + 1` `Decimal`s, `16 (N + 1)` bytes,
+///   reserved before the first payoff is evaluated. A size the allocator
+///   refuses is [`PricingError::InvalidParameter`] at once; a size it grants
+///   is priced however long that takes, and nothing interrupts it.
+///
+/// Accuracy improves as `1/N` with the oscillation of the CRR tree, so a few
+/// hundred to a few thousand steps cover most uses;
+/// [`crate::pricing::constants::DEFAULT_BINOMIAL_STEPS`] is the library's
+/// default.
+///
 /// # Errors
 ///
 /// Returns [`PricingError::SqrtFailure`] when the up-factor exponent
 /// produces an invalid `Decimal`, [`PricingError::BinomialNodeMissing`]
-/// when the induction step cannot read an intermediate node, and
-/// [`PricingError::Positive`] when any `Positive` construction
-/// downstream (e.g. strike × discount factor) underflows below zero.
+/// when the induction step cannot read an intermediate node,
+/// [`PricingError::InvalidParameter`] when the `no_steps + 1` terminal
+/// nodes cannot be allocated, and [`PricingError::Positive`] when any
+/// `Positive` construction downstream (e.g. strike × discount factor)
+/// underflows below zero.
 #[instrument(skip(params), fields(
     strike = %params.strike,
     asset = %params.asset,
@@ -162,9 +191,10 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     };
     info.side = Side::Long;
 
-    let mut prices: Vec<Decimal> = (0..=no_steps_raw)
-        .map(|i| calculate_option_price(long_params.clone(), u, d, i))
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut prices = reserve_nodes(no_steps_raw)?;
+    for i in 0..=no_steps_raw {
+        prices.push(calculate_option_price(long_params.clone(), u, d, i)?);
+    }
 
     let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::half_dt")?;
     for step in (0..no_steps_raw).rev() {
@@ -409,6 +439,28 @@ fn lattice_spot(
 /// # }
 /// ```
 ///
+/// # Cost
+///
+/// `no_steps` has no upper limit (#807); with `N = no_steps`:
+///
+/// - **Time** grows as `N²`: every one of the `(N + 1)(N + 2) / 2` lattice
+///   nodes gets its spot from two `Decimal` powers, and backward induction
+///   values `N (N + 1) / 2` of them, with a payoff per node for an American
+///   or a Bermuda exercise date. Measured with Criterion (`cargo bench -p
+///   optionstratlib-pricing --bench pricing -- pricing/binomial`) on an
+///   Apple M-series laptop, a European call takes about 0.66 ms at 50
+///   steps and 15 ms at 200, roughly 0.4 s at 1 000.
+/// - **Memory** is two square `(N + 1) × (N + 1)` lattices of `Decimal`,
+///   `32 (N + 1)²` bytes (about 32 MB at 1 000 steps and 3.2 GB at 10 000),
+///   plus one row of `N + 1` per induction step. Both lattices are reserved
+///   and zeroed before any node is valued, so a size the allocator refuses
+///   is [`PricingError::InvalidParameter`] at once. On a system that
+///   overcommits memory the reservation itself can succeed and the process
+///   be stopped by the operating system while the zeros are written; the
+///   cost above is the guide for choosing `N`. The full tree exists for
+///   inspection and charts; [`price_binomial`] prices the same lattice in
+///   `O(N)` memory.
+///
 /// # Errors
 ///
 /// Same failure surface as [`price_binomial`]:
@@ -571,6 +623,24 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
     Ok((asset_tree, option_tree))
 }
 
+/// An empty vector with room for the `no_steps + 1` terminal nodes of
+/// [`price_binomial`], reserved before the first payoff is evaluated so a
+/// size the system refuses is reported at once, as [`lattice`] reports it,
+/// instead of after the leaves have been priced one by one (#807).
+fn reserve_nodes(no_steps: usize) -> Result<Vec<Decimal>, PricingError> {
+    let too_large = || {
+        PricingError::invalid_parameter(
+            "no_steps",
+            Decimal::from(no_steps),
+            "a binomial lattice of this many steps cannot be allocated",
+        )
+    };
+    let width = no_steps.checked_add(1).ok_or_else(too_large)?;
+    let mut nodes = Vec::new();
+    nodes.try_reserve_exact(width).map_err(|_| too_large())?;
+    Ok(nodes)
+}
+
 /// A square lattice of `no_steps + 1` rows of `no_steps + 1` zeros. The
 /// rows are reserved fallibly: `vec![vec![..; n + 1]; n + 1]` overflowed
 /// `n + 1` at `usize::MAX` and aborted with `capacity overflow` on a row
@@ -605,6 +675,39 @@ mod tests_price_binomial {
     use rust_decimal_macros::dec;
 
     const EPSILON: Decimal = dec!(1e-6);
+
+    /// A step count whose `no_steps + 1` nodes cannot be reserved is
+    /// rejected before any node is priced (#807): `usize::MAX` overflows the
+    /// node count and `2^60` nodes exceed what any allocation can hold. The
+    /// pricer used to start pricing the leaves and grow its vector one node
+    /// at a time.
+    #[test]
+    fn test_price_binomial_unallocatable_steps_is_invalid_parameter() {
+        for steps in [usize::MAX, 1usize << 60] {
+            let no_steps = NonZeroUsize::new(steps).unwrap_or(NonZeroUsize::MIN);
+            let params = BinomialPricingParams {
+                asset: Positive::HUNDRED,
+                strike: Positive::HUNDRED,
+                int_rate: dec!(0.05),
+                volatility: pos_or_panic!(0.2),
+                expiry: Positive::ONE,
+                no_steps,
+                option_type: &OptionType::European,
+                option_style: &OptionStyle::Call,
+                side: &Side::Long,
+            };
+            assert!(
+                matches!(
+                    price_binomial(params),
+                    Err(PricingError::InvalidParameter {
+                        parameter: "no_steps",
+                        ..
+                    })
+                ),
+                "steps {steps}"
+            );
+        }
+    }
 
     #[test]
     fn test_european_call_option() {

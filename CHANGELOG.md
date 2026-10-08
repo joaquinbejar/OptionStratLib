@@ -1685,6 +1685,22 @@ summarize the release.
   fixings change: the closed-form Kemna-Vorst price of
   `pricing::asian` reads no fixings and is unchanged.
 
+- **The binomial pricer documents its cost, with no step limit** (#807).
+  By owner decision `no_steps` stays unbounded and the cost is the
+  caller's: `price_binomial` and `generate_binomial_tree` gain a `# Cost`
+  section with the time (`N²` node evaluations, an American or Bermuda
+  several times a European) and memory (`16 (N + 1)` bytes for the
+  pricer, two `(N + 1)²` lattices, `32 (N + 1)²` bytes, for the tree) and
+  Criterion timings (`pricing/binomial`: a European 2.2 ms at 200 steps and
+  47 ms at 1 000, an American put 15 ms and 0.7 s, the tree 15 ms at 200).
+  `price_binomial` now reserves its `N + 1` terminal nodes fallibly before
+  pricing any of them, as the tree already reserved its lattices (#788): a
+  step count whose nodes cannot be allocated (`usize::MAX`, `2^60`) is
+  `PricingError::InvalidParameter` at once, where the pricer used to start
+  pricing leaves and grow its vector one node at a time. Prices are
+  unchanged. The stale `# Returns` of `price_binomial`, which said `f64`,
+  now says `Decimal`.
+
 - **No arithmetic operator in core, math or pricing can abort the caller**
   (#788).
   - **Lints.** The three crates deny `clippy::arithmetic_side_effects` and
