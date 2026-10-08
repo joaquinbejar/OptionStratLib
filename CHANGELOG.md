@@ -1812,6 +1812,29 @@ summarize the release.
 
 ### Fixed
 
+- **A compound option at zero volatility returns its deterministic value**
+  (#867). Before expiry, `compound_black_scholes` at `σ = 0` valued the
+  underlying through `black_scholes`, which rejects a zero volatility, so it
+  returned an error.
+  - **The value now returned.** With the forward `F = S e^((r - q) T2)`,
+    the underlying is worth `V = e^(-r (T2 - T1)) max(±(F - K2), 0)` at
+    `T1`, and the compound pays `e^(-r T1) max(±(V - K1), 0)`. That is the
+    `σ → 0` limit of the Geske price. It covers all four call/put
+    combinations, with the underlying taking the compound's style as at
+    every other volatility.
+  - **Examples.** The kernel's test contract is `S = 100`,
+    `K1 = K2 = 5`, `T1 = 91.25` days. Its call on a call was an error and
+    is now about 90.18, and its put on a put about 4.94.
+  - **Unchanged.** Values at expiry, every `σ > 0` value, and
+    `black_scholes()` dispatch: its `d1` / `d2` gate still rejects
+    `σ = 0` for `T > 0`.
+  - **Tests.**
+    - All four combinations equal the hand-computed deterministic value
+      at `σ = 0`.
+    - The closed form at `σ = 1e-4` is within `1e-4` of it.
+    - The kernel prices both styles at `σ = 0`, and their expiry values
+      are unchanged.
+
 - **A spread put struck near zero prices as the put, not the Margrabe
   call** (#852). For a strike below `1e-4`, `spread_black_scholes`
   switched to Margrabe's exchange formula `max(S1 - S2, 0)` for both
@@ -3078,9 +3101,10 @@ summarize the release.
   all-features facade. Focused profiles (core, pricing, market, simulation,
   analytics, a headless facade) are compared with the 0.21.3 default, the
   smallest 0.21.3 surface: they resolve 41 to 69 package pairs against 131
-  and check from clean in 4.1 to 11.3 s against 17.5 s. The facade default
+  and check from clean in 3.8 to 11.3 s against 17.1 s. The facade default
   resolves 124 against 131 and checks in 15.7 s; all features 264 against
-  284, checking in 34.5 s against 42.8 s. Each focused graph is verified to
+  284, checking in 34.5 s against 41.7 s. Samples that overlapped another
+  agent's benchmark run on the host were discarded and re-taken. Each focused graph is verified to
   exclude the capabilities it does not use. The document records medians,
   ranges, raw samples, artifact sizes, the `plotly_static` build-script stub
   used for both revisions, and the confounders (14 % more production code,
