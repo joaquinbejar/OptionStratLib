@@ -62,3 +62,6 @@ jobs:
 
       - name: Feature dependency graphs
         run: make check-feature-trees
+
+      - name: Build benchmarks
+        run: make bench-build

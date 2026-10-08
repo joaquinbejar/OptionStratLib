@@ -37,3 +37,16 @@ utoipa = { workspace = true, optional = true }
 chrono = { workspace = true }
 approx = { workspace = true }
 proptest = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "pricing"
+harness = false
+
+[[bench]]
+name = "greeks"
+harness = false
+
+[[bench]]
+name = "volatility"
+harness = false

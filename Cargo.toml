@@ -133,7 +133,7 @@ expiration_date = { workspace = true }
 financial_types = { workspace = true }
 option_type = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
-criterion = { version = "0.8", default-features = false, features = ["html_reports"] }
+criterion = { workspace = true }
 mockall = { workspace = true }
 tempfile = { workspace = true }
 static_assertions = "1.1"
@@ -279,3 +279,5 @@ tokio = { version = "1.53", features = ["full"] }
 proptest = "1.11"
 mockall = "0.15"
 tempfile = "3.27"
+# Benchmark harness of the facade and of every component crate (#789).
+criterion = { version = "0.8", default-features = false, features = ["html_reports"] }

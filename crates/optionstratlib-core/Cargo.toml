@@ -46,3 +46,8 @@ uuid = { workspace = true }
 [dev-dependencies]
 approx = { workspace = true }
 proptest = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "core"
+harness = false

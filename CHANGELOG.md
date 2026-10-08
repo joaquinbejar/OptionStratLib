@@ -2379,6 +2379,26 @@ summarize the release.
 
 ### Added
 
+- **Every component crate has Criterion benches** (#789). Fourteen bench
+  targets now cover the public hot paths of the workspace: `core` (checked
+  `Decimal` helpers, `Positive`, payoffs, construction), `math` (curve and
+  surface construction, every interpolation method by size, metrics,
+  transformations), `pricing` (`pricing`: Black-Scholes, Black-76,
+  Garman-Kohlhagen, Barone-Adesi-Whaley, binomial by step count,
+  Monte-Carlo and telegraph by path and step count, every exotic; `greeks`:
+  every Greek, the snapshot, the numerical, Black-76 and Garman-Kohlhagen
+  Greeks, the chain sweep; `volatility`: the IV solvers and the estimators),
+  `market` (`chains`, plus `chains_io` behind `io` and `synthetic` behind
+  `synthetic`), `analytics`, `strategies` (construction, break-evens, P&L,
+  probability, delta neutrality, the optimisers on the SP500 fixture and on
+  growing synthetic chains), `simulation` (every walk model, the simulator),
+  `backtest` and `visualization` (chart data and terminal tables, no
+  rendering). Each bench checks that its fixture succeeds before timing it,
+  so an error branch is never measured as the path. `criterion` moves to
+  `[workspace.dependencies]`; no dependency is added. `make bench-build`
+  compiles every bench target and runs in the Lint workflow, and
+  `make bench-workspace` runs them all.
+
 - **The 0.22 release gates are one command, and their evidence is tracked**
   (#557). `make release-gates` (`scripts/release_gates.py`) runs every gate of
   ADR-0004 section 6 and the per-crate and facade matrices: formatting,
