@@ -1440,6 +1440,39 @@ summarize the release.
 
 ### Fixed
 
+- **Every strategy refreshes its break-evens on `add_position` /
+  `modify_position`** (#780). #771 did this for `Collar`, `CoveredCall`
+  and `ProtectivePut`; the other strategies kept the break-evens of their
+  previous legs after an edit. `BullCallSpread`, `BearCallSpread`,
+  `BullPutSpread`, `BearPutSpread`, `IronCondor`, `IronButterfly`,
+  `LongButterflySpread`, `ShortButterflySpread`, `BullCallLadder`,
+  `LongStraddle`, `ShortStraddle`, `LongStrangle`, `ShortStrangle`,
+  `PoorMansCoveredCall`, `LongCall`, `LongPut`, `ShortCall` and `ShortPut`
+  now recompute them in `add_position` and `modify_position` (and
+  `ShortStrangle::replace_position`), through one shared helper with the
+  #771 contract:
+  - a strategy that validates after the edit gets fresh break-evens; if the
+    recomputation fails, the leg and the break-evens are restored and the
+    error is returned as a `PositionError` (`ShortStrangle` used to keep
+    the new leg in that case);
+  - a strategy that does not validate after the edit (one assembled leg by
+    leg from `Default` with legs still unset, or an edit that leaves the
+    legs inconsistent, which `add_position` has always accepted) reports
+    no break-evens instead of stale ones, and the edit stands.
+
+  The constructors fill their legs through a private path, so `new` and
+  `get_strategy` results are unchanged. `LongCall::new`, `LongPut::new`,
+  `ShortCall::new` and `ShortPut::new` returned no break-evens at all; they
+  now compute them like every other constructor, so the same leg has the
+  same break-even whether it is built by `new` or added to a `Default`
+  strategy. No signature changes. The visualization golden
+  `graph_data.json` is regenerated for the four single-leg charts only,
+  which had pinned the missing break-even. Tests: for one strategy of each
+  family (vertical spread, iron condor, butterfly, ladder, straddle,
+  strangle, PMCC, single leg) an edit leaves the break-evens of the same
+  legs built by `new`, and an edit whose premium total overflows is
+  rejected with the strategy unchanged.
+
 - **Path-based pricers include the dividend yield in the drift** (#756).
   `pricing::telegraph` simulated the log price with drift
   `r - sigma^2/2` and `pricing::monte_carlo_option_pricing` grew it by

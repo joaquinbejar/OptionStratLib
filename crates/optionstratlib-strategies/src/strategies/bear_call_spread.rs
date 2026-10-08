@@ -27,7 +27,9 @@ use super::base::{
 use super::shared::SpreadStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::price_gap;
-use crate::strategies::shared::{apply_contract_size, common_contract_size};
+use crate::strategies::shared::{
+    CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -208,7 +210,7 @@ impl BearCallSpread {
             None,
             None,
         );
-        strategy.add_position(&short_call)?;
+        strategy.place_leg(&short_call)?;
 
         let long_call_option = Options::new(
             OptionType::European,
@@ -233,7 +235,7 @@ impl BearCallSpread {
             None,
             None,
         );
-        strategy.add_position(&long_call)?;
+        strategy.place_leg(&long_call)?;
 
         if !strategy.validate() {
             return Err(StrategyError::invalid_strategy(
@@ -378,8 +380,11 @@ impl BreakEvenable for BearCallSpread {
     }
 }
 
-impl Positionable for BearCallSpread {
-    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+impl BearCallSpread {
+    /// Places `position` in the leg its side and style select, without
+    /// refreshing the break-evens: the constructors fill the legs through
+    /// it, and [`Positionable::add_position`] wraps it.
+    fn place_leg(&mut self, position: &Position) -> Result<(), PositionError> {
         match position.option.side {
             Side::Short => {
                 self.short_call = position.clone();
@@ -390,6 +395,61 @@ impl Positionable for BearCallSpread {
                 Ok(())
             }
         }
+    }
+
+    /// Replaces the leg matching `position`, without refreshing the
+    /// break-evens; [`Positionable::modify_position`] wraps it.
+    fn replace_leg(&mut self, position: &Position) -> Result<(), PositionError> {
+        if !position.validate() {
+            return Err(PositionError::ValidationError(
+                PositionValidationErrorKind::InvalidPosition {
+                    reason: "Invalid position data".to_string(),
+                },
+            ));
+        }
+
+        match (
+            &position.option.side,
+            &position.option.option_style,
+            &position.option.strike_price,
+        ) {
+            (_, OptionStyle::Put, _) => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side,
+                    "Put is not valid for PoorMansCoveredCall".to_string(),
+                ));
+            }
+            (Side::Long, OptionStyle::Call, strike)
+                if *strike == self.long_call.option.strike_price =>
+            {
+                self.long_call = position.clone();
+            }
+            (Side::Short, OptionStyle::Call, strike)
+                if *strike == self.short_call.option.strike_price =>
+            {
+                self.short_call = position.clone();
+            }
+            _ => {
+                return Err(PositionError::invalid_position_type(
+                    position.option.side,
+                    "Strike not found in positions".to_string(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl CachedBreakEvens for BearCallSpread {
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive> {
+        &mut self.break_even_points
+    }
+}
+
+impl Positionable for BearCallSpread {
+    fn add_position(&mut self, position: &Position) -> Result<(), PositionError> {
+        edit_refreshing_break_evens(self, |strategy| strategy.place_leg(position))
     }
 
     fn get_positions(&self) -> Result<Vec<&Position>, PositionError> {
@@ -443,44 +503,7 @@ impl Positionable for BearCallSpread {
     /// * `Ok(())` if position was successfully modified
     /// * `Err(PositionError)` if position was not found or validation failed
     fn modify_position(&mut self, position: &Position) -> Result<(), PositionError> {
-        if !position.validate() {
-            return Err(PositionError::ValidationError(
-                PositionValidationErrorKind::InvalidPosition {
-                    reason: "Invalid position data".to_string(),
-                },
-            ));
-        }
-
-        match (
-            &position.option.side,
-            &position.option.option_style,
-            &position.option.strike_price,
-        ) {
-            (_, OptionStyle::Put, _) => {
-                return Err(PositionError::invalid_position_type(
-                    position.option.side,
-                    "Put is not valid for PoorMansCoveredCall".to_string(),
-                ));
-            }
-            (Side::Long, OptionStyle::Call, strike)
-                if *strike == self.long_call.option.strike_price =>
-            {
-                self.long_call = position.clone();
-            }
-            (Side::Short, OptionStyle::Call, strike)
-                if *strike == self.short_call.option.strike_price =>
-            {
-                self.short_call = position.clone();
-            }
-            _ => {
-                return Err(PositionError::invalid_position_type(
-                    position.option.side,
-                    "Strike not found in positions".to_string(),
-                ));
-            }
-        }
-
-        Ok(())
+        edit_refreshing_break_evens(self, |strategy| strategy.replace_leg(position))
     }
 }
 

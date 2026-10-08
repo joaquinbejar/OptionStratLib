@@ -22,10 +22,12 @@
 //! and reduce boilerplate code.
 
 use crate::error::strategies::StrategyError;
+use crate::strategies::base::{BreakEvenable, Validable};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::ProbabilityError;
 use optionstratlib_analytics::pnl::utils::PnL;
+use optionstratlib_core::error::position::PositionError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_mul, d_sub};
@@ -547,6 +549,55 @@ pub(crate) fn price_zones(
             &option.expiration_date,
             Some(option.risk_free_rate),
         )?;
+    }
+    Ok(())
+}
+
+/// A strategy that caches its break-even points in a field, so an edit to
+/// one of its legs can refresh them (#780).
+pub(crate) trait CachedBreakEvens: BreakEvenable + Validable + Clone {
+    /// The cached break-even points.
+    fn break_evens_mut(&mut self) -> &mut Vec<Positive>;
+}
+
+/// Applies `edit` to `strategy` and refreshes its cached break-evens, with
+/// the roll-back contract of #771 (#780).
+///
+/// - When the edited strategy validates, its break-evens are recomputed. If
+///   the recomputation fails, the strategy (legs and break-evens) is
+///   restored and the error is returned.
+/// - When it does not validate there are no break-evens to report, so they
+///   are cleared and the edit stands. This is the case of a strategy
+///   assembled leg by leg from its `Default`, whose remaining legs are
+///   still placeholders, and of an edit that leaves the legs inconsistent,
+///   which `add_position` has always accepted.
+/// - When `edit` itself fails, the strategy is restored and its error is
+///   returned.
+///
+/// # Errors
+///
+/// Returns the error of `edit`, or the failed recomputation as a
+/// [`PositionError`].
+pub(crate) fn edit_refreshing_break_evens<S, F>(
+    strategy: &mut S,
+    edit: F,
+) -> Result<(), PositionError>
+where
+    S: CachedBreakEvens,
+    F: FnOnce(&mut S) -> Result<(), PositionError>,
+{
+    let previous = strategy.clone();
+    if let Err(error) = edit(strategy) {
+        *strategy = previous;
+        return Err(error);
+    }
+    if !strategy.validate() {
+        strategy.break_evens_mut().clear();
+        return Ok(());
+    }
+    if let Err(error) = strategy.update_break_even_points() {
+        *strategy = previous;
+        return Err(error.into());
     }
     Ok(())
 }
