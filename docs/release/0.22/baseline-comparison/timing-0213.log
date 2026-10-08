@@ -1,0 +1,26 @@
+2026-10-08T20:08:20Z host=flumix nproc=16 commit=80efdc02656b8df198a654b71a628ca292023ae5 rustc=rustc 1.99.0 (b940084d7 2026-09-28) cargo=cargo 1.99.0 (5f94df478 2026-08-27)
+2026-10-08T20:08:20Z lockfile_sha256=3dfe332356e062165627c8833b2ca7277bac2ca736ff4fe60841f2bd631dd13f lockfile_packages=528
+2026-10-08T20:08:20Z cargo fetch done
+2026-10-08T20:08:20Z profile=default flags=[-p optionstratlib] loadavg=[1.77 1.15 0.56]
+2026-10-08T20:08:42Z clean-build profile=default sample=1 rc=0 seconds=22.1
+2026-10-08T20:09:06Z clean-build profile=default sample=2 rc=0 seconds=23.7
+2026-10-08T20:09:29Z clean-build profile=default sample=3 rc=0 seconds=23.2
+2026-10-08T20:09:29Z artifact profile=default top_rlib=liboptionstratlib.rlib top_rlib_bytes=170318516 own_rlibs_bytes=170318516 target_bytes=1098900306
+2026-10-08T20:10:09Z incremental-check profile=default touched=src/lib.rs sample=1 rc=0 seconds=3.2
+2026-10-08T20:10:11Z incremental-check profile=default touched=src/lib.rs sample=2 rc=0 seconds=1.5
+2026-10-08T20:10:13Z incremental-check profile=default touched=src/lib.rs sample=3 rc=0 seconds=2.0
+2026-10-08T20:10:30Z clean-check profile=default sample=1 rc=0 seconds=17.2
+2026-10-08T20:10:49Z clean-check profile=default sample=2 rc=0 seconds=18.4
+2026-10-08T20:11:07Z clean-check profile=default sample=3 rc=0 seconds=17.8
+2026-10-08T20:11:07Z profile=all-features flags=[-p optionstratlib --all-features] loadavg=[8.29 4.51 1.96]
+2026-10-08T20:12:03Z clean-build profile=all-features sample=1 rc=0 seconds=56.3
+2026-10-08T20:12:59Z clean-build profile=all-features sample=2 rc=0 seconds=55.9
+2026-10-08T20:14:18Z clean-build profile=all-features sample=3 rc=0 seconds=78.3
+2026-10-08T20:14:18Z artifact profile=all-features top_rlib=liboptionstratlib.rlib top_rlib_bytes=182731560 own_rlibs_bytes=182731560 target_bytes=2510987106
+2026-10-08T20:14:50Z incremental-check profile=all-features touched=src/lib.rs sample=1 rc=0 seconds=4.0
+2026-10-08T20:14:54Z incremental-check profile=all-features touched=src/lib.rs sample=2 rc=0 seconds=4.0
+2026-10-08T20:14:58Z incremental-check profile=all-features touched=src/lib.rs sample=3 rc=0 seconds=3.9
+2026-10-08T20:15:42Z clean-check profile=all-features sample=1 rc=0 seconds=43.9
+2026-10-08T20:16:27Z clean-check profile=all-features sample=2 rc=0 seconds=44.1
+2026-10-08T20:17:10Z clean-check profile=all-features sample=3 rc=0 seconds=43.4
+2026-10-08T20:17:10Z DONE

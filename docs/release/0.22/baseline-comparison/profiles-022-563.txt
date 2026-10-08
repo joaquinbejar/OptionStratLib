@@ -1,0 +1,8 @@
+core|-p optionstratlib-core|crates/optionstratlib-core/src/lib.rs
+pricing|-p optionstratlib-pricing|crates/optionstratlib-pricing/src/lib.rs
+market|-p optionstratlib-market|crates/optionstratlib-market/src/lib.rs
+simulation|-p optionstratlib-simulation|crates/optionstratlib-simulation/src/lib.rs
+analytics|-p optionstratlib-analytics|crates/optionstratlib-analytics/src/lib.rs
+facade-headless-domain|-p optionstratlib --no-default-features --features backtest|src/lib.rs|crates/optionstratlib-core/src/lib.rs
+facade-default|-p optionstratlib|src/lib.rs|crates/optionstratlib-core/src/lib.rs
+facade-all-features|-p optionstratlib --all-features|src/lib.rs|crates/optionstratlib-core/src/lib.rs
