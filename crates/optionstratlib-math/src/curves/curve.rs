@@ -12,7 +12,7 @@ use crate::geometrics::{
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
-    coefficient_of_variation, powu_checked,
+    coefficient_of_variation, population_std_dev, powu_checked,
 };
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::decimal::{
@@ -1842,23 +1842,12 @@ impl MetricsExtractor for Curve {
 
         let op = "Curve::compute_risk_metrics";
         let mean = mean_of(&y_values, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
-        // Note the grouping: the sum of squared deviations is divided by
-        // `sqrt(n)`, not by `sqrt(sum / n)`. Preserved as-is; only the
-        // arithmetic is made checked.
-        let mut squared_deviations = Decimal::ZERO;
-        for &value in &y_values {
-            let centered =
-                d_sub(value, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
-            let squared = powu_checked(centered, 2, op)
-                .map_err(|e| MetricsError::RiskError(e.to_string()))?;
-            squared_deviations = d_add(squared_deviations, squared, op)
-                .map_err(|e| MetricsError::RiskError(e.to_string()))?;
-        }
-        let sqrt_n = d_sqrt(Decimal::from(y_values.len()), op)
-            .map_err(|e| MetricsError::RiskError(e.to_string()))?;
-        // `d_div` rejects the zero denominator, which the emptiness guard
-        // above already rules out.
-        let volatility = d_div(squared_deviations, sqrt_n, op)
+        // The population standard deviation `sqrt(S / n)`, through the
+        // helper `Surface` uses too, so both report the same volatility for
+        // the same values (#840). It was `S / sqrt(n)`, the sum of squared
+        // deviations `S` over `sqrt(n)`: not a standard deviation, and
+        // `sqrt(S)` times this one.
+        let volatility = population_std_dev(&y_values, mean, op)
             .map_err(|e| MetricsError::RiskError(e.to_string()))?;
 
         // Value at Risk (95% confidence) using parametric method. At zero
@@ -1878,14 +1867,9 @@ impl MetricsExtractor for Curve {
             mean_of(&tail, op).map_err(|e| MetricsError::RiskError(e.to_string()))?
         };
 
-        // The coefficient of variation divides the population standard
-        // deviation, the `std_dev` of `compute_basic_metrics`, by the mean,
-        // as `Surface` does (#824). It is not `volatility / mean`: the
-        // `volatility` above keeps its own grouping.
-        let variance =
-            variance_of(&y_values, mean, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
-        let std_dev = d_sqrt(variance, op).map_err(|e| MetricsError::RiskError(e.to_string()))?;
-        let coefficient_of_variation = coefficient_of_variation(std_dev, mean, op)?;
+        // The coefficient of variation: the population standard deviation,
+        // `volatility` here, over the mean, as `Surface` computes it (#824).
+        let coefficient_of_variation = coefficient_of_variation(volatility, mean, op)?;
 
         // Sharpe Ratio (assuming risk-free rate of 0). A flat curve has no
         // dispersion to divide by, which makes this the one field that is
@@ -5360,5 +5344,69 @@ mod tests_coefficient_of_variation {
                 metric: "coefficient of variation"
             })
         ));
+    }
+}
+
+#[cfg(test)]
+mod tests_risk_volatility {
+    use super::*;
+    use crate::geometrics::MetricsExtractor;
+
+    fn line(values: impl IntoIterator<Item = i64>) -> Curve {
+        Curve::new(
+            values
+                .into_iter()
+                .enumerate()
+                .map(|(x, y)| Point2D::new(Decimal::from(x), Decimal::from(y)))
+                .collect(),
+        )
+    }
+
+    /// `y = 1..5`: the risk volatility is the population standard deviation
+    /// `sqrt(S / n) = sqrt(10 / 5) = sqrt(2)`, and the VaR and Sharpe ratio
+    /// follow from it, each to the last of `Decimal`'s 28 places of a 50-digit
+    /// reference. With `S / sqrt(n)` they were `4.4721359549995793928183473373`,
+    /// `-4.3566636459743081011861813699` and `0.6708203932499369089227521006`
+    /// (#840).
+    #[test]
+    fn test_risk_metrics_volatility_is_the_population_std_dev() {
+        let metrics = line(1..=5).compute_risk_metrics().unwrap();
+        assert_eq!(metrics.volatility, dec!(1.4142135623730950488016887242));
+        assert_eq!(metrics.value_at_risk, dec!(0.6736186898962586447212220487));
+        assert_eq!(metrics.expected_shortfall, Decimal::ZERO);
+        assert_eq!(
+            metrics.coefficient_of_variation,
+            dec!(0.4714045207910316829338962414)
+        );
+        assert_eq!(metrics.sharpe_ratio, dec!(2.1213203435596425732025330863));
+    }
+
+    /// One dip in ten, `y = 1, 10 x 9`: mean 9.1, volatility 2.7, so the VaR
+    /// `9.1 - 1.645 * 2.7 = 4.6585` sits above the dip and the expected
+    /// shortfall is its value, 1. The old `S / sqrt(n) = 23.05...` put the VaR
+    /// at `-28.82...`, below every sample, so the shortfall read 0 (#840).
+    #[test]
+    fn test_risk_metrics_expected_shortfall_sees_the_tail() {
+        let metrics = line([1, 10, 10, 10, 10, 10, 10, 10, 10, 10])
+            .compute_risk_metrics()
+            .unwrap();
+        assert_eq!(metrics.volatility, dec!(2.7));
+        assert_eq!(metrics.value_at_risk, dec!(4.6585));
+        assert_eq!(metrics.expected_shortfall, dec!(1));
+        assert_eq!(metrics.sharpe_ratio, dec!(3.3703703703703703703703703704));
+    }
+
+    /// The risk volatility is the `std_dev` of the basic metrics.
+    #[test]
+    fn test_risk_metrics_volatility_matches_basic_std_dev() {
+        let curve = Curve::new(
+            (0..=20i64)
+                .map(|x| Point2D::new(Decimal::from(x), Decimal::from(x * x % 7)))
+                .collect(),
+        );
+        assert_eq!(
+            curve.compute_risk_metrics().unwrap().volatility,
+            curve.compute_basic_metrics().unwrap().std_dev
+        );
     }
 }

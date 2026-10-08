@@ -12,7 +12,7 @@ use crate::geometrics::{
     ConstructionParams, CubicInterpolation, GeometricObject, GeometricTransformations, Interpolate,
     InterpolationType, LinearInterpolation, MergeAxisInterpolate, MergeOperation, MetricsExtractor,
     RangeMetrics, RiskMetrics, ShapeMetrics, SplineInterpolation, TrendMetrics,
-    coefficient_of_variation, powu_checked,
+    coefficient_of_variation, population_std_dev, powu_checked,
 };
 use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
@@ -1600,9 +1600,10 @@ impl MetricsExtractor for Surface {
 
         let op = "Surface::compute_risk_metrics";
         let mean = mean_of(&z_values, op).map_err(risk_err)?;
-        let sum_sq = central_moment(&z_values, mean, 2, op).map_err(risk_err)?;
-        let variance = d_div(sum_sq, Decimal::from(z_values.len()), op).map_err(risk_err)?;
-        let volatility = d_sqrt(variance, op).map_err(risk_err)?;
+        // The population standard deviation, through the helper `Curve`
+        // uses too, so both report the same volatility for the same values
+        // (#840).
+        let volatility = population_std_dev(&z_values, mean, op).map_err(risk_err)?;
 
         // Value at Risk (95% confidence) using parametric method. At zero
         // dispersion this is `mean - 1.645 * 0 = mean`, a deterministic level
@@ -4644,6 +4645,30 @@ mod tests_coefficient_of_variation {
                 .coefficient_of_variation,
             surface.coefficient_of_variation
         );
+    }
+
+    /// A curve and a surface over the same values report the same risk
+    /// metrics, digit for digit: both take the volatility from one helper,
+    /// the population standard deviation `sqrt(80 / 12)` for `1..9` (#840).
+    #[test]
+    fn test_risk_metrics_match_a_curve_over_the_same_values() {
+        let surface = grid(1).compute_risk_metrics().unwrap();
+        let curve = Curve::new(
+            (1..=9i64)
+                .map(|y| Point2D::new(Decimal::from(y), Decimal::from(y)))
+                .collect(),
+        )
+        .compute_risk_metrics()
+        .unwrap();
+        assert_eq!(surface.volatility, dec!(2.5819888974716112567861769332));
+        assert_eq!(curve.volatility, surface.volatility);
+        assert_eq!(curve.value_at_risk, surface.value_at_risk);
+        assert_eq!(curve.expected_shortfall, surface.expected_shortfall);
+        assert_eq!(
+            curve.coefficient_of_variation,
+            surface.coefficient_of_variation
+        );
+        assert_eq!(curve.sharpe_ratio, surface.sharpe_ratio);
     }
 
     /// `z = -4..4` has a zero mean: an error, not a zero (#824).

@@ -1742,6 +1742,36 @@ summarize the release.
     and through it, for both sides. Away from the money, the price one
     minute out matches the price at expiry to three places.
 
+- **A `Curve`'s risk `volatility` is the population standard deviation**
+  (#840). `Curve::compute_risk_metrics` divided the sum of squared
+  deviations `S` by `sqrt(n)`, a variance-like figure `sqrt(S)` times the
+  standard deviation, where `Surface` took `sqrt(S / n)`. By owner decision
+  both now take `sqrt(S / n)` from one crate-private helper,
+  `population_std_dev`, so a curve and a surface over the same values
+  report the same risk metrics digit for digit (a test pins it). The
+  curve's volatility now equals the `std_dev` of its basic metrics, and the
+  parametric VaR (`mean - 1.645 * volatility`), the expected shortfall
+  below it and the Sharpe ratio (`mean / volatility`) move with it. The
+  coefficient of variation already used the population standard deviation
+  (#824) and does not move, nor does any `Surface` value: the helper runs
+  the operations `Surface` ran, in the same order. Values that move, each
+  checked against a 50-digit reference to the last of `Decimal`'s 28
+  places (old -> new):
+
+  | Curve values | volatility | VaR | Sharpe |
+  | --- | --- | --- | --- |
+  | `1..5` | `4.4721359549995793928183473373` -> `1.4142135623730950488016887242` | `-4.3566636459743081011861813699` -> `0.6736186898962586447212220487` | `0.6708203932499369089227521006` -> `2.1213203435596425732025330863` |
+  | `0, 2, 4, 6, 8` | `17.888543819998317571273389349` -> `2.8284271247461900976033774484` | `-25.426654583897232404744725479` -> `-0.6527626202074827105575559026` | `0.2236067977499789696409173669` -> `1.4142135623730950488016887242` |
+  | `1..9` | `20` -> `2.5819888974716112567861769332` | `-27.900` -> `0.7526282636591994825867389449` | `0.25` -> `1.9364916731037084425896326999` |
+  | `x^2 mod 7`, `x = 0..20` | `9.165151389911680013176094387` -> `1.4142135623730950488016887242` | `-13.076674036404713621674675267` -> `-0.3263813101037413552787779513` | `0.2182178902359923812660974854` -> `1.4142135623730950488016887242` |
+  | `1 x 9, 50` | `683.33657958578508985164090602` -> `14.7` | `-1118.1886734186164728059492904` -> `-18.2815` | `0.0086341053241674478498743449` -> `0.4013605442176870748299319728` |
+  | `1, 10 x 9` | `23.0530041426274853302719339389` -> `2.7` | `-28.8221918146222133682973313295` -> `4.6585` | `0.3947424788413203281370360940` -> `3.3703703703703703703703703704` |
+
+  The old volatility put the VaR below every sample of these curves, so
+  the expected shortfall always read 0; with `1, 10 x 9` the VaR now sits
+  above the dip and the shortfall is `1` (`0` before). A constant curve
+  still reports a zero volatility and Sharpe ratio and a VaR at its level.
+
 - **`OptionSeries` keeps every expired expiry** (#825). Its `chains` map is
   keyed by `ExpirationDate`, whose ordering in `expiration_date` 0.4.1
   clamped every past date to zero days, so two expired expiries compared
