@@ -2336,6 +2336,63 @@ mod tests_iron_condor_optimizable {
         assert!(condor.get_profit_area().unwrap() >= initial_area);
     }
 
+    /// The strikes of `condor`: long put, short put, short call, long call.
+    fn condor_strikes(condor: &IronCondor) -> [Positive; 4] {
+        [
+            condor.long_put.option.strike_price,
+            condor.short_put.option.strike_price,
+            condor.short_call.option.strike_price,
+            condor.long_call.option.strike_price,
+        ]
+    }
+
+    /// Runs the search on the priced chain, which has valid iron condors,
+    /// and checks the legs moved off the seed in the condor's strike order.
+    fn search_priced_chain(side: FindOptimalSide, criteria: OptimizationCriteria) -> [Positive; 4] {
+        let mut condor = create_test_condor();
+        let chain = crate::strategies::test_support::priced_chain();
+        let seed = condor_strikes(&condor);
+        condor.find_optimal(&chain, side, criteria).unwrap();
+        let strikes = condor_strikes(&condor);
+        assert_ne!(strikes, seed);
+        assert!(
+            strikes[0] < strikes[1] && strikes[1] < strikes[2] && strikes[2] < strikes[3],
+            "long put < short put < short call < long call: {strikes:?}"
+        );
+        assert!(condor.validate());
+        strikes
+    }
+
+    #[test]
+    fn test_iron_condor_find_optimal_priced_chain_lower_side_below_spot() {
+        let strikes = search_priced_chain(FindOptimalSide::Lower, OptimizationCriteria::Ratio);
+        assert!(strikes.iter().all(|k| *k <= Positive::HUNDRED));
+    }
+
+    #[test]
+    fn test_iron_condor_find_optimal_priced_chain_upper_side_above_spot() {
+        let strikes = search_priced_chain(FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        assert!(strikes.iter().all(|k| *k >= Positive::HUNDRED));
+    }
+
+    #[test]
+    fn test_iron_condor_find_optimal_priced_chain_range_within_bounds() {
+        // Four legs paying 1.0 of fees each need wings wider than the 95 to
+        // 105 range allows (see `test_find_optimal_range`): 90 to 110 has
+        // candidates.
+        let strikes = search_priced_chain(
+            FindOptimalSide::Range(pos_or_panic!(90.0), pos_or_panic!(110.0)),
+            OptimizationCriteria::Ratio,
+        );
+        assert!(strikes[0] >= pos_or_panic!(90.0));
+        assert!(strikes[3] <= pos_or_panic!(110.0));
+    }
+
+    #[test]
+    fn test_iron_condor_find_optimal_priced_chain_by_area_moves_legs() {
+        search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Area);
+    }
+
     #[test]
     fn test_is_valid_long_option() {
         let condor = create_test_condor();

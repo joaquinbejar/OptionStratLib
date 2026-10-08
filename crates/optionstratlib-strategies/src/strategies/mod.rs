@@ -265,6 +265,9 @@ pub mod short_put;
 pub mod short_straddle;
 /// Short Strangle strategy implementation
 pub mod short_strangle;
+// Test-only support (the priced optimiser chain), not public API.
+#[cfg(test)]
+mod test_support;
 
 /// Utility functions for options calculations and analysis
 pub mod utils;

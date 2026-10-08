@@ -2136,6 +2136,58 @@ mod tests_iron_butterfly_optimizable {
         );
     }
 
+    /// The strikes of `butterfly`: long put, short put, short call, long call.
+    fn butterfly_strikes(butterfly: &IronButterfly) -> [Positive; 4] {
+        [
+            butterfly.long_put.option.strike_price,
+            butterfly.short_put.option.strike_price,
+            butterfly.short_call.option.strike_price,
+            butterfly.long_call.option.strike_price,
+        ]
+    }
+
+    /// Runs the search on the priced chain, which has valid iron
+    /// butterflies, and checks the legs moved off the seed into a body
+    /// shared by the short legs with a wing on each side.
+    fn search_priced_chain(side: FindOptimalSide, criteria: OptimizationCriteria) -> [Positive; 4] {
+        let mut butterfly = create_test_butterfly();
+        let chain = crate::strategies::test_support::priced_chain();
+        let seed = butterfly_strikes(&butterfly);
+        butterfly.find_optimal(&chain, side, criteria).unwrap();
+        let strikes = butterfly_strikes(&butterfly);
+        assert_ne!(strikes, seed);
+        assert_eq!(strikes[1], strikes[2], "the short legs share a strike");
+        assert!(
+            strikes[0] < strikes[1] && strikes[2] < strikes[3],
+            "the wings sit outside the body: {strikes:?}"
+        );
+        assert!(butterfly.validate());
+        strikes
+    }
+
+    #[test]
+    fn test_iron_butterfly_find_optimal_priced_chain_ratio_moves_legs() {
+        search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Ratio);
+    }
+
+    #[test]
+    fn test_iron_butterfly_find_optimal_priced_chain_area_moves_legs() {
+        search_priced_chain(FindOptimalSide::All, OptimizationCriteria::Area);
+    }
+
+    #[test]
+    fn test_iron_butterfly_find_optimal_priced_chain_range_within_bounds() {
+        // Four legs paying 1.0 of fees each need wings wider than the 95 to
+        // 105 range allows (see `test_find_optimal_range`): 90 to 110 has
+        // candidates.
+        let strikes = search_priced_chain(
+            FindOptimalSide::Range(pos_or_panic!(90.0), pos_or_panic!(110.0)),
+            OptimizationCriteria::Ratio,
+        );
+        assert!(strikes[0] >= pos_or_panic!(90.0));
+        assert!(strikes[3] <= pos_or_panic!(110.0));
+    }
+
     #[test]
     fn test_is_valid_long_option() {
         let butterfly = create_test_butterfly();

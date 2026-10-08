@@ -236,8 +236,17 @@ fn bench_construction(c: &mut Criterion) {
 }
 
 /// The read-only evaluation paths, measured on one strategy.
-fn bench_evaluation<S>(group: &mut BenchmarkGroup<'_, WallTime>, label: &str, strategy: &S)
-where
+///
+/// `bounded_ratio` is false for a strategy whose maximum profit is
+/// unlimited: its profit ratio is documented to return
+/// `StrategyError::NumericConversion` (#788), so there is no successful
+/// path to time.
+fn bench_evaluation<S>(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    label: &str,
+    strategy: &S,
+    bounded_ratio: bool,
+) where
     S: Strategies + BreakEvenable + Profit + Greeks + Clone,
 {
     let at = pos_or_panic!(5800.0);
@@ -269,9 +278,11 @@ where
     bench_ok(group, &format!("{label}/get_profit_area"), || {
         black_box(strategy).get_profit_area()
     });
-    bench_ok(group, &format!("{label}/get_profit_ratio"), || {
-        black_box(strategy).get_profit_ratio()
-    });
+    if bounded_ratio {
+        bench_ok(group, &format!("{label}/get_profit_ratio"), || {
+            black_box(strategy).get_profit_ratio()
+        });
+    }
     bench_ok(group, &format!("{label}/greeks"), || {
         black_box(strategy).greeks()
     });
@@ -295,12 +306,12 @@ where
 
 fn bench_evaluations(c: &mut Criterion) {
     let mut group = c.benchmark_group("strategies/evaluation");
-    bench_evaluation(&mut group, "long_call", &long_call());
-    bench_evaluation(&mut group, "bull_call_spread", &bull_call_spread());
-    bench_evaluation(&mut group, "short_strangle", &short_strangle());
-    bench_evaluation(&mut group, "long_butterfly", &long_butterfly());
-    bench_evaluation(&mut group, "iron_condor", &iron_condor());
-    bench_evaluation(&mut group, "iron_butterfly", &iron_butterfly());
+    bench_evaluation(&mut group, "long_call", &long_call(), false);
+    bench_evaluation(&mut group, "bull_call_spread", &bull_call_spread(), true);
+    bench_evaluation(&mut group, "short_strangle", &short_strangle(), true);
+    bench_evaluation(&mut group, "long_butterfly", &long_butterfly(), true);
+    bench_evaluation(&mut group, "iron_condor", &iron_condor(), true);
+    bench_evaluation(&mut group, "iron_butterfly", &iron_butterfly(), true);
     group.finish();
 }
 
@@ -329,6 +340,10 @@ fn bench_analysis(c: &mut Criterion) {
 
 /// Times one optimiser call: the optimiser mutates the strategy in place,
 /// so each iteration starts from a fresh clone that is not timed.
+///
+/// As in [`bench_ok`], the search must find a candidate on the fixture
+/// before it is timed: a search that returns `NoValidCandidate` at once
+/// would report a misleadingly cheap number.
 fn bench_optimiser<S>(
     group: &mut BenchmarkGroup<'_, WallTime>,
     name: &str,
@@ -338,18 +353,22 @@ fn bench_optimiser<S>(
 ) where
     S: Optimizable + Clone,
 {
+    let search = |s: &mut S| {
+        if area {
+            s.get_best_area(black_box(chain), FindOptimalSide::All)
+        } else {
+            s.get_best_ratio(black_box(chain), FindOptimalSide::All)
+        }
+    };
+    if let Err(e) = search(&mut strategy.clone()) {
+        panic!("bench `{name}`: the search found no candidate on the fixture: {e:?}");
+    }
     group.bench_function(name, |b| {
         b.iter_batched(
             || strategy.clone(),
             |mut s| {
-                if area {
-                    s.get_best_area(black_box(chain), FindOptimalSide::All)
-                        .expect("benchmark search finds a candidate");
-                } else {
-                    s.get_best_ratio(black_box(chain), FindOptimalSide::All)
-                        .expect("benchmark search finds a candidate");
-                }
-                s
+                let result = search(&mut s);
+                (s, black_box(result))
             },
             BatchSize::LargeInput,
         )
