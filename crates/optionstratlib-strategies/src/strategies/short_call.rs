@@ -597,3 +597,37 @@ impl Strategable for ShortCall {}
 
 #[cfg(test)]
 crate::strategies::macros::test_strategy_traits!(ShortCall, test_short_call_implementations);
+
+#[cfg(test)]
+mod tests_break_even {
+    use super::*;
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// `new` reported no break-even before #780: the strategy it builds now
+    /// matches the same leg added to a `Default` one, break-evens included.
+    #[test]
+    fn test_short_call_new_matches_leg_added_to_default() {
+        let built = ShortCall::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(4.1),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
+        )
+        .unwrap();
+        assert_eq!(built.get_break_even_points().unwrap().len(), 1);
+        let mut added = ShortCall::default();
+        added.add_position(&built.short_call).unwrap();
+        assert_eq!(
+            serde_json::to_value(&added).unwrap(),
+            serde_json::to_value(&built).unwrap()
+        );
+    }
+}
