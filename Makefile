@@ -428,6 +428,21 @@ check-api-report:
 	@$(PYTHON311) scripts/report_api_changes.py --self-test > /dev/null || ($(PYTHON311) scripts/report_api_changes.py --self-test; exit 1)
 	@echo "api-changes: parser self-test OK"
 
+# The 0.22 release gates (#557): every gate of ADR-0004 section 6 and the
+# per-crate and facade matrices, run from `scripts/release_gates.py`, which
+# records each command, result, time and warning count and writes the evidence
+# to docs/release/0.22/gates.md (`release-gates-render`). The run takes about
+# 40 minutes. The semver reports against 0.21.3 are informational and are
+# classified in docs/release/0.22/api-classification.md.
+.PHONY: release-gates release-gates-render
+release-gates:
+	python3 scripts/release_gates.py --self-test > /dev/null
+	python3 scripts/classify_api_changes.py --self-test > /dev/null
+	python3 scripts/release_gates.py run
+
+release-gates-render:
+	python3 scripts/release_gates.py render
+
 # Fails when a panicking construct reappears in production code.
 #
 # The banned set, and why each entry is there:

@@ -2270,6 +2270,26 @@ summarize the release.
 
 ### Added
 
+- **The 0.22 release gates are one command, and their evidence is tracked**
+  (#557). `make release-gates` (`scripts/release_gates.py`) runs every gate of
+  ADR-0004 section 6 and the per-crate and facade matrices: formatting,
+  Clippy, the tests of each crate with default, no and all features and of the
+  facade capability matrix, rustdoc with warnings denied with and without
+  features, the release build, `scan-banned`, the public API snapshots, the
+  architecture and feature-tree checks, the consumer fixtures and the 0.22
+  consumers against the workspace and the package archives, the direct
+  examples, `check-components` and the independent `plotly` and
+  `static_export` surfaces. `docs/release/0.22/gates.md` records the commit,
+  the toolchains, every command, its result, time and warnings, and
+  `docs/release/0.22/api-classification.md` sorts the 1,163 module-level items
+  `cargo-semver-checks` reports against 0.21.3 (`scripts/classify_api_changes.py`)
+  into 734 that still resolve at their path, 404 reachable at a canonical
+  facade path and 25 removed, each removal linked to its issue; it also
+  records the 3 variants the unified `Error` gained. The run found
+  and fixed one failing check: the API report's default surface was missing
+  `schema` since it became a default feature (#549), so `make check-api-report`
+  and the API CHANGES workflow's parser self-test failed.
+
 - **Executable 0.22 consumers and `make test-022-consumers`** (#552). Every
   directory under `fixtures/consumers/` is a downstream crate with the
   manifest a 0.22 user writes, built outside the workspace with a target dir
