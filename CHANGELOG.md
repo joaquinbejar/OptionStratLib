@@ -1812,6 +1812,29 @@ summarize the release.
 
 ### Fixed
 
+- **A compound option at zero volatility returns its deterministic value**
+  (#867). Before expiry, `compound_black_scholes` at `σ = 0` valued the
+  underlying through `black_scholes`, which rejects a zero volatility, so it
+  returned an error.
+  - **The value now returned.** With the forward `F = S e^((r - q) T2)`,
+    the underlying is worth `V = e^(-r (T2 - T1)) max(±(F - K2), 0)` at
+    `T1`, and the compound pays `e^(-r T1) max(±(V - K1), 0)`. That is the
+    `σ → 0` limit of the Geske price. It covers all four call/put
+    combinations, with the underlying taking the compound's style as at
+    every other volatility.
+  - **Examples.** The kernel's test contract is `S = 100`,
+    `K1 = K2 = 5`, `T1 = 91.25` days. Its call on a call was an error and
+    is now about 90.18, and its put on a put about 4.94.
+  - **Unchanged.** Values at expiry, every `σ > 0` value, and
+    `black_scholes()` dispatch: its `d1` / `d2` gate still rejects
+    `σ = 0` for `T > 0`.
+  - **Tests.**
+    - All four combinations equal the hand-computed deterministic value
+      at `σ = 0`.
+    - The closed form at `σ = 1e-4` is within `1e-4` of it.
+    - The kernel prices both styles at `σ = 0`, and their expiry values
+      are unchanged.
+
 - **A spread put struck near zero prices as the put, not the Margrabe
   call** (#852). For a strike below `1e-4`, `spread_black_scholes`
   switched to Margrabe's exchange formula `max(S1 - S2, 0)` for both

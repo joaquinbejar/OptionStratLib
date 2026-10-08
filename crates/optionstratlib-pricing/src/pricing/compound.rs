@@ -357,56 +357,11 @@ fn price_compound(
         return Ok(apply_side(intrinsic, compound));
     }
 
-    if sigma == Positive::ZERO {
-        // Degenerate case
-        let discount = discount_factor(
-            r,
-            t1.to_dec(),
-            "pricing::compound::zero_vol::neg_rt",
-            "pricing::compound::zero_vol::discount",
-        )?;
-        let forward_value = d_mul(
-            value_underlying_option(compound, underlying_type)?,
-            d_exp(
-                d_mul(
-                    d_sub(r, q, "pricing::compound::zero_vol::carry")?,
-                    t1.to_dec(),
-                    "pricing::compound::zero_vol::carry_t",
-                )?,
-                "pricing::compound::zero_vol::growth",
-            )?,
-            "pricing::compound::zero_vol::forward",
-        )?;
-        let intrinsic = match compound.option_style {
-            OptionStyle::Call => d_mul(
-                d_sub(
-                    forward_value,
-                    k1.to_dec(),
-                    "pricing::compound::zero_vol::call::intrinsic",
-                )?
-                .max(Decimal::ZERO),
-                discount,
-                "pricing::compound::zero_vol::call::discounted",
-            )?,
-            OptionStyle::Put => d_mul(
-                d_sub(
-                    k1.to_dec(),
-                    forward_value,
-                    "pricing::compound::zero_vol::put::intrinsic",
-                )?
-                .max(Decimal::ZERO),
-                discount,
-                "pricing::compound::zero_vol::put::discounted",
-            )?,
-        };
-        return Ok(apply_side(intrinsic, compound));
-    }
-
     // The underlying expires at `T2 = 2 T1` and takes the compound's style
     // and strike: `OptionType::Compound` carries neither for it, and this is
-    // the convention the expiry branch above (#639) and the zero-volatility
-    // branch already price. A call is a call on a call and a put a put on a
-    // put. The closed form used to value every underlying as a call (a put
+    // the convention the expiry branch above (#639) prices. A call is a call
+    // on a call and a put a put on a put, at every volatility including zero
+    // (#867). The closed form used to value every underlying as a call (a put
     // was priced as a put on a call) and to approximate the critical price,
     // so it disagreed with the value at expiry by about 38 on a put (#845).
     let t2 = Positive::new_decimal(d_mul(t1.to_dec(), dec!(2), "pricing::compound::t2")?)?;
@@ -477,6 +432,10 @@ const CRITICAL_PRICE_DOUBLINGS: usize = 200;
 /// - call on put: `k2 e^(-r t2) M(-z2, -y2; ρ) - S e^(-q t2) M(-z1, -y1; ρ) - k1 e^(-r t1) N(-z2)`
 /// - put on put: `S e^(-q t2) M(z1, -y1; -ρ) - k2 e^(-r t2) M(z2, -y2; -ρ) + k1 e^(-r t1) N(z2)`
 ///
+/// At `σ = 0` the path is deterministic: with `F = S e^(b t2)`, the
+/// underlying is worth `V = e^(-r (t2 - t1)) max(±(F - k2), 0)` at `t1`, and
+/// the compound `e^(-r t1) max(±(V - k1), 0)`.
+///
 /// When no critical spot exists the decision at `t1` is the same on every
 /// path: a zero `k1` is always exercised by a call on the underlying and
 /// never by a put, and a put underlying worth less than `k1` at every spot
@@ -511,6 +470,66 @@ fn geske_price(inputs: &GeskeInputs) -> Result<Decimal, PricingError> {
     )?;
     let k1_pv = d_mul(k1.to_dec(), discount_t1, "pricing::compound::k1_pv")?;
     let underlying_now = || european_value(&market, s, k2, t2, underlying_call);
+
+    // Without volatility the path is deterministic: the spot reaches the
+    // forward, and the underlying is worth its intrinsic on the forward to
+    // its own expiry, discounted over the remaining `tau`. This is the
+    // `σ → 0` limit of the closed form below, whose `d` terms divide by `σ`
+    // (#867): the branch used to value the underlying through Black-Scholes
+    // at `σ = 0`, which rejects it, so every such compound was an error.
+    if sigma == Positive::ZERO {
+        let forward_t2 = d_mul(
+            s.to_dec(),
+            d_exp(
+                d_mul(b, t2.to_dec(), "pricing::compound::zero_vol::carry_t2")?,
+                "pricing::compound::zero_vol::growth",
+            )?,
+            "pricing::compound::zero_vol::forward",
+        )?;
+        let underlying_intrinsic = if underlying_call {
+            d_sub(
+                forward_t2,
+                k2.to_dec(),
+                "pricing::compound::zero_vol::underlying_call",
+            )?
+        } else {
+            d_sub(
+                k2.to_dec(),
+                forward_t2,
+                "pricing::compound::zero_vol::underlying_put",
+            )?
+        }
+        .max(Decimal::ZERO);
+        let underlying_at_t1 = d_mul(
+            underlying_intrinsic,
+            discount_factor(
+                r,
+                tau.to_dec(),
+                "pricing::compound::zero_vol::neg_r_tau",
+                "pricing::compound::zero_vol::discount_tau",
+            )?,
+            "pricing::compound::zero_vol::underlying",
+        )?;
+        let compound_intrinsic = if outer_call {
+            d_sub(
+                underlying_at_t1,
+                k1.to_dec(),
+                "pricing::compound::zero_vol::call",
+            )?
+        } else {
+            d_sub(
+                k1.to_dec(),
+                underlying_at_t1,
+                "pricing::compound::zero_vol::put",
+            )?
+        }
+        .max(Decimal::ZERO);
+        return Ok(d_mul(
+            compound_intrinsic,
+            discount_t1,
+            "pricing::compound::zero_vol::price",
+        )?);
+    }
 
     let critical = if k1 == Positive::ZERO {
         None
@@ -838,32 +857,6 @@ fn critical_price(
         "pricing::compound::critical::root",
     )?;
     Ok(Some(mid))
-}
-
-/// Values the underlying option at current parameters.
-fn value_underlying_option(
-    compound: &Options,
-    underlying_type: &OptionType,
-) -> Result<Decimal, PricingError> {
-    // Create a temporary option with the underlying type
-    let underlying = Options::new(
-        underlying_type.clone(),
-        compound.side,
-        compound.underlying_symbol.clone(),
-        compound.strike_price,
-        compound.expiration_date,
-        compound.implied_volatility,
-        compound.quantity,
-        compound.underlying_price,
-        compound.risk_free_rate,
-        compound.option_style, // Use same style for underlying
-        compound.dividend_yield,
-        compound.exotic_params.clone(),
-    )
-    .with_contract_size(compound.contract_size);
-
-    // Use Black-Scholes to value the underlying
-    crate::pricing::black_scholes_model::black_scholes(&underlying)
 }
 
 /// Long payoff of the underlying option at the compound's spot, its value at
@@ -1372,5 +1365,108 @@ mod tests {
             bivariate_normal_cdf(dec!(-1), dec!(0.5), dec!(-1)).unwrap(),
             Decimal::ZERO
         );
+    }
+
+    fn geske_at(k1: f64, sigma: Positive, outer_call: bool, underlying_call: bool) -> Decimal {
+        geske_price(&GeskeInputs {
+            s: Positive::HUNDRED,
+            k1: pos_or_panic!(k1),
+            k2: Positive::HUNDRED,
+            t1: pos_or_panic!(0.25),
+            t2: Positive::ONE,
+            market: Market {
+                r: dec!(0.05),
+                q: dec!(0.02),
+                sigma,
+            },
+            outer_call,
+            underlying_call,
+        })
+        .unwrap()
+    }
+
+    /// The deterministic compound on `S = K2 = 100, t1 = 0.25, t2 = 1,
+    /// r = 5 %, q = 2 %`: `F = 100 e^(0.03)`, the underlying at `t1` is
+    /// `e^(-0.05 · 0.75) max(±(F - 100), 0)` and the compound
+    /// `e^(-0.05 · 0.25) max(±(V - K1), 0)`.
+    fn deterministic(k1: f64, outer_call: bool, underlying_call: bool) -> f64 {
+        let forward = 100.0 * 0.03_f64.exp();
+        let intrinsic = if underlying_call {
+            (forward - 100.0).max(0.0)
+        } else {
+            (100.0 - forward).max(0.0)
+        };
+        let underlying = (-0.05_f64 * 0.75).exp() * intrinsic;
+        let payoff = if outer_call {
+            (underlying - k1).max(0.0)
+        } else {
+            (k1 - underlying).max(0.0)
+        };
+        (-0.05_f64 * 0.25).exp() * payoff
+    }
+
+    /// At `σ = 0` every combination is its deterministic value, and the
+    /// closed form at `σ = 1e-4` converges to it (#867). The zero-volatility
+    /// branch used to value the underlying through Black-Scholes at `σ = 0`
+    /// and returned an error.
+    #[test]
+    fn test_geske_zero_volatility_is_the_deterministic_value() {
+        // The underlying call is worth about 2.93 at `t1` and the put 0:
+        // `K1 = 2` puts every compound away from its kink.
+        for (outer_call, underlying_call) in
+            [(true, true), (false, true), (true, false), (false, false)]
+        {
+            let expected = deterministic(2.0, outer_call, underlying_call);
+            let at_zero = geske_at(2.0, Positive::ZERO, outer_call, underlying_call);
+            assert!(
+                (at_zero.to_f64().unwrap() - expected).abs() < 1e-12,
+                "outer call {outer_call}, underlying call {underlying_call}: {at_zero} vs {expected}"
+            );
+            let near_zero = geske_at(2.0, pos_or_panic!(0.0001), outer_call, underlying_call);
+            assert!(
+                (near_zero - at_zero).abs() < dec!(0.0001),
+                "outer call {outer_call}, underlying call {underlying_call}: σ = 1e-4 gives {near_zero}, σ = 0 gives {at_zero}"
+            );
+        }
+        // Spelled out: the call on a call and the put on a put.
+        assert!(geske_at(2.0, Positive::ZERO, true, true) > dec!(0.9));
+        assert!(geske_at(2.0, Positive::ZERO, false, false) > dec!(1.9));
+    }
+
+    /// Through the public kernel a zero-volatility compound before expiry is
+    /// priced, not an error, and its value at expiry is unchanged (#867).
+    #[test]
+    fn test_compound_zero_volatility_through_the_kernel() {
+        for style in [OptionStyle::Call, OptionStyle::Put] {
+            let mut option = create_compound_option(style, OptionType::European);
+            option.implied_volatility = Positive::ZERO;
+            let price = compound_black_scholes(&option).unwrap();
+            // The helper's contract: `S = 100`, `K1 = K2 = 5`, `T1 = 91.25`
+            // days, `T2 = 2 T1`, `r = 5 %`, `q = 0`. The call on a call pays
+            // the discounted forward intrinsic less 5; the put on a put pays
+            // the 5 itself, its underlying put being worthless.
+            let t1 = 91.25 / 365.0;
+            let forward = 100.0 * (0.05_f64 * 2.0 * t1).exp();
+            let underlying = match style {
+                OptionStyle::Call => (-0.05_f64 * t1).exp() * (forward - 5.0).max(0.0),
+                OptionStyle::Put => (-0.05_f64 * t1).exp() * (5.0 - forward).max(0.0),
+            };
+            let payoff = match style {
+                OptionStyle::Call => (underlying - 5.0).max(0.0),
+                OptionStyle::Put => (5.0 - underlying).max(0.0),
+            };
+            let expected = (-0.05_f64 * t1).exp() * payoff;
+            assert!(
+                (price.to_f64().unwrap() - expected).abs() < 1e-12,
+                "{style:?}: {price} vs {expected}"
+            );
+            option.expiration_date = ExpirationDate::Days(Positive::ZERO);
+            let at_expiry = compound_black_scholes(&option).unwrap();
+            let expected_at_expiry = match style {
+                OptionStyle::Call => dec!(90),
+                OptionStyle::Put => dec!(5),
+            };
+            assert_eq!(at_expiry, expected_at_expiry, "{style:?} at expiry");
+        }
     }
 }
