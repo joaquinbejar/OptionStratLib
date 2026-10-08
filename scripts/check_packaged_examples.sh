@@ -17,54 +17,27 @@
 #
 # Usage: scripts/check_packaged_examples.sh [scenario ...]   (default: every scenario)
 # Environment: CARGO_TARGET_DIR (default: target) holds `package/` and the build;
-# OSL_REUSE_PACKAGES=1 reuses the archives already there when all ten are;
+# OSL_REUSE_PACKAGES=1 reuses the archives already there when all ten are
+# (scripts/package_archives.sh);
 # OSL_PACKAGED_SOURCE (default: examples/direct) is the directory of scenarios.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET="${CARGO_TARGET_DIR:-$ROOT/target}"
-PACKAGE_DIR="$TARGET/package"
-VERSION="0.22.0"
-# The facade last: it depends on every component.
-PACKAGES=(
-    optionstratlib-core optionstratlib-math optionstratlib-pricing optionstratlib-simulation
-    optionstratlib-market optionstratlib-analytics optionstratlib-strategies optionstratlib-backtest
-    optionstratlib-visualization optionstratlib
-)
+# shellcheck source=scripts/package_archives.sh
+source "$ROOT/scripts/package_archives.sh"
 SOURCE="${OSL_PACKAGED_SOURCE:-examples/direct}"
 
 cd "$ROOT"
 
-# Package the facade and the components together (their path dependencies are
-# not on crates.io yet, so one run resolves them from each other). The archives
-# are rebuilt every time, so a stale copy of an earlier run cannot stand in for
-# the working tree. With OSL_REUSE_PACKAGES=1 the ten archives already in
-# `<target>/package/` are used as they are, but only when all ten are there;
-# if any is missing, all ten are deleted and packaged again in one run.
-# `make check-components` leaves the nine component archives and not the
-# facade's, so the first run after it always repackages all ten; a later run
-# with OSL_REUSE_PACKAGES=1 reuses those.
-reuse="${OSL_REUSE_PACKAGES:-0}"
-missing=0
-for package in "${PACKAGES[@]}"; do
-    [ -f "$PACKAGE_DIR/$package-$VERSION.crate" ] || missing=1
-done
-if [ "$reuse" != "1" ] || [ "$missing" -eq 1 ]; then
-    echo "packaging the facade and the component crates"
-    rm -f "$PACKAGE_DIR"/optionstratlib-*.crate
-    args=()
-    for package in "${PACKAGES[@]}"; do args+=(-p "$package"); done
-    cargo package "${args[@]}" --allow-dirty --no-verify
-fi
+osl_package_archives "$TARGET"
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/osl-packaged-examples.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 # Unpack every archive once; the patches point at these directories.
-for package in "${PACKAGES[@]}"; do
-    tar -xzf "$PACKAGE_DIR/$package-$VERSION.crate" -C "$work"
-done
+osl_unpack_archives "$TARGET" "$work"
 
 scenarios=("$@")
 if [ "${#scenarios[@]}" -eq 0 ]; then
@@ -86,8 +59,8 @@ for scenario in "${scenarios[@]}"; do
     {
         echo
         echo "[patch.crates-io]"
-        for package in "${PACKAGES[@]}"; do
-            echo "$package = { path = \"$work/$package-$VERSION\" }"
+        for package in "${OSL_PACKAGES[@]}"; do
+            echo "$package = { path = \"$work/$package-$OSL_VERSION\" }"
         done
     } >> "$copy/Cargo.toml"
     if grep -q 'path = "\.\./' "$copy/Cargo.toml"; then

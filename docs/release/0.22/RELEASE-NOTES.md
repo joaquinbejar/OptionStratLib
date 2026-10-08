@@ -379,8 +379,9 @@ gives what to do for each.
 
 ### Toolchain and dependencies
 
-- **Rust 1.88 or newer**, edition 2024, stable toolchain: `utoipa` 6 needs
-  1.88. The manifests declare no `rust-version`.
+- **Rust 1.89 or newer**, edition 2024, stable toolchain. Every published
+  crate declares `rust-version = "1.89"` (#559), which the `uuid` 1.27 and
+  `statrs` 0.19.1 the crates require need.
 - The public API exposes `utoipa` 6, `positive` 0.7, `expiration_date` 0.4,
   `option_type` 0.4 and `financial_types` 0.3; a consumer naming their types
   must use the same lines. The facade itself no longer depends on

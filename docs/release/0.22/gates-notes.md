@@ -20,11 +20,12 @@ on its commit, which rewrites this file.
   `static_export` and `async` carry no derives. The same self-test is the
   first step of the API CHANGES workflow, so that step fails on every pull
   request that carries no such fix.
-- `cargo package` prints one notice per test target it cannot ship, for
-  example ``warning: ignoring test `convergence` as `tests/convergence.rs`
-  is not included in the published package``: 46 distinct notices, from the
-  `include` lists of the component manifests (`src/**/*`, manifest, README,
-  licence), which exclude `tests/`. They are cargo notices about package
+- `cargo package` prints one notice per test or bench target it cannot ship,
+  for example ``warning: ignoring test `convergence` as `tests/convergence.rs`
+  is not included in the published package``: 53 distinct notices since
+  #559 (49 from the component manifests, 4 from the facade's), from the
+  `include` lists (`src/**/*`, manifest, README, licence), which exclude
+  `tests/` and `benches/`. They are cargo notices about package
   contents, not compiler or tool warnings, and the run counts them apart
   ("package notices"); the gates that package the crates (`components`,
   `consumers-022`, `direct-examples-packaged`) pass otherwise. Package contents
@@ -32,9 +33,11 @@ on its commit, which rewrites this file.
   only `src/`, the manifest, the README and the licence (the facade also the
   two `docs/*.md` its rustdoc includes), while the integration tests and
   benches read repository data and stay in the repository and CI. The facade
-  adds the same kind of notice for its own `[[test]]` and `[[bench]]` targets
-  once #559 merges. They are accepted cargo notices, not warnings to fix.
-  #559 records its package evidence in `docs/release/0.22/packages.md`.
+  prints the same kind of notice for its own `[[test]]` and `[[bench]]`
+  targets (`tests`, `property_tests`, `prelude`, `benches`). They are accepted
+  cargo notices, not warnings to fix; `docs/release/0.22/packages.md` gives
+  the per-package count and why neither shipping nor suppressing them is
+  right.
 
 ## Facade capability matrix
 

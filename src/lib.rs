@@ -948,8 +948,9 @@
 //!
 //! ### Prerequisites
 //!
-//! - Rust 1.88 or higher (Rust 2024 edition; `utoipa` 6, behind the default
-//!   `schema` feature, needs 1.88)
+//! - Rust 1.89 or higher (Rust 2024 edition): the `rust-version` every
+//!   published crate declares, which the `uuid` and `statrs` versions they
+//!   require need
 //! - Cargo package manager
 //!
 //! ### Installation

@@ -2,15 +2,16 @@
 name = "optionstratlib-math"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Generic curves, surfaces, interpolation and geometry of OptionStratLib, on Decimal coordinates."
+description = "Generic curves, surfaces, interpolation and geometry of OptionStratLib, on Decimal coordinates. Re-exported by the optionstratlib facade under its `math` feature."
 readme = "README.md"
 keywords = ["finance", "curves", "interpolation", "decimal"]
 categories = ["finance", "mathematics"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

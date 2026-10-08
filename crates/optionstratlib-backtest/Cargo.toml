@@ -2,15 +2,16 @@
 name = "optionstratlib-backtest"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Strategy backtests over simulated paths: per-path evaluation, run statistics and reports of OptionStratLib."
+description = "Strategy backtests over simulated paths: per-path evaluation, run statistics and reports of OptionStratLib. Re-exported by the optionstratlib facade under its `backtest` feature."
 readme = "README.md"
 keywords = ["finance", "options", "backtesting", "simulation", "strategy"]
 categories = ["finance", "mathematics", "simulation"]
-include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []

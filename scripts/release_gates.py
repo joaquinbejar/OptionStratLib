@@ -9,9 +9,9 @@ into the evidence file `docs/release/0.22/gates.md`, together with the
 toolchain versions and the commit the gates ran on.
 
 A gate passes only with exit status 0 and no compiler or tool warning (the
-`ignoring test ... not included in the published package` notices of
-`cargo package` are counted apart, because they describe package contents,
-which #559 owns). The semver reports are informational: they list what 0.22
+`ignoring test ...` / `ignoring benchmark ... not included in the published
+package` notices of `cargo package` are counted apart, because they describe
+package contents, which #559 owns and keeps on purpose). The semver reports are informational: they list what 0.22
 removes or reshapes against the published 0.21.3 and decide nothing (#606).
 
 Usage:
@@ -42,7 +42,9 @@ BASELINE = "v0.21.3"
 REPORT_PYTHON = "$(command -v python3.13 || command -v python3.12 || command -v python3.11 || echo python3)"
 SURFACES = ("none", "default", "plotly", "static_export", "async", "all")
 
-PACKAGE_NOTICE = re.compile(r"^warning: ignoring test `[^`]+` as `[^`]+` is not included in the published package")
+PACKAGE_NOTICE = re.compile(
+    r"^warning: ignoring (test|benchmark) `[^`]+` as `[^`]+` is not included in the published package"
+)
 WARNING = re.compile(r"^(\x1b\[[0-9;]*m)*warning(\[[^\]]*\])?(\x1b\[[0-9;]*m)*:", re.M)
 
 
@@ -100,6 +102,13 @@ GATES: tuple[Gate, ...] = (
     Gate("release-notes", "Consumers", "make check-release-notes",
          "every manifest-plus-program pair of RELEASE-NOTES.md built as a standalone crate outside the repository "
          "(needs network access for the crates.io index)"),
+    Gate("packages", "Packages", "make check-packages",
+         "contents and metadata of the ten published packages: sources, README and LICENSE in, no local "
+         "artifact; lockstep metadata, rust-version, categories, keywords, versioned path dependencies, "
+         "additive features against the ownership map, README links (#559)"),
+    Gate("package-archives", "Packages", "make check-package-archives",
+         "the ten unpacked archives built, documented with `-D warnings` and doc-tested outside the "
+         "repository, then checked with the declared rust-version, Rust 1.89 (#559)"),
     Gate("components", "Per crate", "make check-components",
          "each component alone with default, no and all features, named feature sets, Clippy, rustdoc "
          "`-D warnings` with and without features, package contents, and the packaged archives"),
@@ -252,6 +261,8 @@ def self_test() -> int:
 
     notice = "warning: ignoring test `a` as `tests/a.rs` is not included in the published package"
     check("package notices are counted apart", count_warnings(f"{notice}\n{notice}\n"), (0, 2))
+    bench = "warning: ignoring benchmark `b` as `benches/b.rs` is not included in the published package"
+    check("benchmark notices are package notices", count_warnings(f"{bench}\n"), (0, 1))
     check("a compiler warning counts", count_warnings(f"warning: unused variable: `x`\n{notice}\n"), (1, 1))
     check("a lint warning counts", count_warnings("warning[E0xxx]: something\n"), (1, 0))
     check("command echoes are not warnings", count_warnings('RUSTDOCFLAGS="-D warnings" cargo doc\n'), (0, 0))

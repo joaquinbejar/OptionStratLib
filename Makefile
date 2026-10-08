@@ -312,6 +312,27 @@ check-release-notes:
 # `OSL_REUSE_PACKAGES=1` it reuses the ten archives in `<target>/package/` when
 # all are there. `check-components` leaves no facade archive, so the
 # Components workflow's run right after it packages all ten again.
+# The contents and metadata of the ten published packages (#559): every
+# archive carries its source, README and LICENSE and no local, build or
+# planning artifact; lockstep version, edition, rust-version, license, readme,
+# repository and homepage; valid categories and keywords; versioned path
+# dependencies; additive features that match docs/ownership.md; and tracked
+# README links (scripts/check_packages.py). `--report` prints the evidence
+# docs/release/0.22/packages.md records.
+.PHONY: check-packages
+check-packages:
+	@python3 scripts/check_packages.py --self-test > /dev/null || (python3 scripts/check_packages.py --self-test; exit 1)
+	@python3 scripts/check_packages.py
+
+# Builds, documents (warnings denied) and doc-tests the ten published crates
+# from their unpacked archives, then checks them with the declared
+# rust-version when that toolchain is installed (#559,
+# scripts/check_package_archives.sh). OSL_REUSE_PACKAGES=1 reuses the archives
+# already packaged when all ten are there.
+.PHONY: check-package-archives
+check-package-archives:
+	scripts/check_package_archives.sh
+
 .PHONY: check-direct-examples-packaged
 check-direct-examples-packaged:
 	scripts/check_packaged_examples.sh
