@@ -1635,6 +1635,22 @@ summarize the release.
 
 ### Fixed
 
+- **`numerical_theta` is implemented** (#796). It was a public stub:
+  `Err(GreeksError::CalculationError)` for any expiry of at least 0.01
+  years and `0` below. It is now a central difference in time, by owner
+  decision with a one-day bump either way, like the other numerical Greeks'
+  symmetric bump on their input: `(P(T - 1 day) - P(T + 1 day)) / 2`, per
+  day, the unit of the closed-form `theta`, for one long unit contract as
+  the other numerical Greeks. Within a day of expiry it is the one-sided
+  `P(T) - P(T + 1 day)`, and `0` at expiry. Against the closed form on
+  long European calls and puts (strikes 80/100/120, 30 days to a year,
+  with and without a dividend yield) the error is at most `6.6e-6` per day,
+  asserted at `2e-5`; put-call parity holds to `5.1e-11`, asserted at
+  `1.5e-10`. The truncation `h^2/6 * V'''` grows as `T^(-5/2)` at the money,
+  so a one-day step is coarse in the last week (`2.5e-4` per day at 7
+  days, about 7 % at 1.5 days); the docs say so. `numerical_theta` joins
+  the pricing greeks bench.
+
 - **No arithmetic operator in core, math or pricing can abort the caller**
   (#788).
   - **Lints.** The three crates deny `clippy::arithmetic_side_effects` and
