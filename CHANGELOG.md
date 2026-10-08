@@ -1664,6 +1664,17 @@ summarize the release.
 
 ### Fixed
 
+- **`OptionSeries` keeps every expired expiry** (#825). Its `chains` map is
+  keyed by `ExpirationDate`, whose ordering in `expiration_date` 0.4.1
+  clamped every past date to zero days, so two expired expiries compared
+  equal and the second chain replaced the first. `expiration_date` 0.4.2
+  orders, compares and hashes an expiration by the instant it resolves to,
+  and the workspace requires it. Two past expiries now survive an
+  `OptionSeries` JSON round trip as two chains in date order, and
+  `OptionChain`'s ordering sorts expired chains by date instead of by
+  symbol. `OptionBasicType`, a strategies `HashMap` key, gets an `Eq` that
+  agrees with its `Hash`. The OptionStratLib API is unchanged.
+
 - **`greeks::theta` and `greeks::vega` price exotic options with their own
   pricer** (#817). For every non-European `OptionType` they returned the
   European Black-Scholes closed form, although their docs said they fell
