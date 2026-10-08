@@ -1,4 +1,5 @@
 use optionstratlib::error::Error;
+use optionstratlib::model::DisplayMoney;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
@@ -35,12 +36,12 @@ fn main() -> Result<(), Error> {
         strategy.get_net_premium_received()?
     );
     info!(
-        "Max Profit: ${:.2}",
-        strategy.get_max_profit().unwrap_or(Positive::ZERO)
+        "Max Profit: {:.2}",
+        DisplayMoney::from(strategy.get_max_profit().unwrap_or(Positive::ZERO))
     );
     info!(
-        "Max Loss: ${}",
-        strategy.get_max_loss().unwrap_or(Positive::ZERO)
+        "Max Loss: {}",
+        DisplayMoney::from(strategy.get_max_loss().unwrap_or(Positive::ZERO))
     );
     info!("Total Fees: ${:.2}", strategy.get_fees()?);
     info!(

@@ -12,6 +12,7 @@ use optionstratlib_core::constants::{
 };
 use optionstratlib_core::error::OperationErrorKind;
 use optionstratlib_core::error::position::PositionError;
+use optionstratlib_core::model::DisplayMoney;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
@@ -322,14 +323,14 @@ impl fmt::Display for Strategy {
             writeln!(f, "  {leg}")?;
         }
         if let Some(max_profit) = self.max_profit {
-            writeln!(f, "Max Profit: ${:.2}", cents(max_profit))?;
+            writeln!(f, "Max Profit: {:.2}", DisplayMoney(cents(max_profit)))?;
         }
         if let Some(max_loss) = self.max_loss {
-            writeln!(f, "Max Loss: ${:.2}", cents(max_loss))?;
+            writeln!(f, "Max Loss: {:.2}", DisplayMoney(cents(max_loss)))?;
         }
         writeln!(f, "Break-even Points:")?;
         for point in &self.break_even_points {
-            writeln!(f, "  ${point:.2}")?;
+            writeln!(f, "  {:.2}", DisplayMoney::from(*point))?;
         }
         Ok(())
     }
@@ -2809,6 +2810,21 @@ mod tests_strategy_type_display_debug {
         let shown = strategy.to_string();
         assert!(shown.contains("Max Profit: $11.00\n"), "{shown}");
         assert!(shown.contains("Max Loss: $2.99\n"), "{shown}");
+    }
+
+    #[test]
+    fn test_strategy_display_unlimited_sentinels_render_unlimited() {
+        let mut strategy = Strategy::new(
+            "Short Strangle".to_string(),
+            StrategyType::ShortStrangle,
+            "Unlimited loss".to_string(),
+        );
+        strategy.max_profit = Some(pos_or_panic!(2.5));
+        strategy.max_loss = Some(Positive::MAX);
+        let shown = strategy.to_string();
+        assert!(shown.contains("Max Profit: $2.50\n"), "{shown}");
+        assert!(shown.contains("Max Loss: Unlimited\n"), "{shown}");
+        assert!(!shown.contains("79228162514264337593543950335"), "{shown}");
     }
 
     #[test]

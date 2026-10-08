@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::cmp::Ordering;
 use std::fmt;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, trace, warn};
 
 /// Struct representing a row in an option chain with detailed pricing and analytics data.
 ///
@@ -690,7 +690,8 @@ impl OptionData {
     /// 3. Call option data is valid (via `valid_call()`)
     /// 4. Put option data is valid (via `valid_put()`)
     ///
-    /// Each validation failure is logged as an error for debugging and troubleshooting.
+    /// A failing row is a data condition the chain handles (callers filter it
+    /// out), not an error, so each failure is logged at `DEBUG`.
     ///
     /// # Returns
     ///
@@ -698,13 +699,15 @@ impl OptionData {
     /// * `false` - If any validation check fails, indicating the option data is incomplete or invalid
     pub fn validate(&self) -> bool {
         if self.strike_price == Positive::ZERO {
-            error!("Error: Strike price cannot be zero");
+            debug!("validate: strike price is zero; row skipped");
             return false;
         }
         if !self.valid_call() || !self.valid_put() {
-            error!(
-                "Error: No valid prices for call or put options {} Deltas C {:?} P {:?}",
-                self.strike_price, self.delta_call, self.delta_put
+            debug!(
+                strike = %self.strike_price,
+                delta_call = ?self.delta_call,
+                delta_put = ?self.delta_put,
+                "validate: no valid prices for call or put options; row skipped"
             );
             return false;
         }

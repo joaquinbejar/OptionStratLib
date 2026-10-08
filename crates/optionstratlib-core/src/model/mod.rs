@@ -125,6 +125,7 @@ pub use balance::*;
 pub use expiration::ExpirationDate;
 pub use expiration::ExpirationDateError;
 pub use expiration::{reject_unrepresentable_expiration, resolve_expiration_date};
+pub use format::{DisplayMoney, UNLIMITED, unlimited_label};
 pub use option::Options;
 pub use position::Position;
 pub use trade::{Trade, TradeAble, TradeStatus, TradeStatusAble, save_trades};

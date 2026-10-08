@@ -6,8 +6,78 @@
 use crate::model::option::ExoticParams;
 use crate::model::{Options, Position};
 use positive::Positive;
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::fmt;
+
+/// The label shown in place of an amount that stands for "unlimited".
+pub const UNLIMITED: &str = "Unlimited";
+
+/// The label shown in place of an amount that stands for "unlimited",
+/// if `value` is one of the sentinels the library uses for it.
+///
+/// `Decimal::MAX` (which is also `Positive::MAX`, the value the strategies'
+/// `get_max_profit` / `get_max_loss` return for an unbounded side) gives
+/// `Unlimited`, and `Decimal::MIN` gives `-Unlimited`. Every other value,
+/// however large, gives `None`.
+#[inline]
+#[must_use]
+pub fn unlimited_label(value: Decimal) -> Option<&'static str> {
+    if value == Decimal::MAX {
+        Some(UNLIMITED)
+    } else if value == Decimal::MIN {
+        Some("-Unlimited")
+    } else {
+        None
+    }
+}
+
+/// A monetary amount as shown to a user: `$` followed by the amount, or the
+/// [`unlimited_label`] when the amount is an "unlimited" sentinel.
+///
+/// Display only: the wrapped value is not changed. The formatter's precision
+/// and width apply to the number only, so `format!("{:.2}", DisplayMoney(x))`
+/// prints `$12.34` for a finite amount and `Unlimited` for `Decimal::MAX`.
+///
+/// ```
+/// use optionstratlib_core::model::DisplayMoney;
+/// use positive::Positive;
+/// use rust_decimal_macros::dec;
+///
+/// assert_eq!(format!("{:.2}", DisplayMoney(dec!(12.34))), "$12.34");
+/// assert_eq!(DisplayMoney::from(Positive::MAX).to_string(), "Unlimited");
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DisplayMoney(pub Decimal);
+
+impl From<Decimal> for DisplayMoney {
+    #[inline]
+    fn from(value: Decimal) -> Self {
+        Self(value)
+    }
+}
+
+/// Normalised, so a `Positive` printed without a precision keeps the
+/// trailing-zero-free rendering of `Positive`'s own `Display`.
+impl From<Positive> for DisplayMoney {
+    #[inline]
+    fn from(value: Positive) -> Self {
+        Self(value.to_dec().normalize())
+    }
+}
+
+impl fmt::Display for DisplayMoney {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match unlimited_label(self.0) {
+            // Not `pad`: a precision would truncate the label.
+            Some(label) => f.write_str(label),
+            None => {
+                f.write_str("$")?;
+                fmt::Display::fmt(&self.0, f)
+            }
+        }
+    }
+}
 
 impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -516,5 +586,40 @@ mod tests_position_type_display_debug {
     }";
 
         assert_eq!(format!("{position:?}"), expected_debug);
+    }
+}
+
+#[cfg(test)]
+mod tests_display_money {
+    use super::*;
+
+    #[test]
+    fn test_display_money_finite_amount_keeps_precision() {
+        assert_eq!(format!("{:.2}", DisplayMoney(dec!(12.5))), "$12.50");
+        assert_eq!(format!("{:.2}", DisplayMoney(dec!(-3.25))), "$-3.25");
+        assert_eq!(DisplayMoney(dec!(7)).to_string(), "$7");
+        assert_eq!(
+            DisplayMoney::from(positive::pos_or_panic!(5.00)).to_string(),
+            "$5"
+        );
+    }
+
+    #[test]
+    fn test_display_money_decimal_max_renders_unlimited() {
+        assert_eq!(format!("{:.2}", DisplayMoney(Decimal::MAX)), "Unlimited");
+        assert_eq!(DisplayMoney::from(Positive::MAX).to_string(), "Unlimited");
+    }
+
+    #[test]
+    fn test_display_money_decimal_min_renders_negative_unlimited() {
+        assert_eq!(format!("{:.2}", DisplayMoney(Decimal::MIN)), "-Unlimited");
+    }
+
+    #[test]
+    fn test_unlimited_label_only_for_sentinels() {
+        assert_eq!(unlimited_label(Decimal::MAX), Some(UNLIMITED));
+        assert_eq!(unlimited_label(Decimal::MIN), Some("-Unlimited"));
+        assert_eq!(unlimited_label(Decimal::MAX - Decimal::ONE), None);
+        assert_eq!(unlimited_label(Decimal::ZERO), None);
     }
 }

@@ -1,3 +1,4 @@
+use optionstratlib::model::DisplayMoney;
 use optionstratlib::prelude::*;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
@@ -125,8 +126,8 @@ fn main() {
     // Calculate max profit and loss
     let max_profit = strategy.get_max_profit().unwrap_or(Positive::ZERO);
     let max_loss = strategy.get_max_loss().unwrap_or(Positive::ZERO);
-    info!("Max Profit: ${:.2}", max_profit);
-    info!("Max Loss: ${:.2}", max_loss);
+    info!("Max Profit: {:.2}", DisplayMoney::from(max_profit));
+    info!("Max Loss: {:.2}", DisplayMoney::from(max_loss));
 
     // Calculate total fees
     let total_fees = strategy.get_fees().unwrap_or(Positive::ZERO);

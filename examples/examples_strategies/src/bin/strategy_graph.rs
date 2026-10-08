@@ -6,6 +6,7 @@ use positive::pos_or_panic;
    Date: 20/8/24
 ******************************************************************************/
 use optionstratlib::error::Error;
+use optionstratlib::model::DisplayMoney;
 use optionstratlib::prelude::*;
 
 fn main() -> Result<(), Error> {
@@ -36,11 +37,11 @@ fn main() -> Result<(), Error> {
     );
     info!(
         "Max Profit: {}",
-        strategy.get_max_profit().unwrap_or(Positive::ZERO)
+        DisplayMoney::from(strategy.get_max_profit().unwrap_or(Positive::ZERO))
     );
     info!(
         "Max Loss: {}",
-        strategy.get_max_loss().unwrap_or(Positive::ZERO)
+        DisplayMoney::from(strategy.get_max_loss().unwrap_or(Positive::ZERO))
     );
     info!("Total Cost: {}", strategy.get_total_cost()?);
 

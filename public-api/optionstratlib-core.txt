@@ -814,6 +814,13 @@ pub fn optionstratlib_core::model::Balance::name() -> alloc::borrow::Cow<'static
 pub fn optionstratlib_core::model::Balance::schemas(&mut alloc::vec::Vec<(alloc::string::String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>)
 impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::Balance
 pub fn optionstratlib_core::model::Balance::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
+pub struct optionstratlib_core::model::DisplayMoney(pub rust_decimal::decimal::Decimal)
+impl core::convert::From<positive::positive::Positive> for optionstratlib_core::model::DisplayMoney
+pub fn optionstratlib_core::model::DisplayMoney::from(positive::positive::Positive) -> Self
+impl core::convert::From<rust_decimal::decimal::Decimal> for optionstratlib_core::model::DisplayMoney
+pub fn optionstratlib_core::model::DisplayMoney::from(rust_decimal::decimal::Decimal) -> Self
+impl core::fmt::Display for optionstratlib_core::model::DisplayMoney
+pub fn optionstratlib_core::model::DisplayMoney::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub struct optionstratlib_core::model::MarginInfo
 pub optionstratlib_core::model::MarginInfo::available_margin: rust_decimal::decimal::Decimal
 pub optionstratlib_core::model::MarginInfo::initial_margin: core::option::Option<rust_decimal::decimal::Decimal>
@@ -971,6 +978,7 @@ impl optionstratlib_core::model::TradeAble for optionstratlib_core::model::Trade
 pub fn optionstratlib_core::model::Trade::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::Trade::trade_ref(&self) -> core::result::Result<&optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
+pub const optionstratlib_core::model::UNLIMITED: &str
 pub trait optionstratlib_core::model::TradeAble
 pub fn optionstratlib_core::model::TradeAble::trade(&self) -> core::result::Result<optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
 pub fn optionstratlib_core::model::TradeAble::trade_mut(&mut self) -> core::result::Result<&mut optionstratlib_core::model::Trade, optionstratlib_core::error::TradeError>
@@ -1000,6 +1008,7 @@ pub fn optionstratlib_core::model::position::Position::status_other(&self) -> co
 pub fn optionstratlib_core::model::reject_unrepresentable_expiration(&expiration_date::ExpirationDate) -> core::result::Result<(), expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::resolve_expiration_date(&expiration_date::ExpirationDate) -> core::result::Result<chrono::datetime::DateTime<chrono::offset::utc::Utc>, expiration_date::error::ExpirationDateError>
 pub fn optionstratlib_core::model::save_trades(&[optionstratlib_core::model::Trade], &str) -> core::io::error::Result<()>
+pub fn optionstratlib_core::model::unlimited_label(rust_decimal::decimal::Decimal) -> core::option::Option<&'static str>
 pub mod optionstratlib_core::utils
 pub mod optionstratlib_core::utils::json_format
 pub fn optionstratlib_core::utils::json_format::write_json<T: serde_core::ser::Serialize + ?core::marker::Sized>(&T, &mut core::fmt::Formatter<'_>) -> core::fmt::Result

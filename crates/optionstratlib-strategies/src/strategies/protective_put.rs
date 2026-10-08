@@ -37,6 +37,7 @@ use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::leg::{Leg, SpotPosition};
 use optionstratlib_core::model::position::Position;
 use optionstratlib_core::model::types::{OptionBasicType, OptionStyle, OptionType, Side};
+use optionstratlib_core::model::{DisplayMoney, UNLIMITED};
 use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::PricingError;
 use optionstratlib_pricing::greeks::Greeks;
@@ -890,12 +891,12 @@ impl std::fmt::Display for ProtectivePut {
             .ok()
             .and_then(|break_evens| break_evens.first())
         {
-            writeln!(f, "Break-even: ${:.2}", break_even)?;
+            writeln!(f, "Break-even: {:.2}", DisplayMoney::from(*break_even))?;
         }
         if let Ok(max_loss) = self.max_loss_potential() {
-            writeln!(f, "Max Loss: ${:.2}", max_loss)?;
+            writeln!(f, "Max Loss: {:.2}", DisplayMoney::from(max_loss))?;
         }
-        writeln!(f, "Max Profit: Unlimited")?;
+        writeln!(f, "Max Profit: {UNLIMITED}")?;
         if let Ok(delta) = self.net_delta() {
             writeln!(f, "Net Delta: {:.4}", delta)?;
         }

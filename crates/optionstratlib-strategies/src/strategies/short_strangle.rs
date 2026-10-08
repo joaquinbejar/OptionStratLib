@@ -1125,7 +1125,7 @@ impl Optimizable for ShortStrangle {
             let strategy = match self.create_strategy(option_chain, &legs) {
                 Ok(s) => s,
                 Err(e) => {
-                    warn!(error = %e, "skipping invalid strategy combination");
+                    debug!(error = %e, "skipping invalid strategy combination");
                     continue;
                 }
             };
@@ -1137,7 +1137,7 @@ impl Optimizable for ShortStrangle {
             let current_value = match metric {
                 Ok(v) => v,
                 Err(e) => {
-                    warn!(error = %e, "skipping candidate with unscorable metric");
+                    debug!(error = %e, "skipping candidate with unscorable metric");
                     continue;
                 }
             };
@@ -1582,6 +1582,19 @@ mod tests_short_strangle {
             pos_or_panic!(0.1),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn test_short_strangle_max_loss_display_renders_unlimited() {
+        let strategy = setup();
+        let max_loss = strategy.get_max_loss().unwrap();
+        // The returned value is still the sentinel; only its rendering changes.
+        assert_eq!(max_loss, Positive::MAX);
+        let shown = format!(
+            "Max Loss: {:.2}",
+            optionstratlib_core::model::DisplayMoney::from(max_loss)
+        );
+        assert_eq!(shown, "Max Loss: Unlimited");
     }
 
     #[test]

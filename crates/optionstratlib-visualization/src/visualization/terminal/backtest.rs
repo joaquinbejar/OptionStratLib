@@ -5,6 +5,7 @@ use crate::error::GraphError;
 use optionstratlib_backtest::backtesting::{
     SimulationResult, SimulationStats, SimulationStatsResult,
 };
+use optionstratlib_core::model::DisplayMoney;
 use optionstratlib_core::model::decimal::d_sum_iter;
 use prettytable::{Attr, Cell, Row, Table, color};
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -165,11 +166,12 @@ fn two_decimals(value: Decimal) -> String {
     )
 }
 
-/// A dollar amount with two decimal places.
+/// A dollar amount with two decimal places, or `Unlimited` / `-Unlimited`
+/// for the `Decimal::MAX` / `Decimal::MIN` sentinels.
 #[must_use]
 #[inline]
 fn money(value: Decimal) -> String {
-    format!("${value:.2}")
+    format!("{:.2}", DisplayMoney(value))
 }
 
 /// A dollar amount, green when positive and red when negative.
