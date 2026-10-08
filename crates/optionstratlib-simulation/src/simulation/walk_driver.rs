@@ -148,13 +148,15 @@ pub fn expanding_window_vols(
 
         // `r` is the return between prices[i] and prices[i + 1]; after
         // consuming it, `count` returns are available at price index i + 1.
-        let count = i + 1;
+        let count = i.checked_add(1).ok_or_else(|| overflow("return count"))?;
         if count < 2 {
             raw.push(None);
             continue;
         }
         let count_dec = Decimal::from(count as u64);
-        let denom = count_dec - Decimal::ONE;
+        let denom = count_dec
+            .checked_sub(Decimal::ONE)
+            .ok_or_else(|| overflow("sample size minus one"))?;
         // Sample variance via prefix sums: (Σr² − (Σr)²/n) / (n − 1),
         // algebraically identical to the two-pass form in
         // `constant_volatility`.
@@ -405,7 +407,7 @@ where
 
     // Precompute the x-step sequence serially, honoring the
     // expiration-truncation contract; Xstep::next is deterministic.
-    let mut x_steps: Vec<Xstep<Positive>> = Vec::with_capacity(y_steps.len().saturating_sub(1));
+    let mut x_steps: Vec<Xstep<Positive>> = Vec::with_capacity(y_steps.iter().skip(1).len());
     let mut current_x = walk_params.init_step.x;
     for _ in 1..y_steps.len() {
         current_x = match current_x.next() {
@@ -427,7 +429,9 @@ where
         .par_iter()
         .enumerate()
         .map(|(offset, x_step)| {
-            let price_index = offset + 1;
+            let price_index = offset
+                .checked_add(1)
+                .ok_or_else(|| E::from(SimulationError::walk_error("x-step offset overflowed")))?;
             let y_step = y_steps.get(price_index).copied().ok_or_else(|| {
                 E::from(SimulationError::walk_error(
                     "walker path shorter than x-steps",

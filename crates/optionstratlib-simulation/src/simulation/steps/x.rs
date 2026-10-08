@@ -221,7 +221,7 @@ where
             &TimeFrame::Day,
         )?;
         let datetime = if days_to_rest <= days {
-            ExpirationDate::Days(days - days_to_rest)
+            ExpirationDate::Days(days.checked_sub(&days_to_rest)?)
         } else {
             ExpirationDate::Days(Positive::ZERO)
         };

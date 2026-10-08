@@ -223,10 +223,10 @@ where
             // A zero-step walk has nothing to simulate past the seeded
             // initial value; `size - 1` underflows there and, in release,
             // turns the loop bound into `usize::MAX`. `size` is a step count,
-            // not a financial value, so saturating at zero is the loop bound
+            // not a financial value, so the range below is the loop bound
             // rather than a hidden clamp on a price.
-            let steps = params.size.saturating_sub(1);
-            for _ in 0..steps {
+            // `1..size` is empty for a zero size and has `size - 1` items otherwise.
+            for _ in 1..params.size {
                 // Generate correlated random numbers
                 let z1 = decimal_normal_sample_with(rng);
                 let z2 = d_add(
@@ -364,8 +364,7 @@ where
             // A zero-step walk has nothing to simulate past the seeded
             // initial value; `size - 1` underflows there. `size` is a step
             // count, not a financial value.
-            let steps = params.size.saturating_sub(1);
-            for &vol in vols.iter().take(steps) {
+            for (&vol, _) in vols.iter().zip(1..params.size) {
                 let z = decimal_normal_sample_with(rng);
                 let sigma_abs = d_mul(vol.to_dec(), price, "simulation::custom::sigma_abs")?;
                 let random_step = d_mul(
