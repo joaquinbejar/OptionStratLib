@@ -72,6 +72,10 @@ pub enum Error {
     #[error(transparent)]
     Projection(#[from] crate::error::ProjectionError),
 
+    /// Risk-neutral density and volatility-skew analysis.
+    #[error(transparent)]
+    Rnd(#[from] crate::error::RNDError),
+
     /// Backtest runs, which compose a strategy and a simulation.
     #[error(transparent)]
     Backtest(#[from] crate::error::BacktestError),

@@ -124,6 +124,24 @@ summarize the release.
   `match` on `MetricsError` needs the arm) where data can have a zero
   mean; and do not read the new value as a market beta.
 
+
+- **The risk-neutral density analysis has an analytics-owned error**
+  (#829). `RNDAnalysis::calculate_rnd`, `RNDAnalysis::calculate_skew`,
+  `RNDResult::new` and `RNDStatistics::new` return
+  `optionstratlib_analytics::error::RNDError` (re-exported as
+  `optionstratlib::error::RNDError`, and wrapped by the facade's
+  `error::Error::Rnd`) instead of the market crate's `ChainError`.
+  `ChainError::EmptyDensities` and `ChainError::EmptySkewData` move to
+  `RNDError::EmptyDensities` and `RNDError::EmptySkewData`, with the same
+  messages. The other failures are `RNDError::InvalidParameters` (naming
+  `derivative_tolerance`, `strike_interval`, `expiration_date` or
+  `underlying_price`), `RNDError::Decimal` and `RNDError::Positive`, which
+  used to arrive as `ChainError::ChainBuildError`,
+  `ChainError::OptionDataError` and `ChainError::PositiveError`; a chain
+  failure (no ATM implied volatility) is carried unchanged as
+  `RNDError::Chain`. Migration: match `RNDError` where you matched
+  `ChainError` on these calls; `RNDError: From<ChainError>`, so a function
+  that mixes chain and RND calls can return `RNDError`.
 - **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
   `Result`** (#810). `expiration_timestamp` returns `Result<i64,
   PositionError>` and `is_expired` returns `Result<bool, PositionError>`.

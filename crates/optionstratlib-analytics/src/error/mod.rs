@@ -20,6 +20,10 @@ mod projections;
 /// Failures of the operations on a `Transaction`.
 mod transaction;
 
+/// Failures of the risk-neutral density and volatility-skew analysis.
+mod rnd;
+
 pub use probability::{ProbabilityError, ProbabilityResult};
 pub use projections::ProjectionError;
+pub use rnd::RNDError;
 pub use transaction::TransactionError;

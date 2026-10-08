@@ -126,6 +126,7 @@
 //! The implementation focuses on numerical stability and accurate moment calculations,
 //! particularly for extreme market conditions.
 
+use crate::error::RNDError;
 use chrono::{NaiveDate, Utc};
 use num_traits::FromPrimitive;
 use optionstratlib_core::model::Positive;
@@ -134,7 +135,6 @@ use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_mul, d_sub, d_s
 use optionstratlib_core::model::utils::sub_floor_zero;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::OptionChain;
-use optionstratlib_market::error::ChainError;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
@@ -245,15 +245,15 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::OptionDataError`] when a moment leaves the
+    /// Returns [`RNDError::Decimal`] when a moment leaves the
     /// representable `Decimal` range — a strike-weighted sum past
     /// `Decimal::MAX`, or a total density of zero where the moment divides by
-    /// it — and [`ChainError::PositiveError`] when the variance has no
+    /// it — and [`RNDError::Positive`] when the variance has no
     /// representable square root.
     ///
     /// A density map whose moments are not representable describes no
     /// distribution, so there is no limit to return in their place.
-    pub fn new(densities: &BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+    pub fn new(densities: &BTreeMap<Positive, Decimal>) -> Result<Self, RNDError> {
         let mean = Self::calculate_mean(densities)?;
         let variance = Self::calculate_variance(densities, mean)?;
         let skewness = Self::calculate_skewness(densities, mean, variance)?;
@@ -278,9 +278,9 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::OptionDataError`] when the strike-weighted sum or
+    /// Returns [`RNDError::Decimal`] when the strike-weighted sum or
     /// the total density leaves the representable `Decimal` range.
-    fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Result<Decimal, ChainError> {
+    fn calculate_mean(densities: &BTreeMap<Positive, Decimal>) -> Result<Decimal, RNDError> {
         let mut mean = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
@@ -310,13 +310,13 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::OptionDataError`] when a squared deviation, its
+    /// Returns [`RNDError::Decimal`] when a squared deviation, its
     /// density weighting or the running sum leaves the representable
     /// `Decimal` range.
     fn calculate_variance(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
-    ) -> Result<Positive, ChainError> {
+    ) -> Result<Positive, RNDError> {
         let mut variance = Decimal::ZERO;
         let mut total_density = Decimal::ZERO;
 
@@ -354,15 +354,15 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::OptionDataError`] when a standardized deviation or
+    /// Returns [`RNDError::Decimal`] when a standardized deviation or
     /// its cube leaves the representable `Decimal` range, and
-    /// [`ChainError::PositiveError`] when the variance has no representable
+    /// [`RNDError::Positive`] when the variance has no representable
     /// square root.
     fn calculate_skewness(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
         variance: Positive,
-    ) -> Result<Decimal, ChainError> {
+    ) -> Result<Decimal, RNDError> {
         if variance == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
@@ -412,15 +412,15 @@ impl RNDStatistics {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::OptionDataError`] when a standardized deviation, its
+    /// Returns [`RNDError::Decimal`] when a standardized deviation, its
     /// fourth power, the density weighting or the running sum leaves the
-    /// representable `Decimal` range, and [`ChainError::PositiveError`] when
+    /// representable `Decimal` range, and [`RNDError::Positive`] when
     /// the variance has no representable square root.
     fn calculate_kurtosis(
         densities: &BTreeMap<Positive, Decimal>,
         mean: Decimal,
         variance: Positive,
-    ) -> Result<Decimal, ChainError> {
+    ) -> Result<Decimal, RNDError> {
         if variance == Positive::ZERO {
             return Ok(Decimal::ZERO);
         }
@@ -474,7 +474,7 @@ impl RNDResult {
     /// Propagates the errors of RNDStatistics::new: a density map whose
     /// moments leave the representable `Decimal` range describes no
     /// distribution, and there is no limit to return in their place.
-    pub fn new(densities: BTreeMap<Positive, Decimal>) -> Result<Self, ChainError> {
+    pub fn new(densities: BTreeMap<Positive, Decimal>) -> Result<Self, RNDError> {
         let statistics = RNDStatistics::new(&densities)?;
         Ok(Self {
             densities,
@@ -501,11 +501,17 @@ pub trait RNDAnalysis {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::EmptyDensities`] when no valid density values
-    /// can be extracted from the chain, or [`ChainError::OptionDataError`]
-    /// when individual strikes produce numerical failures during the
-    /// finite-difference second-derivative approximation.
-    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError>;
+    /// - [`RNDError::InvalidParameters`] naming `derivative_tolerance` when it
+    ///   is zero, `strike_interval` when the chain has fewer than two strikes,
+    ///   or `expiration_date` when the chain's expiration is not a
+    ///   `YYYY-MM-DD` date;
+    /// - [`RNDError::EmptyDensities`] when the chain is empty or no strike
+    ///   yields a positive density;
+    /// - [`RNDError::Decimal`] when the discount factor, a finite difference
+    ///   or the normalisation leaves the `Decimal` range;
+    /// - [`RNDError::Decimal`] or [`RNDError::Positive`] from the statistics,
+    ///   as [`RNDStatistics::new`] documents.
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, RNDError>;
 
     /// Calculates the implied volatility skew
     ///
@@ -517,11 +523,14 @@ pub trait RNDAnalysis {
     ///
     /// # Errors
     ///
-    /// Returns [`ChainError::EmptySkewData`] when no strike in the chain
-    /// produced a valid implied-volatility sample, or
-    /// [`ChainError::OptionDataError`] if individual option records carry
-    /// invalid volatility values.
-    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError>;
+    /// - [`RNDError::Chain`] when the chain has no ATM implied volatility;
+    /// - [`RNDError::InvalidParameters`] naming `underlying_price` when a
+    ///   strike over the underlying price is not representable (a zero
+    ///   underlying, for instance);
+    /// - [`RNDError::Decimal`] when a volatility difference leaves the
+    ///   `Decimal` range;
+    /// - [`RNDError::EmptySkewData`] when the chain has no strike.
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, RNDError>;
 }
 
 impl RNDAnalysis for OptionChain {
@@ -536,13 +545,13 @@ impl RNDAnalysis for OptionChain {
     /// * Empty option chain
     /// * Zero derivative tolerance
     /// * Failed density calculations
-    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, ChainError> {
+    fn calculate_rnd(&self, params: &RNDParameters) -> Result<RNDResult, RNDError> {
         let mut densities = BTreeMap::new();
         let mut h = params.derivative_tolerance.to_dec();
 
         // Step 1: Validate parameters
         if h == Positive::ZERO {
-            return Err(ChainError::invalid_parameters(
+            return Err(RNDError::invalid_parameters(
                 "derivative_tolerance",
                 "must be greater than zero",
             ));
@@ -551,7 +560,7 @@ impl RNDAnalysis for OptionChain {
         // Step 2: Get all available strikes
         let strikes: Vec<Positive> = self.options.iter().map(|opt| opt.strike_price).collect();
         if strikes.is_empty() {
-            return Err(ChainError::EmptyDensities);
+            return Err(RNDError::EmptyDensities);
         }
 
         // Calculate minimum strike interval. `options` is a `BTreeSet` ordered
@@ -565,7 +574,7 @@ impl RNDAnalysis for OptionChain {
             })
             .min()
             .ok_or_else(|| {
-                ChainError::invalid_parameters(
+                RNDError::invalid_parameters(
                     "strike_interval",
                     "cannot determine minimum strike interval",
                 )
@@ -577,10 +586,16 @@ impl RNDAnalysis for OptionChain {
 
         // Step 3: Calculate time to expiry
         let expiration_date = self.get_expiration_date();
-        let expiry_date = NaiveDate::parse_from_str(&expiration_date, "%Y-%m-%d")?
+        let expiry_date = NaiveDate::parse_from_str(&expiration_date, "%Y-%m-%d")
+            .map_err(|e| {
+                RNDError::invalid_parameters(
+                    "expiration_date",
+                    &format!("{expiration_date:?} is not a YYYY-MM-DD date: {e}"),
+                )
+            })?
             .and_hms_opt(23, 59, 59)
             .ok_or_else(|| {
-                ChainError::invalid_parameters(
+                RNDError::invalid_parameters(
                     "expiration_date",
                     "invalid expiration date/time components",
                 )
@@ -670,7 +685,7 @@ impl RNDAnalysis for OptionChain {
 
         // Step 6: Validate and normalize densities
         if densities.is_empty() {
-            return Err(ChainError::EmptyDensities);
+            return Err(RNDError::EmptyDensities);
         }
 
         let total = d_sum_iter(densities.values().copied(), "chains::rnd::total_density")?;
@@ -697,7 +712,7 @@ impl RNDAnalysis for OptionChain {
     /// # Error Conditions
     /// * Missing ATM volatility
     /// * Insufficient valid data points
-    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, ChainError> {
+    fn calculate_skew(&self) -> Result<Vec<(Positive, Decimal)>, RNDError> {
         let mut skew = Vec::new();
         let atm_strike = self.underlying_price;
         let atm_vol = self.get_atm_implied_volatility()?;
@@ -707,7 +722,7 @@ impl RNDAnalysis for OptionChain {
             // quotient that leaves the range, and the subtraction aborts on a
             // volatility at the edge of it.
             let relative_strike = opt.strike_price.checked_div(&atm_strike).map_err(|_| {
-                ChainError::invalid_parameters(
+                RNDError::invalid_parameters(
                     "underlying_price",
                     "relative strike is not representable against this underlying",
                 )
@@ -721,7 +736,7 @@ impl RNDAnalysis for OptionChain {
         }
 
         if skew.is_empty() {
-            return Err(ChainError::EmptySkewData);
+            return Err(RNDError::EmptySkewData);
         }
 
         Ok(skew)
@@ -2524,5 +2539,72 @@ mod rnd_analysis_tests {
             assert!(*min_rel_strike < Positive::ONE); // Have strikes below ATM
             assert!(*max_rel_strike > Positive::ONE); // Have strikes above ATM
         }
+    }
+}
+
+/// The RND analysis reports through its own error, `RNDError`, and the two
+/// variants that used to live in the market's `ChainError` (#829).
+#[cfg(test)]
+mod tests_rnd_error {
+    use super::*;
+
+    fn params(tolerance: Positive) -> RNDParameters {
+        RNDParameters {
+            risk_free_rate: Decimal::ZERO,
+            interpolation_points: 10,
+            derivative_tolerance: tolerance,
+        }
+    }
+
+    fn empty_chain() -> OptionChain {
+        OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2030-01-15".to_string(),
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn test_calculate_rnd_on_an_empty_chain_is_empty_densities() {
+        assert!(matches!(
+            empty_chain().calculate_rnd(&params(Positive::ONE)),
+            Err(RNDError::EmptyDensities)
+        ));
+    }
+
+    #[test]
+    fn test_calculate_rnd_zero_tolerance_names_the_parameter() {
+        assert!(matches!(
+            empty_chain().calculate_rnd(&params(Positive::ZERO)),
+            Err(RNDError::InvalidParameters {
+                parameter: "derivative_tolerance",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn test_calculate_skew_carries_the_chain_failure() {
+        // An empty chain has no ATM implied volatility: a chain failure,
+        // carried unchanged.
+        let chain = empty_chain();
+        let expected = chain
+            .get_atm_implied_volatility()
+            .map(|_| ())
+            .expect_err("an empty chain has no ATM volatility");
+        match chain.calculate_skew() {
+            Err(RNDError::Chain(carried)) => assert_eq!(carried.to_string(), expected.to_string()),
+            other => panic!("expected a carried chain error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_rnd_statistics_of_an_empty_map_are_zero() -> Result<(), RNDError> {
+        let statistics = RNDStatistics::new(&BTreeMap::new())?;
+        assert_eq!(statistics.mean, Decimal::ZERO);
+        assert_eq!(statistics.variance, Positive::ZERO);
+        Ok(())
     }
 }

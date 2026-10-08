@@ -444,7 +444,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Analytics inputs and results (#656, #619, #623, #664)
+### Analytics inputs and results (#656, #619, #623, #664, #829)
 
 - `PriceTrend` has private `Decimal` fields: build it with
   `PriceTrend::new(drift_rate, confidence)?`, which rejects a confidence
@@ -457,6 +457,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   term, so the risk-neutral `P(S_T < K)` is `N(-d2)`. Every probability for
   `sigma > 0`, and every strategy probability and expected value built on
   it, changes.
+- `RNDAnalysis::calculate_rnd` / `calculate_skew`, `RNDResult::new` and
+  `RNDStatistics::new` return the analytics-owned `error::RNDError` instead
+  of the market's `ChainError`. `EmptyDensities` and `EmptySkewData` moved
+  from `ChainError` to `RNDError`; a chain failure (no ATM volatility, for
+  instance) arrives as `RNDError::Chain`, and a `?` into a function that
+  returns `ChainError` becomes a `?` into `RNDError` (`From<ChainError>`
+  exists) or into the facade's `error::Error`.
 
 ```rust
 use optionstratlib::analytics::{PriceTrend, VolatilityAdjustment, calculate_single_point_probability};

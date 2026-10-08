@@ -196,10 +196,11 @@ pub use optionstratlib_simulation::error::{SimulationError, SimulationResult};
 pub use optionstratlib_market::error::{ChainError, OhlcvError, chains};
 
 /// Analytics errors (`optionstratlib-analytics`): probability kernels,
-/// projections onto curves and surfaces, and transactions.
+/// projections onto curves and surfaces, risk-neutral densities and
+/// transactions.
 #[cfg(feature = "analytics")]
 pub use optionstratlib_analytics::error::{
-    ProbabilityError, ProbabilityResult, ProjectionError, TransactionError, probability,
+    ProbabilityError, ProbabilityResult, ProjectionError, RNDError, TransactionError, probability,
 };
 
 /// Strategy errors (`optionstratlib-strategies`): building, validating,
