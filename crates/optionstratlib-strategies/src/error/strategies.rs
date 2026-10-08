@@ -186,6 +186,18 @@ pub enum StrategyError {
         /// Where the validation failed, for example the constructor name.
         reason: String,
     },
+
+    /// An `Optimizable::find_optimal` search found no candidate it could
+    /// select.
+    ///
+    /// Raised when the filtered option chain yields no combination, or when
+    /// every combination is discarded (invalid legs, unscorable metric,
+    /// failed break-even recomputation). The strategy is left unchanged.
+    #[error("no valid {strategy} candidate found by find_optimal")]
+    NoValidCandidate {
+        /// The strategy whose search found no candidate.
+        strategy: StrategyType,
+    },
 }
 
 /// Represents different types of errors that can occur during price-related operations.
@@ -444,6 +456,19 @@ impl StrategyError {
         }
     }
 
+    /// Builds a `NoValidCandidate` error for a `find_optimal` search that
+    /// found no candidate it could select.
+    ///
+    /// # Errors
+    ///
+    /// This is an error constructor — it always returns the variant.
+    #[cold]
+    #[inline(never)]
+    #[must_use]
+    pub fn no_valid_candidate(strategy: StrategyType) -> Self {
+        StrategyError::NoValidCandidate { strategy }
+    }
+
     /// Builds an `EmptyCollection` error for an unexpectedly empty collection.
     ///
     /// # Errors
@@ -584,6 +609,9 @@ impl From<StrategyError> for ProbabilityError {
                 strategy,
                 reason: r,
             } => reason(format!("invalid {strategy} strategy: {r}")),
+            StrategyError::NoValidCandidate { strategy } => reason(format!(
+                "no valid {strategy} candidate found by find_optimal"
+            )),
         }
     }
 }
@@ -675,6 +703,20 @@ mod tests_panic_free_variants {
         assert!(matches!(from_string, StrategyError::EmptyCollection { .. }));
         assert!(from_str.to_string().contains("option chain"));
         assert!(from_string.to_string().contains("break-even points"));
+    }
+
+    #[test]
+    fn test_no_valid_candidate_constructor_and_display() {
+        let err = StrategyError::no_valid_candidate(StrategyType::IronCondor);
+        assert!(matches!(
+            err,
+            StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronCondor
+            }
+        ));
+        assert!(err.to_string().contains("find_optimal"));
+        let probability = optionstratlib_analytics::error::ProbabilityError::from(err);
+        assert!(probability.to_string().contains("find_optimal"));
     }
 
     #[test]

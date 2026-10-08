@@ -355,6 +355,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Optimizer searches report their outcome (#791, #793)
+
+`Optimizable::find_optimal`, `get_best_area` and `get_best_ratio` return
+`Result<(), StrategyError>`; in 0.21 they returned `()` and only logged a
+failed search. Add `?` at each call. A search that finds a candidate picks
+the same legs as in 0.21.
+
+- **No candidate is an error.** An empty filtered chain, or one where every
+  combination is discarded, returns `StrategyError::NoValidCandidate {
+  strategy }` and leaves the strategy exactly as it was. Match it where an
+  empty search is expected and the seed should be kept.
+- **No search is an error.** `LongCall`, `LongPut`, `ShortCall`, `ShortPut`,
+  `CoveredCall`, `ProtectivePut` and `Collar` return
+  `StrategyError::OperationError(OperationErrorKind::NotSupported { .. })`.
+- **`CustomStrategy`** returns the error of a position it cannot update from
+  the chain (a strike without the quote a leg needs) and of the break-even
+  recomputation of its best positions, with the strategy unchanged.
+
+```rust
+use optionstratlib::error::StrategyError;
+use optionstratlib::prelude::*;
+use optionstratlib::strategies::base::StrategyType;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut spread = BullCallSpread::default();
+    // A chain with no strikes has no candidate: the search says so and the
+    // seed is kept.
+    let empty = OptionChain::new("XYZ", Positive::HUNDRED, "2030-01-18".to_string(), None, None);
+    match spread.get_best_area(&empty, FindOptimalSide::All) {
+        Ok(()) => { /* `spread` holds the best legs */ }
+        Err(StrategyError::NoValidCandidate { strategy }) => {
+            assert_eq!(strategy, StrategyType::BullCallSpread);
+        }
+        Err(e) => return Err(e.into()),
+    }
+
+    // A single leg has no search.
+    let mut call = LongCall::default();
+    assert!(call.get_best_ratio(&empty, FindOptimalSide::All).is_err());
+    Ok(())
+}
+```
+
 ### Contract multiplier and position sizing (#733, #760, #731)
 
 `Options` has `contract_size: Positive` (units of the underlying per

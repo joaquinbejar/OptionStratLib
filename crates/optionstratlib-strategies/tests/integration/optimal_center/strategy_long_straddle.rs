@@ -35,7 +35,9 @@ fn test_long_straddle_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
     ))?;
-    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
+    strategy
+        .get_best_area(&option_chain, FindOptimalSide::Center)
+        .unwrap();
     let positions = strategy.get_positions()?;
     let atm_strike = option_chain.atm_strike()?;
     for position in positions {

@@ -38,7 +38,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, warn};
+use tracing::debug;
 
 pub(super) const LONG_CALL_DESCRIPTION: &str = "A Long Call is an options strategy where the trader buys a call option, acquiring the right (but not the obligation) to purchase the underlying asset at the strike price until expiration. \
     This strategy involves an upfront cost (the premium paid) and offers unlimited profit potential if the underlying asset's price increases significantly. \
@@ -472,8 +472,11 @@ impl Optimizable for LongCall {
         _option_chain: &OptionChain,
         _side: optionstratlib_market::chains::utils::FindOptimalSide,
         _criteria: OptimizationCriteria,
-    ) {
-        warn!("find_optimal: stub — no optimization performed for LongCall");
+    ) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "find_optimal",
+            "LongCall",
+        ))
     }
 }
 

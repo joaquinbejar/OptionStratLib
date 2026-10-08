@@ -759,8 +759,9 @@ impl Optimizable for BearPutSpread {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -806,7 +807,16 @@ impl Optimizable for BearPutSpread {
                 info!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::BearPutSpread,
+            ))
         }
     }
 
@@ -1615,7 +1625,17 @@ mod tests_bear_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result = spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
             spread.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0,
@@ -1631,7 +1651,17 @@ mod tests_bear_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result = spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
 
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
@@ -1648,7 +1678,18 @@ mod tests_bear_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result =
+            spread.find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
 
         // Both strikes should be above the underlying price
         assert!(spread.short_put.option.strike_price > chain.underlying_price);
@@ -1660,11 +1701,21 @@ mod tests_bear_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result = spread.find_optimal(
             &chain,
             FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
 
         // Strikes should be within the specified range
         assert!(spread.short_put.option.strike_price >= pos_or_panic!(95.0));
@@ -1730,7 +1781,17 @@ mod tests_bear_put_spread_optimization {
             None,
         );
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result = spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
 
         // Should still find a valid optimization ignoring invalid options
         assert!(spread.validate());
@@ -1760,7 +1821,17 @@ mod tests_bear_put_spread_optimization {
 
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        // The fixture's put quotes fall as the strike rises, so no pair forms a
+        // valid bear put spread: the search reports it and keeps the seed.
+        let before = serde_json::to_string(&spread).unwrap();
+        let result = spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearPutSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&spread).unwrap(), before);
 
         assert!(spread.validate());
         assert_eq!(spread.long_put.option.quantity, Positive::TWO);

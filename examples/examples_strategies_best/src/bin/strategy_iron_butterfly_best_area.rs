@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
         Positive::ONE,  // close_fee
     )?;
 
-    strategy.get_best_area(&option_chain, FindOptimalSide::Lower);
+    strategy.get_best_area(&option_chain, FindOptimalSide::Lower)?;
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 

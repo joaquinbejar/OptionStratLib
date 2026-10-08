@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
         pos_or_panic!(0.82), // open_fee_short_put
         pos_or_panic!(0.82), // close_fee_short_put
     )?;
-    strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
+    strategy.get_best_ratio(&option_chain, FindOptimalSide::All)?;
     debug!("Strategy:  {:#?}", strategy);
     let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.get_title());

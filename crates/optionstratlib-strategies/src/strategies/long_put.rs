@@ -41,7 +41,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, warn};
+use tracing::debug;
 
 pub(super) const LONG_PUT_DESCRIPTION: &str = "A Long Put is an options strategy where the trader purchases a put option, gaining the right (but not the obligation) to sell the underlying asset at the strike price until expiration. \
     This strategy requires an initial investment (the premium paid) and provides downside protection or profit potential if the underlying asset's price decreases. \
@@ -478,8 +478,11 @@ impl Optimizable for LongPut {
         _option_chain: &OptionChain,
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
-    ) {
-        warn!("find_optimal: stub — no optimization performed for LongPut");
+    ) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "find_optimal",
+            "LongPut",
+        ))
     }
 }
 

@@ -879,8 +879,9 @@ impl Optimizable for BullPutSpread {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -926,7 +927,16 @@ impl Optimizable for BullPutSpread {
                 debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::BullPutSpread,
+            ))
         }
     }
 
@@ -1694,7 +1704,9 @@ mod tests_bull_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        spread
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
             spread.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0,
@@ -1707,7 +1719,9 @@ mod tests_bull_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        spread
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area)
+            .unwrap();
 
         assert!(spread.validate(), "Optimized spread should be valid");
         assert!(
@@ -1721,7 +1735,9 @@ mod tests_bull_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        spread
+            .find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio)
+            .unwrap();
 
         assert!(spread.short_put.option.strike_price >= chain.underlying_price);
         assert!(spread.long_put.option.strike_price >= chain.underlying_price);
@@ -1732,7 +1748,9 @@ mod tests_bull_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(&chain, FindOptimalSide::Lower, OptimizationCriteria::Ratio);
+        spread
+            .find_optimal(&chain, FindOptimalSide::Lower, OptimizationCriteria::Ratio)
+            .unwrap();
 
         assert!(spread.short_put.option.strike_price <= chain.underlying_price);
         assert!(spread.long_put.option.strike_price <= chain.underlying_price);
@@ -1743,11 +1761,13 @@ mod tests_bull_put_spread_optimization {
         let mut spread = create_base_spread();
         let chain = create_test_chain();
 
-        spread.find_optimal(
-            &chain,
-            FindOptimalSide::Range(pos_or_panic!(90.0), Positive::HUNDRED),
-            OptimizationCriteria::Ratio,
-        );
+        spread
+            .find_optimal(
+                &chain,
+                FindOptimalSide::Range(pos_or_panic!(90.0), Positive::HUNDRED),
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
 
         assert!(spread.short_put.option.strike_price <= Positive::HUNDRED);
         assert!(spread.short_put.option.strike_price >= pos_or_panic!(90.0));

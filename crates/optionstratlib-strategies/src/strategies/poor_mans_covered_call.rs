@@ -739,9 +739,10 @@ impl Optimizable for PoorMansCoveredCall {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = Decimal::MIN;
+        let mut found = false;
 
         for (long_call_index, long_call_option) in options.iter().enumerate() {
             for short_call_option in options.iter().skip(long_call_index + 1) {
@@ -807,8 +808,17 @@ impl Optimizable for PoorMansCoveredCall {
                 if current_value > best_value {
                     best_value = current_value;
                     *self = strategy.clone();
+                    found = true;
                 }
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::PoorMansCoveredCall,
+            ))
         }
     }
 
@@ -1271,7 +1281,9 @@ mod tests_pmcc_optimization {
     fn test_find_optimal_ratio() {
         let mut strategy = create_base_strategy();
         let chain = create_test_option_chain();
-        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
         assert!(strategy.validate());
     }
 
@@ -1279,7 +1291,9 @@ mod tests_pmcc_optimization {
     fn test_find_optimal_area() {
         let mut strategy = create_base_strategy();
         let chain = create_test_option_chain();
-        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area)
+            .unwrap();
         assert!(strategy.validate());
     }
 
@@ -1474,7 +1488,9 @@ mod tests_pmcc_best_area {
     #[test]
     fn test_best_area_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_area(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_area(&option_chain, FindOptimalSide::All)
+            .unwrap();
 
         assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
         assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
@@ -1488,7 +1504,9 @@ mod tests_pmcc_best_area {
     #[test]
     fn test_best_area_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
+        strategy
+            .get_best_area(&option_chain, FindOptimalSide::Upper)
+            .unwrap();
 
         assert!(
             strategy.long_call.option.strike_price >= *strategy.get_underlying_price().unwrap()
@@ -1502,7 +1520,9 @@ mod tests_pmcc_best_area {
     #[test]
     fn test_best_area_lower() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_area(&option_chain, FindOptimalSide::Lower);
+        strategy
+            .get_best_area(&option_chain, FindOptimalSide::Lower)
+            .unwrap();
 
         assert!(
             strategy.long_call.option.strike_price <= *strategy.get_underlying_price().unwrap()
@@ -1558,7 +1578,9 @@ mod tests_pmcc_best_ratio {
     #[test]
     fn test_best_ratio_all() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
+        strategy
+            .get_best_ratio(&option_chain, FindOptimalSide::All)
+            .unwrap();
 
         assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
         assert_eq!(strategy.break_even_points.len(), 1);
@@ -1570,7 +1592,9 @@ mod tests_pmcc_best_ratio {
     #[test]
     fn test_best_ratio_upper() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
+        strategy
+            .get_best_ratio(&option_chain, FindOptimalSide::Upper)
+            .unwrap();
 
         assert!(
             strategy.long_call.option.strike_price >= *strategy.get_underlying_price().unwrap()
@@ -1584,10 +1608,12 @@ mod tests_pmcc_best_ratio {
     #[test]
     fn test_best_ratio_with_range() {
         let (mut strategy, option_chain) = set_up().unwrap();
-        strategy.get_best_ratio(
-            &option_chain,
-            FindOptimalSide::Range(pos_or_panic!(5750.0), pos_or_panic!(5850.0)),
-        );
+        strategy
+            .get_best_ratio(
+                &option_chain,
+                FindOptimalSide::Range(pos_or_panic!(5750.0), pos_or_panic!(5850.0)),
+            )
+            .unwrap();
 
         assert!(strategy.long_call.option.strike_price >= pos_or_panic!(5750.0));
         assert!(strategy.short_call.option.strike_price <= pos_or_panic!(5850.0));

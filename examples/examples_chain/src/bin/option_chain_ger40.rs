@@ -44,7 +44,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     strategy.get_best_ratio(
         &option_chain,
         FindOptimalSide::DeltaRange(dec!(-0.3), dec!(0.3)),
-    );
+    )?;
     strategy.apply_delta_adjustments(Some(Action::Buy))?;
     info!("Strategy:  {}", strategy);
     info!("Break Even Points: {:?}", strategy.break_even_points);

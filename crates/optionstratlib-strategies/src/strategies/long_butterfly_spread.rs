@@ -973,8 +973,9 @@ impl Optimizable for LongButterflySpread {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -1021,7 +1022,16 @@ impl Optimizable for LongButterflySpread {
                 info!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::LongButterflySpread,
+            ))
         }
     }
 
@@ -3351,7 +3361,9 @@ mod tests_butterfly_optimizable {
         let chain = create_test_option_chain();
         let initial_area = butterfly.get_profit_area().unwrap();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        butterfly
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area)
+            .unwrap();
 
         assert!(butterfly.validate());
         assert!(butterfly.get_profit_area().unwrap() >= initial_area);
@@ -3362,7 +3374,9 @@ mod tests_butterfly_optimizable {
         let mut butterfly = create_test_long();
         let chain = create_test_option_chain();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        butterfly
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
 
         assert!(
             butterfly.long_call_low.option.strike_price < butterfly.short_call.option.strike_price
@@ -3378,7 +3392,9 @@ mod tests_butterfly_optimizable {
         let chain = create_test_option_chain();
         let initial_area = butterfly.get_profit_area().unwrap();
 
-        butterfly.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        butterfly
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area)
+            .unwrap();
 
         assert!(butterfly.validate());
         assert!(butterfly.get_profit_area().unwrap() >= initial_area);
@@ -3389,11 +3405,13 @@ mod tests_butterfly_optimizable {
         let mut long_butterfly = create_test_long();
         let chain = create_test_option_chain();
 
-        long_butterfly.find_optimal(
-            &chain,
-            FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
-            OptimizationCriteria::Ratio,
-        );
+        long_butterfly
+            .find_optimal(
+                &chain,
+                FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
+                OptimizationCriteria::Ratio,
+            )
+            .unwrap();
 
         assert!(long_butterfly.short_call.option.strike_price >= pos_or_panic!(95.0));
         assert!(long_butterfly.short_call.option.strike_price <= pos_or_panic!(105.0));

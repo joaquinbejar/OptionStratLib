@@ -40,7 +40,9 @@ fn test_short_strangle_with_greeks_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json"
     ))?;
-    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
+    strategy
+        .get_best_area(&option_chain, FindOptimalSide::Center)
+        .unwrap();
     let positions = strategy.get_positions()?;
     for position in positions {
         match position.option.option_style {

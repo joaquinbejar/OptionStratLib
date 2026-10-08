@@ -42,7 +42,7 @@ fn main() -> Result<(), optionstratlib::error::Error> {
     )?;
 
     // strategy.best_area(&option_chain, FindOptimalSide::Range(pos_or_panic!(21600.0), pos_or_panic!(21700.0) ));
-    strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
+    strategy.get_best_area(&option_chain, FindOptimalSide::Upper)?;
     debug!("Strategy:  {:#?}", strategy);
     let range = strategy.get_range_of_profit().unwrap_or(Positive::ZERO);
     info!("Title: {}", strategy.get_title());

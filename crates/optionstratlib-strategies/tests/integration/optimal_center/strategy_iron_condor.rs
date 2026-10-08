@@ -4,9 +4,11 @@ use {
     optionstratlib_core::model::{OptionStyle, Side},
     optionstratlib_market::chains::chain::OptionChain,
     optionstratlib_market::chains::utils::FindOptimalSide,
+    optionstratlib_strategies::error::StrategyError,
     optionstratlib_strategies::strategies::IronCondor,
     optionstratlib_strategies::strategies::base::Optimizable,
     optionstratlib_strategies::strategies::base::Positionable,
+    optionstratlib_strategies::strategies::base::StrategyType,
     rust_decimal_macros::dec,
     std::error::Error,
 };
@@ -40,7 +42,15 @@ fn test_iron_condor_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
     ))?;
-    strategy.get_best_area(&option_chain, FindOptimalSide::Center);
+    // No centred iron condor around the seed spot is valid on this chain: the
+    // search reports it and keeps the seed legs.
+    let result = strategy.get_best_area(&option_chain, FindOptimalSide::Center);
+    assert!(matches!(
+        result,
+        Err(StrategyError::NoValidCandidate {
+            strategy: StrategyType::IronCondor
+        })
+    ));
     let positions = strategy.get_positions()?;
     for position in positions {
         match (position.option.option_style, position.option.side) {

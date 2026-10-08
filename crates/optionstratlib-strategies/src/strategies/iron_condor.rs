@@ -1009,8 +1009,9 @@ impl Optimizable for IronCondor {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -1060,7 +1061,14 @@ impl Optimizable for IronCondor {
                 info!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(StrategyType::IronCondor))
         }
     }
 
@@ -2239,7 +2247,18 @@ mod tests_iron_condor_optimizable {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
 
-        condor.find_optimal(&chain, FindOptimalSide::Lower, OptimizationCriteria::Ratio);
+        // No combination of the fixture chain forms a valid iron condor: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&condor).unwrap();
+        let result =
+            condor.find_optimal(&chain, FindOptimalSide::Lower, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronCondor
+            })
+        ));
+        assert_eq!(serde_json::to_string(&condor).unwrap(), before);
 
         assert!(condor.validate());
         assert!(condor.long_put.option.strike_price <= chain.underlying_price);
@@ -2251,7 +2270,18 @@ mod tests_iron_condor_optimizable {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
 
-        condor.find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        // No combination of the fixture chain forms a valid iron condor: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&condor).unwrap();
+        let result =
+            condor.find_optimal(&chain, FindOptimalSide::Upper, OptimizationCriteria::Ratio);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronCondor
+            })
+        ));
+        assert_eq!(serde_json::to_string(&condor).unwrap(), before);
 
         assert!(condor.validate());
         assert!(condor.short_call.option.strike_price >= chain.underlying_price);
@@ -2263,11 +2293,21 @@ mod tests_iron_condor_optimizable {
         let mut condor = create_test_condor();
         let chain = create_test_chain();
 
-        condor.find_optimal(
+        // No combination of the fixture chain forms a valid iron condor: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&condor).unwrap();
+        let result = condor.find_optimal(
             &chain,
             FindOptimalSide::Range(pos_or_panic!(95.0), pos_or_panic!(105.0)),
             OptimizationCriteria::Ratio,
         );
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronCondor
+            })
+        ));
+        assert_eq!(serde_json::to_string(&condor).unwrap(), before);
 
         assert!(condor.validate());
         assert!(condor.short_put.option.strike_price >= pos_or_panic!(95.0));
@@ -2280,7 +2320,17 @@ mod tests_iron_condor_optimizable {
         let chain = create_test_chain();
 
         let initial_area = condor.get_profit_area().unwrap();
-        condor.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        // No combination of the fixture chain forms a valid iron condor: the
+        // search reports it and keeps the seed.
+        let before = serde_json::to_string(&condor).unwrap();
+        let result = condor.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::IronCondor
+            })
+        ));
+        assert_eq!(serde_json::to_string(&condor).unwrap(), before);
 
         assert!(condor.validate());
         assert!(condor.get_profit_area().unwrap() >= initial_area);

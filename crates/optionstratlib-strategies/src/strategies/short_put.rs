@@ -41,7 +41,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, warn};
+use tracing::debug;
 
 pub(super) const SHORT_PUT_DESCRIPTION: &str = "A Short Put (or Naked Put) is an options strategy where the trader sells a put option without holding a short position in the underlying stock. \
     This strategy provides immediate income from the premium collected but includes substantial risk if the stock price falls below the strike price. \
@@ -485,8 +485,11 @@ impl Optimizable for ShortPut {
         _option_chain: &OptionChain,
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
-    ) {
-        warn!("find_optimal: stub — no optimization performed for ShortPut");
+    ) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "find_optimal",
+            "ShortPut",
+        ))
     }
 }
 

@@ -786,8 +786,9 @@ impl Optimizable for BearCallSpread {
         option_chain: &OptionChain,
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
-    ) {
+    ) -> Result<(), StrategyError> {
         let mut best_value = Decimal::MIN;
+        let mut found = false;
         let strategy_clone = self.clone();
         let options_iter = strategy_clone.filter_combinations(option_chain, side);
 
@@ -833,7 +834,16 @@ impl Optimizable for BearCallSpread {
                 debug!("Found better value: {}", current_value);
                 best_value = current_value;
                 *self = strategy.clone();
+                found = true;
             }
+        }
+
+        if found {
+            Ok(())
+        } else {
+            Err(StrategyError::no_valid_candidate(
+                StrategyType::BearCallSpread,
+            ))
         }
     }
 
@@ -2075,7 +2085,9 @@ mod tests_bear_call_spread_optimizable {
         let mut strategy = create_test_strategy();
         let chain = create_mock_option_chain();
 
-        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio);
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Ratio)
+            .unwrap();
 
         // Verify the strategy was updated with optimal values
         assert!(strategy.validate());
@@ -2089,7 +2101,9 @@ mod tests_bear_call_spread_optimizable {
         let mut strategy = create_test_strategy();
         let chain = create_mock_option_chain();
 
-        strategy.find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area);
+        strategy
+            .find_optimal(&chain, FindOptimalSide::All, OptimizationCriteria::Area)
+            .unwrap();
 
         // Verify the strategy was updated with optimal values
         assert!(strategy.validate());
@@ -2208,11 +2222,19 @@ mod tests_bear_call_spread_optimizable {
         );
 
         // Should not panic when no valid combinations exist
-        strategy.find_optimal(
+        let before = serde_json::to_string(&strategy).unwrap();
+        let result = strategy.find_optimal(
             &empty_chain,
             FindOptimalSide::All,
             OptimizationCriteria::Ratio,
         );
+        assert!(matches!(
+            result,
+            Err(StrategyError::NoValidCandidate {
+                strategy: StrategyType::BearCallSpread
+            })
+        ));
+        assert_eq!(serde_json::to_string(&strategy).unwrap(), before);
 
         // Strategy should remain unchanged
         assert!(strategy.validate());

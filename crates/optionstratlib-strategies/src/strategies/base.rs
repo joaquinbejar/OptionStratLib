@@ -1506,9 +1506,18 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error of [`Optimizable::find_optimal`] with
+    /// [`OptimizationCriteria::Ratio`].
     #[instrument(skip(self, option_chain), fields(side = ?side, criteria = "Ratio"))]
-    fn get_best_ratio(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio);
+    fn get_best_ratio(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+    ) -> Result<(), StrategyError> {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Ratio)
     }
 
     /// Finds the best area-based strategy within the given `OptionChain`.
@@ -1516,9 +1525,18 @@ pub trait Optimizable: Validable + Strategies {
     /// # Arguments
     /// * `option_chain` - A reference to the `OptionChain` containing option data.
     /// * `side` - A `FindOptimalSide` value specifying the filtering strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error of [`Optimizable::find_optimal`] with
+    /// [`OptimizationCriteria::Area`].
     #[instrument(skip(self, option_chain), fields(side = ?side, criteria = "Area"))]
-    fn get_best_area(&mut self, option_chain: &OptionChain, side: FindOptimalSide) {
-        self.find_optimal(option_chain, side, OptimizationCriteria::Area);
+    fn get_best_area(
+        &mut self,
+        option_chain: &OptionChain,
+        side: FindOptimalSide,
+    ) -> Result<(), StrategyError> {
+        self.find_optimal(option_chain, side, OptimizationCriteria::Area)
     }
 
     /// Filters and generates combinations of options data from the given `OptionChain`.
@@ -1557,25 +1575,39 @@ pub trait Optimizable: Validable + Strategies {
         std::iter::empty()
     }
 
-    /// Finds the optimal strategy based on the given criteria.
-    /// The default implementation is a safe no-op: it emits a warning and
-    /// leaves `self` unchanged. Specific strategies should override this
-    /// method to provide their own optimization logic.
+    /// Finds the optimal strategy based on the given criteria and replaces
+    /// `self` with it.
+    ///
+    /// A candidate that cannot be built or scored is skipped; the search goes
+    /// on. On any error `self` is left exactly as it was before the call.
+    ///
+    /// The default implementation performs no search and returns a
+    /// not-supported error. Specific strategies override this method to
+    /// provide their own optimization logic.
     ///
     /// # Arguments
     /// * `_option_chain` - A reference to the `OptionChain` containing option data.
     /// * `_side` - A `FindOptimalSide` value specifying the filtering strategy.
     /// * `_criteria` - An `OptimizationCriteria` value indicating the optimization goal (e.g., ratio, area).
+    ///
+    /// # Errors
+    ///
+    /// - [`StrategyError::OperationError`] with the `NotSupported` kind when
+    ///   the strategy does not implement a search (the default
+    ///   implementation).
+    /// - [`StrategyError::NoValidCandidate`] when the filtered chain yields no
+    ///   candidate or every candidate is discarded.
+    /// - Any error raised while applying the best candidate to `self`.
     fn find_optimal(
         &mut self,
         _option_chain: &OptionChain,
         _side: FindOptimalSide,
         _criteria: OptimizationCriteria,
-    ) {
-        tracing::warn!(
-            ty = std::any::type_name::<Self>(),
-            "find_optimal default implementation invoked; strategy left unchanged"
-        );
+    ) -> Result<(), StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "find_optimal",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     /// Checks if a long option is valid based on the given criteria.
@@ -2452,6 +2484,36 @@ mod tests_optimizable {
 
     impl Optimizable for TestOptimizableStrategy {
         type Strategy = Self;
+    }
+
+    fn assert_not_supported(result: Result<(), StrategyError>) {
+        match result {
+            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
+                operation,
+                ..
+            })) => assert_eq!(operation, "find_optimal"),
+            other => panic!("expected a not-supported error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_find_optimal_default_implementation_not_supported() {
+        let mut strategy = TestOptimizableStrategy;
+        let chain = OptionChain::new(
+            "TEST",
+            Positive::HUNDRED,
+            "2024-12-31".to_string(),
+            None,
+            None,
+        );
+
+        assert_not_supported(strategy.find_optimal(
+            &chain,
+            FindOptimalSide::All,
+            OptimizationCriteria::Ratio,
+        ));
+        assert_not_supported(strategy.get_best_ratio(&chain, FindOptimalSide::All));
+        assert_not_supported(strategy.get_best_area(&chain, FindOptimalSide::All));
     }
 
     #[test]

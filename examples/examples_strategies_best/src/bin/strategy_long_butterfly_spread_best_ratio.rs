@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
         Positive::ZERO,
         Positive::ZERO,
     )?;
-    strategy.get_best_ratio(&option_chain, FindOptimalSide::All);
+    strategy.get_best_ratio(&option_chain, FindOptimalSide::All)?;
     debug!("Option Chain: {}", option_chain);
     debug!("Strategy:  {:#?}", strategy);
 
