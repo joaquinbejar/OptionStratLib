@@ -142,6 +142,28 @@ summarize the release.
   `RNDError::Chain`. Migration: match `RNDError` where you matched
   `ChainError` on these calls; `RNDError: From<ChainError>`, so a function
   that mixes chain and RND calls can return `RNDError`.
+- **The metric surfaces no longer make up a volatility or a zero-day
+  value** (#822).
+  - `vanna_volga_surface` returns `SurfaceError::OperationError`
+    (`InvalidParameters` naming `implied_volatility`) when no option in the
+    chain has an implied volatility. It used to measure the cost from a
+    made-up ATM volatility of 0.20, the pattern #619 removed from the
+    probability kernels.
+  - `smile_dynamics_surface` at zero days (or a day count whose
+    `sqrt(days / 30)` underflows to zero) returns the same error naming
+    `days_to_expiry` for a strike whose skew is not zero: the adjustment
+    `skew / sqrt(days / 30)` diverges there. It used to return the
+    strike's unadjusted IV (`max(iv, 0.01)`). A zero skew still returns the
+    ATM volatility, which is the `T -> 0` limit; a continuity test pins it.
+  - `volume_profile_surface` at zero days returns the same error naming
+    `days` for a strike with a non-zero volume, where `volume *
+    sqrt(30 / days)` diverges; it used to return the unadjusted volume. A
+    zero volume still returns zero, its limit.
+  - The 0.01 floor on the smile-dynamics volatility stays, documented as a
+    domain floor (`SMILE_VOL_FLOOR`): a volatility must be positive.
+  Every other input returns the same value as before. Migration: pass a
+  chain with at least one implied volatility to `vanna_volga_surface`, and
+  day counts above zero to the two time surfaces.
 - **`Expirable::expiration_timestamp` and `Expirable::is_expired` return
   `Result`** (#810). `expiration_timestamp` returns `Result<i64,
   PositionError>` and `is_expired` returns `Result<bool, PositionError>`.

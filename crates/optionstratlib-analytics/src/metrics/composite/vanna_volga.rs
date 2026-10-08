@@ -109,6 +109,10 @@ pub trait VannaVolgaSurface {
     /// - The option chain lacks sufficient data for hedge calculation
     /// - Price or volatility ranges are invalid
     /// - No valid surface points can be generated
+    ///
+    /// Returns `SurfaceError::OperationError` (`InvalidParameters`) naming
+    /// `implied_volatility` when no option in the chain has an implied
+    /// volatility, so there is no ATM volatility to measure the cost from.
     fn vanna_volga_surface(
         &self,
         price_range: (Positive, Positive),

@@ -119,6 +119,11 @@ pub trait VolumeProfileSurface {
     /// Returns `SurfaceError::ConstructionError` if:
     /// - No options have valid volume data
     /// - The days vector is empty
+    ///
+    /// Returns `SurfaceError::OperationError` (`InvalidParameters`) naming
+    /// `days` when a day count is zero and a strike's volume is not: the
+    /// projection `volume * sqrt(30 / days)` diverges there. A zero volume
+    /// projects to zero, its limit.
     fn volume_profile_surface(&self, days: Vec<Positive>) -> Result<Surface, SurfaceError>;
 }
 
