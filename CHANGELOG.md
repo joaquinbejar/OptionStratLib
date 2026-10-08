@@ -16,6 +16,18 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Walkers and `Simulator::new` generators must be `Send + Sync`**
+  (#860). `Simulator::new` now builds its walks on the rayon pool (see
+  *Changed*), so the trait object in `WalkParams::walker` and the generator
+  cross threads. `WalkTypeAble<X, Y>` gains `Send + Sync` supertraits, and
+  `Simulator::new` requires `F: Send + Sync`, `E: Send`, and `X`, `Y:
+  Send + Sync`. Migration: a walker or generator holding `Rc`, `Cell` or
+  `RefCell` state moves to `Arc`, an atomic or a `Mutex`; every walker and
+  generator in the workspace already met the bounds. A failing build still
+  returns the error of its lowest-indexed failing walk. From
+  `PARALLEL_MIN_WALKS` walks up it no longer stops at that walk: it
+  finishes the round of 1024 walks that holds it first.
+
 - **The core payoff of every option family is its contract's terminal
   payoff** (#844). `OptionType::payoff`, behind `Options::payoff`,
   `payoff_at_price`, `intrinsic_value` and the P&L built on them, disagreed
@@ -3055,6 +3067,22 @@ summarize the release.
   which also replaces an older binary restored from the `~/.cargo/bin` cache.
 
 ### Changed
+
+- **`Simulator::new` builds its walks in parallel** (#860). From
+  `PARALLEL_MIN_WALKS` (3) walks up, the walks are built on the rayon pool,
+  in rounds of 1024, and collected in index order; below it they are built
+  serially, which the crossover measurement found faster there (30-step
+  walks: one or two walks tie or lose on the pool, three already win). The
+  seed of every walk is still drawn in order from the master seed before
+  its walk is built, so a seeded simulator is bit-identical to the serial
+  build: `tests/parallel_simulator_test.rs` compares every step of every
+  path with a walk-by-walk serial reference for five seeds, on both sides of
+  the threshold, across rounds and for geometric Brownian and Heston walks.
+  Criterion `simulation/simulator/new/*` on an Apple M5 Max (18 cores,
+  macOS 27.0.1, rustc 1.99.0), median before and after: 100 paths x 30
+  steps 4.25 ms to 0.53 ms, 1000 x 30 37.5 ms to 2.95 ms, 100 x 252
+  37.6 ms to 2.75 ms. The host was shared (load average about 30 during
+  the after run), so the medians carry its load.
 
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
