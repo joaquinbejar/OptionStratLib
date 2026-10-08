@@ -762,10 +762,12 @@ impl optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib_analytics::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_analytics::pnl::utils::PnL::try_add(&self, &optionstratlib_analytics::pnl::utils::PnL) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
-impl core::convert::From<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::from(&optionstratlib_core::model::trade::Trade) -> Self
-impl core::convert::From<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::from(optionstratlib_core::model::trade::Trade) -> Self
+impl core::convert::TryFrom<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Error = optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_from(&optionstratlib_core::model::trade::Trade) -> core::result::Result<Self, Self::Error>
+impl core::convert::TryFrom<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Error = optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_from(optionstratlib_core::model::trade::Trade) -> core::result::Result<Self, Self::Error>
 impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL
@@ -844,10 +846,12 @@ impl optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::new(core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, positive::positive::Positive, positive::positive::Positive, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> Self
 pub fn optionstratlib_analytics::pnl::utils::PnL::total_pnl(&self) -> core::option::Option<rust_decimal::decimal::Decimal>
 pub fn optionstratlib_analytics::pnl::utils::PnL::try_add(&self, &optionstratlib_analytics::pnl::utils::PnL) -> core::result::Result<optionstratlib_analytics::pnl::utils::PnL, optionstratlib_pricing::error::pricing::PricingError>
-impl core::convert::From<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::from(&optionstratlib_core::model::trade::Trade) -> Self
-impl core::convert::From<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
-pub fn optionstratlib_analytics::pnl::utils::PnL::from(optionstratlib_core::model::trade::Trade) -> Self
+impl core::convert::TryFrom<&optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Error = optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_from(&optionstratlib_core::model::trade::Trade) -> core::result::Result<Self, Self::Error>
+impl core::convert::TryFrom<optionstratlib_core::model::trade::Trade> for optionstratlib_analytics::pnl::utils::PnL
+pub type optionstratlib_analytics::pnl::utils::PnL::Error = optionstratlib_core::error::trade::TradeError
+pub fn optionstratlib_analytics::pnl::utils::PnL::try_from(optionstratlib_core::model::trade::Trade) -> core::result::Result<Self, Self::Error>
 impl core::fmt::Debug for optionstratlib_analytics::pnl::utils::PnL
 pub fn optionstratlib_analytics::pnl::utils::PnL::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::fmt::Display for optionstratlib_analytics::pnl::utils::PnL

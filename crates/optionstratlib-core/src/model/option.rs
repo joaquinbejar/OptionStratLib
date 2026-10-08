@@ -155,6 +155,25 @@ pub struct ExoticParams {
 /// The `Options` struct supports both standard option types and exotic options through
 /// the optional `exotic_params` field, making it versatile for various financial modeling
 /// scenarios.
+///
+/// # Contract size
+///
+/// `quantity` counts contracts and `contract_size` is the multiplier: the
+/// units of the underlying one contract covers (100 for a standard US equity
+/// option, 1 by default). Their product, [`Options::position_size`], is the
+/// position in units of the underlying, and it scales everything that is a
+/// money amount or an exposure of the whole position:
+///
+/// - the payoff and intrinsic value (`payoff`, `payoff_at_price`,
+///   `intrinsic_value`) and the P&L built on them;
+/// - every Greek, which is reported per position, not per unit;
+/// - the premium paid or received by a [`Position`](crate::model::Position)
+///   holding the option.
+///
+/// Prices from the pricing models stay per unit of the underlying, which is
+/// how a premium is quoted. Fees are charged per contract by `Position` and
+/// do not scale with the multiplier. With a contract size of 1 every figure
+/// is the per-unit figure times `quantity`, as before the field existed.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct Options {

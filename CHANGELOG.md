@@ -218,6 +218,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `trade.contract_size`. `Transaction` has private fields and no literal to
   migrate.
 
+- **`Trade` monetary helpers are checked, and the covered strategies
+  handle partial cover** (#765), closing the follow-ups #760 left.
+  - `Trade::cost` and `Trade::income` return `Result<Positive, TradeError>`
+    and `Trade::net` returns `Result<Decimal, TradeError>`. They multiply
+    public `Positive` fields (`premium × contract_size × quantity`,
+    `fee × quantity`), and the operator arithmetic they used could abort on
+    overflow; the products and the sum are now checked. `TradeError` gains
+    an `ArithmeticOverflow { operation, reason }` variant and its
+    `TradeError::arithmetic_overflow` constructor. `From<Trade>` and
+    `From<&Trade>` for `PnL` become `TryFrom<Trade>` and `TryFrom<&Trade>`
+    with `Error = TradeError`. `Transaction::pnl` was already checked and is
+    unchanged.
+  - `ProtectivePut::max_loss_potential` (and so `get_max_loss`) is the
+    deepest point of the expiry P&L for any put size: a put covering fewer
+    units than the shares (`quantity × contract_size` below the spot
+    quantity) reports `N C - U K + U p + F`, reached at zero; an exact or
+    over-hedged put keeps the loss floored at the strike.
+  - `Collar` break-evens are the zeros of the expiry P&L for any put and
+    call size: below the put strike and above the call strike as well as
+    between them. Its max profit and max loss follow the same P&L: an
+    under-covered call reports an unbounded profit (`Positive::MAX`), an
+    over-covered call an unbounded loss (`Positive::MAX`), and otherwise the
+    extreme among zero and the two strikes.
+  - The profit and loss zones (`ProbabilityAnalysis::get_profit_ranges`,
+    `get_loss_ranges`) of `ProtectivePut` and `Collar` with a mismatched leg
+    are the pieces between the break-evens, signed by the P&L inside them.
+    An under-hedged in-the-money put, whose break-even sits below the
+    strike, used to fail with an inverted range.
+
+  With a contract size of 1 and legs that cover the shares exactly every
+  result is unchanged. Migration: add `?` (or handle the error) to calls of
+  `trade.cost()`, `trade.income()` and `trade.net()`; replace
+  `PnL::from(trade)` / `trade.into()` with `PnL::try_from(trade)?` /
+  `trade.try_into()?`. A `match` on `TradeError` needs an arm for
+  `ArithmeticOverflow`.
+
 - **Stochastic pricing entry points take the generator from the caller**
   (#638). No public function of `optionstratlib-pricing` draws from the
   thread-local RNG implicitly any more, so a seeded generator reproduces

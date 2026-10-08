@@ -22,7 +22,11 @@
 //! and reduce boilerplate code.
 
 use crate::error::strategies::StrategyError;
+use optionstratlib_analytics::analytics::ProfitLossRange;
+use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
+use optionstratlib_analytics::error::probability::ProbabilityError;
 use optionstratlib_analytics::pnl::utils::PnL;
+use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_mul, d_sub};
 use optionstratlib_core::model::leg::SpotPosition;
@@ -454,6 +458,95 @@ pub(crate) fn apply_hedge_contract_size(
         leg.option.contract_size = contract_size;
         leg.open_fee = open_fee;
         leg.close_fee = close_fee;
+    }
+    Ok(())
+}
+
+/// The profit and the loss zones of an expiry P&L whose zeros are
+/// `break_evens`, in ascending order.
+///
+/// The price line is cut at each break-even and each piece is classified by
+/// the sign of `profit_at` at a point inside it: half the first break-even,
+/// the midpoint of two consecutive ones, and twice the last. A piece whose
+/// probe is exactly zero joins neither list, and a piece that starts and
+/// ends at zero is skipped. With no break-even the whole line is one piece,
+/// probed at `reference`.
+///
+/// The covered strategies use this when an option leg does not cover the
+/// shares exactly, so the P&L can cross zero on either side of a strike.
+/// The ranges carry no probability yet; see [`price_zones`].
+///
+/// # Errors
+///
+/// Returns [`ProbabilityError`] when a probe point leaves the `Positive`
+/// range, when `profit_at` fails, or when two break-evens are not in
+/// ascending order.
+pub(crate) fn expiry_zones<F>(
+    break_evens: &[Positive],
+    reference: Positive,
+    profit_at: F,
+) -> Result<(Vec<ProfitLossRange>, Vec<ProfitLossRange>), ProbabilityError>
+where
+    F: Fn(&Positive) -> Result<Decimal, PricingError>,
+{
+    let mut pieces: Vec<(Option<Positive>, Option<Positive>, Positive)> =
+        Vec::with_capacity(break_evens.len());
+    match (break_evens.first(), break_evens.last()) {
+        (Some(&first), Some(&last)) => {
+            if first > Positive::ZERO {
+                pieces.push((None, Some(first), first.checked_div(&Positive::TWO)?));
+            }
+            for pair in break_evens.windows(2) {
+                if let [lower, upper] = pair {
+                    let probe = lower.checked_add(upper)?.checked_div(&Positive::TWO)?;
+                    pieces.push((Some(*lower), Some(*upper), probe));
+                }
+            }
+            let probe = if last > Positive::ZERO {
+                last.checked_mul(&Positive::TWO)?
+            } else {
+                Positive::ONE
+            };
+            pieces.push((Some(last), None, probe));
+        }
+        _ => pieces.push((None, None, reference)),
+    }
+
+    let mut profit = Vec::new();
+    let mut loss = Vec::new();
+    for (lower, upper, probe) in pieces {
+        let pnl = profit_at(&probe)?;
+        if pnl > Decimal::ZERO {
+            profit.push(ProfitLossRange::new(lower, upper, Positive::ZERO)?);
+        } else if pnl < Decimal::ZERO {
+            loss.push(ProfitLossRange::new(lower, upper, Positive::ZERO)?);
+        }
+    }
+    Ok((profit, loss))
+}
+
+/// Prices each range in `ranges` at expiry, with the spot at `spot` and the
+/// volatility, expiration and risk-free rate of `option`.
+///
+/// # Errors
+///
+/// Propagates [`ProfitLossRange::calculate_probability`].
+pub(crate) fn price_zones(
+    ranges: &mut [ProfitLossRange],
+    spot: &Positive,
+    option: &Options,
+) -> Result<(), ProbabilityError> {
+    for range in ranges.iter_mut() {
+        range.calculate_probability(
+            spot,
+            VolatilityAdjustment {
+                base_volatility: option.implied_volatility,
+                std_dev_adjustment: Positive::ZERO,
+            },
+            None,
+            &option.expiration_date,
+            Some(option.risk_free_rate),
+        )?;
     }
     Ok(())
 }
