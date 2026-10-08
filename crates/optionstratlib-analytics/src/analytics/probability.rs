@@ -228,7 +228,7 @@ pub fn calculate_single_point_probability(
     }
     let volatility = volatility
         .base_volatility
-        .checked_mul_f64(1.0 + volatility.std_dev_adjustment)?;
+        .checked_mul_f64(1.0 + volatility.std_dev_adjustment.to_f64())?;
 
     // Adjust drift rate based on trend if provided
     let drift_rate = match trend {
@@ -288,7 +288,8 @@ pub fn calculate_single_point_probability(
     // term understated it for every `sigma > 0` (#664).
     let sigma = volatility.to_f64();
     let log_drift = drift_rate - sigma * sigma / 2.0;
-    let z_score: Decimal = f2du!((log_ratio_f - log_drift * time_to_expiry) / std_dev)?;
+    let z_score: Decimal =
+        f2du!((log_ratio_f - log_drift * time_to_expiry.to_f64()) / std_dev.to_f64())?;
 
     // Calculate probabilities using the standard normal distribution
     let prob_below: Positive = Positive::new_decimal(big_n(z_score)?).unwrap_or(Positive::ZERO);

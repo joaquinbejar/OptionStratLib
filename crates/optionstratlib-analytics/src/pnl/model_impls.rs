@@ -343,8 +343,18 @@ impl PnLCalculator for Position {
 
         // Both costs and both incomes are non-negative, so their differences
         // stay inside the `Decimal` range.
-        let cost_diff = self_pnl.initial_costs.to_dec() - other_pnl.initial_costs.to_dec();
-        let income_diff = self_pnl.initial_income.to_dec() - other_pnl.initial_income.to_dec();
+        let cost_diff = d_sub(
+            self_pnl.initial_costs.to_dec(),
+            other_pnl.initial_costs.to_dec(),
+            "pnl_diff/initial_costs",
+        )
+        .map_err(|e| PricingError::method_error("pnl_diff", &e.to_string()))?;
+        let income_diff = d_sub(
+            self_pnl.initial_income.to_dec(),
+            other_pnl.initial_income.to_dec(),
+            "pnl_diff/initial_income",
+        )
+        .map_err(|e| PricingError::method_error("pnl_diff", &e.to_string()))?;
 
         let initial_costs = Positive::new(cost_diff.abs().to_f64().ok_or_else(|| {
             PricingError::method_error(
