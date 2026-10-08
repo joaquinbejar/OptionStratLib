@@ -14,11 +14,6 @@ Key characteristics:
 - Maximum profit achieved when price stays above higher strike
 - Also known as a vertical put credit spread
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -26,15 +21,16 @@ use super::base::{
 use super::shared::SpreadStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -285,8 +281,12 @@ impl StrategyConstructor for BullPutSpread {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let lower_strike_option = &sorted_positions[0];
-        let higher_strike_option = &sorted_positions[1];
+        let [lower_strike_option, higher_strike_option] = sorted_positions.as_slice() else {
+            return Err(StrategyError::invalid_parameters(
+                "Bull Put Spread get_strategy",
+                "Must have exactly 2 options",
+            ));
+        };
 
         // Validate options are puts
         if lower_strike_option.option.option_style != OptionStyle::Put
@@ -609,10 +609,10 @@ impl BasicAble for BullPutSpread {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.long_put.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.long_put.one_option_mut()
     }
     fn set_expiration_date(
@@ -626,23 +626,19 @@ impl BasicAble for BullPutSpread {
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_put.option.implied_volatility = *volatility;
         self.short_put.option.implied_volatility = *volatility;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -696,7 +692,7 @@ impl Strategies for BullPutSpread {
         })
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let high = measured_max_profit(self)?;
         let break_even = *self.break_even_points.first().ok_or_else(|| {
             StrategyError::empty_collection("BullPutSpread::get_profit_area: no break-even points")
         })?;
@@ -704,18 +700,15 @@ impl Strategies for BullPutSpread {
         // order the two fall.
         let strike = self.short_put.option.strike_price;
         let base = price_gap(strike.max(break_even), strike.min(break_even));
-        Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
+        decimal_from_f64(high.to_f64() * base.to_f64() / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok(
-                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
-                    .unwrap_or(Decimal::ZERO),
-            ),
+            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
         }
     }
 }
@@ -768,7 +761,7 @@ impl Optimizable for BullPutSpread {
     ///
     /// # Process
     ///
-    /// 1. Computes the underlying price via `self.get_underlying_price()`.
+    /// 1. Computes the underlying price via `&self.long_put.option.underlying_price`.
     /// 2. Initializes a cloned version of the strategy for dynamic closures.
     /// 3. Uses the `option_chain.get_double_iter()` method to generate all possible pairs
     ///    of options for evaluation.
@@ -846,7 +839,7 @@ impl Optimizable for BullPutSpread {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.long_put.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_double_iter()
@@ -1034,7 +1027,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_put.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1069,7 +1062,7 @@ impl ProbabilityAnalysis for BullPutSpread {
         )?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_put.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1193,7 +1186,10 @@ mod tests_bull_put_spread_strategy {
         assert_eq!(spread.name, "Bull Put Spread");
         assert_eq!(spread.kind, StrategyType::BullPutSpread);
         assert!(!spread.description.is_empty());
-        assert_eq!(spread.get_underlying_price(), &pos_or_panic!(5781.88));
+        assert_eq!(
+            spread.get_underlying_price().unwrap(),
+            &pos_or_panic!(5781.88)
+        );
         assert_eq!(spread.long_put.option.strike_price, pos_or_panic!(5750.0));
         assert_eq!(spread.short_put.option.strike_price, pos_or_panic!(5920.0));
     }
@@ -2083,7 +2079,12 @@ mod tests_bull_put_spread_probability {
     fn test_get_risk_free_rate() {
         let spread = bull_put_spread_test();
         assert_eq!(
-            *spread.get_risk_free_rate().values().next().unwrap(),
+            *spread
+                .get_risk_free_rate()
+                .unwrap()
+                .values()
+                .next()
+                .unwrap(),
             &dec!(0.05)
         );
     }

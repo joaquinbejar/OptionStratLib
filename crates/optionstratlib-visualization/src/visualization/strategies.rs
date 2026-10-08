@@ -9,12 +9,6 @@
 //! `Graph` is a visualization trait and strategies must not depend on
 //! visualization (ADR-0001 D2, strategies row).
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use optionstratlib_strategies::strategies::{
     BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
     IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle, LongStrangle,
@@ -90,8 +84,13 @@ macro_rules! impl_graph_for_payoff_strategy {
                         Ok(points) => points,
                         Err(_) => return GraphData::Series(Series2D::default()),
                     };
-                    let underlying_price = self.get_underlying_price();
-                    let pay_off_at_underlying_price = self.calculate_profit_at(&underlying_price).unwrap_or(Decimal::ZERO);
+                    let underlying_price = match self.get_underlying_price() {
+                        Ok(price) => price,
+                        Err(_) => return GraphData::Series(Series2D::default()),
+                    };
+                    // The marker and label at the current price are left out when the
+                    // payoff there cannot be computed, rather than drawn at zero.
+                    let pay_off_at_underlying_price = self.calculate_profit_at(&underlying_price).ok();
                     let range = match self.get_best_range_to_show(Positive::ONE){
                         Ok(range) => range,
                         Err(_) => return GraphData::Series(Series2D::default()),
@@ -130,61 +129,64 @@ macro_rules! impl_graph_for_payoff_strategy {
                         line_width: Some(1.0),
                     };
 
-                    // Add a point at current price with its payoff value
-                    // Color depends on payoff value: green (positive), blue (zero), red (negative)
-                    let point_color = if pay_off_at_underlying_price > Decimal::ZERO {
-                        "#2ca02c".to_string() // Green for positive values
-                    } else if pay_off_at_underlying_price < Decimal::ZERO {
-                        "#FF0000".to_string() // Red for negative values
-                    } else {
-                        "#0000FF".to_string() // Blue for zero
-                    };
+                    let mut marker = pay_off_at_underlying_price.map(|pay_off_at_underlying_price| {
+                        // Add a point at current price with its payoff value
+                        // Color depends on payoff value: green (positive), blue (zero), red (negative)
+                        let point_color = if pay_off_at_underlying_price > Decimal::ZERO {
+                            "#2ca02c".to_string() // Green for positive values
+                        } else if pay_off_at_underlying_price < Decimal::ZERO {
+                            "#FF0000".to_string() // Red for negative values
+                        } else {
+                            "#0000FF".to_string() // Blue for zero
+                        };
 
-                    // Format the payoff value with 2 decimals for the label
-                    let formatted_payoff = format!("{:.2}", pay_off_at_underlying_price);
+                        // Format the payoff value with 2 decimals for the label
+                        let formatted_payoff = format!("{:.2}", pay_off_at_underlying_price);
 
-                    // Create a point to mark the current position with a larger size
-                    // and use the appropriate color based on the payoff value
-                    let current_point = Series2D {
-                        x: vec![underlying_price.to_dec()],
-                        y: vec![pay_off_at_underlying_price],
-                        // The label will appear in the legend and when hovering over the point
-                        name: format!("Current P/L: {}", formatted_payoff),
-                        // Use LinesMarkers to display the point
-                        mode: TraceMode::Markers,
-                        line_color: Some(point_color.clone()),
-                        line_width: Some(10.0), // Larger point for better visibility
-                    };
+                        // Create a point to mark the current position with a larger size
+                        // and use the appropriate color based on the payoff value
+                        let current_point = Series2D {
+                            x: vec![underlying_price.to_dec()],
+                            y: vec![pay_off_at_underlying_price],
+                            // The label will appear in the legend and when hovering over the point
+                            name: format!("Current P/L: {}", formatted_payoff),
+                            // Use LinesMarkers to display the point
+                            mode: TraceMode::Markers,
+                            line_color: Some(point_color.clone()),
+                            line_width: Some(10.0), // Larger point for better visibility
+                        };
 
-                    // We'll set the y_offset after calculating min_profit and max_profit
-                    // This will allow us to position the labels at the top or bottom of the graph
-                    let mut y_offset = Decimal::ZERO; // Initial value, will be updated later
+                        // We'll set the y_offset after calculating min_profit and max_profit
+                        // This will allow us to position the labels at the top or bottom of the graph
+                        let y_offset = Decimal::ZERO; // Initial value, will be updated later
 
-                    // Create a Point2D for the label position
-                    let label_point = VisPoint2D {
-                        x: underlying_price.to_dec(),
-                        y: y_offset,
-                        name: format!("P/L Label"),
-                        mode: TraceMode::TextLabels,
-                        color: Some(point_color),
-                        width: Some(0.0),
-                    };
+                        // Create a Point2D for the label position
+                        let label_point = VisPoint2D {
+                            x: underlying_price.to_dec(),
+                            y: y_offset,
+                            name: format!("P/L Label"),
+                            mode: TraceMode::TextLabels,
+                            color: Some(point_color),
+                            width: Some(0.0),
+                        };
 
-                    // Create a Label2D that combines the point and the text
-                    let label = Label2D {
-                        point: label_point,
-                        label: formatted_payoff,
-                    };
+                        // Create a Label2D that combines the point and the text
+                        let label = Label2D {
+                            point: label_point,
+                            label: formatted_payoff,
+                        };
 
-                    // Convert the Label2D to a Series2D for compatibility with existing code
-                    let mut label_series = Series2D {
-                        x: vec![label.point.x],
-                        y: vec![label.point.y],
-                        name: label.label.clone(),
-                        mode: TraceMode::TextLabels,
-                        line_color: label.point.color,
-                        line_width: label.point.width,
-                    };
+                        // Convert the Label2D to a Series2D for compatibility with existing code
+                        let label_series = Series2D {
+                            x: vec![label.point.x],
+                            y: vec![label.point.y],
+                            name: label.label.clone(),
+                            mode: TraceMode::TextLabels,
+                            line_color: label.point.color,
+                            line_width: label.point.width,
+                        };
+                        (current_point, label_series)
+                    });
 
                     // Get min and max values for reference lines
                     if let (Some(first), Some(last)) = (range.first(), range.last()) {
@@ -213,22 +215,56 @@ macro_rules! impl_graph_for_payoff_strategy {
                         }
 
                         // Add vertical line at current underlying price
-                        // Extend it slightly beyond min/max profit for visibility
-                        let padding = (max_profit - min_profit) * Decimal::new(5, 2); // 5% padding
+                        // Extend it slightly beyond min/max profit for visibility:
+                        // 5% padding on each side, and the break-even labels half
+                        // a padding above the top. A range where no price could
+                        // be scored has no vertical extent (the extremes are
+                        // still at their seeds), and a padded extent outside
+                        // `Decimal` cannot be drawn; both chart as empty, like
+                        // the other failures above.
+                        let extent = if min_profit <= max_profit {
+                            max_profit
+                                .checked_sub(min_profit)
+                                .and_then(|span| span.checked_mul(Decimal::new(5, 2)))
+                                .and_then(|padding| {
+                                    Some((
+                                        min_profit.checked_sub(padding)?,
+                                        max_profit.checked_add(padding)?,
+                                        max_profit
+                                            .checked_add(padding.checked_mul(Decimal::new(5, 1))?)?,
+                                    ))
+                                })
+                        } else {
+                            None
+                        };
+                        let Some((padded_min, padded_max, label_height)) = extent else {
+                            $crate::__private::tracing::warn!(
+                                %min_profit,
+                                %max_profit,
+                                "payoff chart has no drawable vertical extent"
+                            );
+                            return GraphData::Series(Series2D::default());
+                        };
 
                         // Now that we have min_profit and max_profit, update the y_offset for the label
                         // For positive values: place near the top of the graph
                         // For negative values: place near the bottom of the graph
-                        if pay_off_at_underlying_price >= Decimal::ZERO {
-                            // For positive values, place the label at the top of the graph
-                            y_offset = max_profit + padding;
-                        } else {
-                            // For negative values, place the label at the bottom of the graph
-                            y_offset = min_profit - padding;
-                        }
+                        if let Some((payoff, (_, label_series))) =
+                            pay_off_at_underlying_price.zip(marker.as_mut())
+                        {
+                            let y_offset = if payoff >= Decimal::ZERO {
+                                // For positive values, place the label at the top of the graph
+                                padded_max
+                            } else {
+                                // For negative values, place the label at the bottom of the graph
+                                padded_min
+                            };
 
-                        // Update the label series with the new y_offset
-                        label_series.y[0] = y_offset;
+                            // Update the label series with the new y_offset
+                            if let Some(label_y) = label_series.y.first_mut() {
+                                *label_y = y_offset;
+                            }
+                        }
 
                         // Create labels for break-even points
                         // For each break-even point, create a label showing its X value
@@ -236,7 +272,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                             // Create a Point2D for the break-even label position
                             let be_label_point = VisPoint2D {
                                 x: be_point.to_dec(),
-                                y: max_profit + padding * Decimal::new(5, 1), // Position above the graph
+                                y: label_height, // Position above the graph
                                 name: format!("Break-even"),
                                 mode: TraceMode::TextLabels,
                                 color: Some("#000000".to_string()), // Black color for break-even labels
@@ -253,9 +289,9 @@ macro_rules! impl_graph_for_payoff_strategy {
                         }
 
                         current_price_line.x.push(underlying_price.to_dec());
-                        current_price_line.y.push(min_profit - padding);
+                        current_price_line.y.push(padded_min);
                         current_price_line.x.push(underlying_price.to_dec());
-                        current_price_line.y.push(max_profit + padding);
+                        current_price_line.y.push(padded_max);
                     }
 
                     // Calculate profit at each price point and add to the series
@@ -281,8 +317,7 @@ macro_rules! impl_graph_for_payoff_strategy {
                     let mut current_sign: Option<i8> = None;
 
                     // Process points to create continuous segments with the same sign
-                    for (i, price) in profit_series.x.iter().enumerate() {
-                        let profit = profit_series.y[i];
+                    for (price, &profit) in profit_series.x.iter().zip(&profit_series.y) {
                         let sign = if profit > Decimal::ZERO {
                             1
                         } else if profit < Decimal::ZERO {
@@ -345,8 +380,10 @@ macro_rules! impl_graph_for_payoff_strategy {
                     // Add reference lines, current point and label
                     series_list.push(zero_line);
                     series_list.push(current_price_line);
-                    series_list.push(current_point);
-                    series_list.push(label_series);
+                    if let Some((current_point, label_series)) = marker {
+                        series_list.push(current_point);
+                        series_list.push(label_series);
+                    }
 
                     // Add break-even point labels
                     for be_label in break_even_labels {

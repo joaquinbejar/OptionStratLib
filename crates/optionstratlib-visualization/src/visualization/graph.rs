@@ -8,10 +8,6 @@
 //! provided methods, so an implementation never changes with them
 //! (ADR-0002 section 4).
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341.
-#![allow(clippy::indexing_slicing)]
-
 use crate::visualization::{GraphConfig, GraphData};
 #[cfg(feature = "plotly")]
 use {
@@ -132,10 +128,8 @@ pub trait Graph {
                         series.line_color = pick_color(&cfg, idx);
                     }
 
-                    if let Some(legend) = &cfg.legend
-                        && idx < legend.len()
-                    {
-                        series.name = legend[idx].clone();
+                    if let Some(label) = cfg.legend.as_ref().and_then(|legend| legend.get(idx)) {
+                        series.name = label.clone();
                     }
 
                     plot.add_trace(make_scatter(&series));
@@ -359,15 +353,13 @@ pub trait Graph {
     ///
     /// # Errors
     ///
-    /// Currently infallible (the underlying `plotly` `show` call does
-    /// not return a `Result`); the `Result` signature is retained to
-    /// allow future plot kernels that can surface
-    /// `GraphError::Render` or `GraphError::Io` without
-    /// a breaking change.
+    /// Returns [`GraphError::Io`] when the page cannot be written to the
+    /// system temp directory or the platform's opener (`open`, `xdg-open`,
+    /// `explorer`) cannot be started, as on a headless server, and
+    /// [`GraphError::Render`] on a platform with no default opener.
     #[cfg(feature = "plotly")]
     fn show(&self) -> Result<(), GraphError> {
-        self.to_plot().show();
-        Ok(())
+        show_in_browser(&self.to_plot())
     }
 
     /// One‑stop rendering with error propagation.
@@ -424,6 +416,59 @@ pub trait Graph {
 
 /// The error `Graph::render` returns for a PNG or SVG target in a build
 /// without the `static_export` feature, which is what writes images.
+/// Writes `plot` as a standalone page in the system temp directory and hands
+/// it to the platform's default opener.
+///
+/// `plotly`'s own `Plot::show` does the same, with the same page, but aborts
+/// the process when the temp file cannot be written or the opener cannot be
+/// started (a headless server has no `xdg-open`); here both come back as a
+/// [`GraphError`].
+#[cfg(feature = "plotly")]
+#[inline(never)]
+fn show_in_browser(plot: &Plot) -> Result<(), GraphError> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    // Process id, wall-clock nanoseconds and a per-process sequence number
+    // keep two pages shown at once from overwriting each other; the
+    // sequence only names files, so it is free to wrap.
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_nanos())
+        .unwrap_or_default();
+    let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!(
+        "plotly_optionstratlib_{}_{nanos}_{sequence}.html",
+        std::process::id()
+    ));
+    std::fs::write(&path, plot.to_html())?;
+    open_in_default_app(&path)
+}
+
+/// Opens `path` with the platform's default application, the way `plotly`
+/// does: `open` on macOS, `xdg-open` on the other Unix systems and
+/// `explorer` on Windows.
+#[cfg(feature = "plotly")]
+#[inline(never)]
+fn open_in_default_app(path: &std::path::Path) -> Result<(), GraphError> {
+    use std::process::Command;
+
+    #[cfg(target_os = "macos")]
+    Command::new("open").arg(path).output()?;
+    #[cfg(all(unix, not(target_os = "macos")))]
+    Command::new("xdg-open").arg(path).output()?;
+    #[cfg(target_os = "windows")]
+    Command::new("explorer").arg(path).spawn()?;
+    #[cfg(not(any(unix, target_os = "windows")))]
+    return Err(GraphError::Render(format!(
+        "no default application to open {} on this platform",
+        path.display()
+    )));
+    #[cfg(any(unix, target_os = "windows"))]
+    Ok(())
+}
+
 #[cfg(all(feature = "plotly", not(feature = "static_export")))]
 #[cold]
 #[inline(never)]

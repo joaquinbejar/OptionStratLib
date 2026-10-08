@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 //!
 //! The "Poor Man's Covered Call" is an options strategy designed to simulate a traditional covered call,
 //! but with a lower capital requirement. In a standard covered call, an investor holds a long position
@@ -38,6 +32,7 @@ use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{is_extreme_sign_error, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -304,8 +299,12 @@ impl StrategyConstructor for PoorMansCoveredCall {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let lower_strike_position = &sorted_positions[0];
-        let higher_strike_position = &sorted_positions[1];
+        let [lower_strike_position, higher_strike_position] = sorted_positions.as_slice() else {
+            return Err(StrategyError::invalid_parameters(
+                "Poor Man's Covered Call get_strategy",
+                "Must have exactly 2 options",
+            ));
+        };
 
         // Validate options are calls
         if lower_strike_position.option.option_style != OptionStyle::Call
@@ -626,10 +625,10 @@ impl BasicAble for PoorMansCoveredCall {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -647,12 +646,10 @@ impl BasicAble for PoorMansCoveredCall {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -663,11 +660,9 @@ impl BasicAble for PoorMansCoveredCall {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -709,7 +704,7 @@ impl Strategies for PoorMansCoveredCall {
                 },
             ))
         } else {
-            Ok(Positive::new_decimal(loss.abs()).unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(loss.abs())?)
         }
     }
 
@@ -719,7 +714,7 @@ impl Strategies for PoorMansCoveredCall {
         // A profit above the strike leaves no room below it, and the base
         // stops at the strike rather than inverting the subtraction.
         let strike = self.short_call.option.strike_price;
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
         let base = price_gap(strike, price_gap(strike, max_profit)).to_f64();
         let high = max_profit.to_f64();
         let result = base * high / 200.0;
@@ -729,7 +724,8 @@ impl Strategies for PoorMansCoveredCall {
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let result = match (self.get_max_profit(), self.get_max_loss()) {
             (Ok(profit), Ok(loss)) => profit.checked_div(&loss)?.to_f64() * 100.0,
-            _ => ZERO,
+            (Err(error), _) | (_, Err(error)) if is_extreme_sign_error(&error) => ZERO,
+            (Err(error), _) | (_, Err(error)) => return Err(error),
         };
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
@@ -747,9 +743,8 @@ impl Optimizable for PoorMansCoveredCall {
         let options: Vec<&OptionData> = option_chain.options.iter().collect();
         let mut best_value = Decimal::MIN;
 
-        for long_call_index in 0..options.len() {
-            let long_call_option = &options[long_call_index];
-            for short_call_option in &options[(long_call_index + 1)..] {
+        for (long_call_index, long_call_option) in options.iter().enumerate() {
+            for short_call_option in options.iter().skip(long_call_index + 1) {
                 debug!(
                     "Long: {:#?} Short: {:#?}",
                     long_call_option.strike_price, short_call_option.strike_price
@@ -918,7 +913,7 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
         let mut profit_range = ProfitLossRange::new(Some(break_even_point), None, Positive::ZERO)?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -949,7 +944,7 @@ impl ProbabilityAnalysis for PoorMansCoveredCall {
         let mut loss_range = ProfitLossRange::new(None, Some(break_even_point), Positive::ZERO)?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1495,7 +1490,9 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.get_best_area(&option_chain, FindOptimalSide::Upper);
 
-        assert!(strategy.long_call.option.strike_price >= *strategy.get_underlying_price());
+        assert!(
+            strategy.long_call.option.strike_price >= *strategy.get_underlying_price().unwrap()
+        );
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
         assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
@@ -1507,7 +1504,9 @@ mod tests_pmcc_best_area {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.get_best_area(&option_chain, FindOptimalSide::Lower);
 
-        assert!(strategy.long_call.option.strike_price <= *strategy.get_underlying_price());
+        assert!(
+            strategy.long_call.option.strike_price <= *strategy.get_underlying_price().unwrap()
+        );
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
         assert!(strategy.get_profit_area().unwrap().to_f64().unwrap() > 0.0);
@@ -1573,7 +1572,9 @@ mod tests_pmcc_best_ratio {
         let (mut strategy, option_chain) = set_up().unwrap();
         strategy.get_best_ratio(&option_chain, FindOptimalSide::Upper);
 
-        assert!(strategy.long_call.option.strike_price >= *strategy.get_underlying_price());
+        assert!(
+            strategy.long_call.option.strike_price >= *strategy.get_underlying_price().unwrap()
+        );
         assert!(strategy.short_call.option.strike_price > strategy.long_call.option.strike_price);
 
         assert!(strategy.get_profit_ratio().unwrap().to_f64().unwrap() > 0.0);
@@ -1951,7 +1952,7 @@ mod tests_poor_mans_covered_call_probability {
     fn test_get_risk_free_rate() {
         let pmcc = create_test_pmcc();
         assert_eq!(
-            **pmcc.get_risk_free_rate().values().next().unwrap(),
+            **pmcc.get_risk_free_rate().unwrap().values().next().unwrap(),
             dec!(0.05)
         );
     }

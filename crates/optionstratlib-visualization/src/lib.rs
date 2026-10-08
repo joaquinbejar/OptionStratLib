@@ -1,7 +1,6 @@
 #![deny(missing_docs, rustdoc::broken_intra_doc_links)]
 // Per rules/global_rules.md §Error Handling, unchecked `[]` / slicing is
-// banned in production code. Files that still carry a transitional escape
-// hatch keep their scoped `#![allow(..)]` with a migration note (#341).
+// banned in production code, with no per-file escape hatch (#341, #788).
 #![deny(clippy::indexing_slicing)]
 // Unit tests routinely index into `Vec`s they just pushed into, so the lint
 // is silenced in `#[cfg(test)]` only.

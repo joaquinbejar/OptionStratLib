@@ -9,11 +9,6 @@ Key characteristics:
 - High cost due to purchasing both a call and a put
 - Profitable only with a large move in either direction
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -21,6 +16,7 @@ use super::base::{
 use super::shared::StraddleStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
+use crate::strategies::shared::measured_max_profit;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
@@ -644,10 +640,10 @@ impl BasicAble for ShortStraddle {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -665,12 +661,10 @@ impl BasicAble for ShortStraddle {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_put.option.underlying_price = *price;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -681,11 +675,9 @@ impl BasicAble for ShortStraddle {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_put.premium =
-            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.short_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -744,8 +736,7 @@ impl Strategies for ShortStraddle {
             )
         })?;
         let break_even_diff = price_gap(upper, lower);
-        let result =
-            self.get_max_profit().unwrap_or(Positive::ZERO).to_f64() / break_even_diff * 100.0;
+        let result = measured_max_profit(self)?.to_f64() / break_even_diff * 100.0;
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 }
@@ -766,7 +757,7 @@ impl Optimizable for ShortStraddle {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.short_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_single_iter()
@@ -994,7 +985,7 @@ impl ProbabilityAnalysis for ShortStraddle {
         )?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1032,7 +1023,7 @@ impl ProbabilityAnalysis for ShortStraddle {
             ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1046,7 +1037,7 @@ impl ProbabilityAnalysis for ShortStraddle {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1544,7 +1535,7 @@ mod tests_short_straddle_probability {
     #[test]
     fn test_get_reference_price() {
         let straddle = create_test_short_straddle();
-        let result = straddle.get_underlying_price();
+        let result = straddle.get_underlying_price().unwrap();
 
         assert_eq!(
             result,
@@ -1623,7 +1614,12 @@ mod tests_short_straddle_probability_bis {
     fn test_get_risk_free_rate() {
         let straddle = create_test_short_straddle();
         assert_eq!(
-            **straddle.get_risk_free_rate().values().next().unwrap(),
+            **straddle
+                .get_risk_free_rate()
+                .unwrap()
+                .values()
+                .next()
+                .unwrap(),
             dec!(0.05)
         );
     }

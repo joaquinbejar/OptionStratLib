@@ -106,7 +106,7 @@ fn test_short_call_get_quantity() {
 #[test]
 fn test_short_call_one_option() {
     let short_call = create_test_short_call();
-    let option_ref = short_call.one_option();
+    let option_ref = short_call.one_option().unwrap();
     assert_eq!(option_ref.strike_price, Positive::new(400.0).unwrap());
     assert_eq!(option_ref.side, Side::Short);
 }
@@ -116,7 +116,10 @@ fn test_short_call_set_expiration_date() {
     let mut short_call = create_test_short_call();
     let new_expiration = ExpirationDate::Days(Positive::new(60.0).unwrap());
     short_call.set_expiration_date(new_expiration).unwrap();
-    assert_eq!(short_call.one_option().expiration_date, new_expiration);
+    assert_eq!(
+        short_call.one_option().unwrap().expiration_date,
+        new_expiration
+    );
 }
 
 #[test]
@@ -124,7 +127,7 @@ fn test_short_call_set_underlying_price() {
     let mut short_call = create_test_short_call();
     let new_price = Positive::new(410.0).unwrap();
     short_call.set_underlying_price(&new_price).unwrap();
-    assert_eq!(short_call.one_option().underlying_price, new_price);
+    assert_eq!(short_call.one_option().unwrap().underlying_price, new_price);
 }
 
 #[test]
@@ -132,7 +135,7 @@ fn test_short_call_set_implied_volatility() {
     let mut short_call = create_test_short_call();
     let new_vol = Positive::new(0.30).unwrap();
     short_call.set_implied_volatility(&new_vol).unwrap();
-    assert_eq!(short_call.one_option().implied_volatility, new_vol);
+    assert_eq!(short_call.one_option().unwrap().implied_volatility, new_vol);
 }
 
 #[test]

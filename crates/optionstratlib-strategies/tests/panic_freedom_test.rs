@@ -38,13 +38,19 @@ use optionstratlib_strategies::strategies::base::{
     BasicAble, BreakEvenable, Positionable, Strategies, StrategyType, Validable,
 };
 use optionstratlib_strategies::strategies::custom::CustomStrategy;
-use optionstratlib_strategies::strategies::delta_neutral::DeltaNeutrality;
+use optionstratlib_strategies::strategies::delta_neutral::{
+    AdjustmentTarget, DeltaNeutrality, PortfolioGreeks,
+};
 use optionstratlib_strategies::strategies::probabilities::ProbabilityAnalysis;
 use optionstratlib_strategies::strategies::{
     BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, Collar,
     CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongStraddle,
     LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortPut,
     ShortStraddle, ShortStrangle, StrategyConstructor,
+};
+use optionstratlib_strategies::strategies::{
+    ButterflyStrategy, CondorStrategy, SpreadStrategy, StrangleStrategy, aggregate_fees,
+    aggregate_premiums, calculate_profit_ratio, credit_spread_break_even, debit_spread_break_even,
 };
 use proptest::prelude::*;
 use rust_decimal::Decimal;
@@ -951,5 +957,222 @@ proptest! {
             }
         };
         exercise_with_and_without_break_evens!(strategy, probe);
+    }
+}
+
+/// Quantities, premia, fees and strikes up to `Positive::MAX`, where the sum
+/// of two legs, a doubled wing or a ratio over the smallest representable
+/// loss leaves the `Positive` range (#788).
+fn overflowing_positive() -> impl Strategy<Value = Positive> {
+    prop_oneof![
+        Just(Positive::ZERO),
+        Just(pos(TINY)),
+        Just(Positive::ONE),
+        Just(Positive::HUNDRED),
+        Just(Positive::MAX),
+    ]
+}
+
+/// A thirty-day European leg on a spot of 100.
+fn plain_leg(style: OptionStyle, side: Side, strike: Positive, quantity: Positive) -> Position {
+    Position::new(
+        Options::new(
+            OptionType::European,
+            side,
+            "PROP".to_string(),
+            strike,
+            ExpirationDate::Days(pos(dec!(30))),
+            pos(dec!(0.2)),
+            quantity,
+            Positive::HUNDRED,
+            dec!(0.05),
+            style,
+            Positive::ZERO,
+            None,
+        ),
+        Positive::ONE,
+        chrono::Utc::now(),
+        Positive::ZERO,
+        Positive::ZERO,
+        None,
+        None,
+    )
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(128))]
+
+    /// `get_volume` sums the leg quantities. The two strangles and the trait
+    /// default used the panicking `Positive` `+` / `+=` and aborted with
+    /// `Positive arithmetic overflow in add` once two legs reached
+    /// `Positive::MAX` (#788).
+    #[test]
+    fn test_get_volume_never_panics(
+        call_quantity in overflowing_positive(),
+        put_quantity in overflowing_positive(),
+    ) {
+        let low = pos(dec!(90));
+        let high = pos(dec!(110));
+        let mut long_strangle = assembled::<LongStrangle>(&[
+            plain_leg(OptionStyle::Call, Side::Long, high, call_quantity),
+            plain_leg(OptionStyle::Put, Side::Long, low, put_quantity),
+        ]);
+        let _ = long_strangle.get_volume();
+        let mut short_strangle = assembled::<ShortStrangle>(&[
+            plain_leg(OptionStyle::Call, Side::Short, high, call_quantity),
+            plain_leg(OptionStyle::Put, Side::Short, low, put_quantity),
+        ]);
+        let _ = short_strangle.get_volume();
+        let mut condor = IronCondor {
+            short_call: plain_leg(OptionStyle::Call, Side::Short, high, call_quantity),
+            short_put: plain_leg(OptionStyle::Put, Side::Short, low, put_quantity),
+            long_call: plain_leg(OptionStyle::Call, Side::Long, pos(dec!(120)), call_quantity),
+            long_put: plain_leg(OptionStyle::Put, Side::Long, pos(dec!(80)), put_quantity),
+            ..IronCondor::default()
+        };
+        let _ = condor.get_volume();
+    }
+
+    /// The butterfly constructors double the wing quantity for the body, and
+    /// `validate` doubles it again to compare; both used `quantity * 2.0` and
+    /// aborted with `Positive arithmetic overflow in mul_f64` (#788).
+    #[test]
+    fn test_butterfly_quantity_doubling_never_panics(
+        quantity in overflowing_positive(),
+        wing_quantity in overflowing_positive(),
+    ) {
+        let expiration = ExpirationDate::Days(pos(dec!(30)));
+        let (low, middle, high) = (pos(dec!(90)), Positive::HUNDRED, pos(dec!(110)));
+        let zero = Positive::ZERO;
+        let one = Positive::ONE;
+        let long = LongButterflySpread::new(
+            "PROP".to_string(), Positive::HUNDRED, low, middle, high, expiration,
+            pos(dec!(0.2)), dec!(0.05), zero, quantity, one, one, one,
+            zero, zero, zero, zero, zero, zero,
+        );
+        let short = ShortButterflySpread::new(
+            "PROP".to_string(), Positive::HUNDRED, low, middle, high, expiration,
+            pos(dec!(0.2)), dec!(0.05), zero, quantity, one, one, one,
+            zero, zero, zero, zero, zero, zero,
+        );
+        if let Ok(mut long) = long {
+            long.long_call_low.option.quantity = wing_quantity;
+            let _ = long.validate();
+        }
+        if let Ok(mut short) = short {
+            short.short_call_low.option.quantity = wing_quantity;
+            let _ = short.validate();
+        }
+    }
+
+    /// The free helpers of `strategies::shared`. A put break-even past zero,
+    /// a call break-even past `Positive::MAX`, a ratio over the smallest
+    /// representable loss and a fee or premium total past `Positive::MAX`
+    /// each aborted the process (#788).
+    #[test]
+    fn test_shared_helpers_never_panic(
+        first in overflowing_positive(),
+        second in overflowing_positive(),
+        is_call in any::<bool>(),
+    ) {
+        let _ = credit_spread_break_even(first, second, is_call);
+        let _ = debit_spread_break_even(first, second, is_call);
+        let _ = calculate_profit_ratio(first, second);
+        let mut position = plain_leg(OptionStyle::Call, Side::Long, Positive::HUNDRED, Positive::ONE);
+        position.open_fee = first;
+        position.close_fee = second;
+        position.premium = first;
+        let _ = aggregate_fees(&[&position, &position]);
+        let _ = aggregate_premiums(&[&position, &position]);
+    }
+
+    /// The width accessors of the strategy-family traits subtract one strike
+    /// from another. The strikes are `pub` fields (or arrive through
+    /// `add_position` / `Deserialize`), so they can be crossed, and the
+    /// `Positive` `-` aborted with `result would be non-positive` (#788).
+    #[test]
+    fn test_strategy_family_widths_never_panic(
+        first in extreme_positive(),
+        second in extreme_positive(),
+        third in extreme_positive(),
+        fourth in extreme_positive(),
+    ) {
+        let mut condor = IronCondor::default();
+        condor.long_put.option.strike_price = first;
+        condor.short_put.option.strike_price = second;
+        condor.short_call.option.strike_price = third;
+        condor.long_call.option.strike_price = fourth;
+        let _ = condor.inner_width();
+        let _ = condor.outer_width();
+        let _ = condor.put_spread_width();
+        let _ = condor.call_spread_width();
+
+        let mut spread = BullCallSpread::default();
+        spread.long_call.option.strike_price = first;
+        spread.short_call.option.strike_price = second;
+        let _ = spread.spread_width();
+
+        let mut butterfly = LongButterflySpread::default();
+        butterfly.long_call_low.option.strike_price = third;
+        butterfly.long_call_high.option.strike_price = fourth;
+        let _ = butterfly.wing_width();
+
+        let strangle = assembled::<LongStrangle>(&[
+            plain_leg(OptionStyle::Call, Side::Long, first, Positive::ONE),
+            plain_leg(OptionStyle::Put, Side::Long, second, Positive::ONE),
+        ]);
+        let _ = strangle.strangle_width();
+    }
+
+    /// The target gaps of the adjustment optimizer subtract the current
+    /// Greeks from a target; both are `pub` `Decimal` fields, and the raw
+    /// `-` aborted with `Subtraction overflowed` (#788).
+    #[test]
+    fn test_adjustment_target_never_panics(
+        target in extreme_decimal(),
+        current in extreme_decimal(),
+        tolerance in extreme_decimal(),
+    ) {
+        let goal = AdjustmentTarget {
+            delta: Some(target),
+            gamma: Some(target),
+            vega: Some(target),
+            theta: Some(target),
+        };
+        let greeks = PortfolioGreeks::new(current, current, current, current, current);
+        let _ = goal.delta_gap(&greeks);
+        let _ = goal.gamma_gap(&greeks);
+        let _ = goal.vega_gap(&greeks);
+        let _ = goal.is_satisfied(&greeks, tolerance);
+    }
+
+    /// A custom strategy whose legs were removed after construction through
+    /// the `pub` `positions` field. The getters that read the first leg
+    /// indexed `positions[0]` and aborted with `index out of bounds` (#788).
+    /// The ones with an answer without a leg give it (the strategy's own
+    /// symbol and spot, empty per-leg maps); the ones that need a leg
+    /// (`get_type`, `one_option`, `one_option_mut`) return an error.
+    #[test]
+    fn test_custom_strategy_without_legs_never_panics(
+        underlying in walkable_positive(),
+        probe in walkable_positive(),
+    ) {
+        let spot = if underlying == Positive::ZERO { Positive::ONE } else { underlying };
+        let legs = vec![plain_leg(OptionStyle::Call, Side::Long, spot, Positive::ONE)];
+        if let Ok(mut strategy) = CustomStrategy::new(
+            "prop".to_string(), "PROP".to_string(), "property".to_string(),
+            spot, legs, pos(dec!(0.01)), 100, Positive::ONE,
+        ) {
+            strategy.positions.clear();
+            prop_assert_eq!(strategy.get_symbol().ok(), Some("PROP"));
+            prop_assert_eq!(strategy.get_underlying_price().ok(), Some(&spot));
+            prop_assert!(strategy.get_strike().is_ok_and(|strikes| strikes.is_empty()));
+            prop_assert!(strategy.get_risk_free_rate().is_ok_and(|rates| rates.is_empty()));
+            prop_assert!(strategy.get_dividend_yield().is_ok_and(|yields| yields.is_empty()));
+            prop_assert!(strategy.get_type().is_err());
+            prop_assert!(strategy.one_option().is_err());
+            prop_assert!(strategy.one_option_mut().is_err());
+            exercise(&strategy, probe);
+        }
     }
 }

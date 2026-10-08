@@ -1,9 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use crate::visualization::ColorScheme;
 
 #[cfg(feature = "plotly")]
@@ -142,11 +136,12 @@ pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>>
     let mut x_set = std::collections::BTreeSet::new();
     let mut y_set = std::collections::BTreeSet::new();
 
-    let indices: Vec<_> = (0..surf.x.len().min(surf.y.len()).min(surf.z.len())).collect();
+    // One point per index the three coordinate vectors share.
+    let points = || surf.x.iter().zip(&surf.y).zip(&surf.z);
 
-    for &i in &indices {
-        x_set.insert(surf.x[i]);
-        y_set.insert(surf.y[i]);
+    for ((&x, &y), _) in points() {
+        x_set.insert(x);
+        y_set.insert(y);
     }
 
     let x_unique: Vec<_> = x_set.into_iter().collect();
@@ -165,13 +160,11 @@ pub fn make_surface(surf: &Surface3D) -> Box<Surface<Decimal, Decimal, Decimal>>
 
     let mut z_matrix = vec![vec![Decimal::ZERO; x_unique.len()]; y_unique.len()];
 
-    for i in indices {
-        let x = surf.x[i];
-        let y = surf.y[i];
-        let z = surf.z[i];
-
-        if let (Some(&row), Some(&col)) = (y_to_row.get(&y), x_to_col.get(&x)) {
-            z_matrix[row][col] = z;
+    for ((x, y), &z) in points() {
+        if let (Some(&row), Some(&col)) = (y_to_row.get(y), x_to_col.get(x))
+            && let Some(cell) = z_matrix.get_mut(row).and_then(|cells| cells.get_mut(col))
+        {
+            *cell = z;
         }
     }
 

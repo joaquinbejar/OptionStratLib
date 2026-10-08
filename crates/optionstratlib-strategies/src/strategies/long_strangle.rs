@@ -9,11 +9,6 @@ Key characteristics:
 - Lower cost than a straddle
 - Requires a larger price move to become profitable
 */
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
@@ -22,6 +17,7 @@ use super::shared::StrangleStrategy;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::measured_max_loss;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
@@ -308,8 +304,13 @@ impl StrategyConstructor for LongStrangle {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let put_position = &sorted_positions[0]; // Put will be first
-        let call_position = &sorted_positions[1]; // Call will be second
+        // Put will be first; Call will be second.
+        let [put_position, call_position] = sorted_positions.as_slice() else {
+            return Err(StrategyError::invalid_parameters(
+                "Long Strangle get_strategy",
+                "Must have exactly 2 options",
+            ));
+        };
 
         // Validate one option is call and other is put
         if call_position.option.option_style != OptionStyle::Call
@@ -652,10 +653,10 @@ impl BasicAble for LongStrangle {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.long_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.long_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -669,23 +670,19 @@ impl BasicAble for LongStrangle {
     fn set_underlying_price(&mut self, price: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.option.underlying_price = *price;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
         self.long_call.option.implied_volatility = *volatility;
         self.long_put.option.implied_volatility = *volatility;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.long_put.premium =
-            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_put.option.calculate_price_black_scholes()?.abs())?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -706,8 +703,11 @@ impl BasicAble for LongStrangle {
 
 impl Strategies for LongStrangle {
     fn get_volume(&mut self) -> Result<Positive, StrategyError> {
-        let volume = self.long_call.option.quantity + self.long_put.option.quantity;
-        Ok(volume)
+        Ok(self
+            .long_call
+            .option
+            .quantity
+            .checked_add(&self.long_put.option.quantity)?)
     }
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::MAX) // Theoretically unlimited
@@ -716,7 +716,7 @@ impl Strategies for LongStrangle {
         Ok(self.get_total_cost()?)
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_loss = measured_max_loss(self)?;
         if max_loss == Positive::ZERO {
             return Ok(Decimal::MAX);
         }
@@ -747,7 +747,7 @@ impl Strategies for LongStrangle {
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_loss = measured_max_loss(self)?;
         if max_loss == Positive::ZERO {
             return Ok(Decimal::MAX);
         }
@@ -785,7 +785,7 @@ impl Strategies for LongStrangle {
                 "break-even points are not strictly ordered (first >= last)",
             ));
         }
-        let diff = last_option - first_option.to_dec();
+        let diff = last_option.checked_sub(&first_option)?;
         debug!(
             "First break even point: {} Last break even point: {}",
             first_option, last_option
@@ -816,7 +816,7 @@ impl Optimizable for LongStrangle {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.long_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_double_iter()
@@ -1037,7 +1037,7 @@ impl ProbabilityAnalysis for LongStrangle {
             ProfitLossRange::new(None, Some(lower_break_even_point), Positive::ZERO)?;
 
         lower_profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1051,7 +1051,7 @@ impl ProbabilityAnalysis for LongStrangle {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         upper_profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1092,7 +1092,7 @@ impl ProbabilityAnalysis for LongStrangle {
         )?;
 
         loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1311,7 +1311,12 @@ mod tests_long_strangle_probability {
     fn test_get_risk_free_rate() {
         let strangle = create_test_long_strangle();
         assert_eq!(
-            **strangle.get_risk_free_rate().values().next().unwrap(),
+            **strangle
+                .get_risk_free_rate()
+                .unwrap()
+                .values()
+                .next()
+                .unwrap(),
             dec!(0.05)
         );
     }

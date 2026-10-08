@@ -496,7 +496,9 @@ impl Collar {
                 .profit_at_kinks()?
                 .into_iter()
                 .fold(Decimal::MIN, Decimal::max);
-            return Ok(Positive::new_decimal(best.max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+            // Domain floor: a best case that still loses earns nothing, so the
+            // maximum profit is zero rather than negative.
+            return Ok(Positive::new_decimal(best.max(Decimal::ZERO))?);
         }
 
         if call_strike >= cost_basis {
@@ -506,7 +508,9 @@ impl Collar {
                 total_fees.to_dec(),
                 "Collar::max_profit",
             )?;
-            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a best case that still loses earns nothing, so the
+            // maximum profit is zero rather than negative.
+            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO))?)
         } else {
             // Call strike below cost basis
             let capital_loss = price_gap(cost_basis, call_strike).checked_mul(&quantity)?;
@@ -515,7 +519,9 @@ impl Collar {
                 total_fees.to_dec(),
                 "Collar::max_profit",
             )?;
-            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a best case that still loses earns nothing, so the
+            // maximum profit is zero rather than negative.
+            Ok(Positive::new_decimal(total_profit.max(Decimal::ZERO))?)
         }
     }
 
@@ -554,7 +560,9 @@ impl Collar {
                 .fold(Decimal::MAX, Decimal::min);
             // `Decimal` is symmetric, so negating a representable value is
             // itself representable.
-            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO)).unwrap_or(Positive::ZERO));
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            return Ok(Positive::new_decimal((-worst).max(Decimal::ZERO))?);
         }
 
         if cost_basis >= put_strike {
@@ -564,7 +572,9 @@ impl Collar {
                 total_fees.to_dec(),
                 "Collar::max_loss",
             )?;
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))?)
         } else {
             // Put strike above cost basis (unusual but possible)
             let capital_gain = price_gap(put_strike, cost_basis).checked_mul(&quantity)?;
@@ -573,7 +583,9 @@ impl Collar {
                 capital_gain.to_dec(),
                 "Collar::max_loss",
             )?;
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))?)
         }
     }
 
@@ -953,11 +965,11 @@ impl BasicAble for Collar {
     // `delta_neutrality` and every probability method. The short call carries the
     // same underlying, expiration and rate as the spot leg, so it answers for
     // the strategy.
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
 
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
 

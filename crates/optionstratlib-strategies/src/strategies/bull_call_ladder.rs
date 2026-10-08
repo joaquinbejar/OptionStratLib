@@ -1,14 +1,10 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::strategies::shared::decimal_from_f64;
+use crate::strategies::shared::measured_max_profit;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
@@ -17,7 +13,6 @@ use crate::strategies::{
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -33,6 +28,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+#[cfg(test)]
 use optionstratlib_core::spos;
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
 use optionstratlib_market::chains::utils::FindOptimalSide;
@@ -307,9 +303,17 @@ impl StrategyConstructor for BullCallLadder {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let long_call_position = &sorted_positions[0];
-        let low_short_call_position = &sorted_positions[1];
-        let high_short_call_position = &sorted_positions[2];
+        let [
+            long_call_position,
+            low_short_call_position,
+            high_short_call_position,
+        ] = sorted_positions.as_slice()
+        else {
+            return Err(StrategyError::invalid_parameters(
+                "Bull Call Ladder get_strategy",
+                "Must have exactly 3 options",
+            ));
+        };
 
         // Validate options are calls
         if long_call_position.option.option_style != OptionStyle::Call
@@ -720,10 +724,10 @@ impl BasicAble for BullCallLadder {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.long_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.long_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -742,20 +746,17 @@ impl BasicAble for BullCallLadder {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.option.underlying_price = *price;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.short_call_high.option.underlying_price = *price;
         self.short_call_high.premium = Positive::new_decimal(
             self.short_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -768,18 +769,15 @@ impl BasicAble for BullCallLadder {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call.premium =
-            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())
-                .unwrap_or(Positive::ZERO);
+            Positive::new_decimal(self.long_call.option.calculate_price_black_scholes()?.abs())?;
         self.short_call_high.premium = Positive::new_decimal(
             self.short_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -822,39 +820,40 @@ impl Strategies for BullCallLadder {
 
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         let break_even = self.get_break_even_points()?;
-        if break_even.len() != 2 {
+        let [be0, be1] = break_even.as_slice() else {
             return Err(StrategyError::BreakEvenError(
                 BreakEvenErrorKind::NoBreakEvenPoints,
             ));
-        }
-        let be0 = break_even[0].to_dec();
-        let be1 = break_even[1].to_dec();
-        let base_low_dec = be1 - be0;
-        let base_low = Positive::new_decimal(base_low_dec).unwrap_or(Positive::ZERO);
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
+        };
+        let base_low_dec = d_sub(
+            be1.to_dec(),
+            be0.to_dec(),
+            "BullCallLadder::get_profit_area base_low",
+        )?;
+        let base_low = Positive::new_decimal(base_low_dec)?;
+        let max_profit = measured_max_profit(self)?;
         let short_high = self.short_call_high.option.strike_price.to_dec();
         let short_low = self.short_call_low.option.strike_price.to_dec();
-        let base_high_dec = short_high - short_low;
-        let base_high = Positive::new_decimal(base_high_dec).unwrap_or(Positive::ZERO);
-        Ok(
-            Decimal::from_f64((base_low.to_f64() + base_high.to_f64()) * max_profit.to_f64() / 2.0)
-                .unwrap_or(Decimal::ZERO),
-        )
+        let base_high_dec = d_sub(
+            short_high,
+            short_low,
+            "BullCallLadder::get_profit_area base_high",
+        )?;
+        let base_high = Positive::new_decimal(base_high_dec)?;
+        decimal_from_f64((base_low.to_f64() + base_high.to_f64()) * max_profit.to_f64() / 2.0)
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
+        // A zero or an unlimited (`Positive::MAX`) loss divides by one, so
+        // the ratio is the profit itself in percent.
         let max_loss = match self.get_max_loss()? {
-            value if value == Positive::ZERO => spos!(1.0),
-            value if value == Positive::MAX => spos!(1.0),
-            value => Some(value),
+            value if value == Positive::ZERO || value == Positive::MAX => Positive::ONE,
+            value => value,
         };
-
-        match (self.get_max_profit(), max_loss) {
-            (Ok(max_profit), Some(ml)) => Ok(Decimal::from(
-                max_profit.checked_div(&ml)?.checked_mul_f64(100.0)?,
-            )),
-            _ => Ok(Decimal::ZERO),
-        }
+        let max_profit = measured_max_profit(self)?;
+        Ok(Decimal::from(
+            max_profit.checked_div(&max_loss)?.checked_mul_f64(100.0)?,
+        ))
     }
 }
 
@@ -893,7 +892,7 @@ impl Optimizable for BullCallLadder {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.long_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_triple_iter()
@@ -1130,7 +1129,7 @@ impl ProbabilityAnalysis for BullCallLadder {
         )?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1175,7 +1174,7 @@ impl ProbabilityAnalysis for BullCallLadder {
             ProfitLossRange::new(Some(upper_break_even_point), None, Positive::ZERO)?;
 
         loss_range_lower.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1186,7 +1185,7 @@ impl ProbabilityAnalysis for BullCallLadder {
         )?;
 
         loss_range_upper.calculate_probability(
-            self.get_underlying_price(),
+            &self.long_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1901,7 +1900,7 @@ mod tests_bull_call_ladder_optimizable {
 
         // Verify the new strategy has correct properties
         assert_relative_eq!(
-            new_strategy.get_underlying_price().to_f64(),
+            new_strategy.get_underlying_price().unwrap().to_f64(),
             100.0,
             epsilon = 0.001
         );
@@ -2010,6 +2009,7 @@ mod tests_bull_call_ladder_probability {
         assert_eq!(
             ladder
                 .get_risk_free_rate()
+                .unwrap()
                 .values()
                 .next()
                 .unwrap()

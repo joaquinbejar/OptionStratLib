@@ -1,7 +1,3 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341.
-#![allow(clippy::indexing_slicing)]
-
 use crate::error::strategies::BreakEvenErrorKind;
 use crate::error::strategies::StrategyError;
 use crate::strategies::{
@@ -457,10 +453,12 @@ impl Strategy {
 /// - `get_expiration`: Maps option basic types to their expiration dates.
 /// - `get_implied_volatility`: Retrieves implied volatility.
 ///
-/// # Panics
-/// Only `one_option` and `one_option_mut` panic on the default implementation,
-/// because their reference return types do not allow a graceful fallback.
-/// Every strategy that owns `Options` must override both methods.
+/// # Errors
+/// The default `one_option` and `one_option_mut` return
+/// `StrategyError::OperationError(NotSupported { .. })`, and so do the getters
+/// that read through them (`get_symbol`, `get_strike`, `get_type`,
+/// `get_underlying_price`, `get_risk_free_rate`, `get_dividend_yield`).
+/// Every strategy that owns `Options` overrides both methods.
 ///
 pub trait BasicAble {
     /// Retrieves the title associated with the current instance of the strategy.
@@ -507,8 +505,15 @@ pub trait BasicAble {
     /// - Assumes that `one_option()` is a method that returns an object or reference which implements
     ///   a `get_symbol()` method.
     /// - The returned `&str` is borrowed from the referenced object, and its lifetime is tied to the `self` instance.
-    fn get_symbol(&self) -> &str {
-        self.one_option().get_symbol()
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_symbol(&self) -> Result<&str, StrategyError> {
+        self.one_option()?.get_symbol()
     }
     /// Retrieves a mapping of option basic types to their associated positive strike values.
     ///
@@ -525,8 +530,14 @@ pub trait BasicAble {
     /// - Ensure that the `one_option` method returns a valid object that implements a `get_strike` method.
     /// - The values in the returned map are references, so their lifetime is tied to the ownership of `self`.
     ///
-    fn get_strike(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        self.one_option().get_strike()
+    /// # Errors
+    ///
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_strike(&self) -> Result<HashMap<OptionBasicType<'_>, &Positive>, StrategyError> {
+        self.one_option()?.get_strike()
     }
     /// Retrieves a vector of strike prices from the option types.
     ///
@@ -560,12 +571,6 @@ pub trait BasicAble {
     /// - The keys are `OptionBasicType` values.
     /// - The values are `Side` references corresponding to each `OptionBasicType`.
     ///
-    /// # Panics
-    ///
-    /// This function assumes that `option_type.side` is valid for all elements
-    /// in the iterator returned by `get_option_basic_type`. If this assumption is violated,
-    /// the behavior is undefined.
-    ///
     /// # Notes
     ///
     /// Ensure that `get_option_basic_type` is properly implemented and returns
@@ -587,8 +592,15 @@ pub trait BasicAble {
     /// # Notes
     /// - Ensure `self.one_option()` returns a valid object with a callable `get_type`
     ///   method to avoid runtime errors.
-    fn get_type(&self) -> &OptionType {
-        self.one_option().get_type()
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_type(&self) -> Result<&OptionType, StrategyError> {
+        self.one_option()?.get_type()
     }
     /// Retrieves a mapping of `OptionBasicType` to their corresponding `OptionStyle`.
     ///
@@ -604,9 +616,6 @@ pub trait BasicAble {
     /// Ensure that `get_option_basic_type` returns a valid iterator of `OptionBasicType`
     /// items before calling this function, as the result depends on its output.
     ///
-    /// # Panics
-    /// This function will panic if the `OptionStyle` reference is invalid or not properly
-    /// initialized for any `OptionBasicType`.
     fn get_style(&self) -> HashMap<OptionBasicType<'_>, &OptionStyle> {
         self.get_option_basic_type()
             .iter()
@@ -623,10 +632,6 @@ pub trait BasicAble {
     /// A `HashMap` where:
     /// - The key is of type `OptionBasicType`.
     /// - The value is a reference to the `ExpirationDate` associated with the option basic type.
-    ///
-    /// # Panics
-    /// This method may panic if `expiration_date` is unexpectedly `None` within the option type,
-    /// depending on your implementation of `get_option_basic_type`.
     ///
     /// # Notes
     /// - Ensure `self.get_option_basic_type()` returns a valid iterable of `OptionBasicType` instances.
@@ -691,9 +696,16 @@ pub trait BasicAble {
     ///
     /// # Notes
     ///
-    /// This method assumes that the underlying price is always available and valid.
-    fn get_underlying_price(&self) -> &Positive {
-        self.one_option().get_underlying_price()
+    /// The price is read from [`BasicAble::one_option`].
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_underlying_price(&self) -> Result<&Positive, StrategyError> {
+        self.one_option()?.get_underlying_price()
     }
     /// Retrieves the risk-free interest rate associated with a given set of options.
     ///
@@ -714,10 +726,12 @@ pub trait BasicAble {
     ///
     /// # Errors
     ///
-    /// This function assumes that `one_option` and its underlying functionality
-    /// are error-free. Errors, if any, must be handled within `one_option`.
-    fn get_risk_free_rate(&self) -> HashMap<OptionBasicType<'_>, &Decimal> {
-        self.one_option().get_risk_free_rate()
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_risk_free_rate(&self) -> Result<HashMap<OptionBasicType<'_>, &Decimal>, StrategyError> {
+        self.one_option()?.get_risk_free_rate()
     }
     /// Retrieves the dividend yield of a financial option.
     ///
@@ -733,53 +747,50 @@ pub trait BasicAble {
     /// # Note
     /// Ensure that the associated `one_option()` method is correctly implemented
     /// and provides the desired dividend yield information.
-    fn get_dividend_yield(&self) -> HashMap<OptionBasicType<'_>, &Positive> {
-        self.one_option().get_dividend_yield()
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error of [`BasicAble::one_option`]: the default
+    /// returns `StrategyError::OperationError(NotSupported { .. })` for a
+    /// type that holds no option, and a strategy with no legs returns its
+    /// own error.
+    fn get_dividend_yield(&self) -> Result<HashMap<OptionBasicType<'_>, &Positive>, StrategyError> {
+        self.one_option()?.get_dividend_yield()
     }
     /// Retrieves a shared reference to the strategy's primary `Options` value.
     ///
     /// # Returns
-    /// * `&Options` - A reference to an `Options` object owned by the strategy.
+    /// * `Ok(&Options)` - A reference to an `Options` object owned by the strategy.
     ///
-    /// # Panics
-    /// The default implementation panics because there is no graceful fallback
-    /// for a borrowed `&Options` return, and returning a fabricated `Options`
-    /// would answer every downstream getter with a price nobody quoted. Every
-    /// strategy this crate ships overrides this method.
+    /// # Errors
     ///
-    /// # Note
-    /// This is a placeholder implementation and must be overridden in any
-    /// concrete strategy that holds option positions.
-    fn one_option(&self) -> &Options {
-        // INVARIANT: a `&Options` return type admits no default — we cannot
-        // materialise a safe reference out of thin air, and fabricating one
-        // would answer `get_underlying_price` with a price nobody quoted.
-        // Every strategy this crate ships overrides this method; `Collar`,
-        // `CoveredCall` and `ProtectivePut` did not, which made a plain
-        // getter abort, and they now do. Reaching the default is a
-        // downstream type that forgot the override.
-        const MSG: &str = "one_option not implemented for this strategy — every strategy with options must override";
-        panic!("{MSG}") // scan-banned: allow -- no safe `&Options` exists to return, and no shipped strategy reaches it
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`: there is no
+    /// `Options` to borrow, and fabricating one would answer every getter
+    /// that reads it with terms nobody quoted. Every strategy this crate
+    /// ships overrides it; a strategy with no legs returns its own error.
+    fn one_option(&self) -> Result<&Options, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "one_option",
+            std::any::type_name::<Self>(),
+        ))
     }
     /// Provides a mutable reference to the strategy's primary `Options` value.
     ///
-    /// # Panics
-    ///
-    /// The default implementation panics because there is no graceful fallback
-    /// for a borrowed `&mut Options` return. Every strategy that owns options
-    /// must override this method.
-    ///
     /// # Returns
     ///
-    /// A mutable reference to an `Options` instance.
+    /// * `Ok(&mut Options)` - A mutable reference to an `Options` instance.
     ///
-    fn one_option_mut(&mut self) -> &mut Options {
-        // INVARIANT: same rationale as `one_option` — `&mut Options` has no
-        // safe default value, so every strategy with positions must override
-        // this method. Reaching the panic is a downstream type that forgot
-        // the override; no strategy this crate ships does.
-        const MSG: &str = "one_option_mut not implemented for this strategy — every strategy with options must override";
-        panic!("{MSG}") // scan-banned: allow -- no safe `&mut Options` exists to return, and no shipped strategy reaches it
+    /// # Errors
+    ///
+    /// The default implementation returns
+    /// `StrategyError::OperationError(NotSupported { .. })`, as
+    /// [`BasicAble::one_option`] does.
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
+        Err(StrategyError::operation_not_supported(
+            "one_option_mut",
+            std::any::type_name::<Self>(),
+        ))
     }
 
     /// Sets the expiration date for the strategy.
@@ -933,6 +944,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// # Errors
     ///
     /// This function may return a `StrategyError` in cases such as:
+    /// - The sum of the leg quantities overflows `Positive`
+    ///   (`StrategyError::PositiveError`).
     /// - Internal issues within the strategy's calculation or storage.
     /// - Other implementation-specific failures.
     ///
@@ -940,7 +953,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
         let quantities = self.get_quantity();
         let mut volume = Positive::ZERO;
         for (_, quantity) in quantities {
-            volume += *quantity;
+            volume = volume.checked_add(quantity)?;
         }
         Ok(volume)
     }
@@ -1136,7 +1149,9 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// The default implementation returns [`StrategyError::OperationError`]
     /// with [`OperationErrorKind::NotSupported`]. Overriding strategies may
     /// surface [`StrategyError::BreakEvenError`] or
-    /// [`StrategyError::PriceError`] when the payoff integral fails.
+    /// [`StrategyError::PriceError`] when the payoff integral fails, and
+    /// [`StrategyError::NumericConversion`] when the area computed in `f64`
+    /// is `NaN`, infinite or past the `Decimal` range.
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_area",
@@ -1156,7 +1171,10 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// The default implementation returns [`StrategyError::OperationError`]
     /// with [`OperationErrorKind::NotSupported`]. Overriding strategies may
     /// surface [`StrategyError::ProfitLossError`] when either
-    /// `get_max_profit` or `get_max_loss` fails.
+    /// `get_max_profit` or `get_max_loss` fails, and
+    /// [`StrategyError::NumericConversion`] when the ratio computed in `f64`
+    /// is `NaN`, infinite or past the `Decimal` range (an unlimited profit
+    /// over a finite loss, for example).
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         Err(StrategyError::operation_not_supported(
             "profit_ratio",
@@ -1177,14 +1195,15 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// Propagates any [`StrategyError`] returned by
     /// `Strategable::get_break_even_points` or
-    /// `Strategable::get_max_min_strikes`, and
+    /// `Strategable::get_max_min_strikes` or
+    /// [`BasicAble::get_underlying_price`], and
     /// [`StrategyError::PositiveError`] when widening the range by the
     /// strike distance, or applying the display bound multipliers, leaves the
     /// `Positive` range.
     fn get_range_to_show(&self) -> Result<(Positive, Positive), StrategyError> {
         let mut all_points = self.get_break_even_points()?.clone();
         let (first_strike, last_strike) = self.get_max_min_strikes()?;
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = self.get_underlying_price()?;
 
         // Calculate the largest difference from the underlying price to furthest strike
         let max_diff = (last_strike.value() - underlying_price.value())
@@ -1242,7 +1261,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     ///
     /// Returns [`StrategyError::PriceError`] when the strategy has no
     /// strikes to compare against; propagates [`StrategyError`] variants
-    /// from `Strategable::get_positions` when position enumeration fails.
+    /// from `Strategable::get_positions` when position enumeration fails, and
+    /// the error of [`BasicAble::get_underlying_price`].
     fn get_max_min_strikes(&self) -> Result<(Positive, Positive), StrategyError> {
         let strikes: Vec<&Positive> = self.get_strikes();
         if strikes.is_empty() {
@@ -1261,7 +1281,7 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             .iter()
             .fold(Positive::ZERO, |acc, &strike| Positive::max(acc, *strike));
 
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = self.get_underlying_price()?;
         let mut min_value = min;
         let mut max_value = max;
 
@@ -1291,18 +1311,15 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
     /// surfaced by `Strategable::get_break_even_points`.
     fn get_range_of_profit(&self) -> Result<Positive, StrategyError> {
         let mut break_even_points = self.get_break_even_points()?.clone();
-        match break_even_points.len() {
-            0 => Err(StrategyError::BreakEvenError(
+        match break_even_points.as_slice() {
+            [] => Err(StrategyError::BreakEvenError(
                 BreakEvenErrorKind::NoBreakEvenPoints,
             )),
-            1 => Ok(Positive::MAX),
+            [_] => Ok(Positive::MAX),
             // The width of the profitable region, not a signed difference:
             // nothing orders a two-point break-even vector, and the three-plus
             // branch below sorts before subtracting for exactly that reason.
-            2 => {
-                let (a, b) = (break_even_points[0], break_even_points[1]);
-                Ok(price_gap(a.max(b), a.min(b)))
-            }
+            [a, b] => Ok(price_gap((*a).max(*b), (*a).min(*b))),
             _ => {
                 // sort break even points and then get last minus first
                 // SAFETY: total order on Positive; f64 fallback to Equal is safe for stable sort
@@ -1318,7 +1335,8 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
                         "get_range_of_profit: break_even_points is empty",
                     )
                 })?;
-                Ok(*last - *first)
+                // Sorted ascending, so the difference is non-negative.
+                Ok(last.checked_sub(first)?)
             }
         }
     }
@@ -1566,8 +1584,14 @@ pub trait Optimizable: Validable + Strategies {
     /// * `side` - A reference to the `FindOptimalSide` specifying the filtering strategy.
     fn is_valid_optimal_option(&self, option: &OptionData, side: &FindOptimalSide) -> bool {
         match side {
-            FindOptimalSide::Upper => option.strike_price >= *self.get_underlying_price(),
-            FindOptimalSide::Lower => option.strike_price <= *self.get_underlying_price(),
+            // A strategy with no spot to compare against admits no strike
+            // on either side of it.
+            FindOptimalSide::Upper => self
+                .get_underlying_price()
+                .is_ok_and(|spot| option.strike_price >= *spot),
+            FindOptimalSide::Lower => self
+                .get_underlying_price()
+                .is_ok_and(|spot| option.strike_price <= *spot),
             FindOptimalSide::All => true,
             FindOptimalSide::Range(start, end) => {
                 option.strike_price >= *start && option.strike_price <= *end
@@ -2015,6 +2039,31 @@ mod tests_strategies_extended {
         assert_eq!(strategy.get_strikes(), Vec::<&Positive>::new());
         assert!(strategy.get_max_min_strikes().is_err());
     }
+
+    /// A bare `impl BasicAble for X {}` holds no option. Every getter that
+    /// reads one returns the `NotSupported` error of the `one_option`
+    /// default; before #788 the default panicked.
+    #[test]
+    fn test_bare_basic_able_getters_return_err() {
+        struct Bare;
+        impl BasicAble for Bare {}
+
+        let mut bare = Bare;
+        let not_supported = |error: StrategyError| {
+            matches!(
+                error,
+                StrategyError::OperationError(OperationErrorKind::NotSupported { .. })
+            )
+        };
+        assert!(bare.one_option().is_err_and(not_supported));
+        assert!(bare.one_option_mut().is_err_and(not_supported));
+        assert!(bare.get_symbol().is_err_and(not_supported));
+        assert!(bare.get_strike().is_err_and(not_supported));
+        assert!(bare.get_type().is_err_and(not_supported));
+        assert!(bare.get_underlying_price().is_err_and(not_supported));
+        assert!(bare.get_risk_free_rate().is_err_and(not_supported));
+        assert!(bare.get_dividend_yield().is_err_and(not_supported));
+    }
 }
 
 #[cfg(test)]
@@ -2122,8 +2171,8 @@ mod tests_best_range_to_show {
     }
 
     impl BasicAble for TestStrategy {
-        fn get_underlying_price(&self) -> &Positive {
-            &self.underlying_price
+        fn get_underlying_price(&self) -> Result<&Positive, StrategyError> {
+            Ok(&self.underlying_price)
         }
         fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
             HashSet::new()
@@ -2244,8 +2293,8 @@ mod tests_range_to_show {
         fn get_option_basic_type(&self) -> HashSet<OptionBasicType<'_>> {
             HashSet::new()
         }
-        fn get_underlying_price(&self) -> &Positive {
-            &self.underlying_price
+        fn get_underlying_price(&self) -> Result<&Positive, StrategyError> {
+            Ok(&self.underlying_price)
         }
     }
 
@@ -2369,7 +2418,7 @@ mod tests_strategy_methods {
         impl BasicAble for TestStrategy {}
         impl Strategies for TestStrategy {}
         let strategy = TestStrategy;
-        let result = std::panic::catch_unwind(|| strategy.get_underlying_price());
+        let result = std::panic::catch_unwind(|| strategy.get_underlying_price().unwrap());
         assert!(result.is_err());
     }
 }

@@ -1,24 +1,19 @@
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 use super::base::{
     BreakEvenable, Optimizable, Positionable, Strategable, StrategyBasics, StrategyType, Validable,
 };
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::{BreakEvenErrorKind, ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::price_gap;
+use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
 };
 use chrono::Utc;
-use num_traits::FromPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::{ProbabilityError, ProfitLossRangeErrorKind};
@@ -181,7 +176,7 @@ impl LongButterflySpread {
             middle_strike,
             expiration,
             implied_volatility,
-            quantity * 2.0, // Double quantity for middle strike
+            quantity.checked_mul_dec(Decimal::TWO)?, // Double quantity for middle strike
             underlying_price,
             risk_free_rate,
             OptionStyle::Call,
@@ -283,9 +278,17 @@ impl StrategyConstructor for LongButterflySpread {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        let lower_strike_position = &sorted_positions[0];
-        let middle_strike_position = &sorted_positions[1];
-        let higher_strike_position = &sorted_positions[2];
+        let [
+            lower_strike_position,
+            middle_strike_position,
+            higher_strike_position,
+        ] = sorted_positions.as_slice()
+        else {
+            return Err(StrategyError::invalid_parameters(
+                "Long Butterfly Spread get_strategy",
+                "Must have exactly 3 options",
+            ));
+        };
 
         // Validate options are calls
         if lower_strike_position.option.option_style != OptionStyle::Call
@@ -318,7 +321,8 @@ impl StrategyConstructor for LongButterflySpread {
         let middle_strike = middle_strike_position.option.strike_price;
         let higher_strike = higher_strike_position.option.strike_price;
 
-        if middle_strike - lower_strike != higher_strike - middle_strike {
+        // Sorted ascending, so both differences are non-negative.
+        if middle_strike.checked_sub(&lower_strike)? != higher_strike.checked_sub(&middle_strike)? {
             return Err(StrategyError::OperationError(
                 OperationErrorKind::InvalidParameters {
                     operation: "Long Butterfly Spread get_strategy".to_string(),
@@ -469,7 +473,13 @@ impl Validable for LongButterflySpread {
             return false;
         }
 
-        if self.short_call.option.quantity != self.long_call_low.option.quantity * 2.0 {
+        // A doubled wing that overflows `Positive` cannot equal the body.
+        let doubled_wing = self
+            .long_call_low
+            .option
+            .quantity
+            .checked_mul_dec(Decimal::TWO);
+        if !doubled_wing.is_ok_and(|doubled| doubled == self.short_call.option.quantity) {
             debug!("Middle strike quantity must be double the wing quantities");
             return false;
         }
@@ -745,10 +755,10 @@ impl BasicAble for LongButterflySpread {
             })
             .collect()
     }
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.short_call.one_option()
     }
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.short_call.one_option_mut()
     }
     fn set_expiration_date(
@@ -767,24 +777,21 @@ impl BasicAble for LongButterflySpread {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_call.option.underlying_price = *price;
         self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call_high.option.underlying_price = *price;
         self.long_call_high.premium = Positive::new_decimal(
             self.long_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         Ok(())
     }
     fn set_implied_volatility(&mut self, volatility: &Positive) -> Result<(), StrategyError> {
@@ -797,22 +804,19 @@ impl BasicAble for LongButterflySpread {
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.short_call.premium = Positive::new_decimal(
             self.short_call
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         self.long_call_high.premium = Positive::new_decimal(
             self.long_call_high
                 .option
                 .calculate_price_black_scholes()?
                 .abs(),
-        )
-        .unwrap_or(Positive::ZERO);
+        )?;
         Ok(())
     }
     fn get_contract_size(&self) -> Result<Positive, StrategyError> {
@@ -859,11 +863,11 @@ impl Strategies for LongButterflySpread {
                 },
             ))
         } else {
-            Ok(Positive::new_decimal(max_loss.abs()).unwrap_or(Positive::ZERO))
+            Ok(Positive::new_decimal(max_loss.abs())?)
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = self.get_max_profit().unwrap_or(Positive::ZERO);
+        let high = measured_max_profit(self)?;
         let break_even_points = self.get_break_even_points()?;
 
         // The width of the profitable region between the two break-even
@@ -882,29 +886,24 @@ impl Strategies for LongButterflySpread {
                     Positive::new_decimal(
                         self.calculate_profit_at(&self.long_call_high.option.strike_price)?
                             .abs(),
-                    )
-                    .unwrap_or(Positive::ZERO)
+                    )?
                 } else {
                     Positive::new_decimal(
                         self.calculate_profit_at(&self.long_call_low.option.strike_price)?
                             .abs(),
-                    )
-                    .unwrap_or(Positive::ZERO)
+                    )?
                 }
             }
         };
-        Ok(Decimal::from_f64(high.to_f64() * base.to_f64() / 200.0).unwrap_or(Decimal::ZERO))
+        decimal_from_f64(high.to_f64() * base.to_f64() / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = self.get_max_profit().unwrap_or(Positive::ZERO);
-        let max_loss = self.get_max_loss().unwrap_or(Positive::ZERO);
+        let max_profit = measured_max_profit(self)?;
+        let max_loss = measured_max_loss(self)?;
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => Ok(
-                Decimal::from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0)
-                    .unwrap_or(Decimal::ZERO),
-            ),
+            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
         }
     }
 }
@@ -917,7 +916,7 @@ impl Optimizable for LongButterflySpread {
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
     ) -> impl Iterator<Item = OptionDataGroup<'a>> {
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = &self.short_call.option.underlying_price;
         let strategy = self.clone();
         option_chain
             .get_triple_iter()
@@ -1155,7 +1154,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         )?;
 
         profit_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             VolatilityAdjustment {
                 base_volatility: mean_volatility,
                 std_dev_adjustment: std_dev,
@@ -1208,7 +1207,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         )?;
 
         lower_loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             volatility_adjustment,
             None,
             expiration_date,
@@ -1226,7 +1225,7 @@ impl ProbabilityAnalysis for LongButterflySpread {
         )?;
 
         upper_loss_range.calculate_probability(
-            self.get_underlying_price(),
+            &self.short_call.option.underlying_price,
             volatility_adjustment,
             None,
             expiration_date,
@@ -3460,7 +3459,12 @@ mod tests_butterfly_probability {
         fn test_get_risk_free_rate() {
             let butterfly = create_test_long();
             assert_eq!(
-                **butterfly.get_risk_free_rate().values().next().unwrap(),
+                **butterfly
+                    .get_risk_free_rate()
+                    .unwrap()
+                    .values()
+                    .next()
+                    .unwrap(),
                 dec!(0.05)
             );
         }

@@ -21,8 +21,8 @@
 //! Strategies implement these traits to gain access to common calculations
 //! and reduce boilerplate code.
 
-use crate::error::strategies::StrategyError;
-use crate::strategies::base::{BreakEvenable, Validable};
+use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
+use crate::strategies::base::{BreakEvenable, Strategies, Validable};
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::ProbabilityError;
@@ -30,7 +30,7 @@ use optionstratlib_analytics::pnl::utils::PnL;
 use optionstratlib_core::error::position::PositionError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub};
 use optionstratlib_core::model::leg::SpotPosition;
 use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::position::Position;
@@ -110,8 +110,13 @@ pub trait SpreadStrategy {
     /// # Returns
     ///
     /// The difference between upper and lower strike prices.
-    fn spread_width(&self) -> Positive {
-        self.upper_strike() - self.lower_strike()
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the upper strike sits
+    /// below the lower one, which the public legs of a strategy allow.
+    fn spread_width(&self) -> Result<Positive, StrategyError> {
+        Ok(self.upper_strike().checked_sub(&self.lower_strike())?)
     }
 
     /// Returns the short leg position.
@@ -143,9 +148,14 @@ pub trait ButterflyStrategy {
     /// # Returns
     ///
     /// The distance from the body strike to either wing.
-    fn wing_width(&self) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the upper wing sits
+    /// below the lower one.
+    fn wing_width(&self) -> Result<Positive, StrategyError> {
         let (lower, upper) = self.wing_strikes();
-        (upper - lower) / Decimal::TWO
+        Ok(upper.checked_sub(&lower)?.checked_div_dec(Decimal::TWO)?)
     }
 
     /// Returns all positions in the butterfly.
@@ -167,27 +177,47 @@ pub trait CondorStrategy {
     fn strikes(&self) -> (Positive, Positive, Positive, Positive);
 
     /// Returns the inner spread width (between the two middle strikes).
-    fn inner_width(&self) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the upper middle strike
+    /// sits below the lower middle one.
+    fn inner_width(&self) -> Result<Positive, StrategyError> {
         let (_, lower_mid, upper_mid, _) = self.strikes();
-        upper_mid - lower_mid
+        Ok(upper_mid.checked_sub(&lower_mid)?)
     }
 
     /// Returns the outer spread width (total width of the condor).
-    fn outer_width(&self) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the highest strike sits
+    /// below the lowest one.
+    fn outer_width(&self) -> Result<Positive, StrategyError> {
         let (lowest, _, _, highest) = self.strikes();
-        highest - lowest
+        Ok(highest.checked_sub(&lowest)?)
     }
 
     /// Returns the put spread width (lower wing).
-    fn put_spread_width(&self) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the lower middle strike
+    /// sits below the lowest one.
+    fn put_spread_width(&self) -> Result<Positive, StrategyError> {
         let (lowest, lower_mid, _, _) = self.strikes();
-        lower_mid - lowest
+        Ok(lower_mid.checked_sub(&lowest)?)
     }
 
     /// Returns the call spread width (upper wing).
-    fn call_spread_width(&self) -> Positive {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the highest strike sits
+    /// below the upper middle one.
+    fn call_spread_width(&self) -> Result<Positive, StrategyError> {
         let (_, _, upper_mid, highest) = self.strikes();
-        highest - upper_mid
+        Ok(highest.checked_sub(&upper_mid)?)
     }
 
     /// Returns all positions in the condor.
@@ -234,8 +264,13 @@ pub trait StrangleStrategy {
     fn put_strike(&self) -> Positive;
 
     /// Returns the strangle width (distance between strikes).
-    fn strangle_width(&self) -> Positive {
-        self.call_strike() - self.put_strike()
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StrategyError::PositiveError`] when the call strike sits
+    /// below the put strike.
+    fn strangle_width(&self) -> Result<Positive, StrategyError> {
+        Ok(self.call_strike().checked_sub(&self.put_strike())?)
     }
 
     /// Returns the call position.
@@ -259,16 +294,21 @@ pub trait StrangleStrategy {
 /// # Returns
 ///
 /// The break-even price for the spread.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns [`StrategyError::PositiveError`] when the call break-even
+/// overflows `Positive`, or when the net credit of a put spread is larger
+/// than its short strike, which leaves no break-even above zero.
 pub fn credit_spread_break_even(
     short_strike: Positive,
     net_credit: Positive,
     is_call_spread: bool,
-) -> Positive {
+) -> Result<Positive, StrategyError> {
     if is_call_spread {
-        short_strike + net_credit
+        Ok(short_strike.checked_add(&net_credit)?)
     } else {
-        short_strike - net_credit
+        Ok(short_strike.checked_sub(&net_credit)?)
     }
 }
 
@@ -283,16 +323,21 @@ pub fn credit_spread_break_even(
 /// # Returns
 ///
 /// The break-even price for the spread.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns [`StrategyError::PositiveError`] when the call break-even
+/// overflows `Positive`, or when the net debit of a put spread is larger
+/// than its long strike, which leaves no break-even above zero.
 pub fn debit_spread_break_even(
     long_strike: Positive,
     net_debit: Positive,
     is_call_spread: bool,
-) -> Positive {
+) -> Result<Positive, StrategyError> {
     if is_call_spread {
-        long_strike + net_debit
+        Ok(long_strike.checked_add(&net_debit)?)
     } else {
-        long_strike - net_debit
+        Ok(long_strike.checked_sub(&net_debit)?)
     }
 }
 
@@ -309,11 +354,10 @@ pub fn debit_spread_break_even(
 ///
 /// # Errors
 ///
-/// Currently infallible - every branch returns `Ok`, including the
-/// sentinel cases where `max_loss` or `max_profit` is zero. The `Result`
-/// signature is retained so future tweaks to the ratio definition (e.g.
-/// checked division with rounding) can surface numerical failures without
-/// breaking the public API.
+/// Returns [`StrategyError::OperationError`] when the ratio overflows
+/// `Decimal`: a profit near `Positive::MAX` over a loss at the smallest
+/// representable scale. The sentinel cases where `max_loss` or
+/// `max_profit` is zero return `Ok`.
 pub fn calculate_profit_ratio(
     max_profit: Positive,
     max_loss: Positive,
@@ -324,7 +368,77 @@ pub fn calculate_profit_ratio(
     if max_profit == Positive::ZERO {
         return Ok(Decimal::ZERO);
     }
-    Ok(max_profit.to_dec() / max_loss.to_dec() * Decimal::ONE_HUNDRED)
+    let ratio = d_div(
+        max_profit.to_dec(),
+        max_loss.to_dec(),
+        "calculate_profit_ratio",
+    )?;
+    Ok(d_mul(
+        ratio,
+        Decimal::ONE_HUNDRED,
+        "calculate_profit_ratio",
+    )?)
+}
+
+/// Whether `error` is a strategy reporting the sign of its own extreme: a
+/// best case that still loses (`MaxProfitError`) or a worst case that still
+/// gains (`MaxLossError`), or legs too inverted to have one.
+///
+/// The profit area and the profit ratio read such a strategy as having no
+/// profit, or no loss, to measure: zero, with zero loss shown as an
+/// unbounded ratio. That is the meaning they have always given it; every
+/// other error is propagated (#788).
+#[inline]
+pub(crate) fn is_extreme_sign_error(error: &StrategyError) -> bool {
+    matches!(
+        error,
+        StrategyError::ProfitLossError(
+            ProfitLossErrorKind::MaxProfitError { .. } | ProfitLossErrorKind::MaxLossError { .. }
+        )
+    )
+}
+
+/// The maximum profit the profit area and ratio measure: zero for a strategy
+/// that reports a best case that still loses (see [`is_extreme_sign_error`]).
+///
+/// # Errors
+///
+/// Propagates every other error of `Strategies::get_max_profit`.
+pub(crate) fn measured_max_profit<S: Strategies + ?Sized>(
+    strategy: &S,
+) -> Result<Positive, StrategyError> {
+    match strategy.get_max_profit() {
+        Err(error) if is_extreme_sign_error(&error) => Ok(Positive::ZERO),
+        other => other,
+    }
+}
+
+/// The maximum loss the profit area and ratio measure: zero for a strategy
+/// that reports a worst case that still gains (see [`is_extreme_sign_error`]).
+///
+/// # Errors
+///
+/// Propagates every other error of `Strategies::get_max_loss`.
+pub(crate) fn measured_max_loss<S: Strategies + ?Sized>(
+    strategy: &S,
+) -> Result<Positive, StrategyError> {
+    match strategy.get_max_loss() {
+        Err(error) if is_extreme_sign_error(&error) => Ok(Positive::ZERO),
+        other => other,
+    }
+}
+
+/// Converts an `f64` figure (an area, a ratio) to `Decimal`.
+///
+/// # Errors
+///
+/// Returns [`StrategyError::NumericConversion`] for a `NaN`, an infinity or
+/// a magnitude past `Decimal`, instead of answering with a number nobody
+/// computed (#788).
+#[inline]
+pub(crate) fn decimal_from_f64(value: f64) -> Result<Decimal, StrategyError> {
+    <Decimal as num_traits::FromPrimitive>::from_f64(value)
+        .ok_or_else(|| StrategyError::numeric_conversion(value))
 }
 
 /// Helper function to aggregate fees from multiple positions.
@@ -336,12 +450,16 @@ pub fn calculate_profit_ratio(
 /// # Returns
 ///
 /// Total fees (open + close) for all positions.
-#[must_use]
-pub fn aggregate_fees(positions: &[&Position]) -> Positive {
-    positions
-        .iter()
-        .map(|p| p.open_fee + p.close_fee)
-        .fold(Positive::ZERO, |acc, fee| acc + fee)
+///
+/// # Errors
+///
+/// Returns [`StrategyError::PositiveError`] when the total overflows
+/// `Positive`.
+pub fn aggregate_fees(positions: &[&Position]) -> Result<Positive, StrategyError> {
+    positions.iter().try_fold(Positive::ZERO, |acc, p| {
+        let fee = p.open_fee.checked_add(&p.close_fee)?;
+        Ok(acc.checked_add(&fee)?)
+    })
 }
 
 /// Helper function to aggregate premiums from multiple positions.
@@ -353,12 +471,15 @@ pub fn aggregate_fees(positions: &[&Position]) -> Positive {
 /// # Returns
 ///
 /// Total premium for all positions.
-#[must_use]
-pub fn aggregate_premiums(positions: &[&Position]) -> Positive {
+///
+/// # Errors
+///
+/// Returns [`StrategyError::PositiveError`] when the total overflows
+/// `Positive`.
+pub fn aggregate_premiums(positions: &[&Position]) -> Result<Positive, StrategyError> {
     positions
         .iter()
-        .map(|p| p.premium)
-        .fold(Positive::ZERO, |acc, premium| acc + premium)
+        .try_fold(Positive::ZERO, |acc, p| Ok(acc.checked_add(&p.premium)?))
 }
 
 /// The contract size the option legs of a strategy share.
@@ -611,7 +732,7 @@ mod tests_shared {
     fn test_credit_spread_break_even_call() {
         let short_strike = Positive::new(100.0).unwrap();
         let net_credit = Positive::new(5.0).unwrap();
-        let break_even = credit_spread_break_even(short_strike, net_credit, true);
+        let break_even = credit_spread_break_even(short_strike, net_credit, true).unwrap();
         assert_eq!(break_even, Positive::new(105.0).unwrap());
     }
 
@@ -619,7 +740,7 @@ mod tests_shared {
     fn test_credit_spread_break_even_put() {
         let short_strike = Positive::new(100.0).unwrap();
         let net_credit = Positive::new(5.0).unwrap();
-        let break_even = credit_spread_break_even(short_strike, net_credit, false);
+        let break_even = credit_spread_break_even(short_strike, net_credit, false).unwrap();
         assert_eq!(break_even, Positive::new(95.0).unwrap());
     }
 
@@ -627,7 +748,7 @@ mod tests_shared {
     fn test_debit_spread_break_even_call() {
         let long_strike = Positive::new(100.0).unwrap();
         let net_debit = Positive::new(3.0).unwrap();
-        let break_even = debit_spread_break_even(long_strike, net_debit, true);
+        let break_even = debit_spread_break_even(long_strike, net_debit, true).unwrap();
         assert_eq!(break_even, Positive::new(103.0).unwrap());
     }
 
@@ -635,7 +756,7 @@ mod tests_shared {
     fn test_debit_spread_break_even_put() {
         let long_strike = Positive::new(100.0).unwrap();
         let net_debit = Positive::new(3.0).unwrap();
-        let break_even = debit_spread_break_even(long_strike, net_debit, false);
+        let break_even = debit_spread_break_even(long_strike, net_debit, false).unwrap();
         assert_eq!(break_even, Positive::new(97.0).unwrap());
     }
 
@@ -653,6 +774,114 @@ mod tests_shared {
         let max_loss = Positive::ZERO;
         let ratio = calculate_profit_ratio(max_profit, max_loss).unwrap();
         assert_eq!(ratio, Decimal::MAX);
+    }
+
+    #[test]
+    fn test_spread_break_even_put_past_zero_errs() {
+        let strike = Positive::new(10.0).unwrap();
+        let amount = Positive::new(20.0).unwrap();
+        assert!(credit_spread_break_even(strike, amount, false).is_err());
+        assert!(debit_spread_break_even(strike, amount, false).is_err());
+    }
+
+    #[test]
+    fn test_spread_break_even_call_overflow_errs() {
+        let amount = Positive::new(20.0).unwrap();
+        assert!(credit_spread_break_even(Positive::MAX, amount, true).is_err());
+        assert!(debit_spread_break_even(Positive::MAX, amount, true).is_err());
+    }
+
+    #[test]
+    fn test_calculate_profit_ratio_overflow_errs() {
+        let tiny = Positive::new_decimal(Decimal::new(1, 28)).unwrap();
+        assert!(calculate_profit_ratio(Positive::MAX, tiny).is_err());
+    }
+
+    #[test]
+    fn test_aggregate_fees_and_premiums_overflow_errs() {
+        let mut position = Position {
+            open_fee: Positive::MAX,
+            close_fee: Positive::ONE,
+            premium: Positive::MAX,
+            ..Position::default()
+        };
+        assert!(aggregate_fees(&[&position]).is_err());
+        assert!(aggregate_premiums(&[&position, &position]).is_err());
+
+        position.open_fee = Positive::ONE;
+        position.close_fee = Positive::TWO;
+        position.premium = Positive::new(3.0).unwrap();
+        assert_eq!(
+            aggregate_fees(&[&position, &position]).unwrap(),
+            Positive::new(6.0).unwrap()
+        );
+        assert_eq!(
+            aggregate_premiums(&[&position, &position]).unwrap(),
+            Positive::new(6.0).unwrap()
+        );
+    }
+
+    /// `measured_max_profit` / `measured_max_loss` read a sign report as
+    /// zero and propagate every other error (#788).
+    #[test]
+    fn test_measured_extremes_map_only_sign_reports() {
+        use crate::strategies::base::{BasicAble, Positionable};
+
+        struct Stub {
+            profit: fn() -> Result<Positive, StrategyError>,
+            loss: fn() -> Result<Positive, StrategyError>,
+        }
+        impl Validable for Stub {}
+        impl Positionable for Stub {}
+        impl BreakEvenable for Stub {}
+        impl BasicAble for Stub {}
+        impl Strategies for Stub {
+            fn get_max_profit(&self) -> Result<Positive, StrategyError> {
+                (self.profit)()
+            }
+            fn get_max_loss(&self) -> Result<Positive, StrategyError> {
+                (self.loss)()
+            }
+        }
+
+        let signs = Stub {
+            profit: || {
+                Err(StrategyError::ProfitLossError(
+                    ProfitLossErrorKind::MaxProfitError {
+                        reason: "Max profit is negative".to_string(),
+                    },
+                ))
+            },
+            loss: || {
+                Err(StrategyError::ProfitLossError(
+                    ProfitLossErrorKind::MaxLossError {
+                        reason: "Max loss is negative".to_string(),
+                    },
+                ))
+            },
+        };
+        assert_eq!(measured_max_profit(&signs).unwrap(), Positive::ZERO);
+        assert_eq!(measured_max_loss(&signs).unwrap(), Positive::ZERO);
+
+        let failures = Stub {
+            profit: || Err(StrategyError::empty_collection("profit")),
+            loss: || Err(StrategyError::numeric_conversion(f64::NAN)),
+        };
+        assert!(matches!(
+            measured_max_profit(&failures),
+            Err(StrategyError::EmptyCollection { .. })
+        ));
+        assert!(matches!(
+            measured_max_loss(&failures),
+            Err(StrategyError::NumericConversion { .. })
+        ));
+
+        let values = Stub {
+            profit: || Ok(Positive::TEN),
+            loss: || Ok(Positive::ONE),
+        };
+        assert_eq!(measured_max_profit(&values).unwrap(), Positive::TEN);
+        assert_eq!(measured_max_loss(&values).unwrap(), Positive::ONE);
     }
 
     #[test]

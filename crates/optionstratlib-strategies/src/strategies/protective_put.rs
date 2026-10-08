@@ -4,12 +4,6 @@
    Date: 12/01/26
 ******************************************************************************/
 
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
-
 //! # Protective Put Strategy
 //!
 //! A protective put (also known as a "married put") involves holding a long
@@ -300,7 +294,9 @@ impl ProtectivePut {
                 total_fees.to_dec(),
                 "ProtectivePut::max_loss",
             )?;
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))?)
         } else if cost_basis >= put_strike {
             let capital_loss = price_gap(cost_basis, put_strike).checked_mul(&quantity)?;
             let total_loss = d_add(
@@ -312,7 +308,9 @@ impl ProtectivePut {
                 total_fees.to_dec(),
                 "ProtectivePut::max_loss",
             )?;
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))?)
         } else {
             let capital_gain = price_gap(put_strike, cost_basis).checked_mul(&quantity)?;
             let total_loss = d_sub(
@@ -324,7 +322,9 @@ impl ProtectivePut {
                 capital_gain.to_dec(),
                 "ProtectivePut::max_loss",
             )?;
-            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO)).unwrap_or(Positive::ZERO))
+            // Domain floor: a worst case that still gains loses nothing, so the
+            // maximum loss is zero rather than negative.
+            Ok(Positive::new_decimal(total_loss.max(Decimal::ZERO))?)
         }
     }
 
@@ -632,11 +632,11 @@ impl BasicAble for ProtectivePut {
     // `delta_neutrality` and every probability method. The long put carries the
     // same underlying, expiration and rate as the spot leg, so it answers for
     // the strategy.
-    fn one_option(&self) -> &Options {
+    fn one_option(&self) -> Result<&Options, StrategyError> {
         self.long_put.one_option()
     }
 
-    fn one_option_mut(&mut self) -> &mut Options {
+    fn one_option_mut(&mut self) -> Result<&mut Options, StrategyError> {
         self.long_put.one_option_mut()
     }
 
@@ -707,7 +707,7 @@ impl BasicAble for ProtectivePut {
 
 impl Strategies for ProtectivePut {
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        Ok(Positive::new_decimal(Decimal::MAX).unwrap_or(Positive::ZERO))
+        Ok(Positive::MAX)
     }
 
     fn get_max_loss(&self) -> Result<Positive, StrategyError> {
@@ -885,8 +885,12 @@ impl std::fmt::Display for ProtectivePut {
             Ok(level) => writeln!(f, "Protection Level: {level:.2}%")?,
             Err(_) => writeln!(f, "Protection Level: n/a")?,
         }
-        if let Ok(break_evens) = self.get_break_even_points() {
-            writeln!(f, "Break-even: ${:.2}", break_evens[0])?;
+        if let Some(break_even) = self
+            .get_break_even_points()
+            .ok()
+            .and_then(|break_evens| break_evens.first())
+        {
+            writeln!(f, "Break-even: ${:.2}", break_even)?;
         }
         if let Ok(max_loss) = self.max_loss_potential() {
             writeln!(f, "Max Loss: ${:.2}", max_loss)?;
@@ -1036,6 +1040,17 @@ mod tests {
         let display = format!("{}", pp);
         assert!(display.contains("Protective Put Strategy"));
         assert!(display.contains("AAPL"));
+    }
+
+    /// `break_even_points` is a `pub` field; with it emptied, `Display`
+    /// indexed `[0]` and aborted with `index out of bounds` (#788).
+    #[test]
+    fn test_display_without_break_even_points() {
+        let mut pp = create_test_protective_put();
+        pp.break_even_points.clear();
+        let display = format!("{}", pp);
+        assert!(display.contains("Protective Put Strategy"));
+        assert!(!display.contains("Break-even"));
     }
 
     #[test]

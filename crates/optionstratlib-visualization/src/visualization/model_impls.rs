@@ -15,7 +15,6 @@
 use crate::visualization::{
     ColorScheme, Graph, GraphConfig, GraphData, LineStyle, Series2D, TraceMode,
 };
-use num_traits::FromPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::{Options, Position};
 use optionstratlib_market::chains::utils::calculate_optimal_price_range;
@@ -24,18 +23,25 @@ use rust_decimal::Decimal;
 
 impl Graph for Options {
     fn graph_data(&self) -> GraphData {
-        let range = calculate_optimal_price_range(
+        let range = match calculate_optimal_price_range(
             self.underlying_price,
             self.strike_price,
             self.implied_volatility,
             self.expiration_date,
-        )
-        .unwrap_or_else(|_| {
-            // Fallback to a reasonable default range based on strike price
-            let lower = self.strike_price * Positive::new(0.5).unwrap_or(Positive::ONE);
-            let upper = self.strike_price * Positive::new(1.5).unwrap_or(Positive::ONE);
-            (lower, upper)
-        });
+        ) {
+            Ok(range) => range,
+            Err(_) => {
+                // Fallback to a reasonable default range based on strike price
+                let lower = self.strike_price.checked_mul_dec(Decimal::new(5, 1));
+                let upper = self.strike_price.checked_mul_dec(Decimal::new(15, 1));
+                match (lower, upper) {
+                    (Ok(lower), Ok(upper)) => (lower, upper),
+                    // A strike this close to `Positive::MAX` has no range
+                    // around it to chart.
+                    _ => return GraphData::Series(Series2D::default()),
+                }
+            }
+        };
 
         let mut positive_series = Series2D {
             x: vec![],
@@ -59,30 +65,28 @@ impl Graph for Options {
             range.1.to_u64_checked().unwrap_or_default(),
         );
         for i in range_start..range_end {
-            let profit = self
-                .payoff_at_price(&Positive::new(i as f64).unwrap_or(Positive::ONE))
-                .unwrap_or_default();
+            // Every `u64` is a valid `Positive`; the `else` is never taken.
+            let Ok(price) = Positive::try_from(i) else {
+                continue;
+            };
+            // A price whose payoff cannot be computed is left out of the
+            // chart rather than drawn at zero.
+            let Ok(profit) = self.payoff_at_price(&price) else {
+                continue;
+            };
             match profit {
                 p if p == Decimal::ZERO => {
-                    positive_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
+                    positive_series.x.push(Decimal::from(i));
                     positive_series.y.push(profit);
-                    negative_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
+                    negative_series.x.push(Decimal::from(i));
                     negative_series.y.push(profit);
                 }
                 p if p > Decimal::ZERO => {
-                    positive_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
+                    positive_series.x.push(Decimal::from(i));
                     positive_series.y.push(profit);
                 }
                 _ => {
-                    negative_series
-                        .x
-                        .push(Decimal::from_u64(i).unwrap_or_default());
+                    negative_series.x.push(Decimal::from(i));
                     negative_series.y.push(profit);
                 }
             }

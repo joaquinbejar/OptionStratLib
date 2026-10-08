@@ -67,7 +67,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
     /// propagates the strategy's own error when its positions cannot be
     /// enumerated.
     fn reference_volatility(&self) -> Result<Positive, ProbabilityError> {
-        let spot = self.get_underlying_price().to_dec();
+        let spot = self.get_underlying_price()?.to_dec();
         let positions = self.get_positions().map_err(StrategyError::from)?;
         let mut closest: Option<(Decimal, Positive, Positive)> = None;
         for position in positions {
@@ -154,8 +154,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 probability_of_max_loss: Positive::ZERO, // Default value when no volatility adjustment
                 expected_value,
                 break_even_points: break_even_points.to_vec(),
-                risk_reward_ratio: Positive::new_decimal(self.get_profit_ratio()?)
-                    .unwrap_or(Positive::ZERO),
+                risk_reward_ratio: Positive::new_decimal(self.get_profit_ratio()?)?,
             });
         }
 
@@ -164,8 +163,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let expected_value = self.expected_value(volatility_adj, trend.clone())?;
         let (prob_max_profit, prob_max_loss) =
             self.calculate_extreme_probabilities(volatility_adj, trend)?;
-        let risk_reward_ratio =
-            Positive::new_decimal(self.get_profit_ratio()?).unwrap_or(Positive::ZERO);
+        let risk_reward_ratio = Positive::new_decimal(self.get_profit_ratio()?)?;
 
         Ok(StrategyProbabilityAnalysis {
             probability_of_profit,
@@ -242,11 +240,11 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             && vol_adj.base_volatility == Positive::ZERO
             && vol_adj.std_dev_adjustment == Positive::ZERO
         {
-            return Ok(self.calculate_profit_at(self.get_underlying_price())?);
+            return Ok(self.calculate_profit_at(self.get_underlying_price()?)?);
         }
 
         let volatility = resolve_volatility(self, volatility_adj)?;
-        let step = self.get_underlying_price() / 100.0;
+        let step = self.get_underlying_price()?.checked_div_f64(100.0)?;
         let range = self.get_best_range_to_show(step)?;
         let expiration = *self.get_expiration().values().next().ok_or_else(|| {
             StrategyError::empty_collection("expected_value: no expiration on strategy")
@@ -254,10 +252,11 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
 
         let mut probabilities = Vec::with_capacity(range.len());
         let mut last_prob = Decimal::ZERO;
+        let underlying_price = self.get_underlying_price()?;
 
         for price in range.iter() {
             let prob = calculate_single_point_probability(
-                self.get_underlying_price(),
+                underlying_price,
                 price,
                 volatility,
                 trend.clone(),
@@ -360,7 +359,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let volatility = resolve_volatility(self, volatility_adj)?;
         let mut sum_of_probabilities = Positive::ZERO;
         let ranges = self.get_profit_ranges()?;
-        let option = self.one_option();
+        let option = self.one_option()?;
         let expiration = option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
         let underlying_price = option.underlying_price;
@@ -406,7 +405,7 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
         let volatility = resolve_volatility(self, volatility_adj)?;
         let mut sum_of_probabilities = Positive::ZERO;
         let ranges = self.get_loss_ranges()?;
-        let option = self.one_option();
+        let option = self.one_option()?;
         let expiration = option.expiration_date;
         let risk_free_rate = option.risk_free_rate;
         let underlying_price = option.underlying_price;
@@ -464,12 +463,12 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
                 "calculate_extreme_probabilities: no expiration on strategy",
             )
         })?;
-        let risk_free_rate = *self.get_risk_free_rate().values().next().ok_or_else(|| {
+        let risk_free_rate = *self.get_risk_free_rate()?.values().next().ok_or_else(|| {
             StrategyError::empty_collection(
                 "calculate_extreme_probabilities: no risk_free_rate on strategy",
             )
         })?;
-        let underlying_price = self.get_underlying_price();
+        let underlying_price = self.get_underlying_price()?;
 
         let mut max_profit_prob = Positive::ZERO;
         if let Some(range) = max_profit_range {
@@ -1058,7 +1057,7 @@ mod tests_marginal_probability_inversion {
         );
         assert!(
             strategy
-                .calculate_profit_at(strategy.get_underlying_price())
+                .calculate_profit_at(strategy.get_underlying_price().unwrap())
                 .is_ok(),
             "the profit evaluation still succeeds, so the range is the limit"
         );

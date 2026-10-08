@@ -3,11 +3,6 @@
    Email: jb@taunais.com
    Date: 10/12/24
 ******************************************************************************/
-// Scoped allow: bulk migration of unchecked `[]` indexing to
-// `.get().ok_or_else(..)` tracked as follow-ups to #341. The existing
-// call sites are internal to this file and audited for invariant-bound
-// indices (fixed-length buffers, just-pushed slices, etc.).
-#![allow(clippy::indexing_slicing)]
 
 use super::adjustment::{AdjustmentConfig, AdjustmentPlan};
 use super::optimizer::AdjustmentOptimizer;
@@ -213,7 +208,13 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
         if options.is_empty() {
             return Err(DeltaNeutralityErrorKind::EmptyOptions.into());
         }
-        let underlying_price = *self.get_underlying_price();
+        let underlying_price = *self.get_underlying_price().map_err(|e| {
+            GreeksError::CalculationError(
+                optionstratlib_pricing::error::greeks::CalculationErrorKind::DeltaError {
+                    reason: e.to_string(),
+                },
+            )
+        })?;
         let mut individual_deltas: Vec<DeltaPositionInfo> = Vec::with_capacity(options.len());
         for option in options.iter() {
             let delta = option.delta()?;
@@ -283,7 +284,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
     /// offered by the exchange.
     ///
     fn get_atm_strike(&self) -> Result<Positive, StrategyError> {
-        Ok(*self.get_underlying_price())
+        Ok(*self.get_underlying_price()?)
     }
 
     /// Generates delta adjustments based on the given net delta and option delta per contract.
@@ -395,16 +396,14 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::new_decimal(total_contracts_needed.abs())
-                        .unwrap_or(Positive::ZERO),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())?,
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
                 }
             }
             (true, false, false) => DeltaAdjustment::BuyOptions {
-                quantity: Positive::new_decimal(total_contracts_needed.abs())
-                    .unwrap_or(Positive::ZERO),
+                quantity: Positive::new_decimal(total_contracts_needed.abs())?,
                 strike: option.strike_price,
                 option_style: option.option_style,
                 side: option.side,
@@ -415,8 +414,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
                 // Calculate how many additional contracts we need to buy
                 // discounting those we already have
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::new_decimal(total_contracts_needed.abs())
-                        .unwrap_or(Positive::ZERO),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())?,
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
@@ -424,8 +422,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             }
             // We don't have enough contracts
             (false, true, false) => DeltaAdjustment::BuyOptions {
-                quantity: Positive::new_decimal(total_contracts_needed.abs())
-                    .unwrap_or(Positive::ZERO),
+                quantity: Positive::new_decimal(total_contracts_needed.abs())?,
                 strike: option.strike_price,
                 option_style: option.option_style,
                 side: option.side,
@@ -435,8 +432,7 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             (false, false, true) => {
                 // We already have more contracts than needed, sell the excess
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive::new_decimal(total_contracts_needed.abs())
-                        .unwrap_or(Positive::ZERO),
+                    quantity: Positive::new_decimal(total_contracts_needed.abs())?,
                     strike: option.strike_price,
                     option_style: option.option_style,
                     side: option.side,
@@ -506,40 +502,40 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             }
         }
 
-        if options.len() == 2 {
+        if let [first_option, second_option] = options.as_slice() {
             // Calculate delta neutral sizes based on the current options
             let (delta_neutral_size1, delta_neutral_size2) = calculate_delta_neutral_sizes(
-                options[0].delta()?,
-                options[1].delta()?,
+                first_option.delta()?,
+                second_option.delta()?,
                 total_size,
             )?;
 
             // Calculate size differences (how much to adjust each position)
             let size_diff1: Decimal = d_sub(
                 delta_neutral_size1.to_dec(),
-                options[0].quantity.to_dec(),
+                first_option.quantity.to_dec(),
                 "delta_adjustments::size_diff1",
             )?;
             let size_diff2: Decimal = d_sub(
                 delta_neutral_size2.to_dec(),
-                options[1].quantity.to_dec(),
+                second_option.quantity.to_dec(),
                 "delta_adjustments::size_diff2",
             )?;
 
             // Create adjustment for the first option
             let adjustment1 = if size_diff1.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::new_decimal(size_diff1.abs()).unwrap_or(Positive::ZERO),
-                    strike: options[0].strike_price,
-                    option_style: options[0].option_style,
-                    side: options[0].side,
+                    quantity: Positive::new_decimal(size_diff1.abs())?,
+                    strike: first_option.strike_price,
+                    option_style: first_option.option_style,
+                    side: first_option.side,
                 }
             } else if !size_diff1.is_zero() {
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive::new_decimal(size_diff1.abs()).unwrap_or(Positive::ZERO),
-                    strike: options[0].strike_price,
-                    option_style: options[0].option_style,
-                    side: options[0].side,
+                    quantity: Positive::new_decimal(size_diff1.abs())?,
+                    strike: first_option.strike_price,
+                    option_style: first_option.option_style,
+                    side: first_option.side,
                 }
             } else {
                 DeltaAdjustment::NoAdjustmentNeeded
@@ -548,17 +544,17 @@ pub trait DeltaNeutrality: Greeks + Positionable + Strategies {
             // Create adjustment for the second option
             let adjustment2 = if size_diff2.is_sign_positive() {
                 DeltaAdjustment::BuyOptions {
-                    quantity: Positive::new_decimal(size_diff2.abs()).unwrap_or(Positive::ZERO),
-                    strike: options[1].strike_price,
-                    option_style: options[1].option_style,
-                    side: options[1].side,
+                    quantity: Positive::new_decimal(size_diff2.abs())?,
+                    strike: second_option.strike_price,
+                    option_style: second_option.option_style,
+                    side: second_option.side,
                 }
             } else if !size_diff2.is_zero() {
                 DeltaAdjustment::SellOptions {
-                    quantity: Positive::new_decimal(size_diff2.abs()).unwrap_or(Positive::ZERO),
-                    strike: options[1].strike_price,
-                    option_style: options[1].option_style,
-                    side: options[1].side,
+                    quantity: Positive::new_decimal(size_diff2.abs())?,
+                    strike: second_option.strike_price,
+                    option_style: second_option.option_style,
+                    side: second_option.side,
                 }
             } else {
                 DeltaAdjustment::NoAdjustmentNeeded
