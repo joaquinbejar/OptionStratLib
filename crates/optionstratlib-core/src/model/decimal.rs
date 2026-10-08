@@ -358,7 +358,9 @@ pub fn decimal_to_f64(value: Decimal) -> Result<f64, DecimalError> {
 /// }
 /// ```
 pub fn f64_to_decimal(value: f64) -> Result<Decimal, DecimalError> {
-    Decimal::from_f64(value).ok_or(DecimalError::ConversionError {
+    // `ok_or_else`: the error formats the value and allocates three
+    // `String`s, which `ok_or` paid on every successful call too (#857).
+    Decimal::from_f64(value).ok_or_else(|| DecimalError::ConversionError {
         from_type: format!("f64: {value}"),
         to_type: "Decimal".to_string(),
         reason: "Failed to convert f64 to Decimal".to_string(),

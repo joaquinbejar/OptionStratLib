@@ -413,7 +413,9 @@ pub fn get_today_or_tomorrow_formatted() -> String {
     let now = Utc::now();
     // Get the date we should use based on current UTC time
     let target_date = if now.time() > cutoff_time {
-        now.date_naive().succ_opt().unwrap_or(now.date_naive()) // Get next day safely
+        now.date_naive()
+            .succ_opt()
+            .unwrap_or_else(|| now.date_naive()) // Get next day safely
     } else {
         now.date_naive()
     };

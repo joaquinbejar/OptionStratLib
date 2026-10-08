@@ -3099,6 +3099,18 @@ summarize the release.
   37.6 ms to 2.75 ms. The host was shared (load average about 30 during
   the after run), so the medians carry its load.
 
+- **Errors and defaults are built lazily** (#857). `f64_to_decimal`,
+  `random_decimal`, `IronButterfly`'s position lookup, the chain built from
+  option data and `get_today_or_tomorrow_formatted` built their error or
+  default eagerly with `ok_or(..)` / `unwrap_or(..)`, so the success path
+  paid for it too: `f64_to_decimal` formatted the value and allocated three
+  `String`s on every successful conversion. They use `ok_or_else` /
+  `unwrap_or_else` now, with the same values, and every library crate denies
+  `clippy::or_fun_call` so the pattern does not come back. Criterion on the
+  bench host of `docs/release/0.22/benchmarks.md`, before and after:
+  `f64_to_decimal` 149 ns to 80 ns (-46%), and the normal CDF `big_n`, which
+  returns through it, 200 ns to 128 ns (-36%).
+
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
   instead of collecting the points into a `Vec` and scanning it, and reads
