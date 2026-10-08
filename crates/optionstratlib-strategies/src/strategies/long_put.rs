@@ -625,4 +625,31 @@ mod tests_break_even {
         assert_eq!(break_evens.len(), 1);
         assert_eq!(break_evens[0], pos_or_panic!(95.0));
     }
+
+    /// `new` reported no break-even before #780: the strategy it builds now
+    /// matches the same leg added to a `Default` one, break-evens included.
+    #[test]
+    fn test_long_put_new_matches_leg_added_to_default() {
+        let built = LongPut::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            ExpirationDate::Days(pos_or_panic!(30.0)),
+            pos_or_panic!(0.20),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(4.1),
+            pos_or_panic!(0.5),
+            pos_or_panic!(0.5),
+        )
+        .unwrap();
+        assert_eq!(built.get_break_even_points().unwrap().len(), 1);
+        let mut added = LongPut::default();
+        added.add_position(&built.long_put).unwrap();
+        assert_eq!(
+            serde_json::to_value(&added).unwrap(),
+            serde_json::to_value(&built).unwrap()
+        );
+    }
 }

@@ -1461,17 +1461,29 @@ summarize the release.
     no break-evens instead of stale ones, and the edit stands.
 
   The constructors fill their legs through a private path, so `new` and
-  `get_strategy` results are unchanged. `LongCall::new`, `LongPut::new`,
-  `ShortCall::new` and `ShortPut::new` returned no break-evens at all; they
-  now compute them like every other constructor, so the same leg has the
-  same break-even whether it is built by `new` or added to a `Default`
-  strategy. No signature changes. The visualization golden
+  `get_strategy` results are unchanged (except the single-leg constructors,
+  below). No signature changes. Tests: for one strategy of each family
+  (vertical spread, iron condor, butterfly, ladder, straddle, strangle,
+  PMCC, single leg) an edit leaves the break-evens of the same legs built
+  by `new`, and an edit whose premium total overflows is rejected with the
+  strategy unchanged.
+
+- **`LongCall::new`, `LongPut::new`, `ShortCall::new` and `ShortPut::new`
+  now report their break-even** (#780). They returned an empty
+  break-even list, while every multi-leg constructor computes it; with
+  `add_position` now refreshing break-evens, the same leg would have had a
+  break-even when added to a `Default` strategy and none when built by
+  `new`. Behaviour change: **a single-leg strategy built by `new` now has
+  one break-even** (the strike shifted by the premium net of fees per
+  contract), and `new` returns a `StrategyError` when
+  that computation fails. No signature changes. The visualization golden
   `graph_data.json` is regenerated for the four single-leg charts only,
-  which had pinned the missing break-even. Tests: for one strategy of each
-  family (vertical spread, iron condor, butterfly, ladder, straddle,
-  strangle, PMCC, single leg) an edit leaves the break-evens of the same
-  legs built by `new`, and an edit whose premium total overflows is
-  rejected with the strategy unchanged.
+  which had pinned the missing (or, for the two built as `Default` +
+  `add_position`, never refreshed) break-even; every other chart is
+  unchanged. Tests: each single-leg strategy built by `new` matches the
+  same leg added to a `Default` one (chart data for `LongCall` and
+  `ShortPut`, whose `new` is public; strategy state for `LongPut` and
+  `ShortCall`).
 
 - **Path-based pricers include the dividend yield in the drift** (#756).
   `pricing::telegraph` simulated the log price with drift

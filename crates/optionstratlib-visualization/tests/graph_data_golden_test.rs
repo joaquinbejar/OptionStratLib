@@ -603,3 +603,59 @@ fn test_chart_request_with_invalid_positions_is_an_error() -> Result<(), Box<dyn
     assert!(error.downcast_ref::<StrategyError>().is_some());
     Ok(())
 }
+
+#[test]
+fn test_single_leg_added_to_default_charts_like_new() -> Result<(), Box<dyn Error>> {
+    // The four single-leg golden entries were regenerated in #780: two are
+    // built by `new`, which reported no break-even, and two as `Default` +
+    // `add_position`, which left it stale. The same leg now charts the same
+    // way through either path. `LongPut::new` and `ShortCall::new` are
+    // private, so their two strategies are compared in their own unit
+    // tests instead.
+    let hundred = Positive::HUNDRED;
+    let iv = pos(IMPLIED_VOLATILITY)?;
+    let fee = pos(FEE)?;
+    let days = expiry(EXPIRY_DAYS)?;
+    let one = Positive::ONE;
+    let zero = Positive::ZERO;
+    let symbol = || SYMBOL.to_string();
+    for premium in [dec!(4.1), dec!(4.5)] {
+        let premium_pos = pos(premium)?;
+        let call = leg(Side::Long, OptionStyle::Call, dec!(100), premium)?;
+        let mut added = LongCall::default();
+        added.add_position(&call)?;
+        let built = LongCall::new(
+            symbol(),
+            hundred,
+            days,
+            iv,
+            one,
+            hundred,
+            RISK_FREE_RATE,
+            zero,
+            premium_pos,
+            fee,
+            fee,
+        )?;
+        assert_eq!(entry(&added)?, entry(&built)?, "LongCall at {premium}");
+
+        let put = leg(Side::Short, OptionStyle::Put, dec!(100), premium)?;
+        let mut added = ShortPut::default();
+        added.add_position(&put)?;
+        let built = ShortPut::new(
+            symbol(),
+            hundred,
+            days,
+            iv,
+            one,
+            hundred,
+            RISK_FREE_RATE,
+            zero,
+            premium_pos,
+            fee,
+            fee,
+        )?;
+        assert_eq!(entry(&added)?, entry(&built)?, "ShortPut at {premium}");
+    }
+    Ok(())
+}
