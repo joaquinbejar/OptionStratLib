@@ -1707,9 +1707,17 @@ impl Arithmetic<Surface> for Surface {
             .flat_map(|i| {
                 (0..=steps).into_par_iter().map(move |j| {
                     let x_offset = d_mul(x_step, Decimal::from(i), op).map_err(construction_err)?;
-                    let x = d_add(min_x, x_offset, op).map_err(construction_err)?;
+                    // The steps are rounded at 28 places, so on a span with a
+                    // long mantissa `step * steps` can land past the maximum
+                    // and fail the interpolation (#795). Clamping moves only
+                    // such a point, so every grid that fit before is unchanged.
+                    let x = d_add(min_x, x_offset, op)
+                        .map_err(construction_err)?
+                        .min(max_x);
                     let y_offset = d_mul(y_step, Decimal::from(j), op).map_err(construction_err)?;
-                    let y = d_add(min_y, y_offset, op).map_err(construction_err)?;
+                    let y = d_add(min_y, y_offset, op)
+                        .map_err(construction_err)?
+                        .min(max_y);
                     let point = Point2D::new(x, y);
 
                     // Interpolate z values
@@ -3321,6 +3329,37 @@ mod tests_surface_arithmetic {
             Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0)),
         ]);
         Surface::new(points)
+    }
+
+    /// The end of both ranges in [`long_mantissa_surface`]: a 27-place
+    /// mantissa whose `span / 50` rounds up at 28 places, to
+    /// `0.2000000000000000000000000004`, so `step * 50` used to land on
+    /// `10.000000000000000000000000020`, past the maximum (#795).
+    const LONG_MANTISSA_MAX: Decimal = dec!(10.000000000000000000000000018);
+
+    /// The plane `z = x + y` on the grid `{0, 2.5, 5, 7.5, LONG_MANTISSA_MAX}`
+    /// on both axes.
+    fn long_mantissa_surface() -> Surface {
+        let axis = [dec!(0), dec!(2.5), dec!(5), dec!(7.5), LONG_MANTISSA_MAX];
+        let points = axis
+            .iter()
+            .flat_map(|&x| axis.iter().map(move |&y| Point3D::new(x, y, x + y)))
+            .collect();
+        Surface::new(points)
+    }
+
+    #[test]
+    fn test_merge_long_mantissa_ranges_end_on_the_maximum() {
+        let surface = long_mantissa_surface();
+        let max = LONG_MANTISSA_MAX;
+
+        let result = surface.merge_with(&surface, MergeOperation::Add).unwrap();
+
+        // A 51 x 51 grid from 0 to the maximum on each axis, none past it.
+        assert_eq!(result.points.len(), 51 * 51);
+        assert!(result.points.iter().all(|p| p.x <= max && p.y <= max));
+        assert_eq!(result.x_range, (Decimal::ZERO, max));
+        assert_eq!(result.y_range, (Decimal::ZERO, max));
     }
 
     #[test]

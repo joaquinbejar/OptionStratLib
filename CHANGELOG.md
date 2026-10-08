@@ -1479,6 +1479,22 @@ summarize the release.
 
 ### Fixed
 
+- **`Curve::merge` and `Surface::merge` keep their grid inside the common
+  range** (#795). Both resample on `min + step * i` with
+  `step = span / steps` rounded at 28 places, so on a span with a 27- or
+  28-place mantissa `step * steps` could land past the maximum and the merge
+  failed on its last grid point (`interpolation target
+  10.000000000000000000000000020 is outside the supported range` for a curve
+  sampled at `x = (10 / 511) * i`). Each grid coordinate is now clamped to
+  the range's maximum. A merge that succeeded before had no point past it, so
+  its result is bit-identical: on 964 merges of curves and surfaces sampled
+  at `(end / n) * i` (`n` up to 119, four ends), the 684 that succeeded
+  before return the same points, and 272 of the 280 that failed now succeed
+  (the other 8 are two-point curves that cubic interpolation rejects).
+  Regression tests cover the `10 / 511` curve and a surface ending on
+  `10.000000000000000000000000018`, and the math benches' fixture goes back
+  to the natural `step * i` abscissas it had avoided.
+
 - **`CustomStrategy::find_optimal` no longer leaves stale break-evens
   when they cannot be recomputed** (#791). The search only logged a
   failed recomputation, so it scored candidates against stale
