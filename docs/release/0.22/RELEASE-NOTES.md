@@ -459,29 +459,29 @@ has the method, ranges, raw samples, artifact sizes and confounders.
 
 | Profile | Resolved packages | Clean check (s) | Clean build (s) |
 | --- | ---: | ---: | ---: |
-| 0.21.3 default | 131 | 17.5 | 23.4 |
-| `optionstratlib-core` | 41 | 4.1 | 4.9 |
-| `optionstratlib-pricing` | 62 | 8.7 | 11.2 |
+| 0.21.3 default | 131 | 17.1 | 22.9 |
+| `optionstratlib-core` | 41 | 3.8 | 4.5 |
+| `optionstratlib-pricing` | 62 | 9.0 | 11.0 |
 | `optionstratlib-market` | 63 | 9.2 | 11.7 |
 | `optionstratlib-simulation` | 63 | 9.1 | 11.1 |
 | `optionstratlib-analytics` | 65 | 9.6 | 12.1 |
 | facade, `--no-default-features --features backtest` | 69 | 11.3 | 15.1 |
 | facade default | 124 | 15.7 | 21.3 |
-| 0.21.3 all features | 284 | 42.8 | 55.2 |
+| 0.21.3 all features | 284 | 41.7 | 52.7 |
 | facade all features | 264 | 34.5 | 42.8 |
 
 - A focused consumer resolves 41 to 69 packages instead of 131 and checks
-  from clean in 23 % to 65 % of the 0.21.3 time; each focused graph
+  from clean in 22 % to 66 % of the 0.21.3 time; each focused graph
   excludes the capabilities it does not use (no market data, I/O or charts
   under pricing, no simulation under market, no strategies under
   simulation).
-- The facade default resolves 7 fewer packages and checks about 10 % faster
-  than the 0.21.3 default, although it compiles more features (`io`,
+- The facade default resolves 7 fewer packages and checks 8 % faster than
+  the 0.21.3 default, although it compiles more features (`io`,
   `synthetic`, `schema`, terminal reports). With all features, 0.22
-  resolves 20 fewer packages and checks 19 % and builds 22 % faster.
-- A one-file change inside a component re-checks in 0.1 to 0.3 s, against
-  2.0 s for the 0.21.3 crate; a change to `optionstratlib-core` still takes
-  1.2 to 1.6 s through the facade.
+  resolves 20 fewer packages and checks 17 % and builds 19 % faster.
+- A one-file change inside a component re-checks in 0.2 to 0.3 s, against
+  1.3 s for the 0.21.3 crate; a change to `optionstratlib-core` takes 1.2 to
+  1.6 s through the facade, about as long as the 0.21.3 crate.
 
 These compare the two releases as a whole: 0.22 also carries 14 % more
 production code and other changes besides the crate split, so the deltas

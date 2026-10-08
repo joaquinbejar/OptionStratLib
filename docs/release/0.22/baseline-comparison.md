@@ -17,13 +17,15 @@ the resolved package lists are in
 
 - **Host:** flumix, x86_64, 16 threads, 31 GiB RAM, Ubuntu 24.04 (Linux
   6.8.0-139). Its Docker containers stayed up but idle (load average 0.00
-  before the run), no other compilation ran, and one idle login shell held no
-  CPU.
+  before the run), and one idle login shell held no CPU. Another agent's
+  Criterion run overlapped 20:00 to 20:18 UTC; every sample in that window
+  was discarded and re-taken (see Method).
 - **Toolchain:** `rustc 1.99.0 (b940084d7 2026-09-28)`, `cargo 1.99.0
   (5f94df478 2026-08-27)`, the stable channel both `rust-toolchain.toml`
   files name. 0.21.3 builds on 1.99 unchanged, so no older toolchain was
   needed.
-- **Measured:** 2026-10-08, 20:08 to 20:44 UTC.
+- **Measured:** 2026-10-08, 20:08 to 21:00 UTC; the samples kept are
+  from 20:18 to 21:00 UTC.
 
 Both lockfiles are fresh resolutions made minutes apart (`cargo
 generate-lockfile`), so transitive versions come from the same registry state.
@@ -49,6 +51,17 @@ policy:
   clean build and clean check, both revisions) got three more samples in a
   second pass that alternated the two revisions sample by sample
   ([`interleave-563.sh`](baseline-comparison/interleave-563.sh)), six in all.
+- **Discarded and re-taken:** another agent's Criterion run occupied flumix
+  from about 20:00 to 20:18 UTC (22:00 to 22:18 local). That window held the
+  whole first 0.21.3 pass and the 0.22 core and pricing profiles. All 36 of
+  their samples were discarded and re-taken from 20:50 to 21:00 UTC
+  ([`timing-563-retake.sh`](baseline-comparison/timing-563-retake.sh), the
+  same script). Before every sample, the re-take logged the load average and
+  the busiest processes; only an idle `dockerd` and kernel workers appear. The
+  first-pass logs (`timing-0213.log`, and `timing-main.log` up to 20:18:49)
+  are kept for the record but not used. The 0.22 profiles from market onward
+  (from 20:18:49) and the alternated pass (20:31 to 20:44) lie outside the
+  window.
 - **Package counts:** M0's command, `cargo tree -q <profile> -e normal
   --prefix none | sed 's/ (\*)$//' | sort -u | wc -l` (name/version pairs;
   two versions of one crate count twice)
@@ -137,10 +150,10 @@ clean` before every sample.
 
 | Profile | Clean check | Range | Clean build | Range | Samples |
 | --- | ---: | --- | ---: | --- | ---: |
-| 0.21.3 default | 17.5 | 17.0 to 18.4 | 23.4 | 22.1 to 24.7 | 6 |
-| 0.21.3 all features | 42.8 | 41.6 to 44.1 | 55.2 | 52.7 to 78.3 | 6 |
-| core | 4.1 | 3.8 to 4.1 | 4.9 | 4.8 to 4.9 | 3 |
-| pricing | 8.7 | 8.6 to 8.8 | 11.2 | 10.8 to 11.3 | 3 |
+| 0.21.3 default | 17.1 | 16.0 to 17.8 | 22.9 | 22.4 to 24.7 | 6 |
+| 0.21.3 all features | 41.7 | 41.0 to 42.1 | 52.7 | 51.5 to 54.6 | 6 |
+| core | 3.8 | 3.8 to 3.8 | 4.5 | 4.5 to 4.6 | 3 |
+| pricing | 9.0 | 8.6 to 9.5 | 11.0 | 10.8 to 11.3 | 3 |
 | market | 9.2 | 9.1 to 9.3 | 11.7 | 11.3 to 11.8 | 3 |
 | simulation | 9.1 | 8.9 to 9.1 | 11.1 | 10.9 to 11.6 | 3 |
 | analytics | 9.6 | 9.5 to 9.7 | 12.1 | 12.0 to 12.1 | 3 |
@@ -152,35 +165,38 @@ Deltas of the medians against the 0.21.3 counterpart:
 
 | Profile | Clean check | Clean build |
 | --- | ---: | ---: |
-| core | -77 % | -79 % |
-| pricing | -50 % | -52 % |
-| market | -47 % | -50 % |
-| simulation | -48 % | -53 % |
-| analytics | -45 % | -48 % |
-| headless facade | -35 % | -35 % |
-| 0.22 default | -10 % | -9 % |
-| all features | -19 % | -22 % |
+| core | -78 % | -80 % |
+| pricing | -47 % | -52 % |
+| market | -46 % | -49 % |
+| simulation | -47 % | -52 % |
+| analytics | -44 % | -47 % |
+| headless facade | -34 % | -34 % |
+| 0.22 default | -8 % | -7 % |
+| all features | -17 % | -19 % |
 
 Raw samples, in run order:
 
-- 0.21.3 default, build: 22.1, 23.7, 23.2, 22.5, 24.1, 24.7; check: 17.2,
-  18.4, 17.8, 17.8, 17.0, 17.2.
-- 0.21.3 all features, build: 56.3, 55.9, 78.3, 54.6, 52.7, 53.5; check:
-  43.9, 44.1, 43.4, 41.6, 41.7, 42.1. The 78.3 is a single outlier: the other
-  five samples, three of them in the alternated second pass, sit between 52.7
-  and 56.3. The median absorbs it, and the delta is -22 % with or without it.
+- 0.21.3 default (re-take, then alternated pass), build: 22.4, 22.8, 23.0,
+  22.5, 24.1, 24.7; check: 16.5, 16.0, 17.5, 17.8, 17.0, 17.2.
+- 0.21.3 all features (same order), build: 51.5, 52.4, 52.7, 54.6, 52.7,
+  53.5; check: 41.5, 41.0, 41.7, 41.6, 41.7, 42.1.
 - 0.22 default, build: 21.4, 20.9, 22.0, 20.9, 21.7, 21.2; check: 15.2, 15.4,
   16.0, 15.6, 15.8, 15.8.
 - 0.22 all features, build: 42.0, 42.5, 42.9, 42.7, 43.7, 43.4; check: 34.4,
   34.5, 34.2, 34.6, 34.5, 35.0.
-- The focused profiles' samples are in `timing-main.log`.
+- core and pricing (re-take): build 4.6, 4.5, 4.5 and 11.3, 11.0, 10.8;
+  check 3.8, 3.8, 3.8 and 9.0, 8.6, 9.5. The other focused profiles'
+  samples are in `timing-main.log`.
+- The discarded first 0.21.3 pass ran slower under the overlapping load:
+  23.2 s default build and 55.9 s all-features build medians, one sample at
+  78.3 s.
 
 **Incremental check** (`touch`, warm cache, three samples):
 
 | Profile | File touched | Median (s) | Range (s) |
 | --- | --- | ---: | --- |
-| 0.21.3 default | `src/lib.rs` (all code) | 2.0 | 1.5 to 3.2 |
-| 0.21.3 all features | `src/lib.rs` | 4.0 | 3.9 to 4.0 |
+| 0.21.3 default | `src/lib.rs` (all code) | 1.3 | 1.3 to 1.3 |
+| 0.21.3 all features | `src/lib.rs` | 3.8 | 3.8 to 3.8 |
 | core, pricing, market, simulation, analytics | the crate's own `src/lib.rs` | 0.2 to 0.3 | 0.2 to 0.3 |
 | headless facade | `src/lib.rs` / `crates/optionstratlib-core/src/lib.rs` | 0.1 / 1.2 | 0.1 / 1.2 |
 | 0.22 default | `src/lib.rs` / `crates/optionstratlib-core/src/lib.rs` | 0.1 / 1.6 | 0.1 / 1.6 to 3.6 |
@@ -196,6 +212,8 @@ re-runs it on every check (see the confounders).
 
 ## Artifacts (debug)
 
+Sizes do not depend on machine load: the re-take reproduced the first
+pass's 0.21.3, core and pricing figures to within 25 bytes of `target/`.
 `target/` is the whole directory after the clean build. "Library rlibs" is
 the sum of the OptionStratLib crates' own `.rlib` files in `target/debug/deps`;
 in 0.21.3 that is the single `liboptionstratlib.rlib`.
@@ -241,24 +259,24 @@ code. The totals fall because fewer dependencies are compiled.
   all-features incremental check in both, so the all-features incremental
   numbers measure that script as much as the library.
 - **Single host, one evening.** Six samples for the headline cells, three for
-  the rest. Every clean timing lies within 6 % of its median, with two
-  exceptions: the 0.21.3 outlier described with the raw samples, and core's
-  fastest check (3.8 s, 7 % under a 4.1 s median).
+  the rest. Every clean timing lies within 8 % of its median. The samples
+  that overlapped another run were discarded, not averaged in.
 - **Debug profile only**, as M0. Release builds were not measured.
 
 ## Conclusions the data supports
 
 - Every focused 0.22 profile resolves about half the packages of the 0.21.3
-  crate (41 to 69 against 131) and checks from clean in 23 % to 65 % of its
-  time, with the excluded capabilities verified absent from each graph.
-- The 0.22 facade's default resolves 124 pairs against 131, and checks and
-  builds about 10 % faster, while compiling more features.
-- With all features, 0.22 resolves 264 pairs against 284, and checks 19 % and
-  builds 22 % faster.
-- Incremental checks after a one-file change inside a component take 0.1 to
-  0.3 s in that component, against 2.0 s for the 0.21.3 crate. A change to
-  core, which every layer depends on, still takes 1.2 to 1.6 s through the
-  facade.
+  crate, or less (41 to 69 against 131), and checks from clean in 22 % to
+  66 % of its time, with the excluded capabilities verified absent from each
+  graph.
+- The 0.22 facade's default resolves 124 pairs against 131, and checks 8 %
+  and builds 7 % faster, while compiling more features.
+- With all features, 0.22 resolves 264 pairs against 284, and checks 17 % and
+  builds 19 % faster.
+- Incremental checks after a one-file change inside a component take 0.2 to
+  0.3 s, against 1.3 s for the 0.21.3 crate. A change to core, which every
+  layer depends on, takes 1.2 to 1.6 s through the facade, about as long as
+  0.21.3's single crate.
 
 These are measurements of the two releases on one machine. They do not
 isolate how much of each delta comes from the crate split rather than from

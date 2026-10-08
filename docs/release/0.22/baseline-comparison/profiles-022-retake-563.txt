@@ -1,0 +1,2 @@
+core|-p optionstratlib-core|crates/optionstratlib-core/src/lib.rs
+pricing|-p optionstratlib-pricing|crates/optionstratlib-pricing/src/lib.rs
