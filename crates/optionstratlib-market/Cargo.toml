@@ -33,6 +33,11 @@ schema = [
     "optionstratlib-simulation?/schema",
 ]
 
+[package.metadata.docs.rs]
+# docs.rs builds the default features, empty for this crate, so name the
+# optional ones the API documents. Nothing here needs a browser or the network.
+features = ["io", "async", "synthetic", "schema"]
+
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true }

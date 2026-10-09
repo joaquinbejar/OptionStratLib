@@ -94,6 +94,12 @@ schema = [
 # crate and nothing in the facade itself (ADR-0002 section 2).
 async = ["market", "io", "optionstratlib-market/async"]
 
+[package.metadata.docs.rs]
+# docs.rs builds the default features; add the two optional ones the API
+# documents. `static_export` is left out: its build script needs a browser,
+# which docs.rs does not have.
+features = ["plotly", "async"]
+
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true, optional = true }

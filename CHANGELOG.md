@@ -3146,6 +3146,18 @@ summarize the release.
 
 ### Changed
 
+- **docs.rs documents the optional features** (no issue, release
+  preparation). docs.rs builds a crate's default features, which are empty
+  for every component, so `io`, `async`, `synthetic`, `schema` and `plotly`
+  items would have been missing from the published docs. Each crate now
+  names them in `[package.metadata.docs.rs]`: `schema` for core, math,
+  pricing, simulation, analytics, strategies and backtest; `io`, `async`,
+  `synthetic` and `schema` for market; `plotly` for visualization; and
+  `plotly` and `async` on top of the default for the facade. `static_export`
+  is left out everywhere because its build script needs a browser, which
+  docs.rs does not have. Each set was checked with
+  `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps`.
+
 - **Single-leg backtests evaluate their paths on the rayon pool and reuse
   one option per path** (#863). `simulate_single_leg` evaluated every walk
   serially and cloned the leg's `Options` at every step to price it. It now
