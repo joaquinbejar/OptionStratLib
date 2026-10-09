@@ -16,6 +16,19 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Option contracts and shares are reported apart** (#830). By owner
+  decision a leg's quantity stays in its native unit: option legs count
+  contracts of `contract_size` underlying units, share legs count units of
+  the underlying. `Strategies::get_volume` is documented as the option
+  contracts only (the share legs of `CoveredCall`, `Collar` and
+  `ProtectivePut` never entered it), and the new
+  `Strategies::get_share_volume` reports the share leg, zero for a strategy
+  without one. `LegAble::get_quantity` and the delta-neutral adjustments
+  name the unit of every quantity. A test pins a covered call, a protective
+  put and a collar at contract sizes 1 and 100. Migration: a trait
+  implementor of `Strategies` gets the default `get_share_volume`; code that
+  wanted the share count reads `get_share_volume` instead of the share leg.
+
 - **`static_export` no longer implies `async`** (#833). In 0.21 and the
   0.22 drafts the facade's `static_export` enabled `async`, and with it the
   market `io` stack (`csv`, `zip`) and the market `tokio` wrappers. PNG and

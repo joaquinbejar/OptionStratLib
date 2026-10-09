@@ -41,7 +41,14 @@ pub trait LegAble {
     /// Returns the symbol/ticker of the underlying instrument.
     fn get_symbol(&self) -> &str;
 
-    /// Returns the position quantity (number of units/contracts).
+    /// Returns the position quantity in the leg's native unit (#830).
+    ///
+    /// The unit depends on the leg and is never converted: a `SpotPosition`
+    /// counts units of the underlying (shares), a `FuturePosition` counts
+    /// contracts, a `PerpetualPosition` counts base-currency units and an
+    /// option `Position` counts contracts, each `contract_size` underlying
+    /// units. Quantities of different leg types are not comparable without
+    /// that conversion, so do not add them together.
     fn get_quantity(&self) -> Positive;
 
     /// Returns the position side (Long or Short).

@@ -707,6 +707,10 @@ impl BasicAble for ProtectivePut {
 }
 
 impl Strategies for ProtectivePut {
+    fn get_share_volume(&self) -> Result<Positive, StrategyError> {
+        Ok(self.spot_leg.quantity)
+    }
+
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         Ok(Positive::MAX)
     }
