@@ -470,11 +470,24 @@ impl Positionable for ShortPut {
 }
 
 impl StrategyConstructor for ShortPut {
-    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_strategy",
+    /// Builds the strategy from its one short put position (#831).
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        let position = crate::strategies::shared::single_leg_position(
+            vec_positions,
+            OptionStyle::Put,
+            Side::Short,
             "ShortPut",
-        ))
+        )?;
+        let mut strategy = ShortPut::default();
+        strategy.place_leg(position)?;
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ShortPut,
+                "the requested leg fails validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 

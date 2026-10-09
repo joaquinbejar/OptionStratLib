@@ -463,11 +463,24 @@ impl Positionable for LongPut {
 }
 
 impl StrategyConstructor for LongPut {
-    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_strategy",
+    /// Builds the strategy from its one long put position (#831).
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        let position = crate::strategies::shared::single_leg_position(
+            vec_positions,
+            OptionStyle::Put,
+            Side::Long,
             "LongPut",
-        ))
+        )?;
+        let mut strategy = LongPut::default();
+        strategy.place_leg(position)?;
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongPut,
+                "the requested leg fails validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -594,9 +607,7 @@ mod tests_break_even {
 
     /// A long put pays a debit, so its lower break-even sits *below* the
     /// strike: a 100 strike bought for 5 breaks even at 95. Negating the
-    /// per-contract cost moved it the other way and reported 105. The
-    /// `StrategyConstructor` property cannot reach this, since `LongPut`
-    /// answers `OperationNotSupported` and that branch never runs.
+    /// per-contract cost moved it the other way and reported 105.
     #[test]
     fn test_long_put_lower_break_even_sits_below_the_strike() {
         let mut long_put = LongPut::new(

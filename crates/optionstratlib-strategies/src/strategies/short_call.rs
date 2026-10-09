@@ -468,11 +468,24 @@ impl Positionable for ShortCall {
 }
 
 impl StrategyConstructor for ShortCall {
-    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_strategy",
+    /// Builds the strategy from its one short call position (#831).
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        let position = crate::strategies::shared::single_leg_position(
+            vec_positions,
+            OptionStyle::Call,
+            Side::Short,
             "ShortCall",
-        ))
+        )?;
+        let mut strategy = ShortCall::default();
+        strategy.place_leg(position)?;
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ShortCall,
+                "the requested leg fails validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 

@@ -21,7 +21,7 @@ use crate::strategies::shared::spot_leg_mark_to_market;
 use crate::strategies::shared::{
     apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
 };
-use crate::strategies::{BasicAble, Strategies};
+use crate::strategies::{BasicAble, Strategies, StrategyConstructor};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
@@ -484,6 +484,55 @@ impl Validable for ProtectivePut {
     }
 }
 
+impl StrategyConstructor for ProtectivePut {
+    /// A ProtectivePut holds the underlying, which a slice of option positions cannot
+    /// carry: use [`StrategyConstructor::get_strategy_with_spot`] (#831).
+    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        Err(StrategyError::invalid_parameters(
+            "ProtectivePut get_strategy",
+            "the strategy holds the underlying: build it with get_strategy_with_spot",
+        ))
+    }
+
+    /// Builds the strategy from its share leg and one long put (#831).
+    fn get_strategy_with_spot(
+        spot_leg: Option<&SpotPosition>,
+        vec_positions: &[Position],
+    ) -> Result<Self, StrategyError> {
+        let operation = "ProtectivePut get_strategy_with_spot";
+        let spot_leg =
+            crate::strategies::shared::covered_spot_leg(spot_leg, vec_positions, "ProtectivePut")?
+                .clone();
+        if vec_positions.len() != 1 {
+            return Err(StrategyError::invalid_parameters(
+                operation,
+                "must have exactly 1 option",
+            ));
+        }
+        let long_put = vec_positions
+            .iter()
+            .find(|p| p.option.option_style == OptionStyle::Put && p.option.side == Side::Long)
+            .ok_or_else(|| StrategyError::invalid_parameters(operation, "must have a long put"))?
+            .clone();
+        let mut strategy = ProtectivePut {
+            name: format!("ProtectivePut_{}", spot_leg.symbol),
+            kind: StrategyType::ProtectivePut,
+            description: PROTECTIVE_PUT_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            spot_leg,
+            long_put,
+        };
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::ProtectivePut,
+                "the requested legs fail validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
+    }
+}
+
 impl BreakEvenable for ProtectivePut {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
@@ -796,8 +845,6 @@ impl DeltaNeutrality for ProtectivePut {}
 impl Optimizable for ProtectivePut {
     type Strategy = ProtectivePut;
 }
-
-impl crate::strategies::StrategyConstructor for ProtectivePut {}
 
 impl ProbabilityAnalysis for ProtectivePut {
     /// With an exact hedge the profit zone runs from the break-even up. A put

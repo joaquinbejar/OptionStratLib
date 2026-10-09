@@ -34,7 +34,7 @@ use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub};
 use optionstratlib_core::model::leg::SpotPosition;
 use optionstratlib_core::model::leg::traits::LegAble;
 use optionstratlib_core::model::position::Position;
-use optionstratlib_core::model::types::Side;
+use optionstratlib_core::model::types::{OptionStyle, Side};
 use optionstratlib_pricing::error::PricingError;
 use rust_decimal::Decimal;
 
@@ -740,6 +740,72 @@ where
         return Err(error.into());
     }
     Ok(())
+}
+
+/// The single position of a single-leg request, checked against the leg the
+/// strategy holds (#831).
+///
+/// # Errors
+///
+/// Returns `StrategyError::OperationError` unless `positions` holds exactly
+/// one position of `style` on `side`.
+pub(crate) fn single_leg_position<'a>(
+    positions: &'a [Position],
+    style: OptionStyle,
+    side: Side,
+    strategy: &str,
+) -> Result<&'a Position, StrategyError> {
+    let operation = format!("{strategy} get_strategy");
+    let [position] = positions else {
+        return Err(StrategyError::invalid_parameters(
+            &operation,
+            "must have exactly 1 option",
+        ));
+    };
+    if position.option.option_style != style || position.option.side != side {
+        return Err(StrategyError::invalid_parameters(
+            &operation,
+            &format!("the option must be a {side:?} {style:?}"),
+        ));
+    }
+    Ok(position)
+}
+
+/// The share leg of a covered request (#831): present, long, and on the
+/// underlying of every option position.
+///
+/// # Errors
+///
+/// Returns `StrategyError::OperationError` when `spot_leg` is missing, is
+/// short, or names another underlying than one of `positions`.
+pub(crate) fn covered_spot_leg<'a>(
+    spot_leg: Option<&'a SpotPosition>,
+    positions: &[Position],
+    strategy: &str,
+) -> Result<&'a SpotPosition, StrategyError> {
+    let operation = format!("{strategy} get_strategy_with_spot");
+    let Some(spot_leg) = spot_leg else {
+        return Err(StrategyError::invalid_parameters(
+            &operation,
+            "the strategy holds the underlying: a share leg is required",
+        ));
+    };
+    if spot_leg.side != Side::Long {
+        return Err(StrategyError::invalid_parameters(
+            &operation,
+            "the share leg must be long",
+        ));
+    }
+    if positions
+        .iter()
+        .any(|position| position.option.underlying_symbol != spot_leg.symbol)
+    {
+        return Err(StrategyError::invalid_parameters(
+            &operation,
+            "the share leg and the options must be on the same underlying",
+        ));
+    }
+    Ok(spot_leg)
 }
 
 #[cfg(test)]
