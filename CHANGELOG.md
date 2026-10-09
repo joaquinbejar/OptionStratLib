@@ -1860,6 +1860,18 @@ summarize the release.
 
 ### Fixed
 
+- **Curve and surface generators end exactly at `end`** (#799).
+  `create_linear_curve`, `create_constant_curve` and the parametric
+  `Curve::construct` and `Surface::construct` built each coordinate as
+  `start + step * i` with a step rounded at 28 places, so the last one
+  could land 1 to 2 ulps off an `end` with a long mantissa
+  (`0.1234567890123456789012345678` gave `…5680`, past the range). The last
+  coordinate is now `end` itself, and every other one is clamped toward
+  `end` in whichever direction the range runs, as #795 does for the merge
+  grid. Only the last coordinate and an overshooting one can move; every
+  other generated point is unchanged. The test fixtures in `surfaces/utils`
+  (test only since #788) do the same.
+
 - **The iron condor and iron butterfly optimisers keep the input's fees at
   every quantity** (#875). Their `create_strategy` split `get_fees()`,
   already scaled by the quantity, into the one per-contract fee their

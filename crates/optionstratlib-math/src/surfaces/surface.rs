@@ -5,7 +5,7 @@
 //! the visualization layer's job (`Plottable` in `optionstratlib-visualization`).
 //!
 
-use crate::curves::Point2D;
+use crate::curves::{Point2D, grid_coordinate};
 use crate::error::{InterpolationError, MetricsError, SurfaceError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
@@ -890,10 +890,22 @@ impl GeometricObject<Point3D, Point2D> for Surface {
                         (0..=y_steps).into_par_iter().map(move |j| {
                             let x_offset =
                                 d_mul(x_step, Decimal::from(i), op).map_err(construction_err)?;
-                            let x = d_add(x_start, x_offset, op).map_err(construction_err)?;
+                            // Each axis ends exactly at its end, and no
+                            // coordinate passes it (#799).
+                            let x = grid_coordinate(
+                                d_add(x_start, x_offset, op).map_err(construction_err)?,
+                                x_start,
+                                x_end,
+                                i == x_steps,
+                            );
                             let y_offset =
                                 d_mul(y_step, Decimal::from(j), op).map_err(construction_err)?;
-                            let y = d_add(y_start, y_offset, op).map_err(construction_err)?;
+                            let y = grid_coordinate(
+                                d_add(y_start, y_offset, op).map_err(construction_err)?,
+                                y_start,
+                                y_end,
+                                j == y_steps,
+                            );
                             let t = Point2D::new(x, y);
                             f(t)
                         })

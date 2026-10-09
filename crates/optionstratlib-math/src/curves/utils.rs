@@ -16,6 +16,30 @@ fn sampling_err(err: optionstratlib_core::error::DecimalError) -> CurveError {
     CurveError::ConstructionError(err.to_string())
 }
 
+/// The `i`-th coordinate of a grid from `start` to `end`, given its computed
+/// value `start + step * i`.
+///
+/// The step is `(end - start) / steps` rounded at 28 places, so the computed
+/// last coordinate can land 1 to 2 ulps on either side of an `end` with a
+/// long mantissa (#799). The last coordinate is therefore `end` itself, and
+/// every other one is clamped toward `end`, in whichever direction the range
+/// runs, as in the merge grid of #795. Only the last coordinate and an
+/// overshooting one can move; every other coordinate is unchanged.
+pub(crate) fn grid_coordinate(
+    value: Decimal,
+    start: Decimal,
+    end: Decimal,
+    is_last: bool,
+) -> Decimal {
+    if is_last {
+        end
+    } else if start <= end {
+        value.min(end)
+    } else {
+        value.max(end)
+    }
+}
+
 /// Creates a linear curve defined by a starting point, an ending point, and a slope.
 ///
 /// This function generates a 2-dimensional curve by calculating evenly spaced points
@@ -111,7 +135,12 @@ pub fn create_linear_curve(
     let mut points: Vec<Point2D> = Vec::new();
     for i in 0..=steps {
         let offset = d_mul(step_size, Decimal::from(i), op).map_err(sampling_err)?;
-        let x = d_add(start, offset, op).map_err(sampling_err)?;
+        let x = grid_coordinate(
+            d_add(start, offset, op).map_err(sampling_err)?,
+            start,
+            end,
+            i == steps,
+        );
         let y = d_mul(slope, x, op).map_err(sampling_err)?;
         points.push(Point2D::new(x, y));
     }
@@ -171,7 +200,12 @@ pub fn create_constant_curve(
     let mut point_values: Vec<Point2D> = Vec::new();
     for i in 0..=steps {
         let offset = d_mul(step_size, Decimal::from(i), op).map_err(sampling_err)?;
-        let x = d_add(start, offset, op).map_err(sampling_err)?;
+        let x = grid_coordinate(
+            d_add(start, offset, op).map_err(sampling_err)?,
+            start,
+            end,
+            i == steps,
+        );
         point_values.push(Point2D::new(x, value));
     }
 
@@ -445,5 +479,138 @@ mod tests_utils {
     fn test_window_size_overflow_is_error() {
         let points = BTreeSet::from_iter(vec![Point2D::new(dec!(1.0), dec!(2.0))]);
         assert!(detect_peaks_and_valleys(&points, dec!(0.1), usize::MAX).is_err());
+    }
+}
+
+/// The generated abscissas stay inside `[start, end]` and the last one is
+/// exactly `end`: the rounded step used to put it 1 to 2 ulps off a
+/// long-mantissa `end` (#799).
+#[cfg(test)]
+mod tests_generators_stay_inside_the_range {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// Ends whose tenth has more digits than a `Decimal` keeps.
+    fn long_mantissa_ends() -> Vec<Decimal> {
+        vec![
+            dec!(10.00000000000000000000000002),
+            dec!(3.333333333333333333333333333),
+            dec!(7.777777777777777777777777777),
+            dec!(1.234567890123456789012345678),
+            dec!(9.999999999999999999999999999),
+            dec!(0.1234567890123456789012345678),
+            dec!(123.4567890123456789012345678),
+        ]
+    }
+
+    fn assert_inside(curve: &Curve, start: Decimal, end: Decimal) {
+        let (lo, hi) = if start <= end {
+            (start, end)
+        } else {
+            (end, start)
+        };
+        for p in &curve.points {
+            assert!(p.x >= lo && p.x <= hi, "x = {} outside [{lo}, {hi}]", p.x);
+        }
+    }
+
+    #[test]
+    fn test_parametric_curve_stays_inside_the_range() {
+        use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
+        for end in long_mantissa_ends() {
+            for (t_start, t_end) in [(Decimal::ZERO, end), (end, Decimal::ZERO)] {
+                let params = ConstructionParams::D2 {
+                    t_start,
+                    t_end,
+                    steps: 10,
+                };
+                let f = |t: Decimal| -> Result<Point2D, CurveError> { Ok(Point2D::new(t, t)) };
+                match Curve::construct(ConstructionMethod::Parametric {
+                    f: Box::new(f),
+                    params,
+                }) {
+                    Ok(curve) => assert_inside(&curve, t_start, t_end),
+                    Err(e) => panic!("parametric curve must build: {e:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_parametric_surface_stays_inside_the_range() {
+        use crate::error::SurfaceError;
+        use crate::geometrics::{ConstructionMethod, ConstructionParams, GeometricObject};
+        use crate::surfaces::{Point3D, Surface};
+        for end in long_mantissa_ends() {
+            let params = ConstructionParams::D3 {
+                x_start: Decimal::ZERO,
+                x_end: end,
+                y_start: end,
+                y_end: Decimal::ZERO,
+                x_steps: 10,
+                y_steps: 10,
+            };
+            let f = |p: Point2D| -> Result<Point3D, SurfaceError> {
+                Ok(Point3D::new(p.x, p.y, Decimal::ZERO))
+            };
+            match Surface::construct(ConstructionMethod::Parametric {
+                f: Box::new(f),
+                params,
+            }) {
+                Ok(surface) => {
+                    for p in &surface.points {
+                        assert!(p.x >= Decimal::ZERO && p.x <= end, "x = {} past {end}", p.x);
+                        assert!(p.y >= Decimal::ZERO && p.y <= end, "y = {} past {end}", p.y);
+                    }
+                    assert!(surface.points.iter().any(|p| p.x == end), "no x at {end}");
+                    assert!(
+                        surface.points.iter().any(|p| p.y == Decimal::ZERO),
+                        "no y at 0"
+                    );
+                }
+                Err(e) => panic!("parametric surface must build: {e:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_grid_coordinate_pins_the_last_point_and_clamps_the_rest() {
+        let (start, end) = (Decimal::ZERO, dec!(1));
+        assert_eq!(grid_coordinate(dec!(0.5), start, end, false), dec!(0.5));
+        assert_eq!(
+            grid_coordinate(dec!(1.0000000000000000000000000002), start, end, false),
+            end
+        );
+        // The last coordinate is `end` whether it fell short or overshot.
+        assert_eq!(
+            grid_coordinate(dec!(0.9999999999999999999999999998), start, end, true),
+            end
+        );
+        assert_eq!(
+            grid_coordinate(dec!(1.0000000000000000000000000002), start, end, true),
+            end
+        );
+        // A descending range clamps the other way.
+        assert_eq!(
+            grid_coordinate(dec!(-0.0000000000000000000000000002), end, start, false),
+            start
+        );
+        assert_eq!(grid_coordinate(dec!(0.5), end, start, false), dec!(0.5));
+    }
+
+    #[test]
+    fn test_linear_and_constant_curves_stay_inside_the_range() {
+        for end in long_mantissa_ends() {
+            for (start, end) in [(Decimal::ZERO, end), (end, Decimal::ZERO)] {
+                match create_linear_curve(start, end, dec!(2)) {
+                    Ok(curve) => assert_inside(&curve, start, end),
+                    Err(e) => panic!("linear curve must build: {e:?}"),
+                }
+                match create_constant_curve(start, end, dec!(5)) {
+                    Ok(curve) => assert_inside(&curve, start, end),
+                    Err(e) => panic!("constant curve must build: {e:?}"),
+                }
+            }
+        }
     }
 }
