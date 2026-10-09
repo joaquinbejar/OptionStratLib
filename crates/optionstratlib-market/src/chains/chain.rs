@@ -40,7 +40,12 @@ use std::collections::BTreeSet;
 use std::fmt;
 use tracing::{debug, error, warn};
 #[cfg(feature = "io")]
-use {crate::chains::utils::parse, csv::WriterBuilder, std::fs::File};
+use {
+    crate::chains::utils::parse,
+    csv::WriterBuilder,
+    std::fs::File,
+    std::io::{BufReader, BufWriter, Write},
+};
 
 /// A constant representing the skew value for the smile curve in financial modeling.
 ///
@@ -1472,8 +1477,13 @@ impl OptionChain {
     #[cfg(feature = "io")]
     pub fn save_to_json(&self, file_path: &str) -> Result<(), ChainError> {
         let full_path = format!("{}/{}.json", file_path, self.get_title());
-        let file = File::create(full_path)?;
-        serde_json::to_writer_pretty(file, &self)?;
+        // Buffered: `to_writer_pretty` emits many small writes, one system
+        // call each on a bare `File` (#861).
+        let mut writer = BufWriter::new(File::create(full_path)?);
+        serde_json::to_writer_pretty(&mut writer, &self)?;
+        // Dropping a `BufWriter` discards the error of its last write, so the
+        // flush is explicit and a failed write surfaces as a `ChainError`.
+        writer.flush()?;
         Ok(())
     }
 
@@ -1641,8 +1651,10 @@ impl OptionChain {
     #[inline(never)]
     #[cfg(feature = "io")]
     pub fn load_from_json(file_path: &str) -> Result<Self, ChainError> {
+        // Buffered: `from_reader` reads a byte at a time, one system call each
+        // on a bare `File` (#861).
         let file = File::open(file_path)?;
-        let mut option_chain: OptionChain = serde_json::from_reader(file)?;
+        let mut option_chain: OptionChain = serde_json::from_reader(BufReader::new(file))?;
         option_chain.set_optiondata_extra_params()?;
         option_chain.mutate_single_options(|option| {
             option.implied_volatility = if option.implied_volatility >= Positive::ONE {
@@ -3606,6 +3618,65 @@ mod tests_chain_base {
         assert_eq!(chain.symbol, "SP500");
         assert_eq!(chain.expiration_date, "18-oct-2024");
         assert_eq!(chain.underlying_price, 5781.9);
+    }
+
+    /// #861: the buffered writer must leave exactly the bytes the unbuffered
+    /// one wrote, the pretty serialization of the chain, and the buffered
+    /// reader must load them back to the same chain.
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_save_to_json_buffered_writes_the_pretty_serialization() {
+        let mut chain = OptionChain::new(
+            "SP500",
+            pos_or_panic!(5781.91),
+            "18-oct-2024".to_string(),
+            None,
+            None,
+        );
+        for (strike, iv) in [(5520.0, 0.1631), (5780.0, 0.1452), (6000.0, 0.1388)] {
+            chain.add_option(
+                pos_or_panic!(strike),
+                spos!(274.26),
+                spos!(276.06),
+                spos!(13.22),
+                spos!(14.90),
+                pos_or_panic!(iv),
+                Some(dec!(0.5)),
+                Some(dec!(0.5)),
+                Some(dec!(0.5)),
+                spos!(100.0),
+                Some(100),
+                None,
+            );
+        }
+        let scratch = scratch_dir();
+        let dir = scratch.path().to_string_lossy();
+        chain.save_to_json(&dir).unwrap();
+        let path = format!("{dir}/SP500-18-oct-2024-5781.91.json");
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(written, serde_json::to_string_pretty(&chain).unwrap());
+
+        let loaded = OptionChain::load_from_json(&path).unwrap();
+        assert_eq!(loaded.options.len(), 3);
+        assert_eq!(loaded.get_strikes().unwrap(), chain.get_strikes().unwrap());
+    }
+
+    /// A missing file is still an I/O error with a `BufReader` in between.
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_load_from_json_missing_file_is_io_error() {
+        let scratch = scratch_dir();
+        let path = format!("{}/missing.json", scratch.path().to_string_lossy());
+        let result = OptionChain::load_from_json(&path);
+        assert!(
+            matches!(
+                result,
+                Err(ChainError::FileError(
+                    crate::error::chains::FileErrorKind::IOError(_)
+                ))
+            ),
+            "{result:?}"
+        );
     }
 }
 

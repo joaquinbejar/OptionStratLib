@@ -3126,6 +3126,17 @@ summarize the release.
   to 23.2 µs, SPAN margin 315 µs to 182 µs, a 50-strike implied-volatility
   smile 15.6 ms to 8.9 ms, and a 1 000-path long-call backtest 619 ms to
   365 ms.
+- **`OptionChain::save_to_json` and `load_from_json` buffer their file I/O**
+  (#861). They handed a bare `File` to `serde_json`, which writes and reads
+  in small pieces, one system call each. The writer is now a `BufWriter`,
+  flushed explicitly so a failed write still surfaces as a `ChainError`, and
+  the reader a `BufReader`. The file contents are unchanged: a test asserts
+  the written bytes equal `serde_json::to_string_pretty` of the chain.
+  Criterion on the bench host of `docs/release/0.22/benchmarks.md`, before
+  and after, 101 strikes: `save_to_json` 4.77 ms to 154 µs (-96.8%),
+  `load_from_json` 14.5 ms to 3.79 ms (-73.8%, most of the rest is the
+  intended `update_greeks`); the 45-strike SP500 fixture loads in 128 µs
+  instead of 3.65 ms.
 
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
