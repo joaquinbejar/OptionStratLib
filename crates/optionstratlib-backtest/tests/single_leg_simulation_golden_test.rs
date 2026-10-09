@@ -13,7 +13,13 @@
 //! `as_f64`. Premiums and P&L moved by at most `5e-14` relative
 //! (`avg_premium`, `min_premium`, `realized` and the P&L summary of four
 //! runs); no exit, holding period or count changed.
-//! only when a numerical change is intended and reviewed.
+//!
+//! Compared within `1e-12` relative since #857 C1: `d1` takes its logarithm
+//! in `f64` through the platform's libm, whose last bit may differ between
+//! targets, so the 28-digit premiums are compared to the owner's bound
+//! (2026-10-09) instead of byte for byte. Every non-numeric field, and
+//! every count, exit reason and holding period, still matches exactly.
+//! Regenerate only when a numerical change is intended and reviewed.
 
 use optionstratlib_backtest::backtesting::Simulate;
 use optionstratlib_backtest::backtesting::results::SimulationStatsResult;
@@ -30,6 +36,7 @@ use optionstratlib_simulation::simulation::{
 };
 use optionstratlib_strategies::strategies::base::Positionable;
 use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut};
+use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -201,6 +208,37 @@ fn single_leg_simulation_golden() {
     );
     for (key, exp) in expected.as_object().into_iter().flatten() {
         let got = actual.get(key).unwrap_or(&Value::Null);
-        assert_eq!(got, exp, "run {key} diverged from the golden output");
+        assert!(
+            matches_golden(got, exp),
+            "run {key} diverged from the golden output:\n got {got}\nwant {exp}"
+        );
+    }
+}
+
+/// Relative bound on a numeric field (#857 C1).
+const RELATIVE_TOLERANCE: Decimal = dec!(0.000000000001);
+
+/// `actual` equals `expected`, reading strings that hold a `Decimal` as
+/// numbers within [`RELATIVE_TOLERANCE`] and everything else exactly.
+fn matches_golden(actual: &Value, expected: &Value) -> bool {
+    match (actual, expected) {
+        (Value::Object(a), Value::Object(e)) => {
+            a.len() == e.len()
+                && e.iter()
+                    .all(|(k, ev)| a.get(k).is_some_and(|av| matches_golden(av, ev)))
+        }
+        (Value::Array(a), Value::Array(e)) => {
+            a.len() == e.len() && a.iter().zip(e).all(|(av, ev)| matches_golden(av, ev))
+        }
+        (Value::String(a), Value::String(e)) => {
+            match (a.parse::<Decimal>(), e.parse::<Decimal>()) {
+                (Ok(a), Ok(e)) => {
+                    let scale = a.abs().max(e.abs());
+                    (a - e).abs() <= RELATIVE_TOLERANCE * scale
+                }
+                _ => a == e,
+            }
+        }
+        _ => actual == expected,
     }
 }

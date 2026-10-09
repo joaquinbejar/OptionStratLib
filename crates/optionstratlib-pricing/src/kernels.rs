@@ -48,7 +48,7 @@ use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, f64_to_decimal,
+    d_add, d_div, d_exp, d_ln_f64, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, f64_to_decimal,
 };
 use rust_decimal::Decimal;
 use statrs::distribution::{ContinuousCDF, Normal};
@@ -185,7 +185,10 @@ pub fn d1(
                 // `Positive::MAX` strike branch above.
                 Decimal::MIN
             } else {
-                d_ln(moneyness, "greeks::d1::log_moneyness")?
+                // `f64` logarithm (#857): within about 1e-15 relative of
+                // the 28-place series, which cost about 8 µs of a 12 µs
+                // Black-Scholes price.
+                d_ln_f64(moneyness, "greeks::d1::log_moneyness")?
             }
         }
     };
@@ -2309,5 +2312,84 @@ mod tests_d_values_single_d1 {
             }
         }
         assert_eq!(checked, 240);
+    }
+}
+
+/// `d1` with the `f64` logarithm (#857) against the 28-place `Decimal`
+/// series it replaced, over a strike/volatility/time/rate grid.
+#[cfg(test)]
+mod tests_d1_f64_logarithm {
+    use super::*;
+    use optionstratlib_core::model::decimal::d_ln;
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// The previous `d1`: identical but for `d_ln`.
+    fn d1_decimal_ln(s: Decimal, k: Decimal, b: Decimal, t: Decimal, sigma: Decimal) -> Decimal {
+        let ln = d_ln(s / k, "test").expect("ln");
+        (ln + (b + sigma * sigma / Decimal::TWO) * t) / (sigma * d_sqrt(t, "test").expect("sqrt"))
+    }
+
+    /// The owner's bound (2026-10-09): 1e-12 relative, read as absolute
+    /// below one so a `d1` that crosses zero is not held to a relative bound.
+    const TOLERANCE: Decimal = dec!(0.000000000001);
+
+    #[test]
+    fn test_d1_f64_logarithm_within_the_owner_bound() {
+        let strike = Positive::HUNDRED;
+        let spots = [
+            dec!(1),
+            dec!(50),
+            dec!(80),
+            dec!(95),
+            dec!(99.99),
+            dec!(99.9999),
+            dec!(100),
+            dec!(100.0001),
+            dec!(100.01),
+            dec!(105),
+            dec!(150),
+            dec!(400),
+            dec!(100000),
+        ];
+        let sigmas = [dec!(0.01), dec!(0.05), dec!(0.2), dec!(0.8), dec!(3)];
+        let times = [
+            dec!(0.0027397260273972602739726027),
+            dec!(0.25),
+            dec!(1),
+            dec!(10),
+        ];
+        let rates = [dec!(-0.01), dec!(0), dec!(0.05)];
+        let mut worst = Decimal::ZERO;
+        let mut checked = 0_u32;
+        for &s in &spots {
+            for &sigma in &sigmas {
+                for &t in &times {
+                    for &b in &rates {
+                        let fast = d1(
+                            pos_or_panic!(s.to_f64().expect("f64")),
+                            strike,
+                            b,
+                            Positive::new_decimal(t).expect("t"),
+                            Positive::new_decimal(sigma).expect("sigma"),
+                        )
+                        .expect("d1");
+                        let reference = d1_decimal_ln(s, strike.to_dec(), b, t, sigma);
+                        let scale = reference.abs().max(Decimal::ONE);
+                        let error = (fast - reference).abs() / scale;
+                        worst = worst.max(error);
+                        checked += 1;
+                        assert!(
+                            error <= TOLERANCE,
+                            "S={s} sigma={sigma} T={t} b={b}: {fast} vs {reference} ({error})"
+                        );
+                    }
+                }
+            }
+        }
+        assert_eq!(checked, 780);
+        // Measured 2026-10-09: 3.3e-15 at worst, three orders inside the
+        // bound; held at 1e-14 so a regression shows.
+        assert!(worst < dec!(0.00000000000001), "worst {worst}");
     }
 }
