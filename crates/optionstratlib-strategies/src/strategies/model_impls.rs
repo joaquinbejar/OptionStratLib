@@ -188,19 +188,12 @@ impl BasicAble for Position {
     fn set_underlying_price(&mut self, _price: &Positive) -> Result<(), StrategyError> {
         self.option.set_underlying_price(_price)
     }
-    /// Updates the volatility for the strategy.
+    /// Sets the implied volatility of the position's option.
     ///
-    /// # Parameters
-    /// - `_volatility`: A reference to a `Positive` value representing the new volatility to set.
+    /// # Errors
     ///
-    /// # Returns
-    /// - `Ok(())`: If the update operation succeeds (currently unimplemented).
-    /// - `Err(StrategyError)`: If there is an error during the update process (place-holder as functionality is not implemented).
-    ///
-    /// # Notes
-    /// This method is currently unimplemented, and calling it will result in the `unimplemented!` macro being triggered, which causes a panic.
-    /// This function is a stub and should be implemented to handle setting the volatility specific to the strategy.
-    ///
+    /// Returns whatever the option's own `set_implied_volatility` returns;
+    /// for `Options` that is never an error. It does not panic (#831).
     fn set_implied_volatility(&mut self, _volatility: &Positive) -> Result<(), StrategyError> {
         self.option.set_implied_volatility(_volatility)
     }

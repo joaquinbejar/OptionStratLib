@@ -457,11 +457,24 @@ impl Positionable for LongCall {
 }
 
 impl StrategyConstructor for LongCall {
-    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
-        Err(StrategyError::operation_not_supported(
-            "get_strategy",
+    /// Builds the strategy from its one long call position (#831).
+    fn get_strategy(vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        let position = crate::strategies::shared::single_leg_position(
+            vec_positions,
+            OptionStyle::Call,
+            Side::Long,
             "LongCall",
-        ))
+        )?;
+        let mut strategy = LongCall::default();
+        strategy.place_leg(position)?;
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::LongCall,
+                "the requested leg fails validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
     }
 }
 
@@ -582,21 +595,17 @@ mod tests_get_strategy {
     use super::*;
 
     #[test]
-    fn test_get_strategy_returns_not_supported() {
+    fn test_get_strategy_requires_one_long_call() {
         use optionstratlib_core::error::OperationErrorKind;
         let result = LongCall::get_strategy(&[]);
-        match result {
-            Err(StrategyError::OperationError(OperationErrorKind::NotSupported {
-                operation,
-                reason,
-            })) => {
-                assert_eq!(operation, "get_strategy");
-                assert!(
-                    reason.contains("LongCall"),
-                    "expected reason to contain 'LongCall', got {reason}"
-                );
-            }
-            other => panic!("expected NotSupported error, got {other:?}"),
-        }
+        assert!(
+            matches!(
+                result,
+                Err(StrategyError::OperationError(
+                    OperationErrorKind::InvalidParameters { .. }
+                ))
+            ),
+            "{result:?}"
+        );
     }
 }

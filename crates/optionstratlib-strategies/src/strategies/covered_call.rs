@@ -60,7 +60,7 @@ use crate::strategies::shared::spot_leg_mark_to_market;
 use crate::strategies::shared::{
     apply_hedge_contract_size, common_contract_size, expiry_zones, price_zones,
 };
-use crate::strategies::{BasicAble, Strategies};
+use crate::strategies::{BasicAble, Strategies, StrategyConstructor};
 use chrono::Utc;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::VolatilityAdjustment;
@@ -679,6 +679,55 @@ impl Validable for CoveredCall {
     }
 }
 
+impl StrategyConstructor for CoveredCall {
+    /// A CoveredCall holds the underlying, which a slice of option positions cannot
+    /// carry: use [`StrategyConstructor::get_strategy_with_spot`] (#831).
+    fn get_strategy(_vec_positions: &[Position]) -> Result<Self, StrategyError> {
+        Err(StrategyError::invalid_parameters(
+            "CoveredCall get_strategy",
+            "the strategy holds the underlying: build it with get_strategy_with_spot",
+        ))
+    }
+
+    /// Builds the strategy from its share leg and one short call (#831).
+    fn get_strategy_with_spot(
+        spot_leg: Option<&SpotPosition>,
+        vec_positions: &[Position],
+    ) -> Result<Self, StrategyError> {
+        let operation = "CoveredCall get_strategy_with_spot";
+        let spot_leg =
+            crate::strategies::shared::covered_spot_leg(spot_leg, vec_positions, "CoveredCall")?
+                .clone();
+        if vec_positions.len() != 1 {
+            return Err(StrategyError::invalid_parameters(
+                operation,
+                "must have exactly 1 option",
+            ));
+        }
+        let short_call = vec_positions
+            .iter()
+            .find(|p| p.option.option_style == OptionStyle::Call && p.option.side == Side::Short)
+            .ok_or_else(|| StrategyError::invalid_parameters(operation, "must have a short call"))?
+            .clone();
+        let mut strategy = CoveredCall {
+            name: "Covered Call".to_string(),
+            kind: StrategyType::CoveredCall,
+            description: COVERED_CALL_DESCRIPTION.to_string(),
+            break_even_points: Vec::new(),
+            spot_leg,
+            short_call,
+        };
+        if !strategy.validate() {
+            return Err(StrategyError::invalid_strategy(
+                StrategyType::CoveredCall,
+                "the requested legs fail validation",
+            ));
+        }
+        strategy.update_break_even_points()?;
+        Ok(strategy)
+    }
+}
+
 impl BreakEvenable for CoveredCall {
     fn get_break_even_points(&self) -> Result<&Vec<Positive>, StrategyError> {
         Ok(&self.break_even_points)
@@ -979,8 +1028,6 @@ impl DeltaNeutrality for CoveredCall {}
 impl Optimizable for CoveredCall {
     type Strategy = CoveredCall;
 }
-
-impl crate::strategies::StrategyConstructor for CoveredCall {}
 
 impl ProbabilityAnalysis for CoveredCall {
     /// With the call covering the shares exactly the profit zone runs from

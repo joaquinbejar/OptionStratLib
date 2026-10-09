@@ -8,11 +8,13 @@ use crate::error::StrategyError;
 use crate::strategies::base::StrategyType;
 use crate::strategies::custom::CustomStrategy;
 use crate::strategies::{
-    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, IronButterfly,
-    IronCondor, LongButterflySpread, LongStraddle, LongStrangle, PoorMansCoveredCall,
-    ShortButterflySpread, ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
+    BearCallSpread, BearPutSpread, BullCallLadder, BullCallSpread, BullPutSpread, Collar,
+    CoveredCall, IronButterfly, IronCondor, LongButterflySpread, LongCall, LongPut, LongStraddle,
+    LongStrangle, PoorMansCoveredCall, ProtectivePut, ShortButterflySpread, ShortCall, ShortPut,
+    ShortStraddle, ShortStrangle, Strategable, StrategyConstructor,
 };
 use optionstratlib_core::model::Position;
+use optionstratlib_core::model::leg::SpotPosition;
 use serde::{Deserialize, Serialize};
 
 /// A request structure for creating and analyzing options trading strategies.
@@ -39,6 +41,12 @@ pub struct StrategyRequest {
     /// (calls and puts) with different strike prices and expiration dates,
     /// arranged according to the selected strategy type.
     pub positions: Vec<Position>,
+
+    /// The share leg of a strategy that holds the underlying (`CoveredCall`,
+    /// `ProtectivePut`, `Collar`); `None` for every other strategy (#831).
+    /// Absent from the JSON when `None`, and read as `None` when missing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spot_leg: Option<SpotPosition>,
 }
 
 /// Request handler for options trading strategies.
@@ -61,7 +69,17 @@ impl StrategyRequest {
         Self {
             strategy_type,
             positions,
+            spot_leg: None,
         }
+    }
+
+    /// Sets the share leg that `CoveredCall`, `ProtectivePut` and `Collar`
+    /// hold besides their options (#831).
+    #[inline]
+    #[must_use]
+    pub fn with_spot_leg(mut self, spot_leg: SpotPosition) -> Self {
+        self.spot_leg = Some(spot_leg);
+        self
     }
 
     /// Creates and returns a concrete strategy instance based on the strategy type
@@ -74,62 +92,50 @@ impl StrategyRequest {
     /// * `Ok(Box<dyn Strategable>)` - A boxed trait object implementing the `Strategable`
     ///   trait if the strategy creation was successful.
     /// * `Err(StrategyError)` - An error indicating why the strategy could not be created.
-    ///   Returns `StrategyError::NotImplemented` for strategies that are not yet implemented.
+    ///
+    /// Every [`StrategyType`] is built (#831): `CoveredCall`, `ProtectivePut`
+    /// and `Collar` from `spot_leg` and their options, every other type from
+    /// `positions` alone.
     ///
     /// # Errors
-    /// This method can return errors from the underlying strategy constructors or
-    /// `StrategyError::NotImplemented` for strategies that are defined but not yet implemented.
+    /// Returns the error of the strategy's
+    /// [`StrategyConstructor::get_strategy_with_spot`]: an
+    /// `OperationError` when the positions do not match the strategy's legs,
+    /// when a covered strategy has no `spot_leg` or another strategy has one,
+    /// and an `InvalidStrategy` when the legs fail its validation.
     #[inline(never)]
     pub fn get_strategy(&self) -> Result<Box<dyn Strategable>, StrategyError> {
+        fn build<S: StrategyConstructor + Strategable + 'static>(
+            request: &StrategyRequest,
+        ) -> Result<Box<dyn Strategable>, StrategyError> {
+            Ok(Box::new(S::get_strategy_with_spot(
+                request.spot_leg.as_ref(),
+                &request.positions,
+            )?))
+        }
         match self.strategy_type {
-            StrategyType::BullCallSpread => {
-                Ok(Box::new(BullCallSpread::get_strategy(&self.positions)?))
-            }
-            StrategyType::BearCallSpread => {
-                Ok(Box::new(BearCallSpread::get_strategy(&self.positions)?))
-            }
-            StrategyType::BullPutSpread => {
-                Ok(Box::new(BullPutSpread::get_strategy(&self.positions)?))
-            }
-            StrategyType::BearPutSpread => {
-                Ok(Box::new(BearPutSpread::get_strategy(&self.positions)?))
-            }
-            StrategyType::LongButterflySpread => Ok(Box::new(LongButterflySpread::get_strategy(
-                &self.positions,
-            )?)),
-            StrategyType::ShortButterflySpread => Ok(Box::new(ShortButterflySpread::get_strategy(
-                &self.positions,
-            )?)),
-            StrategyType::IronCondor => Ok(Box::new(IronCondor::get_strategy(&self.positions)?)),
-            StrategyType::IronButterfly => {
-                Ok(Box::new(IronButterfly::get_strategy(&self.positions)?))
-            }
-            StrategyType::LongStraddle => {
-                Ok(Box::new(LongStraddle::get_strategy(&self.positions)?))
-            }
-            StrategyType::ShortStraddle => {
-                Ok(Box::new(ShortStraddle::get_strategy(&self.positions)?))
-            }
-            StrategyType::LongStrangle => {
-                Ok(Box::new(LongStrangle::get_strategy(&self.positions)?))
-            }
-            StrategyType::ShortStrangle => {
-                Ok(Box::new(ShortStrangle::get_strategy(&self.positions)?))
-            }
-            StrategyType::CoveredCall => Err(StrategyError::NotImplemented),
-            StrategyType::ProtectivePut => Err(StrategyError::NotImplemented),
-            StrategyType::Collar => Err(StrategyError::NotImplemented),
-            StrategyType::LongCall => Err(StrategyError::NotImplemented),
-            StrategyType::LongPut => Err(StrategyError::NotImplemented),
-            StrategyType::ShortCall => Err(StrategyError::NotImplemented),
-            StrategyType::ShortPut => Err(StrategyError::NotImplemented),
-            StrategyType::PoorMansCoveredCall => Ok(Box::new(PoorMansCoveredCall::get_strategy(
-                &self.positions,
-            )?)),
-            StrategyType::BullCallLadder => {
-                Ok(Box::new(BullCallLadder::get_strategy(&self.positions)?))
-            }
-            StrategyType::Custom => Ok(Box::new(CustomStrategy::get_strategy(&self.positions)?)),
+            StrategyType::BullCallSpread => build::<BullCallSpread>(self),
+            StrategyType::BearCallSpread => build::<BearCallSpread>(self),
+            StrategyType::BullPutSpread => build::<BullPutSpread>(self),
+            StrategyType::BearPutSpread => build::<BearPutSpread>(self),
+            StrategyType::LongButterflySpread => build::<LongButterflySpread>(self),
+            StrategyType::ShortButterflySpread => build::<ShortButterflySpread>(self),
+            StrategyType::IronCondor => build::<IronCondor>(self),
+            StrategyType::IronButterfly => build::<IronButterfly>(self),
+            StrategyType::LongStraddle => build::<LongStraddle>(self),
+            StrategyType::ShortStraddle => build::<ShortStraddle>(self),
+            StrategyType::LongStrangle => build::<LongStrangle>(self),
+            StrategyType::ShortStrangle => build::<ShortStrangle>(self),
+            StrategyType::CoveredCall => build::<CoveredCall>(self),
+            StrategyType::ProtectivePut => build::<ProtectivePut>(self),
+            StrategyType::Collar => build::<Collar>(self),
+            StrategyType::LongCall => build::<LongCall>(self),
+            StrategyType::LongPut => build::<LongPut>(self),
+            StrategyType::ShortCall => build::<ShortCall>(self),
+            StrategyType::ShortPut => build::<ShortPut>(self),
+            StrategyType::PoorMansCoveredCall => build::<PoorMansCoveredCall>(self),
+            StrategyType::BullCallLadder => build::<BullCallLadder>(self),
+            StrategyType::Custom => build::<CustomStrategy>(self),
         }
     }
 }
@@ -189,6 +195,7 @@ mod tests_serialization {
                     None,
                 ),
             ],
+            spot_leg: None,
         };
 
         let serialized = serde_json::to_string(&strategy_request).unwrap();
@@ -302,6 +309,7 @@ mod tests_strategies_build_model {
     use super::*;
     use chrono::{DateTime, NaiveDateTime, Utc};
     use optionstratlib_core::assert_decimal_eq;
+    use optionstratlib_core::model::ExpirationDate;
     use optionstratlib_core::model::OptionStyle;
     use optionstratlib_core::model::Positive;
     use optionstratlib_core::model::Side;
@@ -763,52 +771,236 @@ mod tests_strategies_build_model {
         );
     }
 
-    #[test]
-    fn test_strategy_covered_call() {
-        let strategy_request = StrategyRequest::new(StrategyType::CoveredCall, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
+    /// Every strategy built by `new` comes back from a request carrying its
+    /// own legs with the same type and break-even points (#831).
+    fn assert_round_trip(original: &dyn Strategable, request: StrategyRequest) {
+        let rebuilt = match request.get_strategy() {
+            Ok(strategy) => strategy,
+            Err(e) => panic!("{:?}: {e}", request.strategy_type),
+        };
+        assert_eq!(rebuilt.get_title(), original.get_title());
+        assert_eq!(
+            rebuilt.get_break_even_points().unwrap(),
+            original.get_break_even_points().unwrap()
+        );
+    }
+
+    fn option_legs(strategy: &dyn Strategable) -> Vec<Position> {
+        strategy
+            .get_positions()
+            .unwrap()
+            .into_iter()
+            .cloned()
+            .collect()
+    }
+
+    fn expiry() -> ExpirationDate {
+        ExpirationDate::Days(pos_or_panic!(30.0))
     }
 
     #[test]
-    fn test_strategy_protective_put() {
-        let strategy_request = StrategyRequest::new(StrategyType::ProtectivePut, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
+    fn test_strategy_single_legs_round_trip() {
+        let long_call = LongCall::new(
+            "TEST".to_string(),
+            pos_or_panic!(105.0),
+            expiry(),
+            pos_or_panic!(0.2),
+            Positive::ONE,
+            Positive::HUNDRED,
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(3.0),
+            Positive::ONE,
+            Positive::ONE,
+        )
+        .unwrap();
+        let legs = option_legs(&long_call);
+        assert_round_trip(
+            &long_call,
+            StrategyRequest::new(StrategyType::LongCall, legs),
+        );
+
+        // The other three single legs carry their one position through.
+        for (kind, style, side) in [
+            (StrategyType::LongPut, OptionStyle::Put, Side::Long),
+            (StrategyType::ShortCall, OptionStyle::Call, Side::Short),
+            (StrategyType::ShortPut, OptionStyle::Put, Side::Short),
+        ] {
+            let leg = Position::new(
+                create_sample_option_with_date(
+                    style,
+                    side,
+                    Positive::HUNDRED,
+                    Positive::ONE,
+                    pos_or_panic!(105.0),
+                    pos_or_panic!(0.2),
+                    sample_date(),
+                ),
+                pos_or_panic!(3.0),
+                Utc::now(),
+                Positive::ONE,
+                Positive::ONE,
+                None,
+                None,
+            );
+            let strategy =
+                match StrategyRequest::new(kind.clone(), vec![leg.clone()]).get_strategy() {
+                    Ok(strategy) => strategy,
+                    Err(e) => panic!("{kind:?}: {e}"),
+                };
+            assert_eq!(option_legs(strategy.as_ref()), vec![leg]);
+            assert_eq!(strategy.get_break_even_points().unwrap().len(), 1);
+        }
     }
 
     #[test]
-    fn test_strategy_collar() {
-        let strategy_request = StrategyRequest::new(StrategyType::Collar, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
+    fn test_strategy_covered_round_trip() {
+        let covered_call = CoveredCall::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            expiry(),
+            pos_or_panic!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(100.0),
+            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+        )
+        .unwrap();
+        let request = StrategyRequest::new(StrategyType::CoveredCall, option_legs(&covered_call))
+            .with_spot_leg(covered_call.spot_leg.clone());
+        assert_round_trip(&covered_call, request);
+
+        let protective_put = ProtectivePut::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            pos_or_panic!(95.0),
+            expiry(),
+            pos_or_panic!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.5),
+            Positive::ONE,
+            Positive::ONE,
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+        )
+        .unwrap();
+        let request =
+            StrategyRequest::new(StrategyType::ProtectivePut, option_legs(&protective_put))
+                .with_spot_leg(protective_put.spot_leg.clone());
+        assert_round_trip(&protective_put, request);
+
+        let collar = Collar::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            pos_or_panic!(95.0),
+            pos_or_panic!(110.0),
+            expiry(),
+            pos_or_panic!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(100.0),
+            pos_or_panic!(1.5),
+            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+        )
+        .unwrap();
+        let request = StrategyRequest::new(StrategyType::Collar, option_legs(&collar))
+            .with_spot_leg(collar.spot_leg.clone());
+        assert_round_trip(&collar, request.clone());
+
+        // The share leg survives JSON, and a request without one omits it.
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("\"spot_leg\""));
+        let back: StrategyRequest = serde_json::from_str(&json).unwrap();
+        assert!(back == request);
+        let no_spot = StrategyRequest::new(StrategyType::Collar, vec![]);
+        let json = serde_json::to_string(&no_spot).unwrap();
+        assert!(!json.contains("spot_leg"));
+        let back: StrategyRequest = serde_json::from_str(&json).unwrap();
+        assert!(back.spot_leg.is_none());
     }
 
     #[test]
-    fn test_strategy_long_call() {
-        let strategy_request = StrategyRequest::new(StrategyType::LongCall, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
-    }
+    fn test_strategy_request_rejects_mismatched_legs() {
+        let invalid = |request: StrategyRequest| {
+            assert!(
+                matches!(
+                    request.get_strategy(),
+                    Err(StrategyError::OperationError(_))
+                ),
+                "{:?} should be rejected",
+                request.strategy_type
+            );
+        };
+        let covered_call = CoveredCall::new(
+            "TEST".to_string(),
+            Positive::HUNDRED,
+            pos_or_panic!(110.0),
+            expiry(),
+            pos_or_panic!(0.2),
+            dec!(0.05),
+            Positive::ZERO,
+            pos_or_panic!(100.0),
+            pos_or_panic!(2.0),
+            Positive::ONE,
+            Positive::ONE,
+            pos_or_panic!(0.01),
+            pos_or_panic!(0.01),
+        )
+        .unwrap();
+        let short_call = option_legs(&covered_call);
+        let spot = covered_call.spot_leg.clone();
 
-    #[test]
-    fn test_strategy_long_put() {
-        let strategy_request = StrategyRequest::new(StrategyType::LongPut, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_strategy_short_call() {
-        let strategy_request = StrategyRequest::new(StrategyType::ShortCall, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_strategy_short_put() {
-        let strategy_request = StrategyRequest::new(StrategyType::ShortPut, vec![]);
-        let result = strategy_request.get_strategy();
-        assert!(result.is_err());
+        // Every type rejects an empty request.
+        for kind in [
+            StrategyType::CoveredCall,
+            StrategyType::ProtectivePut,
+            StrategyType::Collar,
+            StrategyType::LongCall,
+            StrategyType::LongPut,
+            StrategyType::ShortCall,
+            StrategyType::ShortPut,
+        ] {
+            invalid(StrategyRequest::new(kind, vec![]));
+        }
+        // A covered strategy needs its share leg.
+        invalid(StrategyRequest::new(
+            StrategyType::CoveredCall,
+            short_call.clone(),
+        ));
+        // A short call is not a long call.
+        invalid(StrategyRequest::new(
+            StrategyType::LongCall,
+            short_call.clone(),
+        ));
+        // A strategy without a share leg rejects one.
+        invalid(
+            StrategyRequest::new(StrategyType::ShortCall, short_call.clone())
+                .with_spot_leg(spot.clone()),
+        );
+        // The share leg must be long and on the options' underlying.
+        let mut short_spot = spot.clone();
+        short_spot.side = Side::Short;
+        invalid(
+            StrategyRequest::new(StrategyType::CoveredCall, short_call.clone())
+                .with_spot_leg(short_spot),
+        );
+        let mut other_symbol = spot;
+        other_symbol.symbol = "OTHER".to_string();
+        invalid(
+            StrategyRequest::new(StrategyType::CoveredCall, short_call).with_spot_leg(other_symbol),
+        );
     }
 }

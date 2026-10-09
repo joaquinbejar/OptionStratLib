@@ -16,6 +16,23 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`StrategyRequest` builds every strategy type** (#831). `CoveredCall`,
+  `ProtectivePut`, `Collar`, `LongCall`, `LongPut`, `ShortCall` and
+  `ShortPut` returned `NotImplemented` (or `NotSupported` from the
+  single-leg `get_strategy`). The single legs now build from their one
+  position. The covered strategies hold the underlying, which a slice of
+  option positions cannot carry, so `StrategyRequest` gains
+  `spot_leg: Option<SpotPosition>` (set with `with_spot_leg`, omitted from
+  the JSON when `None` and read as `None` when missing) and
+  `StrategyConstructor` gains `get_strategy_with_spot(spot_leg, positions)`,
+  which defaults to `get_strategy` and rejects a share leg; the covered
+  strategies override it and require a long share leg on the options'
+  underlying, while their `get_strategy` reports that it needs one.
+  `StrategyRequest::get_strategy` goes through `get_strategy_with_spot` for
+  every type, so a share leg on a request for any other strategy is an
+  error. The doc of `Position::set_implied_volatility` no longer claims it
+  panics. Migration: a `StrategyRequest` struct literal adds
+  `spot_leg: None`; `StrategyRequest::new` is unchanged.
 - **One implied-volatility solver behind the three entry points** (#859,
   P4). `OptionPricing::calculate_implied_volatility` (a bisection to a
   `1e-5` price tolerance), `implied_volatility` and `calculate_iv` (a

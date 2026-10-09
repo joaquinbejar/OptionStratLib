@@ -6,6 +6,7 @@
 use crate::error::StrategyError;
 use crate::strategies::Strategies;
 use optionstratlib_core::model::Position;
+use optionstratlib_core::model::leg::SpotPosition;
 use optionstratlib_pricing::greeks::Greeks;
 
 /// Defines a common interface for constructing financial option strategies from
@@ -55,6 +56,34 @@ pub trait StrategyConstructor: Strategies + Greeks {
         Self: Sized,
     {
         Err(StrategyError::NotImplemented)
+    }
+
+    /// Constructs the strategy from its option positions and, for a strategy
+    /// that holds the underlying, its share leg (#831).
+    ///
+    /// The default implementation is [`StrategyConstructor::get_strategy`]
+    /// for a strategy without a share leg; `CoveredCall`, `ProtectivePut` and
+    /// `Collar` override it and require `spot_leg`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StrategyError::OperationError` when `spot_leg` is given to a
+    /// strategy that has no share leg, and whatever
+    /// [`StrategyConstructor::get_strategy`] returns otherwise.
+    fn get_strategy_with_spot(
+        spot_leg: Option<&SpotPosition>,
+        vec_positions: &[Position],
+    ) -> Result<Self, StrategyError>
+    where
+        Self: Sized,
+    {
+        match spot_leg {
+            None => Self::get_strategy(vec_positions),
+            Some(_) => Err(StrategyError::invalid_parameters(
+                "get_strategy_with_spot",
+                "this strategy has no share leg",
+            )),
+        }
     }
 }
 
