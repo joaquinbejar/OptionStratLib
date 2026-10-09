@@ -531,7 +531,9 @@ pub(crate) fn calculate_discounted_payoff(
 ///
 /// # Arguments
 ///
-/// * `dt` - A small time step over which the Wiener increment is calculated.
+/// * `sqrt_dt` - The square root of the time step, [`wiener_sqrt_dt`] of it.
+///   It is the same on every step of a path, so the caller computes it once
+///   instead of once per increment (#859).
 /// * `rng` - The generator the standard normal sample is drawn from.
 ///
 /// # Returns
@@ -542,13 +544,13 @@ pub(crate) fn calculate_discounted_payoff(
 /// # Errors
 ///
 /// - [`PricingError::Decimal`] (via `#[from]`) if `Normal::new(0.0, 1.0)` fails
-///   (effectively never; parameters are constants) or if `dt.sqrt()` is
-///   undefined for the given input (negative or non-finite `dt`).
+///   (effectively never; parameters are constants) or if the scaled sample
+///   leaves the `Decimal` range.
 /// - [`PricingError::NonFinite`] if the sampled normal value is non-finite,
 ///   tagged `"pricing::monte_carlo::wiener_increment::sample"`.
 ///
 pub(crate) fn wiener_increment<R: Rng + ?Sized>(
-    dt: Decimal,
+    sqrt_dt: Decimal,
     rng: &mut R,
 ) -> Result<Decimal, PricingError> {
     let normal = Normal::new(0.0, 1.0)
@@ -559,13 +561,25 @@ pub(crate) fn wiener_increment<R: Rng + ?Sized>(
         PricingError::non_finite("pricing::monte_carlo::wiener_increment::sample", sample_f64)
     })?;
 
-    let sqrt_dt = d_sqrt(dt, "pricing::monte_carlo::wiener_increment::sqrt_dt")
-        .map_err(|_| DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment"))?;
     Ok(d_mul(
         sample,
         sqrt_dt,
         "pricing::monte_carlo::wiener_increment::scaled",
     )?)
+}
+
+/// The `sqrt(dt)` a path passes to every [`wiener_increment`] of it.
+///
+/// It was computed inside `wiener_increment`, once per step of every path
+/// (#859); the operation and its error are the same.
+///
+/// # Errors
+///
+/// Returns [`DecimalError`] when the square root of `dt` is undefined
+/// (a negative or unrepresentable `dt`).
+pub(crate) fn wiener_sqrt_dt(dt: Decimal) -> Result<Decimal, DecimalError> {
+    d_sqrt(dt, "pricing::monte_carlo::wiener_increment::sqrt_dt")
+        .map_err(|_| DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment"))
 }
 
 /// Calculates the probability that the option will remain under the strike price.
@@ -905,6 +919,63 @@ mod tests_utils {
             (discount_factor - expected_discount_factor).abs() < EPSILON,
             "Expected {expected_discount_factor}, got {discount_factor}"
         );
+    }
+}
+
+/// #859: `sqrt(dt)` is computed once per path instead of inside every
+/// increment. The increments must be the ones the per-step version drew,
+/// digit for digit, from the same seeded generator.
+#[cfg(test)]
+mod tests_wiener_increment_hoisted_sqrt {
+    use super::*;
+    use optionstratlib_core::utils::deterministic_rng;
+    use rust_decimal_macros::dec;
+
+    /// `wiener_increment` as it was before #859: the square root inside.
+    fn per_step_increment<R: Rng + ?Sized>(
+        dt: Decimal,
+        rng: &mut R,
+    ) -> Result<Decimal, PricingError> {
+        let normal = Normal::new(0.0, 1.0)
+            .map_err(|e| DecimalError::arithmetic_error("Normal::new(0.0, 1.0)", &e.to_string()))?;
+        let sample_f64 = normal.sample(rng);
+        let sample = finite_decimal(sample_f64).ok_or_else(|| {
+            PricingError::non_finite("pricing::monte_carlo::wiener_increment::sample", sample_f64)
+        })?;
+        let sqrt_dt =
+            d_sqrt(dt, "pricing::monte_carlo::wiener_increment::sqrt_dt").map_err(|_| {
+                DecimalError::arithmetic_error("sqrt", "non-finite dt in wiener_increment")
+            })?;
+        Ok(d_mul(
+            sample,
+            sqrt_dt,
+            "pricing::monte_carlo::wiener_increment::scaled",
+        )?)
+    }
+
+    #[test]
+    fn test_wiener_increment_hoisted_sqrt_is_bit_identical() {
+        for dt in [
+            dec!(0.00396825396825),
+            dec!(0.0833333333333),
+            Decimal::ONE,
+            dec!(2.5),
+        ] {
+            let mut hoisted_rng = deterministic_rng(17);
+            let mut per_step_rng = deterministic_rng(17);
+            let sqrt_dt = wiener_sqrt_dt(dt).unwrap();
+            for step in 0..5_000 {
+                let hoisted = wiener_increment(sqrt_dt, &mut hoisted_rng).unwrap();
+                let per_step = per_step_increment(dt, &mut per_step_rng).unwrap();
+                assert_eq!(hoisted, per_step, "dt {dt}, step {step}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_wiener_sqrt_dt_rejects_a_negative_dt() {
+        assert!(wiener_sqrt_dt(dec!(-0.01)).is_err());
+        assert_eq!(wiener_sqrt_dt(dec!(0.25)).unwrap(), dec!(0.5));
     }
 }
 
