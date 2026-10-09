@@ -124,10 +124,80 @@ pub fn historical_volatility(
             reason: "historical_volatility: window_size must be non-zero".to_string(),
         });
     }
-    returns
-        .windows(window_size)
-        .map(constant_volatility)
-        .collect()
+    match rolling_historical_volatility(returns, window_size) {
+        Some(volatilities) => Ok(volatilities),
+        // An intermediate left the `Decimal` range: the per-window two-pass
+        // estimate reports the error it always reported, on the same window.
+        None => returns
+            .windows(window_size)
+            .map(constant_volatility)
+            .collect(),
+    }
+}
+
+/// [`historical_volatility`] in `O(n)`: one pass of rolling sums instead of a
+/// two-pass [`constant_volatility`] over every window (#859).
+///
+/// Each window's sample variance is `(S2 - S1² / w) / (w - 1)` with
+/// `S1 = Σ (r - K)` and `S2 = Σ (r - K)²`, kept up to date by adding the
+/// return that enters the window and subtracting the one that leaves. `K` is
+/// the first window's mean: shifting the data by a value near its mean is the
+/// standard way to keep `S2 - S1² / w` from cancelling (Chan, Golub and
+/// LeVeque, 1983). The result can differ from the two-pass estimate in the
+/// last digits of a `Decimal`, never more than the tests' `1e-10` relative
+/// tolerance on the fixtures.
+///
+/// A window whose rolling variance is not positive (a rounding residue on a
+/// window of equal returns) takes the two-pass estimate, so no value is
+/// invented. Returns `None`, and the caller falls back to the two-pass
+/// estimate for every window, when an intermediate leaves the `Decimal`
+/// range or a window cannot be evaluated.
+fn rolling_historical_volatility(returns: &[Decimal], window_size: usize) -> Option<Vec<Positive>> {
+    let first = returns.get(..window_size)?;
+    if window_size < 2 {
+        // `constant_volatility` reports zero for fewer than two returns.
+        return Some(vec![Positive::ZERO; returns.len()]);
+    }
+    let width = Decimal::from_usize(window_size)?;
+    let dof = width.checked_sub(Decimal::ONE)?;
+    let shift = d_div(d_sum(first, "").ok()?, width, "").ok()?;
+
+    let mut s1 = Decimal::ZERO;
+    let mut s2 = Decimal::ZERO;
+    for &r in first {
+        let x = r.checked_sub(shift)?;
+        s1 = s1.checked_add(x)?;
+        s2 = s2.checked_add(x.checked_mul(x)?)?;
+    }
+
+    let count = returns.len().checked_sub(window_size)?.checked_add(1)?;
+    let mut volatilities = Vec::new();
+    volatilities.try_reserve_exact(count).ok()?;
+
+    let window_volatility = |s1: Decimal, s2: Decimal, window: &[Decimal]| -> Option<Positive> {
+        let centred = s2.checked_sub(s1.checked_mul(s1)?.checked_div(width)?)?;
+        let variance = centred.checked_div(dof)?;
+        if variance > Decimal::ZERO {
+            let std_dev = d_sqrt(variance, "").ok()?;
+            Positive::new_decimal(std_dev).ok()
+        } else {
+            constant_volatility(window).ok()
+        }
+    };
+
+    volatilities.push(window_volatility(s1, s2, first)?);
+    let entering = returns.get(window_size..)?;
+    for (start, (&new, &old)) in (1usize..).zip(entering.iter().zip(returns)) {
+        let x_new = new.checked_sub(shift)?;
+        let x_old = old.checked_sub(shift)?;
+        s1 = s1.checked_add(x_new)?.checked_sub(x_old)?;
+        s2 = s2
+            .checked_add(x_new.checked_mul(x_new)?)?
+            .checked_sub(x_old.checked_mul(x_old)?)?;
+        let window = returns.get(start..start.checked_add(window_size)?)?;
+        volatilities.push(window_volatility(s1, s2, window)?);
+    }
+    Some(volatilities)
 }
 
 /// Calculates EWMA (Exponentially Weighted Moving Average) volatility.
@@ -2454,5 +2524,117 @@ mod tests_non_finite_guards {
             ),
         );
         assert!(res.is_ok(), "finite inputs unexpectedly failed: {res:?}");
+    }
+}
+
+/// The rolling `historical_volatility` of #859 against the per-window
+/// two-pass estimate it replaced.
+#[cfg(test)]
+mod tests_rolling_historical_volatility {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// The previous implementation: a two-pass estimate per window.
+    fn two_pass(returns: &[Decimal], window: usize) -> Result<Vec<Positive>, VolatilityError> {
+        returns.windows(window).map(constant_volatility).collect()
+    }
+
+    /// Deterministic returns: `scale · ((i·7919 mod 1009) - 504) / 1009`,
+    /// plus `drift · i`, so the mean moves across the series.
+    fn series(len: usize, scale: Decimal, drift: Decimal) -> Vec<Decimal> {
+        (0..len)
+            .map(|i| {
+                let k = Decimal::from((i * 7919) % 1009) - dec!(504);
+                scale * k / dec!(1009) + drift * Decimal::from(i)
+            })
+            .collect()
+    }
+
+    fn max_relative_difference(returns: &[Decimal], window: usize) -> Decimal {
+        let (rolling, reference) = match (
+            historical_volatility(returns, window),
+            two_pass(returns, window),
+        ) {
+            (Ok(a), Ok(b)) => (a, b),
+            other => panic!("both must succeed: {other:?}"),
+        };
+        assert_eq!(rolling.len(), reference.len());
+        let mut worst = Decimal::ZERO;
+        for (a, b) in rolling.iter().zip(&reference) {
+            let diff = (a.to_dec() - b.to_dec()).abs();
+            let rel = if b.to_dec().is_zero() {
+                diff
+            } else {
+                diff / b.to_dec()
+            };
+            worst = worst.max(rel);
+        }
+        worst
+    }
+
+    /// The largest relative difference measured on this grid is `7.5e-18`
+    /// (returns of scale `1e-4` with a drift of `1e-5` per step, where the
+    /// mean moves furthest from the shift). `1e-15` leaves a hundredfold
+    /// margin over rounding and is five orders of magnitude below the
+    /// `1e-10` an algorithmic error would breach.
+    const ROLLING_TOLERANCE: Decimal = dec!(0.000000000000001);
+
+    #[test]
+    fn test_rolling_matches_two_pass_on_a_grid() {
+        for scale in [dec!(0.0001), dec!(0.01), dec!(0.2), dec!(10)] {
+            for drift in [dec!(0), dec!(0.00001), dec!(0.01)] {
+                for window in [2usize, 3, 5, 21, 63, 252] {
+                    let returns = series(1008, scale, drift);
+                    let rel = max_relative_difference(&returns, window);
+                    assert!(
+                        rel <= ROLLING_TOLERANCE,
+                        "scale {scale}, drift {drift}, window {window}: {rel}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_rolling_matches_two_pass_on_the_bench_series() {
+        let bench: Vec<Decimal> = (0..1008)
+            .map(|i| (Decimal::from(i % 23) - dec!(11)) / dec!(997))
+            .collect();
+        for window in [2usize, 21, 252] {
+            assert!(max_relative_difference(&bench, window) <= ROLLING_TOLERANCE);
+        }
+    }
+
+    #[test]
+    fn test_rolling_equal_returns_are_exactly_zero() {
+        let returns = vec![dec!(0.0123); 50];
+        for window in [2usize, 7, 50] {
+            match historical_volatility(&returns, window) {
+                Ok(volatilities) => assert!(volatilities.iter().all(|v| *v == Positive::ZERO)),
+                Err(e) => panic!("equal returns must succeed: {e:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_rolling_edge_windows_match_two_pass() {
+        let returns = series(10, dec!(0.01), dec!(0));
+        for window in [1usize, 10, 11] {
+            assert_eq!(
+                format!("{:?}", historical_volatility(&returns, window)),
+                format!("{:?}", two_pass(&returns, window))
+            );
+        }
+        assert!(historical_volatility(&returns, 0).is_err());
+    }
+
+    #[test]
+    fn test_rolling_overflow_falls_back_to_the_two_pass_error() {
+        let huge = Decimal::MAX / dec!(2);
+        let returns = vec![huge, huge, huge, dec!(1)];
+        assert_eq!(
+            format!("{:?}", historical_volatility(&returns, 3)),
+            format!("{:?}", two_pass(&returns, 3))
+        );
     }
 }

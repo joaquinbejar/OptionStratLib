@@ -3229,6 +3229,22 @@ summarize the release.
   intended `update_greeks`); the 45-strike SP500 fixture loads in 128 µs
   instead of 3.65 ms.
 
+- **`historical_volatility` updates rolling sums instead of re-reading
+  every window** (#859, P5). It ran the two-pass `constant_volatility` on
+  each window, `O(n·w)`; it now keeps `Σ(r - K)` and `Σ(r - K)²` with `K`
+  the first window's mean (shifted data, so `S2 - S1²/w` does not cancel)
+  and updates both as the window slides, `O(n)` plus one square root per
+  window. The result is not bit-identical to the two-pass estimate: the
+  largest relative difference over 1 008-return series of scale `1e-4` to
+  10, mean drifts up to 0.01 per step and windows 2 to 252 is `7.5e-18`
+  (`1e-22` on the bench series), and unit tests hold it to `1e-15`. A
+  window whose rolling variance is not positive (equal returns) takes the
+  two-pass estimate, and any intermediate that leaves the `Decimal` range
+  makes the whole series fall back to it, so no value is invented and
+  errors are unchanged. `volatility/estimators/historical_window_21/1008`
+  went from 1.72 ms to 0.98 ms on Apple M5 Max; what remains is the square
+  root per window.
+
 - **The binomial lattice evaluates each power of `u` and `d` once per
   tree** (#859, P2). `price_binomial`'s American and Bermudan exercise
   checks, its terminal layer and `generate_binomial_tree` called `d_powd`
