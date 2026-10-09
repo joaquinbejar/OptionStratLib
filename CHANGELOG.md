@@ -16,6 +16,42 @@ summarize the release.
 
 ### Changed — breaking
 
+- **One implied-volatility solver behind the three entry points** (#859,
+  P4). `OptionPricing::calculate_implied_volatility` (a bisection to a
+  `1e-5` price tolerance), `implied_volatility` and `calculate_iv` (a
+  parallel grid search over `100 · max_iterations` points of `(0, 1)`) now
+  share Newton's method on the Black-Scholes vega (taken in `f64`; it only
+  steers the step), kept inside
+  `[MIN_VOLATILITY, 5]` with a bisection fallback (geometric while the
+  bracket spans more than a factor of four) and started from the
+  Brenner-Subrahmanyam estimate. It stops when a step moves `σ` by at most
+  `1e-13` relative. On a 1 296-point grid (`K` 70 to 130 on `S = 100`,
+  7 days to 2 years, `σ` 8 % to 120 %) the recovered volatility is within
+  `2.3e-13` of the true one wherever the condition number
+  `κ = price / (vega · σ)` is at most 50, and within `κ · 1e-13` up to
+  `κ = 1e4`; the bisection was off by up to `2.2e-1` there. Behaviour
+  changes:
+  - `implied_volatility` and `calculate_iv` return the root, not the
+    nearest grid point, and find volatilities above `1` (up to `5`) that
+    used to be `IvNotFound`. `max_iterations` caps solver steps instead of
+    sizing the grid: one step no longer returns a result, and a cap above
+    `u32::MAX` is clamped instead of reporting `NumericalFailure`.
+    `calculate_iv` runs 100 steps.
+  - `calculate_implied_volatility` returns `MIN_VOLATILITY` for a target at
+    or below the price at the floor, where the bisection returned its
+    bracket bottom (about `6e-5`); a target above the price at `σ = 5`
+    reports `NoConvergence { iterations: 0, last_volatility: 5 }`. It no
+    longer reports `ImpliedVolatilityInvariant`.
+  - Criterion (Apple M5 Max, 30-day call, `S = 100`): `implied_volatility`
+    2.1-2.4 ms to 20-47 µs and `calculate_iv` 0.27 ms to 15-39 µs;
+    `calculate_implied_volatility` 41 µs to 20 µs at the money, 43 µs to
+    41 µs and 33 µs to 46 µs out of the money, 2.18 ms to 2.52 ms for a
+    50-strike chain, the cost of solving to `1e-12` instead of `1e-5`.
+  Migration: tests pinned to a grid point or to the bisection's answer
+  re-pin to the root (the old answer is within `1e-3` of it on a
+  well-conditioned option); code matching `NumericalFailure` from
+  `implied_volatility` can drop that arm.
+
 - **Option contracts and shares are reported apart** (#830). By owner
   decision a leg's quantity stays in its native unit: option legs count
   contracts of `contract_size` underlying units, share legs count units of

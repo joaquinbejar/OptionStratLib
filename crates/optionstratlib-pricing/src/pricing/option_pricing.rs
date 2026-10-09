@@ -44,19 +44,22 @@
 use crate::error::{PricingError, VolatilityError};
 use crate::pricing::black_scholes_model::european_price_band;
 use crate::pricing::constants::{IV_TOLERANCE, MAX_ITERATIONS_IV};
+use crate::pricing::iv_solver::{
+    IV_BRACKET_MAX, IvOutcome, iv_initial_guess, long_residual, solve_implied_volatility,
+};
 use crate::pricing::monte_carlo::price_option_monte_carlo;
 use crate::pricing::{
     BinomialPricingParams, RegimeVolatility, TELEGRAPH_PATHS, black_scholes,
     generate_binomial_tree, price_binomial, telegraph,
 };
+use optionstratlib_core::constants::MIN_VOLATILITY;
 use optionstratlib_core::error::{OptionsError, OptionsResult};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_sub};
 use optionstratlib_core::model::types::OptionType;
 use rand::Rng;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use std::num::NonZeroUsize;
 
 /// Result type for binomial tree pricing models, containing:
@@ -273,14 +276,13 @@ pub trait OptionPricing {
     /// - **Short Options Adjustment**: For short options, the market price is inverted (negated),
     ///   and this adjustment ensures proper calculation of implied volatility.
     ///
-    /// - **Bounds and Iteration**: The method starts with a maximum bound (`5.0`, representing 500%
-    ///   volatility) and a lower bound (`0.0`). It adjusts these bounds based on whether the computed
-    ///   price is above or below the target and repeats until convergence or the maximum number of
-    ///   iterations is reached (`MAX_ITERATIONS_IV`).
+    /// - **Solver**: Newton's method on the Black–Scholes vega, kept inside the bracket
+    ///   `[MIN_VOLATILITY, 5]` (500 % per year) with a bisection fallback, started from the
+    ///   Brenner–Subrahmanyam estimate (#859 P4). It stops when a step moves the volatility by
+    ///   at most `1e-13` relative, so the result reproduces the target to the precision of
+    ///   the prices rather than to the `1e-5` price tolerance of the bisection it replaced.
     ///
-    /// - **Convergence Tolerance**: The function stops iterating when the computed price is within `IV_TOLERANCE`
-    ///   of the target market price or when the difference between the high and low bounds is smaller
-    ///   than a threshold (`0.0001`).
+    /// - **Floor**: a target at or below the price at `MIN_VOLATILITY` returns `MIN_VOLATILITY`.
     ///
     /// - **No-arbitrage band**: a European target is first checked against the band of attainable
     ///   Black–Scholes prices (Hull, bounds on option prices); outside it no implied volatility
@@ -294,19 +296,16 @@ pub trait OptionPricing {
     ///   (put), widened by `IV_TOLERANCE`: no volatility reproduces such a
     ///   price. `price` is the magnitude of `market_price`.
     /// - [`VolatilityError::NoConvergence`] when the target is inside the band
-    ///   but above the price at the top of the bracket (`σ = 500 %`), so the
-    ///   bisection cannot bracket the root, or when it exhausts
-    ///   `MAX_ITERATIONS_IV` (1000, far above the ~16 halvings the bracket
-    ///   floor needs).
+    ///   but above the price at the top of the bracket (`σ = 500 %`;
+    ///   `iterations` is `0` and `last_volatility` the top), or when the
+    ///   solver exhausts `MAX_ITERATIONS_IV` (1000) steps.
     /// - [`VolatilityError::DecimalError`] when a bracket or residual step
     ///   overflows `Decimal` (a target near `Decimal::MAX`).
     /// - [`VolatilityError::Options`] carrying [`OptionsError::TimeError`]
     ///   for an expired option: at `T = 0` the price is the intrinsic value
     ///   whatever the volatility, so no volatility is implied (#843).
     /// - [`VolatilityError::Options`] from the underlying Black–Scholes
-    ///   evaluation or the band, wrapped
-    ///   as [`OptionsError::ImpliedVolatilityInvariant`] when the midpoint
-    ///   invariant check fails.
+    ///   evaluation or the band.
     fn calculate_implied_volatility(
         &self,
         market_price: Decimal,
@@ -426,89 +425,33 @@ impl OptionPricing for Options {
             }
         }
 
-        // Initialize high and low bounds for volatility (500% max).
-        let mut high = IV_BISECTION_MAX_VOLATILITY;
-        let mut low = Positive::ZERO;
-        // The top of the bracket only moves down when a midpoint prices above
-        // the target, so while it has not moved the root may lie above it.
-        let mut high_moved = false;
-
-        // Binary search through volatilities until we find one that gives us our target price
-        // or until we reach maximum iterations
-        for iteration in 1..=MAX_ITERATIONS_IV {
-            // Calculate midpoint volatility
-            let mid_vol = d_div(
-                d_add(high.to_dec(), low.to_dec(), "pricing::iv::bracket_sum")?,
-                Decimal::TWO,
-                "pricing::iv::midpoint",
-            )?;
-            // mid_vol is the average of two non-negative bounds, so it is
-            // structurally non-negative; a None here would indicate a
-            // breached invariant on the bounds themselves.
-            let volatility = Positive::new_decimal(mid_vol).map_err(|e| {
-                OptionsError::ImpliedVolatilityInvariant {
-                    reason: format!("mid_vol invariant breached: {e}"),
-                }
-            })?;
-
-            // Calculate option price at this volatility
-            let mut option_copy = self.clone();
-            option_copy.implied_volatility = volatility;
-            let price = OptionPricing::calculate_price_black_scholes(&option_copy)?;
-
-            // Adjust price for short positions
-            let actual_price = if is_short { -price } else { price };
-
-            // Check if we're close enough to the target price
-            if d_sub(actual_price, target_price, "pricing::iv::residual")?.abs() < IV_TOLERANCE {
-                return Ok(volatility);
-            }
-
-            // Update bounds based on whether this price was too high or too low
-            if actual_price > target_price {
-                high = volatility;
-                high_moved = true;
-            } else {
-                low = volatility;
-            }
-
-            // Check if our range is too small (meaning we've converged)
-            if d_sub(high.to_dec(), low.to_dec(), "pricing::iv::bracket")? < IV_BISECTION_BRACKET {
-                if !high_moved {
-                    // Every midpoint priced below the target. The root is
-                    // bracketed only if the bracket top still prices at or
-                    // above it; otherwise the implied volatility exceeds the
-                    // bracket and the bisection did not converge (#652).
-                    let mut top = self.clone();
-                    top.implied_volatility = IV_BISECTION_MAX_VOLATILITY;
-                    let top_price = OptionPricing::calculate_price_black_scholes(&top)?;
-                    let top_price = if is_short { -top_price } else { top_price };
-                    if top_price < d_sub(target_price, IV_TOLERANCE, "pricing::iv::top")? {
-                        return Err(VolatilityError::NoConvergence {
-                            iterations: iteration,
-                            last_volatility: volatility,
-                        });
-                    }
-                }
-                return Ok(volatility);
-            }
+        // The shared solver of #859 P4 on one long unit; the short sign
+        // convention lives in `target_price`.
+        let guess = iv_initial_guess(self, target_price).unwrap_or(IV_BRACKET_MAX);
+        let outcome = solve_implied_volatility(
+            *MIN_VOLATILITY,
+            IV_BRACKET_MAX,
+            guess,
+            MAX_ITERATIONS_IV,
+            |sigma, with_slope| long_residual(self, target_price, sigma, with_slope),
+        )?;
+        match outcome {
+            IvOutcome::Found(volatility) => Ok(volatility),
+            // The target prices at or below the volatility floor: the
+            // bisection this replaced converged on the bottom of its
+            // bracket, and the floor is that bottom.
+            IvOutcome::BelowBracket => Ok(*MIN_VOLATILITY),
+            IvOutcome::AboveBracket => Err(VolatilityError::NoConvergence {
+                iterations: 0,
+                last_volatility: IV_BRACKET_MAX,
+            }),
+            IvOutcome::NoConvergence(last_volatility) => Err(VolatilityError::NoConvergence {
+                iterations: MAX_ITERATIONS_IV,
+                last_volatility,
+            }),
         }
-
-        // If we haven't found a solution after max iterations
-        Err(VolatilityError::NoConvergence {
-            iterations: MAX_ITERATIONS_IV,
-            last_volatility: high.checked_add(&low)?.checked_div(&Positive::TWO)?,
-        })
     }
 }
-
-/// Top of the bisection bracket of
-/// [`OptionPricing::calculate_implied_volatility`]: 500 % per year.
-const IV_BISECTION_MAX_VOLATILITY: Positive = Positive::FIVE;
-
-/// Width at which the bisection bracket counts as converged, in volatility
-/// units (`0.01 %` per year).
-const IV_BISECTION_BRACKET: Decimal = dec!(0.0001);
 
 /// Builds the error for a target outside the no-arbitrage band.
 ///
@@ -541,6 +484,7 @@ mod tests_option_pricing_trait {
     use optionstratlib_core::model::utils::create_sample_option_simplest;
     use optionstratlib_core::model::{ExpirationDate, OptionType};
     use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
 
     fn sample() -> Options {
         Options::new(
@@ -1075,13 +1019,25 @@ mod tests_options_black_scholes {
 mod tests_calculate_implied_volatility {
     use super::*;
     use crate::error::VolatilityError;
-    use crate::pricing::constants::IV_TOLERANCE;
     use optionstratlib_core::assert_pos_relative_eq;
     use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
     use optionstratlib_core::model::{ExpirationDate, Options};
     use optionstratlib_core::{model::Positive, pos_or_panic};
     use rust_decimal::Decimal;
     use rust_decimal_macros::dec;
+
+    /// The option at `iv` prices `market_price` (signed by side) to `1e-12`
+    /// relative.
+    fn assert_reprices(option: &Options, iv: Positive, market_price: Decimal) {
+        let mut repriced = option.clone();
+        repriced.implied_volatility = iv;
+        let price = repriced.calculate_price_black_scholes().unwrap();
+        let error = ((price - market_price) / market_price).abs();
+        assert!(
+            error <= dec!(1e-12),
+            "repriced {price} vs {market_price}: {error}"
+        );
+    }
 
     #[test]
     fn test_implied_volatility_call() {
@@ -1103,11 +1059,11 @@ mod tests_calculate_implied_volatility {
         let market_price = dec!(60.30);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(
-            iv,
-            pos_or_panic!(0.111618041),
-            Positive::new_decimal(IV_TOLERANCE).unwrap()
-        );
+        // The bisection replaced in #859 P4 stopped at a `1e-5` price
+        // tolerance and was pinned at 0.111618041; the solver now returns the
+        // volatility that reprices the target to `1e-12` relative.
+        assert_reprices(&option, iv, market_price);
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.111618041), pos_or_panic!(1e-3));
     }
 
     #[test]
@@ -1129,11 +1085,11 @@ mod tests_calculate_implied_volatility {
 
         let market_price = dec!(132.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(
-            iv,
-            pos_or_panic!(0.125961),
-            Positive::new_decimal(IV_TOLERANCE).unwrap()
-        );
+        // The bisection replaced in #859 P4 stopped at a `1e-5` price
+        // tolerance and was pinned at 0.125961; the solver now returns the
+        // volatility that reprices the target to `1e-12` relative.
+        assert_reprices(&option, iv, market_price);
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.125961), pos_or_panic!(1e-3));
     }
 
     #[test]
@@ -1156,11 +1112,11 @@ mod tests_calculate_implied_volatility {
         let market_price = dec!(-114.16);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
 
-        assert_pos_relative_eq!(
-            iv,
-            pos_or_panic!(0.1258087),
-            Positive::new_decimal(IV_TOLERANCE).unwrap()
-        );
+        // The bisection replaced in #859 P4 stopped at a `1e-5` price
+        // tolerance and was pinned at 0.1258087; the solver now returns the
+        // volatility that reprices the target to `1e-12` relative.
+        assert_reprices(&option, iv, market_price);
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.1258087), pos_or_panic!(1e-3));
     }
 
     #[test]
@@ -1182,11 +1138,11 @@ mod tests_calculate_implied_volatility {
 
         let market_price = dec!(-132.27);
         let iv = option.calculate_implied_volatility(market_price).unwrap();
-        assert_pos_relative_eq!(
-            iv,
-            pos_or_panic!(0.12611389),
-            Positive::new_decimal(IV_TOLERANCE).unwrap()
-        );
+        // The bisection replaced in #859 P4 stopped at a `1e-5` price
+        // tolerance and was pinned at 0.12611389; the solver now returns the
+        // volatility that reprices the target to `1e-12` relative.
+        assert_reprices(&option, iv, market_price);
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.12611389), pos_or_panic!(1e-3));
     }
 
     #[test]

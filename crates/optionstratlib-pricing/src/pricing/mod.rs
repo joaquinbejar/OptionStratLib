@@ -314,6 +314,10 @@ pub mod monte_carlo;
 /// pricing methods of its own; import this trait to price one.
 pub mod option_pricing;
 
+/// The implied-volatility solver behind every implied-volatility entry
+/// point (#859 P4).
+pub(crate) mod iv_solver;
+
 /// Profit contracts: [`Profit`](crate::pricing::Profit), the profit of a contract or position at a
 /// given underlying price. The payoff contracts at expiry are core's
 /// (`optionstratlib_core::model::payoff`).
