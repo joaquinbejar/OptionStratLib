@@ -3229,6 +3229,24 @@ summarize the release.
   intended `update_greeks`); the 45-strike SP500 fixture loads in 128 µs
   instead of 3.65 ms.
 
+- **The binomial lattice evaluates each power of `u` and `d` once per
+  tree** (#859, P2). `price_binomial`'s American and Bermudan exercise
+  checks, its terminal layer and `generate_binomial_tree` called `d_powd`
+  twice per node, for `u^i` and `d^(step - i)`: `O(n²)` power evaluations
+  for an `n`-step tree. A table of `u^k` and `d^k`, `k = 0..=n`, is built
+  once per tree with the same `d_powd` calls, so every spot is the same
+  `Decimal` and every price is unchanged: a differential run of 56,712
+  prices and full trees (European, American and Bermudan; calls and puts;
+  long and short; strikes 50 to 200, volatility 0.01 to 1, expiry 0.01 to 3
+  years, rates -1% to 5%, 1 to 1 000 steps, plus extreme-volatility trees
+  and their errors) matched `main` byte for byte. A power that leaves the
+  `Decimal` range is stored empty and re-run at the node that needs it, so
+  errors are unchanged too. On Apple M5 Max, `pricing/binomial/
+  american_put/1000` went from 473 ms to 90 ms, `/200` from 14.7 ms to
+  4.0 ms and `generate_binomial_tree/200` from 13.8 ms to 3.4 ms; the
+  European tree (46 ms at 1 000 steps), which only needed the terminal
+  powers, is unchanged.
+
 - **`Curve::intersect_with` no longer compares every pair of samples**
   (#858, M3). Both point sets are sorted by abscissa, so the samples of
   `other` within the `1e-6` tolerance of a sample of `self` form a window
