@@ -3188,6 +3188,23 @@ summarize the release.
 
 ### Changed
 
+- **Seven chain exposures read the stored greek snapshots** (#861, K2).
+  `vega_exposure`, `theta_exposure`, `vanna_exposure`, `vomma_exposure`,
+  `veta_exposure`, `charm_exposure` and `color_exposure` built two
+  `Options` per strike and re-ran the greek. By owner decision they now read
+  each strike's `GreeksSnapshot` (call and put) when
+  `update_greek_snapshots` or `build_chain` with greek snapshots computed
+  it, and compute only when it is missing. Each still sums call plus put;
+  `gamma_exposure` and `delta_exposure` keep reading their mirror fields.
+  Every mutator of the pricing inputs drops the snapshots, so a stale one
+  is not read; a caller that writes the public fields directly
+  recomputes them with `update_greek_snapshots`, as `OptionData`
+  documents. Tests compare all seven sums, digit for digit,
+  with and without snapshots on synthetic chains of 11, 51 and 201 strikes
+  and on the SP500 fixture. Criterion on an Apple M5 Max (load average
+  about 6), one run, `vega_exposure` without and with snapshots: 336 µs to
+  317 ns at 21 strikes, 1.65 ms to 1.59 µs at 101.
+
 - **docs.rs documents the optional features** (no issue, release
   preparation). docs.rs builds a crate's default features, which are empty
   for every component, so `io`, `async`, `synthetic`, `schema` and `plotly`
