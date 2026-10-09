@@ -39,22 +39,28 @@ fn test_iron_butterfly_integration() -> Result<(), Box<dyn Error>> {
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
     ))?;
+    let input_fees = strategy.get_fees()?;
     strategy
         .get_best_area(&option_chain, FindOptimalSide::All)
         .unwrap();
+    // Was 0.2583 here and 0.557 below: each candidate was charged
+    // `quantity` times the fees, and the search rebuilt candidates from its
+    // last improvement, so the fees compounded along the search (#875).
     assert_relative_eq!(
         strategy.get_profit_area().unwrap().to_f64().unwrap(),
-        0.2583,
+        23.3348,
         epsilon = 0.001
     );
+    assert_eq!(strategy.get_fees()?, input_fees);
     strategy
         .get_best_ratio(&option_chain, FindOptimalSide::Upper)
         .unwrap();
     assert_relative_eq!(
         strategy.get_profit_ratio().unwrap().to_f64().unwrap(),
-        0.557,
+        611.2376,
         epsilon = 0.001
     );
+    assert_eq!(strategy.get_fees()?, input_fees);
 
     Ok(())
 }

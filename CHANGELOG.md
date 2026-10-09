@@ -1839,6 +1839,28 @@ summarize the release.
 
 ### Fixed
 
+- **The iron condor and iron butterfly optimisers keep the input's fees at
+  every quantity** (#875). Their `create_strategy` split `get_fees()`,
+  already scaled by the quantity, into the one per-contract fee their
+  constructors take and scale by the quantity again, so a candidate carried
+  `quantity` times the fees. `find_optimal` rebuilt each candidate from its
+  last improvement, so the fees compounded along the search and the result
+  depended on the order the candidates were met: on the SP500 fixture at
+  quantity 2 the area search ended with 16 times the input's fees (245.76
+  for 15.36). The per-leg fee is now the legs' own per-contract open and
+  close fees spread over the eight, which the constructor scales back to the
+  input's total. Every other strategy's `create_strategy` already passed
+  each leg's own per-contract fees, in its constructor's order; a new test
+  checks all fourteen at quantities 1, 2 and 5 with a different fee on
+  every leg, and every optimiser at quantity 2 keeps the input's fees and
+  picks what a search building each candidate from the input picks. At
+  quantity 1 nothing changes. Values that change, both at quantity 2 on the
+  SP500 fixture (`tests/integration/optimal/`): the iron condor's best area
+  0.0818 to 19.58, and its upper-side ratio search, which reported no
+  candidate, now finds the 6100/6050/6200/5950 condor (ratio 464.0); the
+  iron butterfly's best area 0.2583 to 23.33 and upper-side ratio 0.557 to
+  611.2.
+
 - **A compound option at zero volatility returns its deterministic value**
   (#867). Before expiry, `compound_black_scholes` at `σ = 0` valued the
   underlying through `black_scholes`, which rejects a zero volatility, so it
