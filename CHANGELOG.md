@@ -16,6 +16,19 @@ summarize the release.
 
 ### Changed — breaking
 
+- **Option contracts and shares are reported apart** (#830). By owner
+  decision a leg's quantity stays in its native unit: option legs count
+  contracts of `contract_size` underlying units, share legs count units of
+  the underlying. `Strategies::get_volume` is documented as the option
+  contracts only (the share legs of `CoveredCall`, `Collar` and
+  `ProtectivePut` never entered it), and the new
+  `Strategies::get_share_volume` reports the share leg, zero for a strategy
+  without one. `LegAble::get_quantity` and the delta-neutral adjustments
+  name the unit of every quantity. A test pins a covered call, a protective
+  put and a collar at contract sizes 1 and 100. Migration: a trait
+  implementor of `Strategies` gets the default `get_share_volume`; code that
+  wanted the share count reads `get_share_volume` instead of the share leg.
+
 - **Core converts `Decimal` to `f64` through `decimal_to_f64`** (#828,
   part 1 of 2). The Asian, geometric-mean and power payoffs,
   `positive_f64_to_f64` and `mean_and_std` used `Positive::to_f64`, which
@@ -45,6 +58,14 @@ summarize the release.
   0.21 had no such feature; a 0.22 pre-release manifest that names
   `parallel` drops it. `make check-graph` now rejects the feature if it
   comes back.
+
+- **`RNDParameters::interpolation_points` is removed** (#865). The field
+  was documented as the number of interpolation points between strikes, but
+  `calculate_rnd` never read it: the density is computed on the chain's own
+  strikes, so 50 and 200 points measured the same 21.45 µs (#789). By owner
+  decision it is removed rather than implemented. Migration: drop the field
+  from `RNDParameters` literals; results do not change. Serialised
+  parameters that still carry it deserialise, the field is ignored.
 
 - **Walkers and `Simulator::new` generators must be `Send + Sync`**
   (#860). `Simulator::new` now builds its walks on the rayon pool (see
@@ -3146,6 +3167,18 @@ summarize the release.
   which also replaces an older binary restored from the `~/.cargo/bin` cache.
 
 ### Changed
+
+- **docs.rs documents the optional features** (no issue, release
+  preparation). docs.rs builds a crate's default features, which are empty
+  for every component, so `io`, `async`, `synthetic`, `schema` and `plotly`
+  items would have been missing from the published docs. Each crate now
+  names them in `[package.metadata.docs.rs]`: `schema` for core, math,
+  pricing, simulation, analytics, strategies and backtest; `io`, `async`,
+  `synthetic` and `schema` for market; `plotly` for visualization; and
+  `plotly` and `async` on top of the default for the facade. `static_export`
+  is left out everywhere because its build script needs a browser, which
+  docs.rs does not have. Each set was checked with
+  `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps`.
 
 - **Single-leg backtests evaluate their paths on the rayon pool and reuse
   one option per path** (#863). `simulate_single_leg` evaluated every walk

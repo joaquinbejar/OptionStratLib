@@ -184,3 +184,51 @@ fn test_covered_strategies_break_even_is_the_payoff_zero() {
     );
     assert_eq!(profit(&strategy, 99.16), Decimal::ZERO);
 }
+
+/// `get_volume` counts option contracts and `get_share_volume` counts the
+/// share leg in units of the underlying, so the two never mix (#830). With a
+/// contract size of 100 the 100 shares are covered by one call contract.
+#[test]
+fn test_volume_reports_contracts_and_shares_apart() {
+    use optionstratlib_strategies::strategies::{BasicAble, Strategies};
+
+    let mut call = covered_call();
+    let mut put = protective_put();
+    let mut col = collar();
+    // At a contract size of 1 each option leg holds 100 contracts; the
+    // collar has two option legs.
+    for (name, volume, shares, contracts) in [
+        (
+            "covered call",
+            call.get_volume(),
+            call.get_share_volume(),
+            Positive::HUNDRED,
+        ),
+        (
+            "protective put",
+            put.get_volume(),
+            put.get_share_volume(),
+            Positive::HUNDRED,
+        ),
+        (
+            "collar",
+            col.get_volume(),
+            col.get_share_volume(),
+            pos_or_panic!(200.0),
+        ),
+    ] {
+        assert_eq!(volume.ok(), Some(contracts), "{name} contracts");
+        assert_eq!(shares.ok(), Some(Positive::HUNDRED), "{name} shares");
+    }
+
+    call.set_contract_size(Positive::HUNDRED)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(call.get_volume().ok(), Some(Positive::ONE));
+    assert_eq!(call.get_share_volume().ok(), Some(Positive::HUNDRED));
+
+    col.set_contract_size(Positive::HUNDRED)
+        .unwrap_or_else(|e| panic!("{e}"));
+    // A collar has two option legs of one contract each.
+    assert_eq!(col.get_volume().ok(), Some(Positive::TWO));
+    assert_eq!(col.get_share_volume().ok(), Some(Positive::HUNDRED));
+}

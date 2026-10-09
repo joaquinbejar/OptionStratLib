@@ -64,7 +64,6 @@ fn test_rnd_through_analytics_trait_normalises_densities() {
     let chain = create_small_chain();
     let params = RNDParameters {
         risk_free_rate: dec!(0.05),
-        interpolation_points: 100,
         derivative_tolerance: Positive::ONE,
     };
     let result = chain
