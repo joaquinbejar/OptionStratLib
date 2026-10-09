@@ -3,6 +3,7 @@
    Email: jb@taunais.com
    Date: 20/1/25
 ******************************************************************************/
+use crate::curves::grid_coordinate;
 use crate::geometrics::GeometricObject;
 use crate::surfaces::{Point3D, Surface};
 use rust_decimal::Decimal;
@@ -51,8 +52,18 @@ pub fn create_planar_surface(
 
     for i in 0..=x_steps {
         for j in 0..=y_steps {
-            let x = x_start + x_step_size * Decimal::from(i);
-            let y = y_start + y_step_size * Decimal::from(j);
+            let x = grid_coordinate(
+                x_start + x_step_size * Decimal::from(i),
+                x_start,
+                x_end,
+                i == x_steps,
+            );
+            let y = grid_coordinate(
+                y_start + y_step_size * Decimal::from(j),
+                y_start,
+                y_end,
+                j == y_steps,
+            );
             // Using plane equation ax + by + cz + d = 0
             // Therefore z = -(ax + by + d)/c
             let z = -(a * x + b * y + d) / c;
@@ -98,8 +109,18 @@ pub fn create_constant_surface(
 
     for i in 0..=x_steps {
         for j in 0..=y_steps {
-            let x = x_start + x_step_size * Decimal::from(i);
-            let y = y_start + y_step_size * Decimal::from(j);
+            let x = grid_coordinate(
+                x_start + x_step_size * Decimal::from(i),
+                x_start,
+                x_end,
+                i == x_steps,
+            );
+            let y = grid_coordinate(
+                y_start + y_step_size * Decimal::from(j),
+                y_start,
+                y_end,
+                j == y_steps,
+            );
             points.push(Point3D::new(x, y, height));
         }
     }
@@ -147,8 +168,18 @@ pub fn create_paraboloid_surface(
 
     for i in 0..=x_steps {
         for j in 0..=y_steps {
-            let x = x_start + x_step_size * Decimal::from(i);
-            let y = y_start + y_step_size * Decimal::from(j);
+            let x = grid_coordinate(
+                x_start + x_step_size * Decimal::from(i),
+                x_start,
+                x_end,
+                i == x_steps,
+            );
+            let y = grid_coordinate(
+                y_start + y_step_size * Decimal::from(j),
+                y_start,
+                y_end,
+                j == y_steps,
+            );
             let z = a * x * x + b * y * y;
             points.push(Point3D::new(x, y, z));
         }

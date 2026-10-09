@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::curves::Point2D;
 use crate::curves::traits::StatisticalCurve;
-use crate::curves::utils::detect_peaks_and_valleys;
+use crate::curves::utils::{detect_peaks_and_valleys, grid_coordinate};
 use crate::error::{CurveError, InterpolationError, MetricsError};
 use crate::geometrics::{
     Arithmetic, AxisOperations, BasicMetrics, BiLinearInterpolation, ConstructionMethod,
@@ -698,8 +698,15 @@ impl GeometricObject<Point2D, Decimal> for Curve {
                     .map(|i| {
                         let offset = d_mul(step_size, Decimal::from(i), "Curve::construct::offset")
                             .map_err(construction_err)?;
-                        let t = d_add(t_start, offset, "Curve::construct::t")
-                            .map_err(construction_err)?;
+                        // The last `t` is `t_end` itself, the rest stay on its
+                        // `t_start` side (#799).
+                        let t = grid_coordinate(
+                            d_add(t_start, offset, "Curve::construct::t")
+                                .map_err(construction_err)?,
+                            t_start,
+                            t_end,
+                            i == steps,
+                        );
                         f(t)
                     })
                     .collect();

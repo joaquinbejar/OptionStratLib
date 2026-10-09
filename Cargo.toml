@@ -70,12 +70,10 @@ io = ["market", "optionstratlib-market/io"]
 visualization = ["dep:optionstratlib-visualization", "backtest"]
 # Interactive Plotly rendering (`Graph::to_plot`, `write_html`, `show`).
 plotly = ["visualization", "optionstratlib-visualization/plotly"]
-# PNG / SVG export through `plotly_static`; implies `async` as in 0.21.
-static_export = [
-    "plotly",
-    "async",
-    "optionstratlib-visualization/static_export",
-]
+# PNG / SVG export through `plotly_static`, which brings its own WebDriver
+# client and async runtime. It no longer implies the facade's `async` (#833):
+# name `async` as well for the market `*_async` wrappers.
+static_export = ["plotly", "optionstratlib-visualization/static_export"]
 # `utoipa::ToSchema` derives on the domain types of every enabled component
 # (ADR-0002 section 2, #549). Weak `crate?/schema` forwards reach only the
 # components another feature already enabled, so `schema` never adds a
@@ -92,11 +90,6 @@ schema = [
     "optionstratlib-strategies?/schema",
     "optionstratlib-backtest?/schema",
 ]
-# Reserved (ADR-0002 section 2, Option E): the name is held so it is not
-# reused for another meaning, and it enables nothing. `rayon` stays mandatory
-# in `math`, `pricing` and `simulation`; a sequential build needs a sequential
-# twin of every parallel site, which no 0.22 issue owns.
-parallel = []
 # The `*_async` wrappers over the market I/O functions: `tokio` in the market
 # crate and nothing in the facade itself (ADR-0002 section 2).
 async = ["market", "io", "optionstratlib-market/async"]

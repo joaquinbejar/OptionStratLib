@@ -104,12 +104,11 @@ or depend on component crates, whose default features are empty.
 | `backtest` | `optionstratlib-backtest` | `strategies`, `simulation` |
 | `visualization` | `optionstratlib-visualization`, the aggregate `error::Error` | `backtest` |
 | `plotly` | Plotly rendering | `visualization` |
-| `static_export` | PNG/SVG export | `plotly`, `async` |
+| `static_export` | PNG/SVG export | `plotly` |
 | `io` | CSV, JSON and ZIP readers and writers of market data | `market` |
 | `async` | `tokio`-backed `*_async` market I/O | `market`, `io` |
 | `synthetic` | Simulation-backed chain and series generators | `market`, `simulation` |
 | `schema` | `utoipa::ToSchema` derives on every enabled component (adds no component) | |
-| `parallel` | Reserved; enables nothing in 0.22 | |
 
 Default: `pricing`, `market`, `analytics`, `strategies`, `simulation`,
 `backtest`, `visualization`, `synthetic`, `io`, `schema`.
@@ -409,8 +408,9 @@ gives what to do for each.
 - No library code writes to stdout or installs a global subscriber: install
   your own `tracing` subscriber, and print tables through
   `visualization::terminal` (#545, #546).
-- Default builds are synchronous; `tokio` resolves only with `async` (and so
-  with `static_export`) (#525, #549).
+- Default builds are synchronous; `tokio` resolves only with `async`, or
+  with `static_export` through `plotly_static`, which no longer implies
+  `async` (#525, #549, #833).
 - Repository gates that guard the release: `make check-graph` (layers,
   error and utils partition, ownership map), `make check-feature-trees`,
   `make check-fixtures`, `make check-components` (each crate on its own),

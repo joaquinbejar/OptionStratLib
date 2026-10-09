@@ -82,8 +82,10 @@ optionstratlib-pricing = "0.22.0"
 | `optionstratlib-visualization` | `plotly`, `static_export` | `visualization` (implies `backtest`); `plotly`, `static_export` forward to it |
 
 The facade also has `schema` (forwarded to every enabled component, adding
-no component) and `parallel`, reserved and empty in 0.22. `static_export`
-implies `async`.
+no component). The reserved `parallel` feature is retired (#832): `rayon` is
+a mandatory dependency, and a manifest that names `parallel` must drop it.
+`static_export` no longer implies `async` (#833): a manifest that used the
+market `*_async` wrappers through `static_export` alone adds `async`.
 
 **Minimal consumers.** [`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct)
 has one runnable program per capability on component crates alone, each

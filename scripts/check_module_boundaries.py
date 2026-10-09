@@ -1129,8 +1129,9 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
         "synthetic": ("synthetic", frozenset({"optionstratlib-simulation"})),
     },
     # The facade routes `plotly` and `static_export` to the visualization
-    # crate's features, so each set adds what that crate's set adds, plus the
-    # async stack `static_export` implies (ADR-0002 section 2, #544).
+    # crate's features, so each set adds what that crate's set adds: for
+    # `static_export`, the export stack `plotly_static` brings (ADR-0002
+    # section 2, #544, #833).
     "optionstratlib": {
         "visualization": ("visualization", frozenset()),
         "plotly": ("plotly", frozenset({"plotly"})),
@@ -1437,18 +1438,19 @@ def plotly_gate_violations(packages: list[dict]) -> list[str]:
 # The facade's visualization routing, exactly (ADR-0002 section 2): visualization
 # implies backtest, the layer below it; `plotly` implies visualization and
 # forwards to the crate's `plotly`; `static_export` implies `plotly` and
-# `async` and forwards to the crate's `static_export`. Nothing implies them
-# the other way round.
+# forwards to the crate's `static_export`, and no longer implies `async`
+# (#833). Nothing implies them the other way round.
 FACADE_ROUTING = {
     "visualization": frozenset({"dep:optionstratlib-visualization", "backtest"}),
     "plotly": frozenset({"visualization", "optionstratlib-visualization/plotly"}),
-    "static_export": frozenset({"plotly", "async", "optionstratlib-visualization/static_export"}),
+    "static_export": frozenset({"plotly", "optionstratlib-visualization/static_export"}),
 }
 
 
 # The rest of the facade's feature table, exactly (ADR-0002 section 2 and
-# Decision 1): the capability implications, the cross-cutting features, the
-# reserved `parallel` and the 0.22 default (#549). Anything else is drift.
+# Decision 1): the capability implications, the cross-cutting features and
+# the 0.22 default (#549). `parallel` was reserved and is retired (#832).
+# Anything else is drift.
 FACADE_EXACT = {
     "math": frozenset({"dep:optionstratlib-math"}),
     "pricing": frozenset({"dep:optionstratlib-pricing", "math"}),
@@ -1466,7 +1468,6 @@ FACADE_EXACT = {
         "optionstratlib-analytics?/schema", "optionstratlib-strategies?/schema",
         "optionstratlib-backtest?/schema",
     }),
-    "parallel": frozenset(),
     "default": frozenset({
         "pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization",
         "synthetic", "io", "schema",
@@ -2099,7 +2100,7 @@ def self_test() -> int:
             "default": ["visualization"],
             "visualization": ["dep:optionstratlib-visualization", "backtest"],
             "plotly": ["visualization", "optionstratlib-visualization/plotly"],
-            "static_export": ["plotly", "async", "optionstratlib-visualization/static_export"],
+            "static_export": ["plotly", "optionstratlib-visualization/static_export"],
         },
     )
 
@@ -2228,15 +2229,15 @@ def self_test() -> int:
             routed(schema=sorted(FACADE_EXACT["schema"] - {"optionstratlib-math?/schema"} | {"optionstratlib-math/schema"})),
             1,
         ),
-        "parallel is no longer reserved": (routed(parallel=["pricing"]), 1),
+        "the retired parallel comes back": (routed(parallel=[]), 1),
         "a feature outside the table": (routed(extra=["pricing"]), 1),
         "plotly drops visualization": (routed(plotly=["optionstratlib-visualization/plotly"]), 1),
-        "static_export drops async": (
-            routed(static_export=["plotly", "optionstratlib-visualization/static_export"]),
+        "static_export implies async again": (
+            routed(static_export=["plotly", "async", "optionstratlib-visualization/static_export"]),
             1,
         ),
         "static_export forwards to the wrong feature": (
-            routed(static_export=["plotly", "async", "optionstratlib-visualization/plotly"]),
+            routed(static_export=["plotly", "optionstratlib-visualization/plotly"]),
             1,
         ),
     }

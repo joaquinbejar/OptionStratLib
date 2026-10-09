@@ -16,6 +16,27 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`static_export` no longer implies `async`** (#833). In 0.21 and the
+  0.22 drafts the facade's `static_export` enabled `async`, and with it the
+  market `io` stack (`csv`, `zip`) and the market `tokio` wrappers. PNG and
+  SVG export do not need them: `plotly_static` brings its own WebDriver
+  client and runtime. ADR-0002 section 2 named this a candidate for the
+  next major boundary, and by owner decision it lands in 0.22.
+  `static_export` now implies only `plotly`; the `facade-static-export`
+  fixture asserts `csv` and `zip` are absent, and `make check-graph`
+  rejects the implication if it comes back. Migration: a manifest that
+  enabled `static_export` and also used the `*_async` market wrappers or
+  the file I/O names `async` (or `io`) as well.
+
+- **The reserved `parallel` facade feature is retired** (#832). ADR-0002
+  Option E held the name, enabling nothing, until someone implemented a
+  sequential twin of every parallel site. By owner decision the feature is
+  removed instead: `rayon` is a mandatory dependency of math, pricing,
+  simulation, market, strategies and backtest, and no build is sequential.
+  0.21 had no such feature; a 0.22 pre-release manifest that names
+  `parallel` drops it. `make check-graph` now rejects the feature if it
+  comes back.
+
 - **Walkers and `Simulator::new` generators must be `Send + Sync`**
   (#860). `Simulator::new` now builds its walks on the rayon pool (see
   *Changed*), so the trait object in `WalkParams::walker` and the generator
@@ -1838,6 +1859,18 @@ summarize the release.
   `rust-version` every crate declares since #559.
 
 ### Fixed
+
+- **Curve and surface generators end exactly at `end`** (#799).
+  `create_linear_curve`, `create_constant_curve` and the parametric
+  `Curve::construct` and `Surface::construct` built each coordinate as
+  `start + step * i` with a step rounded at 28 places, so the last one
+  could land 1 to 2 ulps off an `end` with a long mantissa
+  (`0.1234567890123456789012345678` gave `…5680`, past the range). The last
+  coordinate is now `end` itself, and every other one is clamped toward
+  `end` in whichever direction the range runs, as #795 does for the merge
+  grid. Only the last coordinate and an overshooting one can move; every
+  other generated point is unchanged. The test fixtures in `surfaces/utils`
+  (test only since #788) do the same.
 
 - **The iron condor and iron butterfly optimisers keep the input's fees at
   every quantity** (#875). Their `create_strategy` split `get_fees()`,
