@@ -1,6 +1,6 @@
 use crate::error::PricingError;
 use crate::kernels::discount_factor;
-use crate::pricing::utils::{wiener_increment, wiener_sqrt_dt};
+use crate::pricing::utils::wiener_sqrt_dt;
 use num_traits::FromPrimitive;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
@@ -9,6 +9,7 @@ use optionstratlib_core::model::decimal::{
 };
 use optionstratlib_core::model::types::{OptionStyle, Side};
 use rand::Rng;
+use rand_distr::{Distribution, Normal};
 use rust_decimal::Decimal;
 use std::num::NonZeroUsize;
 use tracing::instrument;
@@ -93,40 +94,50 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
         "pricing::monte_carlo::gbm::carry",
     )?;
     let drift = d_mul(carry, dt_dec, "pricing::monte_carlo::gbm::drift")?;
-    let strike = option.strike_price.to_dec();
+    // The path runs in `f64` (#859 P3b): the inputs and the loop-invariant
+    // factors are converted once, each step is the same Euler update the
+    // `Decimal` path took, `st <- st * ((1 + (r - q) dt) + sigma * z * sqrt(dt))`,
+    // on the same standard normal draws in the same order, and the payoff is
+    // checked for finiteness before it is summed. Against the `Decimal` path
+    // the price moves by about 1e-15 relative (tests_f64_path_kernel).
+    let one_plus_drift = decimal_to_f64(d_add(
+        Decimal::ONE,
+        drift,
+        "pricing::monte_carlo::gbm::growth_drift",
+    )?)?;
+    let sigma = decimal_to_f64(option.implied_volatility.to_dec())?;
+    let spot = decimal_to_f64(option.underlying_price.to_dec())?;
+    let strike = decimal_to_f64(option.strike_price.to_dec())?;
     // Loop invariant: computed inside every step until #859, where it was
     // about two thirds of the cost of a step.
-    let sqrt_dt = wiener_sqrt_dt(dt_dec)?;
+    let sqrt_dt = decimal_to_f64(wiener_sqrt_dt(dt_dec)?)?;
+    let normal = Normal::new(0.0, 1.0).map_err(|e| {
+        PricingError::from(optionstratlib_core::error::DecimalError::arithmetic_error(
+            "Normal::new(0.0, 1.0)",
+            &e.to_string(),
+        ))
+    })?;
     for _ in 0..simulations_raw {
-        let mut st = option.underlying_price.to_dec();
+        let mut st = spot;
         for _ in 0..steps_raw {
-            let w = wiener_increment(sqrt_dt, rng)?;
-            let diffusion = d_mul(
-                option.implied_volatility.to_dec(),
-                w,
-                "pricing::monte_carlo::gbm::diffusion",
-            )?;
-            let growth = d_add(
-                d_add(
-                    Decimal::ONE,
-                    drift,
-                    "pricing::monte_carlo::gbm::growth_drift",
-                )?,
-                diffusion,
-                "pricing::monte_carlo::gbm::growth",
-            )?;
-            st = d_mul(st, growth, "pricing::monte_carlo::gbm::step")?;
+            let sample = normal.sample(rng);
+            let w = sample * sqrt_dt;
+            let diffusion = sigma * w;
+            st *= one_plus_drift + diffusion;
+        }
+        if !st.is_finite() {
+            return Err(PricingError::non_finite(
+                "pricing::monte_carlo::gbm::step",
+                st,
+            ));
         }
         // The payoff of the option's style; it was always the call payoff
         // until #864, so a put was priced as a call.
-        let payoff_dec = match option.option_style {
-            OptionStyle::Call => d_sub(st, strike, "pricing::monte_carlo::gbm::call_payoff")?,
-            OptionStyle::Put => d_sub(strike, st, "pricing::monte_carlo::gbm::put_payoff")?,
+        let payoff = match option.option_style {
+            OptionStyle::Call => st - strike,
+            OptionStyle::Put => strike - st,
         }
-        .max(Decimal::ZERO);
-        let payoff: f64 = decimal_to_f64(payoff_dec).map_err(|_| {
-            PricingError::non_finite("pricing::monte_carlo::gbm::payoff_cast", f64::NAN)
-        })?;
+        .max(0.0);
         if !payoff.is_finite() {
             return Err(PricingError::non_finite(
                 "pricing::monte_carlo::gbm::payoff",
@@ -785,4 +796,115 @@ mod tests_price_option_monte_carlo {
     //     assert!(diff < Decimal::from_str("0.001").unwrap(),
     //             "Expected close to {}, got {}", expected.0, result.unwrap().0);
     // }
+}
+
+/// The `f64` path kernel (#859 P3b) against the `Decimal` path it replaced,
+/// on the same seeded draws, over spots, volatilities, styles and sides.
+#[cfg(test)]
+mod tests_f64_path_kernel {
+    use super::*;
+    use crate::pricing::utils::wiener_increment;
+    use optionstratlib_core::model::ExpirationDate;
+    use optionstratlib_core::model::types::OptionType;
+    use optionstratlib_core::pos_or_panic;
+    use optionstratlib_core::utils::deterministic_rng;
+    use rust_decimal_macros::dec;
+
+    /// The previous price: the path in `Decimal`, the rest unchanged.
+    fn decimal_path_price<R: Rng + ?Sized>(
+        option: &Options,
+        steps: usize,
+        simulations: usize,
+        rng: &mut R,
+    ) -> Decimal {
+        let steps_dec = Decimal::from(steps);
+        let dt = option.expiration_date.get_years().unwrap().to_dec() / steps_dec;
+        let carry = option.risk_free_rate - option.dividend_yield.to_dec();
+        let growth_drift = Decimal::ONE + carry * dt;
+        let sigma = option.implied_volatility.to_dec();
+        let strike = option.strike_price.to_dec();
+        let sqrt_dt = wiener_sqrt_dt(dt).unwrap();
+        let mut payoff_sum = 0.0;
+        for _ in 0..simulations {
+            let mut st = option.underlying_price.to_dec();
+            for _ in 0..steps {
+                let w = wiener_increment(sqrt_dt, rng).unwrap();
+                st *= growth_drift + sigma * w;
+            }
+            let payoff = match option.option_style {
+                OptionStyle::Call => st - strike,
+                OptionStyle::Put => strike - st,
+            }
+            .max(Decimal::ZERO);
+            payoff_sum += decimal_to_f64(payoff).unwrap();
+        }
+        let rate = decimal_to_f64(option.risk_free_rate).unwrap();
+        let years = decimal_to_f64(option.expiration_date.get_years().unwrap().to_dec()).unwrap();
+        let price =
+            finite_decimal(payoff_sum / simulations as f64 * (-rate * years).exp()).unwrap();
+        match option.side {
+            Side::Long => price,
+            Side::Short => -price,
+        }
+    }
+
+    fn option(spot: Decimal, sigma: Decimal, style: OptionStyle, side: Side) -> Options {
+        Options {
+            option_type: OptionType::European,
+            side,
+            underlying_symbol: "TEST".to_string(),
+            strike_price: Positive::HUNDRED,
+            expiration_date: ExpirationDate::Days(pos_or_panic!(90.0)),
+            implied_volatility: Positive::new_decimal(sigma).unwrap(),
+            quantity: Positive::ONE,
+            contract_size: Positive::ONE,
+            underlying_price: Positive::new_decimal(spot).unwrap(),
+            risk_free_rate: dec!(0.05),
+            option_style: style,
+            dividend_yield: pos_or_panic!(0.02),
+            exotic_params: None,
+        }
+    }
+
+    #[test]
+    fn test_f64_path_kernel_within_the_owner_bound() {
+        let steps = NonZeroUsize::new(30).unwrap();
+        let simulations = NonZeroUsize::new(400).unwrap();
+        let mut worst = Decimal::ZERO;
+        for spot in [dec!(70), dec!(95), dec!(100), dec!(105), dec!(140)] {
+            for sigma in [dec!(0.05), dec!(0.2), dec!(0.8)] {
+                for style in [OptionStyle::Call, OptionStyle::Put] {
+                    for side in [Side::Long, Side::Short] {
+                        let option = option(spot, sigma, style, side);
+                        let fast = monte_carlo_option_pricing(
+                            &option,
+                            steps,
+                            simulations,
+                            &mut deterministic_rng(859),
+                        )
+                        .unwrap();
+                        let reference = decimal_path_price(
+                            &option,
+                            steps.get(),
+                            simulations.get(),
+                            &mut deterministic_rng(859),
+                        );
+                        // Relative to the price, read as absolute below one
+                        // cent so a worthless deep out-of-the-money option is
+                        // not held to a relative bound.
+                        let scale = reference.abs().max(dec!(0.01));
+                        let error = (fast - reference).abs() / scale;
+                        assert!(
+                            error <= dec!(0.000000000001),
+                            "S={spot} sigma={sigma} {style:?} {side:?}: {fast} vs {reference}"
+                        );
+                        worst = worst.max(error);
+                    }
+                }
+            }
+        }
+        // Measured 2026-10-09: 3.6e-13 at worst (the 30 products of a path
+        // each round once in `f64`); held at 5e-13 so a regression shows.
+        assert!(worst < dec!(0.0000000000005), "worst {worst}");
+    }
 }

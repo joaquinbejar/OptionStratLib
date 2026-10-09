@@ -3223,6 +3223,21 @@ summarize the release.
   session: `pricing/closed_form/black_scholes` 11.90 µs to 4.47 µs,
   `black_scholes_chain/50` 565 µs to 229 µs, `calculate_log_returns/1008`
   8.18 ms to 0.33 ms.
+- **`monte_carlo_option_pricing` runs its paths in `f64`** (#859, P3b).
+  Each step was three checked `Decimal` operations plus a `Decimal`
+  conversion of the normal draw. By owner decision (tolerance 1e-12
+  relative against the `Decimal` result) the path now runs in `f64`: the
+  inputs and the loop-invariant factors (`1 + (r - q) dt`, `sigma`,
+  `sqrt(dt)`) are converted once, each step is the same Euler update
+  `st <- st * ((1 + (r - q) dt) + sigma * z * sqrt(dt))` on the same
+  standard normal draws in the same order, and a non-finite terminal value
+  is an error. Against the `Decimal` path on the same seeded draws, over
+  spots 70 to 140, volatilities 5 % to 80 %, both styles and sides, the
+  price moves by at most 3.6e-13 relative (absolute below one cent); the
+  pinned seeded price holds. The `Decimal` `wiener_increment` is now
+  test-only, the reference of that comparison. Criterion on flumix
+  (i7-12650H, idle), A/B in one session: 30 steps x 10 000 paths 131 ms to
+  1.38 ms, 252 steps x 1 000 paths 110 ms to 1.08 ms.
 
 - **docs.rs documents the optional features** (no issue, release
   preparation). docs.rs builds a crate's default features, which are empty
