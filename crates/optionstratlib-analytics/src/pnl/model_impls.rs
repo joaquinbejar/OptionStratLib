@@ -14,7 +14,6 @@
 use crate::error::TransactionError;
 use crate::pnl::utils::PnL;
 use crate::pnl::{PnLCalculator, Transaction, TransactionAble};
-use num_traits::ToPrimitive;
 use optionstratlib_core::error::PositionError;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_add, d_mul, d_sub};
@@ -356,23 +355,13 @@ impl PnLCalculator for Position {
         )
         .map_err(|e| PricingError::method_error("pnl_diff", &e.to_string()))?;
 
-        let initial_costs = Positive::new(cost_diff.abs().to_f64().ok_or_else(|| {
-            PricingError::method_error(
-                "pnl_diff",
-                "initial_costs: cost_diff Decimal cannot be represented as f64",
-            )
-        })?)
-        .map_err(|_| {
+        // Built from the `Decimal` itself: the previous round trip through
+        // `f64` could only lose digits (#828).
+        let initial_costs = Positive::new_decimal(cost_diff.abs()).map_err(|_| {
             PricingError::method_error("pnl_diff", "initial_costs value is not strictly positive")
         })?;
 
-        let initial_income = Positive::new(income_diff.abs().to_f64().ok_or_else(|| {
-            PricingError::method_error(
-                "pnl_diff",
-                "initial_income: income_diff Decimal cannot be represented as f64",
-            )
-        })?)
-        .map_err(|_| {
+        let initial_income = Positive::new_decimal(income_diff.abs()).map_err(|_| {
             PricingError::method_error("pnl_diff", "initial_income value is not strictly positive")
         })?;
 
