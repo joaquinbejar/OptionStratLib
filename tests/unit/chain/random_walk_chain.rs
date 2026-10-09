@@ -8,7 +8,7 @@ use optionstratlib::chains::OptionChain;
 use optionstratlib::simulation::randomwalk::RandomWalk;
 use optionstratlib::simulation::steps::{Step, Xstep, Ystep};
 use optionstratlib::simulation::{WalkParams, WalkType, WalkTypeAble};
-use optionstratlib::utils::time::{convert_time_frame, get_x_days_formatted};
+use optionstratlib::utils::time::convert_time_frame;
 use optionstratlib::utils::{Len, TimeFrame};
 use positive::{Positive, pos_or_panic, spos};
 use rust_decimal_macros::dec;
@@ -85,7 +85,7 @@ fn test_random_walk_chain() -> Result<(), Box<dyn Error>> {
 
     let mut initial_chain =
         OptionChain::load_from_json("examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    initial_chain.update_expiration_date(get_x_days_formatted(2)?);
+    initial_chain.update_expiration_date("2".to_string());
 
     assert_eq!(initial_chain.underlying_price, pos_or_panic!(5781.88));
     assert_eq!(initial_chain.symbol, "SP500");

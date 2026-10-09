@@ -2,7 +2,6 @@ use optionstratlib::chains::generator_optionchain;
 use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 use optionstratlib::utils::time::convert_time_frame;
-use optionstratlib::utils::time::get_x_days_formatted;
 use positive::pos_or_panic;
 
 #[warn(dead_code)]
@@ -55,9 +54,7 @@ fn main() -> Result<(), Error> {
         implied_volatility,
     );
     let mut initial_chain = OptionChain::build_chain(&build_params)?;
-    initial_chain.update_expiration_date(
-        get_x_days_formatted(2).map_err(optionstratlib::error::DecimalError::from)?,
-    );
+    initial_chain.update_expiration_date("2".to_string());
     let walker = Box::new(Walker::new());
 
     let walk_params = WalkParams {
