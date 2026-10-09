@@ -101,6 +101,7 @@ optionstratlib-backtest -> optionstratlib-core
 optionstratlib-backtest -> optionstratlib-pricing
 optionstratlib-backtest -> optionstratlib-simulation
 optionstratlib-backtest -> optionstratlib-strategies
+optionstratlib-backtest -> rayon
 optionstratlib-backtest -> rust_decimal
 optionstratlib-backtest -> rust_decimal_macros
 optionstratlib-backtest -> serde
