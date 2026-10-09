@@ -2461,6 +2461,36 @@ impl AxisOperations<Point2D, Decimal> for Curve {
     }
 }
 
+/// [`GeometricTransformations::intersect_with`] for curves, comparing every
+/// pair of samples: the reference the windowed walk reproduces, kept for the
+/// case where an abscissa difference can overflow, where the error has to
+/// name the first such pair in `(p1, p2)` order.
+fn intersect_all_pairs(
+    curve: &Curve,
+    other: &Curve,
+    epsilon: Decimal,
+) -> Result<Vec<Point2D>, CurveError> {
+    let mut intersections = Vec::new();
+    for p1 in &curve.points {
+        for p2 in &other.points {
+            // Find points with small distance between them
+            let dx = d_sub(p1.x, p2.x, "Curve::intersect_with::dx")
+                .map_err(analysis_err)?
+                .abs();
+            if dx >= epsilon {
+                continue;
+            }
+            let dy = d_sub(p1.y, p2.y, "Curve::intersect_with::dy")
+                .map_err(analysis_err)?
+                .abs();
+            if dy < epsilon {
+                intersections.push(*p1);
+            }
+        }
+    }
+    Ok(intersections)
+}
+
 /// Reads `curve` at `x` for a resampling. A spline is solved into `spline`
 /// on the first call and reused after, with the answers
 /// [`Interpolate::interpolate`] gives.
@@ -2603,19 +2633,82 @@ impl GeometricTransformations<Point2D> for Curve {
         Ok(Curve::new(scaled_points))
     }
 
+    /// Reports the samples the two curves share.
+    ///
+    /// # What it computes
+    ///
+    /// Every pair of samples `(p1, p2)`, `p1` from `self` and `p2` from
+    /// `other`, whose abscissas differ by less than `1e-6` and whose
+    /// ordinates differ by less than `1e-6`, contributes `p1` to the result.
+    /// The result is in `(p1, p2)` order: by `self`'s `(x, y)` order, then by
+    /// `other`'s for one `p1`.
+    ///
+    /// # What it does not compute
+    ///
+    /// Only coinciding samples are compared, never the segments between
+    /// them. Two curves that cross between their samples are not reported,
+    /// so `(0, 0), (2, 2)` and `(0, 2), (2, 0)`, which cross at `(1, 1)`,
+    /// return nothing. A sample of `self` that coincides with several samples
+    /// of `other` appears once per match. Whether a segment-crossing variant
+    /// should exist is an open owner decision (#858); this method documents
+    /// the current behaviour.
+    ///
+    /// # Cost
+    ///
+    /// Both point sets are sorted by abscissa, so the samples of `other`
+    /// within `1e-6` of `p1` form a window that only slides forward as `p1`
+    /// advances. The walk is O(n + m) plus one step per matching pair, with
+    /// no allocation beyond the result (#858). It visits the pairs the
+    /// all-pairs comparison tested on ordinates, in the same order, so the
+    /// result and any error are the same. When some abscissa difference
+    /// could overflow, the all-pairs comparison runs instead, so the error
+    /// names the same pair.
+    ///
+    /// # Errors
+    ///
+    /// [`CurveError::AnalysisError`] when a coordinate difference leaves the
+    /// `Decimal` range.
     fn intersect_with(&self, other: &Self) -> Result<Vec<Point2D>, Self::Error> {
-        let mut intersections = Vec::new();
         let epsilon = Decimal::new(1, 6);
+        let fits = match (
+            self.points.first(),
+            self.points.last(),
+            other.points.first(),
+            other.points.last(),
+        ) {
+            // Each difference `p1.x - p2.x` lies between these two.
+            (Some(first), Some(last), Some(other_first), Some(other_last)) => {
+                d_sub(first.x, other_last.x, "Curve::intersect_with::dx").is_ok()
+                    && d_sub(last.x, other_first.x, "Curve::intersect_with::dx").is_ok()
+            }
+            // An empty curve shares nothing; both paths return no point.
+            _ => true,
+        };
+        if !fits {
+            return intersect_all_pairs(self, other, epsilon);
+        }
 
-        // Use existing pairs iterator for efficiency
-        for p1 in self.get_points() {
-            for p2 in other.get_points() {
-                // Find points with small distance between them
+        let mut intersections = Vec::new();
+        // The samples of `other` not yet `epsilon` or more to the left of
+        // the current `p1`. A sample dropped here is that far left of every
+        // later `p1` too, whose abscissas are no smaller.
+        let mut window = other.points.iter();
+        for p1 in &self.points {
+            while let Some(p2) = window.clone().next() {
+                let dx = d_sub(p1.x, p2.x, "Curve::intersect_with::dx").map_err(analysis_err)?;
+                if dx < epsilon {
+                    break;
+                }
+                window.next();
+            }
+            for p2 in window.clone() {
                 let dx = d_sub(p1.x, p2.x, "Curve::intersect_with::dx")
                     .map_err(analysis_err)?
                     .abs();
+                // Past the window: `p2` is `epsilon` or more to the right,
+                // and so is every sample after it.
                 if dx >= epsilon {
-                    continue;
+                    break;
                 }
                 let dy = d_sub(p1.y, p2.y, "Curve::intersect_with::dy")
                     .map_err(analysis_err)?
@@ -6206,6 +6299,135 @@ fn legacy_spline(curve: &Curve, x: Decimal) -> Result<Point2D, InterpolationErro
                 };
                 assert_eq!(*p, want);
             }
+        }
+    }
+}
+
+/// The windowed `intersect_with` of #858 against the all-pairs comparison it
+/// replaced, `intersect_all_pairs`: the same points in the same order and the
+/// same error.
+#[cfg(test)]
+mod tests_intersect_matches_all_pairs {
+    use super::*;
+
+    fn check(a: &Curve, b: &Curve) {
+        for (left, right) in [(a, b), (b, a), (a, a)] {
+            let fast = left.intersect_with(right);
+            let all = intersect_all_pairs(left, right, Decimal::new(1, 6));
+            assert_eq!(
+                format!("{fast:?}"),
+                format!("{all:?}"),
+                "{left:?} with {right:?}"
+            );
+        }
+    }
+
+    fn curve_of(points: &[(Decimal, Decimal)]) -> Curve {
+        Curve::new(points.iter().map(|&(x, y)| Point2D::new(x, y)).collect())
+    }
+
+    #[test]
+    fn samples_within_tolerance_are_matched_in_pair_order() {
+        let tiny = dec!(0.0000005);
+        let a = curve_of(&[
+            (dec!(0), dec!(1)),
+            (dec!(1), dec!(2)),
+            (dec!(1), dec!(5)),
+            (dec!(2), dec!(3)),
+        ]);
+        let b = curve_of(&[
+            (dec!(0) + tiny, dec!(1) - tiny),
+            (dec!(1) - tiny, dec!(2)),
+            (dec!(1), dec!(2) + tiny),
+            (dec!(1) + dec!(0.000001), dec!(5)),
+            (dec!(2.000001), dec!(3)),
+        ]);
+        check(&a, &b);
+        let found = match a.intersect_with(&b) {
+            Ok(found) => found,
+            Err(e) => panic!("intersect_with failed: {e:?}"),
+        };
+        // `(1, 2)` matches two samples of `b`; `(1, 5)` and `(2, 3)` sit
+        // exactly `1e-6` away, which is not within tolerance.
+        assert_eq!(
+            found,
+            vec![
+                Point2D::new(dec!(0), dec!(1)),
+                Point2D::new(dec!(1), dec!(2)),
+                Point2D::new(dec!(1), dec!(2)),
+            ]
+        );
+    }
+
+    #[test]
+    fn crossings_between_samples_are_not_reported() {
+        let rising = curve_of(&[(dec!(0), dec!(0)), (dec!(2), dec!(2))]);
+        let falling = curve_of(&[(dec!(0), dec!(2)), (dec!(2), dec!(0))]);
+        assert!(matches!(rising.intersect_with(&falling), Ok(found) if found.is_empty()));
+    }
+
+    #[test]
+    fn empty_and_disjoint_curves() {
+        let empty = Curve::default();
+        let a = curve_of(&[(dec!(0), dec!(0)), (dec!(1), dec!(1))]);
+        let far = curve_of(&[(dec!(10), dec!(0)), (dec!(11), dec!(1))]);
+        check(&empty, &a);
+        check(&a, &far);
+        check(&empty, &empty);
+    }
+
+    #[test]
+    fn overflowing_abscissa_difference_reports_the_same_pair() {
+        let a = curve_of(&[
+            (dec!(-70000000000000000000000000000), dec!(0)),
+            (dec!(0), dec!(0)),
+        ]);
+        let b = curve_of(&[
+            (dec!(0), dec!(0)),
+            (dec!(70000000000000000000000000000), dec!(1)),
+        ]);
+        assert!(a.intersect_with(&b).is_err());
+        check(&a, &b);
+        // Ordinates that overflow only matter on a pair within tolerance.
+        let c = curve_of(&[
+            (dec!(0), dec!(-70000000000000000000000000000)),
+            (dec!(1), dec!(0)),
+        ]);
+        let d = curve_of(&[
+            (dec!(0), dec!(70000000000000000000000000000)),
+            (dec!(1), dec!(0)),
+        ]);
+        assert!(c.intersect_with(&d).is_err());
+        check(&c, &d);
+    }
+
+    #[test]
+    fn random_curves_with_stacks_and_near_misses() {
+        let mut state: u64 = 0xa076_1d64_78bd_642f;
+        let mut next = |bound: u64| {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state % bound
+        };
+        // Abscissas on a 5e-7 grid, so neighbours fall inside, on and
+        // outside the 1e-6 tolerance.
+        let curve = |next: &mut dyn FnMut(u64) -> u64| {
+            let len = next(30) as usize;
+            let points: Vec<(Decimal, Decimal)> = (0..len)
+                .map(|_| {
+                    (
+                        Decimal::new(next(12) as i64, 7) * dec!(5),
+                        Decimal::new(next(4) as i64, 7) * dec!(5),
+                    )
+                })
+                .collect();
+            curve_of(&points)
+        };
+        for _ in 0..1_000 {
+            let a = curve(&mut next);
+            let b = curve(&mut next);
+            check(&a, &b);
         }
     }
 }

@@ -3138,6 +3138,22 @@ summarize the release.
   intended `update_greeks`); the 45-strike SP500 fixture loads in 128 µs
   instead of 3.65 ms.
 
+- **`Curve::intersect_with` no longer compares every pair of samples**
+  (#858, M3). Both point sets are sorted by abscissa, so the samples of
+  `other` within the `1e-6` tolerance of a sample of `self` form a window
+  that only slides forward; the walk is O(n + m) plus one step per matching
+  pair instead of O(n·m). Results are bit-identical: it visits the pairs
+  the all-pairs comparison tested on ordinates, in the same order, and when
+  an abscissa difference could overflow it runs the all-pairs comparison so
+  the error names the same pair. Unit tests compare it with the previous
+  comparison on edge cases, overflowing coordinates and 1 000 random curve
+  pairs. The docs now state what it computes: coinciding samples within
+  `1e-6` on both axes, not crossings between samples (whether a
+  segment-crossing variant should exist is an open owner decision).
+  `curve_intersect_with/512` went from 5.10 ms to 18.6 µs (Apple M5 Max,
+  interleaved base/branch runs, control `curve_translate/512` 21.7 to
+  23.6 µs on both).
+
 - **Curve and surface interpolation no longer scan every point per read**
   (#858, M1). `Curve` brackets `x` with two `BTreeSet::range` lookups
   instead of collecting the points into a `Vec` and scanning it, and reads
