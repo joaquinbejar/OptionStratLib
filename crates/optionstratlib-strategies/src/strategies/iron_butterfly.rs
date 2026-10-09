@@ -18,10 +18,10 @@ use super::base::{
 use super::shared::ButterflyStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
-use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
 };
+use crate::strategies::shared::{aggregate_fees, decimal_from_f64};
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
@@ -1107,7 +1107,19 @@ impl Optimizable for IronButterfly {
                         "missing put_ask for long put leg",
                     )
                 })?;
-                let fee_per_leg = self.get_fees()?.checked_div_f64(8.0)?;
+                // One open and one close fee per contract for every leg, as the
+                // constructor takes them: the legs' per-contract fees spread over
+                // the eight. `get_fees()` is already scaled by the quantity, which
+                // the constructor applies again, so starting from it charged a
+                // candidate `quantity` times the fees, compounding at every
+                // improvement of an optimiser's search (#875).
+                let fee_per_leg = aggregate_fees(&[
+                    &self.short_call,
+                    &self.short_put,
+                    &self.long_call,
+                    &self.long_put,
+                ])?
+                .checked_div_f64(8.0)?;
                 let mut strategy = IronButterfly::new(
                     chain.symbol.clone(),
                     chain.underlying_price,
