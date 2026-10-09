@@ -17,6 +17,7 @@ use super::shared::StrangleStrategy;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::measured_max_loss;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
@@ -46,6 +47,7 @@ use optionstratlib_core::model::{
     utils::mean_and_std,
 };
 use optionstratlib_core::{impl_json_debug_pretty, impl_json_display};
+use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -56,7 +58,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info};
+use tracing::debug;
 
 pub(super) const LONG_STRANGLE_DESCRIPTION: &str = "A long strangle involves buying an out-of-the-money call and an \
 out-of-the-money put with the same expiration date. This strategy is used when high volatility \
@@ -808,16 +810,15 @@ impl Validable for LongStrangle {
     }
 }
 
-impl Optimizable for LongStrangle {
-    type Strategy = LongStrangle;
-
-    fn filter_combinations<'a>(
+impl LongStrangle {
+    /// The leg combinations that pass the side and quote filters, before any
+    /// strategy is built from them (#862).
+    fn quoted_candidates<'a>(
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData)> {
         let underlying_price = &self.long_call.option.underlying_price;
-        let strategy = self.clone();
         option_chain
             .get_double_iter()
             .filter(move |(long_put, long_call)| match side {
@@ -845,18 +846,36 @@ impl Optimizable for LongStrangle {
                 long_put.call_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && long_call.call_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
-            // Filter out options that don't meet strategy constraints
-            .filter(move |(long_put, long_call)| {
-                let legs = StrategyLegs::TwoLegs {
-                    first: long_put,
-                    second: long_call,
-                };
+    }
 
-                match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
-                    Err(_) => false,
-                }
-            })
+    /// The strategy of one candidate, when it builds, validates and has
+    /// both a maximum profit and a maximum loss.
+    fn valid_candidate(
+        &self,
+        option_chain: &OptionChain,
+        (long_put, long_call): (&OptionData, &OptionData),
+    ) -> Option<LongStrangle> {
+        let legs = StrategyLegs::TwoLegs {
+            first: long_put,
+            second: long_call,
+        };
+        self.create_strategy(option_chain, &legs)
+            .ok()
+            .filter(|s| s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok())
+    }
+}
+
+impl Optimizable for LongStrangle {
+    type Strategy = LongStrangle;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        self.quoted_candidates(option_chain, side)
+            // Filter out options that don't meet strategy constraints
+            .filter(move |&legs| self.valid_candidate(option_chain, legs).is_some())
             // Map to OptionDataGroup
             .map(move |(long_put, long_call)| OptionDataGroup::Two(long_put, long_call))
     }
@@ -867,63 +886,32 @@ impl Optimizable for LongStrangle {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) -> Result<(), StrategyError> {
-        let mut best_value = Decimal::MIN;
-        let mut found = false;
-        let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
-
-        for option_data_group in options_iter {
-            // Unpack the OptionDataGroup into individual options
-            let (long_put, long_call) = match option_data_group {
-                OptionDataGroup::Two(first, second) => (first, second),
-                other => {
-                    tracing::warn!(
-                        group = ?other,
-                        "find_optimal: skipping unexpected OptionDataGroup variant"
-                    );
-                    continue;
-                }
-            };
-
-            let legs = StrategyLegs::TwoLegs {
-                first: long_put,
-                second: long_call,
-            };
-            let strategy = match self.create_strategy(option_chain, &legs) {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::debug!(error = %e, "skipping invalid strategy combination");
-                    continue;
-                }
-            };
+        // Every candidate is built once, from `self`, and scored on the
+        // rayon pool; among equal scores the first candidate in chain order
+        // wins, as in the serial search (#862).
+        let best = best_candidate(self.quoted_candidates(option_chain, side), |legs| {
+            let strategy = self.valid_candidate(option_chain, legs)?;
             // Calculate the current value based on the optimization criteria
             let metric = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
                 OptimizationCriteria::Area => strategy.get_profit_area(),
             };
-            let current_value = match metric {
-                Ok(v) => v,
+            match metric {
+                Ok(value) => Some((value, strategy)),
                 Err(e) => {
                     tracing::debug!(error = %e, "skipping candidate with unscorable metric");
-                    continue;
+                    None
                 }
-            };
-
-            if current_value > best_value {
-                // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
-                best_value = current_value;
-                *self = strategy.clone();
-                found = true;
             }
-        }
-
-        if found {
-            Ok(())
-        } else {
-            Err(StrategyError::no_valid_candidate(
+        });
+        match best {
+            Some(strategy) => {
+                *self = strategy;
+                Ok(())
+            }
+            None => Err(StrategyError::no_valid_candidate(
                 StrategyType::LongStrangle,
-            ))
+            )),
         }
     }
 
@@ -1443,6 +1431,7 @@ mod tests_long_strangle_delta {
     use optionstratlib_pricing::greeks::DELTA_THRESHOLD;
     use optionstratlib_pricing::greeks::Greeks;
     use rust_decimal_macros::dec;
+    use tracing::info;
 
     fn get_strategy(call_strike: Positive, put_strike: Positive) -> LongStrangle {
         let underlying_price = pos_or_panic!(7138.5);

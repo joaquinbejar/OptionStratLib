@@ -29,6 +29,7 @@ use super::shared::SpreadStrategy;
 use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::lower_break_even;
 use crate::strategies::base::price_gap;
+use crate::strategies::combinations::best_candidate;
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
     probabilities::ProbabilityAnalysis, utils::OptimizationCriteria,
@@ -48,6 +49,7 @@ use optionstratlib_core::model::{
     types::{OptionBasicType, OptionStyle, OptionType, Side},
     utils::mean_and_std,
 };
+use optionstratlib_market::chains::OptionData;
 use optionstratlib_market::chains::utils::FindOptimalSide;
 use optionstratlib_market::chains::{StrategyLegs, chain::OptionChain, utils::OptionDataGroup};
 use optionstratlib_pricing::error::GreeksError;
@@ -58,7 +60,7 @@ use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info};
+use tracing::debug;
 
 /// The default description for the Bear Put Spread strategy.
 pub const BEAR_PUT_SPREAD_DESCRIPTION: &str = "A bear put spread is created by buying a put option with a higher strike price \
@@ -712,16 +714,15 @@ impl Validable for BearPutSpread {
     }
 }
 
-impl Optimizable for BearPutSpread {
-    type Strategy = BearPutSpread;
-
-    fn filter_combinations<'a>(
+impl BearPutSpread {
+    /// The leg combinations that pass the side and quote filters, before any
+    /// strategy is built from them (#862).
+    fn quoted_candidates<'a>(
         &'a self,
         option_chain: &'a OptionChain,
         side: FindOptimalSide,
-    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+    ) -> impl Iterator<Item = (&'a OptionData, &'a OptionData)> {
         let underlying_price = &self.long_put.option.underlying_price;
-        let strategy = self.clone();
         option_chain
             .get_double_iter()
             // Filter out invalid combinations based on FindOptimalSide
@@ -739,17 +740,36 @@ impl Optimizable for BearPutSpread {
                 long.put_ask.unwrap_or(Positive::ZERO) > Positive::ZERO
                     && short.put_bid.unwrap_or(Positive::ZERO) > Positive::ZERO
             })
+    }
+
+    /// The strategy of one candidate, when it builds, validates and has
+    /// both a maximum profit and a maximum loss.
+    fn valid_candidate(
+        &self,
+        option_chain: &OptionChain,
+        (short, long): (&OptionData, &OptionData),
+    ) -> Option<BearPutSpread> {
+        let legs = StrategyLegs::TwoLegs {
+            first: short,
+            second: long,
+        };
+        self.create_strategy(option_chain, &legs)
+            .ok()
+            .filter(|s| s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok())
+    }
+}
+
+impl Optimizable for BearPutSpread {
+    type Strategy = BearPutSpread;
+
+    fn filter_combinations<'a>(
+        &'a self,
+        option_chain: &'a OptionChain,
+        side: FindOptimalSide,
+    ) -> impl Iterator<Item = OptionDataGroup<'a>> {
+        self.quoted_candidates(option_chain, side)
             // Filter out options that don't meet strategy constraints
-            .filter(move |(short, long)| {
-                let legs = StrategyLegs::TwoLegs {
-                    first: short,
-                    second: long,
-                };
-                match strategy.create_strategy(option_chain, &legs) {
-                    Ok(s) => s.validate() && s.get_max_profit().is_ok() && s.get_max_loss().is_ok(),
-                    Err(_) => false,
-                }
-            })
+            .filter(move |&legs| self.valid_candidate(option_chain, legs).is_some())
             // Map to OptionDataGroup
             .map(move |(short, long)| OptionDataGroup::Two(short, long))
     }
@@ -760,63 +780,32 @@ impl Optimizable for BearPutSpread {
         side: FindOptimalSide,
         criteria: OptimizationCriteria,
     ) -> Result<(), StrategyError> {
-        let mut best_value = Decimal::MIN;
-        let mut found = false;
-        let strategy_clone = self.clone();
-        let options_iter = strategy_clone.filter_combinations(option_chain, side);
-
-        for option_data_group in options_iter {
-            // Unpack the OptionDataGroup into individual options
-            let (short, long) = match option_data_group {
-                OptionDataGroup::Two(first, second) => (first, second),
-                other => {
-                    tracing::warn!(
-                        group = ?other,
-                        "find_optimal: skipping unexpected OptionDataGroup variant"
-                    );
-                    continue;
-                }
-            };
-
-            let legs = StrategyLegs::TwoLegs {
-                first: short,
-                second: long,
-            };
-            let strategy = match self.create_strategy(option_chain, &legs) {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::debug!(error = %e, "skipping invalid strategy combination");
-                    continue;
-                }
-            };
+        // Every candidate is built once, from `self`, and scored on the
+        // rayon pool; among equal scores the first candidate in chain order
+        // wins, as in the serial search (#862).
+        let best = best_candidate(self.quoted_candidates(option_chain, side), |legs| {
+            let strategy = self.valid_candidate(option_chain, legs)?;
             // Calculate the current value based on the optimization criteria
             let metric = match criteria {
                 OptimizationCriteria::Ratio => strategy.get_profit_ratio(),
                 OptimizationCriteria::Area => strategy.get_profit_area(),
             };
-            let current_value = match metric {
-                Ok(v) => v,
+            match metric {
+                Ok(value) => Some((value, strategy)),
                 Err(e) => {
                     tracing::debug!(error = %e, "skipping candidate with unscorable metric");
-                    continue;
+                    None
                 }
-            };
-
-            if current_value > best_value {
-                // Update the best value and replace the current strategy
-                info!("Found better value: {}", current_value);
-                best_value = current_value;
-                *self = strategy.clone();
-                found = true;
             }
-        }
-
-        if found {
-            Ok(())
-        } else {
-            Err(StrategyError::no_valid_candidate(
+        });
+        match best {
+            Some(strategy) => {
+                *self = strategy;
+                Ok(())
+            }
+            None => Err(StrategyError::no_valid_candidate(
                 StrategyType::BearPutSpread,
-            ))
+            )),
         }
     }
 
@@ -1916,6 +1905,7 @@ mod tests_bear_put_spread_optimization {
 mod tests_bear_put_spread_optimizable {
     use super::*;
     use optionstratlib_core::spos;
+    use tracing::info;
 
     use optionstratlib_core::model::ExpirationDate;
 

@@ -3129,6 +3129,28 @@ summarize the release.
   unchanged within 0.5% (30 steps, half-width 25: 21.20 ms before, 21.26 ms
   after). `optionstratlib-market` now declares `rayon`, which the pricing
   crate below it already brought into every market graph.
+- **The strategy optimisers build and score each candidate once, on the
+  rayon pool** (#862). `filter_combinations` built and validated every
+  candidate and `find_optimal` built each survivor again to score it, all
+  on one thread. The thirteen optimisers that use `filter_combinations`
+  (bear/bull call and put spreads, bull call ladder, long and short
+  butterflies, iron butterfly, iron condor, long and short straddles and
+  strangles) now go through one crate-private `best_candidate`: each
+  candidate is built and scored once, in rounds of 4096 on the rayon pool,
+  and the best is the highest score with ties going to the lowest
+  combination index, the rule the serial search followed. The strategy is
+  boxed inside the reduction, which keeps a rayon worker's stack within
+  bounds in debug builds. The chosen strategy is unchanged:
+  `tests/integration/optimiser_identity_test.rs` compares the old search,
+  written against the public trait, with the new one for every optimiser
+  on the SP500 fixture and the 11-, 21- and 41-strike synthetic chains,
+  over every `FindOptimalSide` and both criteria, at quantities 1 and 2
+  (the latter holds since #875). No new cheap reject was added, since each
+  would need its own identity proof. Criterion `strategies/optimiser/*` on
+  an Apple M5 Max under a load average of 40 to 50, median before and
+  after: iron condor on SP500 626 ms to 100 ms, on 41 synthetic strikes
+  501 ms to 55 ms, long butterfly on SP500 78 ms to 12 ms, bull call spread
+  on SP500 1.75 ms to 0.48 ms (ratio).
 
 - **`Simulator::new` builds its walks in parallel** (#860). From
   `PARALLEL_MIN_WALKS` (3) walks up, the walks are built on the rayon pool,
