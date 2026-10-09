@@ -5,7 +5,7 @@
 ******************************************************************************/
 use crate::error::DecimalError;
 use crate::model::Position;
-use crate::model::decimal::{d_add, d_div, d_mul, d_sub};
+use crate::model::decimal::{d_add, d_div, d_mul, d_sub, decimal_to_f64};
 use crate::model::types::{OptionStyle, OptionType, Side};
 use crate::model::{ExpirationDate, Options};
 use chrono::{NaiveDateTime, TimeZone, Utc};
@@ -53,11 +53,17 @@ pub fn sub_floor_zero(lhs: Positive, rhs: &Decimal) -> Positive {
 ///
 /// # Returns
 ///
-/// A vector of `f64` values corresponding to the input `Positive` values.
+/// A vector of `f64` values corresponding to the input `Positive` values,
+/// each the `f64` nearest to it ([`decimal_to_f64`], #828).
 ///
-#[must_use]
-pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Vec<f64> {
-    vec.into_iter().map(|pos_f64| pos_f64.to_f64()).collect()
+/// # Errors
+///
+/// Returns the [`DecimalError`] of [`decimal_to_f64`] for a value it cannot
+/// convert.
+pub fn positive_f64_to_f64(vec: Vec<Positive>) -> Result<Vec<f64>, DecimalError> {
+    vec.into_iter()
+        .map(|value| decimal_to_f64(value.to_dec()))
+        .collect()
 }
 
 /// Creates a sample option contract with predefined parameters for testing or demonstration purposes.
@@ -466,13 +472,22 @@ pub fn mean_and_std(vec: Vec<Positive>) -> Result<(Positive, Positive), Positive
     // the returned figures are unchanged for every sample the panicking form
     // accepted. What changes is the reporting: a deviation that overflows
     // `f64` now surfaces instead of collapsing to zero.
+    // Each `Decimal` reaches `f64` through `decimal_to_f64` (#828); its error
+    // is reported as the arithmetic error this function returns.
+    let to_f64 = |value: Positive| {
+        decimal_to_f64(value.to_dec()).map_err(|e| PositiveError::ArithmeticError {
+            operation: "mean_and_std".to_string(),
+            reason: e.to_string(),
+        })
+    };
+    let mean_f64 = to_f64(mean)?;
     let mut squared_deviations = Positive::ZERO;
     for value in &vec {
-        let deviation = Positive::new((value.to_f64() - mean.to_f64()).powi(2))?;
+        let deviation = Positive::new((to_f64(*value)? - mean_f64).powi(2))?;
         squared_deviations = squared_deviations.checked_add(&deviation)?;
     }
     let variance = squared_deviations.checked_div_dec(count)?;
-    let std = Positive::new(variance.to_f64().sqrt())?; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+    let std = Positive::new(to_f64(variance)?.sqrt())?; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
 
     Ok((mean, std))
 }
@@ -611,7 +626,7 @@ mod tests_positive_f64_to_f64 {
 
         let f64_vec = positive_f64_to_f64(positive_vec);
 
-        assert_eq!(f64_vec, vec![10.0, 20.0, 30.0]);
+        assert!(matches!(f64_vec, Ok(v) if v == vec![10.0, 20.0, 30.0]));
     }
 
     #[test]
@@ -620,7 +635,7 @@ mod tests_positive_f64_to_f64 {
 
         let f64_vec = positive_f64_to_f64(positive_vec);
 
-        assert_eq!(f64_vec, vec![42.0]);
+        assert!(matches!(f64_vec, Ok(v) if v == vec![42.0]));
     }
 
     #[test]
