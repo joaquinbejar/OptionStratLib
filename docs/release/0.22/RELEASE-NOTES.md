@@ -325,7 +325,9 @@ migration guide the replacement workflow.
   butterflies are 1/2/1, `CallButterfly` is removed and the 1x1x1 ladder is
   `BullCallLadder` (#706); `max_profit` / `max_loss` are `Option<Positive>`
   (#661); covered strategies size their option legs in shares with fees per
-  share (#731) and handle partial cover (#765).
+  share (#731) and handle partial cover (#765); `get_volume` counts option
+  contracts and the new `get_share_volume` the share leg, each in its own
+  unit (#830).
 - **Contract multiplier.** `Options`, `Trade`, `pnl::Transaction` and the
   strategies carry `contract_size` (#733, #760); `Trade::cost`, `income` and
   `net` are checked and fallible, and `PnL` converts from a `Trade` with
@@ -342,7 +344,8 @@ migration guide the replacement workflow.
   plain-text table (#546); `chains::generator_positive` is gone (#512);
   `load_from_csv` rejects a file name without chain metadata instead of
   loading symbol `"unknown"` at spot 0 (#827); `OptionSeries` keeps every
-  expired expiry (#825).
+  expired expiry (#825); `RNDParameters::interpolation_points`, which
+  `calculate_rnd` never read, is removed (#865).
 - **Pricing inputs.** `Payoff::payoff` returns `OptionsResult<Decimal>` and
   `PayoffInfo` takes `Positive` spots (#637); Garman-Kohlhagen reads
   `ExoticParams::foreign_rate` (#720); a negative risk-free rate is valid
@@ -371,6 +374,14 @@ migration guide the replacement workflow.
 - `ToSchema` derives need `schema`; without it no component resolves
   `utoipa` (#628).
 - Component crates have empty default features.
+- `static_export` implies `plotly` only: it no longer enables `async`, so
+  PNG/SVG export resolves no market I/O; name `async` too for the
+  `*_async` wrappers (#833).
+- The reserved `parallel` feature is retired; `rayon` is a mandatory
+  dependency (#832).
+- docs.rs documents each crate with its optional features
+  (`[package.metadata.docs.rs]`), except `static_export`, whose build
+  script needs a browser.
 
 ### Serialization
 
@@ -471,7 +482,18 @@ says whether any value moves.
   them along the search (#875).
 - **Risk metrics:** a `Curve`'s risk volatility is the population standard
   deviation, so its VaR, expected shortfall and Sharpe ratio move (#840).
-- **Conversions:** `decimal_to_f64` is correctly rounded (#670).
+- **Conversions:** `decimal_to_f64` is correctly rounded (#670), and every
+  `Decimal` to `f64` conversion goes through it; `to_f64` is banned in
+  production code and no conversion falls back to zero (#828).
+- **Grids:** generated curve and surface grids end exactly at `end` instead
+  of one or two ulps past it (#799).
+- **`f64` numeric kernels (owner decision, 1e-12 relative):** the
+  logarithm in `d1` and in the log returns (#857), the Monte Carlo path
+  (#859), the walks' per-step exponential and square root (#860) and the
+  rolling historical volatility (#859) run in `f64`. Each stays within
+  1e-12 relative of the previous `Decimal` result on a realistic grid
+  (measured: at most 3.6e-13), and the seeded pins that depend on the
+  platform's libm compare within that bound.
 - **Payoffs:** `Options::payoff` and P&L are each family's terminal payoff,
   the pricing kernel's value at `T = 0`, signed by the side; the vanilla
   intrinsic value is exact in `Decimal` (#844).
@@ -524,8 +546,9 @@ with 0.21 is claimed; the 0.22 Criterion results are in
 
 The first full Criterion run over every library crate (#789,
 [`benchmarks.md`](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/benchmarks.md))
-found the bottlenecks below; each fix keeps every result bit for bit, which
-its tests assert against the previous code. Medians before and after
+found the bottlenecks below. The first table keeps every result bit for
+bit, which its tests assert against the previous code; the second moves
+results by at most 1e-12 relative, the bound the owner set. Medians before and after
 within one session on one host, so they compare 0.22 with itself, not with
 0.21.
 
@@ -541,7 +564,18 @@ within one session on one host, so they compare 0.22 with itself, not with
 | `Simulator::new` on the rayon pool (#860) | 1000 walks x 30 steps | 37.5 ms | 2.95 ms |
 | Optimisers build each candidate once, in parallel (#862) | iron condor on SP500 | 626 ms | 100 ms |
 | Single-leg backtest paths in parallel (#863) | long call, 1000 paths | 355 ms | 51.8 ms |
+| Binomial powers built once per tree (#859) | American put, 1000 steps | 473 ms | 90 ms |
+| Chain exposures read the greek snapshots (#861) | `vega_exposure/101` | 1.65 ms | 1.59 µs |
 
-Hosts: flumix (i7-12650H, 16 threads, idle) for #857, #859, #861 and #863;
-an Apple M5 Max under load for #858, #860 and #862, so those medians carry
-the host's load. Each CHANGELOG entry has the full tables.
+| Change (within 1e-12) | Benchmark | Before | After |
+| --- | --- | ---: | ---: |
+| `d1` and log returns take `ln` in `f64` (#857) | `black_scholes` | 11.90 µs | 4.47 µs |
+| Monte Carlo path in `f64` (#859) | 30 steps x 10 000 paths | 131 ms | 1.38 ms |
+| Walk steps take `exp` / `sqrt` in `f64` (#860) | Heston, 1008 steps | 6.25 ms | 2.07 ms |
+| Rolling historical volatility (#859) | `historical_window_21/1008` | 1.72 ms | 0.98 ms |
+
+Hosts: flumix (i7-12650H, 16 threads, idle) for #857, #863, the `d1`
+rows, the Monte Carlo rows, the chain I/O and build rows and the walk
+steps; an Apple M5 Max, often under load, for #858, `Simulator::new`,
+#862, the binomial and historical-volatility rows and the exposures, so
+those medians carry the host's load. Each CHANGELOG entry has the full tables.
