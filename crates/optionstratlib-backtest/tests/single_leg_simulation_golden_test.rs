@@ -7,6 +7,12 @@
 //! comparison; every other field must match byte for byte.
 //!
 //! Regenerate with `OSL_WRITE_GOLDEN=1 cargo test -p optionstratlib-backtest --test single_leg_simulation_golden_test`
+//!
+//! Re-baselined for #828: the pricing inputs now reach `f64` through
+//! `decimal_to_f64`, the nearest `f64` (#670), instead of `rust_decimal`'s
+//! `as_f64`. Premiums and P&L moved by at most `5e-14` relative
+//! (`avg_premium`, `min_premium`, `realized` and the P&L summary of four
+//! runs); no exit, holding period or count changed.
 //! only when a numerical change is intended and reviewed.
 
 use optionstratlib_backtest::backtesting::Simulate;

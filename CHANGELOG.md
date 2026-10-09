@@ -42,7 +42,9 @@ summarize the release.
   - `TelegraphProcess::next_state` returns `Result<i8, PricingError>`.
   Results can move by one ulp where an `f64` intermediate rounds
   differently: `ShortStrangle::get_profit_area` on the test fixture goes
-  from `27.07333333333334` to `27.07333333333333`. `pnl_diff` builds
+  from `27.07333333333334` to `27.07333333333333`, and the backtest golden
+  `single_leg_simulation.json` moves premiums and P&L by at most `5e-14`
+  relative (no exit, holding period or count changes). `pnl_diff` builds
   `initial_costs` and `initial_income` from the `Decimal` instead of an
   `f64` round trip. `round_to_clean_interval` compares in `Decimal`.
 
