@@ -9,7 +9,7 @@ numeric crates.
 
 | Module       | Contents                                                                  |
 |--------------|---------------------------------------------------------------------------|
-| `curves`     | `Curve`, `Point2D`, `Curvable`, `StatisticalCurve`                         |
+| `curves`     | `Curve`, `Point2D`, `Curvable`, `StatisticalCurve`, `CurveSpline`          |
 | `surfaces`   | `Surface`, `Point3D`, `Surfacable`                                         |
 | `geometrics` | Construction, linear / bilinear / cubic / spline interpolation, arithmetic, metric extraction |
 | `error`      | `CurveError`, `SurfaceError`, `InterpolationError`, `MetricsError`         |
