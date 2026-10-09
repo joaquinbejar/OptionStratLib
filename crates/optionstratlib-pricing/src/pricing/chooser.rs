@@ -52,7 +52,9 @@ use crate::error::PricingError;
 use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub};
+use optionstratlib_core::model::decimal::{
+    d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64,
+};
 use optionstratlib_core::model::types::OptionType;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -80,7 +82,9 @@ use rust_decimal_macros::dec;
 ///   `Positive`.
 pub fn chooser_black_scholes(option: &Options) -> Result<Decimal, PricingError> {
     match &option.option_type {
-        OptionType::Chooser { choice_date } => simple_chooser_price(option, choice_date.to_f64()),
+        OptionType::Chooser { choice_date } => {
+            simple_chooser_price(option, decimal_to_f64(choice_date.to_dec())?)
+        }
         _ => Err(PricingError::other(
             "chooser_black_scholes requires OptionType::Chooser",
         )),

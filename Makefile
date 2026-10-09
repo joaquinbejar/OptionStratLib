@@ -576,10 +576,18 @@ release-gates-render:
 # multi-line product — `        * asr.exp()` in `crates/optionstratlib-pricing/src/pricing/compound.rs` is
 # five such lines — so a banned construct could hide there.
 #
+# `.to_f64()`, `.to_f64_checked()` and `.as_f64()` are banned there too
+# (#828): on a `Decimal` or a `Positive` they are `rust_decimal`'s `as_f64`,
+# which is not always the nearest `f64`, and their `Option` invited
+# `unwrap_or(0.0)`. Production code converts through
+# `optionstratlib_core::model::decimal::decimal_to_f64`, the correctly
+# rounded conversion of #670, and propagates its `DecimalError`. Tests keep
+# using the methods freely.
+#
 # A reviewed exception carries a trailing
 # `// scan-banned: allow -- <reason>` marker on the same line.
 SCAN_STRICT_DIRS := crates/optionstratlib-core/src|crates/optionstratlib-math/src|crates/optionstratlib-pricing/src|crates/optionstratlib-simulation/src|crates/optionstratlib-market/src|crates/optionstratlib-analytics/src|crates/optionstratlib-strategies/src|crates/optionstratlib-backtest/src|crates/optionstratlib-visualization/src|src
-SCAN_STRICT_PATTERN := (saturating|wrapping)_[a-z]+\(|spos!|Duration::(days|hours|minutes|seconds|milliseconds|weeks)\(|\.(ceiling|round_to|round_to_nice_number)\(|\.(sin|cos|tan)\(\)|[^_[:alnum:]](assert|assert_eq|assert_ne)!|\.(sum|product)::<(Decimal|Positive)>\(
+SCAN_STRICT_PATTERN := (saturating|wrapping)_[a-z]+\(|\.(to_f64|to_f64_checked|as_f64)\(\)|spos!|Duration::(days|hours|minutes|seconds|milliseconds|weeks)\(|\.(ceiling|round_to|round_to_nice_number)\(|\.(sin|cos|tan)\(\)|[^_[:alnum:]](assert|assert_eq|assert_ne)!|\.(sum|product)::<(Decimal|Positive)>\(
 
 .PHONY: scan-banned
 scan-banned:
@@ -642,7 +650,7 @@ scan-banned:
 		echo "$$found"; \
 		exit 1; \
 	fi; \
-	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no *_unchecked, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt/round_to_nice_number in production code; in $(SCAN_STRICT_DIRS): no saturating/wrapping, spos!, aborting chrono/Positive helpers, Decimal trig, asserts or Decimal/Positive sum/product"
+	echo "OK: no unwrap/expect, no panic/unreachable/todo/unimplemented/pos_or_panic, no *_unchecked, no print/dbg macros or tracing_subscriber, no unchecked exp/ln/powd/sqrt/round_to_nice_number in production code; in $(SCAN_STRICT_DIRS): no saturating/wrapping, to_f64/as_f64, spos!, aborting chrono/Positive helpers, Decimal trig, asserts or Decimal/Positive sum/product"
 
 # Pinned producers of public-api/optionstratlib.txt. Both anchors are needed
 # and they only work as a pair: `cargo public-api` does not read the source,

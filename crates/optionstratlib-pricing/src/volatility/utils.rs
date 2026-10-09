@@ -5,11 +5,13 @@
 ******************************************************************************/
 
 use crate::error::VolatilityError;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
+#[cfg(test)]
+use num_traits::ToPrimitive;
 use optionstratlib_core::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_mul, d_sqrt, d_sub, d_sum, finite_decimal, p_sqrt,
+    d_add, d_div, d_mul, d_sqrt, d_sub, d_sum, decimal_to_f64, finite_decimal, p_sqrt,
 };
 use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Options, Side};
 use optionstratlib_core::utils::time::TimeFrame;
@@ -599,14 +601,14 @@ pub fn simulate_heston_volatility<R: Rng + ?Sized>(
         &v_pos,
         "volatility::utils::simulate_heston_volatility",
     )?];
-    let dt_sqrt_f64 = d_sqrt(dt, "volatility::heston::sqrt_dt")
-        .map_err(|_| VolatilityError::NumericalFailure {
+    let dt_sqrt = d_sqrt(dt, "volatility::heston::sqrt_dt").map_err(|_| {
+        VolatilityError::NumericalFailure {
             reason: "simulate_heston_volatility: sqrt(dt) failed (overflow)".to_string(),
-        })?
-        .to_f64()
-        .ok_or_else(|| VolatilityError::NumericalFailure {
-            reason: "simulate_heston_volatility: sqrt(dt) not representable as f64".to_string(),
-        })?;
+        }
+    })?;
+    let dt_sqrt_f64 = decimal_to_f64(dt_sqrt).map_err(|_| VolatilityError::NumericalFailure {
+        reason: "simulate_heston_volatility: sqrt(dt) not representable as f64".to_string(),
+    })?;
     for _ in 1..steps {
         let dw = heston_wiener_increment(rng, dt_sqrt_f64)?;
         let sqrt_v = p_sqrt(&v_pos, "volatility::utils::simulate_heston_volatility")?.to_dec();

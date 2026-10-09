@@ -398,7 +398,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -418,7 +418,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -452,7 +452,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -472,7 +472,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -564,7 +564,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -584,7 +584,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -676,7 +676,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -696,7 +696,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -723,14 +723,14 @@
   },
   "long_call/path1/exit6": {
     "average_holding_period": "2",
-    "average_pnl": "-2.4244799347985250585312550915",
-    "best_pnl": "-2.4244799347985250585312550915",
+    "average_pnl": "-2.4244799347985232585312550915",
+    "best_pnl": "-2.4244799347985232585312550915",
     "loss_count": 2,
-    "median_pnl": "-2.4244799347985250585312550915",
+    "median_pnl": "-2.4244799347985232585312550915",
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.0589223759312944246481771188",
+        "avg_premium": "1.0589223759312950246481771188",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -741,18 +741,18 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.493376819403773537057817006",
-        "min_premium": "0.0688968846052484785265619145",
+        "min_premium": "0.0688968846052502785265619145",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "-2.4244799347985250585312550915",
+          "realized": "-2.4244799347985232585312550915",
           "unrealized": null
         },
         "risk_metrics": null,
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.0589223759312944246481771188",
+        "avg_premium": "1.0589223759312950246481771188",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -763,11 +763,11 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.493376819403773537057817006",
-        "min_premium": "0.0688968846052484785265619145",
+        "min_premium": "0.0688968846052502785265619145",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "-2.4244799347985250585312550915",
+          "realized": "-2.4244799347985232585312550915",
           "unrealized": null
         },
         "risk_metrics": null,
@@ -777,7 +777,7 @@
     "std_dev_pnl": "0",
     "total_simulations": 2,
     "win_rate": "0",
-    "worst_pnl": "-2.4244799347985250585312550915"
+    "worst_pnl": "-2.4244799347985232585312550915"
   },
   "long_call/path2/exit0": {
     "average_holding_period": "5",
@@ -1954,7 +1954,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -1974,7 +1974,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2008,7 +2008,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2028,7 +2028,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2120,7 +2120,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2140,7 +2140,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2232,7 +2232,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2252,7 +2252,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.543561263100781081563767333",
+        "avg_premium": "0.543561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -2279,14 +2279,14 @@
   },
   "long_put/path0/exit6": {
     "average_holding_period": "2",
-    "average_pnl": "-1.9983643120721383062548538261",
-    "best_pnl": "-1.9983643120721383062548538261",
+    "average_pnl": "-1.9983643120721339062548538261",
+    "best_pnl": "-1.9983643120721339062548538261",
     "loss_count": 2,
-    "median_pnl": "-1.9983643120721383062548538261",
+    "median_pnl": "-1.9983643120721339062548538261",
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "0.9032931054020963757293857236",
+        "avg_premium": "0.9032931054020978423960523903",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -2297,18 +2297,18 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.083261195824210296676165566",
-        "min_premium": "0.0848968837520719904213117399",
+        "min_premium": "0.0848968837520763904213117399",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "-1.9983643120721383062548538261",
+          "realized": "-1.9983643120721339062548538261",
           "unrealized": null
         },
         "risk_metrics": null,
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.9032931054020963757293857236",
+        "avg_premium": "0.9032931054020978423960523903",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -2319,11 +2319,11 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.083261195824210296676165566",
-        "min_premium": "0.0848968837520719904213117399",
+        "min_premium": "0.0848968837520763904213117399",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "-1.9983643120721383062548538261",
+          "realized": "-1.9983643120721339062548538261",
           "unrealized": null
         },
         "risk_metrics": null,
@@ -2333,7 +2333,7 @@
     "std_dev_pnl": "0",
     "total_simulations": 2,
     "win_rate": "0",
-    "worst_pnl": "-1.9983643120721383062548538261"
+    "worst_pnl": "-1.9983643120721339062548538261"
   },
   "long_put/path1/exit0": {
     "average_holding_period": "4",
@@ -2734,7 +2734,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2754,7 +2754,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2788,7 +2788,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2808,7 +2808,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2842,7 +2842,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2862,7 +2862,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2896,7 +2896,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -2916,7 +2916,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -3008,7 +3008,7 @@
     "profitable_count": 0,
     "results": [
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -3028,7 +3028,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.9185460834321543323792517862",
+        "avg_premium": "1.9185460834321559928929207368",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -4290,7 +4290,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4310,7 +4310,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4402,7 +4402,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4422,7 +4422,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4456,7 +4456,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4476,7 +4476,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4568,7 +4568,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4588,7 +4588,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "0.6358639623323053574980854794",
+        "avg_premium": "0.6358639623323057174980854794",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -4615,14 +4615,14 @@
   },
   "short_call/path1/exit6": {
     "average_holding_period": "2",
-    "average_pnl": "2.4244799347985250585312550915",
-    "best_pnl": "2.4244799347985250585312550915",
+    "average_pnl": "2.4244799347985232585312550915",
+    "best_pnl": "2.4244799347985232585312550915",
     "loss_count": 0,
-    "median_pnl": "2.4244799347985250585312550915",
+    "median_pnl": "2.4244799347985232585312550915",
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.0589223759312944246481771188",
+        "avg_premium": "1.0589223759312950246481771188",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -4633,18 +4633,18 @@
         "hit_take_profit": true,
         "holding_period": 2,
         "max_premium": "2.493376819403773537057817006",
-        "min_premium": "0.0688968846052484785265619145",
+        "min_premium": "0.0688968846052502785265619145",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "2.4244799347985250585312550915",
+          "realized": "2.4244799347985232585312550915",
           "unrealized": null
         },
         "risk_metrics": null,
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.0589223759312944246481771188",
+        "avg_premium": "1.0589223759312950246481771188",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -4655,11 +4655,11 @@
         "hit_take_profit": true,
         "holding_period": 2,
         "max_premium": "2.493376819403773537057817006",
-        "min_premium": "0.0688968846052484785265619145",
+        "min_premium": "0.0688968846052502785265619145",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "2.4244799347985250585312550915",
+          "realized": "2.4244799347985232585312550915",
           "unrealized": null
         },
         "risk_metrics": null,
@@ -4669,7 +4669,7 @@
     "std_dev_pnl": "0",
     "total_simulations": 2,
     "win_rate": "100.0",
-    "worst_pnl": "2.4244799347985250585312550915"
+    "worst_pnl": "2.4244799347985232585312550915"
   },
   "short_call/path2/exit0": {
     "average_holding_period": "5",
@@ -5846,7 +5846,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -5866,7 +5866,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -5958,7 +5958,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -5978,7 +5978,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -6012,7 +6012,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -6032,7 +6032,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -6124,7 +6124,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -6144,7 +6144,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.343561263100781081563767333",
+        "avg_premium": "1.343561263100781961563767333",
         "exit_reason": "Expiration",
         "expiration_premium": "0",
         "expired": true,
@@ -6171,14 +6171,14 @@
   },
   "short_put/path0/exit6": {
     "average_holding_period": "2",
-    "average_pnl": "0.9983643120721383062548538261",
-    "best_pnl": "0.9983643120721383062548538261",
+    "average_pnl": "0.9983643120721339062548538261",
+    "best_pnl": "0.9983643120721339062548538261",
     "loss_count": 0,
-    "median_pnl": "0.9983643120721383062548538261",
+    "median_pnl": "0.9983643120721339062548538261",
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "1.5699597720687630423960523903",
+        "avg_premium": "1.569959772068764509062719057",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -6189,18 +6189,18 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.083261195824210296676165566",
-        "min_premium": "1.0848968837520719904213117399",
+        "min_premium": "1.0848968837520763904213117399",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "0.9983643120721383062548538261",
+          "realized": "0.9983643120721339062548538261",
           "unrealized": null
         },
         "risk_metrics": null,
         "simulation_count": 1
       },
       {
-        "avg_premium": "1.5699597720687630423960523903",
+        "avg_premium": "1.569959772068764509062719057",
         "exit_reason": {
           "TimeSteps": 2
         },
@@ -6211,11 +6211,11 @@
         "hit_take_profit": false,
         "holding_period": 2,
         "max_premium": "2.083261195824210296676165566",
-        "min_premium": "1.0848968837520719904213117399",
+        "min_premium": "1.0848968837520763904213117399",
         "pnl": {
           "initial_costs": "0",
           "initial_income": "0",
-          "realized": "0.9983643120721383062548538261",
+          "realized": "0.9983643120721339062548538261",
           "unrealized": null
         },
         "risk_metrics": null,
@@ -6225,7 +6225,7 @@
     "std_dev_pnl": "0",
     "total_simulations": 2,
     "win_rate": "100.0",
-    "worst_pnl": "0.9983643120721383062548538261"
+    "worst_pnl": "0.9983643120721339062548538261"
   },
   "short_put/path1/exit0": {
     "average_holding_period": "4",
@@ -6626,7 +6626,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6646,7 +6646,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6680,7 +6680,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6700,7 +6700,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6792,7 +6792,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6812,7 +6812,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6904,7 +6904,7 @@
     "profitable_count": 2,
     "results": [
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,
@@ -6924,7 +6924,7 @@
         "simulation_count": 1
       },
       {
-        "avg_premium": "2.7518794167654876657125851195",
+        "avg_premium": "2.7518794167654893262262540702",
         "exit_reason": "Expiration",
         "expiration_premium": "0.0000000000041283870548223490",
         "expired": true,

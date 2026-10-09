@@ -42,12 +42,13 @@
 
 use crate::error::PricingError;
 use crate::error::greeks::{GreeksError, InputErrorKind, MathErrorKind};
+#[cfg(test)]
 use num_traits::ToPrimitive;
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, f64_to_decimal,
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, f64_to_decimal,
 };
 use rust_decimal::Decimal;
 use statrs::distribution::{ContinuousCDF, Normal};
@@ -133,7 +134,8 @@ pub fn d1(
 ) -> Result<Decimal, GreeksError> {
     if underlying_price == Positive::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidPrice {
-            value: underlying_price.to_f64(),
+            // The branch is taken only for a zero price (#828).
+            value: 0.0,
             reason: "Underlying price price cannot be zero".to_string(),
         }));
     }
@@ -147,7 +149,8 @@ pub fn d1(
 
     if implied_volatility == Decimal::ZERO {
         return Err(GreeksError::InputError(InputErrorKind::InvalidVolatility {
-            value: implied_volatility.to_f64(),
+            // The branch is taken only for a zero volatility (#828).
+            value: 0.0,
             reason: "Implied volatility cannot be zero".to_string(),
         }));
     }
@@ -377,13 +380,8 @@ fn d2_from_d1(
 /// ```
 #[inline]
 pub fn big_n(x: Decimal) -> Result<Decimal, DecimalError> {
-    let Some(x_f64) = x.to_f64() else {
-        return Err(DecimalError::ConversionError {
-            from_type: "Decimal".to_string(),
-            to_type: "f64".to_string(),
-            reason: "Conversion failed".to_string(),
-        });
-    };
+    // The nearest `f64` (#670, #828); its failure is the conversion error.
+    let x_f64 = decimal_to_f64(x)?;
 
     // Guard the `Decimal` → `f64` boundary: if `x` is outside the
     // representable `f64` range the conversion returns `±∞` rather

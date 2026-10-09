@@ -1,6 +1,7 @@
 use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use optionstratlib_core::model::Positive;
@@ -680,7 +681,7 @@ impl Strategies for BearPutSpread {
             StrategyError::empty_collection("BearPutSpread::get_profit_area: no break-even points")
         })?;
         let base = price_gap(*break_even, self.short_put.option.strike_price);
-        decimal_from_f64(high.to_f64() * base.to_f64() / 200.0)
+        decimal_from_f64(f64_of(high)? * f64_of(base)? / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let max_profit = measured_max_profit(self)?;
@@ -688,7 +689,7 @@ impl Strategies for BearPutSpread {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
+            _ => decimal_from_f64(f64_of(max_profit)? / f64_of(max_loss)? * 100.0),
         }
     }
 }

@@ -638,7 +638,7 @@ pub optionstratlib_math::surfaces::Surface::points: alloc::collections::btree::s
 pub optionstratlib_math::surfaces::Surface::x_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 pub optionstratlib_math::surfaces::Surface::y_range: (rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal)
 impl optionstratlib_math::surfaces::Surface
-pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)>
+pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> core::result::Result<alloc::vec::Vec<(f64, f64, f64)>, optionstratlib_math::error::SurfaceError>
 pub fn optionstratlib_math::surfaces::Surface::new(alloc::collections::btree::set::BTreeSet<optionstratlib_math::surfaces::Point3D>) -> Self
 pub fn optionstratlib_math::surfaces::Surface::project_onto(&self, optionstratlib_math::surfaces::types::Axis) -> alloc::vec::Vec<optionstratlib_math::curves::Point2D>
 impl core::default::Default for optionstratlib_math::surfaces::Surface

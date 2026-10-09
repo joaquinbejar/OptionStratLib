@@ -2,10 +2,9 @@ use crate::error::SimulationError;
 use crate::simulation::model::WalkPath;
 use crate::simulation::ou::ou_path;
 use crate::simulation::{WalkParams, WalkType, path_buffer};
-use num_traits::ToPrimitive;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample_with,
+    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample_with, decimal_to_f64,
     decimal_uniform_sample_with, finite_decimal, p_sqrt,
 };
 use optionstratlib_core::utils::deterministic_rng;
@@ -96,7 +95,7 @@ where
                 .checked_mul_dec(stationary_weight)?; // 0.002
 
             // pre-compute √dt
-            let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+            let sqrt_dt = decimal_to_f64(dt.to_dec())?.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                 SimulationError::non_finite("simulation::garch::sqrt_dt", sqrt_dt)
             })?;
@@ -448,7 +447,9 @@ where
             vols.push(volatility);
 
             // Initialize telegraph state randomly
-            let mut state: i8 = if decimal_normal_sample_with(rng).to_f64().unwrap_or(0.0) < 0.0 {
+            // The sign of the draw, read on the `Decimal` itself (#828): no
+            // conversion, so no failed conversion to read as zero.
+            let mut state: i8 = if decimal_normal_sample_with(rng) < Decimal::ZERO {
                 1
             } else {
                 -1
@@ -549,7 +550,7 @@ where
             values.push(start);
             let mut x: Decimal = start.to_dec();
             let sigma_abs = volatility.checked_mul(&start)?.to_dec();
-            let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+            let sqrt_dt = decimal_to_f64(dt.to_dec())?.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                 SimulationError::non_finite("simulation::brownian::sqrt_dt", sqrt_dt)
             })?;
@@ -649,7 +650,7 @@ where
             let mut price: Positive = params.ystep_as_positive()?;
             values.push(price);
 
-            let sqrt_dt = dt.to_f64().sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+            let sqrt_dt = decimal_to_f64(dt.to_dec())?.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
             let sqrt_dt_dec = finite_decimal(sqrt_dt).ok_or_else(|| {
                 SimulationError::non_finite("simulation::log_returns::sqrt_dt", sqrt_dt)
             })?;

@@ -21,6 +21,7 @@ use crate::error::probability::{
 };
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
+use optionstratlib_core::model::decimal::decimal_to_f64;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -73,7 +74,7 @@ impl ProfitLossRange {
         {
             return Err(ProbabilityError::RangeError(
                 crate::error::probability::ProfitLossRangeErrorKind::InvalidProfitRange {
-                    range: format!("[{}, {}]", lower.to_f64(), upper.to_f64()),
+                    range: format!("[{lower}, {upper}]"),
                     reason: "Lower bound must be less than upper bound".to_string(),
                 },
             ));
@@ -325,20 +326,25 @@ impl ProfitRangeProbability for ProfitLossRange {
         // nobody computed; the raw `Positive` operator aborted on it (#569).
         // Ordinary inputs cannot reach this: the `ln` error is at the 28th
         // decimal and only surfaces once `vol * sqrt(T)` is below `~1e-11`.
-        self.probability = prob_below_upper
-            .sub_or_none(&prob_below_lower.to_dec())
-            .ok_or_else(|| {
-                ProbabilityError::CalculationError(
+        self.probability = match prob_below_upper.sub_or_none(&prob_below_lower.to_dec()) {
+            Some(probability) => probability,
+            None => {
+                // The reported gap is formed from the nearest `f64` of each
+                // probability (#828); a failed conversion is its own error.
+                let value = decimal_to_f64(prob_below_upper.to_dec())?
+                    - decimal_to_f64(prob_below_lower.to_dec())?;
+                return Err(ProbabilityError::CalculationError(
                     ProbabilityCalculationErrorKind::InvalidProbability {
-                        value: prob_below_upper.to_f64() - prob_below_lower.to_f64(),
+                        value,
                         reason: format!(
                             "probability below the upper bound {upper} ({prob_below_upper}) is \
                              smaller than below the lower bound {lower} ({prob_below_lower}); \
                              the inputs are outside the precision of the price model"
                         ),
                     },
-                )
-            })?;
+                ));
+            }
+        };
         Ok(())
     }
 }

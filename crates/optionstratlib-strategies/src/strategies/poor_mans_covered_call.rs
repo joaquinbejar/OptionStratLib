@@ -31,6 +31,7 @@ use crate::error::strategies::{ProfitLossErrorKind, StrategyError};
 use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{is_extreme_sign_error, measured_max_profit};
 use crate::strategies::{
@@ -715,15 +716,15 @@ impl Strategies for PoorMansCoveredCall {
         // stops at the strike rather than inverting the subtraction.
         let strike = self.short_call.option.strike_price;
         let max_profit = measured_max_profit(self)?;
-        let base = price_gap(strike, price_gap(strike, max_profit)).to_f64();
-        let high = max_profit.to_f64();
+        let base = f64_of(price_gap(strike, price_gap(strike, max_profit)))?;
+        let high = f64_of(max_profit)?;
         let result = base * high / 200.0;
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
         let result = match (self.get_max_profit(), self.get_max_loss()) {
-            (Ok(profit), Ok(loss)) => profit.checked_div(&loss)?.to_f64() * 100.0,
+            (Ok(profit), Ok(loss)) => f64_of(profit.checked_div(&loss)?)? * 100.0,
             (Err(error), _) | (_, Err(error)) if is_extreme_sign_error(&error) => ZERO,
             (Err(error), _) | (_, Err(error)) => return Err(error),
         };

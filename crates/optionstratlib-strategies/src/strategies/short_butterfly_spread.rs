@@ -8,6 +8,7 @@ use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
@@ -869,7 +870,7 @@ impl Strategies for ShortButterflySpread {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
+            _ => decimal_from_f64(f64_of(max_profit)? / f64_of(max_loss)? * 100.0),
         }
     }
 }

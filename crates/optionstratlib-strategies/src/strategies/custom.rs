@@ -11,6 +11,7 @@ use crate::error::strategies::StrategyError;
 use crate::strategies::base::price_gap;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::utils::calculate_price_range_bounded;
@@ -19,7 +20,6 @@ use crate::strategies::{
     delta_neutral::DeltaNeutrality, probabilities::ProbabilityAnalysis,
     utils::OptimizationCriteria,
 };
-use num_traits::ToPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::VolatilityAdjustment;
 use optionstratlib_analytics::error::probability::ProbabilityError;
@@ -289,7 +289,7 @@ impl CustomStrategy {
         let mut iterations = 0;
 
         while iterations < self.max_iterations {
-            let f_x = self.calculate_profit_at(&x).ok()?.to_f64()?;
+            let f_x = f64_of(self.calculate_profit_at(&x).ok()?).ok()?;
 
             // Check if we're close enough to zero
             if f_x.abs() < self.epsilon {
@@ -298,11 +298,8 @@ impl CustomStrategy {
 
             // Calculate derivative numerically with smaller step
             let h = p_sqrt(&self.epsilon, "strategies::custom::refine_break_even_point").ok()?;
-            let f_x_h = self
-                .calculate_profit_at(&x.checked_add(&h).ok()?)
-                .ok()?
-                .to_f64()?;
-            let derivative = (f_x_h - f_x) / h.to_f64();
+            let f_x_h = f64_of(self.calculate_profit_at(&x.checked_add(&h).ok()?).ok()?).ok()?;
+            let derivative = (f_x_h - f_x) / f64_of(h).ok()?;
 
             // Avoid division by very small numbers
             if derivative.abs() < self.epsilon {
@@ -314,7 +311,7 @@ impl CustomStrategy {
             let next_x = x.checked_sub_f64(f_x / derivative).ok()?;
 
             // Check for convergence with absolute difference
-            if (next_x.to_f64() - x.to_f64()).abs() < self.epsilon {
+            if (f64_of(next_x).ok()? - f64_of(x).ok()?).abs() < self.epsilon {
                 return Some(next_x);
             }
 
@@ -331,7 +328,8 @@ impl CustomStrategy {
         if !self
             .break_even_points
             .iter()
-            .any(|p| (p.to_f64() - point.to_f64()).abs() < self.epsilon)
+            // A point whose conversion fails is not taken for a duplicate.
+            .any(|p| matches!((f64_of(*p), f64_of(point)), (Ok(a), Ok(b)) if (a - b).abs() < self.epsilon))
         {
             self.break_even_points.push(point);
         }

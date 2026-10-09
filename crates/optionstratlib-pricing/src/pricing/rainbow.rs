@@ -37,7 +37,7 @@
 use crate::error::PricingError;
 use crate::kernels::discount_factor;
 use optionstratlib_core::model::Options;
-use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub, decimal_to_f64};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, RainbowType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -279,36 +279,18 @@ fn monte_carlo_rainbow(
     is_best_of: bool,
     is_call: bool,
 ) -> Result<Decimal, PricingError> {
-    let s1_f = s1
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert s1"))?;
-    let s2_f = s2
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert s2"))?;
-    let k_f = k
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert k"))?;
-    let r_f = r
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert r"))?;
-    let q1_f = q1
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert q1"))?;
-    let q2_f = q2
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert q2"))?;
-    let sigma1_f = sigma1
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert sigma1"))?;
-    let sigma2_f = sigma2
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert sigma2"))?;
-    let rho_f = rho
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert rho"))?;
-    let t_f = t
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert t"))?;
+    let s1_f = decimal_to_f64(s1).map_err(|_| PricingError::other("Failed to convert s1"))?;
+    let s2_f = decimal_to_f64(s2).map_err(|_| PricingError::other("Failed to convert s2"))?;
+    let k_f = decimal_to_f64(k).map_err(|_| PricingError::other("Failed to convert k"))?;
+    let r_f = decimal_to_f64(r).map_err(|_| PricingError::other("Failed to convert r"))?;
+    let q1_f = decimal_to_f64(q1).map_err(|_| PricingError::other("Failed to convert q1"))?;
+    let q2_f = decimal_to_f64(q2).map_err(|_| PricingError::other("Failed to convert q2"))?;
+    let sigma1_f =
+        decimal_to_f64(sigma1).map_err(|_| PricingError::other("Failed to convert sigma1"))?;
+    let sigma2_f =
+        decimal_to_f64(sigma2).map_err(|_| PricingError::other("Failed to convert sigma2"))?;
+    let rho_f = decimal_to_f64(rho).map_err(|_| PricingError::other("Failed to convert rho"))?;
+    let t_f = decimal_to_f64(t).map_err(|_| PricingError::other("Failed to convert t"))?;
 
     let sqrt_t = t_f.sqrt(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
     let drift1 = (r_f - q1_f - 0.5 * sigma1_f * sigma1_f) * t_f;

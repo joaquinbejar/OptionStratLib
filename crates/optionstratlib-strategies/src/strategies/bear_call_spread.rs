@@ -25,6 +25,7 @@ use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
 use crate::strategies::{
@@ -705,16 +706,16 @@ impl Strategies for BearCallSpread {
         }
     }
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
-        let high = measured_max_profit(self)?.to_f64();
+        let high = f64_of(measured_max_profit(self)?)?;
         let break_even = self.break_even_points.first().ok_or_else(|| {
             StrategyError::empty_collection("BearCallSpread::get_profit_area: no break-even points")
         })?;
-        let base = price_gap(*break_even, self.short_call.option.strike_price).to_f64();
+        let base = f64_of(price_gap(*break_even, self.short_call.option.strike_price))?;
         decimal_from_f64(high * base / 200.0)
     }
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {
-        let max_profit = measured_max_profit(self)?.to_f64();
-        let max_loss = measured_max_loss(self)?.to_f64();
+        let max_profit = f64_of(measured_max_profit(self)?)?;
+        let max_loss = f64_of(measured_max_loss(self)?)?;
         match (max_profit, max_loss) {
             (0.0, _) => Ok(Decimal::ZERO),
             (_, 0.0) => Ok(Decimal::MAX),

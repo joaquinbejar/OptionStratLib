@@ -3,8 +3,12 @@
    Email: jb@taunais.com
    Date: 25/10/24
 ******************************************************************************/
+#[cfg(test)]
+use num_traits::ToPrimitive;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sqrt, d_sub, p_sqrt};
+use optionstratlib_core::model::decimal::{
+    d_add, d_div, d_mul, d_sqrt, d_sub, decimal_to_f64, p_sqrt,
+};
 
 /// Calculates the optimal price range for an option based on its underlying price,
 /// strike price, implied volatility, and expiration date.
@@ -273,7 +277,6 @@ use optionstratlib_core::pos_or_panic;
 use crate::chains::OptionData;
 use crate::chains::chain::{SKEW_SLOPE, SKEW_SMILE_CURVE};
 use crate::error::chains::ChainError;
-use num_traits::ToPrimitive;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::decimal::f64_to_decimal;
 use rust_decimal::{Decimal, MathematicalOps, RoundingStrategy};
@@ -926,27 +929,12 @@ pub fn adjust_volatility(
     if strike.is_zero() {
         return None;
     }
-    // SAFETY: SKEW_SLOPE and SKEW_SMILE_CURVE are tiny `Decimal` constants
-    // (dec!(-0.2) and dec!(0.1)); `Decimal::to_f64` may only return `None`
-    // for values outside the f64 range. Fall back to 0.0 with a warning so
-    // that an unexpected non-finite override degrades gracefully instead
-    // of panicking.
-    let skew_slope = skew_slope
-        .unwrap_or(SKEW_SLOPE)
-        .to_f64()
-        .unwrap_or_else(|| {
-            tracing::warn!("adjust_volatility: skew_slope to_f64 returned None; defaulting to 0.0");
-            0.0
-        });
-    let smile_curve = smile_curve
-        .unwrap_or(SKEW_SMILE_CURVE)
-        .to_f64()
-        .unwrap_or_else(|| {
-            tracing::warn!(
-                "adjust_volatility: smile_curve to_f64 returned None; defaulting to 0.0"
-            );
-            0.0
-        });
+    // The coefficients reach `f64` through `decimal_to_f64`, the nearest
+    // `f64` (#828). A coefficient it cannot convert leaves no volatility to
+    // adjust: `None`, as for a missing base volatility, instead of the 0.0 it
+    // used to read as.
+    let skew_slope = decimal_to_f64(skew_slope.unwrap_or(SKEW_SLOPE)).ok()?;
+    let smile_curve = decimal_to_f64(smile_curve.unwrap_or(SKEW_SMILE_CURVE)).ok()?;
     // `Positive / f64` panics when the quotient underflows the positivity
     // invariant (a huge underlying against an ordinary strike), and `ln`
     // panics on a ratio that rounded to zero. Both are reachable from a
@@ -957,7 +945,7 @@ pub fn adjust_volatility(
         .checked_div(underlying_price.to_dec())
         .filter(|ratio| *ratio > Decimal::ZERO)
         .and_then(|ratio| ratio.checked_ln())
-        .and_then(|log_moneyness| log_moneyness.to_f64())
+        .and_then(|log_moneyness| decimal_to_f64(log_moneyness).ok())
         .unwrap_or_else(|| {
             tracing::warn!("adjust_volatility: moneyness is not representable; defaulting to 0.0");
             0.0
@@ -1077,45 +1065,47 @@ fn round_to_clean_interval(interval: Positive, price: Positive) -> Positive {
     let p25_int = Positive::new_decimal(dec!(25.0)).unwrap_or(Positive::ZERO);
     let p50 = Positive::new_decimal(dec!(50.0)).unwrap_or(Positive::ZERO);
 
-    let v = interval.to_f64();
+    // Compared in `Decimal` (#828): the thresholds are exact there, and
+    // there is no conversion to fail.
+    let v = interval.to_dec();
 
     if price < p25_int {
-        if v <= 0.25 {
+        if v <= dec!(0.25) {
             p025
-        } else if v <= 0.5 {
+        } else if v <= dec!(0.5) {
             p05
-        } else if v <= 1.0 {
+        } else if v <= dec!(1.0) {
             Positive::ONE
-        } else if v <= 2.5 {
+        } else if v <= dec!(2.5) {
             p25
         } else {
             p5
         }
     } else if price < Positive::HUNDRED {
-        if v <= 1.0 {
+        if v <= dec!(1.0) {
             Positive::ONE
-        } else if v <= 2.5 {
+        } else if v <= dec!(2.5) {
             p25
-        } else if v <= 5.0 {
+        } else if v <= dec!(5.0) {
             p5
         } else {
             p10
         }
-    } else if v <= 5.0 {
+    } else if v <= dec!(5.0) {
         Positive::ONE
-    } else if v <= 8.0 {
+    } else if v <= dec!(8.0) {
         Positive::TWO
-    } else if v <= 12.5 {
+    } else if v <= dec!(12.5) {
         p5
-    } else if v <= 15.0 {
+    } else if v <= dec!(15.0) {
         p10
-    } else if v <= 20.0 {
+    } else if v <= dec!(20.0) {
         p15
-    } else if v <= 25.0 {
+    } else if v <= dec!(25.0) {
         p20
-    } else if v <= 35.0 {
+    } else if v <= dec!(35.0) {
         p25_int
-    } else if v <= 50.0 {
+    } else if v <= dec!(50.0) {
         p50
     } else {
         Positive::HUNDRED
