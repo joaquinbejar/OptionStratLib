@@ -189,6 +189,14 @@ fn bench_refresh(c: &mut Criterion) {
         bench_ok(&mut group, &format!("vega_exposure/{strikes}"), || {
             black_box(&chain).vega_exposure()
         });
+        // The same sum read from the stored greek snapshots (#861 K2).
+        let mut with_snapshots = chain.clone();
+        with_snapshots.update_greek_snapshots();
+        bench_ok(
+            &mut group,
+            &format!("vega_exposure_snapshots/{strikes}"),
+            || black_box(&with_snapshots).vega_exposure(),
+        );
     }
     group.finish();
 }

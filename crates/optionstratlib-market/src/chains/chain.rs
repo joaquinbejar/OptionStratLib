@@ -27,8 +27,9 @@ use optionstratlib_core::utils::Len;
 use optionstratlib_core::utils::rng::get_random_element;
 use optionstratlib_math::curves::{Curve, Point2D};
 use optionstratlib_math::geometrics::LinearInterpolation;
+use optionstratlib_pricing::error::GreeksError;
 use optionstratlib_pricing::error::VolatilityError;
-use optionstratlib_pricing::greeks::Greeks;
+use optionstratlib_pricing::greeks::{Greeks, GreeksSnapshot};
 use optionstratlib_pricing::volatility::{AtmIvProvider, VolatilitySmile};
 use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
@@ -2420,6 +2421,36 @@ impl OptionChain {
         Ok(&option_data.implied_volatility)
     }
 
+    /// Sums one greek over every strike, call and put, reading each
+    /// strike's stored [`GreeksSnapshot`] when [`Self::update_greek_snapshots`]
+    /// has computed it and pricing the long option otherwise (#861).
+    ///
+    /// A snapshot is the long option's full greek set from the same inputs,
+    /// so both paths give the same value; the snapshot only skips building
+    /// two `Options` and re-running the greek per strike. Every mutator of
+    /// the pricing inputs drops the snapshots, so a stale one is never read.
+    fn snapshot_exposure(
+        &self,
+        label: &'static str,
+        pick: impl Fn(&GreeksSnapshot) -> Decimal,
+        compute: impl Fn(&Options) -> Result<Decimal, GreeksError>,
+    ) -> Result<Decimal, ChainError> {
+        let mut exposure = Decimal::ZERO;
+        for option_data in &self.options {
+            for (style, snapshot) in [
+                (OptionStyle::Call, option_data.greeks_call.as_ref()),
+                (OptionStyle::Put, option_data.greeks_put.as_ref()),
+            ] {
+                let value = match snapshot {
+                    Some(snapshot) => pick(snapshot),
+                    None => compute(&option_data.get_option(Side::Long, style)?)?,
+                };
+                exposure = d_add(exposure, value, label)?;
+            }
+        }
+        Ok(exposure)
+    }
+
     /// Calculates the total gamma exposure for all options in the chain.
     ///
     /// Gamma exposure represents the aggregate rate of change in the delta value
@@ -2508,18 +2539,7 @@ impl OptionChain {
     ///
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn vega_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut vega_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let vega = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .vega()?;
-            vega_exposure = d_add(vega_exposure, vega, "chains::vega_exposure::call")?;
-            let vega = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .vega()?;
-            vega_exposure = d_add(vega_exposure, vega, "chains::vega_exposure::put")?;
-        }
-        Ok(vega_exposure)
+        self.snapshot_exposure("chains::vega_exposure", |s| s.vega, |o| o.vega())
     }
 
     /// Calculates the total theta exposure for all options in the chain.
@@ -2542,18 +2562,7 @@ impl OptionChain {
     ///
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn theta_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut theta_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let theta = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .theta()?;
-            theta_exposure = d_add(theta_exposure, theta, "chains::theta_exposure::call")?;
-            let theta = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .theta()?;
-            theta_exposure = d_add(theta_exposure, theta, "chains::theta_exposure::put")?;
-        }
-        Ok(theta_exposure)
+        self.snapshot_exposure("chains::theta_exposure", |s| s.theta, |o| o.theta())
     }
 
     /// Calculates the total vanna exposure for all options in the chain.
@@ -2576,18 +2585,7 @@ impl OptionChain {
     ///
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn vanna_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut vanna_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let vanna = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .vanna()?;
-            vanna_exposure = d_add(vanna_exposure, vanna, "chains::vanna_exposure::call")?;
-            let vanna = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .vanna()?;
-            vanna_exposure = d_add(vanna_exposure, vanna, "chains::vanna_exposure::put")?;
-        }
-        Ok(vanna_exposure)
+        self.snapshot_exposure("chains::vanna_exposure", |s| s.vanna, |o| o.vanna())
     }
 
     /// Calculates the total vomma exposure for all options in the chain.
@@ -2609,18 +2607,7 @@ impl OptionChain {
     ///
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn vomma_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut vomma_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let vomma = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .vomma()?;
-            vomma_exposure = d_add(vomma_exposure, vomma, "chains::vomma_exposure::call")?;
-            let vomma = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .vomma()?;
-            vomma_exposure = d_add(vomma_exposure, vomma, "chains::vomma_exposure::put")?;
-        }
-        Ok(vomma_exposure)
+        self.snapshot_exposure("chains::vomma_exposure", |s| s.vomma, |o| o.vomma())
     }
 
     /// Calculates the total veta exposure for all options in the chain.
@@ -2642,18 +2629,7 @@ impl OptionChain {
     ///
     /// This method requires options greeks to be initialized first by calling the `update_greeks` method.
     pub fn veta_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut veta_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let veta = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .veta()?;
-            veta_exposure = d_add(veta_exposure, veta, "chains::veta_exposure::call")?;
-            let veta = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .veta()?;
-            veta_exposure = d_add(veta_exposure, veta, "chains::veta_exposure::put")?;
-        }
-        Ok(veta_exposure)
+        self.snapshot_exposure("chains::veta_exposure", |s| s.veta, |o| o.veta())
     }
 
     /// Calculates the total charm exposure for all options in the chain.
@@ -2676,18 +2652,7 @@ impl OptionChain {
     /// This method requires options greeks to be initialized first by calling
     /// the `update_greeks` method.
     pub fn charm_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut charm_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let charm = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .charm()?;
-            charm_exposure = d_add(charm_exposure, charm, "chains::charm_exposure::call")?;
-            let charm = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .charm()?;
-            charm_exposure = d_add(charm_exposure, charm, "chains::charm_exposure::put")?;
-        }
-        Ok(charm_exposure)
+        self.snapshot_exposure("chains::charm_exposure", |s| s.charm, |o| o.charm())
     }
 
     /// Calculates the total color exposure for all options in the chain.
@@ -2710,18 +2675,7 @@ impl OptionChain {
     /// This method requires options greeks to be initialized first by calling
     /// the `update_greeks` method.
     pub fn color_exposure(&self) -> Result<Decimal, ChainError> {
-        let mut color_exposure = Decimal::ZERO;
-        for option_data in &self.options {
-            let color = option_data
-                .get_option(Side::Long, OptionStyle::Call)?
-                .color()?;
-            color_exposure = d_add(color_exposure, color, "chains::color_exposure::call")?;
-            let color = option_data
-                .get_option(Side::Long, OptionStyle::Put)?
-                .color()?;
-            color_exposure = d_add(color_exposure, color, "chains::color_exposure::put")?;
-        }
-        Ok(color_exposure)
+        self.snapshot_exposure("chains::color_exposure", |s| s.color, |o| o.color())
     }
 
     /// Updates the expiration date for the option chain and recalculates Greeks.
@@ -10910,5 +10864,55 @@ mod tests_parallel_pricing {
         assert!(price_in_parallel(PARALLEL_STRIKE_THRESHOLD));
         // On a rayon worker, as inside `generator_optionchain`.
         assert!(!serially(|| price_in_parallel(10_000)));
+    }
+
+    /// The seven snapshot-reading exposures equal the per-strike computation
+    /// they replaced (#861 K2): a chain whose strikes carry greek snapshots
+    /// and the same chain without them give the same sums, digit for digit.
+    fn assert_exposures_match_with_and_without_snapshots(without: &OptionChain) {
+        assert!(without.options.iter().all(|o| o.greeks_call.is_none()));
+        let mut with = without.clone();
+        with.update_greek_snapshots();
+        assert!(with.options.iter().any(|o| o.greeks_call.is_some()));
+        type Exposure = fn(&OptionChain) -> Result<Decimal, ChainError>;
+        let exposures: [(&str, Exposure); 7] = [
+            ("vega", OptionChain::vega_exposure),
+            ("theta", OptionChain::theta_exposure),
+            ("vanna", OptionChain::vanna_exposure),
+            ("vomma", OptionChain::vomma_exposure),
+            ("veta", OptionChain::veta_exposure),
+            ("charm", OptionChain::charm_exposure),
+            ("color", OptionChain::color_exposure),
+        ];
+        for (name, exposure) in exposures {
+            let computed = exposure(without).expect("computed exposure");
+            let read = exposure(&with).expect("snapshot exposure");
+            assert_eq!(
+                format!("{read:?}"),
+                format!("{computed:?}"),
+                "{name}: the snapshot sum differs from the computed sum"
+            );
+        }
+    }
+
+    #[test]
+    fn test_exposures_read_snapshots_bit_for_bit() {
+        for half_width in [5, 25, 100] {
+            let chain =
+                OptionChain::build_chain(&params(half_width, false)).expect("the chain builds");
+            assert_exposures_match_with_and_without_snapshots(&chain);
+        }
+    }
+
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_exposures_read_snapshots_on_the_sp500_fixture() {
+        let mut chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/testdata/SP500-18-oct-2024-5781.88.json"
+        ))
+        .expect("the fixture loads");
+        chain.update_expiration_date("30".to_string());
+        assert_exposures_match_with_and_without_snapshots(&chain);
     }
 }
