@@ -432,6 +432,21 @@ pub(crate) fn measured_max_loss<S: Strategies + ?Sized>(
     }
 }
 
+/// The `f64` nearest to `value`, through
+/// [`decimal_to_f64`](optionstratlib_core::model::decimal::decimal_to_f64),
+/// the correctly rounded conversion of #670 (#828). `Positive::to_f64` and
+/// `ToPrimitive::to_f64` are `rust_decimal`'s `as_f64`, which is not always
+/// the nearest `f64`.
+///
+/// # Errors
+///
+/// [`StrategyError`] wrapping the conversion's `DecimalError`.
+pub(crate) fn f64_of(value: impl Into<Decimal>) -> Result<f64, StrategyError> {
+    Ok(optionstratlib_core::model::decimal::decimal_to_f64(
+        value.into(),
+    )?)
+}
+
 /// Converts an `f64` figure (an area, a ratio) to `Decimal`.
 ///
 /// # Errors

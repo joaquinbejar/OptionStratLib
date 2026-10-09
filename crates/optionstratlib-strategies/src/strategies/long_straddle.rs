@@ -20,6 +20,7 @@ use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::is_extreme_sign_error;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
@@ -695,7 +696,7 @@ impl Strategies for LongStraddle {
             )
         })?;
         let strike_diff = price_gap(upper, lower);
-        let cat = strike_diff.checked_div_f64(2.0_f64.sqrt())?.to_f64(); // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
+        let cat = f64_of(strike_diff.checked_div_f64(2.0_f64.sqrt())?)?; // scan-banned: allow -- f64 `sqrt`: returns NaN for negative input, it does not abort; the non-finite value is rejected at the `Decimal` boundary
         let loss_area = (cat.powf(2.0)) / (2.0 * 10.0_f64.powf(cat.log10().ceil()));
         let result = (1.0 / loss_area) * 10000.0; // Invert the value to get the profit area: the lower, the better
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
@@ -714,10 +715,11 @@ impl Strategies for LongStraddle {
         // A straddle that cost nothing has no ratio to report: the quotient is
         // unbounded, and a number stood in for it would read as a real one.
         let result = match self.get_max_loss() {
-            Ok(max_loss) => break_even_diff
-                .checked_div(&max_loss)?
-                .checked_mul_f64(100.0)?
-                .to_f64(),
+            Ok(max_loss) => f64_of(
+                break_even_diff
+                    .checked_div(&max_loss)?
+                    .checked_mul_f64(100.0)?,
+            )?,
             Err(error) if is_extreme_sign_error(&error) => ZERO,
             Err(error) => return Err(error),
         };
