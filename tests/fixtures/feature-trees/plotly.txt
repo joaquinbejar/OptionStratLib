@@ -172,6 +172,7 @@ optionstratlib-market -> num-traits
 optionstratlib-market -> optionstratlib-core
 optionstratlib-market -> optionstratlib-math
 optionstratlib-market -> optionstratlib-pricing
+optionstratlib-market -> rayon
 optionstratlib-market -> rust_decimal
 optionstratlib-market -> rust_decimal_macros
 optionstratlib-market -> serde

@@ -30,6 +30,7 @@ use optionstratlib_math::geometrics::LinearInterpolation;
 use optionstratlib_pricing::error::VolatilityError;
 use optionstratlib_pricing::greeks::Greeks;
 use optionstratlib_pricing::volatility::{AtmIvProvider, VolatilitySmile};
+use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
 use serde::de::{MapAccess, Visitor};
@@ -289,6 +290,88 @@ impl<'de> Deserialize<'de> for OptionChain {
     }
 }
 
+/// Strikes per chain at and above which `build_chain`, `update_greeks` and
+/// `update_greek_snapshots` price on the rayon pool (#861).
+///
+/// Serial against parallel, median of seven batches, on an idle 16-thread
+/// i7-12650H (flumix): the parallel build is level at 3 strikes and ahead
+/// from 5 (1.6x at 5, 2.1x at 7, 2.8x at 9, 3.8x at 21, 4.6x at 201), the
+/// delta/gamma refresh likewise (1.6x at 5, 2.1x at 7, 2.9x at 9, 4.5x at
+/// 21). On an 18-core Apple M5 Max under a load average of 26 to 65 the
+/// same comparison still lost an occasional run at 5 to 11 strikes. A
+/// chain has an odd number of strikes, so 8 keeps 7 and below serial and
+/// prices 9 and above in parallel.
+pub(crate) const PARALLEL_STRIKE_THRESHOLD: usize = 8;
+
+/// Whether `strikes` strikes are priced on the rayon pool.
+///
+/// A call already running on a rayon worker stays serial:
+/// `generator_optionchain` and `generator_optionseries` build one chain per
+/// walk step in parallel, and splitting each of those builds again would only
+/// add scheduling to an already busy pool.
+fn price_in_parallel(strikes: usize) -> bool {
+    strikes >= PARALLEL_STRIKE_THRESHOLD && rayon::current_thread_index().is_none()
+}
+
+/// One strike priced by `build_chain`, with the pricing failure the build
+/// logs when the strike joins the chain.
+struct PricedStrike {
+    data: OptionData,
+    pricing_failure: Option<ChainError>,
+}
+
+/// One step of the `build_chain` grid: the strike above ATM and, while the
+/// grid has room below, the strike below.
+struct GridStep {
+    upper: Positive,
+    lower: Option<Positive>,
+}
+
+/// The `counter`-th step of the grid around `atm_strike`.
+///
+/// `lower` is `None` where the serial walk stopped after the upper strike:
+/// the offset is past the ATM strike, or the lower strike is zero.
+///
+/// # Errors
+///
+/// Returns [`ChainError::ChainBuildError`] when the offset or a strike leaves
+/// the `Positive` range: a grid that cannot be represented is a bad
+/// parameter set, not a chain to truncate silently.
+fn grid_step(
+    atm_strike: Positive,
+    strike_interval: Positive,
+    counter: Positive,
+) -> Result<GridStep, ChainError> {
+    let offset = strike_interval.checked_mul(&counter).map_err(|e| {
+        ChainError::invalid_parameters(
+            "strike_interval",
+            &format!("strike offset overflows at step {counter}: {e}"),
+        )
+    })?;
+    let upper = atm_strike.checked_add(&offset).map_err(|e| {
+        ChainError::invalid_parameters(
+            "underlying_price",
+            &format!("strike {atm_strike} + {offset} is not representable: {e}"),
+        )
+    })?;
+    if offset.to_dec() > atm_strike.to_dec() {
+        return Ok(GridStep { upper, lower: None });
+    }
+    let lower = atm_strike.checked_sub(&offset).map_err(|e| {
+        ChainError::invalid_parameters(
+            "strike_interval",
+            &format!("strike {atm_strike} - {offset} is not representable: {e}"),
+        )
+    })?;
+    if lower == Positive::ZERO {
+        return Ok(GridStep { upper, lower: None });
+    }
+    Ok(GridStep {
+        upper,
+        lower: Some(lower),
+    })
+}
+
 /// Whether a `day-month-year` title component reads as a date in one of the
 /// date-only formats `ExpirationDate::from_string` accepts. Checked here with
 /// `NaiveDate` because `from_string` also records a process-wide reference
@@ -493,11 +576,14 @@ impl OptionChain {
             params.price_params.dividend_yield,
         );
 
+        /// Prices one strike. A pricing failure is not fatal: the strike
+        /// keeps its greeks and no quotes, and the failure is handed back so
+        /// the caller logs it when, and only when, the strike joins the chain.
         fn create_chain_data(
             strike: &Positive,
             p: &OptionChainBuildParams,
             price: Positive,
-        ) -> Result<OptionData, ChainError> {
+        ) -> Result<PricedStrike, ChainError> {
             if p.implied_volatility > Positive::ONE {
                 return Err(ChainError::invalid_volatility(
                     Some(p.implied_volatility.to_f64()),
@@ -561,97 +647,138 @@ impl OptionChain {
             // `calculate_prices` is given no spread here: the widening
             // happens once, below, because only this call site knows the
             // configured `decimal_places` (and therefore the tick).
-            match option_data.calculate_prices(None) {
+            // Greeks do not depend on bid/ask prices, so they are computed
+            // even when pricing failed, to keep the chain's greek coverage
+            // identical to a post-build `update_greeks` pass.
+            let pricing_failure = match option_data.calculate_prices(None) {
                 Ok(()) => {
                     option_data.apply_spread(p.spread, p.decimal_places);
-                    if p.greek_snapshots {
-                        option_data.calculate_greeks();
-                    } else {
-                        option_data.calculate_delta();
-                        option_data.calculate_gamma();
-                    }
+                    None
                 }
-                Err(e) => {
-                    warn!(
-                        "Failed to calculate prices for strike: {} error: {}",
-                        strike, e
-                    );
-                    // Greeks do not depend on bid/ask prices, so compute them
-                    // even when pricing failed to keep the chain's greek
-                    // coverage identical to a post-build `update_greeks` pass.
-                    if p.greek_snapshots {
-                        option_data.calculate_greeks();
-                    } else {
-                        option_data.calculate_delta();
-                        option_data.calculate_gamma();
-                    }
-                }
+                Err(e) => Some(e),
+            };
+            if p.greek_snapshots {
+                option_data.calculate_greeks();
+            } else {
+                option_data.calculate_delta();
+                option_data.calculate_gamma();
             }
-            Ok(option_data)
+            Ok(PricedStrike {
+                data: option_data,
+                pricing_failure,
+            })
+        }
+
+        /// Takes a priced strike into the chain's order: logs its pricing
+        /// failure, if any, exactly where the serial build logged it.
+        fn admit(priced: Result<PricedStrike, ChainError>) -> Result<OptionData, ChainError> {
+            let PricedStrike {
+                data,
+                pricing_failure,
+            } = priced?;
+            if let Some(e) = pricing_failure {
+                warn!(
+                    "Failed to calculate prices for strike: {} error: {}",
+                    data.strike_price, e
+                );
+            }
+            Ok(data)
         }
 
         let atm_strike = rounder(underlying_price, strike_interval);
-        let atm_strike_option_data = create_chain_data(&atm_strike, params, underlying_price)?;
+        let atm_strike_option_data =
+            admit(create_chain_data(&atm_strike, params, underlying_price))?;
         option_chain.options.insert(atm_strike_option_data);
 
-        // Generate strikes above and below ATM based on chain_size parameter
+        // Generate strikes above and below ATM based on chain_size parameter.
+        //
+        // The grid is walked one step at a time, a step being the strike
+        // above ATM and, while the grid has room below, the strike below.
+        // The walk stops at `chain_size`, where the grid runs out below, at
+        // the first error, and at the first step whose two strikes both
+        // failed to price. Above `PARALLEL_STRIKE_THRESHOLD` strikes the
+        // steps are priced a batch at a time on the rayon pool (#861), then
+        // admitted in grid order with those same stops, so the chain, its
+        // errors and its warnings are those of the serial walk; a batch
+        // only prices a few steps past a price stop that the serial walk
+        // would not have reached. Serially a batch is one step.
+        let total_strikes = params
+            .chain_size
+            .checked_mul(2)
+            .and_then(|doubled| doubled.checked_add(1))
+            .unwrap_or(usize::MAX);
+        let batch_steps = if price_in_parallel(total_strikes) {
+            rayon::current_num_threads().max(1)
+        } else {
+            1
+        };
         let mut counter = Positive::ONE;
         let max_strikes = params.chain_size;
 
-        loop {
-            // Check if we've reached the desired chain size
-            if counter.to_usize_checked().unwrap_or(usize::MAX) > max_strikes {
+        'grid: loop {
+            // Plan the batch: strike arithmetic only, no pricing.
+            let mut planned: Vec<Result<GridStep, ChainError>> = Vec::with_capacity(batch_steps);
+            let mut grid_exhausted = false;
+            while planned.len() < batch_steps {
+                // Check if we've reached the desired chain size
+                if counter.to_usize_checked().unwrap_or(usize::MAX) > max_strikes {
+                    grid_exhausted = true;
+                    break;
+                }
+                let step = grid_step(atm_strike, strike_interval, counter);
+                let last = !matches!(step, Ok(GridStep { lower: Some(_), .. }));
+                planned.push(step);
+                if last {
+                    break;
+                }
+                counter = match counter.checked_add(&Positive::ONE) {
+                    Ok(next) => next,
+                    Err(e) => {
+                        planned.push(Err(ChainError::invalid_parameters(
+                            "chain_size",
+                            &format!("strike counter overflows at step {counter}: {e}"),
+                        )));
+                        break;
+                    }
+                };
+            }
+            if planned.is_empty() {
                 break;
             }
 
-            // `Positive`'s operators panic on overflow, and both the offset
-            // and the upper strike overflow once the ATM strike sits near the
-            // top of the `Decimal` range. A grid that cannot be represented
-            // is a bad parameter set, not a chain to truncate silently.
-            let offset = strike_interval.checked_mul(&counter).map_err(|e| {
-                ChainError::invalid_parameters(
-                    "strike_interval",
-                    &format!("strike offset overflows at step {counter}: {e}"),
-                )
-            })?;
-            let next_upper_strike = atm_strike.checked_add(&offset).map_err(|e| {
-                ChainError::invalid_parameters(
-                    "underlying_price",
-                    &format!("strike {atm_strike} + {offset} is not representable: {e}"),
-                )
-            })?;
-            let next_upper_option_data =
-                create_chain_data(&next_upper_strike, params, underlying_price)?;
-            option_chain.options.insert(next_upper_option_data.clone());
+            let price = |step: Result<GridStep, ChainError>| {
+                step.map(|step| {
+                    (
+                        create_chain_data(&step.upper, params, underlying_price),
+                        step.lower
+                            .map(|lower| create_chain_data(&lower, params, underlying_price)),
+                    )
+                })
+            };
+            let priced: Vec<_> = if batch_steps > 1 {
+                planned.into_par_iter().map(price).collect()
+            } else {
+                planned.into_iter().map(price).collect()
+            };
 
-            let strike_step = offset.to_dec();
-            if strike_step > atm_strike.to_dec() {
+            for step in priced {
+                let (upper, lower) = step?;
+                let next_upper_option_data = admit(upper)?;
+                option_chain.options.insert(next_upper_option_data.clone());
+                let Some(lower) = lower else {
+                    break 'grid;
+                };
+                let next_lower_option_data = admit(lower)?;
+                option_chain.options.insert(next_lower_option_data.clone());
+                if next_upper_option_data.some_price_is_none()
+                    && next_lower_option_data.some_price_is_none()
+                {
+                    break 'grid;
+                }
+            }
+            if grid_exhausted {
                 break;
             }
-            let next_lower_strike = atm_strike.checked_sub(&offset).map_err(|e| {
-                ChainError::invalid_parameters(
-                    "strike_interval",
-                    &format!("strike {atm_strike} - {offset} is not representable: {e}"),
-                )
-            })?;
-            if next_lower_strike == Positive::ZERO {
-                break;
-            }
-            let next_lower_option_data =
-                create_chain_data(&next_lower_strike, params, underlying_price)?;
-            option_chain.options.insert(next_lower_option_data.clone());
-
-            if next_upper_option_data.some_price_is_none()
-                && next_lower_option_data.some_price_is_none()
-            {
-                break;
-            }
-            counter = counter.checked_add(&Positive::ONE).map_err(|e| {
-                ChainError::invalid_parameters(
-                    "chain_size",
-                    &format!("strike counter overflows at step {counter}: {e}"),
-                )
-            })?;
         }
         debug!("Option chain: {}", option_chain);
         Ok(option_chain)
@@ -1329,17 +1456,26 @@ impl OptionChain {
     ///
     /// The original options in the chain are replaced with the ones containing the updated Greeks.
     pub fn update_greeks(&mut self) {
-        let modified_options: BTreeSet<OptionData> = self
-            .options
-            .iter()
-            .map(|option| {
-                let mut option = option.clone(); // Create a clone we can modify
-                option.calculate_delta();
-                option.calculate_gamma();
-                option
-            })
-            .collect();
-        self.options = modified_options;
+        self.refresh_each_strike(|option| {
+            option.calculate_delta();
+            option.calculate_gamma();
+        });
+    }
+
+    /// Applies `refresh` to a copy of every strike and stores the copies.
+    ///
+    /// Each strike is refreshed on its own, so above
+    /// `PARALLEL_STRIKE_THRESHOLD` strikes the copies are refreshed on the
+    /// rayon pool (#861); the set is keyed by strike, so the order the
+    /// copies come back in does not matter.
+    fn refresh_each_strike(&mut self, refresh: impl Fn(&mut OptionData) + Sync) {
+        let mut options: Vec<OptionData> = self.options.iter().cloned().collect();
+        if price_in_parallel(options.len()) {
+            options.par_iter_mut().for_each(&refresh);
+        } else {
+            options.iter_mut().for_each(&refresh);
+        }
+        self.options = options.into_iter().collect();
     }
 
     /// Recomputes the full twelve-greek snapshot for every strike, for both
@@ -1354,16 +1490,7 @@ impl OptionChain {
     /// A strike whose greeks cannot be computed keeps a `None` snapshot and
     /// logs at `debug` level; see [`OptionData::calculate_greeks`].
     pub fn update_greek_snapshots(&mut self) {
-        let modified_options: BTreeSet<OptionData> = self
-            .options
-            .iter()
-            .map(|option| {
-                let mut option = option.clone();
-                option.calculate_greeks();
-                option
-            })
-            .collect();
-        self.options = modified_options;
+        self.refresh_each_strike(OptionData::calculate_greeks);
     }
 
     /// Saves the option chain data to a CSV file.
@@ -10627,5 +10754,154 @@ mod tests_title_metadata {
         let chain = runtime.block_on(OptionChain::load_from_csv_async(&good))?;
         assert_eq!(chain.underlying_price.to_dec(), dec!(5781.88));
         Ok(())
+    }
+}
+
+/// The rayon-pool build and refresh (#861) produce exactly the chain the
+/// serial walk produces: same strikes, same values at the same scale, same
+/// stops and the same errors.
+#[cfg(test)]
+mod tests_parallel_pricing {
+    use super::*;
+    use optionstratlib_core::pos_or_panic;
+    use rust_decimal_macros::dec;
+
+    /// Runs `f` on a one-thread rayon pool. A call already on a rayon worker
+    /// prices serially, so this is the serial reference.
+    fn serially<T: Send>(f: impl FnOnce() -> T + Send) -> T {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(1)
+            .build()
+            .expect("a one-thread pool")
+            .install(f)
+    }
+
+    /// Every field of the chain, with each strike's `Debug` form, which
+    /// prints every `Decimal` at its scale: `1.0` and `1.00` differ here.
+    fn fingerprint(chain: &OptionChain) -> Vec<String> {
+        let mut lines = vec![format!(
+            "{} {:?} {} {:?} {:?}",
+            chain.symbol,
+            chain.underlying_price.to_dec(),
+            chain.expiration_date,
+            chain.risk_free_rate,
+            chain.dividend_yield.map(|d| d.to_dec())
+        )];
+        lines.extend(chain.options.iter().map(|option| format!("{option:?}")));
+        lines
+    }
+
+    fn params(half_width: usize, greek_snapshots: bool) -> OptionChainBuildParams {
+        OptionChainBuildParams::new(
+            "BENCH".to_string(),
+            None,
+            half_width,
+            None,
+            dec!(-0.2),
+            dec!(0.1),
+            pos_or_panic!(0.02),
+            2,
+            OptionDataPriceParams::new(
+                Some(Box::new(Positive::HUNDRED)),
+                Some(ExpirationDate::Days(pos_or_panic!(30.0))),
+                Some(dec!(0.05)),
+                Some(pos_or_panic!(0.01)),
+                Some("BENCH".to_string()),
+            ),
+            pos_or_panic!(0.2),
+        )
+        .with_greek_snapshots(greek_snapshots)
+    }
+
+    fn assert_build_matches_serial(params: &OptionChainBuildParams) {
+        let parallel = OptionChain::build_chain(params).map(|chain| fingerprint(&chain));
+        let serial = serially(|| OptionChain::build_chain(params).map(|chain| fingerprint(&chain)));
+        match (parallel, serial) {
+            (Ok(parallel), Ok(serial)) => assert_eq!(parallel, serial),
+            (Err(parallel), Err(serial)) => assert_eq!(parallel.to_string(), serial.to_string()),
+            (parallel, serial) => panic!("parallel {parallel:?} against serial {serial:?}"),
+        }
+    }
+
+    fn assert_refresh_matches_serial(chain: &OptionChain) {
+        let mut parallel = chain.clone();
+        parallel.update_greeks();
+        let serial = serially(|| {
+            let mut serial = chain.clone();
+            serial.update_greeks();
+            serial
+        });
+        assert_eq!(fingerprint(&parallel), fingerprint(&serial));
+
+        let mut parallel = chain.clone();
+        parallel.update_greek_snapshots();
+        let serial = serially(|| {
+            let mut serial = chain.clone();
+            serial.update_greek_snapshots();
+            serial
+        });
+        assert_eq!(fingerprint(&parallel), fingerprint(&serial));
+    }
+
+    #[test]
+    fn test_parallel_build_and_refresh_match_serial_on_21_and_201_strikes() {
+        for (half_width, strikes) in [(10, 21), (100, 201)] {
+            assert!(
+                price_in_parallel(strikes),
+                "{strikes} strikes price in parallel"
+            );
+            for greek_snapshots in [false, true] {
+                let params = params(half_width, greek_snapshots);
+                assert_build_matches_serial(&params);
+                let chain = OptionChain::build_chain(&params).expect("the chain builds");
+                assert_eq!(chain.options.len(), strikes);
+                assert_refresh_matches_serial(&chain);
+            }
+        }
+    }
+
+    #[cfg(feature = "io")]
+    #[test]
+    fn test_parallel_build_and_refresh_match_serial_on_the_sp500_fixture() {
+        let chain = OptionChain::load_from_json(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+        ))
+        .expect("the fixture loads");
+        assert!(price_in_parallel(chain.options.len()));
+        assert_refresh_matches_serial(&chain);
+        let params = chain
+            .to_build_params()
+            .expect("the fixture has build params");
+        assert_build_matches_serial(&params);
+    }
+
+    #[test]
+    fn test_parallel_build_stops_where_the_serial_walk_stops() {
+        // A grid of 1 around a spot of 10 runs out below after 9 steps, long
+        // before `chain_size`: the batch priced past that stop is dropped.
+        let mut params = params(500, false);
+        params.set_underlying_price(Some(Box::new(pos_or_panic!(10.0))));
+        params.strike_interval = Some(Positive::ONE);
+        assert_build_matches_serial(&params);
+        let chain = OptionChain::build_chain(&params).expect("the chain builds");
+        assert_eq!(chain.options.len(), 1 + 2 * 9 + 1);
+    }
+
+    #[test]
+    fn test_parallel_build_reports_the_serial_error() {
+        // An implied volatility above 1 fails the ATM strike, before any batch.
+        let mut params = params(50, false);
+        params.set_implied_volatility(pos_or_panic!(1.5));
+        assert_build_matches_serial(&params);
+        assert!(OptionChain::build_chain(&params).is_err());
+    }
+
+    #[test]
+    fn test_small_chains_and_nested_calls_stay_serial() {
+        assert!(!price_in_parallel(PARALLEL_STRIKE_THRESHOLD - 1));
+        assert!(price_in_parallel(PARALLEL_STRIKE_THRESHOLD));
+        // On a rayon worker, as inside `generator_optionchain`.
+        assert!(!serially(|| price_in_parallel(10_000)));
     }
 }
