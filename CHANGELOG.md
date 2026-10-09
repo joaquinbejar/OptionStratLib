@@ -3105,6 +3105,28 @@ summarize the release.
 
 ### Changed
 
+- **Single-leg backtests evaluate their paths on the rayon pool and reuse
+  one option per path** (#863). `simulate_single_leg` evaluated every walk
+  serially and cloned the leg's `Options` at every step to price it. It now
+  evaluates the walks on the rayon pool, collects the results in walk
+  order and aggregates them as before, and each path reuses one scratch
+  copy of the leg, whose two step-dependent fields every step overwrites.
+  The statistics are those of a serial run: `tests/parallel_backtest_test.rs`
+  compares the whole serialised run, every path included, with a serial
+  walk-by-walk evaluation for a long call and a short put, four seeds and
+  path counts, and every exit policy. When several paths fail, the error is
+  the lowest-indexed path's, as before, though the other paths are still
+  evaluated. `simulate_single_leg` and the `Simulate` impls of `LongCall`,
+  `LongPut`, `ShortCall` and `ShortPut` now require `X, Y: Send + Sync`,
+  and the strategy `Sync`; every walker in the workspace already meets
+  this. `optionstratlib-backtest` declares `rayon`, which its strategies
+  and simulation dependencies already brought into its graph (owner
+  approval, 2026-10-09). Criterion `backtest/run/*` on flumix (i7-12650H,
+  16 threads, idle, rustc 1.99.0), A/B in one session: long call to
+  expiration 36.1 ms to 5.58 ms (100 paths) and 355 ms to 51.8 ms (1000
+  paths), short put profit-or-loss 1.23 ms to 0.292 ms and 12.5 ms to
+  2.26 ms.
+
 - **Chain construction and the greek refreshes price strikes in
   parallel** (#861, K3). From `PARALLEL_STRIKE_THRESHOLD` (8) strikes up,
   `OptionChain::build_chain`, `update_greeks` and `update_greek_snapshots`

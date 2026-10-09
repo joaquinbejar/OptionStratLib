@@ -28,6 +28,7 @@ use optionstratlib_simulation::simulation::simulator::Simulator;
 use optionstratlib_simulation::simulation::{ExitPolicy, PathEvaluator, check_exit_policy};
 use optionstratlib_strategies::strategies::base::Positionable;
 use optionstratlib_strategies::strategies::{LongCall, LongPut, ShortCall, ShortPut, Strategies};
+use rayon::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::collections::HashMap;
@@ -249,6 +250,11 @@ where
         let mut exit_reason = ExitPolicy::Expiration;
         let mut final_pnl = None;
 
+        // One scratch copy of the leg per path: every step overwrites the
+        // two fields the price reads from the walk, so reusing it prices
+        // exactly what a fresh clone per step priced (#863).
+        let mut current_option = option.clone();
+
         // Iterate through the random walk
         for step in random_walk.get_steps().iter().skip(1) {
             let days_left = match step.x.days_left() {
@@ -260,7 +266,6 @@ where
             };
 
             // Calculate current option premium
-            let mut current_option = option.clone();
             current_option.underlying_price = step.y.positive()?;
             current_option.expiration_date = ExpirationDate::Days(days_left);
 
@@ -403,16 +408,18 @@ where
 /// Simulates a single-leg strategy across every walk of `sim`.
 ///
 /// Prices the leg once for the opening premium, evaluates each walk with
-/// [`SingleLegPathEvaluator`] (emitting a `debug` event per path and an
-/// `info` event at the end) and
-/// aggregates the results with [`SimulationStatsResult::from_results`].
+/// [`SingleLegPathEvaluator`] on the rayon pool (emitting a `debug` event
+/// per path and an `info` event at the end) and aggregates the results, in
+/// walk order, with [`SimulationStatsResult::from_results`]. The paths are
+/// independent, so the statistics are those of a serial run (#863).
 ///
 /// # Errors
 ///
 /// Returns a [`BacktestError`] when the strategy has no single leg, a
 /// Black-Scholes price or an expiration P&L fails, a step cannot be read as
 /// a price or carries a negative index, or the aggregate statistics
-/// overflow.
+/// overflow. When several paths fail, the error is the lowest-indexed
+/// path's, as in a serial run; the other paths are still evaluated.
 #[must_use = "the simulation statistics are the only product of this call"]
 #[tracing::instrument(level = "debug", skip(strategy, sim), fields(walks = sim.len()))]
 pub fn simulate_single_leg<S, X, Y>(
@@ -421,21 +428,28 @@ pub fn simulate_single_leg<S, X, Y>(
     exit: ExitPolicy,
 ) -> Result<SimulationStatsResult, BacktestError>
 where
-    S: SingleLegSimulation,
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    S: SingleLegSimulation + Sync,
+    X: Copy + Into<Positive> + AddAssign + Display + Send + Sync,
+    Y: Into<Positive> + Display + Clone + Send + Sync,
 {
     let evaluator = SingleLegPathEvaluator::new(strategy)?;
-    let mut simulation_results = Vec::with_capacity(sim.len());
 
     // Progress is a `tracing` event per path instead of a terminal progress
     // bar (ADR-0002 section 6): the caller's subscriber decides whether and
     // how to show it.
-    let walk_count = sim.len();
-    for (random_walk, completed) in sim.into_iter().zip(1usize..) {
-        simulation_results.push(evaluator.evaluate_path(random_walk, &exit)?);
-        tracing::debug!(completed, total = walk_count, "simulated path evaluated");
-    }
+    let walks = sim.get_random_walks();
+    let walk_count = walks.len();
+    let outcomes: Vec<Result<SimulationResult, BacktestError>> = walks
+        .into_par_iter()
+        .enumerate()
+        .map(|(path, random_walk)| {
+            let outcome = evaluator.evaluate_path(random_walk, &exit);
+            tracing::debug!(path, total = walk_count, "simulated path evaluated");
+            outcome
+        })
+        .collect();
+    // In walk order, so the first error is the lowest-indexed path's.
+    let simulation_results = outcomes.into_iter().collect::<Result<Vec<_>, _>>()?;
     tracing::info!(total = walk_count, "simulations completed");
 
     Ok(SimulationStatsResult::from_results(simulation_results)?)
@@ -443,8 +457,8 @@ where
 
 impl<X, Y> Simulate<X, Y> for LongCall
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + Into<Positive> + AddAssign + Display + Send + Sync,
+    Y: Into<Positive> + Display + Clone + Send + Sync,
 {
     fn simulate(
         &self,
@@ -457,8 +471,8 @@ where
 
 impl<X, Y> Simulate<X, Y> for LongPut
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + Into<Positive> + AddAssign + Display + Send + Sync,
+    Y: Into<Positive> + Display + Clone + Send + Sync,
 {
     fn simulate(
         &self,
@@ -471,8 +485,8 @@ where
 
 impl<X, Y> Simulate<X, Y> for ShortCall
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + Into<Positive> + AddAssign + Display + Send + Sync,
+    Y: Into<Positive> + Display + Clone + Send + Sync,
 {
     fn simulate(
         &self,
@@ -485,8 +499,8 @@ where
 
 impl<X, Y> Simulate<X, Y> for ShortPut
 where
-    X: Copy + Into<Positive> + AddAssign + Display,
-    Y: Into<Positive> + Display + Clone,
+    X: Copy + Into<Positive> + AddAssign + Display + Send + Sync,
+    Y: Into<Positive> + Display + Clone + Send + Sync,
 {
     fn simulate(
         &self,
