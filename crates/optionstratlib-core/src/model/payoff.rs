@@ -7,7 +7,7 @@
 
 use crate::constants::ZERO;
 use crate::error::{OptionsError, OptionsResult};
-use crate::model::decimal::finite_decimal;
+use crate::model::decimal::{decimal_to_f64, finite_decimal};
 use crate::model::option::ExoticParams;
 use crate::model::types::{
     AsianAveragingType, BarrierType, BinaryType, LookbackType, OptionStyle, OptionType,
@@ -376,13 +376,21 @@ fn asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> Optio
         _ => return Ok(vanilla(info)),
     };
     let average = match averaging_type {
-        AsianAveragingType::Geometric => geometric_mean(fixings),
+        AsianAveragingType::Geometric => geometric_mean(fixings)?,
         // `AsianAveragingType` is `#[non_exhaustive]`: fall back to the
         // arithmetic mean, the conventional default for Asian options.
-        _ => fixings.iter().map(Positive::to_f64).sum::<f64>() / fixings.len() as f64,
+        _ => {
+            let mut total = ZERO;
+            for fixing in fixings {
+                total += decimal_to_f64(fixing.to_dec())?;
+            }
+            total / fixings.len() as f64
+        }
     };
     match info.style {
-        OptionStyle::Call => from_kernel((average - info.strike.to_f64()).max(ZERO)),
+        OptionStyle::Call => {
+            from_kernel((average - decimal_to_f64(info.strike.to_dec())?).max(ZERO))
+        }
         // The put is formed on `Decimal`, as since #788; a non-finite average
         // has no put value and is reported as unrepresentable.
         OptionStyle::Put => {
@@ -406,19 +414,24 @@ fn asian_payoff(averaging_type: &AsianAveragingType, info: &PayoffInfo) -> Optio
 /// and the product overflows or underflows on 297 of them. A zero fixing makes the mean
 /// zero, as it made the product. An empty slice has no mean; the caller
 /// never passes one.
-fn geometric_mean(fixings: &[Positive]) -> f64 {
+///
+/// # Errors
+///
+/// Propagates the [`DecimalError`](crate::error::DecimalError) of
+/// [`decimal_to_f64`] (#828).
+fn geometric_mean(fixings: &[Positive]) -> OptionsResult<f64> {
     let Some(first) = fixings.first() else {
-        return ZERO;
+        return Ok(ZERO);
     };
     if fixings.contains(&Positive::ZERO) {
-        return ZERO;
+        return Ok(ZERO);
     }
-    let centre = first.to_f64();
-    let log_sum: f64 = fixings
-        .iter()
-        .map(|fixing| (fixing.to_f64() / centre).ln()) // scan-banned: allow -- f64 `ln` of a positive finite ratio, it does not abort
-        .sum();
-    centre * (log_sum / fixings.len() as f64).exp() // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite payoff is rejected at the `Decimal` boundary
+    let centre = decimal_to_f64(first.to_dec())?;
+    let mut log_sum = ZERO;
+    for fixing in fixings {
+        log_sum += (decimal_to_f64(fixing.to_dec())? / centre).ln(); // scan-banned: allow -- f64 `ln` of a positive finite ratio, it does not abort
+    }
+    Ok(centre * (log_sum / fixings.len() as f64).exp()) // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite payoff is rejected at the `Decimal` boundary
 }
 
 /// The long payoff at expiry of a barrier option (Reiner-Rubinstein contract
@@ -592,7 +605,7 @@ fn rainbow_payoff(
 /// `Decimal` representation. The put is worthless there: `S^n` is `+∞` in
 /// the limit.
 fn power_payoff(exponent: Positive, info: &PayoffInfo) -> OptionsResult<Decimal> {
-    let powered = info.spot.to_f64().powf(exponent.to_f64());
+    let powered = decimal_to_f64(info.spot.to_dec())?.powf(decimal_to_f64(exponent.to_dec())?);
     match (finite_decimal(powered), info.style) {
         (Some(powered), style) => Ok(intrinsic(powered, info.strike.to_dec(), style)),
         (None, OptionStyle::Put) => Ok(Decimal::ZERO),
@@ -1795,7 +1808,10 @@ mod tests_geometric_mean {
             ),
         ];
         for (values, reference) in cases {
-            let mean = geometric_mean(&values);
+            let mean = match geometric_mean(&values) {
+                Ok(mean) => mean,
+                Err(e) => panic!("geometric mean must convert: {e:?}"),
+            };
             assert!(
                 ulps(mean, reference) <= REFERENCE_ULPS,
                 "{} fixings: {mean} against {reference}",
@@ -1835,9 +1851,9 @@ mod tests_geometric_mean {
             fixings([dec!(0), dec!(100), dec!(110)]),
             fixings([dec!(90), dec!(100), dec!(0)]),
         ] {
-            assert_eq!(geometric_mean(&values), 0.0);
+            assert!(matches!(geometric_mean(&values), Ok(mean) if mean == 0.0));
         }
-        assert_eq!(geometric_mean(&[]), 0.0);
+        assert!(matches!(geometric_mean(&[]), Ok(mean) if mean == 0.0));
     }
 }
 

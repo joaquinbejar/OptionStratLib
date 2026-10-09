@@ -29,6 +29,15 @@ summarize the release.
   implementor of `Strategies` gets the default `get_share_volume`; code that
   wanted the share count reads `get_share_volume` instead of the share leg.
 
+- **Core converts `Decimal` to `f64` through `decimal_to_f64`** (#828,
+  part 1 of 2). The Asian, geometric-mean and power payoffs,
+  `positive_f64_to_f64` and `mean_and_std` used `Positive::to_f64`, which
+  is `rust_decimal`'s `as_f64` and not always the nearest `f64`; they now
+  use the correctly rounded `decimal_to_f64` of #670 and propagate its
+  `DecimalError`. Migration: `positive_f64_to_f64` returns
+  `Result<Vec<f64>, DecimalError>`; add `?` or handle the error. No other
+  signature and no computed value changed.
+
 - **`static_export` no longer implies `async`** (#833). In 0.21 and the
   0.22 drafts the facade's `static_export` enabled `async`, and with it the
   market `io` stack (`csv`, `zip`) and the market `tokio` wrappers. PNG and
