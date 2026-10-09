@@ -19,7 +19,7 @@ chrono = { workspace = true }
 # WebDriver stack. `default` turns both on so `cargo run -p examples_chain
 # --bin <name>` works unchanged (the package features name them, because a
 # `required-features` entry checks the package's features, and
-# `static_export` implies the facade's `async` but not this package's);
+# `static_export` no longer implies the facade's `async`, #833);
 # `--no-default-features` builds only the binaries that need neither.
 [features]
 default = ["async", "static_export"]

@@ -16,6 +16,18 @@ summarize the release.
 
 ### Changed — breaking
 
+- **`static_export` no longer implies `async`** (#833). In 0.21 and the
+  0.22 drafts the facade's `static_export` enabled `async`, and with it the
+  market `io` stack (`csv`, `zip`) and the market `tokio` wrappers. PNG and
+  SVG export do not need them: `plotly_static` brings its own WebDriver
+  client and runtime. ADR-0002 section 2 named this a candidate for the
+  next major boundary, and by owner decision it lands in 0.22.
+  `static_export` now implies only `plotly`; the `facade-static-export`
+  fixture asserts `csv` and `zip` are absent, and `make check-graph`
+  rejects the implication if it comes back. Migration: a manifest that
+  enabled `static_export` and also used the `*_async` market wrappers or
+  the file I/O names `async` (or `io`) as well.
+
 - **The reserved `parallel` facade feature is retired** (#832). ADR-0002
   Option E held the name, enabling nothing, until someone implemented a
   sequential twin of every parallel site. By owner decision the feature is

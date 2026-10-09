@@ -5,7 +5,6 @@
 # versions are not recorded.
 aes -> cfg-if
 aes -> cipher
-aes -> cpubits
 aes -> cpufeatures
 aho-corasick -> memchr
 android_system_properties -> libc
@@ -36,8 +35,6 @@ async-trait -> quote
 async-trait -> syn
 basic-toml -> serde
 block-buffer -> generic-array
-block-buffer -> hybrid-array
-block-buffer -> zeroize
 bzip2 -> bzip2-sys
 bzip2 -> libbz2-rs-sys
 bzip2 -> libc
@@ -70,14 +67,7 @@ crossbeam-deque -> crossbeam-epoch
 crossbeam-deque -> crossbeam-utils
 crossbeam-epoch -> crossbeam-utils
 crypto-common -> generic-array
-crypto-common -> hybrid-array
 crypto-common -> typenum
-csv -> csv-core
-csv -> itoa
-csv -> ryu
-csv -> serde_core
-csv-core -> memchr
-ctutils -> cmov
 darling -> darling_core
 darling -> darling_macro
 darling_core -> ident_case
@@ -92,11 +82,8 @@ derive_arbitrary -> proc-macro2
 derive_arbitrary -> quote
 derive_arbitrary -> syn
 digest -> block-buffer
-digest -> const-oid
 digest -> crypto-common
-digest -> ctutils
 digest -> subtle
-digest -> zeroize
 dirs -> dirs-sys
 dirs-next -> cfg-if
 dirs-next -> dirs-sys-next
@@ -170,13 +157,11 @@ futures-util -> slab
 generic-array -> typenum
 generic-array -> version_check
 getrandom -> cfg-if
-getrandom -> js-sys
 getrandom -> libc
 getrandom -> r-efi
 getrandom -> rand_core
 getrandom -> wasi
 getrandom -> wasip2
-getrandom -> wasm-bindgen
 h2 -> atomic-waker
 h2 -> bytes
 h2 -> fnv
@@ -202,7 +187,6 @@ http-body-util -> futures-core
 http-body-util -> http
 http-body-util -> http-body
 http-body-util -> pin-project-lite
-hybrid-array -> typenum
 hyper -> atomic-waker
 hyper -> bytes
 hyper -> futures-channel
@@ -312,7 +296,6 @@ idna_adapter -> icu_properties
 indexmap -> equivalent
 indexmap -> hashbrown
 inout -> generic-array
-inout -> hybrid-array
 is-terminal -> hermit-abi
 is-terminal -> libc
 is-terminal -> windows-sys
@@ -333,7 +316,6 @@ liblzma-sys -> libc
 liblzma-sys -> pkg-config
 libredox -> libc
 lock_api -> scopeguard
-lzma-rust2 -> sha2
 matrixmultiply -> autocfg
 matrixmultiply -> rawpointer
 miniz_oxide -> adler2
@@ -440,7 +422,6 @@ optionstratlib-core -> thiserror
 optionstratlib-core -> tracing
 optionstratlib-core -> uuid
 optionstratlib-market -> chrono
-optionstratlib-market -> csv
 optionstratlib-market -> num-traits
 optionstratlib-market -> optionstratlib-core
 optionstratlib-market -> optionstratlib-math
@@ -451,9 +432,7 @@ optionstratlib-market -> rust_decimal_macros
 optionstratlib-market -> serde
 optionstratlib-market -> serde_json
 optionstratlib-market -> thiserror
-optionstratlib-market -> tokio
 optionstratlib-market -> tracing
-optionstratlib-market -> zip
 optionstratlib-math -> itertools
 optionstratlib-math -> num-traits
 optionstratlib-math -> optionstratlib-core
@@ -733,7 +712,6 @@ thiserror-impl -> proc-macro2
 thiserror-impl -> quote
 thiserror-impl -> syn
 time -> deranged
-time -> js-sys
 time -> num-conv
 time -> powerfmt
 time -> time-core
@@ -925,13 +903,11 @@ zip -> getrandom
 zip -> hmac
 zip -> indexmap
 zip -> liblzma
-zip -> lzma-rust2
 zip -> memchr
 zip -> pbkdf2
 zip -> ppmd-rust
 zip -> sha1
 zip -> time
-zip -> typed-path
 zip -> zeroize
 zip -> zopfli
 zip -> zstd
@@ -964,7 +940,7 @@ base64 [alloc,default,simd-unsafe,std]
 base64ct []
 basic-toml []
 bitflags [default,std]
-block-buffer [zeroize]
+block-buffer []
 bumpalo [default]
 bytemuck []
 byteorder [default,std]
@@ -976,31 +952,25 @@ cfg-if []
 chacha20 [rng]
 chrono [alloc,clock,default,iana-time-zone,js-sys,now,oldtime,serde,std,wasm-bindgen,wasmbind,winapi,windows-link]
 cipher []
-cmov []
-const-oid []
-constant_time_eq [default,std]
+constant_time_eq []
 cookie [percent-encode,percent-encoding]
 core-foundation [default,link]
 core-foundation-sys [default,link]
 core_detect [default]
 core_maths []
-cpubits []
 cpufeatures []
 crc32fast [default,std]
 crossbeam-deque [default,std]
 crossbeam-epoch [alloc,std]
 crossbeam-utils [default,std]
 crypto-common [std]
-csv []
-csv-core [default]
-ctutils []
 darling [default,suggestions]
 darling_core [strsim,suggestions]
 darling_macro []
 deflate64 [default]
 deranged [default]
 derive_arbitrary []
-digest [alloc,block-api,block-buffer,core-api,default,mac,oid,std,subtle,zeroize]
+digest [alloc,block-buffer,core-api,default,mac,std,subtle]
 dirs []
 dirs-next []
 dirs-sys []
@@ -1032,18 +1002,17 @@ futures-sink [alloc,default,std]
 futures-task [alloc,std]
 futures-util [alloc,async-await,async-await-macro,default,futures-io,futures-macro,futures-sink,io,memchr,sink,slab,std]
 generic-array [more_lengths]
-getrandom [std,sys_rng,wasm_js]
+getrandom [std,sys_rng]
 h2 []
 hashbrown []
 hermit-abi [default]
-hmac [reset,zeroize]
+hmac [reset]
 home []
 http [default,std]
 http-body []
 http-body-util [default]
 httparse [default,std]
 httpdate []
-hybrid-array []
 hyper [client,default,h2,http1,http2,runtime,socket2,stream,tcp]
 hyper-tls []
 hyper-util [client,client-legacy,client-proxy,client-proxy-system,default,http1,http2,tokio]
@@ -1085,7 +1054,6 @@ linux-raw-sys [auxvec,elf,errno,general,ioctl,no_std]
 litemap [alloc]
 lock_api [atomic_usize,default]
 log []
-lzma-rust2 [encoder,optimization,sha2,std,xz]
 matrixmultiply [avx512,default,std]
 memchr [alloc,default,std]
 mime []
@@ -1107,11 +1075,11 @@ openssl-probe []
 openssl-sys []
 option-ext []
 option_type [default]
-optionstratlib [analytics,async,backtest,io,market,math,plotly,pricing,simulation,static_export,strategies,visualization]
+optionstratlib [analytics,backtest,market,math,plotly,pricing,simulation,static_export,strategies,visualization]
 optionstratlib-analytics [default]
 optionstratlib-backtest [default]
 optionstratlib-core [default]
-optionstratlib-market [async,default,io]
+optionstratlib-market [default]
 optionstratlib-math [default]
 optionstratlib-pricing [default]
 optionstratlib-simulation [default]
@@ -1165,15 +1133,15 @@ security-framework-sys [OSX_10_13,default]
 semver [default,std]
 serde [alloc,default,derive,serde_derive,std]
 serde-wasm-bindgen []
-serde_core [alloc,default,result,std]
+serde_core [alloc,result,std]
 serde_derive [default]
 serde_json [alloc,default,std]
 serde_repr []
 serde_urlencoded []
 serde_with [alloc,default,macros,std]
 serde_with_macros []
-sha1 [alloc,default,oid,std]
-sha2 [alloc,default,oid]
+sha1 [default,std]
+sha2 []
 shlex [default,std]
 signal-hook-registry []
 simba [std,wide]
@@ -1196,7 +1164,7 @@ tempfile [default,getrandom]
 term [default]
 thiserror [default,std]
 thiserror-impl []
-time [alloc,default,formatting,macros,parsing,std,wasm-bindgen]
+time [alloc,default,formatting,macros,parsing,std]
 time-core []
 time-macros [formatting,parsing]
 tinystr [alloc,zerovec]
@@ -1212,9 +1180,8 @@ tracing [attributes,default,std,tracing-attributes]
 tracing-attributes []
 tracing-core [once_cell,std]
 try-lock []
-typed-path [default,std]
 typeid []
-typenum [const-generics]
+typenum []
 unicode-ident []
 unicode-segmentation []
 unicode-width [cjk,default]
@@ -1274,7 +1241,7 @@ zeroize_derive []
 zerotrie [yoke,zerofrom]
 zerovec [derive,yoke]
 zerovec-derive []
-zip [_bzip2_any,_deflate-any,aes,aes-crypto,bzip2,constant_time_eq,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,flate2,getrandom,hmac,lzma,lzma-static,pbkdf2,ppmd,sha1,time,xz,zeroize,zstd]
+zip [_deflate-any,aes,aes-crypto,bzip2,constant_time_eq,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,flate2,getrandom,hmac,lzma,lzma-static,pbkdf2,ppmd,sha1,time,xz,zeroize,zstd]
 zlib-rs [rust-allocator,std]
 zmij []
 zopfli [default,gzip,std,zlib]
