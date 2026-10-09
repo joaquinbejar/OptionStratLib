@@ -58,7 +58,7 @@ pub enum AdjustmentAction {
     ModifyQuantity {
         /// Index of the leg in the strategy's position list
         leg_index: usize,
-        /// New quantity for the position
+        /// New quantity for the position, in option contracts (#830)
         new_quantity: Positive,
     },
 
@@ -71,7 +71,7 @@ pub enum AdjustmentAction {
         option: Box<Options>,
         /// Side of the new position (Long or Short)
         side: Side,
-        /// Quantity to add
+        /// Quantity to add, in option contracts (#830)
         quantity: Positive,
     },
 
@@ -93,7 +93,7 @@ pub enum AdjustmentAction {
         leg_index: usize,
         /// New strike price
         new_strike: Positive,
-        /// Quantity for the new position
+        /// Quantity for the new position, in option contracts (#830)
         quantity: Positive,
     },
 
@@ -107,7 +107,7 @@ pub enum AdjustmentAction {
         leg_index: usize,
         /// New expiration date
         new_expiration: ExpirationDate,
-        /// Quantity for the new position
+        /// Quantity for the new position, in option contracts (#830)
         quantity: Positive,
     },
 
@@ -116,7 +116,8 @@ pub enum AdjustmentAction {
     /// Each share has delta = 1, making this a simple way to adjust
     /// portfolio delta without adding option complexity.
     AddUnderlying {
-        /// Quantity of shares (negative for short)
+        /// Quantity in units of the underlying (shares), negative for
+        /// short; not option contracts (#830)
         quantity: Decimal,
     },
 }

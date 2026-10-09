@@ -1079,6 +1079,10 @@ impl BasicAble for Collar {
 }
 
 impl Strategies for Collar {
+    fn get_share_volume(&self) -> Result<Positive, StrategyError> {
+        Ok(self.spot_leg.quantity)
+    }
+
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
         self.max_profit_potential().map_err(StrategyError::from)
     }

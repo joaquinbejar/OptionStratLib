@@ -931,15 +931,18 @@ pub trait BasicAble {
 /// such as profit/loss, cost, break-even points, and price ranges.  Implementations of this trait
 /// must also implement the `Validable`, `Positionable`, and `BreakEvenable` traits.
 pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
-    /// Retrieves the current volume of the strategy as sum of quantities in their positions
+    /// The strategy's option volume: the sum of its option legs' quantities,
+    /// in contracts.
     ///
-    /// This function returns the volume as a `Positive` value, ensuring that the result
-    /// is always greater than zero. If the method fails to retrieve the volume, an error
-    /// of type `StrategyError` is returned.
+    /// Only option legs count. The share leg of `CoveredCall`, `Collar` and
+    /// `ProtectivePut` is in units of the underlying, a different unit, and is
+    /// reported apart by [`Strategies::get_share_volume`] (#830). An option
+    /// contract covers `contract_size` underlying units; multiply by it to
+    /// compare the two.
     ///
     /// # Returns
     ///
-    /// - `Ok(Positive)` - The current volume as a positive numeric value.
+    /// - `Ok(Positive)` - The number of option contracts across the legs.
     /// - `Err(StrategyError)` - An error indicating why the volume could not be retrieved.
     ///
     /// # Errors
@@ -957,6 +960,22 @@ pub trait Strategies: Validable + Positionable + BreakEvenable + BasicAble {
             volume = volume.checked_add(quantity)?;
         }
         Ok(volume)
+    }
+
+    /// The strategy's share volume: the quantity of its share leg, in units
+    /// of the underlying.
+    ///
+    /// Zero for a strategy without a share leg, which is every strategy but
+    /// `CoveredCall`, `Collar` and `ProtectivePut`. Kept apart from
+    /// [`Strategies::get_volume`], which counts option contracts, because the
+    /// two units differ by the contract size (#830).
+    ///
+    /// # Errors
+    ///
+    /// The default implementation cannot fail. An implementation returns a
+    /// [`StrategyError`] when its share leg cannot be read.
+    fn get_share_volume(&self) -> Result<Positive, StrategyError> {
+        Ok(Positive::ZERO)
     }
 
     /// Calculates the maximum possible profit for the strategy.
