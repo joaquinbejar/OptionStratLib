@@ -466,6 +466,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   instance) arrives as `RNDError::Chain`, and a `?` into a function that
   returns `ChainError` becomes a `?` into `RNDError` (`From<ChainError>`
   exists) or into the facade's `error::Error`.
+- `RNDParameters` has no `interpolation_points`: `calculate_rnd` never read
+  it. Drop it from the literal; no result changes.
 
 ```rust
 use optionstratlib::analytics::{PriceTrend, VolatilityAdjustment, calculate_single_point_probability};

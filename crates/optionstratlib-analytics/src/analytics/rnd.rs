@@ -45,7 +45,6 @@
 //! // Create parameters for RND calculation
 //! let params = RNDParameters {
 //!     risk_free_rate: dec!(0.05),
-//!     interpolation_points: 100,
 //!     derivative_tolerance: pos_or_panic!(0.001),
 //! };
 //! let option_chain_params = OptionChainBuildParams::new(
@@ -149,7 +148,6 @@ use tracing::debug;
 ///
 /// # Parameters
 /// * `risk_free_rate` - Risk-free interest rate used in the calculation
-/// * `interpolation_points` - Number of points to use in interpolation between strikes
 /// * `derivative_tolerance` - Numerical tolerance for derivative calculations
 ///
 /// # Example
@@ -159,7 +157,6 @@ use tracing::debug;
 /// use optionstratlib_core::pos_or_panic;
 /// let params = RNDParameters {
 ///     risk_free_rate: dec!(0.05),
-///     interpolation_points: 100,
 ///     derivative_tolerance: pos_or_panic!(0.001),
 /// };
 /// ```
@@ -168,8 +165,6 @@ use tracing::debug;
 pub struct RNDParameters {
     /// Risk-free rate for calculations
     pub risk_free_rate: Decimal,
-    /// Number of points to use in interpolation
-    pub interpolation_points: usize,
     /// Tolerance for numerical derivatives
     pub derivative_tolerance: Positive,
 }
@@ -181,7 +176,6 @@ impl Default for RNDParameters {
     fn default() -> Self {
         Self {
             risk_free_rate: Decimal::ZERO,
-            interpolation_points: 100,
             derivative_tolerance: Positive::ZERO,
         }
     }
@@ -800,7 +794,6 @@ mod tests {
         fn test_default_parameters() {
             let params = RNDParameters::default();
             assert_eq!(params.risk_free_rate, Decimal::ZERO);
-            assert_eq!(params.interpolation_points, 100);
             assert_eq!(params.derivative_tolerance, Positive::ZERO);
         }
 
@@ -808,11 +801,9 @@ mod tests {
         fn test_custom_parameters() {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 200,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
             assert_eq!(params.risk_free_rate, dec!(0.05));
-            assert_eq!(params.interpolation_points, 200);
             assert_eq!(params.derivative_tolerance, pos_or_panic!(0.001));
         }
     }
@@ -939,7 +930,6 @@ mod tests {
             let chain = create_test_option_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
 
@@ -993,7 +983,6 @@ mod tests {
             let params = RNDParameters {
                 risk_free_rate: dec!(0.5), // 50% interest rate
                 derivative_tolerance: pos_or_panic!(0.001),
-                ..Default::default()
             };
 
             let result = chain.calculate_rnd(&params);
@@ -1103,7 +1092,6 @@ mod tests {
             let chain = create_test_option_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
 
@@ -1163,7 +1151,6 @@ mod tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.10), // High interest rate
-                interpolation_points: 200,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
 
@@ -1340,7 +1327,6 @@ mod additional_tests {
             let chain = create_wide_spread_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
 
@@ -1359,7 +1345,6 @@ mod additional_tests {
             let chain = create_high_vol_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.001),
             };
 
@@ -1387,7 +1372,6 @@ mod additional_tests {
             for tolerance in tolerances.iter() {
                 let params = RNDParameters {
                     risk_free_rate: dec!(0.05),
-                    interpolation_points: 100,
                     derivative_tolerance: *tolerance,
                 };
 
@@ -1431,7 +1415,6 @@ mod additional_tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.0001),
             };
 
@@ -1466,7 +1449,6 @@ mod additional_tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.0001),
             };
 
@@ -1916,7 +1898,6 @@ mod chain_test {
 
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
-            interpolation_points: 100,
             derivative_tolerance: pos_or_panic!(0.01),
         };
         // Calculate RND from option chain
@@ -1959,7 +1940,6 @@ mod chain_test {
         let chain = OptionChain::build_chain(&option_chain_params).unwrap();
         let params = RNDParameters {
             risk_free_rate: dec!(0.05),
-            interpolation_points: 100,
             derivative_tolerance: Positive::ONE, // Using larger step size for testing
         };
 
@@ -1987,14 +1967,12 @@ mod chain_test {
         // Test with h = 1.0
         let params_1 = RNDParameters {
             risk_free_rate: dec!(0.05),
-            interpolation_points: 100,
             derivative_tolerance: Positive::ONE,
         };
 
         // Test with h = 0.1
         let params_2 = RNDParameters {
             risk_free_rate: dec!(0.05),
-            interpolation_points: 100,
             derivative_tolerance: pos_or_panic!(0.1),
         };
 
@@ -2168,7 +2146,6 @@ mod rnd_analysis_tests {
             let chain = create_standard_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: Positive::ONE,
             };
 
@@ -2193,7 +2170,6 @@ mod rnd_analysis_tests {
             let chain = create_standard_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.1), // Smaller than strike interval
             };
 
@@ -2247,7 +2223,6 @@ mod rnd_analysis_tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: Positive::ONE,
             };
 
@@ -2354,7 +2329,6 @@ mod rnd_analysis_tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: Positive::ONE,
             };
 
@@ -2367,7 +2341,6 @@ mod rnd_analysis_tests {
             let chain = create_standard_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(-0.05),
-                interpolation_points: 100,
                 derivative_tolerance: Positive::ONE,
             };
 
@@ -2380,7 +2353,6 @@ mod rnd_analysis_tests {
             let chain = create_standard_chain();
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(5.0),
             };
 
@@ -2425,7 +2397,6 @@ mod rnd_analysis_tests {
 
             let params = RNDParameters {
                 risk_free_rate: dec!(0.05),
-                interpolation_points: 100,
                 derivative_tolerance: pos_or_panic!(0.1),
             };
 
@@ -2551,7 +2522,6 @@ mod tests_rnd_error {
     fn params(tolerance: Positive) -> RNDParameters {
         RNDParameters {
             risk_free_rate: Decimal::ZERO,
-            interpolation_points: 10,
             derivative_tolerance: tolerance,
         }
     }

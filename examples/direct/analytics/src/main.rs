@@ -79,7 +79,6 @@ fn analytics(spot: f64) -> Result<(Option<Decimal>, Decimal, Decimal), Box<dyn E
     let margin = SPANMargin::new(dec!(0.1), dec!(0.05), dec!(0.1)).calculate_margin(&position)?;
     let density = chain()?.calculate_rnd(&RNDParameters {
         risk_free_rate: dec!(0.05),
-        interpolation_points: 100,
         derivative_tolerance: Positive::new(0.1)?,
     })?;
     Ok((pnl, margin, density.statistics.mean))

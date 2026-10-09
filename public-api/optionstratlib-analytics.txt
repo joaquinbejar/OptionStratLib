@@ -83,7 +83,6 @@ pub fn optionstratlib_market::chains::chain::OptionChain::vomma_surface(&self, a
 pub mod optionstratlib_analytics::analytics::rnd
 pub struct optionstratlib_analytics::analytics::rnd::RNDParameters
 pub optionstratlib_analytics::analytics::rnd::RNDParameters::derivative_tolerance: positive::positive::Positive
-pub optionstratlib_analytics::analytics::rnd::RNDParameters::interpolation_points: usize
 pub optionstratlib_analytics::analytics::rnd::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
 impl core::default::Default for optionstratlib_analytics::analytics::rnd::RNDParameters
 pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::default() -> Self
@@ -137,7 +136,6 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_analytics::analytics::profi
 pub fn optionstratlib_analytics::analytics::profit_range::ProfitLossRange::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_analytics::analytics::RNDParameters
 pub optionstratlib_analytics::analytics::RNDParameters::derivative_tolerance: positive::positive::Positive
-pub optionstratlib_analytics::analytics::RNDParameters::interpolation_points: usize
 pub optionstratlib_analytics::analytics::RNDParameters::risk_free_rate: rust_decimal::decimal::Decimal
 impl core::default::Default for optionstratlib_analytics::analytics::rnd::RNDParameters
 pub fn optionstratlib_analytics::analytics::rnd::RNDParameters::default() -> Self

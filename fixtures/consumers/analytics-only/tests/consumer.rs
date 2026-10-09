@@ -167,7 +167,6 @@ fn test_risk_neutral_density_and_skew_of_a_chain() {
     let chain = chain();
     let params = RNDParameters {
         risk_free_rate: dec!(0.05),
-        interpolation_points: 100,
         derivative_tolerance: pos_or_panic!(0.1),
     };
     match chain.calculate_rnd(&params) {

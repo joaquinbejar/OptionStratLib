@@ -37,6 +37,14 @@ summarize the release.
   `parallel` drops it. `make check-graph` now rejects the feature if it
   comes back.
 
+- **`RNDParameters::interpolation_points` is removed** (#865). The field
+  was documented as the number of interpolation points between strikes, but
+  `calculate_rnd` never read it: the density is computed on the chain's own
+  strikes, so 50 and 200 points measured the same 21.45 µs (#789). By owner
+  decision it is removed rather than implemented. Migration: drop the field
+  from `RNDParameters` literals; results do not change. Serialised
+  parameters that still carry it deserialise, the field is ignored.
+
 - **Walkers and `Simulator::new` generators must be `Send + Sync`**
   (#860). `Simulator::new` now builds its walks on the rayon pool (see
   *Changed*), so the trait object in `WalkParams::walker` and the generator
