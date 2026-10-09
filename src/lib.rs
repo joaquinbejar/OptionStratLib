@@ -1067,7 +1067,7 @@
 //! | `backtest` | `dep:optionstratlib-backtest` | | `strategies`, `simulation` | yes |
 //! | `visualization` | `dep:optionstratlib-visualization` | | `backtest` | yes |
 //! | `plotly` | | `optionstratlib-visualization/plotly` | `visualization` | no |
-//! | `static_export` | | `optionstratlib-visualization/static_export` | `plotly`, `async` | no |
+//! | `static_export` | | `optionstratlib-visualization/static_export` | `plotly` | no |
 //! | `io` | | `optionstratlib-market/io` | `market` | yes |
 //! | `async` | | `optionstratlib-market/async` | `market`, `io` | no |
 //! | `synthetic` | | `optionstratlib-market/synthetic` | `market`, `simulation` | yes |
@@ -1098,9 +1098,11 @@
 //! - There is no chart-only build: `visualization` implies `backtest`, because
 //!   the visualization crate renders strategies and simulations, so it brings
 //!   every capability below it.
-//! - There is no `plotly` or `static_export` without `visualization`, and no
-//!   `static_export` without `async` (and so `io`, `csv`, `zip` and `tokio`);
-//!   the implication is the 0.21 behaviour, kept for 0.22.
+//! - There is no `plotly` or `static_export` without `visualization`.
+//!   `static_export` no longer implies `async` as it did in 0.21 (#833): it
+//!   resolves no `io`, `csv` or `zip`, and the async runtime it needs comes
+//!   with `plotly_static`. Name `async` too for the market `*_async`
+//!   wrappers.
 //! - There is no `synthetic` without `simulation`, no `async` without `io`,
 //!   and no capability above `pricing` without `pricing` and `math`.
 //! - There is no sequential build: the parallel code paths use `rayon`

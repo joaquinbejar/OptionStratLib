@@ -387,8 +387,8 @@ SURFACES: dict[str, dict] = {
     # The other named surfaces are each feature alone, without the defaults,
     # as `default-features = false` builds them: `plotly` resolves the
     # `visualization` chain down to `backtest` and `simulation` but not
-    # `synthetic`, `io` or `schema`, `static_export` adds `async` (hence `io`)
-    # to it, and `async` resolves `market` and `io` only. `schema` is a facade
+    # `synthetic`, `io` or `schema`, `static_export` adds the visualization
+    # crate's export to it (no `async` since #833), and `async` resolves `market` and `io` only. `schema` is a facade
     # feature since #549 and no longer hard-wired, so only `default` and `all`
     # carry the `ToSchema` impls.
     "none": {"features": []},
