@@ -2,7 +2,6 @@ use optionstratlib::chains::generator_optionchain;
 use optionstratlib::error::Error;
 use optionstratlib::prelude::*;
 use optionstratlib::utils::time::convert_time_frame;
-use optionstratlib::utils::time::get_x_days_formatted;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
@@ -26,9 +25,7 @@ fn main() -> Result<(), Error> {
     let mut initial_chain = OptionChain::load_from_json(
         "examples/Chains/Germany-40-2025-05-27-15-29-00-UTC-24209.json",
     )?;
-    initial_chain.update_expiration_date(
-        get_x_days_formatted(2).map_err(optionstratlib::error::DecimalError::from)?,
-    );
+    initial_chain.update_expiration_date("2".to_string());
     let iv = pos_or_panic!(0.20);
     let walker = Box::new(Walker::new());
     let days = Positive::TWO;

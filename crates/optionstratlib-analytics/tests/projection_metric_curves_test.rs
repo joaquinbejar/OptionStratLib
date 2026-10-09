@@ -19,12 +19,9 @@ fn sample_chain() -> OptionChain {
         Ok(chain) => chain,
         Err(error) => panic!("sample chain must load: {error}"),
     };
-    chain.set_expiration_date(
-        match optionstratlib_core::utils::time::get_x_days_formatted(30) {
-            Ok(value) => value,
-            Err(error) => panic!("get_x_days_formatted failed: {error}"),
-        },
-    );
+    // A day count, not a calendar date: the expiry must not depend on
+    // when the test runs.
+    chain.set_expiration_date("30".to_string());
     chain
 }
 

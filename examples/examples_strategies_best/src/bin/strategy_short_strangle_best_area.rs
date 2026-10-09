@@ -1,7 +1,6 @@
 use optionstratlib::error::Error;
 use optionstratlib::model::DisplayMoney;
 use optionstratlib::prelude::*;
-use optionstratlib::utils::time::get_x_days_formatted;
 use osl_example_support::setup_logger;
 use positive::pos_or_panic;
 
@@ -9,9 +8,7 @@ fn main() -> Result<(), Error> {
     setup_logger();
     let mut option_chain =
         OptionChain::load_from_json("./examples/Chains/SP500-18-oct-2024-5781.88.json")?;
-    option_chain.update_expiration_date(
-        get_x_days_formatted(30).map_err(optionstratlib::error::DecimalError::from)?,
-    );
+    option_chain.update_expiration_date("30".to_string());
     let chain_params = option_chain.to_build_params()?;
     info!("Chain params: {:#?}", chain_params);
     let mut option_chain = OptionChain::build_chain(&chain_params)?;
