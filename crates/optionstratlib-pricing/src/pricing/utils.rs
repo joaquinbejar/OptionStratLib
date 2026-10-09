@@ -376,6 +376,78 @@ pub(crate) fn option_node_value(
     )
 }
 
+/// The powers `u^k` and `d^k`, `k = 0..=no_steps`, of one binomial lattice
+/// (#859).
+///
+/// The lattice used to call [`d_powd`] twice per node, for `u^i` and
+/// `d^(step - i)`: `O(n²)` power evaluations for an `n`-step tree. Each power
+/// it can need is computed here once, by the same `d_powd` call, so a spot
+/// read from the table is the same `Decimal` the per-node call produced and
+/// every lattice result is unchanged. A power that leaves the `Decimal`
+/// range is stored as `None`; reading it re-runs the per-node `d_powd` under
+/// the caller's label, which reports the same error at the same node as
+/// before.
+pub(crate) struct LatticePowers {
+    up: Vec<Option<Decimal>>,
+    down: Vec<Option<Decimal>>,
+}
+
+impl LatticePowers {
+    /// Computes `u^k` and `d^k` for `k = 0..=no_steps`.
+    ///
+    /// # Errors
+    ///
+    /// [`PricingError::InvalidParameter`] when the `no_steps + 1` entries
+    /// cannot be allocated, with the message [`reserve`](Vec::try_reserve_exact)
+    /// failures of the lattice's node vectors give.
+    pub(crate) fn new(u: Decimal, d: Decimal, no_steps: usize) -> Result<Self, PricingError> {
+        let too_large = || {
+            PricingError::invalid_parameter(
+                "no_steps",
+                Decimal::from(no_steps),
+                "a binomial lattice of this many steps cannot be allocated",
+            )
+        };
+        let width = no_steps.checked_add(1).ok_or_else(too_large)?;
+        let mut up = Vec::new();
+        up.try_reserve_exact(width).map_err(|_| too_large())?;
+        let mut down = Vec::new();
+        down.try_reserve_exact(width).map_err(|_| too_large())?;
+        for k in 0..width {
+            let exponent = Decimal::from(k as u64);
+            up.push(d_powd(u, exponent, "pricing::binomial::powers::up").ok());
+            down.push(d_powd(d, exponent, "pricing::binomial::powers::down").ok());
+        }
+        Ok(Self { up, down })
+    }
+
+    /// `u^k`, or the error `d_powd(u, k)` reports under `op`.
+    pub(crate) fn up(
+        &self,
+        u: Decimal,
+        k: usize,
+        op: &'static str,
+    ) -> Result<Decimal, PricingError> {
+        match self.up.get(k).copied().flatten() {
+            Some(power) => Ok(power),
+            None => Ok(d_powd(u, Decimal::from(k as u64), op)?),
+        }
+    }
+
+    /// `d^k`, or the error `d_powd(d, k)` reports under `op`.
+    pub(crate) fn down(
+        &self,
+        d: Decimal,
+        k: usize,
+        op: &'static str,
+    ) -> Result<Decimal, PricingError> {
+        match self.down.get(k).copied().flatten() {
+            Some(power) => Ok(power),
+            None => Ok(d_powd(d, Decimal::from(k as u64), op)?),
+        }
+    }
+}
+
 /// Calculates the option price using the Binomial Pricing Model.
 ///
 /// # Parameters
@@ -402,6 +474,7 @@ pub(crate) fn calculate_option_price(
     u: Decimal,
     d: Decimal,
     i: usize,
+    powers: &LatticePowers,
 ) -> Result<Decimal, PricingError> {
     // `i` is bounded by `no_steps` at every call site, but the subtraction is
     // checked so a caller that walks past the last step reports instead of
@@ -412,16 +485,8 @@ pub(crate) fn calculate_option_price(
             "step index exceeds the number of lattice steps",
         )
     })?;
-    let up_power = d_powd(
-        u,
-        Decimal::from(i as u64),
-        "pricing::binomial::option_price::up_power",
-    )?;
-    let down_power = d_powd(
-        d,
-        Decimal::from(down_steps as u64),
-        "pricing::binomial::option_price::down_power",
-    )?;
+    let up_power = powers.up(u, i, "pricing::binomial::option_price::up_power")?;
+    let down_power = powers.down(d, down_steps, "pricing::binomial::option_price::down_power")?;
     let spot = d_mul(
         d_mul(
             params.asset.to_dec(),
@@ -1251,5 +1316,62 @@ mod tests_calculate_up_down_factor {
 
         // Factor for larger dt should be greater
         assert!(up1 > up2);
+    }
+}
+
+/// The power table of #859 holds exactly the `d_powd` values the lattice
+/// computed per node, and an entry that overflowed reports the per-node
+/// error under the caller's label.
+#[cfg(test)]
+mod tests_lattice_powers {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_lattice_powers_match_per_node_powd() {
+        let (u, d) = (dec!(1.0316), dec!(0.9693));
+        let steps = 200;
+        let powers = match LatticePowers::new(u, d, steps) {
+            Ok(powers) => powers,
+            Err(e) => panic!("table must build: {e:?}"),
+        };
+        for k in 0..=steps {
+            let exponent = Decimal::from(k as u64);
+            assert!(matches!(
+                (powers.up(u, k, "up"), d_powd(u, exponent, "up")),
+                (Ok(a), Ok(b)) if a == b
+            ));
+            assert!(matches!(
+                (powers.down(d, k, "down"), d_powd(d, exponent, "down")),
+                (Ok(a), Ok(b)) if a == b
+            ));
+        }
+    }
+
+    #[test]
+    fn test_lattice_powers_overflow_reports_the_per_node_error() {
+        // `u^k` leaves the `Decimal` range for large `k`.
+        let u = dec!(1000);
+        let powers = match LatticePowers::new(u, Decimal::ONE, 20) {
+            Ok(powers) => powers,
+            Err(e) => panic!("table must build: {e:?}"),
+        };
+        let from_table = powers.up(u, 20, "pricing::binomial::lattice_spot::up");
+        let per_node: Result<Decimal, PricingError> = d_powd(
+            u,
+            Decimal::from(20u64),
+            "pricing::binomial::lattice_spot::up",
+        )
+        .map_err(PricingError::from);
+        assert!(from_table.is_err());
+        assert_eq!(format!("{from_table:?}"), format!("{per_node:?}"));
+    }
+
+    #[test]
+    fn test_lattice_powers_unallocatable_is_invalid_parameter() {
+        assert!(matches!(
+            LatticePowers::new(Decimal::TWO, Decimal::ONE, usize::MAX),
+            Err(PricingError::InvalidParameter { .. })
+        ));
     }
 }

@@ -2,7 +2,7 @@ use crate::error::PricingError;
 use crate::pricing::utils::*;
 use optionstratlib_core::f2d;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_div, d_mul, d_powd, d_sub};
+use optionstratlib_core::model::decimal::{d_div, d_mul, d_sub};
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
@@ -193,8 +193,15 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
     info.side = Side::Long;
 
     let mut prices = reserve_nodes(no_steps_raw)?;
+    let powers = LatticePowers::new(u, d, no_steps_raw)?;
     for i in 0..=no_steps_raw {
-        prices.push(calculate_option_price(long_params.clone(), u, d, i)?);
+        prices.push(calculate_option_price(
+            long_params.clone(),
+            u,
+            d,
+            i,
+            &powers,
+        )?);
     }
 
     let half_dt = d_div(dt, Decimal::TWO, "pricing::binomial::half_dt")?;
@@ -213,7 +220,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
                 .ok_or(PricingError::BinomialNodeMissing { node: "price_slot" })?;
             match params.option_type {
                 OptionType::American => {
-                    info.spot = lattice_spot(params.asset, u, d, i, step)?;
+                    info.spot = lattice_spot(params.asset, u, d, i, step, &powers)?;
                     let intrinsic_value = params.option_type.payoff(&info)?;
                     *slot = option_value.max(intrinsic_value);
                 }
@@ -238,7 +245,7 @@ pub fn price_binomial(params: BinomialPricingParams) -> Result<Decimal, PricingE
                         }
                     }
                     if is_exercise_date {
-                        let spot = lattice_spot(params.asset, u, d, i, step)?;
+                        let spot = lattice_spot(params.asset, u, d, i, step, &powers)?;
                         let slot_value = option_value;
                         info.spot = spot;
                         let intrinsic_value = params.option_type.payoff(&info)?;
@@ -346,7 +353,8 @@ fn price_deterministic(params: &BinomialPricingParams) -> Result<Decimal, Pricin
     })
 }
 
-/// Spot price at lattice node `(step, i)`: `S · u^i · d^(step - i)`.
+/// Spot price at lattice node `(step, i)`: `S · u^i · d^(step - i)`, with the
+/// powers read from the tree's [`LatticePowers`] table (#859).
 ///
 /// # Errors
 ///
@@ -360,20 +368,13 @@ fn lattice_spot(
     d: Decimal,
     i: usize,
     step: usize,
+    powers: &LatticePowers,
 ) -> Result<Positive, PricingError> {
     let down_steps = step
         .checked_sub(i)
         .ok_or(PricingError::BinomialNodeMissing { node: "down_steps" })?;
-    let up_power = d_powd(
-        u,
-        Decimal::from(i as u64),
-        "pricing::binomial::lattice_spot::up",
-    )?;
-    let down_power = d_powd(
-        d,
-        Decimal::from(down_steps as u64),
-        "pricing::binomial::lattice_spot::down",
-    )?;
+    let up_power = powers.up(u, i, "pricing::binomial::lattice_spot::up")?;
+    let down_power = powers.down(d, down_steps, "pricing::binomial::lattice_spot::down")?;
     let spot = d_mul(
         d_mul(
             asset.to_dec(),
@@ -497,6 +498,7 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
 
     let mut asset_tree = lattice(no_steps_raw)?;
     let mut option_tree = lattice(no_steps_raw)?;
+    let powers = LatticePowers::new(up_factor, down_factor, no_steps_raw)?;
 
     for (step, step_vec) in asset_tree.iter_mut().enumerate() {
         let nodes = step_vec
@@ -509,8 +511,15 @@ pub fn generate_binomial_tree(params: &BinomialPricingParams) -> BinomialTreeRes
             let up_steps = step
                 .checked_sub(node)
                 .ok_or(PricingError::BinomialNodeMissing { node: "up_steps" })?;
-            *node_val =
-                lattice_spot(params.asset, up_factor, down_factor, up_steps, step)?.to_dec();
+            *node_val = lattice_spot(
+                params.asset,
+                up_factor,
+                down_factor,
+                up_steps,
+                step,
+                &powers,
+            )?
+            .to_dec();
         }
     }
 
