@@ -23,7 +23,7 @@ use crate::error::PricingError;
 use crate::kernels::big_n;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_mul, d_sub};
+use optionstratlib_core::model::decimal::{d_mul, d_sub, decimal_to_f64};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
 use rust_decimal::prelude::*;
@@ -102,12 +102,8 @@ fn power_price(
     style: &OptionStyle,
 ) -> Result<Decimal, PricingError> {
     if t <= dec!(0.0) {
-        let s_f64 = s
-            .to_f64()
-            .ok_or_else(|| PricingError::other("Failed to convert s"))?;
-        let n_f64 = n
-            .to_f64()
-            .ok_or_else(|| PricingError::other("Failed to convert n"))?;
+        let s_f64 = decimal_to_f64(s).map_err(|_| PricingError::other("Failed to convert s"))?;
+        let n_f64 = decimal_to_f64(n).map_err(|_| PricingError::other("Failed to convert n"))?;
         let s_power = Decimal::from_f64(s_f64.powf(n_f64))
             .ok_or_else(|| PricingError::other("Failed to compute S^n"))?;
 
@@ -121,27 +117,14 @@ fn power_price(
         };
     }
 
-    let s_f64 = s
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert s"))?;
-    let n_f64 = n
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert n"))?;
-    let r_f64 = r
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert r"))?;
-    let q_f64 = q
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert q"))?;
-    let sigma_f64 = sigma
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert sigma"))?;
-    let t_f64 = t
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert t"))?;
-    let k_f64 = k
-        .to_f64()
-        .ok_or_else(|| PricingError::other("Failed to convert k"))?;
+    let s_f64 = decimal_to_f64(s).map_err(|_| PricingError::other("Failed to convert s"))?;
+    let n_f64 = decimal_to_f64(n).map_err(|_| PricingError::other("Failed to convert n"))?;
+    let r_f64 = decimal_to_f64(r).map_err(|_| PricingError::other("Failed to convert r"))?;
+    let q_f64 = decimal_to_f64(q).map_err(|_| PricingError::other("Failed to convert q"))?;
+    let sigma_f64 =
+        decimal_to_f64(sigma).map_err(|_| PricingError::other("Failed to convert sigma"))?;
+    let t_f64 = decimal_to_f64(t).map_err(|_| PricingError::other("Failed to convert t"))?;
+    let k_f64 = decimal_to_f64(k).map_err(|_| PricingError::other("Failed to convert k"))?;
 
     let s_power = s_f64.powf(n_f64);
 

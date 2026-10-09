@@ -38,11 +38,12 @@ use crate::kernels::{big_n, d1, d2, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, finite_decimal,
+    d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
 };
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use rust_decimal::Decimal;
+#[cfg(test)]
 use rust_decimal::prelude::*;
 use rust_decimal_macros::dec;
 use statrs::function::erf::erfc;
@@ -69,8 +70,8 @@ fn bivariate_normal_cdf(a: Decimal, b: Decimal, rho: Decimal) -> Result<Decimal,
     // Convert to f64 for computation. A failed conversion is an error
     // (#639); it used to become `0.0`, i.e. `N2(0, 0; 0) = 0.25`.
     let to_f64 = |value: Decimal, context: &'static str| -> Result<f64, PricingError> {
-        value
-            .to_f64()
+        decimal_to_f64(value)
+            .ok()
             .filter(|converted| converted.is_finite())
             .ok_or_else(|| PricingError::non_finite(context, f64::NAN))
     };
