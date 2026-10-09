@@ -453,7 +453,7 @@ pub struct optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::new<R: rand_core::Rng + ?core::marker::Sized>(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &mut R) -> Self
-pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state<R: rand_core::Rng + ?core::marker::Sized>(&mut self, rust_decimal::decimal::Decimal, &mut R) -> i8
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state<R: rand_core::Rng + ?core::marker::Sized>(&mut self, rust_decimal::decimal::Decimal, &mut R) -> core::result::Result<i8, optionstratlib_pricing::error::PricingError>
 pub const optionstratlib_pricing::pricing::telegraph::TELEGRAPH_PATHS: core::num::nonzero::NonZeroUsize
 pub fn optionstratlib_pricing::pricing::telegraph::telegraph<R: rand_core::Rng + ?core::marker::Sized>(&optionstratlib_core::model::option::Options, core::num::nonzero::NonZeroUsize, core::num::nonzero::NonZeroUsize, core::option::Option<rust_decimal::decimal::Decimal>, core::option::Option<rust_decimal::decimal::Decimal>, optionstratlib_pricing::pricing::telegraph::RegimeVolatility, &mut R) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>
 pub mod optionstratlib_pricing::pricing::unified
@@ -507,7 +507,7 @@ pub struct optionstratlib_pricing::pricing::TelegraphProcess
 impl optionstratlib_pricing::pricing::telegraph::TelegraphProcess
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::get_current_state(&self) -> i8
 pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::new<R: rand_core::Rng + ?core::marker::Sized>(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, &mut R) -> Self
-pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state<R: rand_core::Rng + ?core::marker::Sized>(&mut self, rust_decimal::decimal::Decimal, &mut R) -> i8
+pub fn optionstratlib_pricing::pricing::telegraph::TelegraphProcess::next_state<R: rand_core::Rng + ?core::marker::Sized>(&mut self, rust_decimal::decimal::Decimal, &mut R) -> core::result::Result<i8, optionstratlib_pricing::error::PricingError>
 pub const optionstratlib_pricing::pricing::TELEGRAPH_PATHS: core::num::nonzero::NonZeroUsize
 pub trait optionstratlib_pricing::pricing::Black76
 pub fn optionstratlib_pricing::pricing::Black76::calculate_price_black_76(&self) -> core::result::Result<rust_decimal::decimal::Decimal, optionstratlib_pricing::error::PricingError>

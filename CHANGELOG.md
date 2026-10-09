@@ -29,6 +29,23 @@ summarize the release.
   implementor of `Strategies` gets the default `get_share_volume`; code that
   wanted the share count reads `get_share_volume` instead of the share leg.
 
+- **Every crate converts `Decimal` to `f64` through `decimal_to_f64`**
+  (#828, part 2 of 2). Math, pricing, simulation, market, analytics and
+  strategies used `ToPrimitive::to_f64` or `Positive::to_f64`, which are
+  `rust_decimal`'s `as_f64` and not always the nearest `f64`, and several
+  sites read a failed conversion as `0.0`, `1.0` or the previous value. All
+  of them now use the correctly rounded `decimal_to_f64` of #670 and report
+  its failure; `make scan-banned` rejects `.to_f64()`, `.to_f64_checked()`
+  and `.as_f64()` in production code from now on. Migration:
+  - `Surface::get_f64_points` returns
+    `Result<Vec<(f64, f64, f64)>, SurfaceError>`;
+  - `TelegraphProcess::next_state` returns `Result<i8, PricingError>`.
+  Results can move by one ulp where an `f64` intermediate rounds
+  differently: `ShortStrangle::get_profit_area` on the test fixture goes
+  from `27.07333333333334` to `27.07333333333333`. `pnl_diff` builds
+  `initial_costs` and `initial_income` from the `Decimal` instead of an
+  `f64` round trip. `round_to_clean_interval` compares in `Decimal`.
+
 - **Core converts `Decimal` to `f64` through `decimal_to_f64`** (#828,
   part 1 of 2). The Asian, geometric-mean and power payoffs,
   `positive_f64_to_f64` and `mean_and_std` used `Positive::to_f64`, which
