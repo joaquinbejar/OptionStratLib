@@ -181,18 +181,15 @@ fn bench_rnd(c: &mut Criterion) {
     for half_width in [10, 25] {
         let chain = chain(half_width);
         let strikes = chain.options.len();
-        for points in [50, 200] {
-            let params = RNDParameters {
-                risk_free_rate: dec!(0.05),
-                interpolation_points: points,
-                derivative_tolerance: pos_or_panic!(0.1),
-            };
-            bench_ok(
-                &mut group,
-                &format!("calculate_rnd/{strikes}_strikes_{points}_points"),
-                || black_box(&chain).calculate_rnd(black_box(&params)),
-            );
-        }
+        let params = RNDParameters {
+            risk_free_rate: dec!(0.05),
+            derivative_tolerance: pos_or_panic!(0.1),
+        };
+        bench_ok(
+            &mut group,
+            &format!("calculate_rnd/{strikes}_strikes"),
+            || black_box(&chain).calculate_rnd(black_box(&params)),
+        );
         bench_ok(&mut group, &format!("calculate_skew/{strikes}"), || {
             black_box(&chain).calculate_skew()
         });
