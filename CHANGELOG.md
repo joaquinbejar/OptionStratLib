@@ -44,7 +44,8 @@ summarize the release.
   differently: `ShortStrangle::get_profit_area` on the test fixture goes
   from `27.07333333333334` to `27.07333333333333`, and the backtest golden
   `single_leg_simulation.json` moves premiums and P&L by at most `5e-14`
-  relative (no exit, holding period or count changes). `pnl_diff` builds
+  relative (no exit, holding period or count changes); the expected value
+  pinned with a 15-place drift moves by `6e-17` relative. `pnl_diff` builds
   `initial_costs` and `initial_income` from the `Decimal` instead of an
   `f64` round trip. `round_to_clean_interval` compares in `Decimal`.
 

@@ -762,13 +762,17 @@ mod tests_expected_value {
     /// `Decimal` and drops the extra `1 / (1 + |drift|)` scaling applied
     /// after the sum: the drift already shapes the distribution, so the old
     /// value was the expectation divided by `3.999789999999902`
-    /// (`0.003104587227155649` -> `0.012417696945304589008056`).
+    /// (`0.003104587227155649` -> `0.012417696945304589008056`). Re-baselined
+    /// by #828, which takes the rate, volatility, time and standard deviation
+    /// of the probability kernel to the nearest `f64` through
+    /// `decimal_to_f64` as well (`0.012417696945304589008056` ->
+    /// `0.012417696945304588256316`, `6e-17` relative).
     #[test]
     fn test_expected_value_many_decimal_places_drift_matches_f64_field() {
         let strategy = create_test_strategy();
         let trend = Some(price_trend(dec!(2.999789999999902), dec!(0.95)));
         match strategy.expected_value(None, trend) {
-            Ok(ev) => assert_eq!(ev, dec!(0.012417696945304589008056)),
+            Ok(ev) => assert_eq!(ev, dec!(0.012417696945304588256316)),
             Err(e) => panic!("expected value evaluates: {e}"),
         }
     }
