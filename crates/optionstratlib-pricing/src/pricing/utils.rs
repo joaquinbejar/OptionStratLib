@@ -12,12 +12,16 @@ use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64,
 };
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::Side;
 use optionstratlib_core::utils::random_decimal;
 use rand::Rng;
+// Only the tests' `Decimal` reference increment draws here since #859 P3b.
+#[cfg(test)]
+use optionstratlib_core::model::decimal::finite_decimal;
+#[cfg(test)]
 use rand_distr::{Distribution, Normal};
 use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
@@ -614,6 +618,9 @@ pub(crate) fn calculate_discounted_payoff(
 /// - [`PricingError::NonFinite`] if the sampled normal value is non-finite,
 ///   tagged `"pricing::monte_carlo::wiener_increment::sample"`.
 ///
+// The `Decimal` increment the Monte-Carlo path used until #859 P3b; kept as
+// the tests' reference for the `f64` path kernel.
+#[cfg(test)]
 pub(crate) fn wiener_increment<R: Rng + ?Sized>(
     sqrt_dt: Decimal,
     rng: &mut R,
