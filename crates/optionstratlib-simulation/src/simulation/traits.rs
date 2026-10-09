@@ -4,8 +4,8 @@ use crate::simulation::ou::ou_path;
 use crate::simulation::{WalkParams, WalkType, path_buffer};
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_mul, d_sqrt, d_sub, decimal_normal_sample_with, decimal_to_f64,
-    decimal_uniform_sample_with, finite_decimal, p_sqrt,
+    d_add, d_div, d_exp, d_exp_f64, d_mul, d_sqrt, d_sqrt_f64, d_sub, decimal_normal_sample_with,
+    decimal_to_f64, decimal_uniform_sample_with, finite_decimal, p_sqrt,
 };
 use optionstratlib_core::utils::deterministic_rng;
 use rand::Rng;
@@ -111,7 +111,11 @@ where
                 // `var` is kept in annualized-squared units, so sqrt is
                 // the annualized conditional volatility at this step; it
                 // feeds both the shock and the reported vol path.
-                let var_sqrt = p_sqrt(&var, "simulation::traits::garch_walk")?;
+                // `f64` square root (#860): correctly rounded on every platform.
+                let var_sqrt = Positive::new_decimal(d_sqrt_f64(
+                    var.to_dec(),
+                    "simulation::traits::garch_walk",
+                )?)?;
                 let eps = d_mul(
                     d_mul(z, var_sqrt.to_dec(), "simulation::garch::eps")?,
                     sqrt_dt_dec,
@@ -128,7 +132,7 @@ where
                 // 4) price update
                 price = d_mul(
                     price,
-                    d_exp(ret, "simulation::garch::price")?,
+                    d_exp_f64(ret, "simulation::garch::price")?,
                     "simulation::garch::price",
                 )?;
                 path.push(Positive::new_decimal(price).unwrap_or(Positive::ZERO));
@@ -239,8 +243,8 @@ where
                 )?;
 
                 // Ensure variance stays positive (modified Euler scheme with truncation)
-                let variance_sqrt =
-                    d_sqrt(variance, "simulation::heston::variance_sqrt").map_err(|_| {
+                let variance_sqrt = d_sqrt_f64(variance, "simulation::heston::variance_sqrt")
+                    .map_err(|_| {
                         SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
                     })?;
                 let variance_drift = d_mul(
@@ -278,7 +282,7 @@ where
                     Decimal::TWO,
                     "simulation::heston::avg_variance",
                 )?;
-                let avg_variance_sqrt = d_sqrt(
+                let avg_variance_sqrt = d_sqrt_f64(
                     avg_variance,
                     "simulation::heston::avg_variance_sqrt",
                 )
@@ -295,15 +299,17 @@ where
                     "simulation::heston::price_change",
                 )?;
 
-                price = price.checked_mul_dec(d_exp(price_change, "simulation::heston::price")?)?;
+                price =
+                    price.checked_mul_dec(d_exp_f64(price_change, "simulation::heston::price")?)?;
                 variance = variance_new;
 
                 values.push(price);
                 // Instantaneous annualized volatility after the step;
                 // CIR variance is truncated at zero so sqrt always exists.
-                let vol_step = d_sqrt(variance, "simulation::heston::vol_step").map_err(|_| {
-                    SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
-                })?;
+                let vol_step =
+                    d_sqrt_f64(variance, "simulation::heston::vol_step").map_err(|_| {
+                        SimulationError::walk_error("Heston: sqrt(variance) failed (overflow)")
+                    })?;
                 vols.push(Positive::new_decimal(vol_step).unwrap_or(Positive::ZERO));
             }
 
@@ -459,25 +465,26 @@ where
             let vol_mult_up = vol_multiplier_up.unwrap_or(Positive::ONE);
             let vol_mult_down = vol_multiplier_down.unwrap_or(Positive::ONE);
 
-            for _ in 1..params.size {
-                // Calculate transition probabilities
-                let lambda = if state == 1 {
-                    lambda_down.to_dec()
-                } else {
-                    lambda_up.to_dec()
-                };
-
-                // `lambda` is non-negative, so the exponent is non-positive;
-                // an arbitrarily fast transition rate flushes `e^x` to zero,
-                // which is the limit `transition_prob -> 1`.
-                let transition_prob = d_sub(
+            // `lambda` is non-negative, so the exponent is non-positive; an
+            // arbitrarily fast transition rate flushes `e^x` to zero, which
+            // is the limit `transition_prob -> 1`. It depends on the state
+            // only, so both are computed once per path instead of every step
+            // (#860), with the same operations.
+            let transition_probability = |lambda: Decimal| {
+                d_sub(
                     Decimal::ONE,
                     d_exp(
                         d_mul(-lambda, dt.to_dec(), "simulation::telegraph::transition")?,
                         "simulation::telegraph::transition",
                     )?,
                     "simulation::telegraph::transition",
-                )?;
+                )
+            };
+            let leave_up = transition_probability(lambda_down.to_dec())?;
+            let leave_down = transition_probability(lambda_up.to_dec())?;
+
+            for _ in 1..params.size {
+                let transition_prob = if state == 1 { leave_up } else { leave_down };
 
                 // Bernoulli trial on a genuine U(0,1) draw (#683):
                 // `P(switch) = 1 - e^(-λ·dt)`.
@@ -509,7 +516,7 @@ where
                 let price_change = d_add(drift_term, diffusion, "simulation::telegraph::price")?;
                 price = d_mul(
                     price,
-                    d_exp(price_change, "simulation::telegraph::price")?,
+                    d_exp_f64(price_change, "simulation::telegraph::price")?,
                     "simulation::telegraph::price",
                 )?;
 
@@ -617,8 +624,9 @@ where
                     diffusion,
                     "simulation::gbm::drift",
                 )?;
-                current_value =
-                    current_value.checked_mul_dec(d_exp(drift_term, "simulation::gbm::price")?)?;
+                // `f64` exponential (#860), about 1e-16 relative.
+                current_value = current_value
+                    .checked_mul_dec(d_exp_f64(drift_term, "simulation::gbm::price")?)?;
                 values.push(current_value);
             }
             Ok(values)
@@ -685,7 +693,8 @@ where
                 }
 
                 // actualizar precio
-                price = price.checked_mul_dec(d_exp(log_ret, "simulation::log_returns::price")?)?;
+                price =
+                    price.checked_mul_dec(d_exp_f64(log_ret, "simulation::log_returns::price")?)?;
                 values.push(price);
 
                 prev_log_ret = log_ret;

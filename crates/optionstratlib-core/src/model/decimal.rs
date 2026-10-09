@@ -775,6 +775,53 @@ pub fn d_ln_f64(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
 /// `|x - 1|` below which [`d_ln_f64`] evaluates `ln_1p(x - 1)`.
 const LN_1P_BAND: Decimal = Decimal::from_parts(5, 0, 0, false, 1);
 
+/// Exponential evaluated in `f64`, for the per-step walk kernels (#860).
+///
+/// [`d_exp`] runs `rust_decimal`'s series to 28 places, about 0.8 µs a call;
+/// a walk step whose shock is an `f64` normal draw gains nothing from those
+/// places. This takes `e^x` in `f64` (within an ulp, about `1e-16`
+/// relative) and converts the result back once, with [`d_exp`]'s contract:
+/// a negative argument whose exponential is below the representable range
+/// returns zero, a positive one that overflows is an error. The public
+/// [`d_exp`] stays the `Decimal` series.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::Overflow`] when `x` is positive and `e^x` is
+/// outside the representable `Decimal` range, and the conversion error of
+/// [`decimal_to_f64`].
+#[inline]
+pub fn d_exp_f64(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    let value = decimal_to_f64(x)?.exp(); // scan-banned: allow -- f64 `exp`: returns inf on overflow, it does not abort; a non-finite or unrepresentable value is reported below
+    match finite_decimal(value) {
+        Some(result) => Ok(result),
+        None if x.is_sign_negative() => Ok(Decimal::ZERO),
+        None => Err(DecimalError::overflow(op, x, Decimal::ZERO)),
+    }
+}
+
+/// Square root evaluated in `f64`, for the per-step walk kernels (#860).
+///
+/// IEEE-754 `sqrt` is correctly rounded, so on every platform this is the
+/// nearest `f64` to the square root of the nearest `f64` to `x`, converted
+/// back once: about `1e-16` relative of the 28-place [`d_sqrt`], at a
+/// fraction of its Newton iteration.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ArithmeticError`] when `x` is negative, and the
+/// conversion errors of [`decimal_to_f64`] and [`f64_to_decimal`].
+#[inline]
+pub fn d_sqrt_f64(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    if x.is_sign_negative() && !x.is_zero() {
+        return Err(DecimalError::arithmetic_error(
+            op,
+            "square root of a negative value",
+        ));
+    }
+    f64_to_decimal(decimal_to_f64(x)?.sqrt()) // scan-banned: allow -- f64 `sqrt` of a non-negative finite value is finite and does not abort
+}
+
 /// Checked `base^exponent`.
 ///
 /// Checked helper used in place of [`MathematicalOps::powd`], which
@@ -1945,5 +1992,72 @@ mod tests_d_ln_f64 {
         // Measured 2026-10-09: below 1e-15; held at 1e-14 so a regression
         // shows.
         assert!(worst < dec!(0.00000000000001), "worst {worst}");
+    }
+}
+
+/// [`d_exp_f64`] and [`d_sqrt_f64`] against the 28-place [`d_exp`] and
+/// [`d_sqrt`] (#860).
+#[cfg(test)]
+mod tests_f64_exp_sqrt {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// The owner's bound (2026-10-09): 1e-12 relative.
+    const TOLERANCE: Decimal = dec!(0.000000000001);
+
+    fn relative(fast: Decimal, exact: Decimal) -> Decimal {
+        if exact.is_zero() {
+            fast.abs()
+        } else {
+            (fast - exact).abs() / exact.abs()
+        }
+    }
+
+    #[test]
+    fn test_d_exp_f64_within_the_owner_bound() {
+        for x in [
+            dec!(-60),
+            dec!(-5),
+            dec!(-0.5),
+            dec!(-0.0001234),
+            dec!(0),
+            dec!(0.000002),
+            dec!(0.0179),
+            dec!(0.5),
+            dec!(1),
+            dec!(7.25),
+            dec!(40),
+            dec!(60),
+        ] {
+            let error = relative(d_exp_f64(x, "test").unwrap(), d_exp(x, "test").unwrap());
+            assert!(error <= TOLERANCE, "exp({x}): {error}");
+        }
+    }
+
+    #[test]
+    fn test_d_exp_f64_keeps_the_d_exp_contract() {
+        assert_eq!(d_exp_f64(dec!(-1000), "test").ok(), Some(Decimal::ZERO));
+        assert!(d_exp_f64(dec!(1000), "test").is_err());
+        assert_eq!(d_exp_f64(Decimal::ZERO, "test").ok(), Some(Decimal::ONE));
+    }
+
+    #[test]
+    fn test_d_sqrt_f64_within_the_owner_bound() {
+        for x in [
+            dec!(0.0000000004),
+            dec!(0.000016),
+            dec!(0.04),
+            dec!(0.0625),
+            dec!(1),
+            dec!(2),
+            dec!(3.999999999999),
+            dec!(100.5),
+            dec!(1e12),
+        ] {
+            let error = relative(d_sqrt_f64(x, "test").unwrap(), d_sqrt(x, "test").unwrap());
+            assert!(error <= TOLERANCE, "sqrt({x}): {error}");
+        }
+        assert_eq!(d_sqrt_f64(Decimal::ZERO, "test").ok(), Some(Decimal::ZERO));
+        assert!(d_sqrt_f64(dec!(-0.01), "test").is_err());
     }
 }
