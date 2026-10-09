@@ -92,11 +92,6 @@ schema = [
     "optionstratlib-strategies?/schema",
     "optionstratlib-backtest?/schema",
 ]
-# Reserved (ADR-0002 section 2, Option E): the name is held so it is not
-# reused for another meaning, and it enables nothing. `rayon` stays mandatory
-# in `math`, `pricing` and `simulation`; a sequential build needs a sequential
-# twin of every parallel site, which no 0.22 issue owns.
-parallel = []
 # The `*_async` wrappers over the market I/O functions: `tokio` in the market
 # crate and nothing in the facade itself (ADR-0002 section 2).
 async = ["market", "io", "optionstratlib-market/async"]

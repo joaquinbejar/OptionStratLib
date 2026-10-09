@@ -435,8 +435,7 @@
 //! | `optionstratlib-backtest` | strategy backtests over simulated paths: per-path evaluation, run statistics, reports and metrics | `schema` | `backtest` (implies `strategies` and `simulation`) | `backtesting`; `BacktestError` in `error` |
 //! | `optionstratlib-visualization` | chart data, the `Graph` contract and its implementations, terminal reports, Plotly rendering and PNG/SVG export | `plotly`, `static_export` | `visualization` (implies `backtest`); `plotly` and `static_export` forward to its features | `visualization`; `GraphError` and the aggregate `Error` in `error`; the `impl_graph_for_payoff_strategy!` macro at the root |
 //!
-//! The facade also has `schema` (forwarded to every enabled component) and
-//! the reserved, empty `parallel`. Each facade path is an explicit module or
+//! The facade also has `schema` (forwarded to every enabled component). Each facade path is an explicit module or
 //! item re-export (`pub use optionstratlib_core::model;`, `pub use
 //! optionstratlib_core::error::DecimalError`), never a glob over a
 //! component's root, so `optionstratlib::model::Options` *is*
@@ -1040,8 +1039,6 @@
 //!   enabled component (forwards `optionstratlib-core/schema` and, weakly,
 //!   `schema` of each other component, so it never adds a component). Additive: it
 //!   changes no type. Without it no build resolves `utoipa`
-//! - `parallel`: reserved and empty in 0.22, so the name is not reused for another
-//!   meaning. `rayon` is mandatory in the numeric crates; a sequential build is not offered
 //! - `synthetic` (default): simulation-backed `OptionChain` and `OptionSeries` generators
 //!   (`chains::generator_optionchain`, `series::generator_optionseries`, defined by
 //!   `optionstratlib-market` behind its own `synthetic` feature), whose simulation
@@ -1075,7 +1072,6 @@
 //! | `async` | | `optionstratlib-market/async` | `market`, `io` | no |
 //! | `synthetic` | | `optionstratlib-market/synthetic` | `market`, `simulation` | yes |
 //! | `schema` | | `optionstratlib-core/schema`, `optionstratlib-{math,pricing,simulation,market,analytics,strategies,backtest}?/schema` | | yes |
-//! | `parallel` | | | | no (reserved, empty) |
 //!
 //! The facade depends on `optionstratlib-core` always and declares no other
 //! optional dependency: `async` adds `tokio` through the market crate, and
@@ -1107,8 +1103,8 @@
 //!   the implication is the 0.21 behaviour, kept for 0.22.
 //! - There is no `synthetic` without `simulation`, no `async` without `io`,
 //!   and no capability above `pricing` without `pricing` and `math`.
-//! - `parallel` enables nothing: the parallel code paths use `rayon`
-//!   unconditionally, so a sequential build is not offered.
+//! - There is no sequential build: the parallel code paths use `rayon`
+//!   unconditionally, and the reserved `parallel` feature is retired (#832).
 //!
 //! The matrix CI runs: no features, default, all features, each capability
 //! alone (`math`, `schema`, `pricing`, `market`, `io`, `async`, `synthetic`,

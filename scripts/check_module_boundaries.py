@@ -1447,8 +1447,9 @@ FACADE_ROUTING = {
 
 
 # The rest of the facade's feature table, exactly (ADR-0002 section 2 and
-# Decision 1): the capability implications, the cross-cutting features, the
-# reserved `parallel` and the 0.22 default (#549). Anything else is drift.
+# Decision 1): the capability implications, the cross-cutting features and
+# the 0.22 default (#549). `parallel` was reserved and is retired (#832).
+# Anything else is drift.
 FACADE_EXACT = {
     "math": frozenset({"dep:optionstratlib-math"}),
     "pricing": frozenset({"dep:optionstratlib-pricing", "math"}),
@@ -1466,7 +1467,6 @@ FACADE_EXACT = {
         "optionstratlib-analytics?/schema", "optionstratlib-strategies?/schema",
         "optionstratlib-backtest?/schema",
     }),
-    "parallel": frozenset(),
     "default": frozenset({
         "pricing", "market", "analytics", "strategies", "simulation", "backtest", "visualization",
         "synthetic", "io", "schema",
@@ -2228,7 +2228,7 @@ def self_test() -> int:
             routed(schema=sorted(FACADE_EXACT["schema"] - {"optionstratlib-math?/schema"} | {"optionstratlib-math/schema"})),
             1,
         ),
-        "parallel is no longer reserved": (routed(parallel=["pricing"]), 1),
+        "the retired parallel comes back": (routed(parallel=[]), 1),
         "a feature outside the table": (routed(extra=["pricing"]), 1),
         "plotly drops visualization": (routed(plotly=["optionstratlib-visualization/plotly"]), 1),
         "static_export drops async": (

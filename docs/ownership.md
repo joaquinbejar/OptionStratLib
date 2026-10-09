@@ -75,7 +75,8 @@ component feature.
 | PNG and SVG export | `optionstratlib_visualization::visualization::Graph::write_png` | `optionstratlib::visualization::Graph::write_png` | static_export | `optionstratlib-visualization/static_export` |
 | `utoipa::ToSchema` derives on domain types | `optionstratlib_core::model::Options` | `optionstratlib::model::Options` | schema | `optionstratlib-core/schema` |
 
-`parallel` is a reserved facade feature that enables nothing in 0.22.
+The facade has no `parallel` feature: it was reserved and is retired
+(#832), and `rayon` is a mandatory dependency.
 
 ## 3. Errors
 
