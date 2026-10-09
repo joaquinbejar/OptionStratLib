@@ -24,6 +24,11 @@ plotly = ["dep:plotly"]
 # `plotly_static`, which brings the WebDriver client and its async runtime.
 static_export = ["plotly", "plotly/static_export_default"]
 
+[package.metadata.docs.rs]
+# docs.rs builds the default features, empty for this crate, so name the
+# optional ones the API documents. `static_export` is left out: its build script needs a browser, which docs.rs does not have.
+features = ["plotly"]
+
 [dependencies]
 optionstratlib-core = { workspace = true }
 optionstratlib-math = { workspace = true }
