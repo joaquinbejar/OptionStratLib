@@ -26,7 +26,7 @@ use crate::kernels::{big_n, discount_factor};
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, finite_decimal,
+    d_add, d_div, d_exp, d_ln, d_mul, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
 };
 use optionstratlib_core::model::types::OptionType;
 use rust_decimal::Decimal;
@@ -101,7 +101,7 @@ fn price_cliquet(option: &Options, reset_dates: &[f64]) -> Result<Decimal, Prici
         .map_err(|e| PricingError::other(&e.to_string()))?;
 
     // Convert reset dates from days to years
-    let t_total_f = t_total.to_f64();
+    let t_total_f = decimal_to_f64(t_total.to_dec())?;
     let mut reset_times_years = vec![0.0]; // Start at t=0
     for &d in &dates {
         let t = d / 365.0;

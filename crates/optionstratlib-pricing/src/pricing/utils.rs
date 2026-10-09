@@ -12,7 +12,7 @@ use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, finite_decimal,
+    d_add, d_div, d_exp, d_ln, d_mul, d_powd, d_sqrt, d_sub, decimal_to_f64, finite_decimal,
 };
 use optionstratlib_core::model::payoff::{Payoff, PayoffInfo};
 use optionstratlib_core::model::types::Side;
@@ -109,7 +109,7 @@ pub fn simulate_returns<R: Rng + ?Sized>(
 
     if std_dev < Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
-            value: std_dev.to_f64(),
+            value: decimal_to_f64(std_dev.to_dec())?,
             reason: "Standard deviation cannot be negative".to_string(),
         });
     }

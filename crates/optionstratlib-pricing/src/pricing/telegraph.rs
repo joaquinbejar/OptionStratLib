@@ -84,12 +84,14 @@
 use crate::error::PricingError;
 use crate::kernels::discount_factor;
 use crate::pricing::utils::simulate_returns;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
+#[cfg(test)]
+use num_traits::ToPrimitive;
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, finite_decimal,
+    d_add, d_div, d_mul, d_powd, d_sqrt, d_sub, d_sum_iter, decimal_to_f64, finite_decimal,
 };
 use rand::{Rng, RngExt};
 use rand_distr::{Distribution, StandardNormal};
@@ -166,17 +168,26 @@ impl TelegraphProcess {
     /// # Returns
     ///
     /// The new state of the process (-1 or 1)
-    pub fn next_state<R: Rng + ?Sized>(&mut self, dt: Decimal, rng: &mut R) -> i8 {
+    ///
+    /// # Errors
+    ///
+    /// [`PricingError::Decimal`] when the transition probability has no
+    /// `f64` conversion (#828).
+    pub fn next_state<R: Rng + ?Sized>(
+        &mut self,
+        dt: Decimal,
+        rng: &mut R,
+    ) -> Result<i8, PricingError> {
         let lambda = if self.current_state == 1 {
             self.lambda_down
         } else {
             self.lambda_up
         };
-        if rng.random::<f64>() < flip_probability(lambda, dt) {
+        if rng.random::<f64>() < flip_probability(lambda, dt)? {
             self.current_state *= -1;
         }
 
-        self.current_state
+        Ok(self.current_state)
     }
 
     /// Returns the current state of the process.
@@ -194,9 +205,14 @@ impl TelegraphProcess {
 /// one step of length `dt`: `1 - exp(-lambda * dt)`, as an `f64` ready to be
 /// compared against a uniform draw.
 ///
-/// Infallible by design: every unrepresentable intermediate degrades to the
-/// limit its sign implies rather than aborting.
-fn flip_probability(lambda: Decimal, dt: Decimal) -> f64 {
+/// Every unrepresentable intermediate of the exponent degrades to the limit
+/// its sign implies.
+///
+/// # Errors
+///
+/// [`PricingError::Decimal`] when the probability has no `f64` conversion
+/// (#828).
+fn flip_probability(lambda: Decimal, dt: Decimal) -> Result<f64, PricingError> {
     // lambda_dt is non-positive for the physical case (lambda, dt >= 0).
     // For very-negative values exp(lambda_dt) underflows to 0; treat as a
     // guaranteed flip (probability = 1). Otherwise use the standard
@@ -215,16 +231,9 @@ fn flip_probability(lambda: Decimal, dt: Decimal) -> f64 {
         },
     };
 
-    // probability is mathematically in [0, 1] (Decimal::ONE or 1 - exp(neg)); to_f64 is
-    // expected to succeed. If conversion ever fails we log and treat the period as
-    // "no transition" rather than panicking.
-    probability.to_f64().unwrap_or_else(|| {
-        warn!(
-            probability = %probability,
-            "telegraph::flip_probability: probability.to_f64() returned None; treating as 0.0"
-        );
-        0.0
-    })
+    // The nearest `f64` (#828). A probability in `[0, 1]` always converts;
+    // a failure is still reported rather than read as "no transition".
+    Ok(decimal_to_f64(probability)?)
 }
 
 /// Estimates the Telegraph Process parameters from historical data.
@@ -315,14 +324,16 @@ pub(crate) fn estimate_telegraph_parameters(
 
     if sum_down == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
-            value: sum_down.to_f64().unwrap_or(0.0),
+            // The branch is taken only for a zero sum (#828).
+            value: 0.0,
             reason: "Sum of down durations must be non-zero".to_string(),
         });
     }
 
     if sum_up == Decimal::ZERO {
         return Err(DecimalError::InvalidValue {
-            value: sum_up.to_f64().unwrap_or(0.0),
+            // The branch is taken only for a zero sum (#828).
+            value: 0.0,
             reason: "Sum of up durations must be non-zero".to_string(),
         });
     }
@@ -490,10 +501,10 @@ impl RegimeStep {
         let drift_dt = d_mul(drift, dt, "pricing::telegraph::drift_dt")?;
         let diffusion = d_mul(sigma, sqrt_dt, "pricing::telegraph::diffusion")?;
         Ok(Self {
-            drift_dt: drift_dt.to_f64().ok_or_else(|| {
+            drift_dt: decimal_to_f64(drift_dt).map_err(|_| {
                 PricingError::method_error("telegraph", "drift * dt not representable as f64")
             })?,
-            diffusion: diffusion.to_f64().ok_or_else(|| {
+            diffusion: decimal_to_f64(diffusion).map_err(|_| {
                 PricingError::method_error("telegraph", "sigma * sqrt(dt) not representable as f64")
             })?,
         })
@@ -658,8 +669,8 @@ pub fn telegraph<R: Rng + ?Sized>(
     // `dt` is the same on every step, so each regime's flip probability is
     // loop-invariant: the up regime leaves at `lambda_down`, the down regime
     // at `lambda_up` (the same law as `TelegraphProcess::next_state`).
-    let flip_from_up = flip_probability(lambda_down_temp, dt);
-    let flip_from_down = flip_probability(lambda_up_temp, dt);
+    let flip_from_up = flip_probability(lambda_down_temp, dt)?;
+    let flip_from_down = flip_probability(lambda_up_temp, dt)?;
 
     // Loop-invariant per-regime coefficients. `carry` is the risk-neutral
     // drift rate `r - q` of the underlying before the Ito correction each
@@ -702,7 +713,7 @@ pub fn telegraph<R: Rng + ?Sized>(
             Positive::new_decimal(d_mul(spot, growth, "pricing::telegraph::terminal_price")?)?;
         let payoff = option.payoff_at_price(&terminal)?;
         payoff_sum = d_add(payoff_sum, payoff, "pricing::telegraph::payoff_sum")?;
-        let payoff_f64 = payoff.to_f64().unwrap_or(0.0);
+        let payoff_f64 = decimal_to_f64(payoff)?;
         payoff_sum_f64 += payoff_f64;
         payoff_sum_sq_f64 += payoff_f64 * payoff_f64;
     }
@@ -734,6 +745,16 @@ pub fn telegraph<R: Rng + ?Sized>(
 }
 
 /// Both regimes at the 20% volatility the test options are quoted at.
+/// `TelegraphProcess::next_state` for the tests, which assert on the state:
+/// a conversion failure (#828) fails the test.
+#[cfg(test)]
+fn next_state_ok<R: Rng + ?Sized>(tp: &mut TelegraphProcess, dt: Decimal, rng: &mut R) -> i8 {
+    match tp.next_state(dt, rng) {
+        Ok(state) => state,
+        Err(e) => panic!("next_state failed: {e:?}"),
+    }
+}
+
 #[cfg(test)]
 fn regimes_20() -> RegimeVolatility {
     RegimeVolatility::constant(optionstratlib_core::pos_or_panic!(0.2)).unwrap()
@@ -762,7 +783,7 @@ mod tests_telegraph_process_basis {
         let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let mut tp = TelegraphProcess::new(Decimal::ONE, Decimal::ONE, &mut rng);
         let _initial_state = tp.get_current_state();
-        let new_state = tp.next_state(dec!(0.1), &mut rng);
+        let new_state = next_state_ok(&mut tp, dec!(0.1), &mut rng);
         assert!(new_state == 1 || new_state == -1);
         // There's a chance the state didn't change, so we can't assert inequality
     }
@@ -783,7 +804,7 @@ mod tests_telegraph_process_basis {
         let mut prev = tp.get_current_state();
         let mut flips: u64 = 0;
         for _ in 0..n {
-            let next = tp.next_state(dec!(0.01), &mut rng);
+            let next = next_state_ok(&mut tp, dec!(0.01), &mut rng);
             if next != prev {
                 flips += 1;
             }
@@ -905,7 +926,7 @@ mod tests_telegraph_process_extended {
         let mut rng = deterministic_rng(DETERMINISTIC_RNG_DEFAULT_SEED);
         let mut tp = TelegraphProcess::new(dec!(1000.0), dec!(1000.0), &mut rng); // High rates to ensure state change
         let initial_state = tp.get_current_state();
-        let new_state = tp.next_state(dec!(0.1), &mut rng);
+        let new_state = next_state_ok(&mut tp, dec!(0.1), &mut rng);
         assert_ne!(initial_state, new_state);
     }
 
@@ -1196,7 +1217,7 @@ mod tests_telegraph_seeded {
         let mut rng = deterministic_rng(seed);
         let mut tp = TelegraphProcess::new(dec!(1.0), dec!(2.0), &mut rng);
         let mut path = vec![tp.get_current_state()];
-        path.extend((0..steps).map(|_| tp.next_state(dec!(0.1), &mut rng)));
+        path.extend((0..steps).map(|_| next_state_ok(&mut tp, dec!(0.1), &mut rng)));
         path
     }
 
@@ -1234,7 +1255,7 @@ mod tests_telegraph_seeded {
         let n = 200_000_u64;
         let mut up: u64 = 0;
         for _ in 0..n {
-            if tp.next_state(dec!(0.01), &mut rng) == 1 {
+            if next_state_ok(&mut tp, dec!(0.01), &mut rng) == 1 {
                 up += 1;
             }
         }

@@ -1,10 +1,12 @@
 use crate::error::PricingError;
 use crate::kernels::discount_factor;
 use crate::pricing::utils::{wiener_increment, wiener_sqrt_dt};
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::FromPrimitive;
 use optionstratlib_core::model::Options;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_mul, d_sub, finite_decimal};
+use optionstratlib_core::model::decimal::{
+    d_add, d_div, d_mul, d_sub, decimal_to_f64, finite_decimal,
+};
 use optionstratlib_core::model::types::{OptionStyle, Side};
 use rand::Rng;
 use rust_decimal::Decimal;
@@ -122,7 +124,7 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
             OptionStyle::Put => d_sub(strike, st, "pricing::monte_carlo::gbm::put_payoff")?,
         }
         .max(Decimal::ZERO);
-        let payoff: f64 = payoff_dec.to_f64().ok_or_else(|| {
+        let payoff: f64 = decimal_to_f64(payoff_dec).map_err(|_| {
             PricingError::non_finite("pricing::monte_carlo::gbm::payoff_cast", f64::NAN)
         })?;
         if !payoff.is_finite() {
@@ -138,16 +140,15 @@ pub fn monte_carlo_option_pricing<R: Rng + ?Sized>(
     // the rate, the discount exponent, or the final average surfaces
     // a tagged `PricingError::NonFinite` instead of silently collapsing
     // to `Decimal::ZERO` through the `f2d!` cast.
-    let rate_f64 = option.risk_free_rate.to_f64().ok_or_else(|| {
-        PricingError::non_finite("pricing::monte_carlo::rate_f64::cast", f64::NAN)
-    })?;
+    let rate_f64 = decimal_to_f64(option.risk_free_rate)
+        .map_err(|_| PricingError::non_finite("pricing::monte_carlo::rate_f64::cast", f64::NAN))?;
     if !rate_f64.is_finite() {
         return Err(PricingError::non_finite(
             "pricing::monte_carlo::rate_f64",
             rate_f64,
         ));
     }
-    let years = option.expiration_date.get_years()?.to_f64();
+    let years = decimal_to_f64(option.expiration_date.get_years()?.to_dec())?;
     if !years.is_finite() {
         return Err(PricingError::non_finite(
             "pricing::monte_carlo::years",
