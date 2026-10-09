@@ -109,7 +109,6 @@ or depend on component crates, whose default features are empty.
 | `async` | `tokio`-backed `*_async` market I/O | `market`, `io` |
 | `synthetic` | Simulation-backed chain and series generators | `market`, `simulation` |
 | `schema` | `utoipa::ToSchema` derives on every enabled component (adds no component) | |
-| `parallel` | Reserved; enables nothing in 0.22 | |
 
 Default: `pricing`, `market`, `analytics`, `strategies`, `simulation`,
 `backtest`, `visualization`, `synthetic`, `io`, `schema`.

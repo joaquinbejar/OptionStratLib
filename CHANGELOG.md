@@ -16,6 +16,15 @@ summarize the release.
 
 ### Changed — breaking
 
+- **The reserved `parallel` facade feature is retired** (#832). ADR-0002
+  Option E held the name, enabling nothing, until someone implemented a
+  sequential twin of every parallel site. By owner decision the feature is
+  removed instead: `rayon` is a mandatory dependency of math, pricing,
+  simulation, market, strategies and backtest, and no build is sequential.
+  0.21 had no such feature; a 0.22 pre-release manifest that names
+  `parallel` drops it. `make check-graph` now rejects the feature if it
+  comes back.
+
 - **Walkers and `Simulator::new` generators must be `Send + Sync`**
   (#860). `Simulator::new` now builds its walks on the rayon pool (see
   *Changed*), so the trait object in `WalkParams::walker` and the generator

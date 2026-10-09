@@ -85,7 +85,7 @@ the migration guide are absolute GitHub links to tracked files.
 
 | Package | Features | Optional dependencies |
 | --- | --- | --- |
-| `optionstratlib` | `analytics`, `async`, `backtest`, `default`, `io`, `market`, `math`, `parallel`, `plotly`, `pricing`, `schema`, `simulation`, `static_export`, `strategies`, `synthetic`, `visualization` | the eight components above core |
+| `optionstratlib` | `analytics`, `async`, `backtest`, `default`, `io`, `market`, `math`, `plotly`, `pricing`, `schema`, `simulation`, `static_export`, `strategies`, `synthetic`, `visualization` | the eight components above core |
 | `optionstratlib-core` | `default`, `schema` | `utoipa` |
 | `optionstratlib-math` | `default`, `schema` | `utoipa` |
 | `optionstratlib-pricing` | `default`, `schema` | `utoipa` |
@@ -101,8 +101,7 @@ dependency and every `x?/feature` an optional one; every optional dependency
 is enabled by a feature; no feature is named to subtract. Each row of
 section 2 of `docs/ownership.md` names a facade feature that enables the
 component feature in its last column (`io`, `async`, `synthetic`, `plotly`,
-`static_export`, `schema`). `parallel` is the reserved facade feature the
-map documents; it enables nothing.
+`static_export`, `schema`).
 
 ## Unpacked archives
 
