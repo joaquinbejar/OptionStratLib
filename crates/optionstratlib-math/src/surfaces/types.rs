@@ -7,9 +7,9 @@ use crate::curves::Point2D;
 use crate::error::SurfaceError;
 use crate::geometrics::HasX;
 use num_traits::FromPrimitive;
+use optionstratlib_core::model::decimal::decimal_to_f64;
 use optionstratlib_core::model::is_positive;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
@@ -209,9 +209,9 @@ impl Point3D {
     /// cannot be represented as an `f64` (typically a `Decimal`
     /// magnitude that exceeds the `f64` range).
     pub fn to_f64_tuple(&self) -> Result<(f64, f64, f64), SurfaceError> {
-        let x = self.x.to_f64();
-        let y = self.y.to_f64();
-        let z = self.z.to_f64();
+        let x = decimal_to_f64(self.x).ok();
+        let y = decimal_to_f64(self.y).ok();
+        let z = decimal_to_f64(self.z).ok();
 
         match (x, y, z) {
             (Some(x), Some(y), Some(z)) => Ok((x, y, z)),

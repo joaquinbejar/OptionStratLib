@@ -6,9 +6,9 @@
 use crate::error::CurveError;
 use crate::geometrics::HasX;
 use num_traits::FromPrimitive;
+use optionstratlib_core::model::decimal::decimal_to_f64;
 use optionstratlib_core::model::is_positive;
 use rust_decimal::Decimal;
-use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
@@ -215,8 +215,8 @@ impl Point2D {
     /// # Errors
     /// Returns a `CurvesError::Point2DError` with a reason explaining the failure.
     pub fn to_f64_tuple(&self) -> Result<(f64, f64), CurveError> {
-        let x = self.x.to_f64();
-        let y = self.y.to_f64();
+        let x = decimal_to_f64(self.x).ok();
+        let y = decimal_to_f64(self.y).ok();
 
         match (x, y) {
             (Some(x), Some(y)) => Ok((x, y)),

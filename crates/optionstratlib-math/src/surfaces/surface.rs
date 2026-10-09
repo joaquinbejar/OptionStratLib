@@ -18,11 +18,10 @@ use crate::surfaces::Point3D;
 use crate::surfaces::types::Axis;
 use optionstratlib_core::error::DecimalError;
 use optionstratlib_core::model::decimal::{
-    d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter,
+    d_add, d_div, d_mul, d_product_iter, d_sqrt, d_sub, d_sum_iter, decimal_to_f64,
 };
 use optionstratlib_core::utils::Len;
 
-use num_traits::ToPrimitive;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -409,17 +408,20 @@ impl Surface {
     /// // Will produce: [(1.5, 2.0, 3.0), (2.5, 3.0, 4.0)]
     /// let points = surface.get_f64_points();
     /// ```
-    #[must_use]
-    pub fn get_f64_points(&self) -> Vec<(f64, f64, f64)> {
+    ///
+    /// # Errors
+    ///
+    /// [`SurfaceError::Point3DError`] when a coordinate has no `f64`
+    /// conversion ([`decimal_to_f64`], #828). It used to read as `0.0`.
+    pub fn get_f64_points(&self) -> Result<Vec<(f64, f64, f64)>, SurfaceError> {
+        let to_f64 = |value: Decimal| {
+            decimal_to_f64(value).map_err(|_| SurfaceError::Point3DError {
+                reason: "Error converting Decimal to f64",
+            })
+        };
         self.points
             .iter()
-            .map(|p| {
-                (
-                    p.x.to_f64().unwrap_or(0.0),
-                    p.z.to_f64().unwrap_or(0.0),
-                    p.y.to_f64().unwrap_or(0.0),
-                )
-            })
+            .map(|p| Ok((to_f64(p.x)?, to_f64(p.z)?, to_f64(p.y)?)))
             .collect()
     }
 }
@@ -2422,7 +2424,10 @@ mod tests_surface_basic {
         );
         assert_eq!(projection.len(), surface.points.len());
 
-        let points = surface.get_f64_points();
+        let points = match surface.get_f64_points() {
+            Ok(points) => points,
+            Err(e) => panic!("finite coordinates convert: {e:?}"),
+        };
         assert_eq!(points.len(), 5);
         assert_eq!(points[0].0, 0.0);
         assert_eq!(points[0].1, 0.0);

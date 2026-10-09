@@ -6,9 +6,8 @@
 use crate::curves::{Curve, Point2D};
 use crate::error::CurveError;
 use crate::geometrics::{BasicMetrics, MetricsExtractor, RangeMetrics, ShapeMetrics, TrendMetrics};
-use num_traits::ToPrimitive;
 use optionstratlib_core::error::OperationErrorKind;
-use optionstratlib_core::model::decimal::d_sub;
+use optionstratlib_core::model::decimal::{d_sub, decimal_to_f64};
 use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
 use rust_decimal::Decimal;
@@ -152,17 +151,24 @@ pub trait StatisticalCurve: MetricsExtractor {
             ));
         }
 
+        // Every `Decimal` reaches `f64` through `decimal_to_f64`, the nearest
+        // `f64` (#828). A value it cannot convert is an error; the previous
+        // conversions fell back to 0, 1 or the slot's own value instead.
+        let to_f64 = |value: Decimal| -> Result<f64, CurveError> {
+            decimal_to_f64(value).map_err(|e| {
+                CurveError::invalid_parameters("generate_statistical_curve", &e.to_string())
+            })
+        };
+        let mean = to_f64(basic_metrics.mean)?;
+        let std_dev = to_f64(basic_metrics.std_dev)?;
+
         // Initialize random number generator with optional seed
         let seed_value = seed.unwrap_or_else(rand::random);
         let mut rng = StdRng::seed_from_u64(seed_value);
         // Create a normal distribution with the given mean and standard deviation
 
         let mut y_values: Vec<f64> = if basic_metrics.std_dev != Decimal::ZERO {
-            let normal = Normal::new(
-                basic_metrics.mean.to_f64().unwrap_or(0.0),
-                basic_metrics.std_dev.to_f64().unwrap_or(1.0),
-            )
-            .map_err(|e| {
+            let normal = Normal::new(mean, std_dev).map_err(|e| {
                 error!(
                     "Failed to create normal distribution with mean {} and std_dev {}: {}",
                     basic_metrics.mean, basic_metrics.std_dev, e
@@ -178,18 +184,18 @@ pub trait StatisticalCurve: MetricsExtractor {
                 })
                 .collect()
         } else {
-            vec![basic_metrics.mean.to_f64().unwrap_or(0.0); num_points]
+            vec![mean; num_points]
         };
 
         // Apply transformations to match skewness and kurtosis (simplified approach)
-        let skewness = shape_metrics.skewness.to_f64().unwrap_or(0.0);
-        let kurtosis = shape_metrics.kurtosis.to_f64().unwrap_or(0.0);
+        let skewness = to_f64(shape_metrics.skewness)?;
+        let kurtosis = to_f64(shape_metrics.kurtosis)?;
 
         // Apply skewness transformation (simplified approach)
         if skewness.abs() > 0.01 {
             for y in &mut y_values {
                 // Apply a simple transformation to induce skewness
-                *y += skewness * (*y - basic_metrics.mean.to_f64().unwrap_or(0.0)).powi(2);
+                *y += skewness * (*y - mean).powi(2);
             }
         }
 
@@ -197,16 +203,15 @@ pub trait StatisticalCurve: MetricsExtractor {
         if kurtosis.abs() > 0.01 {
             for y in &mut y_values {
                 // Apply a simple transformation to adjust kurtosis
-                let z = (*y - basic_metrics.mean.to_f64().unwrap_or(0.0))
-                    / basic_metrics.std_dev.to_f64().unwrap_or(1.0);
+                let z = (*y - mean) / std_dev;
                 *y += kurtosis * 0.1 * z.powi(3);
             }
         }
 
         // Apply trend (slope and intercept)
-        let slope = trend_metrics.slope.to_f64().unwrap_or(0.0);
+        let slope = to_f64(trend_metrics.slope)?;
         if slope.abs() > 0.001 {
-            let intercept = trend_metrics.intercept.to_f64().unwrap_or(0.0);
+            let intercept = to_f64(trend_metrics.intercept)?;
             for (i, y) in y_values.iter_mut().enumerate() {
                 let x = x_values.get(i).ok_or_else(|| {
                     CurveError::invalid_parameters(
@@ -214,13 +219,7 @@ pub trait StatisticalCurve: MetricsExtractor {
                         "fewer x-values than generated samples",
                     )
                 })?;
-                let x_f = x.to_f64().ok_or_else(|| {
-                    CurveError::invalid_parameters(
-                        "to_f64",
-                        "Decimal out of range / non-representable as f64 in regression x-input",
-                    )
-                })?;
-                *y += slope * x_f + intercept;
+                *y += slope * to_f64(*x)? + intercept;
             }
         }
 
@@ -229,8 +228,8 @@ pub trait StatisticalCurve: MetricsExtractor {
         let current_max = y_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let current_range = current_max - current_min;
 
-        let target_min = range_metrics.min.y.to_f64().unwrap_or(0.0);
-        let target_max = range_metrics.max.y.to_f64().unwrap_or(1.0);
+        let target_min = to_f64(range_metrics.min.y)?;
+        let target_max = to_f64(range_metrics.max.y)?;
         let target_range = target_max - target_min;
 
         // Scale and shift the y-values to match the target range
@@ -243,21 +242,16 @@ pub trait StatisticalCurve: MetricsExtractor {
         // Ensure mode value is included
         if num_points > 3 {
             let index = rng.random_range(0..(num_points / 3));
+            let mode = to_f64(basic_metrics.mode)?;
             if let Some(slot) = y_values.get_mut(index) {
-                *slot = basic_metrics.mode.to_f64().unwrap_or(*slot);
+                *slot = mode;
             }
         }
 
         // Create points and construct curve
         let mut points = BTreeSet::new();
         for (x, y) in x_values.iter().zip(&y_values).take(num_points) {
-            let x_f = x.to_f64().ok_or_else(|| {
-                CurveError::invalid_parameters(
-                    "to_f64",
-                    "Decimal out of range / non-representable as f64 in regression x-input",
-                )
-            })?;
-            let point = Point2D::from_f64_tuple(x_f, *y)?;
+            let point = Point2D::from_f64_tuple(to_f64(*x)?, *y)?;
             points.insert(point);
         }
 
