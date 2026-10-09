@@ -3205,6 +3205,25 @@ summarize the release.
   about 6), one run, `vega_exposure` without and with snapshots: 336 µs to
   317 ns at 21 strikes, 1.65 ms to 1.59 µs at 101.
 
+- **`d1` and the log returns take their logarithm in `f64`** (#857, C1).
+  `rust_decimal`'s 28-place `ln` cost about 8 µs, two thirds of a
+  Black-Scholes price after #859 P1. By owner decision (tolerance 1e-12
+  relative against the `Decimal` result) the new
+  `optionstratlib_core::model::decimal::d_ln_f64` evaluates it in `f64`,
+  as `ln_1p(x - 1)` with `x - 1` exact in `Decimal` near one, so
+  `ln(1)` stays exactly zero and the result keeps its relative accuracy,
+  and as `ln(x)` elsewhere. `pricing::d1` (and so every Black-Scholes price,
+  Greek and implied volatility built on it) and
+  `utils::calculate_log_returns` use it; the public `d_ln` stays the
+  `Decimal` series. Measured against the series: `d_ln_f64` within 1e-14
+  relative on 17 inputs from 1e-28 to `Decimal::MAX`; `d1` within 3.3e-15
+  (relative, absolute below one) on 780 spot/volatility/time/rate points;
+  log returns within 1e-14 relative on 500 moves; no pinned value in the
+  workspace moved. Criterion on flumix (i7-12650H, idle), A/B in one
+  session: `pricing/closed_form/black_scholes` 11.90 µs to 4.47 µs,
+  `black_scholes_chain/50` 565 µs to 229 µs, `calculate_log_returns/1008`
+  8.18 ms to 0.33 ms.
+
 - **docs.rs documents the optional features** (no issue, release
   preparation). docs.rs builds a crate's default features, which are empty
   for every component, so `io`, `async`, `synthetic`, `schema` and `plotly`

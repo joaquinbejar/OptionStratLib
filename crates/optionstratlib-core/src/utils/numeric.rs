@@ -11,6 +11,7 @@
 //! them; `market` and `simulation` are callers, not owners.
 
 use crate::error::DecimalError;
+use crate::model::decimal::d_ln_f64;
 use positive::Positive;
 use rust_decimal::Decimal;
 
@@ -108,12 +109,9 @@ pub fn calculate_log_returns(close_prices: &[Positive]) -> Result<Vec<Decimal>, 
                 "price ratio is zero or not representable",
             )
         })?;
-        log_returns.push(ratio.checked_ln().map_err(|_| {
-            DecimalError::arithmetic_error(
-                "utils::calculate_log_returns",
-                "logarithm of a non-positive price ratio",
-            )
-        })?);
+        // `f64` logarithm (#857), about 1e-15 relative of the 28-place
+        // series and a tenth of its cost.
+        log_returns.push(d_ln_f64(ratio.to_dec(), "utils::calculate_log_returns")?);
     }
 
     Ok(log_returns)
@@ -368,5 +366,44 @@ mod tests_log_returns {
         assert!(result[0].to_f64().unwrap_or(f64::NAN) < 0.0001);
         assert!(result[1].to_f64().unwrap_or(f64::NAN) > 0.0);
         assert!(result[1].to_f64().unwrap_or(f64::NAN) < 0.0001);
+    }
+}
+
+/// `calculate_log_returns` with the `f64` logarithm (#857) against the
+/// 28-place series it replaced.
+#[cfg(test)]
+mod tests_log_returns_f64 {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    #[test]
+    fn test_log_returns_within_the_owner_bound() {
+        // Deterministic prices around 100 with moves from 1e-6 to 30 %.
+        let prices: Vec<Positive> = (0..500u32)
+            .map(|i| {
+                let k = Decimal::from((i * 7919) % 1009) - dec!(504);
+                Positive::new_decimal(dec!(100) + k * dec!(0.06)).expect("positive price")
+            })
+            .collect();
+        let fast = calculate_log_returns(&prices).expect("log returns");
+        let mut worst = Decimal::ZERO;
+        for (window, value) in prices.windows(2).zip(&fast) {
+            let [previous, current] = window else {
+                continue;
+            };
+            let exact = crate::model::decimal::d_ln(current.to_dec() / previous.to_dec(), "test")
+                .expect("series ln");
+            let error = if exact.is_zero() {
+                value.abs()
+            } else {
+                (*value - exact).abs() / exact.abs()
+            };
+            assert!(
+                error <= dec!(0.000000000001),
+                "{previous} -> {current}: {error}"
+            );
+            worst = worst.max(error);
+        }
+        assert!(worst < dec!(0.00000000000001), "worst {worst}");
     }
 }

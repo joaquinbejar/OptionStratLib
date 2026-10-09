@@ -726,6 +726,55 @@ pub fn d_ln(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
         .ok_or_else(|| DecimalError::arithmetic_error(op, "logarithm is not representable"))
 }
 
+/// Natural logarithm evaluated in `f64`, for the numeric kernels (#857).
+///
+/// [`d_ln`] runs `rust_decimal`'s series to 28 places and costs about 8 µs;
+/// a kernel whose other inputs are already `f64`-accurate gains nothing from
+/// those places. This takes the logarithm in `f64` and converts the result
+/// back once:
+///
+/// - for `|x - 1| < 1/2` it evaluates `ln_1p(x - 1)`, with `x - 1` exact in
+///   `Decimal`, so the result keeps its relative accuracy as `x` approaches
+///   one (where `ln(x)` would lose it to cancellation) and `ln(1)` is exactly
+///   zero;
+/// - elsewhere it evaluates `ln(x)`, whose magnitude is at least `ln(3/2)`.
+///
+/// In both cases the result is within a few `f64` ulps, about `1e-15`
+/// relative, of the exact logarithm. The public [`d_ln`] stays `Decimal`.
+///
+/// # Errors
+///
+/// Returns [`DecimalError::ArithmeticError`] when `x` is zero or negative, or
+/// when the `f64` result is not finite, and the conversion errors of
+/// [`decimal_to_f64`] and [`f64_to_decimal`].
+#[inline]
+pub fn d_ln_f64(x: Decimal, op: &'static str) -> Result<Decimal, DecimalError> {
+    if x <= Decimal::ZERO {
+        return Err(DecimalError::arithmetic_error(
+            op,
+            "logarithm of a non-positive value",
+        ));
+    }
+    let shifted = x
+        .checked_sub(Decimal::ONE)
+        .ok_or_else(|| DecimalError::arithmetic_error(op, "x - 1 is not representable"))?;
+    let value = if shifted.abs() < LN_1P_BAND {
+        decimal_to_f64(shifted)?.ln_1p()
+    } else {
+        decimal_to_f64(x)?.ln() // scan-banned: allow -- f64 `ln`: x > 0 here, and `f64::ln` returns -inf/NaN rather than aborting; a non-finite result is rejected below
+    };
+    if !value.is_finite() {
+        return Err(DecimalError::arithmetic_error(
+            op,
+            "logarithm is not finite in f64",
+        ));
+    }
+    f64_to_decimal(value)
+}
+
+/// `|x - 1|` below which [`d_ln_f64`] evaluates `ln_1p(x - 1)`.
+const LN_1P_BAND: Decimal = Decimal::from_parts(5, 0, 0, false, 1);
+
 /// Checked `base^exponent`.
 ///
 /// Checked helper used in place of [`MathematicalOps::powd`], which
@@ -1834,5 +1883,67 @@ mod tests_decimal_to_f64_rounding {
         for value in [Decimal::ZERO, Decimal::new(0, 25), negative_zero] {
             assert_eq!(converted(value).to_bits(), 0.0_f64.to_bits(), "{value:?}");
         }
+    }
+}
+
+/// [`d_ln_f64`] against the 28-place [`d_ln`] (#857).
+#[cfg(test)]
+mod tests_d_ln_f64 {
+    use super::*;
+    use rust_decimal_macros::dec;
+
+    /// The owner's bound (2026-10-09): 1e-12 relative.
+    const TOLERANCE: Decimal = dec!(0.000000000001);
+
+    fn relative_error(x: Decimal) -> Decimal {
+        let fast = d_ln_f64(x, "test").expect("fast ln");
+        let exact = d_ln(x, "test").expect("series ln");
+        if exact.is_zero() {
+            return fast.abs();
+        }
+        (fast - exact).abs() / exact.abs()
+    }
+
+    #[test]
+    fn test_d_ln_f64_one_is_exactly_zero() {
+        assert_eq!(d_ln_f64(Decimal::ONE, "test").ok(), Some(Decimal::ZERO));
+    }
+
+    #[test]
+    fn test_d_ln_f64_rejects_non_positive() {
+        assert!(d_ln_f64(Decimal::ZERO, "test").is_err());
+        assert!(d_ln_f64(dec!(-1), "test").is_err());
+    }
+
+    #[test]
+    fn test_d_ln_f64_within_the_owner_bound() {
+        let inputs = [
+            dec!(0.0000000000000000000000000001),
+            dec!(0.000001),
+            dec!(0.3),
+            dec!(0.5),
+            dec!(0.5000000001),
+            dec!(0.99),
+            dec!(0.9999999),
+            dec!(0.9999999999999),
+            dec!(1.0000000000001),
+            dec!(1.0000001),
+            dec!(1.01),
+            dec!(1.4999999999),
+            dec!(1.5),
+            dec!(2.718281828459045),
+            dec!(57.81),
+            dec!(1000000),
+            dec!(79228162514264337593543950335),
+        ];
+        let mut worst = Decimal::ZERO;
+        for x in inputs {
+            let error = relative_error(x);
+            assert!(error <= TOLERANCE, "ln({x}): relative error {error}");
+            worst = worst.max(error);
+        }
+        // Measured 2026-10-09: below 1e-15; held at 1e-14 so a regression
+        // shows.
+        assert!(worst < dec!(0.00000000000001), "worst {worst}");
     }
 }
