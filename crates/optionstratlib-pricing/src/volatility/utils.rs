@@ -8,7 +8,7 @@ use crate::error::VolatilityError;
 use num_traits::FromPrimitive;
 #[cfg(test)]
 use num_traits::ToPrimitive;
-use optionstratlib_core::constants::{MAX_VOLATILITY, MIN_VOLATILITY};
+use optionstratlib_core::constants::MIN_VOLATILITY;
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{
     d_add, d_div, d_mul, d_sqrt, d_sub, d_sum, decimal_to_f64, finite_decimal, p_sqrt,
@@ -17,13 +17,15 @@ use optionstratlib_core::model::{ExpirationDate, OptionStyle, OptionType, Option
 use optionstratlib_core::utils::time::TimeFrame;
 use rand::Rng;
 use rand_distr::{Distribution, StandardNormal};
-use rayon::prelude::*;
 use rust_decimal::{Decimal, RoundingStrategy};
 use tracing::instrument;
 
 use crate::pricing::OptionPricing;
 use crate::pricing::black_scholes_model::european_price_band;
 use crate::pricing::constants::IV_TOLERANCE;
+use crate::pricing::iv_solver::{
+    IV_BRACKET_MAX, IvOutcome, iv_initial_guess, long_residual, solve_implied_volatility,
+};
 #[cfg(test)]
 use optionstratlib_core::pos_or_panic;
 
@@ -271,49 +273,39 @@ pub fn ewma_volatility(
 
 /// Calculates the implied volatility of an option given its market price.
 ///
-/// This function uses the Newton-Raphson method to iteratively approximate the implied
-/// volatility that corresponds to the observed market price of the option. The implied
-/// volatility is updated within the `Options` struct provided as a mutable reference.
+/// Returns the volatility at which one long unit of `options` prices
+/// `market_price` under Black-Scholes. `options` is read, not modified.
 ///
 /// # Parameters
 /// - `market_price`: The observed market price of the option.
-/// - `options`: A mutable reference to an `Options` struct, which should contain the necessary
-///   methods and fields such as `implied_volatility`, `calculate_price_black_scholes()`, and `vega()`.
-/// - `max_iterations`: The maximum number of iterations allowed for the Newton-Raphson method.
+/// - `options`: The option whose volatility is implied; its side, quantity
+///   and current `implied_volatility` are ignored.
+/// - `max_iterations`: The maximum number of solver steps.
 ///
 /// # Returns
-/// The function returns the estimated implied volatility of the option.
+/// The implied volatility, in `[MIN_VOLATILITY, 5]`.
 ///
-/// # Remarks
-/// - If the price difference between the calculated and market price is within the tolerated threshold (`TOLERANCE`),
-///   the current implied volatility is returned.
-/// - The function ensures that the implied volatility stays positive.
+/// # Method
+///
+/// The volatility is found by Newton's method on the Black–Scholes vega,
+/// kept inside the bracket `[MIN_VOLATILITY, 5]` with a bisection fallback
+/// (`pricing::iv_solver`, #859 P4); `max_iterations` caps its steps.
+/// It used to be a parallel grid search over `100 * max_iterations`
+/// candidates, which returned the nearest grid point instead of the root.
 ///
 /// # Errors
 ///
-/// The implementation is a parallel grid search over
-/// `100 * max_iterations` candidate volatilities rather than a
-/// Newton–Raphson iteration. It returns
-/// `VolatilityError::IvNotFound` when the best candidate is an edge of the
-/// grid, `1 / (100 * max_iterations)` or `1 - 1 / (100 * max_iterations)`
-/// (the root lies at or beyond it), and when a European target lies outside
+/// Returns `VolatilityError::IvNotFound` when a European target lies outside
 /// the no-arbitrage band of Black–Scholes prices, below
 /// `max(S e^(-qT) - K e^(-rT), 0)` (call) / `max(K e^(-rT) - S e^(-qT), 0)`
-/// (put) or above `S e^(-qT)` / `K e^(-rT)`, widened by `1e-5` (#652);
-/// `VolatilityError::Options` or `VolatilityError::DecimalError` when the
-/// band's discount factors leave the `Decimal` range;
-/// `VolatilityError::NoValidVolatility` when every grid
-/// point failed the Black–Scholes evaluation or the option has expired (at
-/// `T = 0` the price is the intrinsic value whatever the volatility, #843),
-/// and
-/// `VolatilityError::PositiveError` when the boundary `Positive`
-/// conversion fails. Black–Scholes errors on individual candidates
-/// are discarded by the parallel filter rather than propagated.
-///
-/// Returns `VolatilityError::NumericalFailure` when
-/// `100 * max_iterations` overflows `i64` (`max_iterations` at or near
-/// `i64::MAX` or `i64::MIN`), which used to abort a debug build with
-/// `attempt to multiply with overflow` and wrap silently in release.
+/// (put) or above `S e^(-qT)` / `K e^(-rT)`, widened by `1e-5` (#652), when
+/// the target lies outside the prices of the bracket, or when the solver
+/// does not converge within `max_iterations` steps;
+/// `VolatilityError::NoValidVolatility` when the option has expired (at
+/// `T = 0` the price is the intrinsic value whatever the volatility, #843)
+/// or `max_iterations` is not positive; `VolatilityError::Options` or
+/// `VolatilityError::DecimalError` when a price, the band or the arithmetic
+/// fails.
 #[instrument(skip(options), fields(
     market_price = %market_price,
     strike = %options.strike_price,
@@ -325,81 +317,40 @@ pub fn implied_volatility(
     max_iterations: i64,
 ) -> Result<Positive, VolatilityError> {
     // At expiry the price is the intrinsic value for every volatility
-    // (#843), so no grid point implies one. This is the error the grid
-    // returned when Black-Scholes rejected `T = 0` on every candidate.
+    // (#843), so no volatility is implied.
     if options.time_to_expiration()?.is_zero() {
         return Err(VolatilityError::NoValidVolatility);
     }
-    let base_option = options.clone();
-    let iterations =
-        max_iterations
-            .checked_mul(100)
-            .ok_or_else(|| VolatilityError::NumericalFailure {
-                reason: format!(
-                    "implied_volatility: grid size 100 * {max_iterations} overflows i64"
-                ),
-            })?;
-    let result = (1..iterations)
-        .into_par_iter()
-        .map(
-            |i| -> Result<Option<(Positive, Decimal)>, VolatilityError> {
-                let mut option = base_option.clone();
-                option.side = Side::Long; // Ensure the option is long
-                // `1 <= i < iterations`, so `i / iterations` lies in `(0, 1)`:
-                // the `?` cannot fire.
-                let iv = Positive::new(i as f64 / iterations as f64)?;
-                option.implied_volatility = iv;
-
-                // A candidate Black–Scholes rejects is dropped, as documented.
-                let Ok(price) = option.calculate_price_black_scholes() else {
-                    return Ok(None);
-                };
-                let gap = d_sub(price, market_price.to_dec(), "volatility::iv_grid::gap")?;
-                Ok(Some((iv, gap.abs())))
-            },
-        )
-        .filter_map(Result::transpose)
-        // `min_by` with `Ord::cmp`, made fallible: the first of equally
-        // close candidates wins, as `min_by` keeps it.
-        .try_reduce_with(|best, candidate| {
-            Ok(match candidate.1.cmp(&best.1) {
-                std::cmp::Ordering::Less => candidate,
-                _ => best,
-            })
-        })
-        .transpose()?;
-
-    let Some((best_iv, _)) = result else {
+    if max_iterations <= 0 {
         return Err(VolatilityError::NoValidVolatility);
-    };
+    }
+    let base_option = options.clone();
+    let target = market_price.to_dec();
     // A European target outside the no-arbitrage band has no implied
-    // volatility (#652): the argmin would otherwise land on whichever grid
-    // point happens to round nearest, an edge or a point near one.
+    // volatility (#652).
     if matches!(base_option.option_type, OptionType::European) {
         let (lower, upper) = european_price_band(&base_option)
             .map_err(optionstratlib_core::error::OptionsError::from)?;
-        let target = market_price.to_dec();
-        if target < d_sub(lower, IV_TOLERANCE, "volatility::iv_grid::band::lower")?
-            || target > d_add(upper, IV_TOLERANCE, "volatility::iv_grid::band::upper")?
+        if target < d_sub(lower, IV_TOLERANCE, "volatility::iv::band::lower")?
+            || target > d_add(upper, IV_TOLERANCE, "volatility::iv::band::upper")?
         {
             return Err(VolatilityError::IvNotFound);
         }
     }
-    let iv = best_iv.checked_clamp(*MIN_VOLATILITY, MAX_VOLATILITY)?;
-    // The nearest price sits on an edge of the grid: the root is at or
-    // beyond that edge, so the grid did not find it.
-    let lowest = Positive::new(1f64 / iterations as f64)?;
-    let last_point =
-        iterations
-            .checked_sub(1)
-            .ok_or_else(|| VolatilityError::NumericalFailure {
-                reason: format!("implied_volatility: grid size {iterations} has no last point"),
-            })?;
-    let highest = Positive::new(last_point as f64 / iterations as f64)?;
-    if iv == lowest || iv == highest {
-        Err(VolatilityError::IvNotFound)
-    } else {
-        Ok(iv)
+    // A cap above `u32::MAX` iterations is no cap the solver can reach.
+    let cap = u32::try_from(max_iterations).unwrap_or(u32::MAX);
+    let guess = iv_initial_guess(&base_option, target).unwrap_or(IV_BRACKET_MAX);
+    match solve_implied_volatility(
+        *MIN_VOLATILITY,
+        IV_BRACKET_MAX,
+        guess,
+        cap,
+        |sigma, with_slope| long_residual(&base_option, target, sigma, with_slope),
+    )? {
+        IvOutcome::Found(iv) => Ok(iv),
+        IvOutcome::BelowBracket | IvOutcome::AboveBracket | IvOutcome::NoConvergence(_) => {
+            Err(VolatilityError::IvNotFound)
+        }
     }
 }
 
@@ -428,8 +379,8 @@ pub fn implied_volatility(
 /// # Notes
 ///
 /// This function internally creates an `Options` object with the given parameters,
-/// and calls the `implied_volatility` function with the option data. The iteration
-/// limit for the IV calculation is set to 10.
+/// and calls the `implied_volatility` function with the option data. The solver
+/// is capped at 100 steps.
 ///
 /// Ensure that all input parameters are valid and conform to the expected types
 /// and ranges for meaningful results.
@@ -455,7 +406,10 @@ pub fn calculate_iv(
         Positive::ZERO,
         None,
     );
-    implied_volatility(option_price, &mut option, 10)
+    // 100 solver steps: Newton converges in a handful, and the cap leaves
+    // room for the bisection fallback (the grid this replaced read 10 as
+    // 1 000 candidates, #859 P4).
+    implied_volatility(option_price, &mut option, 100)
 }
 
 /// Calculates GARCH(1,1) volatility (simplified).
@@ -1223,10 +1177,16 @@ mod tests_implied_volatility {
         let mut option = create_test_option();
         let market_price = pos_or_panic!(5.0);
 
-        // Test with very low number of iterations
+        // One solver step does not converge. The grid search replaced in
+        // #859 P4 read `1` as 100 candidates and always returned one; the
+        // solver reports that it did not find the root instead.
         let result = implied_volatility(market_price, &mut option, 1);
-        assert!(result.is_ok()); // Should still return a result
+        assert!(
+            matches!(result, Err(VolatilityError::IvNotFound)),
+            "{result:?}"
+        );
 
+        let result = implied_volatility(market_price, &mut option, 100);
         let iv = result.unwrap();
         assert!(iv >= *MIN_VOLATILITY && iv <= MAX_VOLATILITY);
 
@@ -1242,7 +1202,9 @@ mod tests_implied_volatility {
 
         let iv = result.unwrap();
         assert!(iv >= *MIN_VOLATILITY && iv <= MAX_VOLATILITY);
-        assert_pos_relative_eq!(iv, pos_or_panic!(0.437), pos_or_panic!(1e-3));
+        // The grid search replaced in #859 P4 returned the grid point 0.437;
+        // the solver returns the volatility that reprices 5.0.
+        assert_pos_relative_eq!(iv, pos_or_panic!(0.4374518792594474), pos_or_panic!(1e-12));
     }
 
     #[test]

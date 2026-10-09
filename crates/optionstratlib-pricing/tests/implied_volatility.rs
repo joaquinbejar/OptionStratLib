@@ -9,22 +9,22 @@
 //!
 //! # Coverage
 //!
-//! The crate has two solvers, both inverted against Black-Scholes:
+//! Since #859 P4 the three entry points share one solver: Newton's method on
+//! the Black-Scholes vega kept inside `σ ∈ [MIN_VOLATILITY, 5]` with a
+//! bisection fallback, stopping when a step moves `σ` by at most `1e-13`
+//! relative.
 //!
-//! * `OptionPricing::calculate_implied_volatility`: bisection on
-//!   `σ ∈ [0, 5]`, stopping when the repriced value is within `IV_TOLERANCE`
-//!   (`1e-5`, crate-private in `pricing::constants`) of the target or when
-//!   the bracket is narrower than `1e-4`.
-//! * `volatility::calculate_iv` (through `volatility::implied_volatility`
-//!   with 10 iterations): a grid search over `σ = i / 1000`,
-//!   `i = 1, ..., 999`, at `r = q = 0`.
+//! * `OptionPricing::calculate_implied_volatility`: both sides (a short
+//!   target is negated), any rate and dividend.
+//! * `volatility::implied_volatility` and `volatility::calculate_iv` (cap 100
+//!   steps, `r = q = 0`): long targets.
 //!
-//! Round trips price an option at a known `σ`, solve for the volatility from
-//! that price and require the known `σ` back within the solver's own
-//! resolution, across moneyness, maturities, both styles and, for the
-//! bisection, both sides. Error paths cover an expired option, an
-//! out-of-the-money target at the zero-volatility floor, an overflowing grid
-//! size, and targets outside the no-arbitrage band (#652).
+//! Before #859 P4 the first was a bisection to a `1e-5` price tolerance and
+//! a `1e-4` bracket, and the other two a grid search over `σ = i / 1000`.
+//! The round trips below still hold those bounds; the realistic-grid test
+//! holds the shared solver to `1e-12` relative. Error paths cover an expired
+//! option, a target at the volatility floor, a target above the bracket and
+//! targets outside the no-arbitrage band (#652).
 //!
 //! # Sources
 //!
@@ -32,23 +32,20 @@
 //! increasing in `σ` and bounded by `max(S e^(-qT) - K e^(-rT), 0)` at
 //! `σ → 0` and by `S e^(-qT)` (call) or `K e^(-rT)` (put) at `σ → ∞`, so
 //! targets inside the band invert uniquely and targets outside it have no
-//! implied volatility.
+//! implied volatility. Press et al., *Numerical Recipes*, 9.4 (`rtsafe`).
 //!
 //! # Tolerance policy
 //!
-//! The bisection returns when either stopping rule fires, so the recovered
-//! volatility is within the bracket floor `1e-4`, or within
-//! `IV_TOLERANCE / ν` of the true one when the price rule fires first (`ν`
-//! the vega per unit volatility). Where `ν < 0.2` the price rule alone
-//! admits volatility errors above `1e-4` (implied volatility is
-//! ill-conditioned where vega vanishes, e.g. short-dated deep
-//! out-of-the-money options); those grid points are skipped and counted,
-//! and every remaining point is held to `1e-4` (`2 · 1e-5 / 0.2`, the
-//! factor 2 covering the curvature of the price in `σ`). The grid search
-//! picks the grid point whose
-//! price is nearest the target, which for a strictly increasing price is one
-//! of the two grid neighbours of the true `σ`: the bound is one grid step,
-//! `1e-3`. Test volatilities sit off the grid on purpose.
+//! The recovered volatility is the root of the computed price, so its error
+//! against the true `σ` is the price's own rounding error amplified by the
+//! condition number `κ = price / (ν σ)` (`ν` the vega per unit volatility):
+//! `|σ̂ - σ| / σ ≈ κ · ε_price`. Where `κ ≤ 50` the realistic-grid test
+//! requires `1e-12` relative; up to `κ = 1e4` (deep in-the-money options,
+//! whose price is almost all intrinsic value) it requires `κ · 1e-13`
+//! (`ε_price` measured at up to `1.1e-14`), and
+//! beyond that (vega vanishes, `σ` is not identifiable from the price) it
+//! checks nothing. For the bisection-era round trips: within the bracket
+//! floor `1e-4`, or `IV_TOLERANCE / ν` where `ν < 0.2` (skipped, counted).
 
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
@@ -202,6 +199,88 @@ fn test_bisection_round_trip_short_side_recovers_volatility() {
     }
 }
 
+/// Accuracy of the shared solver (#859 P4) against the true volatility:
+/// `S = 100`, `K ∈ {70, 80, 90, 95, 100, 105, 110, 120, 130}`,
+/// `T ∈ {7, 30, 91, 182.5, 365, 730} d`, `σ ∈ {8, 15, 25, 40, 70, 120} %`,
+/// calls and puts, through `calculate_implied_volatility` (`r = 3 %`,
+/// `q = 1 %`, both sides) and `calculate_iv` (`r = q = 0`). See the
+/// tolerance policy for the bound at each condition number `κ`; at least
+/// 1 000 of the 1 296 bisection-entry points must reach `1e-12`.
+#[test]
+fn test_shared_solver_recovers_volatility_on_realistic_grid() {
+    let tight = dec!(1e-12);
+    let mut tight_checked = 0usize;
+    for strike in [70.0, 80.0, 90.0, 95.0, 100.0, 105.0, 110.0, 120.0, 130.0] {
+        for days in [7.0, 30.0, 91.0, 182.5, 365.0, 730.0] {
+            for vol in [0.08, 0.15, 0.25, 0.40, 0.70, 1.20] {
+                let sigma = pos_or_panic!(vol).to_dec();
+                for style in [OptionStyle::Call, OptionStyle::Put] {
+                    for (rate, dividend) in [(dec!(0.03), 0.01), (Decimal::ZERO, 0.0)] {
+                        let long =
+                            european(style, Side::Long, 100.0, strike, days, vol, rate, dividend);
+                        let price = ok(black_scholes(&long), "price");
+                        let slope = vega_per_unit(&long) * sigma;
+                        if price <= Decimal::ZERO || slope <= dec!(1e-20) {
+                            continue;
+                        }
+                        let kappa = price / slope;
+                        if kappa > dec!(1e4) {
+                            continue;
+                        }
+                        let bound = if kappa <= dec!(50) {
+                            tight
+                        } else {
+                            kappa * dec!(1e-13)
+                        };
+                        let ctx = format!(
+                            "{style:?} k={strike} days={days} vol={vol} r={rate} kappa={kappa}"
+                        );
+                        let relative = |solved: Positive| ((solved.to_dec() - sigma) / sigma).abs();
+                        let mut solutions = Vec::new();
+                        if rate.is_zero() {
+                            solutions.push(ok(
+                                calculate_iv(
+                                    ok(Positive::new_decimal(price), "positive price"),
+                                    pos_or_panic!(strike),
+                                    style,
+                                    pos_or_panic!(100.0),
+                                    pos_or_panic!(days),
+                                    "IV".to_string(),
+                                ),
+                                "calculate_iv",
+                            ));
+                        } else {
+                            for side in [Side::Long, Side::Short] {
+                                let opt =
+                                    european(style, side, 100.0, strike, days, vol, rate, dividend);
+                                let target = ok(black_scholes(&opt), "signed price");
+                                solutions.push(ok(
+                                    opt.calculate_implied_volatility(target),
+                                    "calculate_implied_volatility",
+                                ));
+                                if kappa <= dec!(50) {
+                                    tight_checked += 1;
+                                }
+                            }
+                        }
+                        for solved in solutions {
+                            let error = relative(solved);
+                            assert!(
+                                error <= bound,
+                                "{ctx}: recovered {solved}, error {error} > {bound}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(
+        tight_checked >= 1000,
+        "only {tight_checked} points held to 1e-12"
+    );
+}
+
 /// Grid-search round trip through `calculate_iv` (`r = q = 0`):
 /// `S = 100`, `K ∈ {90, 100, 110}`, `T ∈ {30 d, 0.5 y, 1 y}`,
 /// `σ ∈ {12.34, 45.67} %` (off the `1e-3` grid), calls and puts.
@@ -278,11 +357,11 @@ fn test_expired_option_returns_documented_errors() {
     );
 }
 
-/// A zero target for an out-of-the-money call sits at the `σ → 0` floor:
-/// the nearest grid price is the lowest grid point, which the grid search
-/// reports as `IvNotFound`.
+/// A zero target for an out-of-the-money call is already reached at the
+/// volatility floor, so no volatility is implied: `calculate_iv` reports
+/// `IvNotFound`, as the grid search it replaced did at its lowest point.
 #[test]
-fn test_grid_search_target_at_zero_volatility_floor_returns_iv_not_found() {
+fn test_target_at_volatility_floor_returns_iv_not_found() {
     let result = calculate_iv(
         Positive::ZERO,
         pos_or_panic!(120.0),
@@ -297,10 +376,12 @@ fn test_grid_search_target_at_zero_volatility_floor_returns_iv_not_found() {
     );
 }
 
-/// `implied_volatility` sizes its grid as `100 · max_iterations`; an
-/// overflowing product is reported, not wrapped.
+/// `max_iterations` caps solver steps. The grid search sized itself as
+/// `100 · max_iterations` and reported `NumericalFailure` when that
+/// overflowed; the solver clamps a cap above `u32::MAX` and converges in a
+/// handful of steps.
 #[test]
-fn test_grid_search_overflowing_grid_size_returns_numerical_failure() {
+fn test_implied_volatility_huge_iteration_cap_converges() {
     let mut opt = european(
         OptionStyle::Call,
         Side::Long,
@@ -311,11 +392,17 @@ fn test_grid_search_overflowing_grid_size_returns_numerical_failure() {
         Decimal::ZERO,
         0.0,
     );
-    let result = implied_volatility(pos_or_panic!(2.0), &mut opt, i64::MAX);
-    assert!(
-        matches!(result, Err(VolatilityError::NumericalFailure { .. })),
-        "overflowing grid: {result:?}"
+    let target = ok(black_scholes(&opt), "price");
+    let solved = ok(
+        implied_volatility(
+            ok(Positive::new_decimal(target), "positive price"),
+            &mut opt,
+            i64::MAX,
+        ),
+        "huge cap",
     );
+    let error = ((solved.to_dec() - dec!(0.2)) / dec!(0.2)).abs();
+    assert!(error <= dec!(1e-12), "recovered {solved}, error {error}");
 }
 
 /// Targets outside the no-arbitrage band have no implied volatility: a call
@@ -445,11 +532,11 @@ fn test_bisection_target_above_bracket_top_returns_no_convergence() {
     );
 }
 
-/// The grid search reports its top edge as `IvNotFound` like its bottom
-/// edge: a target inside the band whose implied volatility exceeds the grid
-/// (`σ = 1.5 > 0.999`) is not found (#652).
+/// A target whose implied volatility exceeds the old grid (`σ = 1.5 >
+/// 0.999`) used to be `IvNotFound` (#652); the solver's bracket reaches
+/// `σ = 5`, so it is found.
 #[test]
-fn test_grid_search_target_above_grid_top_returns_iv_not_found() {
+fn test_target_above_old_grid_top_is_found() {
     let opt = european(
         OptionStyle::Call,
         Side::Long,
@@ -461,16 +548,17 @@ fn test_grid_search_target_above_grid_top_returns_iv_not_found() {
         0.0,
     );
     let target = ok(black_scholes(&opt), "price");
-    let result = calculate_iv(
-        ok(Positive::new_decimal(target), "positive price"),
-        pos_or_panic!(100.0),
-        OptionStyle::Call,
-        pos_or_panic!(100.0),
-        pos_or_panic!(365.0),
-        "IV".to_string(),
+    let solved = ok(
+        calculate_iv(
+            ok(Positive::new_decimal(target), "positive price"),
+            pos_or_panic!(100.0),
+            OptionStyle::Call,
+            pos_or_panic!(100.0),
+            pos_or_panic!(365.0),
+            "IV".to_string(),
+        ),
+        "calculate_iv",
     );
-    assert!(
-        matches!(result, Err(VolatilityError::IvNotFound)),
-        "target above the grid top: {result:?}"
-    );
+    let error = ((solved.to_dec() - dec!(1.5)) / dec!(1.5)).abs();
+    assert!(error <= dec!(1e-12), "recovered {solved}, error {error}");
 }
