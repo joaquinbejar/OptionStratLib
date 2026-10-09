@@ -15,7 +15,6 @@
 use crate::error::probability::{
     ExpirationErrorKind, PriceErrorKind, ProbabilityCalculationErrorKind, ProbabilityError,
 };
-use num_traits::ToPrimitive;
 use optionstratlib_core::f2du;
 use optionstratlib_core::model::ExpirationDate;
 use optionstratlib_core::model::Positive;
@@ -228,7 +227,7 @@ pub fn calculate_single_point_probability(
     }
     let volatility = volatility
         .base_volatility
-        .checked_mul_f64(1.0 + volatility.std_dev_adjustment.to_f64())?;
+        .checked_mul_f64(1.0 + decimal_to_f64(volatility.std_dev_adjustment.into())?)?;
 
     // Adjust drift rate based on trend if provided
     let drift_rate = match trend {
@@ -240,7 +239,7 @@ pub fn calculate_single_point_probability(
             // `f64`.
             let trend_drift = trend_field_to_f64("drift_rate", t.drift_rate)?;
             let confidence = trend_field_to_f64("confidence", t.confidence)?;
-            let rf = risk_free.to_f64().ok_or_else(|| {
+            let rf = decimal_to_f64(risk_free).map_err(|_| {
                 ProbabilityError::CalculationError(
                     ProbabilityCalculationErrorKind::ExpectedValueError {
                         reason: format!(
@@ -251,7 +250,7 @@ pub fn calculate_single_point_probability(
             })?;
             rf + (trend_drift * confidence)
         }
-        None => risk_free.to_f64().ok_or_else(|| {
+        None => decimal_to_f64(risk_free).map_err(|_| {
             ProbabilityError::CalculationError(
                 ProbabilityCalculationErrorKind::ExpectedValueError {
                     reason: format!(
@@ -275,7 +274,7 @@ pub fn calculate_single_point_probability(
     // Calculate z-score considering drift
     // `Positive::ln` returns `Decimal` as of positive 0.6: the log of a
     // positive number is not necessarily positive.
-    let log_ratio_f = log_ratio.to_f64().ok_or_else(|| {
+    let log_ratio_f = decimal_to_f64(log_ratio).map_err(|_| {
         ProbabilityError::CalculationError(ProbabilityCalculationErrorKind::ExpectedValueError {
             reason: format!(
                 "calculate_single_point_probability: log ratio {log_ratio} not representable as f64"
@@ -286,14 +285,17 @@ pub fn calculate_single_point_probability(
     // drifts at `mu - sigma^2 / 2` (Ito). With `mu = r` the threshold is
     // `-d2` and `P(S_T < K) = N(-d2)` (Hull, ch. 15); omitting the convexity
     // term understated it for every `sigma > 0` (#664).
-    let sigma = volatility.to_f64();
+    let sigma = decimal_to_f64(volatility.to_dec())?;
     let log_drift = drift_rate - sigma * sigma / 2.0;
-    let z_score: Decimal =
-        f2du!((log_ratio_f - log_drift * time_to_expiry.to_f64()) / std_dev.to_f64())?;
+    let z_score: Decimal = f2du!(
+        (log_ratio_f - log_drift * decimal_to_f64(time_to_expiry.to_dec())?)
+            / decimal_to_f64(std_dev.to_dec())?
+    )?;
 
     // Calculate probabilities using the standard normal distribution
     let prob_below: Positive = Positive::new_decimal(big_n(z_score)?).unwrap_or(Positive::ZERO);
-    let prob_above: Positive = Positive::new(1.0 - prob_below.to_f64()).unwrap_or(Positive::ZERO);
+    let prob_above: Positive =
+        Positive::new(1.0 - decimal_to_f64(prob_below.to_dec())?).unwrap_or(Positive::ZERO);
 
     Ok((prob_below, prob_above))
 }
@@ -386,18 +388,23 @@ pub fn calculate_price_probability(
     // returned a triple summing to 1.5 instead of 1, so it is reported
     // (#570, same rule as `ProfitLossRange::calculate_probability`, #569).
     let prob_below_range = prob_below_lower;
-    let prob_in_range = prob_below_upper
-        .sub_or_none(prob_below_lower.to_dec_ref())
-        .ok_or_else(|| {
-            ProbabilityError::CalculationError(
+    let prob_in_range = match prob_below_upper.sub_or_none(prob_below_lower.to_dec_ref()) {
+        Some(probability) => probability,
+        None => {
+            // The reported gap is formed from the nearest `f64` of each
+            // probability (#828); a failed conversion is its own error.
+            let value = decimal_to_f64(prob_below_upper.to_dec())?
+                - decimal_to_f64(prob_below_lower.to_dec())?;
+            return Err(ProbabilityError::CalculationError(
                 ProbabilityCalculationErrorKind::InvalidProbability {
-                    value: prob_below_upper.to_f64() - prob_below_lower.to_f64(),
+                    value,
                     reason: format!(
                         "probability below the upper bound {upper_bound}                          ({prob_below_upper}) is smaller than below the lower bound                          {lower_bound} ({prob_below_lower}); the inputs are outside                          the precision of the price model"
                     ),
                 },
-            )
-        })?;
+            ));
+        }
+    };
     let prob_above_range = prob_above_upper;
 
     Ok((prob_below_range, prob_in_range, prob_above_range))

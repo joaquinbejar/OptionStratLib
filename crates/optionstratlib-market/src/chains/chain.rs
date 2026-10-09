@@ -16,7 +16,7 @@ use chrono::Utc;
 use num_traits::{FromPrimitive, ToPrimitive};
 use optionstratlib_core::impl_json_debug;
 use optionstratlib_core::model::Positive;
-use optionstratlib_core::model::decimal::{d_add, d_div, d_sub};
+use optionstratlib_core::model::decimal::{d_add, d_div, d_sub, decimal_to_f64};
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Position, Side,
     reject_unrepresentable_expiration,
@@ -586,7 +586,7 @@ impl OptionChain {
         ) -> Result<PricedStrike, ChainError> {
             if p.implied_volatility > Positive::ONE {
                 return Err(ChainError::invalid_volatility(
-                    Some(p.implied_volatility.to_f64()),
+                    decimal_to_f64(p.implied_volatility.to_dec()).ok(),
                     &format!(
                         "Implied volatility should be between 0 and 1, got: {}",
                         p.implied_volatility
@@ -800,10 +800,14 @@ impl OptionChain {
     /// are confined to this numeric kernel; the outputs are `Decimal`.
     fn fit_skew_smile(&self) -> Option<(Decimal, Decimal)> {
         let atm_iv = match self.get_atm_implied_volatility() {
-            Ok(iv) if *iv > Positive::ZERO && *iv <= Positive::ONE => iv.to_f64(),
+            // The nearest `f64` (#828); an IV it cannot convert leaves the fit
+            // underdetermined, the documented `None`.
+            Ok(iv) if *iv > Positive::ZERO && *iv <= Positive::ONE => {
+                decimal_to_f64(iv.to_dec()).ok()?
+            }
             _ => return None,
         };
-        let spot = self.underlying_price.to_f64();
+        let spot = decimal_to_f64(self.underlying_price.to_dec()).ok()?;
         if !spot.is_finite() || spot <= 0.0 {
             return None;
         }
@@ -818,11 +822,11 @@ impl OptionChain {
         let mut sy2 = 0.0f64;
         let mut count = 0usize;
         for option in &self.options {
-            let iv = option.implied_volatility.to_f64();
+            let iv = decimal_to_f64(option.implied_volatility.to_dec()).ok()?;
             if iv <= 0.0 {
                 continue;
             }
-            let m = (option.strike_price.to_f64() / spot).ln(); // scan-banned: allow -- f64 `ln`: returns -inf/NaN, it does not abort; the `is_finite` guard on the next line drops the point
+            let m = (decimal_to_f64(option.strike_price.to_dec()).ok()? / spot).ln(); // scan-banned: allow -- f64 `ln`: returns -inf/NaN, it does not abort; the `is_finite` guard on the next line drops the point
             if !m.is_finite() {
                 continue;
             }
@@ -2897,7 +2901,7 @@ impl OptionChain {
         if self.options.is_empty() {
             return Err(ChainError::OptionDataError(
                 OptionDataErrorKind::InvalidDelta {
-                    delta: target_delta.to_f64(),
+                    delta: decimal_to_f64(target_delta).ok(),
                     reason: "Option chain is empty".to_string(),
                 },
             ));
@@ -2940,7 +2944,7 @@ impl OptionChain {
 
             return Err(ChainError::OptionDataError(
                 OptionDataErrorKind::InvalidDelta {
-                    delta: target_delta.to_f64(),
+                    delta: decimal_to_f64(target_delta).ok(),
                     reason: message,
                 },
             ));
@@ -2966,7 +2970,7 @@ impl OptionChain {
                     .map_err(|e| {
                         error!("Failed to create position: {}", e);
                         ChainError::OptionDataError(OptionDataErrorKind::InvalidDelta {
-                            delta: delta.to_f64(),
+                            delta: decimal_to_f64(delta).ok(),
                             reason: format!("Failed to create position: {e}"),
                         })
                     })
@@ -2976,7 +2980,7 @@ impl OptionChain {
                 // but included for completeness
                 Err(ChainError::OptionDataError(
                     OptionDataErrorKind::InvalidDelta {
-                        delta: target_delta.to_f64(),
+                        delta: decimal_to_f64(target_delta).ok(),
                         reason: "Unexpected error when selecting option with closest delta"
                             .to_string(),
                     },
@@ -3149,7 +3153,10 @@ impl OptionChainParams for OptionChain {
             .find(|option| option.strike_price == strike_price);
         if option.is_none() {
             let reason = format!("Option with strike price {strike_price} not found");
-            return Err(ChainError::invalid_strike(strike_price.to_f64(), &reason));
+            return Err(ChainError::invalid_strike(
+                decimal_to_f64(strike_price.to_dec())?,
+                &reason,
+            ));
         }
         Ok(OptionDataPriceParams::new(
             Some(Box::new(self.underlying_price)),

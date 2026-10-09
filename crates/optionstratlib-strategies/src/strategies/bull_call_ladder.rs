@@ -8,6 +8,7 @@ use crate::strategies::shared::decimal_from_f64;
 use crate::strategies::shared::measured_max_profit;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor, delta_neutral::DeltaNeutrality,
@@ -842,7 +843,7 @@ impl Strategies for BullCallLadder {
             "BullCallLadder::get_profit_area base_high",
         )?;
         let base_high = Positive::new_decimal(base_high_dec)?;
-        decimal_from_f64((base_low.to_f64() + base_high.to_f64()) * max_profit.to_f64() / 2.0)
+        decimal_from_f64((f64_of(base_low)? + f64_of(base_high)?) * f64_of(max_profit)? / 2.0)
     }
 
     fn get_profit_ratio(&self) -> Result<Decimal, StrategyError> {

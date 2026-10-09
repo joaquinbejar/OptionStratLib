@@ -15,7 +15,6 @@ use optionstratlib_core::pos_or_panic;
 use crate::error::strategies::StrategyError;
 use crate::strategies::base::Strategies;
 use crate::strategies::probabilities::analysis::StrategyProbabilityAnalysis;
-use num_traits::ToPrimitive;
 use optionstratlib_analytics::analytics::ProfitLossRange;
 use optionstratlib_analytics::analytics::probability::{
     PriceTrend, VolatilityAdjustment, calculate_single_point_probability,
@@ -23,6 +22,7 @@ use optionstratlib_analytics::analytics::probability::{
 use optionstratlib_analytics::error::probability::{
     ProbabilityCalculationErrorKind, ProbabilityError,
 };
+use optionstratlib_core::model::decimal::decimal_to_f64;
 use optionstratlib_pricing::pricing::Profit;
 use rust_decimal::Decimal;
 use tracing::warn;
@@ -280,19 +280,26 @@ pub trait ProbabilityAnalysis: Strategies + Profit {
             // value weighted by a distribution that does not sum to one, so it
             // is reported (#570, same rule as
             // `ProfitLossRange::calculate_probability`, #569).
-            let marginal_prob = prob.0.sub_or_none(&last_prob).ok_or_else(|| {
-                ProbabilityError::CalculationError(
-                    ProbabilityCalculationErrorKind::InvalidProbability {
-                        value: prob.0.to_f64() - last_prob.to_f64().unwrap_or(f64::NAN),
-                        reason: format!(
-                            "cumulative probability at {price} ({}) is smaller than at \
-                             the previous price ({last_prob}); the inputs are outside \
-                             the precision of the price model",
-                            prob.0
-                        ),
-                    },
-                )
-            })?;
+            let marginal_prob = match prob.0.sub_or_none(&last_prob) {
+                Some(marginal) => marginal,
+                None => {
+                    // The reported gap is formed from the nearest `f64` of
+                    // each probability (#828); a failed conversion is its own
+                    // error rather than a NaN payload.
+                    let value = decimal_to_f64(prob.0.to_dec())? - decimal_to_f64(last_prob)?;
+                    return Err(ProbabilityError::CalculationError(
+                        ProbabilityCalculationErrorKind::InvalidProbability {
+                            value,
+                            reason: format!(
+                                "cumulative probability at {price} ({}) is smaller than at \
+                                 the previous price ({last_prob}); the inputs are outside \
+                                 the precision of the price model",
+                                prob.0
+                            ),
+                        },
+                    ));
+                }
+            };
             probabilities.push(marginal_prob);
             last_prob = prob.0.to_dec();
         }
