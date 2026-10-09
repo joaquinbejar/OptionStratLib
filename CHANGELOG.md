@@ -3188,6 +3188,26 @@ summarize the release.
 
 ### Changed
 
+- **The walk kernels take their per-step exponential and square root in
+  `f64`** (#860, S1). Each step of the geometric Brownian, log-returns,
+  GARCH, Heston and telegraph walks paid a 28-place `Decimal` `exp`
+  (about 0.8 µs), and GARCH and Heston a `Decimal` `sqrt`. By owner
+  decision (tolerance 1e-12 relative against the `Decimal` result) the new
+  `d_exp_f64`, with `d_exp`'s contract (zero below the range, an error
+  above it), and `d_sqrt_f64`, correctly rounded on every platform, take
+  their place; the path state stays `Decimal`. The telegraph walk's two
+  transition probabilities depend only on its state and are now computed
+  once per path, with the same operations. The seeded pins of those five
+  walks, of the seeded GBM simulator, its exit P&L and its Monte-Carlo
+  price hold within 1e-12 against the values the `Decimal` kernels
+  produced (`tests/deterministic_simulation_test.rs`, which documents why
+  they are no longer bit for bit: libm's `exp` may differ in the last bit
+  between targets); counts, exits, holding periods and the other walks stay
+  exact. Criterion on flumix (i7-12650H, idle), A/B in one session, 1008
+  steps: geometric Brownian 1.87 ms to 0.67 ms, log returns 1.89 ms to
+  0.65 ms, GARCH 3.41 ms to 1.11 ms, Heston 6.25 ms to 2.07 ms, telegraph
+  2.92 ms to 0.69 ms.
+
 - **Seven chain exposures read the stored greek snapshots** (#861, K2).
   `vega_exposure`, `theta_exposure`, `vanna_exposure`, `vomma_exposure`,
   `veta_exposure`, `charm_exposure` and `color_exposure` built two

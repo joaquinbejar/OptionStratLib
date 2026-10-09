@@ -34,6 +34,20 @@
 //!
 //! An unseeded walk keeps drawing from the thread RNG and is reproducible
 //! only in distribution; it is checked here only to differ run to run.
+//!
+//! # Within 1e-12 since #860 S1
+//!
+//! The geometric Brownian, log-returns, GARCH, Heston and telegraph walks
+//! take their per-step exponential, and GARCH and Heston their per-step
+//! square root, in `f64` since #860 (owner decision, 2026-10-09). The `f64`
+//! square root is correctly rounded everywhere, but the exponential comes
+//! from the platform's libm, whose last bit may differ between targets. So
+//! their price and volatility paths, the seeded simulator built on the GBM
+//! walk, its exit P&L and its Monte-Carlo price are compared with the pins
+//! below, which the `Decimal` kernels produced, within [`F64_TOLERANCE`].
+//! Exit reasons, holding periods and counts stay exact, as do the Brownian,
+//! mean-reverting, jump-diffusion and custom walks and every same-platform
+//! repetition.
 
 use optionstratlib_core::model::types::{OptionStyle, OptionType, Side};
 use optionstratlib_core::model::{ExpirationDate, Options, Positive};
@@ -224,12 +238,44 @@ fn assert_bit_identical(actual: &[Decimal], expected: &[Decimal], what: &str) {
     );
 }
 
+/// The owner's bound for the `f64` walk kernels (#860): relative above
+/// one, absolute below it.
+const F64_TOLERANCE: Decimal = dec!(0.000000000001);
+
+fn assert_close(actual: &[Decimal], expected: &[Decimal], what: &str) {
+    assert_eq!(actual.len(), expected.len(), "{what}: length");
+    for (index, (a, e)) in actual.iter().zip(expected).enumerate() {
+        let scale = e.abs().max(Decimal::ONE);
+        assert!(
+            (*a - *e).abs() <= F64_TOLERANCE * scale,
+            "{what}[{index}]: {a} is not within 1e-12 of {e}"
+        );
+    }
+}
+
+/// Whether the walk takes a per-step exponential or square root in `f64`.
+fn uses_f64_kernel(walk_type: &WalkType) -> bool {
+    matches!(
+        walk_type,
+        WalkType::GeometricBrownian { .. }
+            | WalkType::LogReturns { .. }
+            | WalkType::Garch { .. }
+            | WalkType::Heston { .. }
+            | WalkType::Telegraph { .. }
+    )
+}
+
 fn assert_pinned(walk_type: WalkType, prices: &[Decimal], vols: Option<&[Decimal]>) {
+    let compare = if uses_f64_kernel(&walk_type) {
+        assert_close
+    } else {
+        assert_bit_identical
+    };
     let path = generate(walk_type, Some(SEED));
-    assert_bit_identical(&decimals(&path.prices), prices, "price path");
+    compare(&decimals(&path.prices), prices, "price path");
     match (path.vols.as_deref(), vols) {
         (Some(actual), Some(expected)) => {
-            assert_bit_identical(&decimals(actual), expected, "volatility path");
+            compare(&decimals(actual), expected, "volatility path");
         }
         (None, None) => {}
         (actual, expected) => panic!("volatility path {actual:?}, expected {expected:?}"),
@@ -897,7 +943,7 @@ fn test_deterministic_walk_steps_par_equals_walk_steps_for_every_walk_type() {
 fn test_deterministic_simulator_seeded_walks_match_pinned() {
     let sim = seeded_simulator();
     assert_eq!(sim.len(), SIMULATOR_WALKS);
-    assert_bit_identical(
+    assert_close(
         &terminal_prices(&sim),
         &[
             dec!(96.54708383850050583758680556),
@@ -945,27 +991,43 @@ fn test_deterministic_exit_outcomes_and_statistics_match_pinned() {
                 outcome.holding_period, *holding_period,
                 "{policy:?}: holding"
             );
-            assert_bit_identical(&[outcome.pnl.unwrap_or(Decimal::MIN)], &[*pnl], "path P&L");
+            assert_close(&[outcome.pnl.unwrap_or(Decimal::MIN)], &[*pnl], "path P&L");
         }
 
         let stats = PathStatistics::from_outcomes(&outcomes)
             .unwrap_or_else(|e| panic!("{policy:?}: statistics failed: {e}"));
-        assert_eq!(stats, expected_stats, "{policy:?}: statistics drifted");
-        let decimal_fields = |s: &PathStatistics| {
-            bits(&[
+        // Counts and the count-derived fields stay exact; the P&L figures
+        // come from the `f64` GBM walk (#860).
+        assert_eq!(
+            (stats.total_paths, stats.profitable_count, stats.loss_count),
+            (
+                expected_stats.total_paths,
+                expected_stats.profitable_count,
+                expected_stats.loss_count
+            ),
+            "{policy:?}: counts drifted"
+        );
+        assert_bit_identical(
+            &[stats.win_rate, stats.average_holding_period],
+            &[
+                expected_stats.win_rate,
+                expected_stats.average_holding_period,
+            ],
+            "{policy:?}: count-derived statistics",
+        );
+        let pnl_fields = |s: &PathStatistics| {
+            [
                 s.average_pnl,
                 s.median_pnl,
                 s.std_dev_pnl,
                 s.best_pnl,
                 s.worst_pnl,
-                s.win_rate,
-                s.average_holding_period,
-            ])
+            ]
         };
-        assert_eq!(
-            decimal_fields(&stats),
-            decimal_fields(&expected_stats),
-            "{policy:?}: statistics changed representation"
+        assert_close(
+            &pnl_fields(&stats),
+            &pnl_fields(&expected_stats),
+            "P&L statistics",
         );
     }
 }
@@ -995,5 +1057,5 @@ fn test_deterministic_seeded_mc_price_matches_pinned() {
     // `Decimal`, which moves the mean by `8.0e-16` from
     // `2.3259914839804568426769173659`.
     let pinned = dec!(2.3259914839804576472702068362);
-    assert_bit_identical(&[price], &[pinned], "Monte-Carlo price");
+    assert_close(&[price], &[pinned], "Monte-Carlo price");
 }
