@@ -306,6 +306,11 @@ migration guide the replacement workflow.
   in a pricing kernel is a typed `PricingError` instead of a substituted
   value (#639); Heston and telegraph walk overflow is a `SimulationError`
   instead of a panic (#686).
+- **No panics outside tests.** Every production path of every crate returns
+  a typed error instead of panicking (#788), and each crate denies the
+  arithmetic-side-effect and cast lints (#808) and `clippy::or_fun_call`
+  (#857). `Expirable::expiration_timestamp` and `is_expired` return
+  `Result` (#810).
 - **Capabilities move to traits.** `Options` lost its inherent pricing
   methods; use `OptionPricing` and `Greeks` (#499). `Strategable` no longer
   requires `Graph`, and `Simulator` / `RandomWalk` no longer implement
@@ -328,19 +333,29 @@ migration guide the replacement workflow.
   `TryFrom` (#765).
 - **Analytics.** `PriceTrend` has private fields and `PriceTrend::new`
   (#656); the probability kernels take a required `VolatilityAdjustment`
-  (#619); `expected_value` is a signed `Decimal` (#623).
+  (#619); `expected_value` is a signed `Decimal` (#623); the risk-neutral
+  density analysis returns its own `RNDError` (#829);
+  `RiskMetrics::beta` is renamed `coefficient_of_variation` (#824); the
+  chain metric surfaces return `InvalidParameters` where they made up an
+  ATM volatility or a zero-day value (#822).
 - **Market data.** `strike_price_range_vec` works in `Positive` (#642);
   `OptionChain::show()` is removed and `Display for OptionChain` writes a
-  plain-text table (#546); `chains::generator_positive` is gone (#512).
+  plain-text table (#546); `chains::generator_positive` is gone (#512);
+  `load_from_csv` rejects a file name without chain metadata instead of
+  loading symbol `"unknown"` at spot 0 (#827); `OptionSeries` keeps every
+  expired expiry (#825).
 - **Pricing inputs.** `Payoff::payoff` returns `OptionsResult<Decimal>` and
   `PayoffInfo` takes `Positive` spots (#637); Garman-Kohlhagen reads
   `ExoticParams::foreign_rate` (#720); a negative risk-free rate is valid
   (#709); `uncertain_volatility_bounds` returns signed `Decimal` bounds
-  (#715).
+  (#715); `PayoffInfo` gains `exotic_params` (#844); `numerical_theta` is
+  implemented (#796).
 - **Backtests and charts.** `SimulationStats` sums `PnL::total_pnl` and
   reports through `statistics()` (#691, #677); the `print_*` methods move to
   `visualization::terminal::SimulationReport` (#546); `Plottable` has no
-  `Error` type (#543).
+  `Error` type (#543). `WalkTypeAble` is `Send + Sync`, and
+  `Simulator::new` and the single-leg `Simulate` implementations require
+  `Send + Sync` inputs (#860, #863).
 - **Logging.** `setup_logger` and `setup_logger_with_level` are removed; the
   library no longer depends on `tracing-subscriber` (#506, #545).
 
@@ -381,7 +396,8 @@ gives what to do for each.
 - **Rust 1.89 or newer**, edition 2024, stable toolchain. Every published
   crate declares `rust-version = "1.89"` (#559), which the `uuid` 1.27 and
   `statrs` 0.19.1 the crates require need.
-- The public API exposes `utoipa` 6, `positive` 0.7, `expiration_date` 0.4,
+- The public API exposes `utoipa` 6, `positive` 0.7, `expiration_date` 0.4
+  (0.4.2 or newer, #825),
   `option_type` 0.4 and `financial_types` 0.3; a consumer naming their types
   must use the same lines. The facade itself no longer depends on
   `positive`: `Positive` comes from `optionstratlib-core` (#556).
@@ -425,8 +441,19 @@ says whether any value moves.
   lookbacks Conze-Viswanathan (#647), a gap put prices as a put (#649),
   quanto reads the foreign rate and Kirk's spread the second dividend yield
   (#650), a compound at its own expiry values the underlying at its payoff
-  (#639), Garman-Kohlhagen uses `foreign_rate` when set (#720).
-- **Monte Carlo and paths:** supplied-path Monte Carlo discounts at the
+  (#639), Garman-Kohlhagen uses `foreign_rate` when set (#720). The
+  compound's Geske price values the underlying in the compound's own style,
+  solves the critical spot and uses an exact bivariate normal, so it is
+  continuous at expiry (#845), and at zero volatility it is the
+  deterministic value (#867). A spread put struck near zero is the exchange
+  put (#852). Every exotic prices at expiry through `black_scholes()`, and
+  a European option at `T = 0` is its intrinsic value (#843); an unhit
+  knock-in pays its rebate at expiry (#826); exotic theta and vega come
+  from each option's own pricer (#817); the geometric Asian averages its
+  fixings as a log-sum (#806).
+- **Monte Carlo and paths:** `monte_carlo_option_pricing` prices puts and
+  short positions by their own payoff (#864); supplied-path Monte Carlo
+  discounts at the
   risk-free rate (#651); path-based pricers include the dividend yield in
   the drift (#756); the telegraph pricer is a Monte Carlo expectation with
   regime volatility (#743, #755).
@@ -439,7 +466,11 @@ says whether any value moves.
   report partial cover correctly (#765); put spreads price their textbook
   payoff (#696) and butterflies their 1/2/1 payoff (#706);
   `uncertain_volatility_bounds` gives a short position its negative bounds
-  instead of `(0, 0)` (#715).
+  instead of `(0, 0)` (#715); the iron condor and iron butterfly
+  optimisers keep the input's fees at any quantity instead of compounding
+  them along the search (#875).
+- **Risk metrics:** a `Curve`'s risk volatility is the population standard
+  deviation, so its VaR, expected shortfall and Sharpe ratio move (#840).
 - **Conversions:** `decimal_to_f64` is correctly rounded (#670).
 - **Payoffs:** `Options::payoff` and P&L are each family's terminal payoff,
   the pricing kernel's value at `T = 0`, signed by the side; the vanilla
@@ -488,3 +519,29 @@ production code and other changes besides the crate split, so the deltas
 do not isolate the split's own effect. No runtime performance comparison
 with 0.21 is claimed; the 0.22 Criterion results are in
 [`benchmarks.md`](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/benchmarks.md).
+
+## Runtime improvements within 0.22
+
+The first full Criterion run over every library crate (#789,
+[`benchmarks.md`](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.22/benchmarks.md))
+found the bottlenecks below; each fix keeps every result bit for bit, which
+its tests assert against the previous code. Medians before and after
+within one session on one host, so they compare 0.22 with itself, not with
+0.21.
+
+| Change | Benchmark | Before | After |
+| --- | --- | ---: | ---: |
+| Black-Scholes computes `d1` once (#859) | `black_scholes` | 20.7 µs | 12.1 µs |
+| Monte Carlo hoists `sqrt(dt)` (#859) | 30 steps x 10 000 paths | 418 ms | 132 ms |
+| Buffered chain JSON I/O (#861) | `save_to_json/101` | 4.77 ms | 154 µs |
+| Chain strikes on the rayon pool (#861) | `build_chain/201` | 16.75 ms | 3.60 ms |
+| Lazy conversion errors (#857) | `f64_to_decimal` | 149 ns | 80 ns |
+| Interpolation brackets in O(log n) (#858) | curve `linear/2048` | 39.4 µs | 0.50 µs |
+| `Curve::intersect_with` in O(n + m) (#858) | `curve_intersect_with/512` | 5.10 ms | 18.6 µs |
+| `Simulator::new` on the rayon pool (#860) | 1000 walks x 30 steps | 37.5 ms | 2.95 ms |
+| Optimisers build each candidate once, in parallel (#862) | iron condor on SP500 | 626 ms | 100 ms |
+| Single-leg backtest paths in parallel (#863) | long call, 1000 paths | 355 ms | 51.8 ms |
+
+Hosts: flumix (i7-12650H, 16 threads, idle) for #857, #859, #861 and #863;
+an Apple M5 Max under load for #858, #860 and #862, so those medians carry
+the host's load. Each CHANGELOG entry has the full tables.
