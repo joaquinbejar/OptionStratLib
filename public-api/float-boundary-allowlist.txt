@@ -10,7 +10,7 @@ pub const optionstratlib_core::constants::STRIKE_PRICE_LOWER_BOUND_MULTIPLIER: f
 pub const optionstratlib_core::constants::STRIKE_PRICE_UPPER_BOUND_MULTIPLIER: f64 # dimensionless strike-range factor (1.02)
 pub const optionstratlib_core::constants::ZERO: f64 # float zero for kernel comparisons
 pub fn optionstratlib_core::model::decimal::finite_decimal(f64) -> core::option::Option<rust_decimal::decimal::Decimal> # the checked f64 -> Decimal conversion every kernel uses
-pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> alloc::vec::Vec<f64> # explicit conversion helper for plotting and statistics inputs
+pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<f64>, optionstratlib_core::error::DecimalError> # explicit conversion helper for plotting and statistics inputs
 pub fn optionstratlib_core::utils::numeric::approx_equal(f64, f64) -> bool # float tolerance comparison
 pub fn optionstratlib_core::utils::approx_equal(f64, f64) -> bool # float tolerance comparison (root re-export)
 pub fn optionstratlib_math::surfaces::Surface::get_f64_points(&self) -> alloc::vec::Vec<(f64, f64, f64)> # explicit export to f64 for plotting backends

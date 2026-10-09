@@ -760,7 +760,7 @@ pub fn optionstratlib_core::model::utils::create_sample_option_with_days(financi
 pub fn optionstratlib_core::model::utils::create_sample_position(financial_types::OptionStyle, financial_types::Side, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive, positive::positive::Positive) -> optionstratlib_core::model::position::Position
 pub fn optionstratlib_core::model::utils::generate_price_points(rust_decimal::decimal::Decimal, rust_decimal::decimal::Decimal, usize) -> core::result::Result<alloc::vec::Vec<rust_decimal::decimal::Decimal>, optionstratlib_core::error::DecimalError>
 pub fn optionstratlib_core::model::utils::mean_and_std(alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<(positive::positive::Positive, positive::positive::Positive), positive::error::PositiveError>
-pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> alloc::vec::Vec<f64>
+pub fn optionstratlib_core::model::utils::positive_f64_to_f64(alloc::vec::Vec<positive::positive::Positive>) -> core::result::Result<alloc::vec::Vec<f64>, optionstratlib_core::error::DecimalError>
 #[repr(u8)] pub enum optionstratlib_core::model::BasicAxisTypes
 pub optionstratlib_core::model::BasicAxisTypes::Charm
 pub optionstratlib_core::model::BasicAxisTypes::Color
