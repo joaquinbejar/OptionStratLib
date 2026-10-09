@@ -21,6 +21,7 @@ use crate::strategies::base::{lower_break_even, price_gap};
 use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{aggregate_fees, decimal_from_f64};
 use crate::strategies::shared::{measured_max_loss, measured_max_profit};
@@ -903,23 +904,21 @@ impl Strategies for IronButterfly {
     fn get_profit_area(&self) -> Result<Decimal, StrategyError> {
         // Short strikes crossed, or long strikes narrower than the short
         // ones, describe a body with no width rather than a negative one.
-        let inner_width = price_gap(
+        let inner_width = f64_of(price_gap(
             self.short_call.option.strike_price,
             self.short_put.option.strike_price,
-        )
-        .to_f64();
-        let outer_width = price_gap(
+        ))?;
+        let outer_width = f64_of(price_gap(
             self.long_call.option.strike_price,
             self.long_put.option.strike_price,
-        )
-        .to_f64();
-        let height = measured_max_profit(self)?.to_f64();
+        ))?;
+        let height = f64_of(measured_max_profit(self)?)?;
 
         let inner_area = inner_width * height;
         let outer_triangles = (outer_width - inner_width) * height / 2.0;
 
         let result =
-            (inner_area + outer_triangles) / self.short_call.option.underlying_price.to_f64();
+            (inner_area + outer_triangles) / f64_of(self.short_call.option.underlying_price)?;
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
@@ -929,7 +928,7 @@ impl Strategies for IronButterfly {
         match (max_profit, max_loss) {
             (value, _) if value == Positive::ZERO => Ok(Decimal::ZERO),
             (_, value) if value == Positive::ZERO => Ok(Decimal::MAX),
-            _ => decimal_from_f64(max_profit.to_f64() / max_loss.to_f64() * 100.0),
+            _ => decimal_from_f64(f64_of(max_profit)? / f64_of(max_loss)? * 100.0),
         }
     }
 }

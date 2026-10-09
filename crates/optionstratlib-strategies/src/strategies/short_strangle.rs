@@ -1,5 +1,6 @@
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::shared::{is_extreme_sign_error, measured_max_profit};
 use optionstratlib_core::model::Positive;
@@ -780,7 +781,7 @@ impl Strategies for ShortStrangle {
     }
 
     fn get_max_profit(&self) -> Result<Positive, StrategyError> {
-        let max_profit = self.get_net_premium_received()?.to_f64();
+        let max_profit = f64_of(self.get_net_premium_received()?)?;
         if max_profit < ZERO {
             Err(StrategyError::ProfitLossError(
                 ProfitLossErrorKind::MaxProfitError {
@@ -820,10 +821,11 @@ impl Strategies for ShortStrangle {
         let break_even_diff = price_gap(upper, lower);
         let outer_square = break_even_diff.checked_mul(&max_profit)?;
         let triangles = price_gap(outer_square, inner_square).checked_div_f64(2.0)?;
-        let result = inner_square
-            .checked_add(&triangles)?
-            .checked_div(&self.short_call.option.underlying_price)?
-            .to_f64();
+        let result = f64_of(
+            inner_square
+                .checked_add(&triangles)?
+                .checked_div(&self.short_call.option.underlying_price)?,
+        )?;
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
 
@@ -838,7 +840,7 @@ impl Strategies for ShortStrangle {
         })?;
         let break_even_diff = price_gap(upper, lower);
         let result = match self.get_max_profit() {
-            Ok(max_profit) => max_profit.to_f64() / break_even_diff.to_f64() * 100.0,
+            Ok(max_profit) => f64_of(max_profit)? / f64_of(break_even_diff)? * 100.0,
             Err(error) if is_extreme_sign_error(&error) => ZERO,
             Err(error) => return Err(error),
         };
@@ -1670,9 +1672,13 @@ is expected and the underlying asset's price is anticipated to remain stable."
     #[test]
     fn test_area() {
         let strategy = setup();
+        // One ulp below the previous `27.07333333333334`: the area's inputs
+        // now reach `f64` through `decimal_to_f64`, the nearest `f64`
+        // (#828, the rounding policy of #670), instead of `rust_decimal`'s
+        // `as_f64`.
         assert_eq!(
             strategy.get_profit_area().unwrap().to_f64().unwrap(),
-            27.07333333333334
+            27.07333333333333
         );
     }
 

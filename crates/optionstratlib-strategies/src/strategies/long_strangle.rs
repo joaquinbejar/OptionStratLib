@@ -21,6 +21,7 @@ use crate::strategies::combinations::best_candidate;
 use crate::strategies::shared::measured_max_loss;
 use crate::strategies::shared::{
     CachedBreakEvens, apply_contract_size, common_contract_size, edit_refreshing_break_evens,
+    f64_of,
 };
 use crate::strategies::{
     BasicAble, Strategies, StrategyConstructor,
@@ -741,10 +742,11 @@ impl Strategies for LongStrangle {
         let break_even_diff = price_gap(upper, lower);
         let outer_square = break_even_diff.checked_mul(&max_loss)?;
         let triangles = price_gap(outer_square, inner_square).checked_div_f64(2.0)?;
-        let loss_area = inner_square
-            .checked_add(&triangles)?
-            .checked_div(&self.long_call.option.underlying_price)?
-            .to_f64();
+        let loss_area = f64_of(
+            inner_square
+                .checked_add(&triangles)?
+                .checked_div(&self.long_call.option.underlying_price)?,
+        )?;
         let result = 1.0 / loss_area; // Invert the value to get the profit area: the lower, the better
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
@@ -766,7 +768,7 @@ impl Strategies for LongStrangle {
         let ratio = max_loss
             .checked_div(&break_even_diff)?
             .checked_mul_f64(100.0)?;
-        let result = 1.0 / ratio.to_f64(); // Invert the value to get the profit ratio: the lower, the better
+        let result = 1.0 / f64_of(ratio)?; // Invert the value to get the profit ratio: the lower, the better
         Decimal::from_f64(result).ok_or_else(|| StrategyError::numeric_conversion(result))
     }
     fn get_best_range_to_show(&self, step: Positive) -> Result<Vec<Positive>, StrategyError> {
