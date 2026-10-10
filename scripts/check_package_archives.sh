@@ -46,12 +46,12 @@ find "$work" -type f -exec touch {} +
     echo "[workspace]"
     echo 'resolver = "3"'
     echo "members = ["
-    for package in "${OSL_PACKAGES[@]}"; do echo "    \"$package-$OSL_VERSION\","; done
+    for package in "${OSL_PACKAGES[@]}"; do echo "    \"$(osl_unpacked "$work" "$package")\","; done
     echo "]"
     echo
     echo "[patch.crates-io]"
     for package in "${OSL_PACKAGES[@]}"; do
-        echo "$package = { path = \"$package-$OSL_VERSION\" }"
+        echo "$package = { path = \"$(osl_unpacked "$work" "$package")\" }"
     done
 } > "$work/Cargo.toml"
 
@@ -69,7 +69,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc "${manifest[@]}" --workspace --all-features
 echo "=== doc tests (all features)"
 cargo test "${manifest[@]}" --workspace --all-features --doc
 
-rust_version="$(sed -nE 's/^rust-version = "([^"]+)"$/\1/p' "$work/optionstratlib-$OSL_VERSION/Cargo.toml")"
+rust_version="$(sed -nE 's/^rust-version = "([^"]+)"$/\1/p' "$work/$(osl_unpacked "$work" optionstratlib)/Cargo.toml")"
 if [ -z "$rust_version" ]; then
     echo "the facade archive declares no rust-version" >&2
     exit 1

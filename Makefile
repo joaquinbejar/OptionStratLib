@@ -490,16 +490,23 @@ check-api-report:
 # per-crate and facade matrices, run from `scripts/release_gates.py`, which
 # records each command, result, time and warning count and writes the evidence
 # to docs/release/0.22/gates.md (`release-gates-render`). The run takes about
-# 40 minutes. The semver reports against 0.21.3 are informational and are
-# classified in docs/release/0.22/api-classification.md.
+# 40 minutes. A 0.22.x patch names its version and the crates it publishes
+# (docs/versioning-policy.md, #834), and its evidence goes to
+# docs/release/0.22.N/gates.md:
+#   make release-gates RELEASE=0.22.1 CRATES="optionstratlib-pricing optionstratlib"
+# The semver reports against 0.21.3 are informational and are classified in
+# docs/release/0.22/api-classification.md.
 .PHONY: release-gates release-gates-render
+RELEASE ?= 0.22.0
+RELEASE_GATES_ARGS = --release $(RELEASE) $(if $(CRATES),--crates $(CRATES))
+
 release-gates:
 	python3 scripts/release_gates.py --self-test > /dev/null
 	python3 scripts/classify_api_changes.py --self-test > /dev/null
-	python3 scripts/release_gates.py run
+	python3 scripts/release_gates.py run $(RELEASE_GATES_ARGS)
 
 release-gates-render:
-	python3 scripts/release_gates.py render
+	python3 scripts/release_gates.py render $(RELEASE_GATES_ARGS)
 
 # Fails when a panicking construct reappears in production code.
 #

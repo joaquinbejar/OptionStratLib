@@ -56,7 +56,6 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = "0.22.0"
 # Publication order: every crate after the ones it depends on, the facade last.
 PACKAGES = (
     "optionstratlib-core",
@@ -215,7 +214,10 @@ def main() -> int:
     run.cargo("package", ["package", *selection, *dirty], ROOT)
 
     print("== 2. archives")
-    archives = {name: target / "package" / f"{name}-{VERSION}.crate" for name in PACKAGES}
+    # Each crate at its own version: the ten share the 0.22 line, not
+    # necessarily a patch (docs/versioning-policy.md, #834).
+    versions = {p["name"]: p["version"] for p in meta["packages"] if p["name"] in PACKAGES}
+    archives = {name: target / "package" / f"{name}-{versions[name]}.crate" for name in PACKAGES}
     for name, path in archives.items():
         if path.exists():
             print(f"  {path.name}  {path.stat().st_size} B  sha256 {sha256(path)}")
@@ -250,12 +252,12 @@ def main() -> int:
                         tar.extractall(work)
                 fresh_mtimes(work)
                 patches = "".join(
-                    f'{sib} = {{ path = "{sib}-{VERSION}" }}\n' for sib in closure[name]
+                    f'{sib} = {{ path = "{sib}-{versions[sib]}" }}\n' for sib in closure[name]
                 )
                 (work / "Cargo.toml").write_text(
                     "[workspace]\n"
                     'resolver = "3"\n'
-                    f'members = ["{name}-{VERSION}"]\n'
+                    f'members = ["{name}-{versions[name]}"]\n'
                     + (f"\n[patch.crates-io]\n{patches}" if patches else "")
                 )
                 print(f"  -- {name} (siblings from archives: {', '.join(closure[name]) or 'none'})")

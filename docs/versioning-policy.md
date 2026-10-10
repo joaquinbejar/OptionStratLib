@@ -1,8 +1,8 @@
 # Versioning policy for 0.22.x patch releases
 
-**Status:** Proposed, awaiting the owner's decision (#834). Nothing below is in
-force until it is accepted; until then the 0.22 lockstep rule of ADR-0001
-applies unchanged.
+**Status:** Accepted by the owner on 2026-10-09 (#834): decision B below is in
+force, and the tooling changes it calls for are applied. 0.22.0 itself is
+still released in lockstep, every crate at `0.22.0`.
 
 ## Context
 
@@ -84,17 +84,38 @@ Each crate follows its own semver line (`optionstratlib-pricing` may reach
    version of every crate the facade resolves at that commit.
 6. **0.23 resets the family**: every crate is published at `0.23.0`.
 
-## Changes once accepted
+## Applied
 
-These are not part of this draft; they follow the owner's decision:
+- `scripts/check_packages.py` checks that every package is on the `0.22`
+  line and that every sibling requirement is `^0.22` or a `^0.22.N` no newer
+  than the sibling's own version; the other checks are unchanged. Its
+  self-test passes a mixed-patch set (`-pricing` at 0.22.1, the rest at
+  0.22.0) and rejects a sibling on 0.23, a requirement past the sibling and
+  one on another line.
+- `scripts/release_gates.py` takes `--release 0.22.N` and `--crates ...`
+  (default: `0.22.0` and all ten), records every crate's version at the
+  gated commit, and writes the evidence to `docs/release/0.22.N/gates.md`
+  (`docs/release/0.22/gates.md` for 0.22.0). `make release-gates` forwards
+  `RELEASE` and `CRATES`.
+- `scripts/publish_dry_run.py` and `scripts/package_archives.sh` (with
+  `check_package_archives.sh` and `check_packaged_examples.sh`) read each
+  crate's own version instead of assuming one shared version.
 
-- `scripts/check_packages.py`: replace the exact `VERSION` check with "every
-  package is on the `0.22` line" and "every sibling requirement is `^0.22` or
-  a `^0.22.N` no newer than the sibling's own version"; keep the other checks.
-- `scripts/release_gates.py`: take the list of crates being released and the
-  release version from the command line, and write the evidence to the
-  release's own directory.
-- `make check-packages` self-test: add a mixed-patch fixture (`-pricing`
-  at 0.22.1, the rest at 0.22.0) that must pass, and one with a sibling on
-  0.23 that must fail.
-- `CLAUDE.md` / release command: document the patch procedure.
+## Patch release procedure
+
+1. Fix on a branch as usual; the PR states which crates' packaged source it
+   changes.
+2. Bump the version of exactly those crates to their next patch (a crate
+   that inherits `version.workspace = true` gets its own `version` for the
+   patch). A crate that needs the fix raises its sibling requirement to that
+   patch (`"^0.22.1"`) and is bumped too; the facade is bumped whenever a
+   crate it re-exports is.
+3. `cargo semver-checks` on each bumped crate against its published
+   version: anything above a minor-compatible addition waits for 0.23.
+4. `make check-packages`, then
+   `make release-gates RELEASE=0.22.N CRATES="<the bumped crates>"` and
+   `make release-gates-render RELEASE=0.22.N CRATES="..."`; commit the
+   evidence in `docs/release/0.22.N/`.
+5. Publish only the bumped crates, in the dependency order of #560, the
+   facade last; then tag `v0.22.N`. As for every release, only on the
+   owner's explicit go.
