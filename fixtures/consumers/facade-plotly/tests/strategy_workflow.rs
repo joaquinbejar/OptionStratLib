@@ -12,7 +12,8 @@
 //!   contract (#658), so a `Box<dyn Strategable>` cannot be charted. A
 //!   consumer that renders names the bound itself: it dispatches on the
 //!   request's `strategy_type` to the concrete type, builds it with
-//!   `StrategyConstructor::get_strategy` from the same legs, and charts it
+//!   `StrategyConstructor::get_strategy_with_spot` from the same legs (and
+//!   the share leg of a covered strategy, #831), and charts it
 //!   through a function generic over `S: StrategyConstructor + Graph`.
 //!
 //! The capability the old boxed-strategy chart call had is kept: every
@@ -22,6 +23,7 @@
 //! `calculate_profit_at` and `get_break_even_points` on the trait object.
 
 use optionstratlib::error::StrategyError;
+use optionstratlib::model::leg::SpotPosition;
 use optionstratlib::prelude::*;
 use optionstratlib::strategies::StrategyRequest;
 use optionstratlib::strategies::base::StrategyType;
@@ -94,8 +96,22 @@ fn leg(
     ))
 }
 
+/// One long share of `TEST` bought at 100, the share leg of a covered call.
+fn shares() -> Result<SpotPosition, Box<dyn Error>> {
+    Ok(SpotPosition::new(
+        "TEST".to_string(),
+        Positive::ONE,
+        Positive::HUNDRED,
+        Side::Long,
+        Utc::now(),
+        pos(FEE)?,
+        pos(FEE)?,
+    ))
+}
+
 /// The requests a service would receive: a debit vertical, a credit
-/// four-leg structure and a long-volatility pair.
+/// four-leg structure, a long-volatility pair, a single leg and a covered
+/// call with its share leg (#831).
 fn requests() -> Result<Vec<StrategyRequest>, Box<dyn Error>> {
     use OptionStyle::{Call, Put};
     use Side::{Long, Short};
@@ -123,6 +139,15 @@ fn requests() -> Result<Vec<StrategyRequest>, Box<dyn Error>> {
                 leg(Long, Put, dec!(100), dec!(4.1))?,
             ],
         ),
+        StrategyRequest::new(
+            StrategyType::LongCall,
+            vec![leg(Long, Call, dec!(100), dec!(4.5))?],
+        ),
+        StrategyRequest::new(
+            StrategyType::CoveredCall,
+            vec![leg(Short, Call, dec!(105), dec!(2.4))?],
+        )
+        .with_spot_leg(shares()?),
     ])
 }
 
@@ -135,8 +160,10 @@ struct Chart {
 
 /// Charts any strategy that implements the graph contract: the explicit
 /// bound a rendering consumer writes.
-fn chart<S: StrategyConstructor + Graph>(positions: &[Position]) -> Result<Chart, Box<dyn Error>> {
-    let strategy = S::get_strategy(positions)?;
+fn chart<S: StrategyConstructor + Graph>(
+    request: &StrategyRequest,
+) -> Result<Chart, Box<dyn Error>> {
+    let strategy = S::get_strategy_with_spot(request.spot_leg.as_ref(), &request.positions)?;
     Ok(Chart {
         data: strategy.graph_data(),
         title: strategy.graph_config().title,
@@ -147,33 +174,31 @@ fn chart<S: StrategyConstructor + Graph>(positions: &[Position]) -> Result<Chart
 /// Charts the strategy a request names: the dispatch that replaces the old
 /// `Graph` supertrait on the boxed strategy.
 fn chart_request(request: &StrategyRequest) -> Result<Chart, Box<dyn Error>> {
-    let positions = request.positions.as_slice();
+    // Every type is named, as `StrategyRequest::get_strategy` builds every
+    // type (#831): a new type fails to compile here until it is chartable.
     match request.strategy_type {
-        StrategyType::BullCallSpread => chart::<BullCallSpread>(positions),
-        StrategyType::BearCallSpread => chart::<BearCallSpread>(positions),
-        StrategyType::BullPutSpread => chart::<BullPutSpread>(positions),
-        StrategyType::BearPutSpread => chart::<BearPutSpread>(positions),
-        StrategyType::LongButterflySpread => chart::<LongButterflySpread>(positions),
-        StrategyType::ShortButterflySpread => chart::<ShortButterflySpread>(positions),
-        StrategyType::IronCondor => chart::<IronCondor>(positions),
-        StrategyType::IronButterfly => chart::<IronButterfly>(positions),
-        StrategyType::LongStraddle => chart::<LongStraddle>(positions),
-        StrategyType::ShortStraddle => chart::<ShortStraddle>(positions),
-        StrategyType::LongStrangle => chart::<LongStrangle>(positions),
-        StrategyType::ShortStrangle => chart::<ShortStrangle>(positions),
-        StrategyType::PoorMansCoveredCall => chart::<PoorMansCoveredCall>(positions),
-        StrategyType::BullCallLadder => chart::<BullCallLadder>(positions),
-        StrategyType::Custom => chart::<CustomStrategy>(positions),
-        // No builder: `StrategyRequest::get_strategy` reports the same. Named
-        // one by one, so a strategy that gains a builder fails to compile
-        // here until it is chartable.
-        StrategyType::CoveredCall
-        | StrategyType::ProtectivePut
-        | StrategyType::Collar
-        | StrategyType::LongCall
-        | StrategyType::LongPut
-        | StrategyType::ShortCall
-        | StrategyType::ShortPut => Err(Box::new(StrategyError::NotImplemented)),
+        StrategyType::BullCallSpread => chart::<BullCallSpread>(request),
+        StrategyType::BearCallSpread => chart::<BearCallSpread>(request),
+        StrategyType::BullPutSpread => chart::<BullPutSpread>(request),
+        StrategyType::BearPutSpread => chart::<BearPutSpread>(request),
+        StrategyType::LongButterflySpread => chart::<LongButterflySpread>(request),
+        StrategyType::ShortButterflySpread => chart::<ShortButterflySpread>(request),
+        StrategyType::IronCondor => chart::<IronCondor>(request),
+        StrategyType::IronButterfly => chart::<IronButterfly>(request),
+        StrategyType::LongStraddle => chart::<LongStraddle>(request),
+        StrategyType::ShortStraddle => chart::<ShortStraddle>(request),
+        StrategyType::LongStrangle => chart::<LongStrangle>(request),
+        StrategyType::ShortStrangle => chart::<ShortStrangle>(request),
+        StrategyType::CoveredCall => chart::<CoveredCall>(request),
+        StrategyType::ProtectivePut => chart::<ProtectivePut>(request),
+        StrategyType::Collar => chart::<Collar>(request),
+        StrategyType::LongCall => chart::<LongCall>(request),
+        StrategyType::LongPut => chart::<LongPut>(request),
+        StrategyType::ShortCall => chart::<ShortCall>(request),
+        StrategyType::ShortPut => chart::<ShortPut>(request),
+        StrategyType::PoorMansCoveredCall => chart::<PoorMansCoveredCall>(request),
+        StrategyType::BullCallLadder => chart::<BullCallLadder>(request),
+        StrategyType::Custom => chart::<CustomStrategy>(request),
     }
 }
 
@@ -191,7 +216,7 @@ fn test_requests_are_analysed_through_the_trait_object() -> Result<(), Box<dyn E
         .iter()
         .map(StrategyRequest::get_strategy)
         .collect::<Result<_, _>>()?;
-    assert_eq!(strategies.len(), 3);
+    assert_eq!(strategies.len(), 5);
 
     // Bull call spread 95/105 for a 5.00 debit and 2.00 of fees: break-even
     // 102, profit capped at 3, loss capped at 7.
@@ -222,12 +247,14 @@ fn test_requests_are_analysed_through_the_trait_object() -> Result<(), Box<dyn E
         dec!(-10.6)
     );
 
-    // Generic code over the trait object: the fees of the whole book.
+    // Generic code over the trait object: the fees of the whole book, the
+    // open and close fee of every option leg (ten legs at 0.5 each; the
+    // covered call's share leg is not an option position).
     let fees = strategies
         .iter()
         .map(|strategy| strategy.get_fees())
         .try_fold(Positive::ZERO, |total, fees| fees.map(|fees| total + fees))?;
-    assert_eq!(fees, pos(dec!(8))?);
+    assert_eq!(fees, pos(dec!(10))?);
     Ok(())
 }
 
@@ -315,22 +342,24 @@ fn test_a_request_chart_is_written_as_html() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn test_a_request_without_a_builder_is_not_implemented() -> Result<(), Box<dyn Error>> {
-    // Single legs have constructors, not builders, on both sides.
+fn test_a_share_leg_on_a_strategy_without_one_is_rejected_by_both_sides()
+-> Result<(), Box<dyn Error>> {
+    // Only the covered strategies hold the underlying (#831).
     let request = StrategyRequest::new(
         StrategyType::LongCall,
         vec![leg(Side::Long, OptionStyle::Call, dec!(100), dec!(4.5))?],
-    );
+    )
+    .with_spot_leg(shares()?);
     assert!(matches!(
         request.get_strategy(),
-        Err(StrategyError::NotImplemented)
+        Err(StrategyError::OperationError(_))
     ));
     let error = chart_request(&request)
         .err()
-        .ok_or("a long call has no builder")?;
+        .ok_or("a long call has no share leg")?;
     assert!(matches!(
         error.downcast_ref::<StrategyError>(),
-        Some(StrategyError::NotImplemented)
+        Some(StrategyError::OperationError(_))
     ));
     Ok(())
 }
