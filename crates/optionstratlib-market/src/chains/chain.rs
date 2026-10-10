@@ -10826,7 +10826,8 @@ mod tests_parallel_pricing {
     fn test_parallel_build_and_refresh_match_serial_on_the_sp500_fixture() {
         let chain = OptionChain::load_from_json(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/Chains/SP500-18-oct-2024-5781.88.json"
+            // The packaged copy (#558): `examples/` is not in the archive.
+            "/testdata/SP500-18-oct-2024-5781.88.json"
         ))
         .expect("the fixture loads");
         assert!(price_in_parallel(chain.options.len()));
