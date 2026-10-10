@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-10
+
 Upgrading from 0.21: start with the [0.22 architecture and adoption
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md), which
 groups the changes below by the workflow that replaces them. 0.22 keeps no

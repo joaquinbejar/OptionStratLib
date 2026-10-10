@@ -1,9 +1,5 @@
 # OptionStratLib 0.22.0 release notes
 
-> **Draft.** Nothing described here is tagged, released or published yet.
-> The crates.io and docs.rs links below resolve once the owner publishes
-> 0.22.0.
-
 OptionStratLib 0.22.0 splits the library into nine component crates behind
 the `optionstratlib` facade, gives every public concept one owning crate and
 one canonical path, and fixes a set of numerical models whose results
