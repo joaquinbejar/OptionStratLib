@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib-visualization = { version = "0.22.0", features = ["plotly"] }
+//! optionstratlib-visualization = { version = "0.22.1", features = ["plotly"] }
 //! ```
 //!
 //! ## Core Concepts
