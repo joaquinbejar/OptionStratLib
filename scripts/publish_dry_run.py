@@ -78,7 +78,14 @@ ALLOWED_NOTICE = re.compile(
     r"|aborting upload due to dry run)$"
 )
 WARNING = re.compile(r"^warning(\[[^\]]*\])?:")
-WAITING = re.compile(r"no matching package named `(optionstratlib[a-z-]*)` found")
+# A sibling absent from crates.io altogether (the first release of the
+# family, 0.22.0) is "no matching package named"; a sibling whose new patch is
+# not uploaded yet (0.22.N) is "failed to select a version for the
+# requirement" with the older versions as candidates.
+WAITING = re.compile(
+    r"no matching package named `(optionstratlib[a-z-]*)` found"
+    r"|failed to select a version for the requirement `(optionstratlib[a-z-]*) = "
+)
 
 
 def warnings_in(output: str) -> list[str]:
@@ -235,7 +242,8 @@ def main() -> int:
             continue
         missing = WAITING.search(output)
         if missing:
-            print(f"    {name}: waiting on {missing.group(1)} (not on crates.io yet)")
+            sibling = missing.group(1) or missing.group(2)
+            print(f"    {name}: waiting on {sibling} (not on crates.io yet)")
         else:
             run.failures.append(f"publish-{name}: failed for a reason other than an unpublished sibling")
 
@@ -297,6 +305,14 @@ def self_test() -> int:
     check(
         "an unpublished sibling is recognised",
         WAITING.search("no matching package named `optionstratlib-core` found").group(1),
+        "optionstratlib-core",
+    )
+    patch = WAITING.search(
+        'failed to select a version for the requirement `optionstratlib-core = "^0.22.1"`'
+    )
+    check(
+        "a sibling's unpublished patch is recognised",
+        patch.group(1) or patch.group(2) if patch else None,
         "optionstratlib-core",
     )
     meta = {"packages": [
