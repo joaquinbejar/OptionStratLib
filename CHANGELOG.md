@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-10
+
+### Changed — breaking
+
+- **`positive` 0.8, `expiration_date` 0.5 and `option_type` 0.5** in all ten
+  crates. The three appear in the public API (`Positive` throughout,
+  `ExpirationDate`, `OptionStyle`, `OptionType`), so a consumer that names
+  their types moves to the same versions. `positive` 0.8 removes the
+  `non-zero` feature, which OptionStratLib never enabled;
+  `expiration_date` 0.5 and `option_type` 0.5 only follow it. No behaviour
+  changes. By owner decision this ships as a 0.22 patch rather than 0.23.
+  Migration: require `positive = "0.8"`, `expiration_date = "0.5"` and
+  `option_type = "0.5"` alongside `optionstratlib = "0.22.1"`.
+
+### Changed
+
+- The author link in the README points to <https://joaquinbejar.taunais.com/>.
+
 ## [0.22.0] - 2026-10-10
 
 Upgrading from 0.21: start with the [0.22 architecture and adoption
@@ -6094,7 +6112,9 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.21.2...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.0...v0.22.1
+[0.22.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.21.3...v0.22.0
 [0.21.2]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.2
 [0.21.1]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.1
 [0.21.0]: https://github.com/joaquinbejar/OptionStratLib/releases/tag/v0.21.0

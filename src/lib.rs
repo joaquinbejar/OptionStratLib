@@ -34,7 +34,7 @@
 // the success path too (#857), so it is built in a closure.
 #![deny(clippy::or_fun_call)]
 
-//! # OptionStratLib v0.22.0: Financial Options Library
+//! # OptionStratLib v0.22.1: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -445,7 +445,7 @@
 //! ```toml
 //! [dependencies]
 //! # pricing, greeks and volatility, without market data, I/O or charts
-//! optionstratlib = { version = "0.22.0", default-features = false, features = ["pricing"] }
+//! optionstratlib = { version = "0.22.1", default-features = false, features = ["pricing"] }
 //! rust_decimal = "1.43" # for `dec!`
 //! ```
 //!
@@ -453,8 +453,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib-core = "0.22.0"
-//! optionstratlib-pricing = "0.22.0"
+//! optionstratlib-core = "0.22.1"
+//! optionstratlib-pricing = "0.22.1"
 //! ```
 //!
 //! ## Canonical paths
@@ -982,7 +982,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.22.0"
+//! optionstratlib = "0.22.1"
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1002,7 +1002,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.22.0", features = ["plotly"] }
+//! optionstratlib = { version = "0.22.1", features = ["plotly"] }
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1085,7 +1085,7 @@
 //! **The 0.22 default** is every capability that 0.21 shipped without a
 //! feature flag: `pricing`, `market`, `analytics`, `strategies`,
 //! `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
-//! plain `optionstratlib = "0.22.0"` keeps the whole library and resolves no
+//! plain `optionstratlib = "0.22.1"` keeps the whole library and resolves no
 //! Plotly, image-export, async-runtime or HTTP package. The default is a
 //! compatibility contract of the 0.22 line, not a statement that a consumer
 //! needs all of it: opt out with `default-features = false` and name only the
@@ -1542,7 +1542,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.22.0** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.22.1** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library
