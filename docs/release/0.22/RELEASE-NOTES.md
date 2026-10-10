@@ -22,6 +22,8 @@ describes, each with its replacement workflow.
   every change with its issue, reference values and migration note.
 - [`examples/direct`](https://github.com/joaquinbejar/OptionStratLib/tree/main/examples/direct):
   one runnable program per capability on component crates alone.
+- [Versioning policy](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/versioning-policy.md):
+  how 0.22.x patch releases version and publish the ten crates.
 
 ## Packages
 
@@ -327,7 +329,9 @@ migration guide the replacement workflow.
   (#661); covered strategies size their option legs in shares with fees per
   share (#731) and handle partial cover (#765); `get_volume` counts option
   contracts and the new `get_share_volume` the share leg, each in its own
-  unit (#830).
+  unit (#830); `StrategyRequest::get_strategy` builds every strategy type,
+  including the covered strategies with their share leg and the single-leg
+  ones, instead of `NotImplemented` for seven of them (#831).
 - **Contract multiplier.** `Options`, `Trade`, `pnl::Transaction` and the
   strategies carry `contract_size` (#733, #760); `Trade::cost`, `income` and
   `net` are checked and fallible, and `PnL` converts from a `Trade` with
@@ -471,7 +475,11 @@ says whether any value moves.
 - **Walks:** telegraph switching probability `1 - e^(-lambda dt)` (#683),
   jump-diffusion `lambda dt` (#684), Heston normal Wiener increments (#742).
 - **Implied volatility:** targets with no implied volatility are reported as
-  errors (#652).
+  errors (#652). `implied_volatility`, `calculate_iv` and
+  `OptionPricing::calculate_implied_volatility` share one bracketed Newton
+  solver (#859): they return the root instead of a grid point or a bisection
+  bracket, within 2.3e-13 wherever the problem is well conditioned, and find
+  volatilities up to 5.
 - **P&L and strategies:** mark-to-market scales with quantity (#725);
   covered strategies mark to market (#728), size in shares (#731) and
   report partial cover correctly (#765); put spreads price their textbook
@@ -573,9 +581,11 @@ within one session on one host, so they compare 0.22 with itself, not with
 | Monte Carlo path in `f64` (#859) | 30 steps x 10 000 paths | 131 ms | 1.38 ms |
 | Walk steps take `exp` / `sqrt` in `f64` (#860) | Heston, 1008 steps | 6.25 ms | 2.07 ms |
 | Rolling historical volatility (#859) | `historical_window_21/1008` | 1.72 ms | 0.98 ms |
+| One Newton IV solver (#859) | `implied_volatility`, 30-day call | 2.1 ms | 20-47 µs |
 
 Hosts: flumix (i7-12650H, 16 threads, idle) for #857, #863, the `d1`
 rows, the Monte Carlo rows, the chain I/O and build rows and the walk
 steps; an Apple M5 Max, often under load, for #858, `Simulator::new`,
-#862, the binomial and historical-volatility rows and the exposures, so
+#862, the binomial, historical-volatility and IV-solver rows and the
+exposures, so
 those medians carry the host's load. Each CHANGELOG entry has the full tables.

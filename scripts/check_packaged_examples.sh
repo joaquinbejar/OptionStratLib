@@ -60,7 +60,7 @@ for scenario in "${scenarios[@]}"; do
         echo
         echo "[patch.crates-io]"
         for package in "${OSL_PACKAGES[@]}"; do
-            echo "$package = { path = \"$work/$package-$OSL_VERSION\" }"
+            echo "$package = { path = \"$work/$(osl_unpacked "$work" "$package")\" }"
         done
     } >> "$copy/Cargo.toml"
     if grep -q 'path = "\.\./' "$copy/Cargo.toml"; then

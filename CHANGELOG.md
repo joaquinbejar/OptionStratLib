@@ -3241,6 +3241,17 @@ summarize the release.
 
 ### Changed
 
+- **The 0.22.x versioning policy is accepted and applied** (#834). By
+  owner decision (2026-10-09) the ten crates share the `0.22` line and a
+  patch release publishes only the crates whose packaged source changed,
+  each at its own next patch (`docs/versioning-policy.md`, which also
+  records the patch procedure). `make check-packages` checks the line and
+  that no sibling requirement is newer than the sibling (with mixed-patch
+  self-tests); `make release-gates` takes `RELEASE` and `CRATES` and writes
+  a patch's evidence to `docs/release/0.22.N/`; the package and dry-run
+  scripts read each crate's own version. 0.22.0 is still released in
+  lockstep.
+
 - **The walk kernels take their per-step exponential and square root in
   `f64`** (#860, S1). Each step of the geometric Brownian, log-returns,
   GARCH, Heston and telegraph walks paid a 28-place `Decimal` `exp`

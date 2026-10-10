@@ -47,7 +47,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-VERSION = "0.22.0"
+# The release line every package is on (docs/versioning-policy.md, #834):
+# the ten crates share `0.MINOR` and each may be at its own patch.
+LINE = "0.22"
+LINE_VERSION_RE = re.compile(r"^0\.22\.(0|[1-9][0-9]*)$")
 EDITION = "2024"
 RUST_VERSION = "1.89"
 LICENSE = "MIT"
@@ -151,8 +154,9 @@ def metadata() -> dict[str, dict]:
 def metadata_problems(package: dict) -> list[str]:
     name = package["name"]
     problems = []
+    if not LINE_VERSION_RE.match(package.get("version") or ""):
+        problems.append(f"{name}: version is {package.get('version')!r}, expected a {LINE}.x version")
     expected = {
-        "version": VERSION,
         "edition": EDITION,
         "rust_version": RUST_VERSION,
         "license": LICENSE,
@@ -192,12 +196,39 @@ def metadata_problems(package: dict) -> list[str]:
         if not valid_keyword(keyword):
             problems.append(f"{name}: keyword `{keyword}` breaks the crates.io rules")
     for dep in package["dependencies"]:
-        if dep.get("path") is not None:
-            if dep["req"] in ("*", ""):
-                problems.append(f"{name}: path dependency `{dep['name']}` has no version requirement")
-            if dep["name"] in PACKAGES and dep["req"] != f"^{VERSION}":
-                problems.append(f"{name}: `{dep['name']}` requires {dep['req']}, expected ^{VERSION}")
+        if dep.get("path") is not None and dep["req"] in ("*", ""):
+            problems.append(f"{name}: path dependency `{dep['name']}` has no version requirement")
     problems += feature_problems(name, package["features"], package["dependencies"])
+    return problems
+
+
+def patch_of(version: str) -> int | None:
+    """The patch number of a `0.22.N` version, or `None` off the line."""
+    match = LINE_VERSION_RE.match(version)
+    return int(match.group(1)) if match else None
+
+
+def sibling_requirement_problems(name: str, deps: list[dict], versions: dict[str, str]) -> list[str]:
+    """Sibling requirements under the versioning policy (#834).
+
+    A sibling is required as `^0.22` or `^0.22.N` with `N` no newer than the
+    sibling's own patch, so a crate can raise its requirement to a fixed
+    patch published in the same release but never past what exists.
+    """
+    problems = []
+    for dep in deps:
+        sibling = dep["name"]
+        if dep.get("path") is None or sibling not in versions:
+            continue
+        req = dep["req"]
+        sibling_patch = patch_of(versions[sibling])
+        if req == f"^{LINE}":
+            continue
+        required_patch = patch_of(req[1:]) if req.startswith("^") else None
+        if required_patch is None:
+            problems.append(f"{name}: `{sibling}` requires {req}, expected ^{LINE} or ^{LINE}.N")
+        elif sibling_patch is None or required_patch > sibling_patch:
+            problems.append(f"{name}: `{sibling}` requires {req}, newer than its {versions[sibling]}")
     return problems
 
 
@@ -332,6 +363,46 @@ def self_test() -> int:
         ("forbidden nested README", contents_problems("p", ["examples/direct/README.md", *REQUIRED_FILES]) != []),
         ("source allowed", not FORBIDDEN_RE.search("src/tests.rs")),
         ("test data allowed", not FORBIDDEN_RE.search("testdata/SP500-18-oct-2024-5781.88.json")),
+        ("0.22.0 on the line", patch_of("0.22.0") == 0),
+        ("0.22.3 on the line", patch_of("0.22.3") == 3),
+        ("0.23.0 off the line", patch_of("0.23.0") is None),
+        ("0.22.01 off the line", patch_of("0.22.01") is None),
+        (
+            "mixed patches pass",
+            sibling_requirement_problems(
+                "optionstratlib",
+                [
+                    {"name": "optionstratlib-pricing", "path": "p", "req": "^0.22.1"},
+                    {"name": "optionstratlib-core", "path": "c", "req": "^0.22.0"},
+                    {"name": "optionstratlib-math", "path": "m", "req": "^0.22"},
+                ],
+                {"optionstratlib-pricing": "0.22.1", "optionstratlib-core": "0.22.0", "optionstratlib-math": "0.22.0"},
+            ) == [],
+        ),
+        (
+            "a sibling on 0.23 fails",
+            len(sibling_requirement_problems(
+                "optionstratlib",
+                [{"name": "optionstratlib-core", "path": "c", "req": "^0.22.0"}],
+                {"optionstratlib-core": "0.23.0"},
+            )) == 1,
+        ),
+        (
+            "a requirement past the sibling fails",
+            len(sibling_requirement_problems(
+                "optionstratlib",
+                [{"name": "optionstratlib-core", "path": "c", "req": "^0.22.2"}],
+                {"optionstratlib-core": "0.22.1"},
+            )) == 1,
+        ),
+        (
+            "a requirement on another line fails",
+            len(sibling_requirement_problems(
+                "optionstratlib",
+                [{"name": "optionstratlib-core", "path": "c", "req": "^0.21.3"}],
+                {"optionstratlib-core": "0.22.0"},
+            )) == 1,
+        ),
     ]
     failures = 0
     for label, ok in checks:
@@ -352,16 +423,16 @@ def main() -> int:
     problems += ownership_problems(packages)
     problems += link_problems(packages)
     problems += testdata_problems(packages, listings)
-    versions = {packages[name]["version"] for name in PACKAGES}
-    if versions != {VERSION}:
-        problems.append(f"the packages are not in lockstep: {sorted(versions)}")
+    versions = {name: packages[name]["version"] for name in PACKAGES}
+    for name in PACKAGES:
+        problems += sibling_requirement_problems(name, packages[name]["dependencies"], versions)
     if "--report" in sys.argv:
         report(packages, listings, sizes_from_dry_run())
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
     print(f"OK: the {len(PACKAGES)} packages carry their sources, README and LICENSE, no local artifact, "
-          f"lockstep {VERSION} metadata, valid categories and keywords, versioned path dependencies, "
+          f"{LINE}.x metadata with sibling requirements no newer than the siblings, valid categories and keywords, versioned path dependencies, "
           f"additive features matching the ownership map, tracked documentation links, and archived test data "
           f"matching examples/Chains")
     return 0
