@@ -1523,7 +1523,7 @@ If you have any questions, issues, or would like to provide feedback, please fee
 
 ### **Contact Information**
 
-- **Author**: Joaquín Béjar García
+- **Author**: Joaquín Béjar García <https://joaquinbejar.capitaldelta.co/>
 - **Email**: jb@taunais.com
 - **Telegram**: [@joaquin_bejar](https://t.me/joaquin_bejar)
 - **Repository**: <https://github.com/joaquinbejar/OptionStratLib>
