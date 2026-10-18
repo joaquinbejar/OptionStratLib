@@ -1,0 +1,100 @@
+//! Errors of the native exporter.
+
+use rust_decimal::Decimal;
+use thiserror::Error;
+
+/// Why a chart could not be exported.
+///
+/// Every case the Plotly path papers over (a surface with missing grid
+/// points is filled with zeros there, mismatched series lengths are cut to
+/// the shorter one by plotly.js) is an error here: the prototype never
+/// drops a point or invents a value.
+#[derive(Debug, Error)]
+pub enum ExportError {
+    /// The configured width or height is zero.
+    #[error("invalid dimensions {width}x{height}: both must be positive")]
+    InvalidDimensions {
+        /// Configured width in pixels.
+        width: u32,
+        /// Configured height in pixels.
+        height: u32,
+    },
+
+    /// A 2D series has a different number of x and y values.
+    #[error("series {name:?} has {x} x values and {y} y values")]
+    LengthMismatch {
+        /// Name of the series.
+        name: String,
+        /// Number of x values.
+        x: usize,
+        /// Number of y values.
+        y: usize,
+    },
+
+    /// A surface has a different number of x, y and z values.
+    #[error("surface {name:?} has {x} x, {y} y and {z} z values")]
+    SurfaceLengthMismatch {
+        /// Name of the surface.
+        name: String,
+        /// Number of x values.
+        x: usize,
+        /// Number of y values.
+        y: usize,
+        /// Number of z values.
+        z: usize,
+    },
+
+    /// A surface needs at least two distinct x and two distinct y values.
+    #[error("surface {name:?} has a {columns}x{rows} grid; at least 2x2 is needed")]
+    DegenerateSurface {
+        /// Name of the surface.
+        name: String,
+        /// Distinct x values.
+        columns: usize,
+        /// Distinct y values.
+        rows: usize,
+    },
+
+    /// A surface grid point appears more than once.
+    #[error("surface {name:?} has more than one z value at ({x}, {y})")]
+    DuplicateSurfacePoint {
+        /// Name of the surface.
+        name: String,
+        /// x of the repeated point.
+        x: Decimal,
+        /// y of the repeated point.
+        y: Decimal,
+    },
+
+    /// A surface grid point is missing: `expected` is distinct x times
+    /// distinct y, `found` the number of points given.
+    #[error("surface {name:?} is an incomplete grid: {found} of {expected} points")]
+    IncompleteSurface {
+        /// Name of the surface.
+        name: String,
+        /// Points a complete grid has.
+        expected: usize,
+        /// Points the surface has.
+        found: usize,
+    },
+
+    /// A value has no `f64` representation for drawing.
+    #[error("value {0} cannot be represented as f64")]
+    NotRepresentable(Decimal),
+
+    /// A colour is not `#RGB` or `#RRGGBB`.
+    #[error("unsupported colour {0:?}: expected #RGB or #RRGGBB")]
+    InvalidColor(String),
+
+    /// The embedded font could not be registered.
+    #[error("embedded font rejected: {0}")]
+    Font(String),
+
+    /// Plotters failed while drawing or encoding.
+    #[error("render failed: {0}")]
+    Render(String),
+
+    /// The output file or its directory could not be written.
+    #[error("i/o error: {0}")]
+    Io(#[from] std::io::Error),
+}
