@@ -12,15 +12,16 @@ the baseline one (built with `plotly-baseline`) for Plotly.
   records each export's wall time inside one process. Plotly builds a new
   exporter (chromedriver + Chrome) per image either way, so its warm runs
   still pay the browser start-up.
-* Leaks: every Plotly run is watched while it runs. The process tree under
-  the `compare` process (chromedriver, Chrome and its helpers) is sampled
-  every `TRACK_INTERVAL_S`; whatever of that tree is still alive a second
-  after `compare` exited, with the same command line, is reported as leaked
-  and terminated by its exact PID. Attribution is by ancestry recorded
-  while the export ran, not by command-line pattern, so a browser any other
-  program runs at the same time (another worktree's tests, Selenium,
-  Playwright, the user's Chrome) is never reported or touched. A run that
-  fails is checked the same way.
+* Leaks: every Plotly run starts in a process group of its own, which
+  chromedriver and Chrome inherit, and its process tree is also sampled every
+  `TRACK_INTERVAL_S` while it runs. Whatever of that group or tree is still
+  alive a second after `compare` exited is reported as leaked and terminated
+  (`killpg` on the run's own group, the PID for a sampled stray). Ownership
+  comes from the group and the recorded ancestry, never from a command-line
+  pattern, so a browser any other program runs at the same time (another
+  worktree's tests, Selenium, Playwright, the user's Chrome) is never
+  reported or touched. Failed, timed-out and interrupted runs are checked the
+  same way, in `finally`.
 * Sandbox (macOS, `--sandbox`): the native cold runs execute under
   `sandbox-exec` with network access and process creation denied, so a
   successful run proves the export opened no socket and spawned nothing.
@@ -29,7 +30,8 @@ the baseline one (built with `plotly-baseline`) for Plotly.
   started at once, as separate processes (parallel test binaries or
   worktrees), sharing the default chromedriver port. `interrupted`: one
   export whose process receives SIGINT, SIGTERM or SIGKILL while the browser
-  is up. Leftovers are found and terminated as above, two seconds later.
+  is up, and SIGINT to its whole process group, as Ctrl-C in a terminal
+  sends. Leftovers are found and terminated as above, two seconds later.
 
 Usage:
     measure.py --native BIN --baseline BIN --out DIR [--cold N] [--warm N]
@@ -63,61 +65,100 @@ TRACK_INTERVAL_S = 0.1
 ENV = {**os.environ, "RUST_LOG": "warn"}
 
 
-def process_table() -> dict[int, tuple[int, str]]:
-    """Every process of the machine: PID -> (parent PID, command line)."""
+def process_table() -> dict[int, tuple[int, int, str]]:
+    """Every process of the machine: PID -> (parent PID, group ID, command line)."""
     out = subprocess.run(
-        ["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True, check=True
+        ["ps", "-axo", "pid=,ppid=,pgid=,command="], capture_output=True, text=True, check=True
     ).stdout
     table = {}
     for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) == 3:
-            table[int(parts[0])] = (int(parts[1]), parts[2])
+        parts = line.split(None, 3)
+        if len(parts) == 4:
+            table[int(parts[0])] = (int(parts[1]), int(parts[2]), parts[3])
     return table
 
 
-def descendants(roots: set[int], table: dict[int, tuple[int, str]]) -> dict[int, str]:
+def descendants(roots: set[int], table: dict[int, tuple[int, int, str]]) -> dict[int, str]:
     """The processes below `roots` in `table`, by PID, with their command lines."""
     children: dict[int, list[int]] = {}
-    for pid, (parent, _) in table.items():
+    for pid, (parent, _, _) in table.items():
         children.setdefault(parent, []).append(pid)
     found, pending = {}, list(roots)
     while pending:
         for child in children.get(pending.pop(), []):
             if child not in found:
-                found[child] = table[child][1]
+                found[child] = table[child][2]
                 pending.append(child)
     return found
 
 
 class Tracker:
-    """Records the process trees under some children while they run."""
+    """Owns the processes an export starts, and finds the ones it leaves.
+
+    Every child is started in a process group of its own
+    (`start_new_session`), and chromedriver and Chrome inherit it, so
+    membership survives the child exiting and its descendants being
+    reparented, even before the first sample. The tree under each child is
+    also sampled while it runs, for anything that leaves the group.
+    """
 
     def __init__(self) -> None:
+        self.groups: set[int] = set()
         self.seen: dict[int, str] = {}
+
+    def adopt(self, child: subprocess.Popen) -> None:
+        """Registers `child`, started with `start_new_session=True`."""
+        self.groups.add(child.pid)
 
     def sample(self, roots: set[int]) -> None:
         self.seen.update(descendants(roots, process_table()))
 
     def leftovers(self, settle_s: float) -> list[dict]:
-        """Recorded processes still alive after `settle_s`, terminated by PID.
+        """Owned processes still alive after `settle_s`, then terminated.
 
-        A PID only counts while its command line is the one recorded, so a PID
-        the system reused for something else is left alone.
+        Owned means: in one of the adopted groups, or sampled under a child
+        and still running the command line it was sampled with (a PID the
+        system reused for something else is left alone). Groups are signalled
+        with `killpg`, stray sampled processes by PID; nothing else is.
         """
         time.sleep(settle_s)
         table = process_table()
-        found = [{"pid": pid, "command": command[:160]}
-                 for pid, command in self.seen.items()
-                 if pid in table and table[pid][1] == command]
-        for item in found:
+        found = {pid: command for pid, (_, group, command) in table.items()
+                 if group in self.groups}
+        strays = {pid: command for pid, command in self.seen.items()
+                  if pid not in found and pid in table and table[pid][2] == command}
+        found.update(strays)
+        for group in self.groups:
             try:
-                os.kill(item["pid"], signal.SIGTERM)
+                os.killpg(group, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+        for pid in strays:
+            try:
+                os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
                 pass
         if found:
             time.sleep(1.0)
-        return found
+        return [{"pid": pid, "command": command[:160]} for pid, command in found.items()]
+
+
+def start_owned(command: list[str], tracker: Tracker | None, stderr) -> subprocess.Popen:
+    """Starts `command` in a process group of its own, adopted by `tracker`."""
+    child = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=stderr, env=ENV,
+                             start_new_session=True)
+    if tracker is not None:
+        tracker.adopt(child)
+    return child
+
+
+def stop(children: list[subprocess.Popen]) -> None:
+    """Kills and reaps the children still running, by their handles."""
+    for child in children:
+        if child.poll() is None:
+            child.kill()
+    for child in children:
+        child.wait()
 
 
 def run_watched(commands: list[list[str]], tracker: Tracker | None,
@@ -127,23 +168,25 @@ def run_watched(commands: list[list[str]], tracker: Tracker | None,
     The wall time is taken by a thread blocked on the process, so sampling
     the process tree meanwhile does not coarsen it. stderr goes to a file, not
     a pipe: a process the command leaves behind inherits the descriptor, and
-    reading a pipe to its end would wait for that process too.
+    reading a pipe to its end would wait for that process too. Children are
+    registered as they start, so if a later one fails to start, or anything
+    raises, the started ones are killed and reaped; what they left behind is
+    the caller's tracker's to clean.
     """
     with tempfile.TemporaryDirectory(prefix="osl-920-stderr-") as logs:
-        files = [open(Path(logs) / f"{index}.err", "w+") for index in range(len(commands))]
+        files = []
+        children: list[subprocess.Popen] = []
         try:
             started = time.perf_counter()
-            children = [subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=log,
-                                         env=ENV)
-                        for command, log in zip(commands, files)]
+            for index, command in enumerate(commands):
+                files.append(open(Path(logs) / f"{index}.err", "w+"))
+                children.append(start_owned(command, tracker, files[-1]))
             results: list[dict] = [{} for _ in children]
 
             def wait(index: int, child: subprocess.Popen) -> None:
                 try:
                     status: int | str = child.wait(timeout=timeout_s)
                 except subprocess.TimeoutExpired:
-                    # Our own child, by its handle; what it started is
-                    # cleaned up by the caller's tracker.
                     child.kill()
                     child.wait()
                     status = "timeout"
@@ -165,6 +208,7 @@ def run_watched(commands: list[list[str]], tracker: Tracker | None,
                 result["stderr"] = log.read()[-400:]
             return results
         finally:
+            stop(children)
             for log in files:
                 log.close()
 
@@ -247,12 +291,17 @@ def concurrent(binary: str, processes: int, workdir: Path, run: int) -> dict:
             "tracked": len(tracker.seen), "leaked": leaked}
 
 
-def interrupted(binary: str, sig: signal.Signals, delay_s: float, workdir: Path,
-                run: int) -> dict:
+def interrupted(binary: str, sig: signal.Signals, to_group: bool, delay_s: float,
+                workdir: Path, run: int) -> dict:
+    """One export interrupted by `sig` while its browser is up.
+
+    `to_group=False` signals the exporting process only, as a test harness,
+    a timeout or `kill <pid>` does. `to_group=True` signals its whole process
+    group, chromedriver and Chrome included, as Ctrl-C in a terminal does.
+    """
     tracker = Tracker()
-    child = subprocess.Popen([binary, "export", "plotly", "curves", "png",
-                              str(workdir / f"interrupted-{run}.png")],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=ENV)
+    child = start_owned([binary, "export", "plotly", "curves", "png",
+                         str(workdir / f"interrupted-{run}.png")], tracker, subprocess.DEVNULL)
     try:
         deadline = time.perf_counter() + delay_s
         while time.perf_counter() < deadline and child.poll() is None:
@@ -260,60 +309,86 @@ def interrupted(binary: str, sig: signal.Signals, delay_s: float, workdir: Path,
             time.sleep(TRACK_INTERVAL_S)
         tracker.sample({child.pid})
         up_at_signal = len(tracker.seen)
-        child.send_signal(sig)
+        if to_group:
+            os.killpg(child.pid, sig)
+        else:
+            child.send_signal(sig)
         child.wait(timeout=60)
     finally:
-        if child.poll() is None:
-            child.kill()
-            child.wait()
+        stop([child])
         leaked = tracker.leftovers(2.0)
-    return {"scenario": "interrupted", "signal": sig.name, "delay_s": delay_s, "run": run,
-            "status": child.returncode, "browser_up_at_signal": up_at_signal,
-            "leaked": leaked}
+    return {"scenario": "interrupted", "signal": sig.name,
+            "target": "process group" if to_group else "exporting process",
+            "delay_s": delay_s, "run": run, "status": child.returncode,
+            "browser_up_at_signal": up_at_signal, "leaked": leaked}
 
 
 def self_test() -> int:
-    """Leak attribution without a browser: only the run's own tree is touched.
+    """Leak attribution without a browser: only the run's own processes.
 
-    A foreign process started before the run and one started during it stand
-    in for another worktree's Chrome; the "export" is a shell that starts a
-    long-lived child and exits with an error, the way a failed export leaves
-    a browser behind. The leftover must be found and terminated, the foreign
-    processes must survive, and a timed-out run must be killed and cleaned.
+    Foreign processes started before and during a run stand in for another
+    worktree's Chrome and must survive. Owned leftovers must be found and
+    terminated when the "export" fails after a delay, when it fails before
+    the first sample (its child is already reparented by then), and when it
+    times out; and when the second of two commands cannot start, the first
+    must be killed and reaped.
     """
-    sleeper = [sys.executable, "-c", "import time; time.sleep(30)"]
-    foreign_before = subprocess.Popen(sleeper)
-    failures = []
-    try:
+    python = sys.executable
+    sleeper = [python, "-c", "import time; time.sleep(30)"]
+    leave_behind = f"'{python}' -c 'import time; time.sleep(30)' & {{delay}} exit 3"
+    failures: list[str] = []
+    foreign = [subprocess.Popen(sleeper)]
+
+    def check(name: str, commands: list[list[str]], expect_status, expect_leaks: int,
+              timeout_s: float = 300.0) -> None:
         tracker = Tracker()
-        foreign_during = None
+        result = None
         try:
-            command = ["/bin/sh", "-c",
-                       f"'{sys.executable}' -c 'import time; time.sleep(30)' & sleep 0.5; exit 3"]
-            foreign_during = subprocess.Popen(sleeper)
-            (result,) = run_watched([command], tracker)
+            foreign.append(subprocess.Popen(sleeper))
+            (result,) = run_watched(commands, tracker, timeout_s=timeout_s)
         finally:
             leaked = tracker.leftovers(0.5)
-        if result["status"] != 3:
-            failures.append(f"failed export status {result['status']}, expected 3")
-        if len(leaked) != 1:
-            failures.append(f"expected exactly the one leaked child, found {leaked}")
-        for name, process in (("before", foreign_before), ("during", foreign_during)):
-            if process is None or process.poll() is not None:
-                failures.append(f"foreign process started {name} the run was touched")
-        timeout_tracker = Tracker()
+        if result is None or result["status"] != expect_status:
+            failures.append(f"{name}: status {result and result['status']}, "
+                            f"expected {expect_status}")
+        if len(leaked) != expect_leaks:
+            failures.append(f"{name}: {len(leaked)} leftovers, expected {expect_leaks}")
+
+    try:
+        check("late failure", [["/bin/sh", "-c", leave_behind.format(delay="sleep 0.5;")]],
+              3, 1)
+        check("immediate failure", [["/bin/sh", "-c", leave_behind.format(delay="")]], 3, 1)
+        check("timeout", [sleeper], "timeout", 0, timeout_s=0.5)
+        # Reparented before any sample: only the process group can attribute it.
+        orphaning = Tracker()
+        parent = start_owned(["/bin/sh", "-c", leave_behind.format(delay="")], orphaning,
+                             subprocess.DEVNULL)
+        parent.wait()
+        if len(orphaning.leftovers(0.5)) != 1:
+            failures.append("reparented before any sample: leftover not attributed")
+        first: list[subprocess.Popen] = []
+        original = subprocess.Popen
+
+        def recording_popen(*args, **kwargs):
+            child = original(*args, **kwargs)
+            first.append(child)
+            return child
+
+        subprocess.Popen = recording_popen
         try:
-            (timed,) = run_watched([sleeper], timeout_tracker, timeout_s=0.5)
+            run_watched([sleeper, ["/nonexistent/osl-920-command"]], Tracker())
+            failures.append("start failure: no exception raised")
+        except OSError:
+            pass
         finally:
-            timeout_tracker.leftovers(0.2)
-        if timed["status"] != "timeout":
-            failures.append(f"timed-out run reported {timed['status']}")
-        if foreign_during is not None:
-            foreign_during.kill()
-            foreign_during.wait()
+            subprocess.Popen = original
+        if not first or first[0].poll() is None:
+            failures.append("start failure: the first child was left running")
+        for process in foreign:
+            if process.poll() is not None:
+                failures.append("a foreign process was touched")
     finally:
-        foreign_before.kill()
-        foreign_before.wait()
+        stop(foreign)
     for failure in failures:
         print(f"self-test: {failure}", file=sys.stderr)
     print("self-test: " + ("FAILED" if failures else "OK"), file=sys.stderr)
@@ -372,7 +447,11 @@ def leaks(args: argparse.Namespace, out: Path, environment: dict) -> int:
                 results["scenarios"].append(concurrent(args.baseline, processes, workdir, run))
             for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGKILL):
                 print(f"interrupted {sig.name} run {run}", file=sys.stderr)
-                results["scenarios"].append(interrupted(args.baseline, sig, 0.8, workdir, run))
+                results["scenarios"].append(
+                    interrupted(args.baseline, sig, False, 0.8, workdir, run))
+            print(f"interrupted SIGINT to the group (Ctrl-C) run {run}", file=sys.stderr)
+            results["scenarios"].append(
+                interrupted(args.baseline, signal.SIGINT, True, 0.8, workdir, run))
     target = out / "leaks.json"
     target.write_text(json.dumps(results, indent=2))
     total = sum(len(item["leaked"]) for item in results["scenarios"])
