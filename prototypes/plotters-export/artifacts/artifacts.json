@@ -1,0 +1,122 @@
+[
+  {
+    "backend": "plotters",
+    "case": "payoff",
+    "format": "png",
+    "file": "payoff-plotters.png",
+    "bytes": 63709,
+    "millis": 3.451
+  },
+  {
+    "backend": "plotters",
+    "case": "payoff",
+    "format": "svg",
+    "file": "payoff-plotters.svg",
+    "bytes": 205891,
+    "millis": 0.455334
+  },
+  {
+    "backend": "plotters",
+    "case": "payoff",
+    "format": "svg-plain",
+    "file": "payoff-plotters.plain.svg",
+    "bytes": 9073,
+    "millis": 0.162292
+  },
+  {
+    "backend": "plotly",
+    "case": "payoff",
+    "format": "png",
+    "file": "payoff-plotly.png",
+    "bytes": 70689,
+    "millis": 1281.956833
+  },
+  {
+    "backend": "plotly",
+    "case": "payoff",
+    "format": "svg",
+    "file": "payoff-plotly.svg",
+    "bytes": 46072,
+    "millis": 1447.936
+  },
+  {
+    "backend": "plotters",
+    "case": "curves",
+    "format": "png",
+    "file": "curves-plotters.png",
+    "bytes": 74761,
+    "millis": 16.165375
+  },
+  {
+    "backend": "plotters",
+    "case": "curves",
+    "format": "svg",
+    "file": "curves-plotters.svg",
+    "bytes": 212255,
+    "millis": 6.9404580000000005
+  },
+  {
+    "backend": "plotters",
+    "case": "curves",
+    "format": "svg-plain",
+    "file": "curves-plotters.plain.svg",
+    "bytes": 15437,
+    "millis": 4.532333
+  },
+  {
+    "backend": "plotly",
+    "case": "curves",
+    "format": "png",
+    "file": "curves-plotly.png",
+    "bytes": 93806,
+    "millis": 1153.765416
+  },
+  {
+    "backend": "plotly",
+    "case": "curves",
+    "format": "svg",
+    "file": "curves-plotly.svg",
+    "bytes": 26730,
+    "millis": 1150.020417
+  },
+  {
+    "backend": "plotters",
+    "case": "surface",
+    "format": "png",
+    "file": "surface-plotters.png",
+    "bytes": 142453,
+    "millis": 3.283667
+  },
+  {
+    "backend": "plotters",
+    "case": "surface",
+    "format": "svg",
+    "file": "surface-plotters.svg",
+    "bytes": 234533,
+    "millis": 0.40925
+  },
+  {
+    "backend": "plotters",
+    "case": "surface",
+    "format": "svg-plain",
+    "file": "surface-plotters.plain.svg",
+    "bytes": 37715,
+    "millis": 0.37024999999999997
+  },
+  {
+    "backend": "plotly",
+    "case": "surface",
+    "format": "png",
+    "file": "surface-plotly.png",
+    "bytes": 137383,
+    "millis": 1945.415041
+  },
+  {
+    "backend": "plotly",
+    "case": "surface",
+    "format": "svg",
+    "file": "surface-plotly.svg",
+    "bytes": 374699,
+    "millis": 1915.458958
+  }
+]

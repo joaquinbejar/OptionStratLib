@@ -214,6 +214,7 @@ members = [
     "examples/examples_surfaces",
     "examples/examples_visualization",
     "examples/examples_volatility",
+    "prototypes/plotters-export",
 ]
 
 [workspace.package]

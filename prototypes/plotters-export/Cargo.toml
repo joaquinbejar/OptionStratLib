@@ -1,0 +1,60 @@
+# Prototype for #920: native PNG/SVG export with Plotters, compared with the
+# current Plotly export (`plotly_static` + chromedriver + headless Chrome).
+#
+# A workspace member with `publish = false`. It is an experiment, not part of
+# any published crate: nothing here changes `optionstratlib-visualization`,
+# its features or the facade. The native renderer reads the same backend-
+# neutral `GraphData` / `GraphConfig` the Plotly path reads, so the two
+# outputs come from identical inputs. See `REPORT.md` for the results.
+#
+# The Plotly baseline is behind `plotly-baseline`, which turns on
+# `optionstratlib-visualization/static_export`: building it runs the
+# `plotly_static` build script and running it needs a chromedriver of the
+# installed Chrome's major version (`WEBDRIVER_PATH`, `BROWSER_PATH`). The
+# default build needs neither.
+[package]
+name = "osl-prototype-plotters-export"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Prototype for #920: native PNG/SVG export with Plotters, compared with the Plotly static export."
+
+[features]
+default = []
+# The Plotly static export, for the comparison only.
+plotly-baseline = ["optionstratlib-visualization/static_export"]
+
+[dependencies]
+optionstratlib-core = { workspace = true }
+optionstratlib-pricing = { workspace = true }
+optionstratlib-strategies = { workspace = true }
+optionstratlib-visualization = { workspace = true }
+# Only the pieces the prototype draws with. `ab_glyph` renders the embedded
+# font instead of `ttf`, which would load system fonts through font-kit
+# (fontconfig on Linux).
+plotters = { version = "0.3.7", default-features = false, features = [
+    "ab_glyph",
+    "bitmap_backend",
+    "bitmap_encoder",
+    "colormaps",
+    # `colormaps` does not compile without it in 0.3.7.
+    "full_palette",
+    "line_series",
+    "svg_backend",
+] }
+base64 = "0.22"
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+tempfile = { workspace = true }
+
+[[bench]]
+name = "native_export"
+harness = false

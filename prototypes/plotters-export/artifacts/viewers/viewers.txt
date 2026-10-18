@@ -1,0 +1,10 @@
+chrome: Google Chrome 155.0.8059.85 
+rsvg: rsvg-convert version 2.63.3
+
+libraries used:
+  cairo 1.18.6
+  pango 1.58.2
+  harfbuzz 14.6.0
+  fontconfig 2.18.3
+webkit: macOS 27.0.1 Quick Look
+open sans installed: 0
