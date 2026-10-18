@@ -1,0 +1,131 @@
+{
+  "svg": "text.outlines.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+      "description": "Chart of 4 series: AV To fi ; café · ñandú · Ωμέγα αβγ; € £ ¥ $ 1.5e−7; & < > \" ' $. x axis: Strike − spot ($). y axis: Δ per $1 (Γ = 1.5e−7)."
+    },
+    {
+      "role": "image",
+      "name": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Δ per $1 (Γ = 1.5e−7)",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Strike − spot ($)",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−1.5e-6",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−1e-6",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−5e-7",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5e-7",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "1e-6",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "1.5e-6",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "2",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "4",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "6",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "8",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "10",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": " AV To fi ",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "café · ñandú · Ωμέγα αβγ",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "€ £ ¥ $ 1.5e−7",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Aa",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "& < > \" ' $",
+      "description": null
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "svg": "curves.outlines.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "Call value by implied volatility (K = 100, 30 days)",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "Call value by implied volatility (K = 100, 30 days)",
+      "description": "Chart of 5 series: σ = 10%; σ = 20%; σ = 30%; σ = 40%; Intrinsic value. x axis: Underlying price. y axis: Call value."
+    },
+    {
+      "role": "image",
+      "name": "Call value by implied volatility (K = 100, 30 days)",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Call value",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Underlying price",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "10",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "15",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "20",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "25",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "30",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "70",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "80",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "90",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "100",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "110",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "120",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "130",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "σ = 10%",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "σ = 20%",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "σ = 30%",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "σ = 40%",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Intrinsic value",
+      "description": null
+    }
+  ]
+}

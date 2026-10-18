@@ -16,7 +16,7 @@
 //!
 //! Labels are laid out with the metrics Plotters measured the chart with,
 //! which are also the ones the PNG is drawn with: ab_glyph at the Plotters
-//! font size (the SVG `font-size` times [`EM_RATIO`], the factor
+//! font size (the SVG `font-size` times `EM_RATIO`, the factor
 //! plotters-svg divided it by, applied once here), each character's
 //! horizontal advance plus ab_glyph's kerning, and the anchor box of
 //! `plotters-backend`'s default `draw_text`. The room the layout reserved
@@ -856,6 +856,24 @@ mod tests {
         assert!(close(flat.bottom - flat.top, turned.right - turned.left));
         // A quarter turn counter-clockwise: text reads upwards from the anchor.
         assert!(close(turned.bottom, 30.0 - (flat.left - 20.0)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_bundled_font_kerns_nothing_through_ab_glyph() -> Result<(), ExportError> {
+        // Open Sans 3.003 keeps its kerning in GPOS only, and ab_glyph reads
+        // the legacy `kern` table: Plotters' layout, its PNG and these
+        // outlines kern no pair, while browsers apply GPOS to `<text>`.
+        let font = bundled_font()?;
+        let scaled = font.as_scaled(PxScale::from(20.0));
+        for pair in ["AV", "To", "Te", "Yo", "LT", "P5", "VA"] {
+            let mut glyphs = pair.chars().map(|c| font.glyph_id(c));
+            let (Some(first), Some(second)) = (glyphs.next(), glyphs.next()) else {
+                panic!("two characters");
+            };
+            assert_ne!(first, NOTDEF);
+            assert_eq!(scaled.kern(first, second), 0.0, "{pair}");
+        }
         Ok(())
     }
 

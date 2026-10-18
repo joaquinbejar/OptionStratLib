@@ -1,0 +1,111 @@
+{
+  "svg": "payoff.outlines.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option",
+      "description": "Chart of 7 series: BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option; Segment 2; Break Even; Current Price; Current P/L: -52.66; -52.66; BE: 5808.21. x axis: Underlying Price. y axis: Profit/Loss."
+    },
+    {
+      "role": "image",
+      "name": "BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Profit/Loss",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Underlying Price",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−120",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−100",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−80",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−60",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−40",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "−20",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "20",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5650",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5700",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5750",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5800",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5850",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "5900",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "-52.66",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "BE: 5808.21",
+      "description": null
+    }
+  ]
+}

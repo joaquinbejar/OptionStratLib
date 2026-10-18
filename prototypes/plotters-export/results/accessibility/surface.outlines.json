@@ -1,0 +1,126 @@
+{
+  "svg": "surface.outlines.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "Implied volatility surface",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "Implied volatility surface",
+      "description": "Surface chart of Implied volatility, coloured by value. x axis: Strike. y axis: Days to expiry. z axis: Implied volatility."
+    },
+    {
+      "role": "image",
+      "name": "Implied volatility surface",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "80",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "100",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "120",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.2",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.25",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.3",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.35",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.4",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.45",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "100",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "200",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "300",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Strike",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Days to expiry",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Implied volatility",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.17",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.24",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.31",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.39",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "0.46",
+      "description": null
+    },
+    {
+      "role": "image",
+      "name": "Implied volatility",
+      "description": null
+    }
+  ]
+}

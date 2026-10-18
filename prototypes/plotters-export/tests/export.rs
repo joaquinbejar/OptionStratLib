@@ -562,6 +562,24 @@ fn test_outlines_rotate_the_y_axis_title() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn test_outlines_labels_never_overlap() -> Result<(), Box<dyn Error>> {
+    for case in Case::EVERY {
+        let Fixture { data, config } = case.build()?;
+        let labels = render_svg_outlined(&data, &config)?.labels;
+        for (index, a) in labels.iter().enumerate() {
+            for b in labels.iter().skip(index + 1) {
+                let apart = a.right <= b.left
+                    || b.right <= a.left
+                    || a.bottom <= b.top
+                    || b.bottom <= a.top;
+                assert!(apart, "{}: {a:?} overlaps {b:?}", case.slug());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_outlines_fit_the_reserved_legend_column() -> Result<(), Box<dyn Error>> {
     for case in [Case::Curves, Case::Text] {
         let Fixture { data, config } = case.build()?;

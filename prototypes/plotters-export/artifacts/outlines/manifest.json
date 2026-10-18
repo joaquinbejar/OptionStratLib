@@ -1,0 +1,146 @@
+[
+  {
+    "case": "payoff",
+    "format": "png",
+    "text": null,
+    "file": "payoff.png",
+    "width": 1600,
+    "height": 900,
+    "bytes": 63709
+  },
+  {
+    "case": "payoff",
+    "format": "svg",
+    "text": "embedded-font",
+    "file": "payoff.svg",
+    "width": 1600,
+    "height": 900,
+    "bytes": 205891
+  },
+  {
+    "case": "payoff",
+    "format": "svg-plain",
+    "text": "viewer-font",
+    "file": "payoff.plain.svg",
+    "width": 1600,
+    "height": 900,
+    "bytes": 9073
+  },
+  {
+    "case": "payoff",
+    "format": "svg-outlines",
+    "text": "outlines",
+    "file": "payoff.outlines.svg",
+    "width": 1600,
+    "height": 900,
+    "bytes": 100938
+  },
+  {
+    "case": "curves",
+    "format": "png",
+    "text": null,
+    "file": "curves.png",
+    "width": 1280,
+    "height": 720,
+    "bytes": 74761
+  },
+  {
+    "case": "curves",
+    "format": "svg",
+    "text": "embedded-font",
+    "file": "curves.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 212255
+  },
+  {
+    "case": "curves",
+    "format": "svg-plain",
+    "text": "viewer-font",
+    "file": "curves.plain.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 15437
+  },
+  {
+    "case": "curves",
+    "format": "svg-outlines",
+    "text": "outlines",
+    "file": "curves.outlines.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 68997
+  },
+  {
+    "case": "surface",
+    "format": "png",
+    "text": null,
+    "file": "surface.png",
+    "width": 1280,
+    "height": 720,
+    "bytes": 142453
+  },
+  {
+    "case": "surface",
+    "format": "svg",
+    "text": "embedded-font",
+    "file": "surface.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 234533
+  },
+  {
+    "case": "surface",
+    "format": "svg-plain",
+    "text": "viewer-font",
+    "file": "surface.plain.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 37715
+  },
+  {
+    "case": "surface",
+    "format": "svg-outlines",
+    "text": "outlines",
+    "file": "surface.outlines.svg",
+    "width": 1280,
+    "height": 720,
+    "bytes": 93739
+  },
+  {
+    "case": "text",
+    "format": "png",
+    "text": null,
+    "file": "text.png",
+    "width": 960,
+    "height": 540,
+    "bytes": 49077
+  },
+  {
+    "case": "text",
+    "format": "svg",
+    "text": "embedded-font",
+    "file": "text.svg",
+    "width": 960,
+    "height": 540,
+    "bytes": 206029
+  },
+  {
+    "case": "text",
+    "format": "svg-plain",
+    "text": "viewer-font",
+    "file": "text.plain.svg",
+    "width": 960,
+    "height": 540,
+    "bytes": 9211
+  },
+  {
+    "case": "text",
+    "format": "svg-outlines",
+    "text": "outlines",
+    "file": "text.outlines.svg",
+    "width": 960,
+    "height": 540,
+    "bytes": 71495
+  }
+]
