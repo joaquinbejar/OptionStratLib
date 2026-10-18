@@ -1,0 +1,388 @@
+{
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "chrome": "Google Chrome 155.0.8059.85",
+    "chromedriver": "ChromeDriver 155.0.8059.85 (0e66b94549a8bd85f03fbdf189b752d6e7b63c32-refs/branch-heads/8059@{#1304})",
+    "git": "1ffcda8566ea63493cc531fd8e0a5357e48603ef",
+    "mode": "leaks",
+    "sandboxed_native_cold_runs": false,
+    "cold_runs": 10,
+    "warm_iterations": 200,
+    "plotly_warm_iterations": 10
+  },
+  "scenarios": [
+    {
+      "scenario": "concurrent",
+      "processes": 2,
+      "run": 0,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": []
+    },
+    {
+      "scenario": "concurrent",
+      "processes": 4,
+      "run": 0,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": []
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGINT",
+      "delay_s": 0.8,
+      "run": 0,
+      "status": -2,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 27050,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 27063,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27066,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27067,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGTERM",
+      "delay_s": 0.8,
+      "run": 0,
+      "status": -15,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 27208,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 27225,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27228,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27237,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGKILL",
+      "delay_s": 0.8,
+      "run": 0,
+      "status": -9,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 27380,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 27389,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27392,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27395,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "concurrent",
+      "processes": 2,
+      "run": 1,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": []
+    },
+    {
+      "scenario": "concurrent",
+      "processes": 4,
+      "run": 1,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": [
+        {
+          "pid": 27694,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 27747,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27767,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 27772,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGINT",
+      "delay_s": 0.8,
+      "run": 1,
+      "status": -2,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 27974,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 27987,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28027,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28028,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGTERM",
+      "delay_s": 0.8,
+      "run": 1,
+      "status": -15,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 28151,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 28164,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28169,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28170,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGKILL",
+      "delay_s": 0.8,
+      "run": 1,
+      "status": -9,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 28264,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 28277,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28281,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 28283,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "concurrent",
+      "processes": 2,
+      "run": 2,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": []
+    },
+    {
+      "scenario": "concurrent",
+      "processes": 4,
+      "run": 2,
+      "statuses": [
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        },
+        {
+          "status": 0,
+          "stderr": ""
+        }
+      ],
+      "leaked": []
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGINT",
+      "delay_s": 0.8,
+      "run": 2,
+      "status": -2,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 29106,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 29114,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29117,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29122,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGTERM",
+      "delay_s": 0.8,
+      "run": 2,
+      "status": -15,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 29270,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 29311,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29316,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29319,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    },
+    {
+      "scenario": "interrupted",
+      "signal": "SIGKILL",
+      "delay_s": 0.8,
+      "run": 2,
+      "status": -9,
+      "browser_up_at_signal": 5,
+      "leaked": [
+        {
+          "pid": 29419,
+          "command": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --allow-pre-commit-input --disable-background-networking --disable-background-timer-throttling --di"
+        },
+        {
+          "pid": 29433,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29443,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        },
+        {
+          "pid": 29444,
+          "command": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.85/Helpers/Google Chrome Helper (Renderer).app/Content"
+        }
+      ]
+    }
+  ]
+}
