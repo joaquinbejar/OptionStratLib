@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib-market"
-version.workspace = true
+version = "0.22.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

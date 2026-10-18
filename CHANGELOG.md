@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-10-18
+
+Only `optionstratlib-market` is released at 0.22.2; the other nine crates
+stay at 0.22.1 (`docs/versioning-policy.md`, #834). A consumer picks it up
+with `cargo update -p optionstratlib-market`.
+
+### Security
+
+- **`zip` 9** (#919). `zip` 8.6, which `optionstratlib-market` used behind
+  `io` (and so the facade's default), is affected by RUSTSEC-2026-0367,
+  RUSTSEC-2026-0368 and RUSTSEC-2026-0369, all in the archive extraction
+  API. The library never extracted archives (it opens them and reads
+  entries), but the dependency failed `cargo audit` downstream. The market
+  crate now requires `zip` 9: `ZipFile::name()` became fallible there, so
+  an entry whose name cannot be decoded is reported as the archive's
+  `OhlcvError::ZipError` instead of being read through. The `static_export`
+  build still pulls older `zip` copies through `plotly_static`'s build
+  dependencies, which have no fixed release; they are waived in
+  `.cargo/audit.toml`, and `make check-feature-trees` now fails if any
+  other surface, or the market crate itself, resolves a `zip` below 9.
+- **`make publish-dry-run` handles a partial patch** (#919). The crates a
+  patch does not release keep a version crates.io already has; the dry run's
+  "already exists on crates.io index" warning for them is now reported as
+  "not part of this release" instead of failing the run.
+
 ## [0.22.1] - 2026-10-10
 
 ### Changed — breaking
