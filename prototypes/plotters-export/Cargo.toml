@@ -37,6 +37,8 @@ plotters = { version = "0.3.7", default-features = false, features = [
     "bitmap_backend",
     "bitmap_encoder",
     "colormaps",
+    # `colormaps` does not compile without it in 0.3.7.
+    "full_palette",
     "line_series",
     "svg_backend",
 ] }
