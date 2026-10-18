@@ -46,6 +46,9 @@ const TEXT_LABEL_PX: f64 = 16.0;
 
 /// plotly.js scatter defaults.
 const DEFAULT_LINE_WIDTH: f64 = 2.0;
+/// Widest line drawn. Plotters' polygon rasteriser panics on an unbounded
+/// width (an infinite one became `u32::MAX`), so wider is an error.
+const MAX_LINE_WIDTH_PX: f64 = 100.0;
 const DEFAULT_MARKER_DIAMETER: u32 = 6;
 /// `make_scatter` gives zero-width markers a 10px marker.
 const LABEL_MARKER_DIAMETER: u32 = 10;
@@ -79,6 +82,10 @@ const SURFACE_YAW: f64 = 0.7;
 const SURFACE_PITCH: f64 = 0.5;
 const SURFACE_SCALE: f64 = 0.8;
 const COLORBAR_WIDTH_PX: u32 = 110;
+/// Smallest figure a surface is laid out in: the colour bar plus room for
+/// the 3D axes, and a height that leaves an area under the title.
+const SURFACE_MIN_WIDTH_PX: u32 = COLORBAR_WIDTH_PX + 130;
+const SURFACE_MIN_HEIGHT_PX: u32 = 160;
 const COLORBAR_STEPS: i32 = 100;
 const COLORBAR_TICKS: i32 = 5;
 
@@ -284,6 +291,25 @@ where
     }
 }
 
+/// Fails when `area`, carved out of `root` by a title, legend or colour bar,
+/// has no pixels left. Plotters reports an area squeezed below zero as a huge
+/// unsigned size rather than an error, so it is caught here before any
+/// geometry is derived from it.
+fn ensure_room<DB: DrawingBackend>(
+    area: &DrawingArea<DB, Shift>,
+    root: &DrawingArea<DB, Shift>,
+) -> Result<(), ExportError> {
+    let (width, height) = area.dim_in_pixel();
+    let (root_width, root_height) = root.dim_in_pixel();
+    if width == 0 || height == 0 || width > root_width || height > root_height {
+        return Err(ExportError::NoRoom {
+            width: root_width,
+            height: root_height,
+        });
+    }
+    Ok(())
+}
+
 /// One 2D series, validated and converted for drawing.
 struct Trace {
     name: String,
@@ -313,6 +339,12 @@ fn prepare_traces(series: &[Series2D]) -> Result<Vec<Trace>, ExportError> {
             None => default_color(index)?,
         };
         let width = item.line_width.unwrap_or(DEFAULT_LINE_WIDTH);
+        if !(width.is_finite() && (0.0..=MAX_LINE_WIDTH_PX).contains(&width)) {
+            return Err(ExportError::InvalidLineWidth {
+                name: item.name.clone(),
+                width,
+            });
+        }
         let diameter = if item.line_width == Some(0.0) {
             LABEL_MARKER_DIAMETER
         } else {
@@ -323,8 +355,8 @@ fn prepare_traces(series: &[Series2D]) -> Result<Vec<Trace>, ExportError> {
             points,
             mode: item.mode,
             color,
-            // A pixel width: negative or NaN draws nothing, like Plotly.
-            line_width: width.max(0.0).round() as u32,
+            // Finite and within 0..=MAX_LINE_WIDTH_PX, checked above.
+            line_width: width.round() as u32,
             marker_radius: diameter / 2,
         });
     }
@@ -342,7 +374,9 @@ fn axis_range(values: impl Iterator<Item = f64>, padding: f64) -> std::ops::Rang
     }
     match bounds {
         None => 0.0..1.0,
-        Some((low, high)) if high - low <= f64::EPSILON * low.abs().max(1.0) => {
+        // Only equal bounds are flat: a tiny but real span (0 to 1e-18 is a
+        // valid Decimal series) keeps its own scale.
+        Some((low, high)) if high == low => {
             let half = if low == 0.0 {
                 FLAT_ZERO_HALF_SPAN
             } else {
@@ -369,12 +403,14 @@ where
     let body = root
         .titled(&config.title, font(TITLE_PX).color(&TEXT))
         .map_err(render_error)?;
+    ensure_room(&body, root)?;
 
     let (plot_area, legend_area) = if config.show_legend && !traces.is_empty() {
         let width = legend_width(root, &traces)?;
         let (total, _) = body.dim_in_pixel();
         let split = total.checked_sub(width).unwrap_or(total);
         let (left, right) = body.split_horizontally(split);
+        ensure_room(&left, root)?;
         (left, Some(right))
     } else {
         (body, None)
@@ -388,6 +424,12 @@ where
         traces.iter().flat_map(|t| t.points.iter().map(|p| p.1)),
         Y_PADDING,
     );
+    // Plotters' key points degrade below spans of about 1e-15, so a tiny axis
+    // is drawn in units of its own scale and labelled with the real values.
+    let (x_scale, y_scale) = (axis_scale(&x_range), axis_scale(&y_range));
+    let scaled = |point: &(f64, f64)| (point.0 / x_scale, point.1 / y_scale);
+    let x_range = (x_range.start / x_scale)..(x_range.end / x_scale);
+    let y_range = (y_range.start / y_scale)..(y_range.end / y_scale);
 
     let mut chart = ChartBuilder::on(&plot_area)
         .margin(10)
@@ -398,8 +440,8 @@ where
 
     let x_step = tick_step(&x_range, 8);
     let y_step = tick_step(&y_range, 8);
-    let x_format = move |value: &f64| format_number(*value, x_step);
-    let y_format = move |value: &f64| format_number(*value, y_step);
+    let x_format = move |value: &f64| format_number(*value * x_scale, x_step * x_scale);
+    let y_format = move |value: &f64| format_number(*value * y_scale, y_step * y_scale);
     let mut mesh = chart.configure_mesh();
     mesh.x_label_formatter(&x_format)
         .y_label_formatter(&y_format)
@@ -443,7 +485,7 @@ where
         if draws_line && trace.line_width > 0 {
             let style = trace.color.stroke_width(trace.line_width);
             chart
-                .draw_series(LineSeries::new(trace.points.iter().copied(), style))
+                .draw_series(LineSeries::new(trace.points.iter().map(scaled), style))
                 .map_err(render_error)?;
         }
         if draws_markers {
@@ -453,7 +495,7 @@ where
                     trace
                         .points
                         .iter()
-                        .map(|point| Circle::new(*point, trace.marker_radius, style)),
+                        .map(|point| Circle::new(scaled(point), trace.marker_radius, style)),
                 )
                 .map_err(render_error)?;
         }
@@ -466,7 +508,7 @@ where
                     trace
                         .points
                         .iter()
-                        .map(|point| Text::new(trace.name.clone(), *point, style.clone())),
+                        .map(|point| Text::new(trace.name.clone(), scaled(point), style.clone())),
                 )
                 .map_err(render_error)?;
         }
@@ -640,12 +682,23 @@ where
     DB::ErrorType: 'static,
 {
     let grid = surface_grid(surface)?;
+    if config.width < SURFACE_MIN_WIDTH_PX || config.height < SURFACE_MIN_HEIGHT_PX {
+        return Err(ExportError::TooSmall {
+            width: config.width,
+            height: config.height,
+            min_width: SURFACE_MIN_WIDTH_PX,
+            min_height: SURFACE_MIN_HEIGHT_PX,
+        });
+    }
     let body = root
         .titled(&config.title, font(TITLE_PX).color(&TEXT))
         .map_err(render_error)?;
+    ensure_room(&body, root)?;
     let (total, _) = body.dim_in_pixel();
     let split = total.checked_sub(COLORBAR_WIDTH_PX).unwrap_or(total);
     let (plot_area, bar_area) = body.split_horizontally(split);
+    ensure_room(&plot_area, root)?;
+    ensure_room(&bar_area, root)?;
 
     let x_range = axis_range(grid.xs.iter().copied(), 0.0);
     let y_range = axis_range(grid.ys.iter().copied(), 0.0);
@@ -785,16 +838,23 @@ fn draw_colorbar<DB: DrawingBackend>(
 where
     DB::ErrorType: 'static,
 {
+    // Geometry in i64: `dim_in_pixel` of an area squeezed below zero by a
+    // caption comes back as a huge u32, which must not overflow here.
     let (_, height) = area.dim_in_pixel();
-    let height = i32::try_from(height).unwrap_or(i32::MAX);
+    let height = i64::from(height);
     let top = height / 6;
     let bottom = height - height / 6;
     let (left, right) = (10, 30);
     let span = (bottom - top).max(1);
-    for step in 0..COLORBAR_STEPS {
-        let y0 = bottom - span * step / COLORBAR_STEPS;
-        let y1 = bottom - span * (step + 1) / COLORBAR_STEPS;
-        let fraction = f64::from(step) / f64::from(COLORBAR_STEPS - 1);
+    let steps = i64::from(COLORBAR_STEPS);
+    let pixel = |value: i64| {
+        i32::try_from(value)
+            .map_err(|_| ExportError::Render(format!("colour bar coordinate {value} out of range")))
+    };
+    for step in 0..steps {
+        let y0 = pixel(bottom - span * step / steps)?;
+        let y1 = pixel(bottom - span * (step + 1) / steps)?;
+        let fraction = step as f64 / (steps - 1) as f64;
         let color = ViridisRGB.get_color(fraction);
         area.draw(&Rectangle::new([(left, y1), (right, y0)], color.filled()))
             .map_err(render_error)?;
@@ -805,7 +865,7 @@ where
     for tick in 0..COLORBAR_TICKS {
         let fraction = f64::from(tick) / f64::from(COLORBAR_TICKS - 1);
         let value = low + (high - low) * fraction;
-        let y = bottom - (f64::from(span) * fraction).round() as i32;
+        let y = pixel(bottom - (span as f64 * fraction).round() as i64)?;
         area.draw(&PathElement::new(
             vec![(right, y), (right + 4, y)],
             AXIS_LINE.stroke_width(1),
@@ -822,37 +882,73 @@ where
         let style = font(TICK_PX)
             .color(&TEXT)
             .pos(Pos::new(HPos::Left, VPos::Bottom));
-        area.draw(&Text::new(title, (left, top - 12), style))
+        area.draw(&Text::new(title, (left, pixel(top - 12)?), style))
             .map_err(render_error)?;
     }
     Ok(())
 }
 
-/// `value` with enough decimals to tell apart ticks `step` apart, without
+/// `value` with enough precision to tell apart ticks `step` apart, without
 /// trailing zeros and with a true minus sign, as Plotly writes ticks.
+///
+/// Fixed notation while the step is at least 1e-4; below that, or for
+/// magnitudes from 1e15, scientific notation with as many mantissa digits as
+/// `value / step` needs, so ticks of a 0 to 0.00001 axis stay distinct.
 fn format_number(value: f64, step: f64) -> String {
+    const SMALLEST_FIXED_STEP: f64 = 1e-4;
+    const LARGEST_FIXED_MAGNITUDE: f64 = 1e15;
+    const MAX_DIGITS: f64 = 15.0;
     let step = step.abs();
-    let decimals = if step >= 1.0 {
-        0
-    } else if step >= 0.1 {
-        1
-    } else if step >= 0.01 {
-        2
-    } else if step >= 0.001 {
-        3
+    if !value.is_finite() || !step.is_finite() || step == 0.0 {
+        return with_true_minus(value.to_string());
+    }
+    if value == 0.0 {
+        return "0".to_string();
+    }
+    let magnitude = value.abs().max(step);
+    let text = if step >= SMALLEST_FIXED_STEP && magnitude < LARGEST_FIXED_MAGNITUDE {
+        let decimals = (-step.log10()).ceil().clamp(0.0, MAX_DIGITS) as usize;
+        trim_fraction(&format!("{value:.decimals$}"))
     } else {
-        4
+        let digits = (magnitude / step).log10().ceil().clamp(0.0, MAX_DIGITS) as usize;
+        let scientific = format!("{value:.digits$e}");
+        match scientific.split_once('e') {
+            Some((mantissa, exponent)) => format!("{}e{exponent}", trim_fraction(mantissa)),
+            None => scientific,
+        }
     };
-    let text = format!("{value:.decimals$}");
-    let text = if text.contains('.') {
+    with_true_minus(text)
+}
+
+/// `text` without trailing fractional zeros or a bare decimal point.
+fn trim_fraction(text: &str) -> String {
+    if text.contains('.') {
         text.trim_end_matches('0').trim_end_matches('.').to_string()
     } else {
-        text
-    };
+        text.to_string()
+    }
+}
+
+/// A leading `-` as U+2212, and `-0` as `0`.
+fn with_true_minus(text: String) -> String {
     match text.strip_prefix('-') {
         Some("0") => "0".to_string(),
         Some(rest) => format!("\u{2212}{rest}"),
         None => text,
+    }
+}
+
+/// Axes spanning less than this are drawn rescaled.
+const SMALLEST_DRAWN_SPAN: f64 = 1e-9;
+
+/// The unit a 2D axis is drawn in: 1, or for a span under
+/// `SMALLEST_DRAWN_SPAN` the power of ten just below it.
+fn axis_scale(range: &std::ops::Range<f64>) -> f64 {
+    let span = range.end - range.start;
+    if span > 0.0 && span < SMALLEST_DRAWN_SPAN {
+        10_f64.powi(span.log10().floor() as i32)
+    } else {
+        1.0
     }
 }
 
@@ -938,6 +1034,27 @@ mod tests {
         assert_eq!(grid.z_at(1, 0), Some(3.0));
         assert_eq!(grid.z_at(1, 1), Some(4.0));
         Ok(())
+    }
+
+    #[test]
+    fn test_axis_range_keeps_a_tiny_real_span() {
+        let range = axis_range([0.0, 1e-18].into_iter(), 0.05);
+        assert!(range.start < 0.0 && range.end > 1e-18);
+        assert!(range.end - range.start < 2e-18);
+    }
+
+    #[test]
+    fn test_format_number_keeps_small_ticks_distinct() {
+        let ticks: Vec<String> = [0.0, 2e-6, 4e-6, 6e-6, 8e-6, 1e-5]
+            .iter()
+            .map(|value| format_number(*value, 2e-6))
+            .collect();
+        let distinct: std::collections::BTreeSet<&String> = ticks.iter().collect();
+        assert_eq!(distinct.len(), ticks.len(), "{ticks:?}");
+        assert_eq!(format_number(2e-6, 2e-6), "2e-6");
+        assert_eq!(format_number(-2e-6, 2e-6), "\u{2212}2e-6");
+        assert_ne!(format_number(1.0, 2e-7), format_number(1.0000002, 2e-7));
+        assert_eq!(format_number(f64::INFINITY, 1.0), "inf");
     }
 
     #[test]

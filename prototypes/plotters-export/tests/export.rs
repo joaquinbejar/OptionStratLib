@@ -244,3 +244,153 @@ fn test_empty_surface_is_rejected() {
         })
     ));
 }
+
+#[test]
+fn test_small_figures_never_panic() -> Result<(), Box<dyn Error>> {
+    const SIZES: [u32; 9] = [1, 2, 5, 20, 40, 120, 159, 239, 240];
+    for case in Case::ALL {
+        let fixture = case.build()?;
+        for width in SIZES {
+            for height in SIZES {
+                let config = GraphConfig {
+                    width,
+                    height,
+                    ..fixture.config.clone()
+                };
+                let outcome = std::panic::catch_unwind(|| {
+                    render_svg(&fixture.data, &config, SvgText::ViewerFont)
+                });
+                let Ok(result) = outcome else {
+                    return Err(format!("{} panicked at {width}x{height}", case.slug()).into());
+                };
+                match result {
+                    Ok(_) | Err(ExportError::TooSmall { .. } | ExportError::NoRoom { .. }) => {}
+                    Err(error) => {
+                        return Err(format!("{} at {width}x{height}: {error}", case.slug()).into());
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_surface_below_its_minimum_size_is_rejected() -> Result<(), Box<dyn Error>> {
+    let Fixture { data, config } = Case::Surface.build()?;
+    let config = GraphConfig {
+        width: 20,
+        height: 20,
+        ..config
+    };
+    let result = render_svg(&data, &config, SvgText::ViewerFont);
+    assert!(matches!(
+        result,
+        Err(ExportError::TooSmall {
+            width: 20,
+            height: 20,
+            min_width: 240,
+            min_height: 160
+        })
+    ));
+    Ok(())
+}
+
+#[test]
+fn test_non_finite_or_huge_line_widths_are_rejected() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    for width in [f64::INFINITY, f64::NAN, -1.0, 1e9] {
+        let mut line = series("wide", vec![dec!(0), dec!(1)], vec![dec!(0), dec!(1)]);
+        line.line_width = Some(width);
+        let config = GraphConfig {
+            width: 640,
+            height: 480,
+            ..GraphConfig::default()
+        };
+        let result = write_png(&GraphData::Series(line), &config, &dir.path().join("w.png"));
+        assert!(
+            matches!(result, Err(ExportError::InvalidLineWidth { .. })),
+            "{width}: {result:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_wide_but_flat_surface_figure_is_rejected() {
+    let data = surface(
+        vec![dec!(1), dec!(2), dec!(1), dec!(2)],
+        vec![dec!(1), dec!(1), dec!(2), dec!(2)],
+        vec![dec!(0.2), dec!(0.3), dec!(0.4), dec!(0.5)],
+    );
+    let config = GraphConfig {
+        width: 640,
+        height: 20,
+        ..GraphConfig::default()
+    };
+    let result = render_svg(&data, &config, SvgText::ViewerFont);
+    assert!(
+        matches!(result, Err(ExportError::TooSmall { .. })),
+        "{result:?}"
+    );
+}
+
+#[test]
+fn test_title_taller_than_the_figure_is_no_room() {
+    let data = GraphData::Series(series("s", vec![dec!(0), dec!(1)], vec![dec!(0), dec!(1)]));
+    let config = GraphConfig {
+        width: 640,
+        height: 10,
+        ..GraphConfig::default()
+    };
+    let result = render_svg(&data, &config, SvgText::ViewerFont);
+    assert!(
+        matches!(result, Err(ExportError::NoRoom { .. })),
+        "{result:?}"
+    );
+}
+
+/// The numeric text elements of an SVG.
+fn numeric_labels(svg: &str) -> Vec<f64> {
+    svg.split("<text")
+        .skip(1)
+        .filter_map(|element| {
+            let content = element.split_once('>')?.1.split_once("</text>")?.0;
+            content.trim().replace('\u{2212}', "-").parse::<f64>().ok()
+        })
+        .collect()
+}
+
+#[test]
+fn test_small_values_keep_distinct_tick_labels() -> Result<(), Box<dyn Error>> {
+    let data = GraphData::Series(series(
+        "tiny",
+        vec![dec!(0), dec!(1)],
+        vec![dec!(0), dec!(0.00001)],
+    ));
+    let svg = render_svg(&data, &small_config(), SvgText::ViewerFont)?;
+    let small: std::collections::BTreeSet<String> = numeric_labels(&svg)
+        .into_iter()
+        .filter(|value| *value > 0.0 && *value <= 1.1e-5)
+        .map(|value| format!("{value:e}"))
+        .collect();
+    assert!(small.len() >= 3, "{small:?}");
+    Ok(())
+}
+
+#[test]
+fn test_tiny_nonconstant_series_keeps_its_scale() -> Result<(), Box<dyn Error>> {
+    let data = GraphData::Series(series(
+        "tiny",
+        vec![dec!(0), dec!(1)],
+        vec![dec!(0), dec!(0.000000000000000001)],
+    ));
+    let svg = render_svg(&data, &small_config(), SvgText::ViewerFont)?;
+    let labels = numeric_labels(&svg);
+    assert!(
+        labels.iter().any(|value| *value > 0.0 && *value < 1e-17),
+        "{labels:?}"
+    );
+    assert!(!labels.iter().any(|value| *value <= -0.5), "{labels:?}");
+    Ok(())
+}

@@ -20,6 +20,39 @@ pub enum ExportError {
         height: u32,
     },
 
+    /// The figure is too small to lay the chart out.
+    #[error(
+        "{width}x{height} is too small for this chart; it needs at least {min_width}x{min_height}"
+    )]
+    TooSmall {
+        /// Configured width in pixels.
+        width: u32,
+        /// Configured height in pixels.
+        height: u32,
+        /// Smallest width the chart is laid out in.
+        min_width: u32,
+        /// Smallest height the chart is laid out in.
+        min_height: u32,
+    },
+
+    /// The title, legend or colour bar leave no pixels to draw the chart in.
+    #[error("{width}x{height} leaves no room for the chart under its title, legend or colour bar")]
+    NoRoom {
+        /// Configured width in pixels.
+        width: u32,
+        /// Configured height in pixels.
+        height: u32,
+    },
+
+    /// A line width is not a finite number of pixels between 0 and 100.
+    #[error("series {name:?} has line width {width}: expected a finite width in 0..=100 px")]
+    InvalidLineWidth {
+        /// Name of the series.
+        name: String,
+        /// The width given.
+        width: f64,
+    },
+
     /// A 2D series has a different number of x and y values.
     #[error("series {name:?} has {x} x values and {y} y values")]
     LengthMismatch {
