@@ -17,8 +17,10 @@
 
 pub mod error;
 pub mod fixtures;
+pub mod outline;
 pub mod render;
 pub mod svg;
 
 pub use error::ExportError;
-pub use render::{SvgText, render_svg, write_png, write_svg};
+pub use outline::{Label, Outlined};
+pub use render::{SvgText, render_svg, render_svg_outlined, write_png, write_svg};

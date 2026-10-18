@@ -9,6 +9,10 @@
 //!   legend.
 //! * [`Case::Surface`]: an implied-volatility surface over strike and days
 //!   to expiry with skew, smile curvature and an inverted short end.
+//! * [`Case::Text`]: not one of the compared charts, but a compact chart of
+//!   awkward text for #923 (text as SVG outlines): pairs kerning would
+//!   tighten, a ligature candidate, padding spaces, accents, Greek, currency
+//!   signs, a true minus, scientific ticks and characters SVG escapes.
 
 use optionstratlib_core::model::{
     ExpirationDate, OptionStyle, OptionType, Options, Positive, Side,
@@ -47,11 +51,16 @@ pub enum Case {
     Curves,
     /// An implied-volatility surface.
     Surface,
+    /// The text fixture of #923; not part of [`Case::ALL`].
+    Text,
 }
 
 impl Case {
-    /// Every case, in report order.
+    /// The three compared charts, in report order.
     pub const ALL: [Case; 3] = [Case::Payoff, Case::Curves, Case::Surface];
+
+    /// The compared charts and the text fixture.
+    pub const EVERY: [Case; 4] = [Case::Payoff, Case::Curves, Case::Surface, Case::Text];
 
     /// File-name stem of the case.
     #[must_use]
@@ -60,13 +69,14 @@ impl Case {
             Case::Payoff => "payoff",
             Case::Curves => "curves",
             Case::Surface => "surface",
+            Case::Text => "text",
         }
     }
 
     /// The case named `slug`, if any.
     #[must_use]
     pub fn from_slug(slug: &str) -> Option<Case> {
-        Case::ALL.into_iter().find(|case| case.slug() == slug)
+        Case::EVERY.into_iter().find(|case| case.slug() == slug)
     }
 
     /// Builds the case's chart.
@@ -80,6 +90,7 @@ impl Case {
             Case::Payoff => payoff(),
             Case::Curves => curves(),
             Case::Surface => surface(),
+            Case::Text => text(),
         }
     }
 }
@@ -299,6 +310,77 @@ fn surface() -> Result<Fixture, FixtureError> {
     })
 }
 
+/// Labels of the text fixture: one series per awkward-text group. Every
+/// character is in the bundled Open Sans.
+pub const TEXT_SERIES: [&str; 4] = [
+    "  AV To fi  ",
+    "café · ñandú · Ωμέγα αβγ",
+    "€ £ ¥ $ 1.5e−7",
+    "& < > \" ' $",
+];
+/// Title of the text fixture.
+pub const TEXT_TITLE: &str = "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '";
+
+/// Points of the text fixture's series: tiny values on both sides of zero,
+/// so the y ticks are scientific with a true minus.
+const TEXT_POINTS: i64 = 11;
+const TEXT_SLOPE: Decimal = dec!(0.0000003);
+
+fn text() -> Result<Fixture, FixtureError> {
+    const CASE: &str = "text";
+    let x: Vec<Decimal> = (0..TEXT_POINTS).map(Decimal::from).collect();
+    let mut series = Vec::with_capacity(TEXT_SERIES.len());
+    let modes = [
+        TraceMode::Lines,
+        TraceMode::LinesMarkers,
+        TraceMode::Markers,
+        TraceMode::TextLabels,
+    ];
+    let offsets = [dec!(-1), dec!(0), dec!(1), dec!(2)];
+    for ((name, mode), offset) in TEXT_SERIES.into_iter().zip(modes).zip(offsets) {
+        let y = x
+            .iter()
+            .map(|value| {
+                value
+                    .checked_sub(dec!(5))
+                    .and_then(|centred| centred.checked_add(offset))
+                    .and_then(|shifted| shifted.checked_mul(TEXT_SLOPE))
+                    .ok_or(FixtureError::Overflow(CASE))
+            })
+            .collect::<Result<_, _>>()?;
+        let (x, y) = if mode == TraceMode::TextLabels {
+            // Two labels are enough to show centred point labels.
+            let pick = |values: Vec<Decimal>| values.into_iter().step_by(5).take(2).collect();
+            (pick(x.clone()), pick(y))
+        } else {
+            (x.clone(), y)
+        };
+        series.push(Series2D {
+            x,
+            y,
+            name: name.to_string(),
+            mode,
+            line_color: None,
+            line_width: None,
+        });
+    }
+    Ok(Fixture {
+        data: GraphData::MultiSeries(series),
+        config: GraphConfig {
+            title: TEXT_TITLE.to_string(),
+            width: 960,
+            height: 540,
+            x_label: Some("Strike − spot ($)".to_string()),
+            y_label: Some("Δ per $1 (Γ = 1.5e−7)".to_string()),
+            z_label: None,
+            line_style: LineStyle::Solid,
+            color_scheme: ColorScheme::Default,
+            legend: None,
+            show_legend: true,
+        },
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -353,9 +435,27 @@ mod tests {
 
     #[test]
     fn test_case_slugs_round_trip() {
-        for case in Case::ALL {
+        for case in Case::EVERY {
             assert_eq!(Case::from_slug(case.slug()), Some(case));
         }
         assert_eq!(Case::from_slug("heatmap"), None);
+        assert!(!Case::ALL.contains(&Case::Text));
+    }
+
+    #[test]
+    fn test_text_fixture_names_every_awkward_label() -> Result<(), FixtureError> {
+        let fixture = Case::Text.build()?;
+        let GraphData::MultiSeries(series) = fixture.data else {
+            panic!("the text chart is a multi-series chart");
+        };
+        let names: Vec<&str> = series.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, TEXT_SERIES);
+        assert!(series.iter().all(|s| s.x.len() == s.y.len()));
+        assert!(
+            series
+                .iter()
+                .any(|s| s.mode == TraceMode::TextLabels && s.x.len() == 2)
+        );
+        Ok(())
     }
 }

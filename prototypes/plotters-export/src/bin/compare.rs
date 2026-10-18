@@ -10,15 +10,22 @@
 //! compare repeat <backend> <case> <format> <iterations> <dir>
 //!     <iterations> exports in one process; per-export wall times in
 //!     <dir>/repeat-<backend>-<case>-<format>.json.
+//! compare outlines <dir>
+//!     The native artifacts of #923 for every case and the text fixture:
+//!     PNG and the three SVG text modes, each named and listed with its
+//!     mode in <dir>/manifest.json, plus each outlines SVG's label boxes in
+//!     <dir>/<case>.labels.json.
 //! ```
 //!
 //! `<backend>` is `plotters` or `plotly` (the latter needs the
 //! `plotly-baseline` feature and a matching chromedriver), `<case>` one of
-//! `payoff`, `curves`, `surface`, and `<format>` `png`, `svg` or `svg-plain`
-//! (Plotters SVG without the embedded font).
+//! `payoff`, `curves`, `surface` or `text` (the #923 text fixture), and
+//! `<format>` `png`, `svg` (embedded font), `svg-plain` (Plotters SVG
+//! without the embedded font) or `svg-outlines` (Plotters SVG with text as
+//! outlines).
 
 use osl_prototype_plotters_export::fixtures::{Case, Fixture};
-use osl_prototype_plotters_export::{SvgText, write_png, write_svg};
+use osl_prototype_plotters_export::{SvgText, render_svg_outlined, write_png, write_svg};
 use serde::Serialize;
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -36,6 +43,7 @@ enum Format {
     Png,
     Svg,
     SvgPlain,
+    SvgOutlines,
 }
 
 impl Backend {
@@ -61,7 +69,10 @@ impl Format {
             "png" => Ok(Format::Png),
             "svg" => Ok(Format::Svg),
             "svg-plain" => Ok(Format::SvgPlain),
-            other => Err(format!("unknown format {other:?}: png, svg or svg-plain")),
+            "svg-outlines" => Ok(Format::SvgOutlines),
+            other => Err(format!(
+                "unknown format {other:?}: png, svg, svg-plain or svg-outlines"
+            )),
         }
     }
 
@@ -70,6 +81,17 @@ impl Format {
             Format::Png => "png",
             Format::Svg => "svg",
             Format::SvgPlain => "svg-plain",
+            Format::SvgOutlines => "svg-outlines",
+        }
+    }
+
+    /// How the format carries text: `None` for a raster.
+    const fn text_mode(self) -> Option<&'static str> {
+        match self {
+            Format::Png => None,
+            Format::Svg => Some("embedded-font"),
+            Format::SvgPlain => Some("viewer-font"),
+            Format::SvgOutlines => Some("outlines"),
         }
     }
 
@@ -78,12 +100,14 @@ impl Format {
             Format::Png => "png",
             Format::Svg => "svg",
             Format::SvgPlain => "plain.svg",
+            Format::SvgOutlines => "outlines.svg",
         }
     }
 }
 
 fn parse_case(text: &str) -> Result<Case, String> {
-    Case::from_slug(text).ok_or_else(|| format!("unknown case {text:?}: payoff, curves or surface"))
+    Case::from_slug(text)
+        .ok_or_else(|| format!("unknown case {text:?}: payoff, curves, surface or text"))
 }
 
 /// One export through the requested renderer.
@@ -101,6 +125,9 @@ fn export(
         (Backend::Plotters, Format::SvgPlain) => {
             write_svg(&fixture.data, &fixture.config, path, SvgText::ViewerFont)?;
         }
+        (Backend::Plotters, Format::SvgOutlines) => {
+            write_svg(&fixture.data, &fixture.config, path, SvgText::Outlines)?;
+        }
         (Backend::Plotly, format) => plotly_export(fixture, format, path)?,
     }
     Ok(())
@@ -112,7 +139,9 @@ fn plotly_export(fixture: &Fixture, format: Format, path: &Path) -> Result<(), B
     match format {
         Format::Png => fixture.write_png(path)?,
         Format::Svg => fixture.write_svg(path)?,
-        Format::SvgPlain => return Err("svg-plain is a Plotters-only format".into()),
+        Format::SvgPlain | Format::SvgOutlines => {
+            return Err(format!("{} is a Plotters-only format", format.slug()).into());
+        }
     }
     Ok(())
 }
@@ -165,6 +194,57 @@ fn artifacts(dir: &Path) -> Result<(), Box<dyn Error>> {
     }
     std::fs::write(
         dir.join("artifacts.json"),
+        serde_json::to_string_pretty(&written)?,
+    )?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct NativeArtifact {
+    case: &'static str,
+    format: &'static str,
+    /// `embedded-font`, `viewer-font` or `outlines`; absent for PNG.
+    text: Option<&'static str>,
+    file: String,
+    width: u32,
+    height: u32,
+    bytes: u64,
+}
+
+/// The native artifacts of #923, with their manifest and label boxes.
+fn outlines(dir: &Path) -> Result<(), Box<dyn Error>> {
+    let mut written = Vec::new();
+    for case in Case::EVERY {
+        let fixture = case.build()?;
+        for format in [
+            Format::Png,
+            Format::Svg,
+            Format::SvgPlain,
+            Format::SvgOutlines,
+        ] {
+            let file = format!("{}.{}", case.slug(), format.extension());
+            let path = dir.join(&file);
+            export(Backend::Plotters, &fixture, format, &path)?;
+            let bytes = std::fs::metadata(&path)?.len();
+            info!(file, bytes, "artifact written");
+            written.push(NativeArtifact {
+                case: case.slug(),
+                format: format.slug(),
+                text: format.text_mode(),
+                file,
+                width: fixture.config.width,
+                height: fixture.config.height,
+                bytes,
+            });
+        }
+        let outlined = render_svg_outlined(&fixture.data, &fixture.config)?;
+        std::fs::write(
+            dir.join(format!("{}.labels.json", case.slug())),
+            serde_json::to_string_pretty(&outlined.labels)?,
+        )?;
+    }
+    std::fs::write(
+        dir.join("manifest.json"),
         serde_json::to_string_pretty(&written)?,
     )?;
     Ok(())
@@ -248,6 +328,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::fs::create_dir_all(&dir)?;
             repeat(backend, case, format, iterations, &dir)
         }
-        other => Err(format!("unknown command {other:?}: artifacts, export or repeat").into()),
+        "outlines" => {
+            let dir = PathBuf::from(argument(&args, 1, "output directory")?);
+            std::fs::create_dir_all(&dir)?;
+            outlines(&dir)
+        }
+        other => {
+            Err(format!("unknown command {other:?}: artifacts, export, repeat or outlines").into())
+        }
     }
 }

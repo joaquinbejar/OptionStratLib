@@ -1,7 +1,8 @@
-//! Criterion benchmarks of the native exporter (#920).
+//! Criterion benchmarks of the native exporter (#920, #923).
 //!
-//! Each case rendered to PNG (file) and SVG (string, with and without the
-//! embedded font), fixtures built once outside the measured loop. The
+//! Each case, and the #923 text fixture, rendered to PNG (file) and SVG
+//! (string: embedded font, no font, text as outlines), fixtures built once
+//! outside the measured loop. The
 //! Plotly baseline is not benchmarked here: one Plotly export takes seconds
 //! and needs Chrome, so it is timed by the `compare` binary and
 //! `measure.py` instead, never by a normal benchmark run.
@@ -16,7 +17,7 @@ use std::hint::black_box;
 fn native_export(c: &mut Criterion) {
     let dir = std::env::temp_dir().join(format!("osl-plotters-bench-{}", std::process::id()));
     let mut group = c.benchmark_group("native_export");
-    for case in Case::ALL {
+    for case in Case::EVERY {
         let Ok(fixture) = case.build() else {
             tracing::error!(case = case.slug(), "fixture failed to build; skipped");
             continue;
@@ -40,6 +41,15 @@ fn native_export(c: &mut Criterion) {
                     black_box(&fixture.data),
                     black_box(&fixture.config),
                     SvgText::ViewerFont,
+                )
+            })
+        });
+        group.bench_function(format!("{}/svg-outlines", case.slug()), |b| {
+            b.iter(|| {
+                render_svg(
+                    black_box(&fixture.data),
+                    black_box(&fixture.config),
+                    SvgText::Outlines,
                 )
             })
         });

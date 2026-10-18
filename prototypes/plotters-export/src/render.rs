@@ -10,6 +10,7 @@
 //! [`ExportError`] instead (see that type).
 
 use crate::error::ExportError;
+use crate::outline::{self, ChartText, Outlined};
 use crate::svg;
 use optionstratlib_visualization::visualization::{
     GraphConfig, GraphData, Series2D, Surface3D, TraceMode, get_color_from_scheme,
@@ -34,7 +35,7 @@ pub(crate) const FONT_BYTES: &[u8] = include_bytes!("../assets/OpenSans-Regular.
 
 /// plotters-svg writes `font-size` as the style size divided by this
 /// factor, so a CSS size of `n` px is a Plotters size of `n * EM_RATIO`.
-const EM_RATIO: f64 = 1.24;
+pub(crate) const EM_RATIO: f64 = 1.24;
 
 /// Plotly's default sizes, in CSS pixels.
 const TITLE_PX: f64 = 17.0;
@@ -100,6 +101,11 @@ pub enum SvgText {
     /// viewer substitutes its own font when it lacks Open Sans, as the
     /// Plotly SVG does.
     ViewerFont,
+    /// Draw every label as `<path>` outlines of the embedded font: no font
+    /// is named, embedded or needed, and each label keeps its text as an
+    /// accessible name (see [`crate::outline`]). A character the font lacks
+    /// is an error instead of a viewer's substitute.
+    Outlines,
 }
 
 /// Writes `data` to `path` as a PNG of `config.width` x `config.height`.
@@ -126,13 +132,41 @@ pub fn write_png(data: &GraphData, config: &GraphConfig, path: &Path) -> Result<
 /// # Errors
 ///
 /// [`ExportError`] for invalid dimensions or data, a failed font
-/// registration or a drawing failure.
+/// registration or a drawing failure; with [`SvgText::Outlines`], also a
+/// character the font has no glyph for.
 #[tracing::instrument(skip(data, config), fields(title = %config.title))]
 pub fn render_svg(
     data: &GraphData,
     config: &GraphConfig,
     text: SvgText,
 ) -> Result<String, ExportError> {
+    let document = render_plotters_svg(data, config)?;
+    match text {
+        SvgText::EmbeddedFont => Ok(svg::embed_font(&document)),
+        SvgText::ViewerFont => Ok(svg::with_fallback_family(&document)),
+        SvgText::Outlines => {
+            Ok(outline::outline_text(&document, &describe(data, config))?.document)
+        }
+    }
+}
+
+/// Renders `data` as an SVG with its text as outlines, like
+/// [`render_svg`] with [`SvgText::Outlines`], and also returns where each
+/// label's ink is: the comparison of #923 crops the viewers' renders there.
+///
+/// # Errors
+///
+/// Everything [`render_svg`] returns for [`SvgText::Outlines`].
+pub fn render_svg_outlined(
+    data: &GraphData,
+    config: &GraphConfig,
+) -> Result<Outlined, ExportError> {
+    let document = render_plotters_svg(data, config)?;
+    outline::outline_text(&document, &describe(data, config))
+}
+
+/// The document plotters-svg writes, before any text post-processing.
+fn render_plotters_svg(data: &GraphData, config: &GraphConfig) -> Result<String, ExportError> {
     let size = dimensions(config)?;
     register_embedded_font()?;
     let mut document = String::new();
@@ -141,10 +175,46 @@ pub fn render_svg(
         draw(&root, data, config)?;
         root.present().map_err(render_error)?;
     }
-    Ok(match text {
-        SvgText::EmbeddedFont => svg::embed_font(&document),
-        SvgText::ViewerFont => svg::with_fallback_family(&document),
-    })
+    Ok(document)
+}
+
+/// The chart's accessible name and description: its title, what it plots
+/// and its axes, with the names the legend shows.
+fn describe(data: &GraphData, config: &GraphConfig) -> ChartText {
+    let legend = |index: usize| config.legend.as_ref().and_then(|legend| legend.get(index));
+    let mut description = match data {
+        GraphData::Series(series) => {
+            format!("Chart of 1 series: {}.", legend(0).unwrap_or(&series.name))
+        }
+        GraphData::MultiSeries(list) => {
+            let names: Vec<&str> = list
+                .iter()
+                .enumerate()
+                .map(|(index, series)| legend(index).unwrap_or(&series.name).as_str())
+                .collect();
+            format!("Chart of {} series: {}.", names.len(), names.join("; "))
+        }
+        GraphData::GraphSurface(surface) => format!(
+            "Surface chart of {}, coloured by value.",
+            legend(0).unwrap_or(&surface.name)
+        ),
+    };
+    let axes = [
+        ("x", &config.x_label),
+        ("y", &config.y_label),
+        ("z", &config.z_label),
+    ];
+    for (axis, label) in axes {
+        if let Some(label) = label {
+            description.push_str(&format!(" {axis} axis: {label}."));
+        }
+    }
+    let title = if config.title.trim().is_empty() {
+        "Chart".to_string()
+    } else {
+        config.title.clone()
+    };
+    ChartText { title, description }
 }
 
 /// Writes `data` to `path` as an SVG; see [`render_svg`].

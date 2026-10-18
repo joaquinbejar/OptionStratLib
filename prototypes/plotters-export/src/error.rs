@@ -123,6 +123,26 @@ pub enum ExportError {
     #[error("embedded font rejected: {0}")]
     Font(String),
 
+    /// A label uses a character the bundled font has no glyph for, so it
+    /// cannot be drawn as outlines. The other modes leave such a character to
+    /// the viewer (or draw the font's empty-box glyph in PNG); outlines never
+    /// substitute or drop it.
+    #[error("the bundled font has no glyph for {character:?} (U+{code:04X}) in label {text:?}")]
+    MissingGlyph {
+        /// The character without a glyph.
+        character: char,
+        /// Its code point, for display.
+        code: u32,
+        /// The whole label.
+        text: String,
+    },
+
+    /// A text element is outside the subset of SVG the outline conversion
+    /// understands: the exact `<text>` elements plotters-svg 0.3.7 writes
+    /// for the regular style of the bundled font.
+    #[error("unsupported SVG text: {0}")]
+    UnsupportedSvgText(String),
+
     /// Plotters failed while drawing or encoding.
     #[error("render failed: {0}")]
     Render(String),

@@ -23,8 +23,9 @@ the baseline one (built with `plotly-baseline`) for Plotly.
   reported or touched. Failed, timed-out and interrupted runs are checked the
   same way, in `finally`.
 * Sandbox (macOS, `--sandbox`): the native cold runs execute under
-  `sandbox-exec` with network access and process creation denied, so a
-  successful run proves the export opened no socket and spawned nothing.
+  `sandbox-exec` with network access, process creation and reads of the
+  system and user font directories denied, so a successful run proves the
+  export opened no socket, spawned nothing and used no installed font.
 * Leak scenarios (`--mode leaks`): the cases where an export does not get
   to close its WebDriver session. `concurrent`: several Plotly exports
   started at once, as separate processes (parallel test binaries or
@@ -36,7 +37,11 @@ the baseline one (built with `plotly-baseline`) for Plotly.
 Usage:
     measure.py --native BIN --baseline BIN --out DIR [--cold N] [--warm N]
                [--plotly-warm N] [--sandbox] [--backends plotters,plotly]
+               [--cases payoff,curves,surface] [--formats png,svg,...]
                [--name results]
+    (--baseline is needed only with the plotly backend; `--cases` may add
+    `text`, the #923 fixture, and `--formats` limits the native formats:
+    png, svg, svg-plain, svg-outlines.)
     measure.py --mode leaks --baseline BIN --out DIR [--repeat N]
     measure.py --self-test
 """
@@ -57,10 +62,15 @@ import time
 from pathlib import Path
 
 CASES = ("payoff", "curves", "surface")
-NATIVE_FORMATS = ("png", "svg", "svg-plain")
+NATIVE_FORMATS = ("png", "svg", "svg-plain", "svg-outlines")
 PLOTLY_FORMATS = ("png", "svg")
-EXTENSIONS = {"png": "png", "svg": "svg", "svg-plain": "plain.svg"}
-SANDBOX_PROFILE = "(version 1)(allow default)(deny network*)(deny process-fork)"
+EXTENSIONS = {"png": "png", "svg": "svg", "svg-plain": "plain.svg",
+              "svg-outlines": "outlines.svg"}
+FONT_DIRECTORIES = ("/System/Library/Fonts", "/Library/Fonts",
+                    os.path.expanduser("~/Library/Fonts"))
+SANDBOX_PROFILE = ("(version 1)(allow default)(deny network*)(deny process-fork)"
+                   "(deny file-read* " + " ".join(f'(subpath "{path}")'
+                                                  for path in FONT_DIRECTORIES) + ")")
 TRACK_INTERVAL_S = 0.1
 ENV = {**os.environ, "RUST_LOG": "warn"}
 
@@ -404,12 +414,14 @@ def version(command: list[str]) -> str:
 
 def timing(args: argparse.Namespace, out: Path, environment: dict) -> int:
     backends = set(args.backends.split(","))
+    cases = args.cases.split(",")
+    formats = [fmt for fmt in NATIVE_FORMATS if fmt in args.formats.split(",")]
     results = {"environment": environment, "cold": [], "warm": []}
     with tempfile.TemporaryDirectory(prefix="osl-920-") as scratch:
         workdir = Path(scratch)
-        for case in CASES:
+        for case in cases:
             if "plotters" in backends:
-                for fmt in NATIVE_FORMATS:
+                for fmt in formats:
                     print(f"cold plotters {case} {fmt}", file=sys.stderr)
                     results["cold"].append(cold(args.native, "plotters", case, fmt, args.cold,
                                                 workdir, args.sandbox))
@@ -418,9 +430,9 @@ def timing(args: argparse.Namespace, out: Path, environment: dict) -> int:
                     print(f"cold plotly {case} {fmt}", file=sys.stderr)
                     results["cold"].append(cold(args.baseline, "plotly", case, fmt, args.cold,
                                                 workdir, False))
-        for case in CASES:
+        for case in cases:
             if "plotters" in backends:
-                for fmt in NATIVE_FORMATS:
+                for fmt in formats:
                     print(f"warm plotters {case} {fmt}", file=sys.stderr)
                     results["warm"].append(warm(args.native, "plotters", case, fmt, args.warm,
                                                 workdir))
@@ -469,6 +481,8 @@ def main() -> int:
     parser.add_argument("--out")
     parser.add_argument("--name", default="results")
     parser.add_argument("--backends", default="plotters,plotly")
+    parser.add_argument("--cases", default=",".join(CASES))
+    parser.add_argument("--formats", default=",".join(NATIVE_FORMATS))
     parser.add_argument("--cold", type=int, default=10)
     parser.add_argument("--warm", type=int, default=200)
     parser.add_argument("--plotly-warm", type=int, default=10)
@@ -477,8 +491,10 @@ def main() -> int:
     args = parser.parse_args()
     if args.self_test:
         return self_test()
-    if not args.baseline or not args.out:
-        parser.error("--baseline and --out are required")
+    if not args.out:
+        parser.error("--out is required")
+    if not args.baseline and (args.mode == "leaks" or "plotly" in args.backends):
+        parser.error("--baseline is required for the plotly backend and the leak scenarios")
     if args.mode == "timing" and "plotters" in args.backends and not args.native:
         parser.error("--native is required to time plotters")
 
@@ -493,6 +509,7 @@ def main() -> int:
         "git": version(["git", "rev-parse", "HEAD"]),
         "mode": args.mode,
         "sandboxed_native_cold_runs": args.sandbox,
+        "sandbox_profile": SANDBOX_PROFILE if args.sandbox else None,
         "cold_runs": args.cold,
         "warm_iterations": args.warm,
         "plotly_warm_iterations": args.plotly_warm,

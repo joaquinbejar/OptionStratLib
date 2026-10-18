@@ -43,6 +43,10 @@ plotters = { version = "0.3.7", default-features = false, features = [
     "svg_backend",
 ] }
 base64 = "0.22"
+# The glyph outlines of the SVG `Outlines` mode (#923). Already in the tree
+# through `plotters/ab_glyph`; named directly to read the same font with the
+# same metrics Plotters lays the chart out with.
+ab_glyph = "0.2.32"
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
