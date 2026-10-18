@@ -1,13 +1,19 @@
 # Plotters for native PNG and SVG export: decision report (#920)
 
-**Recommendation: migrate the PNG/SVG export to the native Plotters renderer**,
-keeping Plotly for interactive HTML, under the conditions in
-[Migration conditions](#migration-conditions). Every migration criterion of
-#920 is met except SVG text portability, which is met in Blink and WebKit and
-unmet in librsvg; the current Plotly SVG does not meet it in any of the three.
+**Outcome: the experiment is complete, and migration is not yet approved by
+its own criteria.** Five of the six migration criteria of #920 are met. The
+sixth, SVG text portability, is **unmet**: the embedded font works in Blink
+and WebKit, but librsvg ignores it and uses its own font. The current Plotly
+SVG fails that criterion in all three engines, but that does not waive it.
+
+**Recommendation: one more bounded experiment, SVG text as outlines (paths),
+then migrate** the PNG/SVG export to the native renderer, keeping Plotly for
+interactive HTML, under the conditions in
+[Migration conditions](#migration-conditions). SVG portability is one of
+those conditions and blocks the migration; it is not an optional follow-up.
 
 This is the decision report of the prototype; nothing in a published crate
-changed. Measured on 2026-10-18 at `1ffcda8` + this branch, macOS 27.0.1
+changed. Measured on 2026-10-18 at `8b742d8`, macOS 27.0.1
 arm64, `rustc 1.99.1`, Chrome and chromedriver 155.0.8059.85, release
 builds, plotters 0.3.7. Open Sans is **not** installed on the machine.
 
@@ -31,7 +37,8 @@ member, `publish = false`):
 - `src/bin/compare.rs`, `measure.py`, `render_svg_viewers.sh`: artifacts,
   timings, leak scenarios, viewer renders.
 - `benches/native_export.rs`: Criterion benchmarks of the native path.
-- `tests/export.rs` plus unit tests: files and every documented error.
+- `tests/export.rs` plus unit tests: files, every documented error, 81
+  figure sizes per chart with no panic, small numeric scales.
 
 The three charts:
 
@@ -83,6 +90,10 @@ output. Plotly loses two of them today (payoff title, surface axis titles).
 | Empty series | empty axes | empty axes |
 | Constant series | flat line, widened axis | flat line, widened axis |
 | Zero width or height | Plotly error | `InvalidDimensions` |
+| Title, legend or colour bar leave no pixels to draw in | drawn, clipped | `NoRoom` |
+| `line_width` not finite or outside 0..=100 px | drawn (Plotly clamps) | `InvalidLineWidth`; an infinite width panicked in the Plotters rasteriser before the review |
+| Tiny but real range (0 to 1e-18) | own scale | own scale: 2D axes under 1e-9 are drawn rescaled and labelled with real values, tick precision follows the step (scientific below 1e-4) |
+| Surface figure under 240×160 px | drawn, cramped | `TooSmall` (no layout fits the axes and colour bar; review found a 640×20 surface overflowing the colour-bar arithmetic) |
 | Unwritable path | error | `Io` error (parent directories are created, as `prepare_file_path` does) |
 
 ## Measurements
@@ -102,40 +113,47 @@ output. Plotly loses two of them today (payoff title, surface axis titles).
 
 | Case | Format | Plotly cold, median (p90) | Plotters cold, median (p90) | Plotly in-process median | Plotters in-process median | Plotly bytes | Plotters bytes |
 |---|---|---|---|---|---|---|---|
-| payoff | PNG | 1,557 ms (1,859) | 9.4 ms (10.6) | 1,315 ms | 2.9 ms | 70,689 | 63,709 |
-| payoff | SVG | 1,220 ms (1,468) | 4.8 ms (5.4) | 1,105 ms | 0.21 ms | 46,072 | 205,891 |
-| curves | PNG | 1,603 ms (1,932) | 10.0 ms (11.3) | 1,096 ms | 2.0 ms | 93,806 | 74,761 |
-| curves | SVG | 1,557 ms (1,815) | 6.5 ms (7.1) | 1,115 ms | 0.19 ms | 26,730 | 212,255 |
-| surface | PNG | 2,452 ms (3,616) | 8.3 ms (9.1) | 2,101 ms | 2.7 ms | 137,383 | 142,453 |
-| surface | SVG | 1,945 ms (2,336) | 5.5 ms (6.2) | 1,978 ms | 0.28 ms | 374,699 | 234,533 |
+| payoff | PNG | 1,196 ms (1,219) | 13.8 ms (18.1) | 1,178 ms | 3.0 ms | 70,689 | 63,709 |
+| payoff | SVG | 1,123 ms (1,165) | 7.7 ms (12.8) | 1,074 ms | 0.18 ms | 46,072 | 205,891 |
+| curves | PNG | 1,183 ms (1,360) | 13.0 ms (15.4) | 1,101 ms | 2.2 ms | 93,806 | 74,761 |
+| curves | SVG | 1,142 ms (1,168) | 12.7 ms (14.0) | 1,047 ms | 0.23 ms | 26,730 | 212,255 |
+| surface | PNG | 1,940 ms (2,013) | 13.0 ms (14.5) | 1,887 ms | 3.2 ms | 137,383 | 142,453 |
+| surface | SVG | 1,953 ms (2,352) | 7.4 ms (13.1) | 1,943 ms | 0.33 ms | 374,699 | 234,533 |
 
-- Latency improves in every case and format: about 160-350× cold and
-  450-7,000× in-process. No regression was observed.
+- Latency improves in every case and format: about 85-260× cold and
+  400-6,000× in-process. No regression was observed. A cold Plotters run is
+  dominated by process start-up; an earlier run on the same machine measured
+  5-10 ms medians, this one 7-14 ms.
 - The Plotters SVG is larger because it embeds the 148 KB font (≈197 KB of
   base64). Without it (`plain.svg`) the files are 9 KB, 15 KB and 38 KB, and
-  exports take 5.0-6.7 ms cold and 0.11-0.23 ms in-process. Subsetting the
+  exports take 7.5-13.3 ms cold and 0.13-0.27 ms in-process. Subsetting the
   font would shrink the embedded variant.
 - Under `sandbox-exec` with network access **and process creation denied**,
-  all 90 native cold runs succeeded (the sandbox itself adds about 10-20 ms
-  per run, `results/timing.json`); the Plotly export fails there at once
+  all 90 native cold runs succeeded (the sandbox itself adds about 10 ms per
+  run, `results/timing.json`); the Plotly export fails there at once
   (`Failed to spawn 'chromedriver': Operation not permitted`).
 - Release binary: 2.6 MB native vs 16 MB with the Plotly baseline.
 
 ### Leaked Chrome processes
 
-In the sequential runs above no process leaked (90 Plotly exports). The
+In the sequential runs above no process leaked (120 Plotly exports: 60 cold,
+60 in-process). The
 leaks happen when the exporter does not get to close its WebDriver session
-(`results/leaks.json`, 3 rounds of each scenario, PIDs recorded, then
-terminated; only processes started with `--test-type=webdriver` or from the
-test's chromedriver are counted, so no other browser was touched):
+(`results/leaks.json`, 5 rounds of each scenario). `measure.py` records the
+process tree under each export every 0.1 s while it runs; whatever of it is
+still alive, with the same command line, two seconds after the export ended
+is a leak, and is terminated by that exact PID. Attribution is by ancestry,
+never by command-line pattern, so a browser another program runs at the same
+time is never counted or signalled (`measure.py --self-test` checks this
+with stand-in processes, and also a failed and a timed-out run):
 
 | Scenario | Plotly result |
 |---|---|
-| Export interrupted with SIGINT (Ctrl-C) | Chrome left running in **3 of 3** rounds (4 processes each) |
-| Interrupted with SIGTERM | **3 of 3** |
-| Interrupted with SIGKILL | **3 of 3** |
-| 2 exports in separate processes at once | 0 of 3 |
-| 4 exports in separate processes at once | **1 of 3** (the cross-process form of #724: the mutex in `graph.rs` is per process) |
+| Export interrupted with SIGINT (Ctrl-C) | processes left running in **5 of 5** rounds (chromedriver, Chrome and helpers: 7 each) |
+| Interrupted with SIGTERM | **5 of 5** (7 each) |
+| Interrupted with SIGKILL | **5 of 5** (5-7 each) |
+| 2 exports in separate processes at once | **1 of 5** (7 processes) |
+| 4 exports in separate processes at once | **3 of 5** (7-28 processes; the cross-process form of #724: the mutex in `graph.rs` is per process) |
 
 Earlier on the same machine, with chromedriver in its own process group,
 `SIGKILL` to chromedriver alone left all 8 Chrome processes running,
@@ -147,7 +165,10 @@ nothing to leak.
 ## SVG portability
 
 `render_svg_viewers.sh` rendered every SVG in three engines on a machine
-without Open Sans (`artifacts/viewers/`, versions in `viewers.txt`):
+without Open Sans (`artifacts/viewers/`, versions in `viewers.txt`). The
+renders predate the review fixes; the Plotters SVGs are byte-identical
+before and after them, and the Plotly SVGs differ only in their random
+clip-path ids:
 
 | SVG | Blink (Chrome 155) | WebKit (Quick Look, macOS 27) | librsvg 2.63.3 |
 |---|---|---|---|
@@ -161,7 +182,8 @@ By the issue's rule ("if text remains dependent on viewer fonts, mark this
 criterion unmet") the criterion is **unmet**: librsvg still uses its own
 font. The Plotly baseline is unmet in all three engines. Converting text to
 outlines (paths) would meet it everywhere, at the cost of selectable and
-accessible text; it is the follow-up named below.
+accessible text (an SVG `<title>`/`aria-label` can carry the strings); it is
+the next bounded experiment, and a condition of the migration.
 
 ## Dependencies
 
@@ -204,38 +226,42 @@ accessible text; it is the follow-up named below.
 ## Limitations and maintenance cost
 
 - A second renderer to maintain next to `to_plot`: about 800 lines of code
-  in `render.rs`, `svg.rs` and `error.rs`, tests and comments excluded. Every change to `GraphData`,
-  `GraphConfig` or the Plotly mapping has to be mirrored, or one renderer
-  drifts.
+  in `render.rs`, `svg.rs` and `error.rs`, tests and comments excluded.
+  Every change to `GraphData`, `GraphConfig` or the Plotly mapping has to be
+  mirrored, or one renderer drifts.
 - 3D is basic: one fixed camera, flat shading, painter's ordering.
 - Text quality in PNG is below Chrome's (no kerning).
 - `ttf-parser` unmaintained advisory; Plotters' slow release cadence.
 - Colour names are not parsed yet.
-- Viewer-dependent SVG text in librsvg, unless text becomes outlines.
+- Viewer-dependent SVG text in librsvg until text becomes outlines; this
+  blocks the migration (condition 1 below).
 
 ## Migration conditions
 
 Only after this report is accepted, and as #920 lists:
 
-1. Keep `Graph::write_png` / `write_svg` signatures and error contracts,
+1. **Gate: SVG text portability.** Render SVG text as outlines (or another
+   approach) and show the same text in Blink, WebKit and librsvg on a
+   machine without the font. Until then the migration is not approved.
+2. Keep `Graph::write_png` / `write_svg` signatures and error contracts,
    `Graph::to_plot`, interactive HTML and the public Plotly helpers. Keep
    `static_export` implying `plotly` at component and facade level, and drop
    the `plotly/static_export_default` edge. Decide whether the data errors
    above become `GraphError` variants (a behaviour change for surfaces that
    are zero-filled today) and document it in the release notes.
-2. Parse CSS colour names (`ColorScheme::Custom` and `line_color` accept them
+3. Parse CSS colour names (`ColorScheme::Custom` and `line_color` accept them
    with Plotly today).
-3. Add an audit exception for RUSTSEC-2026-0192 with the reachability
+4. Add an audit exception for RUSTSEC-2026-0192 with the reachability
    rationale above, or choose a text path without `ttf-parser`.
-4. Native rendering tests in PR CI before retiring the browser workflow;
+5. Native rendering tests in PR CI before retiring the browser workflow;
    keep every example `make smoke-examples SMOKE_EXPORT=1` covers.
-5. Recheck feature trees and consumer fixtures; remove the two exporter
+6. Recheck feature trees and consumer fixtures; remove the two exporter
    advisory exceptions only once the lockfile and audit confirm their paths
    are gone.
-6. docs.rs can then build `static_export` (no build script needs a browser);
+7. docs.rs can then build `static_export` (no build script needs a browser);
    update the feature documentation, migration notes and an ADR.
-7. Follow-ups worth their own issues: text as outlines in SVG (librsvg
-   portability), font subsetting (SVG size), surface lighting.
+8. Worth their own issues, not blocking: font subsetting (SVG size),
+   surface lighting.
 
 ## Reproduce
 
@@ -254,9 +280,11 @@ WEBDRIVER_PATH=<chromedriver> BROWSER_PATH=<chrome> python3 -I \
 # Leak scenarios.
 WEBDRIVER_PATH=<chromedriver> BROWSER_PATH=<chrome> python3 -I \
   prototypes/plotters-export/measure.py --mode leaks --baseline /tmp/compare-baseline \
-  --out /tmp/osl-920 --repeat 3
+  --out /tmp/osl-920 --repeat 5
 # SVG viewers (macOS: Chrome, rsvg-convert, qlmanage).
 prototypes/plotters-export/render_svg_viewers.sh "$PWD/prototypes/plotters-export/artifacts" /tmp/osl-920-viewers
+# Leak attribution self-test (no browser needed).
+python3 -I prototypes/plotters-export/measure.py --self-test
 # Native Criterion benchmarks.
 cargo bench -p osl-prototype-plotters-export --bench native_export
 ```

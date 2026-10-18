@@ -5,7 +5,7 @@
     "format": "png",
     "file": "payoff-plotters.png",
     "bytes": 63709,
-    "millis": 5.953291999999999
+    "millis": 3.451
   },
   {
     "backend": "plotters",
@@ -13,7 +13,7 @@
     "format": "svg",
     "file": "payoff-plotters.svg",
     "bytes": 205891,
-    "millis": 0.814334
+    "millis": 0.455334
   },
   {
     "backend": "plotters",
@@ -21,7 +21,7 @@
     "format": "svg-plain",
     "file": "payoff-plotters.plain.svg",
     "bytes": 9073,
-    "millis": 0.281458
+    "millis": 0.162292
   },
   {
     "backend": "plotly",
@@ -29,7 +29,7 @@
     "format": "png",
     "file": "payoff-plotly.png",
     "bytes": 70689,
-    "millis": 1285.211583
+    "millis": 1281.956833
   },
   {
     "backend": "plotly",
@@ -37,7 +37,7 @@
     "format": "svg",
     "file": "payoff-plotly.svg",
     "bytes": 46072,
-    "millis": 1113.674458
+    "millis": 1447.936
   },
   {
     "backend": "plotters",
@@ -45,7 +45,7 @@
     "format": "png",
     "file": "curves-plotters.png",
     "bytes": 74761,
-    "millis": 2.3349170000000004
+    "millis": 16.165375
   },
   {
     "backend": "plotters",
@@ -53,7 +53,7 @@
     "format": "svg",
     "file": "curves-plotters.svg",
     "bytes": 212255,
-    "millis": 0.346125
+    "millis": 6.9404580000000005
   },
   {
     "backend": "plotters",
@@ -61,7 +61,7 @@
     "format": "svg-plain",
     "file": "curves-plotters.plain.svg",
     "bytes": 15437,
-    "millis": 0.411209
+    "millis": 4.532333
   },
   {
     "backend": "plotly",
@@ -69,7 +69,7 @@
     "format": "png",
     "file": "curves-plotly.png",
     "bytes": 93806,
-    "millis": 1523.746875
+    "millis": 1153.765416
   },
   {
     "backend": "plotly",
@@ -77,7 +77,7 @@
     "format": "svg",
     "file": "curves-plotly.svg",
     "bytes": 26730,
-    "millis": 1352.170333
+    "millis": 1150.020417
   },
   {
     "backend": "plotters",
@@ -85,7 +85,7 @@
     "format": "png",
     "file": "surface-plotters.png",
     "bytes": 142453,
-    "millis": 3.217083
+    "millis": 3.283667
   },
   {
     "backend": "plotters",
@@ -93,7 +93,7 @@
     "format": "svg",
     "file": "surface-plotters.svg",
     "bytes": 234533,
-    "millis": 0.5510419999999999
+    "millis": 0.40925
   },
   {
     "backend": "plotters",
@@ -101,7 +101,7 @@
     "format": "svg-plain",
     "file": "surface-plotters.plain.svg",
     "bytes": 37715,
-    "millis": 0.341042
+    "millis": 0.37024999999999997
   },
   {
     "backend": "plotly",
@@ -109,7 +109,7 @@
     "format": "png",
     "file": "surface-plotly.png",
     "bytes": 137383,
-    "millis": 1931.873917
+    "millis": 1945.415041
   },
   {
     "backend": "plotly",
@@ -117,6 +117,6 @@
     "format": "svg",
     "file": "surface-plotly.svg",
     "bytes": 374699,
-    "millis": 1862.634833
+    "millis": 1915.458958
   }
 ]
