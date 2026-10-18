@@ -13,7 +13,8 @@ interactive HTML, under the conditions in
 those conditions and blocks the migration; it is not an optional follow-up.
 
 This is the decision report of the prototype; nothing in a published crate
-changed. Measured on 2026-10-18 at `8b742d8`, macOS 27.0.1
+changed. Measured on 2026-10-18 at `e4b3159` (Rust code unchanged since
+`8b742d8`; the binaries were built there), macOS 27.0.1
 arm64, `rustc 1.99.1`, Chrome and chromedriver 155.0.8059.85, release
 builds, plotters 0.3.7. Open Sans is **not** installed on the machine.
 
@@ -113,24 +114,24 @@ output. Plotly loses two of them today (payoff title, surface axis titles).
 
 | Case | Format | Plotly cold, median (p90) | Plotters cold, median (p90) | Plotly in-process median | Plotters in-process median | Plotly bytes | Plotters bytes |
 |---|---|---|---|---|---|---|---|
-| payoff | PNG | 1,196 ms (1,219) | 13.8 ms (18.1) | 1,178 ms | 3.0 ms | 70,689 | 63,709 |
-| payoff | SVG | 1,123 ms (1,165) | 7.7 ms (12.8) | 1,074 ms | 0.18 ms | 46,072 | 205,891 |
-| curves | PNG | 1,183 ms (1,360) | 13.0 ms (15.4) | 1,101 ms | 2.2 ms | 93,806 | 74,761 |
-| curves | SVG | 1,142 ms (1,168) | 12.7 ms (14.0) | 1,047 ms | 0.23 ms | 26,730 | 212,255 |
-| surface | PNG | 1,940 ms (2,013) | 13.0 ms (14.5) | 1,887 ms | 3.2 ms | 137,383 | 142,453 |
-| surface | SVG | 1,953 ms (2,352) | 7.4 ms (13.1) | 1,943 ms | 0.33 ms | 374,699 | 234,533 |
+| payoff | PNG | 1,625 ms (3,090) | 11.1 ms (12.5) | 1,201 ms | 2.2 ms | 70,689 | 63,709 |
+| payoff | SVG | 1,401 ms (1,590) | 11.0 ms (11.8) | 1,184 ms | 0.16 ms | 46,072 | 205,891 |
+| curves | PNG | 1,178 ms (1,263) | 11.3 ms (12.0) | 1,093 ms | 1.7 ms | 93,806 | 74,761 |
+| curves | SVG | 1,252 ms (1,307) | 11.5 ms (12.2) | 1,084 ms | 0.17 ms | 26,730 | 212,255 |
+| surface | PNG | 2,013 ms (2,119) | 11.1 ms (11.8) | 1,823 ms | 2.2 ms | 137,383 | 142,453 |
+| surface | SVG | 1,965 ms (2,050) | 11.1 ms (11.9) | 1,812 ms | 0.25 ms | 374,699 | 234,533 |
 
-- Latency improves in every case and format: about 85-260× cold and
-  400-6,000× in-process. No regression was observed. A cold Plotters run is
-  dominated by process start-up; an earlier run on the same machine measured
-  5-10 ms medians, this one 7-14 ms.
+- Latency improves in every case and format: about 100-180× cold and
+  540-7,500× in-process. No regression was observed. A cold Plotters run is
+  dominated by process start-up (about 11 ms here; earlier runs on the same
+  machine measured 5-14 ms medians).
 - The Plotters SVG is larger because it embeds the 148 KB font (≈197 KB of
   base64). Without it (`plain.svg`) the files are 9 KB, 15 KB and 38 KB, and
-  exports take 7.5-13.3 ms cold and 0.13-0.27 ms in-process. Subsetting the
+  exports take 6.5-11.2 ms cold and 0.09-0.19 ms in-process. Subsetting the
   font would shrink the embedded variant.
 - Under `sandbox-exec` with network access **and process creation denied**,
-  all 90 native cold runs succeeded (the sandbox itself adds about 10 ms per
-  run, `results/timing.json`); the Plotly export fails there at once
+  all 90 native cold runs succeeded (the sandbox itself adds about 10-30 ms
+  per run, `results/timing.json`); the Plotly export fails there at once
   (`Failed to spawn 'chromedriver': Operation not permitted`).
 - Release binary: 2.6 MB native vs 16 MB with the Plotly baseline.
 
@@ -139,21 +140,31 @@ output. Plotly loses two of them today (payoff title, surface axis titles).
 In the sequential runs above no process leaked (120 Plotly exports: 60 cold,
 60 in-process). The
 leaks happen when the exporter does not get to close its WebDriver session
-(`results/leaks.json`, 5 rounds of each scenario). `measure.py` records the
-process tree under each export every 0.1 s while it runs; whatever of it is
-still alive, with the same command line, two seconds after the export ended
-is a leak, and is terminated by that exact PID. Attribution is by ancestry,
-never by command-line pattern, so a browser another program runs at the same
-time is never counted or signalled (`measure.py --self-test` checks this
-with stand-in processes, and also a failed and a timed-out run):
+(`results/leaks.json`, 5 rounds of each scenario). Each export
+runs in a process group of its own, which chromedriver and Chrome inherit,
+and `measure.py` also samples its process tree every 0.1 s; whatever of the
+group or tree is still alive two seconds after the export ended is a leak,
+and is terminated (`killpg` on the export's own group). Ownership comes from
+the group and the recorded ancestry, never from a command-line pattern, so a
+browser another program runs at the same time is never counted or signalled.
+`measure.py --self-test` checks this with stand-in processes: foreign ones
+survive, and leftovers are found after a late failure, an immediate failure
+whose child is reparented before any sample, a timeout, and a failure to
+start the second of two commands.
 
 | Scenario | Plotly result |
 |---|---|
-| Export interrupted with SIGINT (Ctrl-C) | processes left running in **5 of 5** rounds (chromedriver, Chrome and helpers: 7 each) |
-| Interrupted with SIGTERM | **5 of 5** (7 each) |
-| Interrupted with SIGKILL | **5 of 5** (5-7 each) |
-| 2 exports in separate processes at once | **1 of 5** (7 processes) |
+| SIGINT to the exporting process only | processes left running in **5 of 5** rounds (chromedriver, Chrome and helpers: 7 each) |
+| SIGTERM to the exporting process only | **5 of 5** (7 each) |
+| SIGKILL to the exporting process only | **5 of 5** (7 each) |
+| SIGINT to its whole process group (a terminal Ctrl-C) | 0 of 5: chromedriver and Chrome receive it too and exit |
+| 2 exports in separate processes at once | 0 of 5 (1 of 5 in an earlier run of the same scenario) |
 | 4 exports in separate processes at once | **3 of 5** (7-28 processes; the cross-process form of #724: the mutex in `graph.rs` is per process) |
+
+So an interactive Ctrl-C cleans up, but everything that stops only the
+exporting process does not: a test runner's timeout, `kill <pid>`, an IDE's
+stop button, a supervisor restarting a service. Parallel test binaries or
+worktrees exporting at once leak as well.
 
 Earlier on the same machine, with chromedriver in its own process group,
 `SIGKILL` to chromedriver alone left all 8 Chrome processes running,
