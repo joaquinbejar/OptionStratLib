@@ -212,10 +212,12 @@ the next bounded experiment, and a condition of the migration.
 - **`cargo audit`: `ttf-parser 0.25.1` is unmaintained (RUSTSEC-2026-0192)**,
   reached through `ab_glyph` (and equally through Plotters' `ttf` feature).
   It parses only the font compiled into the binary, never input. On the
-  owner's decision this PR adds a scoped `.cargo/audit.toml` exception with
-  that rationale, so `main`'s audit stays green with the prototype in the
-  workspace. It covers the unpublished prototype only and must be
-  re-evaluated if the migration brings Plotters into a published crate.
+  owner's decision this PR adds a `.cargo/audit.toml` exception with that
+  rationale, so `main`'s audit stays green with the prototype in the
+  workspace. cargo-audit ignores by advisory ID across the whole lockfile,
+  so the waiver itself is not scoped; its justification is, to the
+  unpublished prototype, and it must be re-evaluated if the migration (or
+  anything else) brings `ttf-parser` into a published crate.
 - Plotters 0.3.7 (September 2024) is the latest release; `colormaps` does
   not compile without `full_palette` in it, hence that feature.
 - The font asset is Open Sans Regular from `googlefonts/opensans`

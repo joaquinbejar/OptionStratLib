@@ -135,6 +135,11 @@
 #                nothing else. It parses one input: the Open Sans font
 #                compiled into the prototype with `include_bytes!`, never a
 #                font from a user or the network.
+# Guard        : cargo-audit ignores by ID, not by package path, so this
+#                waiver would also hide ttf-parser reaching a published crate.
+#                Re-run `cargo tree --workspace --all-features -i ttf-parser`
+#                before extending it; any path other than the prototype voids
+#                this rationale.
 # Upgrade path : None to take: an unmaintained advisory has no fixed release,
 #                and Plotters reaches ttf-parser through both of its text
 #                backends (`ab_glyph`, `ttf`). If the PNG/SVG migration of
