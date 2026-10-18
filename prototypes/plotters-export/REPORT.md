@@ -211,11 +211,11 @@ the next bounded experiment, and a condition of the migration.
   Plus `base64` for the font embedding.
 - **`cargo audit`: `ttf-parser 0.25.1` is unmaintained (RUSTSEC-2026-0192)**,
   reached through `ab_glyph` (and equally through Plotters' `ttf` feature).
-  It parses only the font compiled into the binary, never input. A migration
-  needs an exception entry with that rationale, or a text path that does not
-  use it. The prototype adds no entry; the audit job (not required for PRs)
-  reports it. The `zip` advisories the same run reports are already on
-  `main` and unrelated.
+  It parses only the font compiled into the binary, never input. On the
+  owner's decision this PR adds a scoped `.cargo/audit.toml` exception with
+  that rationale, so `main`'s audit stays green with the prototype in the
+  workspace. It covers the unpublished prototype only and must be
+  re-evaluated if the migration brings Plotters into a published crate.
 - Plotters 0.3.7 (September 2024) is the latest release; `colormaps` does
   not compile without `full_palette` in it, hence that feature.
 - The font asset is Open Sans Regular from `googlefonts/opensans`
@@ -262,8 +262,9 @@ Only after this report is accepted, and as #920 lists:
    are zero-filled today) and document it in the release notes.
 3. Parse CSS colour names (`ColorScheme::Custom` and `line_color` accept them
    with Plotly today).
-4. Add an audit exception for RUSTSEC-2026-0192 with the reachability
-   rationale above, or choose a text path without `ttf-parser`.
+4. Re-evaluate the RUSTSEC-2026-0192 exception (added here for the
+   unpublished prototype) for the published crate Plotters would enter, or
+   choose a text path without `ttf-parser`.
 5. Native rendering tests in PR CI before retiring the browser workflow;
    keep every example `make smoke-examples SMOKE_EXPORT=1` covers.
 6. Recheck feature trees and consumer fixtures; remove the two exporter
