@@ -98,11 +98,41 @@
 # Owner        : @joaquinbejar
 # Review by    : 2026-11-28
 # ---------------------------------------------------------------------------
+# RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369 — zip < 9.0.0:
+#                     SUID/SGID bits kept, symlinks outside the destination,
+#                     and Unix permissions applied through symlinks, all in
+#                     the archive *extraction* API. Fixed in zip >= 9.0.0.
+#
+# Reachability : NOT LINKED INTO THIS CRATE, and absent from every surface
+#                without `static_export`. The library's own copy is zip 9
+#                since #919 (`optionstratlib-market`, feature `io`, which
+#                only opens archives and reads entries). The flagged copies
+#                are build-time only, on the same path as the entries above:
+#                    optionstratlib -> optionstratlib-visualization
+#                      -> plotly -> plotly_static
+#                      -> [build-dependencies] zip 4.6
+#                      -> [build-dependencies] webdriver-downloader -> zip 0.6
+#                They unpack a webdriver downloaded from its release endpoint
+#                on the build machine while building with `static_export`.
+# Guard        : cargo-audit ignores by ID, not by version, so this waiver
+#                alone would hide `optionstratlib-market` falling back below
+#                zip 9. `make check-feature-trees` fails when any surface
+#                without `static_export` resolves a zip below 9, or when the
+#                market crate's own zip is below 9 (#919).
+# Upgrade path : Blocked upstream: plotly_static 0.1.0 (the latest) requires
+#                zip ^4.0 and webdriver-downloader ^0.16.
+# Tracking     : https://github.com/plotly/plotly.rs
+# Owner        : @joaquinbejar
+# Review by    : 2027-01-18
+# ---------------------------------------------------------------------------
 ignore = [
     "RUSTSEC-2026-0235",
     "RUSTSEC-2025-0119",
     "RUSTSEC-2025-0134",
     "RUSTSEC-2026-0258",
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
 ]
 
 # Every other advisory class fails the run, so a new unmaintained or unsound

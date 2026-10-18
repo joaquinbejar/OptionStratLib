@@ -78,6 +78,13 @@ ALLOWED_NOTICE = re.compile(
     r"|aborting upload due to dry run)$"
 )
 WARNING = re.compile(r"^warning(\[[^\]]*\])?:")
+# A patch release publishes only the crates whose source changed
+# (docs/versioning-policy.md, #834); the others keep a version crates.io
+# already has, and cargo's dry run says so. That is the crate staying out of
+# the release, not a defect, so it is reported apart and does not fail the
+# run (#919). A crate meant to be released has a version crates.io lacks, so
+# it never prints this.
+ALREADY_PUBLISHED = re.compile(r"^warning: crate (optionstratlib[a-z-]*)@(\S+) already exists on crates\.io index$")
 # A sibling absent from crates.io altogether (the first release of the
 # family, 0.22.0) is "no matching package named"; a sibling whose new patch is
 # not uploaded yet (0.22.N) is "failed to select a version for the
@@ -93,8 +100,13 @@ def warnings_in(output: str) -> list[str]:
     return [
         line
         for line in output.splitlines()
-        if WARNING.match(line) and not ALLOWED_NOTICE.match(line)
+        if WARNING.match(line) and not ALLOWED_NOTICE.match(line) and not ALREADY_PUBLISHED.match(line)
     ]
+
+
+def already_published_in(output: str) -> list[str]:
+    """`name@version` of every crate the dry run found already on crates.io."""
+    return [f"{m.group(1)}@{m.group(2)}" for line in output.splitlines() if (m := ALREADY_PUBLISHED.match(line))]
 
 
 def notices_in(output: str) -> int:
@@ -238,7 +250,11 @@ def main() -> int:
     for name in PACKAGES:
         code, output = run.cargo(f"publish-{name}", ["publish", "--dry-run", "-p", name, *dirty], ROOT, may_fail=True)
         if code == 0:
-            print(f"    {name}: dry-run passes against crates.io")
+            unchanged = already_published_in(output)
+            if f"{name}@{versions[name]}" in unchanged:
+                print(f"    {name}: {versions[name]} is already on crates.io; not part of this release")
+            else:
+                print(f"    {name}: dry-run passes against crates.io; released at {versions[name]}")
             continue
         missing = WAITING.search(output)
         if missing:
@@ -301,6 +317,10 @@ def self_test() -> int:
         "   Compiling x",
     ])
     check("packaging notices are allowed", notices_in(out), 3)
+    unchanged = "warning: crate optionstratlib-core@0.22.1 already exists on crates.io index"
+    check("an already published crate is not a stray warning", warnings_in(unchanged), [])
+    check("an already published crate is reported", already_published_in(unchanged), ["optionstratlib-core@0.22.1"])
+    check("another crate's existence warning is kept", len(warnings_in("warning: crate serde@1.0.0 already exists on crates.io index")), 1)
     check("other warnings are kept", len(warnings_in(out)), 2)
     check(
         "an unpublished sibling is recognised",

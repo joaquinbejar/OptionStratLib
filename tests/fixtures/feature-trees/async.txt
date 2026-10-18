@@ -26,6 +26,7 @@ chrono -> wasm-bindgen
 chrono -> windows-link
 cipher -> crypto-common
 cipher -> inout
+constant_time_eq -> rustversion
 cpufeatures -> libc
 crc32fast -> cfg-if
 crossbeam-deque -> crossbeam-epoch
@@ -99,6 +100,10 @@ nalgebra -> num-traits
 nalgebra -> rand
 nalgebra -> simba
 nalgebra -> typenum
+nix -> bitflags
+nix -> cfg-if
+nix -> cfg_aliases
+nix -> libc
 num-complex -> num-traits
 num-integer -> num-traits
 num-rational -> num-integer
@@ -307,6 +312,7 @@ zip -> hmac
 zip -> indexmap
 zip -> lzma-rust2
 zip -> memchr
+zip -> nix
 zip -> pbkdf2
 zip -> ppmd-rust
 zip -> sha1
@@ -337,6 +343,7 @@ bytes [default,std]
 bzip2 [default]
 cc [parallel]
 cfg-if []
+cfg_aliases []
 chacha20 [rng]
 chrono [alloc,clock,default,iana-time-zone,js-sys,now,oldtime,serde,std,wasm-bindgen,wasmbind,winapi,windows-link]
 cipher []
@@ -380,7 +387,7 @@ itoa []
 jobserver []
 js-sys [default,std,unsafe-eval]
 libbz2-rs-sys [rust-allocator]
-libc [default,std]
+libc [default,extra_traits,std]
 libm [arch,default]
 lock_api [atomic_usize,default]
 log []
@@ -389,6 +396,7 @@ matrixmultiply [avx512,default,std]
 memchr [alloc,default,std]
 mio [net,os-ext,os-poll]
 nalgebra [matrixmultiply,rand-no-std,rand-package,std]
+nix [fs]
 num-complex [std]
 num-conv []
 num-integer [i128,std]

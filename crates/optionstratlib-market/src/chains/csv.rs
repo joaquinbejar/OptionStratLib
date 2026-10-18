@@ -81,7 +81,9 @@ pub fn read_ohlcv_from_zip(
     let mut csv_index = None;
     for i in 0..archive.len() {
         let file = archive.by_index(i)?;
-        if file.name().ends_with(".csv") {
+        // `zip` 9 decodes the entry name fallibly (#919); an undecodable
+        // name is reported as the archive's error, not skipped.
+        if file.name()?.ends_with(".csv") {
             csv_index = Some(i);
             break;
         }
@@ -185,7 +187,7 @@ mod ohlcv_tests {
     use rust_decimal_macros::dec;
     use std::io::Write;
     use tempfile::NamedTempFile;
-    use zip::{ZipWriter, write::FileOptions};
+    use zip::{ZipWriter, write::SimpleFileOptions};
 
     // Helper function to create a temporary zip file with test data
     fn create_test_zip(data: &str) -> Result<(String, NamedTempFile), OhlcvError> {
@@ -198,8 +200,8 @@ mod ohlcv_tests {
         let mut zip = ZipWriter::new(File::create(temp_file.path())?);
 
         // Add a CSV file
-        let options: FileOptions<'_, ()> =
-            FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
         zip.start_file("test_data.csv", options)
             .map_err(|e| OhlcvError::ZipError {

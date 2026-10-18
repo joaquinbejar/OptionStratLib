@@ -230,6 +230,47 @@ def edges(flags: list[str]) -> list[str]:
     return graph
 
 
+# The zip advisories RUSTSEC-2026-0367/0368/0369 are waived in
+# `.cargo/audit.toml` only for the `plotly_static` build-dependency copies that
+# `static_export` brings (#919). cargo-audit ignores by advisory ID, not by
+# version, so this guard keeps the waiver from hiding a regression: no
+# surface without `static_export` may resolve a zip below the fixed line, and
+# the zip `optionstratlib-market` depends on must be on it on every surface.
+ZIP_FIXED_MAJOR = 9
+ZIP_WAIVED_SURFACES = {"static_export"}
+ZIP_VERSION_RE = re.compile(r"^zip v(\d+)\.(\d+)\.(\d+)")
+
+
+def zip_majors(lines: list[str]) -> list[int]:
+    """The major version of every `zip vX.Y.Z` package line."""
+    return [int(m.group(1)) for line in lines if (m := ZIP_VERSION_RE.match(line.strip()))]
+
+
+def zip_violations(surface: str, resolved: list[str], market_direct: list[str]) -> list[str]:
+    """A zip below the fixed line where the audit waiver does not cover it."""
+    problems = []
+    if surface not in ZIP_WAIVED_SURFACES:
+        old = sorted({major for major in zip_majors(resolved) if major < ZIP_FIXED_MAJOR})
+        if old:
+            problems.append(f"{surface}: resolves zip {old} below {ZIP_FIXED_MAJOR}, which RUSTSEC-2026-0367/0368/0369 affect")
+    old_market = [major for major in zip_majors(market_direct) if major < ZIP_FIXED_MAJOR]
+    if old_market:
+        problems.append(f"{surface}: optionstratlib-market depends on zip {old_market}, below {ZIP_FIXED_MAJOR}")
+    return problems
+
+
+def packages_with_versions(args: list[str]) -> list[str]:
+    """`name vX.Y.Z` lines `cargo tree` resolves for the given arguments."""
+    result = subprocess.run(
+        ["cargo", "tree", "--color", "never", "--target", "all", "--prefix", "none", "--format", "{p}", *args],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if result.returncode != 0:
+        print(result.stderr, file=sys.stderr)
+        raise SystemExit(f"cargo tree failed for {' '.join(args)}")
+    return ANSI_RE.sub("", result.stdout).splitlines()
+
+
 def packages_of(graph: list[str]) -> set[str]:
     """The package names in a graph, from its `name [features]` lines."""
     return {line.split(" [")[0] for line in graph if line and " -> " not in line and not line.startswith("#")}
@@ -374,6 +415,18 @@ def self_test() -> int:
     surfaces = set(SURFACES) == set(BACKEND_RULES)
     failures += 0 if surfaces else 1
     print(f"self-test {'ok' if surfaces else 'FAIL'}: every surface has a backend rule and the reverse")
+    zip_cases = {
+        "zip 9 everywhere is clean": ("default", ["zip v9.0.5"], ["zip v9.0.5"], 0),
+        "zip 8 on a default surface fails": ("default", ["zip v8.6.0"], ["zip v8.6.0"], 2),
+        "an old build-time zip under static_export is waived": ("static_export", ["zip v4.6.1", "zip v9.0.5"], ["zip v9.0.5"], 0),
+        "market on zip 8 under static_export still fails": ("static_export", ["zip v8.6.0"], ["zip v8.6.0"], 1),
+        "an old zip on the io surface fails": ("io", ["zip v0.6.6"], [], 1),
+    }
+    for name, (surface, resolved, market, expected) in zip_cases.items():
+        got = len(zip_violations(surface, resolved, market))
+        ok = got == expected
+        failures += 0 if ok else 1
+        print(f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected}, got {got})")
     return 1 if failures else 0
 
 
@@ -391,6 +444,14 @@ def main() -> int:
     # Checked before any fixture is written, so `--update` cannot record a
     # graph that breaks the gate.
     problems = [problem for surface, graph in graphs.items() for problem in backend_violations(surface, graph)]
+    # The zip `optionstratlib-market` names under `io`, the feature that
+    # enables it, is the same on every surface.
+    market = packages_with_versions(
+        ["-e", "normal", "--depth", "1", "-p", "optionstratlib-market", "--features", "io"]
+    )
+    for surface, flags in SURFACES.items():
+        resolved = packages_with_versions(["-e", "normal,build", *flags])
+        problems += zip_violations(surface, resolved, market)
     for problem in problems:
         print(f"backend gate: {problem}", file=sys.stderr)
     if problems:
