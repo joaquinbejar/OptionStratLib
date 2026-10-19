@@ -303,7 +303,7 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
 /// As the rasterizer's own (crate-private) `Point::distance_to`.
 fn distance(a: Point, b: Point) -> f32 {
     let (dx, dy) = (a.x - b.x, a.y - b.y);
-    (dx * dx + dy * dy).sqrt()
+    (dx * dx + dy * dy).sqrt() // scan-banned: allow -- f32 `sqrt` of a sum of squares, never negative
 }
 
 impl ClippedLines<'_> {
@@ -360,9 +360,11 @@ impl ClippedLines<'_> {
             return;
         }
         // At least 1; a degenerate curve too large to subdivide is a line.
+        // `devsq` is a sum of squares, so both f32 roots are of non-negative
+        // values.
         let Some(n) = (3.0 * devsq)
-            .sqrt()
-            .sqrt()
+            .sqrt() // scan-banned: allow -- f32 `sqrt` of a non-negative value
+            .sqrt() // scan-banned: allow -- f32 `sqrt` of a non-negative value
             .floor()
             .to_usize()
             .and_then(|n| n.checked_add(1))

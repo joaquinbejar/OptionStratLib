@@ -1,6 +1,7 @@
 # Consumer fixture: the `optionstratlib` facade with only its `static_export` feature
-# (ADR-0002 Decision 2, #544): PNG and SVG export, which brings Plotly, the
-# `plotly_static` exporter, its WebDriver client and the async runtime. Excluded from the root workspace so feature
+# (ADR-0002 Decision 2, #544): PNG and SVG export, drawn natively since #927,
+# which brings Plotly and the native renderer but no browser exporter, WebDriver
+# client or async runtime. Excluded from the root workspace so feature
 # unification with the other members cannot widen its graph; built with
 # `--manifest-path`.
 [package]
