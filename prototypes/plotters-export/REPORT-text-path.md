@@ -129,8 +129,10 @@ default `autohint_shaping` feature does not change the size; it stays off
 because nothing uses it. The size is skrifa's outline code. The
 alternative below would avoid it.
 
-**Time.** All runs were under the sandbox with network, process creation
-and font directories denied, and all succeeded. The two binaries were
+**Time.** Every run succeeded. The cold runs, separate and interleaved,
+ran under the sandbox with network, process creation and font
+directories denied. The in-process runs did not: `measure.py` runs the
+`repeat` command directly. The two binaries were
 built from `cfa2ee6b` (SHA-256 `03f86978…`) and from this branch at
 `0f98ec6b` (SHA-256 `10a7a3cf…`); the hashes are in
 `results/timing-text-path-interleaved.json`.
@@ -145,10 +147,16 @@ built from `cfa2ee6b` (SHA-256 `03f86978…`) and from this branch at
     2.66 and 2.81 ms; warm timings on this machine are sensitive to
     background load.
 - **Cold, separately** (same files, 240 runs per binary: 4 cases × 3
-  formats × 20). Medians per format, before and after:
-  - PNG 21.45 and 21.14 ms;
-  - embedded-font SVG 21.07 and 20.98 ms;
-  - outlines SVG 20.99 and 20.98 ms.
+  formats × 20, base first, then head). Medians per format, before and
+  after:
+  - PNG 25.44 and 25.34 ms;
+  - embedded-font SVG 24.96 and 24.70 ms;
+  - outlines SVG 24.72 and 25.41 ms.
+
+  These runs are about 4 ms slower than the interleaved ones below, which
+  were taken at another moment; within them the two binaries ran minutes
+  apart, so machine drift is not separated from the binaries. The
+  interleaved runs are the fair comparison.
 - **Cold, interleaved** (`results/timing-text-path-interleaved.json`,
   `measure.py --mode interleaved`). 40 rounds, alternating which binary
   goes first, give 480 runs per binary. Medians per format, before and
