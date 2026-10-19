@@ -37,9 +37,10 @@ figure and asked plotly.js for the image. That cost:
 - **Advisories.** The download stack brought `reqwest` 0.11, `h2` 0.3,
   `rustls-pemfile` and zip below 9, each waived in `.cargo/audit.toml` as a
   build-time-only path.
-- **Silent repairs.** plotly.js filled the missing points of an incomplete
-  surface with zero, kept the last of repeated points, drew the shorter of
-  two series arrays and accepted colour spellings CSS does not.
+- **Silent repairs.** The old Plotly export path filled the missing points
+  of an incomplete surface with zero and kept the last of repeated points
+  (both in the crate's own `make_surface`), drew the shorter of two series
+  arrays and accepted colour spellings CSS does not.
 
 The experiments #920 (Plotters renderer, timings, leak checks) and #923
 (SVG text as outlines, viewer and accessibility checks) measured a native
