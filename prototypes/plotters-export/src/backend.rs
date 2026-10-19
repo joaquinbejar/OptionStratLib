@@ -147,6 +147,11 @@ impl<B: DrawingBackend> TextBackend<B> {
 
     /// Fills closed `segments` (nonzero winding, as TrueType) with `color`,
     /// antialiased, clipped to the backend.
+    ///
+    /// The rasterizer covers only the visible part of the label, plus one
+    /// spare column on the right. It clips rows itself but assumes every
+    /// x lies within its width, so a label running past the left or right
+    /// edge of the canvas is clipped here first (see [`ClippedLines`]).
     fn fill(&mut self, segments: &[Segment], color: BackendColor) -> Result<(), ExportError> {
         let points = segments.iter().flat_map(|segment| match segment {
             Segment::Move(p) | Segment::Line(p) => vec![*p],
@@ -159,18 +164,25 @@ impl<B: DrawingBackend> TextBackend<B> {
             (x0, y0, x1, y1) = (x0.min(x), y0.min(y), x1.max(x), y1.max(y));
         }
         let (width, height) = self.inner.get_size();
+        let (canvas_width, canvas_height) = (f64::from(width), f64::from(height));
         let (left, top) = (x0.floor().max(0.0), y0.floor().max(0.0));
-        let (right, bottom) = (
-            x1.ceil().min(f64::from(width)),
-            y1.ceil().min(f64::from(height)),
-        );
+        let (right, bottom) = (x1.ceil().min(canvas_width), y1.ceil().min(canvas_height));
         if right <= left || bottom <= top {
             return Ok(());
         }
         // Whole pixels inside the canvas, so these conversions are exact.
         let (cols, rows) = ((right - left) as usize, (bottom - top) as usize);
         let local = |(x, y): (f64, f64)| point((x - left) as f32, (y - top) as f32);
-        let mut raster = Rasterizer::new(cols, rows);
+        // The spare column takes coverage at the right edge, which would
+        // otherwise spill into the next row.
+        let mut raster = Rasterizer::new(cols + 1, rows);
+        // A label inside the canvas horizontally goes to the rasterizer as
+        // it is; only one running past a side edge needs clipping.
+        let clip = (x0 < 0.0 || x1 > canvas_width).then_some(cols as f32);
+        let mut lines = ClippedLines {
+            raster: &mut raster,
+            right: clip,
+        };
         let (mut start, mut current): (Option<Point>, Option<Point>) = (None, None);
         for segment in segments {
             match *segment {
@@ -181,21 +193,21 @@ impl<B: DrawingBackend> TextBackend<B> {
                 Segment::Line(p) => {
                     let p = local(p);
                     if let Some(from) = current {
-                        raster.draw_line(from, p);
+                        lines.line(from, p);
                     }
                     current = Some(p);
                 }
                 Segment::Quad(c, p) => {
                     let p = local(p);
                     if let Some(from) = current {
-                        raster.draw_quad(from, local(c), p);
+                        lines.quad(from, local(c), p);
                     }
                     current = Some(p);
                 }
                 Segment::Cubic(c0, c1, p) => {
                     let p = local(p);
                     if let Some(from) = current {
-                        raster.draw_cubic(from, local(c0), local(c1), p);
+                        lines.cubic(from, local(c0), local(c1), p, 0);
                     }
                     current = Some(p);
                 }
@@ -203,7 +215,7 @@ impl<B: DrawingBackend> TextBackend<B> {
                     if let (Some(from), Some(to)) = (current, start)
                         && from != to
                     {
-                        raster.draw_line(from, to);
+                        lines.line(from, to);
                     }
                     current = start;
                 }
@@ -211,7 +223,7 @@ impl<B: DrawingBackend> TextBackend<B> {
         }
         let mut pixels = Vec::new();
         raster.for_each_pixel_2d(|x, y, coverage| {
-            if coverage > 0.0 {
+            if coverage > 0.0 && (x as usize) < cols {
                 pixels.push((x, y, coverage.min(1.0)));
             }
         });
@@ -232,6 +244,119 @@ impl<B: DrawingBackend> TextBackend<B> {
                 .map_err(|error| ExportError::Render(error.to_string()))?;
         }
         Ok(())
+    }
+}
+
+/// Feeds outline segments to the rasterizer, clipping them to the columns
+/// `0..=right` when `right` is set.
+///
+/// The rasterizer accumulates signed coverage along each row, so a piece
+/// of the outline left of the first column only matters through its height:
+/// moving it onto the left edge keeps the coverage of every visible pixel.
+/// A piece right of the last visible column covers nothing visible: moving
+/// it onto the right edge puts its coverage in the spare column. Segments
+/// are cut where they cross an edge, not clamped, and curves are flattened
+/// with the rasterizer's own subdivision first, so the shape is unchanged.
+struct ClippedLines<'a> {
+    raster: &'a mut Rasterizer,
+    right: Option<f32>,
+}
+
+fn lerp(t: f32, p0: Point, p1: Point) -> Point {
+    point(p0.x + t * (p1.x - p0.x), p0.y + t * (p1.y - p0.y))
+}
+
+/// As the rasterizer's own (crate-private) `Point::distance_to`.
+fn distance(a: Point, b: Point) -> f32 {
+    let (dx, dy) = (a.x - b.x, a.y - b.y);
+    (dx * dx + dy * dy).sqrt()
+}
+
+impl ClippedLines<'_> {
+    fn line(&mut self, p0: Point, p1: Point) {
+        let Some(right) = self.right else {
+            self.raster.draw_line(p0, p1);
+            return;
+        };
+        let dx = p1.x - p0.x;
+        let mut cuts = vec![0.0_f32, 1.0];
+        if dx != 0.0 {
+            for edge in [0.0, right] {
+                let t = (edge - p0.x) / dx;
+                if t > 0.0 && t < 1.0 {
+                    cuts.push(t);
+                }
+            }
+        }
+        cuts.sort_by(f32::total_cmp);
+        for pair in cuts.windows(2) {
+            let [t0, t1] = pair else {
+                continue;
+            };
+            let (mut a, mut b) = (lerp(*t0, p0, p1), lerp(*t1, p0, p1));
+            let middle = 0.5 * (a.x + b.x);
+            let x = if middle < 0.0 {
+                Some(0.0)
+            } else if middle > right {
+                Some(right)
+            } else {
+                None
+            };
+            match x {
+                // Outside: onto the edge.
+                Some(x) => (a.x, b.x) = (x, x),
+                // Inside: only rounding can stray past an edge.
+                None => (a.x, b.x) = (a.x.clamp(0.0, right), b.x.clamp(0.0, right)),
+            }
+            self.raster.draw_line(a, b);
+        }
+    }
+
+    /// `Rasterizer::draw_quad`'s subdivision, through [`ClippedLines::line`].
+    fn quad(&mut self, p0: Point, p1: Point, p2: Point) {
+        if self.right.is_none() {
+            self.raster.draw_quad(p0, p1, p2);
+            return;
+        }
+        let devx = p0.x - 2.0 * p1.x + p2.x;
+        let devy = p0.y - 2.0 * p1.y + p2.y;
+        let devsq = devx * devx + devy * devy;
+        if devsq < 0.333 {
+            self.line(p0, p2);
+            return;
+        }
+        // Finite and at least 1.
+        let n = 1 + (3.0 * devsq).sqrt().sqrt().floor() as usize;
+        let step = (n as f32).recip();
+        let (mut p, mut t) = (p0, 0.0);
+        for _ in 1..n {
+            t += step;
+            let next = lerp(t, lerp(t, p0, p1), lerp(t, p1, p2));
+            self.line(p, next);
+            p = next;
+        }
+        self.line(p, p2);
+    }
+
+    /// `Rasterizer::draw_cubic`'s subdivision, through [`ClippedLines::line`].
+    fn cubic(&mut self, p0: Point, p1: Point, p2: Point, p3: Point, depth: u8) {
+        if self.right.is_none() {
+            self.raster.draw_cubic(p0, p1, p2, p3);
+            return;
+        }
+        const FLATNESS_SQUARED: f32 = 0.35 * 0.35;
+        const MAX_DEPTH: u8 = 16;
+        let long = distance(p0, p1) + distance(p1, p2) + distance(p2, p3);
+        let short = distance(p0, p3);
+        if depth < MAX_DEPTH && long * long - short * short > FLATNESS_SQUARED {
+            let (p01, p12, p23) = (lerp(0.5, p0, p1), lerp(0.5, p1, p2), lerp(0.5, p2, p3));
+            let (pa, pb) = (lerp(0.5, p01, p12), lerp(0.5, p12, p23));
+            let middle = lerp(0.5, pa, pb);
+            self.cubic(p0, p01, pa, middle, depth + 1);
+            self.cubic(middle, pb, p23, p3, depth + 1);
+        } else {
+            self.line(p0, p3);
+        }
     }
 }
 
@@ -339,5 +464,94 @@ impl<B: DrawingBackend> DrawingBackend for TextBackend<B> {
         src: &[u8],
     ) -> Result<(), DrawingErrorKind<Self::ErrorType>> {
         self.inner.blit_bitmap(pos, size, src)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use plotters::prelude::{BLACK, BitMapBackend, IntoFont, TextStyle};
+    use plotters::style::Color;
+    use plotters_backend::text_anchor::Pos;
+
+    const WIDTH: u32 = 60;
+    const HEIGHT: u32 = 40;
+    /// Margin of the large canvas, which holds every test label whole.
+    const PAD: u32 = 40;
+
+    /// `FontTransform` is neither `Copy` nor `Debug`: tests pass makers.
+    type Transform = fn() -> FontTransform;
+
+    /// The red channel of `text` drawn black at `pos` on a white canvas.
+    fn draw(
+        text: &str,
+        pos: BackendCoord,
+        transform: Transform,
+        (width, height): (u32, u32),
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let mut buffer = vec![255_u8; (width * height * 3) as usize];
+        {
+            let inner = BitMapBackend::with_buffer(&mut buffer, (width, height));
+            let mut backend = TextBackend::new(inner, TextMode::Raster, TextErrors::default());
+            let black = BLACK.to_rgba();
+            let style = TextStyle::from(("Open Sans", 20.0).into_font())
+                .color(&black)
+                .transform(transform())
+                .pos(Pos::new(HPos::Left, VPos::Top));
+            backend.draw_text(text, &style, pos)?;
+            backend.present()?;
+        }
+        Ok(buffer.chunks(3).map(|pixel| pixel[0]).collect())
+    }
+
+    #[test]
+    fn test_labels_past_any_edge_are_clipped_not_distorted()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let transforms: [(&str, Transform); 4] = [
+            ("none", || FontTransform::None),
+            ("90", || FontTransform::Rotate90),
+            ("180", || FontTransform::Rotate180),
+            ("270", || FontTransform::Rotate270),
+        ];
+        // Past the left, right, top and bottom edges, and two at once.
+        let positions = [
+            (-25, 10),
+            (45, 10),
+            (10, -25),
+            (10, 35),
+            (-25, -25),
+            (50, 30),
+        ];
+        let pad = PAD as i32;
+        let mut inked = 0;
+        for (name, transform) in transforms {
+            for (x, y) in positions {
+                let small = draw("Wg", (x, y), transform, (WIDTH, HEIGHT))?;
+                let large = draw(
+                    "Wg",
+                    (x + pad, y + pad),
+                    transform,
+                    (WIDTH + 2 * PAD, HEIGHT + 2 * PAD),
+                )?;
+                for row in 0..HEIGHT as usize {
+                    for col in 0..WIDTH as usize {
+                        let clipped = small[row * WIDTH as usize + col];
+                        let whole = large[(row + PAD as usize) * (WIDTH + 2 * PAD) as usize
+                            + col
+                            + PAD as usize];
+                        assert!(
+                            clipped.abs_diff(whole) <= 2,
+                            "rotation {name} at ({x}, {y}): pixel ({col}, {row}) is {clipped}, {whole} unclipped"
+                        );
+                        inked += usize::from(clipped < 128);
+                    }
+                }
+            }
+        }
+        assert!(
+            inked > 500,
+            "only {inked} inked pixels: the labels missed the canvas"
+        );
+        Ok(())
     }
 }

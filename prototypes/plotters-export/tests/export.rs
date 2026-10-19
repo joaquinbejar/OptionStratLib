@@ -830,3 +830,31 @@ fn test_png_rejects_a_character_the_font_lacks() -> Result<(), Box<dyn Error>> {
     );
     Ok(())
 }
+
+#[test]
+fn test_png_labels_wider_or_taller_than_the_figure() -> Result<(), Box<dyn Error>> {
+    // A title past both side edges (it used to overflow the rasterizer's
+    // indices), and a rotated axis title past the top and bottom.
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Payoff.build()?;
+    for (index, (title, y_label)) in [
+        ("W".repeat(50), None),
+        ("W".repeat(5000), None),
+        ("Payoff".to_string(), Some("W".repeat(200))),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let config = GraphConfig {
+            width: 640,
+            height: 480,
+            title,
+            y_label: y_label.or(config.y_label.clone()),
+            ..config.clone()
+        };
+        let path = dir.path().join(format!("{index}.png"));
+        write_png(&data, &config, &path)?;
+        assert_eq!(png_dimensions(&path)?, (640, 480));
+    }
+    Ok(())
+}
