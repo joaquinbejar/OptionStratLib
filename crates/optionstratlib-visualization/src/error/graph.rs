@@ -50,8 +50,9 @@ pub enum GraphError {
     #[error(transparent)]
     Backtest(Box<BacktestError>),
 
-    /// The configured figure width or height is zero.
-    #[error("invalid dimensions {width}x{height}: both must be positive")]
+    /// The configured figure width or height is zero or larger than the
+    /// 16384 pixels the static export draws.
+    #[error("invalid dimensions {width}x{height}: both must be 1 to 16384 pixels")]
     InvalidDimensions {
         /// Configured width in pixels.
         width: u32,

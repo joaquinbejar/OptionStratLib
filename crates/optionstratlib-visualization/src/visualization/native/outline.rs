@@ -174,7 +174,7 @@ fn unsupported(reason: impl Into<String>) -> GraphError {
 /// plotters-svg subset (or a document with no `<svg>` element),
 /// [`GraphError::MissingGlyph`] for a character the bundled font cannot
 /// draw, [`GraphError::NotXmlText`] for a label, title or description
-/// with a character XML 1.0 cannot carry, and [`GraphError::Font`] if the
+/// with a character XML 1.0 cannot carry, and [`GraphError::Render`] if the
 /// bundled font does not parse.
 pub(crate) fn outline_text(document: &str, chart: &ChartText) -> Result<Outlined, GraphError> {
     let font = bundled_font()?;

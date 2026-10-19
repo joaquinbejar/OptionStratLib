@@ -256,7 +256,7 @@ impl BundledFont {
     ///
     /// # Errors
     ///
-    /// [`GraphError::Font`] if a glyph outline cannot be read.
+    /// [`GraphError::Render`] if a glyph outline cannot be read.
     pub(crate) fn trace(
         &self,
         layout: &LineLayout,

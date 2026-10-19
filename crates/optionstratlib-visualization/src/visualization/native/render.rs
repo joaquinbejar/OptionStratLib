@@ -101,14 +101,15 @@ const COLORBAR_LABEL_X: i32 = COLORBAR_RIGHT_PX + 8;
 /// Writes `data` to `path` as a PNG of `config.width` x `config.height`.
 ///
 /// Creates the parent directory when it is missing. The image is drawn into
-/// a temporary file next to `path` and renamed over it only once complete,
-/// so a failed export never leaves a partial image (Plotters' bitmap
-/// backend writes its file even when drawing fails).
+/// a [`Scratch`] directory next to `path` and renamed over it only once
+/// complete, so a failed export never leaves a partial image (Plotters'
+/// bitmap backend writes its file even when drawing fails).
 ///
 /// # Errors
 ///
 /// [`GraphError`] for invalid dimensions or data, a label the font cannot
-/// draw, a drawing failure, or a path that cannot be written.
+/// draw or a drawing failure; [`GraphError::Io`] when the file cannot be
+/// written or the image cannot be encoded into it.
 #[tracing::instrument(skip(data, config), fields(title = %config.title))]
 pub(crate) fn write_png(
     data: &GraphData,
@@ -117,47 +118,132 @@ pub(crate) fn write_png(
 ) -> Result<(), GraphError> {
     let size = dimensions(config)?;
     prepare_parent(path)?;
-    let partial = partial_path(path);
+    let scratch = Scratch::create(path)?;
+    let image = scratch.file("image.png");
     let errors = TextErrors::default();
     let result = {
         let backend = TextBackend::new(
-            BitMapBackend::new(&partial, size),
+            BitMapBackend::new(&image, size),
             TextMode::Raster,
             errors.clone(),
         );
         let root = backend.into_drawing_area();
-        draw(&root, data, config).and_then(|()| root.present().map_err(render_error))
-        // `root`, and with it the backend that writes `partial`, drops here.
+        draw(&root, data, config).and_then(|()| root.present().map_err(png_error))
+        // `root`, and with it the backend that writes `image`, drops here.
     };
-    let result = typed_text_error_first(result, &errors)
-        .and_then(|()| std::fs::rename(&partial, path).map_err(GraphError::from));
-    if result.is_err() {
-        // Best effort: the export has already failed, and the partial file
-        // may never have been created.
-        if let Err(error) = std::fs::remove_file(&partial)
-            && error.kind() != std::io::ErrorKind::NotFound
-        {
-            tracing::warn!(path = %partial.display(), %error, "partial PNG left behind");
-        }
-    }
-    result
+    typed_text_error_first(result, &errors)?;
+    scratch.publish(&image, path)
 }
 
-/// A temporary sibling of `path` for the image being drawn: hidden, unique
-/// to this process and export, and ending in `.png`, which is how Plotters'
-/// bitmap backend picks its encoder.
-fn partial_path(path: &Path) -> std::path::PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-    let sequence = SEQUENCE.fetch_add(1, Ordering::Relaxed);
-    let name = path
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    path.with_file_name(format!(
-        ".{name}.{}-{sequence}.partial.png",
-        std::process::id()
-    ))
+/// The bitmap backend's error, which `plotters` does not re-export.
+type BitMapBackendError = <BitMapBackend<'static> as DrawingBackend>::ErrorType;
+
+/// How many names [`Scratch::create`] tries before giving up.
+const SCRATCH_ATTEMPTS: u32 = 64;
+
+/// A directory of one export's own, next to its output, for the file being
+/// written. It is created exclusively, so an entry already there under that
+/// name (a symlink included) is never reused, and on Unix only its owner can
+/// enter it: nothing planted beforehand can redirect the file drawn inside.
+/// Its name is short whatever the output is called. Dropping it removes the
+/// directory and anything left in it.
+struct Scratch {
+    dir: std::path::PathBuf,
+}
+
+impl Scratch {
+    fn create(path: &Path) -> Result<Self, GraphError> {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+        let parent = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        let process = std::process::id();
+        Self::create_in(
+            parent,
+            std::iter::repeat_with(|| {
+                format!(
+                    ".osl-export-{process}-{}",
+                    SEQUENCE.fetch_add(1, Ordering::Relaxed)
+                )
+            })
+            .take(SCRATCH_ATTEMPTS.to_usize().unwrap_or(1)),
+        )
+    }
+
+    /// The first of `names` that can be created as a new directory in
+    /// `parent`.
+    fn create_in(parent: &Path, names: impl Iterator<Item = String>) -> Result<Self, GraphError> {
+        let mut builder = std::fs::DirBuilder::new();
+        #[cfg(unix)]
+        std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+        let mut taken = None;
+        for name in names {
+            let dir = parent.join(name);
+            match builder.create(&dir) {
+                Ok(()) => return Ok(Self { dir }),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                    taken = Some(error);
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+        Err(taken
+            .unwrap_or_else(|| std::io::Error::from(std::io::ErrorKind::AlreadyExists))
+            .into())
+    }
+
+    /// `name` inside the directory.
+    fn file(&self, name: &str) -> std::path::PathBuf {
+        self.dir.join(name)
+    }
+
+    /// Moves the complete `file` over `path`: an existing `path` is
+    /// replaced as a whole, never written through.
+    fn publish(self, file: &Path, path: &Path) -> Result<(), GraphError> {
+        std::fs::rename(file, path)?;
+        Ok(())
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        // Best effort: whatever the export returned stands. The directory is
+        // this export's own, so everything in it is this export's file.
+        if let Err(error) = std::fs::remove_dir_all(&self.dir)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(path = %self.dir.display(), %error, "export scratch directory left behind");
+        }
+    }
+}
+
+/// A PNG export's failure: a failure to write or encode the file is
+/// [`GraphError::Io`]. The encoder's own error type belongs to `image`,
+/// which this crate does not name, and with the dimensions bounded it fails
+/// only writing the file; its kind is that of the first [`std::io::Error`]
+/// in the error's source chain, or [`std::io::ErrorKind::Other`] when the
+/// chain has none (image 0.24 does not expose the one it wraps).
+#[cold]
+#[inline(never)]
+fn png_error(error: DrawingAreaErrorKind<BitMapBackendError>) -> GraphError {
+    use plotters_backend::DrawingErrorKind;
+    match error {
+        DrawingAreaErrorKind::BackendError(DrawingErrorKind::DrawingError(
+            BitMapBackendError::IOError(error),
+        )) => GraphError::Io(error),
+        DrawingAreaErrorKind::BackendError(DrawingErrorKind::DrawingError(
+            BitMapBackendError::ImageError(error),
+        )) => {
+            let kind =
+                std::iter::successors(std::error::Error::source(&error), |cause| cause.source())
+                    .find_map(|cause| cause.downcast_ref::<std::io::Error>())
+                    .map_or(std::io::ErrorKind::Other, std::io::Error::kind);
+            GraphError::Io(std::io::Error::new(kind, error.to_string()))
+        }
+        other => render_error(other),
+    }
 }
 
 /// Renders `data` as an SVG document of `config.width` x `config.height`,
@@ -246,7 +332,9 @@ fn describe(data: &GraphData, config: &GraphConfig) -> ChartText {
 
 /// Writes `data` to `path` as an SVG; see [`render_svg`].
 ///
-/// Creates the parent directory when it is missing.
+/// Creates the parent directory when it is missing, and like
+/// [`write_png`] writes through a [`Scratch`] directory, so `path` is
+/// replaced only by a complete document.
 ///
 /// # Errors
 ///
@@ -259,12 +347,21 @@ pub(crate) fn write_svg(
 ) -> Result<(), GraphError> {
     let document = render_svg(data, config)?.document;
     prepare_parent(path)?;
-    std::fs::write(path, document)?;
-    Ok(())
+    let scratch = Scratch::create(path)?;
+    let file = scratch.file("image.svg");
+    std::fs::write(&file, document)?;
+    scratch.publish(&file, path)
 }
 
+/// The largest width or height drawn, in pixels. It bounds the PNG buffer
+/// (3 bytes a pixel, about 805 MB at 16384 x 16384) and keeps every
+/// coordinate far inside the `i32` Plotters draws with, which a larger
+/// figure overflows inside Plotters before any of this crate's checks run.
+const MAX_SIDE_PX: u32 = 16_384;
+
 fn dimensions(config: &GraphConfig) -> Result<(u32, u32), GraphError> {
-    if config.width == 0 || config.height == 0 {
+    let side = 1..=MAX_SIDE_PX;
+    if !side.contains(&config.width) || !side.contains(&config.height) {
         return Err(GraphError::InvalidDimensions {
             width: config.width,
             height: config.height,
@@ -1054,6 +1151,47 @@ fn tick_step(range: &std::ops::Range<f64>, count: u32) -> f64 {
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
+
+    #[cfg(unix)]
+    #[test]
+    fn test_scratch_never_reuses_an_existing_entry() -> Result<(), Box<dyn std::error::Error>> {
+        let dir = tempfile::tempdir()?;
+        let victim = dir.path().join("victim.txt");
+        std::fs::write(&victim, "untouched")?;
+        std::os::unix::fs::symlink(&victim, dir.path().join("link"))?;
+        std::fs::create_dir(dir.path().join("dir"))?;
+        let names = ["link", "dir", "free"].map(str::to_string).into_iter();
+        let scratch = Scratch::create_in(dir.path(), names)?;
+        assert_eq!(scratch.dir, dir.path().join("free"));
+        std::fs::write(scratch.file("image.png"), "partial")?;
+        drop(scratch);
+        assert!(!dir.path().join("free").exists());
+        assert_eq!(std::fs::read_to_string(&victim)?, "untouched");
+        // Every name taken: an `AlreadyExists` I/O error, not a reuse.
+        let taken = Scratch::create_in(dir.path(), ["link", "dir"].map(str::to_string).into_iter());
+        assert!(matches!(
+            taken,
+            Err(GraphError::Io(ref error)) if error.kind() == std::io::ErrorKind::AlreadyExists
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_png_write_failures_are_io_errors() {
+        let denied = DrawingAreaErrorKind::BackendError(
+            plotters_backend::DrawingErrorKind::DrawingError(BitMapBackendError::IOError(
+                std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+            )),
+        );
+        assert!(matches!(
+            png_error(denied),
+            GraphError::Io(ref error) if error.kind() == std::io::ErrorKind::PermissionDenied
+        ));
+        let buffer = DrawingAreaErrorKind::BackendError(
+            plotters_backend::DrawingErrorKind::DrawingError(BitMapBackendError::InvalidBuffer),
+        );
+        assert!(matches!(png_error(buffer), GraphError::Render(_)));
+    }
 
     #[test]
     fn test_axis_range_pads_and_widens_flat_axes() {

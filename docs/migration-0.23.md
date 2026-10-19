@@ -48,6 +48,7 @@ a `GraphError` variant you can match:
 | Series with more x than y values | shorter length drawn | `LengthMismatch` |
 | Colour plotly.js tolerates but CSS does not | drawn | `InvalidColor` |
 | Label character outside the bundled font | browser's fallback font | `MissingGlyph` |
+| Width or height above 16384 pixels | drawn by the browser | `InvalidDimensions` |
 
 `GraphError` is `#[non_exhaustive]`: keep a wildcard arm.
 

@@ -40,6 +40,11 @@ Upgrading: see `docs/migration-0.23.md`.
   - A label character the bundled font has no glyph for (for example CJK)
     is an error in PNG and SVG; tab, line feed and carriage return advance
     like a space.
+  - A width or height above 16384 pixels is `GraphError::InvalidDimensions`,
+    like zero.
+  - The file is written next to its destination and renamed over it once
+    complete, so a failed export leaves no partial image, and a symlink at
+    the destination is replaced rather than written through.
   - The 3D surface is drawn with flat shading from a fixed viewpoint, with
     a Viridis colour bar; it shows its axis titles, which the Plotly export
     lost.

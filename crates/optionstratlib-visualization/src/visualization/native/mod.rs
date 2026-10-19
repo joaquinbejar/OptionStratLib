@@ -365,4 +365,111 @@ mod tests {
         assert!(worst <= 2, "clipped title differs by {worst}/255");
         Ok(())
     }
+
+    #[test]
+    fn test_oversized_figures_are_refused_before_drawing() -> TestResult {
+        // Each of these used to overflow inside Plotters: the PNG buffer
+        // size, or an `i32` coordinate of the SVG. Nothing is allocated.
+        let dir = tempfile::tempdir()?;
+        let (png, svg) = (dir.path().join("big.png"), dir.path().join("big.svg"));
+        let huge = 1_u32 << 31;
+        for (width, height) in [
+            (u32::MAX, u32::MAX),
+            (huge, 480),
+            (640, huge),
+            (16_385, 100),
+            (100, 16_385),
+        ] {
+            let config = GraphConfig {
+                width,
+                height,
+                ..config()
+            };
+            let refused = |result: Result<(), GraphError>| matches!(result, Err(GraphError::InvalidDimensions { width: w, height: h }) if (w, h) == (width, height));
+            assert!(
+                refused(write_png(&multi(), &config, &png)),
+                "{width}x{height}"
+            );
+            assert!(
+                refused(write_svg(&multi(), &config, &svg)),
+                "{width}x{height}"
+            );
+            assert!(refused(render_svg(&multi(), &config).map(|_| ())));
+        }
+        assert_eq!(std::fs::read_dir(dir.path())?.count(), 0);
+        // The largest side is still drawn.
+        let edge = GraphConfig {
+            width: 16_384,
+            height: 200,
+            ..config()
+        };
+        write_png(&multi(), &edge, &png)?;
+        assert_eq!(png_size(&png)?, (16_384, 200));
+        Ok(())
+    }
+
+    #[test]
+    fn test_a_long_output_name_is_written() -> TestResult {
+        // The temporary file's name does not grow with the output's.
+        let dir = tempfile::tempdir()?;
+        for extension in ["png", "svg"] {
+            let path = dir.path().join(format!("{}.{extension}", "a".repeat(246)));
+            if extension == "png" {
+                write_png(&multi(), &config(), &path)?;
+            } else {
+                write_svg(&multi(), &config(), &path)?;
+            }
+            assert!(path.is_file());
+        }
+        assert_eq!(std::fs::read_dir(dir.path())?.count(), 2);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_a_symlink_at_the_output_is_replaced_not_written_through() -> TestResult {
+        let dir = tempfile::tempdir()?;
+        let victim = dir.path().join("victim.txt");
+        std::fs::write(&victim, "untouched")?;
+        for name in ["out.png", "out.svg"] {
+            let path = dir.path().join(name);
+            std::os::unix::fs::symlink(&victim, &path)?;
+            if name.ends_with("png") {
+                write_png(&multi(), &config(), &path)?;
+            } else {
+                write_svg(&multi(), &config(), &path)?;
+            }
+            assert!(std::fs::symlink_metadata(&path)?.is_file(), "{name}");
+        }
+        assert_eq!(std::fs::read_to_string(&victim)?, "untouched");
+        // victim.txt, out.png, out.svg: no scratch directory is left.
+        assert_eq!(std::fs::read_dir(dir.path())?.count(), 3);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_an_unwritable_directory_is_an_io_error() -> TestResult {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir()?;
+        let locked = dir.path().join("locked");
+        std::fs::create_dir(&locked)?;
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555))?;
+        // A superuser writes anyway; there is nothing to check then.
+        let enforced = std::fs::write(locked.join("probe"), "").is_err();
+        let outcomes = [
+            write_png(&multi(), &config(), &locked.join("out.png")),
+            write_svg(&multi(), &config(), &locked.join("out.svg")),
+        ];
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755))?;
+        if enforced {
+            for outcome in outcomes {
+                assert!(
+                    matches!(&outcome, Err(GraphError::Io(error)) if error.kind() == std::io::ErrorKind::PermissionDenied),
+                    "{outcome:?}"
+                );
+            }
+        }
+        Ok(())
+    }
 }

@@ -114,8 +114,10 @@ pub trait Graph {
     ///
     /// # Errors
     ///
-    /// * [`GraphError::Io`] when the file or its directory cannot be written.
-    /// * [`GraphError::InvalidDimensions`], [`GraphError::TooSmall`] or
+    /// * [`GraphError::Io`] when the file or its directory cannot be written
+    ///   or the image cannot be encoded into it.
+    /// * [`GraphError::InvalidDimensions`] for a width or height of zero or
+    ///   above 16384 pixels; [`GraphError::TooSmall`] or
     ///   [`GraphError::NoRoom`] when the figure cannot hold the chart.
     /// * [`GraphError::LengthMismatch`], [`GraphError::SurfaceLengthMismatch`],
     ///   [`GraphError::DegenerateSurface`], [`GraphError::DuplicateSurfacePoint`],
@@ -125,7 +127,7 @@ pub trait Graph {
     ///   a series style it cannot reproduce.
     /// * [`GraphError::MissingGlyph`] or [`GraphError::UnsupportedText`] for
     ///   a label the bundled font cannot draw.
-    /// * [`GraphError::Render`] when drawing or encoding fails.
+    /// * [`GraphError::Render`] when drawing fails.
     #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
         native::write_png(&self.graph_data(), &self.graph_config(), path)
