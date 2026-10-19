@@ -5,7 +5,7 @@
 # The archives come from scripts/package_archives.sh (shared with
 # check_packaged_examples.sh). They are unpacked into a scratch directory
 # outside the repository and joined there by a throwaway workspace whose
-# `[patch.crates-io]` resolves each crate's `version = "0.22.0"` dependencies
+# `[patch.crates-io]` resolves each crate's `version = "0.MINOR.N"` dependencies
 # on its siblings to the unpacked copies. In that workspace this runs:
 #
 #   cargo build  --workspace --all-features
