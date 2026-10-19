@@ -379,7 +379,7 @@ Robust error management:
 
 ### Workspace Crates
 
-OptionStratLib 0.22 is nine component crates and this facade. Each
+OptionStratLib is nine component crates and this facade (since 0.22). Each
 component owns one layer, and the facade (`optionstratlib`) re-exports
 them, so a path through the facade and the same path through the
 component name the same type.
@@ -399,7 +399,11 @@ and the [ownership map](https://github.com/joaquinbejar/OptionStratLib/blob/main
 gives the defining crate, direct import, facade path and feature of every
 public concept.
 
-Moving from 0.21? The [0.22 architecture and adoption
+Moving from 0.22? The [0.23
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
+covers the one area that changed: PNG and SVG export, now drawn natively,
+and the typed `GraphError` it returns. Moving from 0.21? The [0.22
+architecture and adoption
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
 maps each redesign to its replacement workflow; 0.22 keeps no
 compatibility with 0.21.
@@ -1067,12 +1071,12 @@ any package other than the visualization crate declares Plotly, and
 `make check-feature-trees` pins the resolved graph of the facade with no
 capability, of each capability alone and of the default.
 
-**The 0.22 default** is every capability that 0.21 shipped without a
+**The default** (unchanged since 0.22) is every capability that 0.21 shipped without a
 feature flag: `pricing`, `market`, `analytics`, `strategies`,
 `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
 plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
 Plotly, image-export, async-runtime or HTTP package. The default is a
-compatibility contract of the 0.22 line, not a statement that a consumer
+compatibility contract since the 0.22 line, not a statement that a consumer
 needs all of it: opt out with `default-features = false` and name only the
 capability you use, or depend on a component crate directly.
 
@@ -1493,6 +1497,17 @@ cargo test --all-features
 **OptionStratLib v0.23.0** - Built with ❤️ in Rust for the financial community
 
 
+
+## Upgrading from 0.22
+
+0.23 changes one area: PNG and SVG export under `static_export` are drawn
+natively, with no browser, WebDriver or installed font, and `GraphError` is
+`#[non_exhaustive]` with typed variants for data the export will not repair.
+Every other API and result is unchanged. The [0.23 migration
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
+lists what to change, and the [0.23 release
+notes](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.23/RELEASE-NOTES.md)
+summarise the release.
 
 ## Upgrading from 0.21
 
