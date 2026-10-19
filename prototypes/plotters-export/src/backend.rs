@@ -148,10 +148,18 @@ impl<B: DrawingBackend> TextBackend<B> {
     /// Fills closed `segments` (nonzero winding, as TrueType) with `color`,
     /// antialiased, clipped to the backend.
     ///
-    /// The rasterizer covers only the visible part of the label, plus one
-    /// spare column on the right. It clips rows itself but assumes every
-    /// x lies within its width, so a label running past the left or right
-    /// edge of the canvas is clipped here first (see [`ClippedLines`]).
+    /// The rasterizer covers only the visible part of the label, plus a
+    /// guard column on each side: visible pixels are its columns
+    /// `1..=cols`. It clips rows itself but assumes every x lies within its
+    /// width, so a label running past the left or right edge of the canvas
+    /// is clipped here first (see [`ClippedLines`]).
+    ///
+    /// The guards matter because the rasterizer accumulates coverage over
+    /// the whole buffer in `f32`: a line ending exactly on its x = 0 can
+    /// drift a hair below it, and a contribution there is dropped (first
+    /// row) or lands in the previous row, which corrupts every pixel after
+    /// it. With the visible area starting at x = 1, such drift stays in the
+    /// left guard of the same row, where the running sum still counts it.
     fn fill(&mut self, segments: &[Segment], color: BackendColor) -> Result<(), ExportError> {
         let points = segments.iter().flat_map(|segment| match segment {
             Segment::Move(p) | Segment::Line(p) => vec![*p],
@@ -172,16 +180,15 @@ impl<B: DrawingBackend> TextBackend<B> {
         }
         // Whole pixels inside the canvas, so these conversions are exact.
         let (cols, rows) = ((right - left) as usize, (bottom - top) as usize);
-        let local = |(x, y): (f64, f64)| point((x - left) as f32, (y - top) as f32);
-        // The spare column takes coverage at the right edge, which would
-        // otherwise spill into the next row.
-        let mut raster = Rasterizer::new(cols + 1, rows);
+        let local = |(x, y): (f64, f64)| point((x - left + 1.0) as f32, (y - top) as f32);
+        let mut raster = Rasterizer::new(cols + 2, rows);
         // A label inside the canvas horizontally goes to the rasterizer as
-        // it is; only one running past a side edge needs clipping.
-        let clip = (x0 < 0.0 || x1 > canvas_width).then_some(cols as f32);
+        // it is; only one running past a side edge needs clipping, to the
+        // visible columns' outer edges.
+        let edges = (x0 < 0.0 || x1 > canvas_width).then_some((1.0, cols as f32 + 1.0));
         let mut lines = ClippedLines {
             raster: &mut raster,
-            right: clip,
+            edges,
         };
         let (mut start, mut current): (Option<Point>, Option<Point>) = (None, None);
         for segment in segments {
@@ -223,8 +230,9 @@ impl<B: DrawingBackend> TextBackend<B> {
         }
         let mut pixels = Vec::new();
         raster.for_each_pixel_2d(|x, y, coverage| {
-            if coverage > 0.0 && (x as usize) < cols {
-                pixels.push((x, y, coverage.min(1.0)));
+            // Columns 1..=cols are the visible ones; 0 and cols + 1 guard.
+            if coverage > 0.0 && (1..=cols).contains(&(x as usize)) {
+                pixels.push((x - 1, y, coverage.min(1.0)));
             }
         });
         let (left, top) = (left as i32, top as i32);
@@ -247,19 +255,20 @@ impl<B: DrawingBackend> TextBackend<B> {
     }
 }
 
-/// Feeds outline segments to the rasterizer, clipping them to the columns
-/// `0..=right` when `right` is set.
+/// Feeds outline segments to the rasterizer, clipping them to x within
+/// `edges` (the visible columns' outer edges) when set.
 ///
 /// The rasterizer accumulates signed coverage along each row, so a piece
-/// of the outline left of the first column only matters through its height:
-/// moving it onto the left edge keeps the coverage of every visible pixel.
-/// A piece right of the last visible column covers nothing visible: moving
-/// it onto the right edge puts its coverage in the spare column. Segments
-/// are cut where they cross an edge, not clamped, and curves are flattened
-/// with the rasterizer's own subdivision first, so the shape is unchanged.
+/// of the outline left of the first visible column only matters through
+/// its height: moving it onto the left edge keeps the coverage of every
+/// visible pixel. A piece right of the last visible column covers nothing
+/// visible: moving it onto the right edge puts its coverage in the right
+/// guard column. Segments are cut where they cross an edge, not clamped,
+/// and curves are flattened with the rasterizer's own subdivision first,
+/// so the shape is unchanged.
 struct ClippedLines<'a> {
     raster: &'a mut Rasterizer,
-    right: Option<f32>,
+    edges: Option<(f32, f32)>,
 }
 
 fn lerp(t: f32, p0: Point, p1: Point) -> Point {
@@ -274,14 +283,14 @@ fn distance(a: Point, b: Point) -> f32 {
 
 impl ClippedLines<'_> {
     fn line(&mut self, p0: Point, p1: Point) {
-        let Some(right) = self.right else {
+        let Some((left, right)) = self.edges else {
             self.raster.draw_line(p0, p1);
             return;
         };
         let dx = p1.x - p0.x;
         let mut cuts = vec![0.0_f32, 1.0];
         if dx != 0.0 {
-            for edge in [0.0, right] {
+            for edge in [left, right] {
                 let t = (edge - p0.x) / dx;
                 if t > 0.0 && t < 1.0 {
                     cuts.push(t);
@@ -295,8 +304,8 @@ impl ClippedLines<'_> {
             };
             let (mut a, mut b) = (lerp(*t0, p0, p1), lerp(*t1, p0, p1));
             let middle = 0.5 * (a.x + b.x);
-            let x = if middle < 0.0 {
-                Some(0.0)
+            let x = if middle < left {
+                Some(left)
             } else if middle > right {
                 Some(right)
             } else {
@@ -306,7 +315,7 @@ impl ClippedLines<'_> {
                 // Outside: onto the edge.
                 Some(x) => (a.x, b.x) = (x, x),
                 // Inside: only rounding can stray past an edge.
-                None => (a.x, b.x) = (a.x.clamp(0.0, right), b.x.clamp(0.0, right)),
+                None => (a.x, b.x) = (a.x.clamp(left, right), b.x.clamp(left, right)),
             }
             self.raster.draw_line(a, b);
         }
@@ -314,7 +323,7 @@ impl ClippedLines<'_> {
 
     /// `Rasterizer::draw_quad`'s subdivision, through [`ClippedLines::line`].
     fn quad(&mut self, p0: Point, p1: Point, p2: Point) {
-        if self.right.is_none() {
+        if self.edges.is_none() {
             self.raster.draw_quad(p0, p1, p2);
             return;
         }
@@ -340,7 +349,7 @@ impl ClippedLines<'_> {
 
     /// `Rasterizer::draw_cubic`'s subdivision, through [`ClippedLines::line`].
     fn cubic(&mut self, p0: Point, p1: Point, p2: Point, p3: Point, depth: u8) {
-        if self.right.is_none() {
+        if self.edges.is_none() {
             self.raster.draw_cubic(p0, p1, p2, p3);
             return;
         }
@@ -482,9 +491,11 @@ mod tests {
     /// `FontTransform` is neither `Copy` nor `Debug`: tests pass makers.
     type Transform = fn() -> FontTransform;
 
-    /// The red channel of `text` drawn black at `pos` on a white canvas.
+    /// The red channel of `text` drawn black at `pos` on a white canvas,
+    /// at the Plotters font size `size`.
     fn draw(
         text: &str,
+        size: f64,
         pos: BackendCoord,
         transform: Transform,
         (width, height): (u32, u32),
@@ -494,7 +505,7 @@ mod tests {
             let inner = BitMapBackend::with_buffer(&mut buffer, (width, height));
             let mut backend = TextBackend::new(inner, TextMode::Raster, TextErrors::default());
             let black = BLACK.to_rgba();
-            let style = TextStyle::from(("Open Sans", 20.0).into_font())
+            let style = TextStyle::from(("Open Sans", size).into_font())
                 .color(&black)
                 .transform(transform())
                 .pos(Pos::new(HPos::Left, VPos::Top));
@@ -513,8 +524,10 @@ mod tests {
             ("180", || FontTransform::Rotate180),
             ("270", || FontTransform::Rotate270),
         ];
-        // Past the left, right, top and bottom edges, and two at once.
-        let positions = [
+        // Past the left, right, top and bottom edges, and two at once; then
+        // each offset a few pixels past the left edge, where a line ending
+        // on the visible edge used to lose coverage for the whole label.
+        let mut positions = vec![
             (-25, 10),
             (45, 10),
             (10, -25),
@@ -522,28 +535,34 @@ mod tests {
             (-25, -25),
             (50, 30),
         ];
+        positions.extend((-8..=-1).map(|x| (x, 10)));
+        // The chart's tick and title sizes, and a larger one.
+        let labels = [("Wg", 20.0), ("OA", 12.0 * 1.24), ("OA", 17.0 * 1.24)];
         let pad = PAD as i32;
         let mut inked = 0;
         for (name, transform) in transforms {
-            for (x, y) in positions {
-                let small = draw("Wg", (x, y), transform, (WIDTH, HEIGHT))?;
-                let large = draw(
-                    "Wg",
-                    (x + pad, y + pad),
-                    transform,
-                    (WIDTH + 2 * PAD, HEIGHT + 2 * PAD),
-                )?;
-                for row in 0..HEIGHT as usize {
-                    for col in 0..WIDTH as usize {
-                        let clipped = small[row * WIDTH as usize + col];
-                        let whole = large[(row + PAD as usize) * (WIDTH + 2 * PAD) as usize
-                            + col
-                            + PAD as usize];
-                        assert!(
-                            clipped.abs_diff(whole) <= 2,
-                            "rotation {name} at ({x}, {y}): pixel ({col}, {row}) is {clipped}, {whole} unclipped"
-                        );
-                        inked += usize::from(clipped < 128);
+            for (text, size) in labels {
+                for &(x, y) in &positions {
+                    let small = draw(text, size, (x, y), transform, (WIDTH, HEIGHT))?;
+                    let large = draw(
+                        text,
+                        size,
+                        (x + pad, y + pad),
+                        transform,
+                        (WIDTH + 2 * PAD, HEIGHT + 2 * PAD),
+                    )?;
+                    for row in 0..HEIGHT as usize {
+                        for col in 0..WIDTH as usize {
+                            let clipped = small[row * WIDTH as usize + col];
+                            let whole = large[(row + PAD as usize) * (WIDTH + 2 * PAD) as usize
+                                + col
+                                + PAD as usize];
+                            assert!(
+                                clipped.abs_diff(whole) <= 2,
+                                "{text:?} at {size}, rotation {name}, at ({x}, {y}): pixel ({col}, {row}) is {clipped}, {whole} unclipped"
+                            );
+                            inked += usize::from(clipped < 128);
+                        }
                     }
                 }
             }

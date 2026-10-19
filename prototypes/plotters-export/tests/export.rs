@@ -985,3 +985,40 @@ fn test_png_labels_wider_or_taller_than_the_figure() -> Result<(), Box<dyn Error
     }
     Ok(())
 }
+
+#[test]
+fn test_png_title_clipped_at_the_sides_keeps_its_coverage() -> Result<(), Box<dyn Error>> {
+    // The same centred title, cut off at 640 px and whole at 2040 px: the
+    // visible part must match the middle of the whole one pixel for pixel
+    // (antialiasing aside), over the title's rows.
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Payoff.build()?;
+    let export = |width: u32, name: &str| -> Result<(Vec<u8>, usize), Box<dyn Error>> {
+        let config = GraphConfig {
+            width,
+            height: 480,
+            title: "O".repeat(100),
+            ..config.clone()
+        };
+        let path = dir.path().join(name);
+        write_png(&data, &config, &path)?;
+        let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(&path)?));
+        let mut reader = decoder.read_info()?;
+        let mut buffer = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buffer)?;
+        Ok((buffer, info.line_size))
+    };
+    let (small, small_stride) = export(640, "small.png")?;
+    let (large, large_stride) = export(2040, "large.png")?;
+    let offset = (2040 - 640) / 2;
+    let mut worst = 0_u8;
+    for row in 0..25 {
+        for col in 0..640 * 3 {
+            let a = small[row * small_stride + col];
+            let b = large[row * large_stride + offset * 3 + col];
+            worst = worst.max(a.abs_diff(b));
+        }
+    }
+    assert!(worst <= 2, "clipped title differs by {worst}/255");
+    Ok(())
+}

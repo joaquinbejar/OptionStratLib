@@ -59,11 +59,19 @@ A wrapper backend therefore takes over both methods:
     but assumes every x lies within its width. Segments are therefore cut
     where they cross a side edge, and the outer pieces are projected onto
     that edge, which keeps the accumulated coverage of every visible pixel;
-    curves are flattened with the rasterizer's own subdivision first. The
-    rasterizer also gets a spare column for coverage at the right edge.
-    Labels inside the canvas skip all of this, so the PNG artifacts did not
-    change. A 46-character title at 640 px used to overflow the
-    rasterizer's index arithmetic before this; it was found in review.
+    curves are flattened with the rasterizer's own subdivision first.
+  - **Guard columns.** The rasterizer gets a guard column on each side of
+    the visible area. It accumulates coverage over the whole buffer in
+    `f32`, so a line ending exactly on x = 0 can drift a hair below it:
+    the contribution is then dropped (first row) or lands in the previous
+    row, and every pixel after it is off. With the visible area starting
+    at x = 1, that drift stays in the left guard of the same row.
+  - **Found in review.** Before these fixes, a 46-character title at 640 px
+    overflowed the rasterizer's index arithmetic, and a clipped title of
+    `O`s differed from the same title drawn whole by up to 25/255.
+  - **Effect on the artifacts.** Shifting the coordinates by the guard
+    column changed 3 pixels of the four PNG artifacts by 1/255; they are
+    regenerated.
   - **SVG text** still goes to plotters-svg as `<text>`, which needs no font
     data. The outline conversion (`src/outline.rs`) or the viewer draws it.
   - A character without a glyph in PNG or outlines is a typed
