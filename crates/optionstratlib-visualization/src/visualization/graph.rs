@@ -241,8 +241,8 @@ pub trait Graph {
     ///
     /// # Errors
     ///
-    /// A PNG or SVG target returns whatever [`Graph::write_png`] or
-    /// [`Graph::write_svg`] returns, unchanged; in a build without
+    /// A PNG or SVG target returns whatever `Graph::write_png` or
+    /// `Graph::write_svg` returns, unchanged; in a build without
     /// `static_export` it is `GraphError::Render`. HTML and browser targets
     /// return `GraphError::Render` when serialization fails and
     /// `GraphError::Io` when the destination cannot be written.
