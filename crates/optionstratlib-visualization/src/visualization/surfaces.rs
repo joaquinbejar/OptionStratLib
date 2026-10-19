@@ -23,13 +23,14 @@
 //! use optionstratlib_visualization::visualization::Plottable;
 //! use optionstratlib_math::surfaces::{Point3D, Surface};
 //!
-//! # let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
-//! # let p2 = Point3D::new(dec!(1.0), dec!(1.0), dec!(1.0));
-//! # let p3 = Point3D::new(dec!(2.0), dec!(4.0), dec!(4.0));
-//! # let points = vec![&p1, &p2, &p3];
-//! # let surface = Surface::from_vector(points);
+//! // A complete 2 x 2 grid: the PNG export refuses a grid with missing
+//! // or repeated points instead of filling them in.
+//! let p1 = Point3D::new(dec!(0.0), dec!(0.0), dec!(0.0));
+//! let p2 = Point3D::new(dec!(1.0), dec!(0.0), dec!(1.0));
+//! let p3 = Point3D::new(dec!(0.0), dec!(1.0), dec!(1.0));
+//! let p4 = Point3D::new(dec!(1.0), dec!(1.0), dec!(4.0));
+//! let surface = Surface::from_vector(vec![&p1, &p2, &p3, &p4]);
 //!
-//! // Create a surface
 //! #[cfg(feature = "static_export")]
 //! {
 //!     let dst = PathBuf::from("surface_plot.png");
