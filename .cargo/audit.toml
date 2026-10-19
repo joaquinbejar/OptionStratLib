@@ -125,34 +125,6 @@
 # Owner        : @joaquinbejar
 # Review by    : 2027-01-18
 # ---------------------------------------------------------------------------
-# RUSTSEC-2026-0192 — ttf-parser 0.25.1, unmaintained.
-#
-# Reachability : NOT IN ANY PUBLISHED CRATE. The only package reaching it is
-#                the unpublished Plotters export prototype of #920 and #923
-#                (`publish = false`), by two paths to the same ab_glyph:
-#                    osl-prototype-plotters-export -> plotters 0.3.7
-#                      -> ab_glyph -> owned_ttf_parser -> ttf-parser 0.25.1
-#                    osl-prototype-plotters-export -> ab_glyph (the #923
-#                      text outlines) -> owned_ttf_parser -> ttf-parser
-#                `cargo tree --workspace --all-features -i ttf-parser` lists
-#                nothing else. It parses one input: the Open Sans font
-#                compiled into the prototype with `include_bytes!`, never a
-#                font from a user or the network. A user-supplied font, or
-#                ab_glyph in a published crate, is not covered by this waiver.
-# Guard        : cargo-audit ignores by ID, not by package path, so this
-#                waiver would also hide ttf-parser reaching a published crate.
-#                Re-run `cargo tree --workspace --all-features -i ttf-parser`
-#                before extending it; any path other than the prototype voids
-#                this rationale.
-# Upgrade path : None to take: an unmaintained advisory has no fixed release,
-#                and Plotters reaches ttf-parser through both of its text
-#                backends (`ab_glyph`, `ttf`). If the PNG/SVG migration of
-#                #920 goes ahead, re-evaluate this entry for the published
-#                crate it would enter, or choose a text path without it.
-# Tracking     : https://github.com/joaquinbejar/OptionStratLib/issues/920
-# Owner        : @joaquinbejar
-# Review by    : 2027-01-18
-# ---------------------------------------------------------------------------
 ignore = [
     "RUSTSEC-2026-0235",
     "RUSTSEC-2025-0119",
@@ -161,7 +133,6 @@ ignore = [
     "RUSTSEC-2026-0367",
     "RUSTSEC-2026-0368",
     "RUSTSEC-2026-0369",
-    "RUSTSEC-2026-0192",
 ]
 
 # Every other advisory class fails the run, so a new unmaintained or unsound

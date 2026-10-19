@@ -752,3 +752,79 @@ fn test_outlines_keep_a_tiny_series_scale() -> Result<(), Box<dyn Error>> {
     assert!(!labels.iter().any(|value| *value <= -0.5), "{labels:?}");
     Ok(())
 }
+
+// The text path without ttf-parser (condition 4 of #920).
+
+#[test]
+fn test_layout_matches_the_920_artifacts_byte_for_byte() -> Result<(), Box<dyn Error>> {
+    // The viewer-font SVG records every position Plotters computed from the
+    // text measurements: it must not move when the font is read with skrifa
+    // instead of ab_glyph.
+    let artifacts = Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts");
+    for case in Case::ALL {
+        let Fixture { data, config } = case.build()?;
+        let expected =
+            std::fs::read_to_string(artifacts.join(format!("{}-plotters.plain.svg", case.slug())))?;
+        let actual = render_svg(&data, &config, SvgText::ViewerFont)?;
+        assert!(actual == expected, "{} layout moved", case.slug());
+    }
+    Ok(())
+}
+
+#[test]
+fn test_png_text_is_painted() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Curves.build()?;
+    let path = dir.path().join("curves.png");
+    write_png(&data, &config, &path)?;
+    let title = render_svg_outlined(&data, &config)?
+        .labels
+        .into_iter()
+        .next()
+        .ok_or("no title label")?;
+    let decoded = image_rows(&path)?;
+    // Some pixels inside the title's ink box are dark: the text is drawn.
+    let dark = (title.top as usize..title.bottom as usize)
+        .flat_map(|y| (title.left as usize..title.right as usize).map(move |x| (x, y)))
+        .filter(|(x, y)| decoded(*x, *y).is_some_and(|luma| luma < 128))
+        .count();
+    assert!(dark > 50, "{dark} dark pixels in the title box");
+    Ok(())
+}
+
+/// A luminance reader for an 8-bit RGB PNG (the bitmap backend's format).
+fn image_rows(path: &Path) -> Result<impl Fn(usize, usize) -> Option<u8>, Box<dyn Error>> {
+    let (width, height) = png_dimensions(path)?;
+    let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path)?));
+    let mut reader = decoder.read_info()?;
+    let mut buffer = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buffer)?;
+    let channels = info.color_type.samples();
+    let stride = info.line_size;
+    let (width, height) = (width as usize, height as usize);
+    Ok(move |x: usize, y: usize| {
+        if x >= width || y >= height {
+            return None;
+        }
+        let start = y.checked_mul(stride)?.checked_add(x.checked_mul(channels)?)?;
+        let pixel = buffer.get(start..start.checked_add(3)?)?;
+        let [r, g, b] = [pixel[0], pixel[1], pixel[2]].map(u32::from);
+        u8::try_from((r * 299 + g * 587 + b * 114) / 1000).ok()
+    })
+}
+
+#[test]
+fn test_png_rejects_a_character_the_font_lacks() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, mut config } = Case::Curves.build()?;
+    config.title = "IV 中".to_string();
+    let result = write_png(&data, &config, &dir.path().join("cjk.png"));
+    assert!(
+        matches!(
+            result,
+            Err(ExportError::MissingGlyph { character: '中', ref text, .. }) if text == "IV 中"
+        ),
+        "{result:?}"
+    );
+    Ok(())
+}

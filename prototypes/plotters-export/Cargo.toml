@@ -49,7 +49,7 @@ base64 = "0.22"
 # The bundled font's character map, advances, metrics and glyph outlines.
 # skrifa (Google Fonts' fontations) is the replacement the ttf-parser
 # advisory names.
-skrifa = "0.48"
+skrifa = { version = "0.48", default-features = false, features = ["std"] }
 # Antialiased coverage of the glyph outlines for PNG text; no font parsing.
 ab_glyph_rasterizer = "0.1.10"
 rust_decimal = { workspace = true }
@@ -63,6 +63,8 @@ tracing-subscriber = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 tempfile = { workspace = true }
+# Decodes the PNGs in the tests; already in the tree through plotters.
+png = "0.17.16"
 
 [[bench]]
 name = "native_export"
