@@ -1,16 +1,19 @@
 name: Visualization surfaces
 
 # The compilation surfaces of the visualization layer, one job each (#547,
-# ADR-0004 sections 1 and 2): backend-neutral (no feature), `plotly` and
-# `static_export`. An all-features run never compiles the backend-neutral
+# ADR-0004 sections 1 and 2): backend-neutral (no feature), `plotly`,
+# `static_export` alone and `static_export` with `plotly` named too. An
+# all-features run never compiles the backend-neutral
 # `Graph` and cannot show that the headless surfaces stay free of Plotly and
 # the export stack, so each surface runs on its own, for the direct
 # `optionstratlib-visualization` crate and for the facade feature that routes
 # to it: check, Clippy, tests and doctests, docs with warnings denied, the
-# consumer fixtures of the surface and the dependency assertions. The
-# `#[ignore]`d PNG/SVG export tests need a browser and run from
-# `static_export.yml` on a schedule. The recipe is
-# `make check-visualization-surface`, so the same command runs locally.
+# consumer fixtures of the surface and the dependency assertions. The tests
+# include real native PNG/SVG exports through the component, the facade and
+# both `static_export` consumer fixtures (#927, #929), so a broken export
+# fails the PR; no browser, WebDriver or font package is installed. The
+# recipe is `make check-visualization-surface`, so the same command runs
+# locally.
 
 on:
   push:
@@ -46,6 +49,7 @@ jobs:
           - neutral
           - plotly
           - static_export
+          - static_export_plotly
 
     steps:
       - uses: actions/checkout@v4
@@ -69,8 +73,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-visualization-${{ matrix.surface }}-
 
+      # No fontconfig or font package: the native export reads the font the
+      # visualization crate bundles (#927).
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y make
 
       # Consumer fixtures build from a target dir of their own, so a cached
       # workspace target cannot hide a missing dependency (#527).

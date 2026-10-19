@@ -24,8 +24,9 @@ Steps, in the publication order (core first, the facade last):
    for each sibling it depends on (directly or transitively) pointing at
    that sibling's unpacked archive, never at the repository. In it,
    `cargo build` and `cargo test` (unit and doc tests) run with the default
-   features, with none, and with every feature but `static_export`, whose
-   build script needs a browser.
+   features, with none, and with every feature. `static_export` was left out
+   while its build script needed a browser; its export is native since #927,
+   so it is built and tested from the archive too (#929).
 
 A warning fails the run, except the two notices packaging produces on
 purpose: `ignoring test/benchmark ... not included in the published package`
@@ -69,10 +70,6 @@ PACKAGES = (
     "optionstratlib-visualization",
     "optionstratlib",
 )
-# Built in every feature set but this one: `plotly_static`'s build script
-# needs an installed browser and webdriver.
-EXCLUDED_FEATURE = "static_export"
-
 ALLOWED_NOTICE = re.compile(
     r"^warning: (ignoring (test|benchmark) `[^`]+` as `[^`]+` is not included in the published package"
     r"|aborting upload due to dry run)$"
@@ -174,14 +171,10 @@ def sibling_closure(meta: dict) -> dict[str, list[str]]:
 
 
 def feature_sets(meta: dict, name: str) -> list[tuple[str, list[str]]]:
-    package = next(p for p in meta["packages"] if p["name"] == name)
-    features = sorted(f for f in package["features"] if f != "default")
-    if EXCLUDED_FEATURE in features:
-        kept = [f for f in features if f != EXCLUDED_FEATURE]
-        everything = (f"all but {EXCLUDED_FEATURE}", ["--features", ",".join(kept)])
-    else:
-        everything = ("all", ["--all-features"])
-    return [("default", []), ("none", ["--no-default-features"]), everything]
+    """Default, no and all features: every crate's archive builds each (#929)."""
+    if not any(p["name"] == name for p in meta["packages"]):
+        raise SystemExit(f"{name} is not in the workspace metadata")
+    return [("default", []), ("none", ["--no-default-features"]), ("all", ["--all-features"])]
 
 
 def fresh_mtimes(directory: Path) -> None:
@@ -344,9 +337,9 @@ def self_test() -> int:
     check("the closure is transitive", sibling_closure(meta)["optionstratlib-math"], ["optionstratlib-core"])
     check("the facade closes over every component", len(sibling_closure(meta)["optionstratlib"]), 9)
     check(
-        "static_export is left out",
+        "static_export is built with every other feature",
         feature_sets(meta, "optionstratlib")[2],
-        (f"all but {EXCLUDED_FEATURE}", ["--features", "plotly,schema"]),
+        ("all", ["--all-features"]),
     )
     check("a crate without it builds all features", feature_sets(meta, "optionstratlib-core")[2],
           ("all", ["--all-features"]))

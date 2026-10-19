@@ -156,11 +156,11 @@ mod plotly_render_tests {
             let invalid_path = unwritable_path("file.png");
 
             // Test render with PNG to invalid path
-            let png_result = graph.render(OutputType::Png(&invalid_path)); // browser-test: allow -- unwritable_path is rejected before export
+            let png_result = graph.render(OutputType::Png(&invalid_path));
             assert!(png_result.is_err());
 
             // Test render with SVG to invalid path
-            let svg_result = graph.render(OutputType::Svg(&invalid_path)); // browser-test: allow -- unwritable_path is rejected before export
+            let svg_result = graph.render(OutputType::Svg(&invalid_path));
             assert!(svg_result.is_err());
 
             // Test render with HTML to invalid path
@@ -170,7 +170,6 @@ mod plotly_render_tests {
 
         // Test the render method with PNG output
         #[test]
-        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_render_png() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_render.png");
@@ -189,7 +188,6 @@ mod plotly_render_tests {
 
         // Test the render method with SVG output
         #[test]
-        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_render_svg() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_render.svg");
@@ -237,7 +235,6 @@ mod plotly_render_tests {
 
         // Test the write_png method directly
         #[test]
-        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_write_png() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_write.png");
@@ -256,7 +253,6 @@ mod plotly_render_tests {
 
         // Test the write_svg method directly
         #[test]
-        #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
         fn test_write_svg() {
             let temp_dir = tempdir().unwrap();
             let file_path = temp_dir.path().join("test_write.svg");
@@ -312,11 +308,11 @@ mod plotly_render_tests {
             let graph = TestGraph::new(GraphData::Series(series), config);
 
             // Test PNG write error handling
-            let png_result = graph.write_png(&invalid_path); // browser-test: allow -- unwritable_path is rejected before export
+            let png_result = graph.write_png(&invalid_path);
             assert!(png_result.is_err(), "Write to invalid PNG path should fail");
 
             // Test SVG write error handling
-            let svg_result = graph.write_svg(&invalid_path); // browser-test: allow -- unwritable_path is rejected before export
+            let svg_result = graph.write_svg(&invalid_path);
             assert!(svg_result.is_err(), "Write to invalid SVG path should fail");
 
             // Test HTML write error handling

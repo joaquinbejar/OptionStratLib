@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Report tests that start a browser without being `#[ignore]`d (#724).
+"""Report tests that open a browser without being `#[ignore]`d (#724).
 
-`show()` hands a chart to the default browser, and plotly's own image export
-(`write_image`) spawns chromedriver and a headless Chrome. A test that does
-either inside `make test` or CI leaves browser processes behind on every run,
-so those tests are `#[ignore]`d and run only by `make test-visual`. Five
-`curves.rs` tests slipped past that rule and kept exporting PNG on every run
-until #724; this script keeps it from happening again.
+`show()` and `render(OutputType::Browser)` hand a chart to the default
+browser. A test that does either inside `make test` or CI opens a window on
+every run, so those tests are `#[ignore]`d and run only by `make
+test-visual`.
 
-Since #927 `Graph::write_png`, `write_svg` and `render(OutputType::Png/Svg)`
-draw natively, with no browser, so ordinary tests may call them.
+PNG and SVG export used to start chromedriver and a headless Chrome through
+`plotly_static` (`write_image`), and five `curves.rs` tests kept doing it on
+every run until #724. Since #927 `Graph::write_png`, `write_svg` and
+`render(OutputType::Png/Svg)` draw natively, and since #929 the exporter's
+`write_image` rules are gone: `make check-graph` forbids `plotly_static` in
+every crate, so Plotly's `write_image` no longer compiles here.
 
 A test is a `fn` whose attribute block carries `#[test]` or `#[tokio::test]`.
 It is reported when the block has no `#[ignore]` and the function body calls
 one of:
 
-* `.write_image(` / `write_image_with_exporter(`
 * `render(OutputType::Browser)`
 * `.show()`
 
@@ -47,9 +48,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 BROWSER_CALL_RE = re.compile(
-    r"\.write_image\("
-    r"|\bwrite_image_with_exporter\("
-    r"|\brender\(\s*OutputType::Browser\b"
+    r"\brender\(\s*OutputType::Browser\b"
     r"|\.show\(\)"
 )
 TEST_ATTR_RE = re.compile(r"#\[\s*(?:tokio::)?test\b")
@@ -179,7 +178,8 @@ def sources(root: Path) -> list[Path]:
 def self_test() -> int:
     """Prove the scanner reports what it must and nothing else."""
     cases = {
-        "bad_image.rs": ("#[test]\nfn t() {\n    plot.write_image(p, f, 1, 1, 1.0);\n}\n", 1),
+        # The browser exporter's API is gone (#929): not a browser call.
+        "plotly_image_api.rs": ("#[test]\nfn t() {\n    plot.write_image(p, f, 1, 1, 1.0);\n}\n", 0),
         "bad_render.rs": (
             "#[test]\n#[cfg(feature = \"x\")]\nfn t() {\n    g.render(OutputType::Browser);\n}\n",
             1,
@@ -250,7 +250,7 @@ def main(argv: list[str]) -> int:
         return self_test()
     problems = [p for path in sources(ROOT) for p in scan_file(path)]
     if problems:
-        print("Tests that start a browser must be #[ignore]d (run them with make test-visual):")
+        print("Tests that open a browser must be #[ignore]d (run them with make test-visual):")
         for problem in problems:
             print(f"  {problem}")
         return 1

@@ -472,7 +472,6 @@ mod tests_plotly_interface {
         optionstratlib_visualization::visualization::{ColorScheme, LineStyle, OutputType},
         plotly::Plot,
         std::fs,
-        std::path::PathBuf,
     };
     use {
         optionstratlib_visualization::visualization::{make_scatter, make_surface, to_plotly_mode},
@@ -657,7 +656,6 @@ mod tests_plotly_interface {
     // Tests for to_plot
     #[test]
     #[cfg(feature = "static_export")]
-    #[ignore]
     fn test_to_plot_with_series() {
         // Create a graph with Series data
         let graph = create_test_graph_with_series();
@@ -683,7 +681,6 @@ mod tests_plotly_interface {
     }
 
     #[test]
-    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_to_plot_with_surface() {
         // Create a graph with Surface data
@@ -698,12 +695,12 @@ mod tests_plotly_interface {
 
     // Tests for write_html
     #[test]
-    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_write_html() {
         // Create a graph with multiple Series
         let graph = create_test_graph_with_multi_series();
-        let temp_path = PathBuf::from("test_output_html.html");
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let temp_path = temp_dir.path().join("test_output_html.html");
 
         // Clean up existing file if it exists
         if temp_path.exists() {
@@ -724,7 +721,6 @@ mod tests_plotly_interface {
 
     #[test]
     #[cfg(feature = "static_export")]
-    #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
     fn test_write_png() {
         use crate::artifacts::assert_png_artifact;
         use tempfile::tempdir;
@@ -745,7 +741,6 @@ mod tests_plotly_interface {
 
     #[test]
     #[cfg(feature = "static_export")]
-    #[ignore = "needs a WebDriver matching the installed browser; run with --ignored"]
     fn test_write_svg() {
         use crate::artifacts::assert_svg_artifact;
         use tempfile::tempdir;
@@ -768,12 +763,12 @@ mod tests_plotly_interface {
     // (PNG and SVG are commented out because they require kaleido)
     #[test]
     #[cfg(feature = "static_export")]
-    #[ignore]
     fn test_render_with_html_output_type() {
         let graph = create_test_graph_with_series();
 
         // OutputType::Html
-        let html_path = PathBuf::from("test_render_html.html");
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let html_path = temp_dir.path().join("test_render_html.html");
         if html_path.exists() {
             fs::remove_file(&html_path).unwrap();
         }
@@ -786,12 +781,12 @@ mod tests_plotly_interface {
 
     // Test for to_interactive_html
     #[test]
-    #[ignore]
     #[cfg(feature = "static_export")]
     fn test_to_interactive_html() {
         // Create a graph with multiple Series
         let graph = create_test_graph_with_multi_series();
-        let temp_path = PathBuf::from("test_interactive_html.html");
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let temp_path = temp_dir.path().join("test_interactive_html.html");
 
         // Clean up existing file if it exists
         if temp_path.exists() {

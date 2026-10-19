@@ -53,67 +53,61 @@ test:
 test-workspace-integration:
 	LOGLEVEL=WARN cargo test -p osl-workspace-tests
 
-# Run the tests that need a real browser: PNG/SVG export through a WebDriver,
-# and the one that hands a chart to the default browser. They are `#[ignore]`d
-# so `make test` never spawns a browser (`check-browser-tests` enforces it);
-# run this target explicitly, with WEBDRIVER_PATH pointing at a chromedriver
-# whose major version matches the installed Chrome. Exports run one at a time
-# per process (`STATIC_EXPORT_LOCK` in graph.rs), so parallel tests in one
-# binary never share a chromedriver; do not run two of these targets at once.
+# Run the one test that needs a real browser: it hands a chart to the default
+# browser (`render(OutputType::Browser)`, a window opens). It is `#[ignore]`d
+# so `make test` never opens one (`check-browser-tests` enforces it); run this
+# target explicitly, on a machine with a desktop session.
 .PHONY: test-visual
 test-visual:
 	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored
 
-# The PNG and SVG half of `test-visual`: the `static_export` acceptance run of
-# #544, without the test that opens the default browser. It writes real image
-# files through `plotly_static`, so it needs the same matching chromedriver
-# (`WEBDRIVER_PATH`) and runs outside `make test` and the PR CI for that
-# reason. The scheduled `static_export.yml` workflow (weekly, plus manual
-# dispatch; it never blocks a PR) runs it with a Chrome and chromedriver pair
-# installed together.
-#
-# Locally, install Chrome and a chromedriver of the same major version
-# (`google-chrome --version` and `chromedriver --version` must agree; a
-# mismatched driver fails all six tests), then:
-#
-#   WEBDRIVER_PATH=/path/to/chromedriver make test-export
-#
-# Platform requirements (ADR-0004 section 5, exhaustive tier): Linux or macOS
-# with Chrome, the matching chromedriver, a headless session and outbound
-# network access; Windows is untested. Retention: the workflow uploads no
-# artifact. The tests write their images to a temporary directory and assert
-# them in place (PNG signature, `<svg`), so a failure is read from the run log
-# (GitHub keeps run logs for the repository's retention setting).
+# The native PNG and SVG export (#927), on its own and without any browser,
+# WebDriver, network or installed font: the export tests of the visualization
+# crate with `static_export` alone (its `plotly` comes from `static_export`,
+# not from the command line), then the direct-component and facade consumer
+# fixtures, each built on its own. Every ordinary `make test` and the
+# `static_export` job of `visualization.yml` run the same tests; this target
+# is the quick local check after touching the renderer (#929).
 .PHONY: test-export
 test-export:
-	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --features static_export -- --ignored png svg
+	LOGLEVEL=WARN cargo test -p optionstratlib-visualization --no-default-features --features static_export -- png svg export native
+	@for fixture in visualization-static-export facade-static-export; do \
+		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
+	done
 
 # The compilation surfaces of the visualization layer (#547, ADR-0004 section
 # 1 "Default-only tests" and section 2 "Plotly" / "Static export"). An
 # all-features run compiles only the `plotly` + `static_export` code and never
 # the backend-neutral `Graph`, so each surface is built on its own, for the
 # direct crate and for the facade route to it:
-#   neutral        no features         facade `visualization`
-#   plotly         `plotly`            facade `plotly`
-#   static_export  `static_export,plotly` facade `static_export,plotly`
+#   neutral               no features             facade `visualization`
+#   plotly                `plotly`                facade `plotly`
+#   static_export         `static_export`         facade `static_export`
+#   static_export_plotly  `static_export,plotly`  facade `static_export,plotly`
+# `static_export` alone proves the feature forwards `plotly` by itself; the
+# combined set is the documented configuration that names both (#929).
 # `make check-visualization-surface SURFACE=<surface>` runs, for one surface:
 # check and Clippy (`-D warnings`) of both packages, their tests and doctests,
 # their docs with warnings denied, the consumer fixtures of that surface, and
 # the dependency assertions (`check-graph`, `check-feature-trees` and the
 # fixtures' `present`/`absent` lists), so headless surfaces provably exclude
-# Plotly and the export stack. The `#[ignore]`d export tests stay out: they
-# need a browser, see `test-export`. `visualization.yml` runs one job per
-# surface; `check-visualization` runs all three.
+# Plotly and the export stack. The tests include the native PNG/SVG exports
+# (#929): only the test that opens the default browser stays `#[ignore]`d, see
+# `test-visual`. `visualization.yml` runs one job per surface;
+# `check-visualization` runs all four.
 VIS_CRATE_FLAGS_neutral := --no-default-features
 VIS_CRATE_FLAGS_plotly := --no-default-features --features plotly
-VIS_CRATE_FLAGS_static_export := --no-default-features --features static_export,plotly
+VIS_CRATE_FLAGS_static_export := --no-default-features --features static_export
+VIS_CRATE_FLAGS_static_export_plotly := --no-default-features --features static_export,plotly
 VIS_FACADE_FLAGS_neutral := --no-default-features --features visualization
 VIS_FACADE_FLAGS_plotly := --no-default-features --features plotly
-VIS_FACADE_FLAGS_static_export := --no-default-features --features static_export,plotly
+VIS_FACADE_FLAGS_static_export := --no-default-features --features static_export
+VIS_FACADE_FLAGS_static_export_plotly := --no-default-features --features static_export,plotly
 VIS_FIXTURES_neutral := facade-visualization headless-full
 VIS_FIXTURES_plotly := facade-plotly
 VIS_FIXTURES_static_export := facade-static-export visualization-static-export
-VIS_SURFACES := neutral plotly static_export
+VIS_FIXTURES_static_export_plotly :=
+VIS_SURFACES := neutral plotly static_export static_export_plotly
 
 .PHONY: check-visualization-surface
 check-visualization-surface:
@@ -129,7 +123,7 @@ check-visualization-surface:
 	@for fixture in $(VIS_FIXTURES_$(SURFACE)); do \
 		CARGO_TARGET_DIR=$(FIXTURE_TARGET_DIR)/$$fixture cargo test --manifest-path fixtures/consumers/$$fixture/Cargo.toml || exit 1; \
 	done
-	@python3 scripts/check_fixtures.py $(VIS_FIXTURES_$(SURFACE))
+	@$(if $(VIS_FIXTURES_$(SURFACE)),python3 scripts/check_fixtures.py $(VIS_FIXTURES_$(SURFACE)))
 	@$(MAKE) --no-print-directory check-graph check-feature-trees
 
 .PHONY: check-visualization
@@ -183,9 +177,10 @@ check-test-modules:
 	@python3 scripts/check_test_modules.py --self-test > /dev/null || (python3 scripts/check_test_modules.py --self-test; exit 1)
 	@python3 scripts/check_test_modules.py
 
-# Fails on a `#[test]` that exports PNG/SVG or opens a browser without being
-# `#[ignore]`d (#724): such a test spawns chromedriver and headless Chrome on
-# every `make test` and CI run. Those belong to `test-visual` / `test-export`.
+# Fails on a `#[test]` that opens a browser (`show()`,
+# `render(OutputType::Browser)`) without being `#[ignore]`d (#724): such a test
+# opens a window on every `make test` and CI run, so it belongs to
+# `test-visual`. PNG/SVG export is native since #927 and runs in every suite.
 .PHONY: check-browser-tests
 check-browser-tests:
 	@python3 scripts/check_browser_tests.py --self-test > /dev/null || (python3 scripts/check_browser_tests.py --self-test; exit 1)
@@ -336,8 +331,9 @@ check-package-archives:
 # Packages the ten published crates with cargo's verification, dry-runs their
 # publication as a workspace and one by one in dependency order (every
 # `cargo publish` carries `--dry-run`: nothing is uploaded), and builds and
-# tests each archive on its own with default, no and all features but
-# `static_export` (#558, scripts/publish_dry_run.py). Release evidence runs it
+# tests each archive on its own with default, no and all features (#558,
+# scripts/publish_dry_run.py; `static_export` included since #929, its export
+# being native). Release evidence runs it
 # on a committed tree; OSL_ALLOW_DIRTY=1 passes --allow-dirty for a working
 # copy with uncommitted changes.
 .PHONY: publish-dry-run
@@ -358,12 +354,10 @@ $(addprefix tree-example-direct-,$(DIRECT_EXAMPLES)): tree-example-direct-%:
 # so neither can rot unnoticed. `smoke-examples` builds all example binaries
 # (`examples_*` and `osl-example-direct-*`, each with its default features)
 # and runs them from the repository root, each with a timeout; a program passes
-# with exit status 0 and no panic. PNG/SVG export needs a chromedriver of the
-# same major version as Chrome (`WEBDRIVER_PATH`, and `BROWSER_PATH` for a
-# Chrome that is not the default): without one a program that fails only
-# because the export could not start is reported as `needs-webdriver`, and
-# `SMOKE_EXPORT=1` makes that a failure, as on a machine that has the driver
-# (the weekly `static_export.yml` workflow). `smoke-benches` compiles every
+# with exit status 0 and no panic, and anything else, an export error
+# included, fails the run: PNG/SVG export is native since #927 and needs no
+# browser, so the old `needs-webdriver` result and `SMOKE_EXPORT=1` are gone
+# (#929); the PR examples workflow runs it all. `smoke-benches` compiles every
 # bench target (`bench-build`, #789) and runs each benchmark for one iteration
 # (Criterion's `--test` mode, with the target's required features). Both
 # write one log per target under `target/smoke/`; the examples write their
@@ -374,7 +368,7 @@ smoke: smoke-examples smoke-benches
 smoke-examples:
 	@python3 scripts/smoke_examples.py --self-test > /dev/null || (python3 scripts/smoke_examples.py --self-test; exit 1)
 	cargo build --workspace --bins
-	python3 scripts/smoke_examples.py $(if $(SMOKE_EXPORT),--export,)
+	python3 scripts/smoke_examples.py
 
 smoke-benches: bench-build
 	python3 scripts/smoke_examples.py --benches
