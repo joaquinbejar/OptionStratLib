@@ -126,8 +126,8 @@ pub enum ExportError {
         reason: &'static str,
     },
 
-    /// The embedded font could not be registered.
-    #[error("embedded font rejected: {0}")]
+    /// The bundled font could not be read.
+    #[error("bundled font rejected: {0}")]
     Font(String),
 
     /// A label uses a character the bundled font has no glyph for, so it

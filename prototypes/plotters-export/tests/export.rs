@@ -879,3 +879,146 @@ fn test_built_in_schemes_keep_their_colours() -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+
+// The text path without ttf-parser (condition 4 of #920).
+
+#[test]
+fn test_layout_matches_the_920_artifacts_byte_for_byte() -> Result<(), Box<dyn Error>> {
+    // The viewer-font SVG records every position Plotters computed from the
+    // text measurements: it must not move when the font is read with skrifa
+    // instead of ab_glyph.
+    let artifacts = Path::new(env!("CARGO_MANIFEST_DIR")).join("artifacts");
+    for case in Case::ALL {
+        let Fixture { data, config } = case.build()?;
+        let expected =
+            std::fs::read_to_string(artifacts.join(format!("{}-plotters.plain.svg", case.slug())))?;
+        let actual = render_svg(&data, &config, SvgText::ViewerFont)?;
+        assert!(actual == expected, "{} layout moved", case.slug());
+    }
+    Ok(())
+}
+
+#[test]
+fn test_png_text_is_painted() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Curves.build()?;
+    let path = dir.path().join("curves.png");
+    write_png(&data, &config, &path)?;
+    let title = render_svg_outlined(&data, &config)?
+        .labels
+        .into_iter()
+        .next()
+        .ok_or("no title label")?;
+    let decoded = image_rows(&path)?;
+    // Some pixels inside the title's ink box are dark: the text is drawn.
+    let dark = (title.top as usize..title.bottom as usize)
+        .flat_map(|y| (title.left as usize..title.right as usize).map(move |x| (x, y)))
+        .filter(|(x, y)| decoded(*x, *y).is_some_and(|luma| luma < 128))
+        .count();
+    assert!(dark > 50, "{dark} dark pixels in the title box");
+    Ok(())
+}
+
+/// A luminance reader for an 8-bit RGB PNG (the bitmap backend's format).
+fn image_rows(path: &Path) -> Result<impl Fn(usize, usize) -> Option<u8>, Box<dyn Error>> {
+    let (width, height) = png_dimensions(path)?;
+    let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(path)?));
+    let mut reader = decoder.read_info()?;
+    let mut buffer = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buffer)?;
+    let channels = info.color_type.samples();
+    let stride = info.line_size;
+    let (width, height) = (width as usize, height as usize);
+    Ok(move |x: usize, y: usize| {
+        if x >= width || y >= height {
+            return None;
+        }
+        let start = y
+            .checked_mul(stride)?
+            .checked_add(x.checked_mul(channels)?)?;
+        let pixel = buffer.get(start..start.checked_add(3)?)?;
+        let [r, g, b] = [pixel[0], pixel[1], pixel[2]].map(u32::from);
+        u8::try_from((r * 299 + g * 587 + b * 114) / 1000).ok()
+    })
+}
+
+#[test]
+fn test_png_rejects_a_character_the_font_lacks() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, mut config } = Case::Curves.build()?;
+    config.title = "IV 中".to_string();
+    let result = write_png(&data, &config, &dir.path().join("cjk.png"));
+    assert!(
+        matches!(
+            result,
+            Err(ExportError::MissingGlyph { character: '中', ref text, .. }) if text == "IV 中"
+        ),
+        "{result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_png_labels_wider_or_taller_than_the_figure() -> Result<(), Box<dyn Error>> {
+    // A title past both side edges (it used to overflow the rasterizer's
+    // indices), and a rotated axis title past the top and bottom.
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Payoff.build()?;
+    for (index, (title, y_label)) in [
+        ("W".repeat(50), None),
+        ("W".repeat(5000), None),
+        ("Payoff".to_string(), Some("W".repeat(200))),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let config = GraphConfig {
+            width: 640,
+            height: 480,
+            title,
+            y_label: y_label.or(config.y_label.clone()),
+            ..config.clone()
+        };
+        let path = dir.path().join(format!("{index}.png"));
+        write_png(&data, &config, &path)?;
+        assert_eq!(png_dimensions(&path)?, (640, 480));
+    }
+    Ok(())
+}
+
+#[test]
+fn test_png_title_clipped_at_the_sides_keeps_its_coverage() -> Result<(), Box<dyn Error>> {
+    // The same centred title, cut off at 640 px and whole at 2040 px: the
+    // visible part must match the middle of the whole one pixel for pixel
+    // (antialiasing aside), over the title's rows.
+    let dir = tempfile::tempdir()?;
+    let Fixture { data, config } = Case::Payoff.build()?;
+    let export = |width: u32, name: &str| -> Result<(Vec<u8>, usize), Box<dyn Error>> {
+        let config = GraphConfig {
+            width,
+            height: 480,
+            title: "O".repeat(100),
+            ..config.clone()
+        };
+        let path = dir.path().join(name);
+        write_png(&data, &config, &path)?;
+        let decoder = png::Decoder::new(std::io::BufReader::new(std::fs::File::open(&path)?));
+        let mut reader = decoder.read_info()?;
+        let mut buffer = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buffer)?;
+        Ok((buffer, info.line_size))
+    };
+    let (small, small_stride) = export(640, "small.png")?;
+    let (large, large_stride) = export(2040, "large.png")?;
+    let offset = (2040 - 640) / 2;
+    let mut worst = 0_u8;
+    for row in 0..25 {
+        for col in 0..640 * 3 {
+            let a = small[row * small_stride + col];
+            let b = large[row * large_stride + offset * 3 + col];
+            worst = worst.max(a.abs_diff(b));
+        }
+    }
+    assert!(worst <= 2, "clipped title differs by {worst}/255");
+    Ok(())
+}

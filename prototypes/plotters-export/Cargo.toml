@@ -29,11 +29,11 @@ optionstratlib-core = { workspace = true }
 optionstratlib-pricing = { workspace = true }
 optionstratlib-strategies = { workspace = true }
 optionstratlib-visualization = { workspace = true }
-# Only the pieces the prototype draws with. `ab_glyph` renders the embedded
-# font instead of `ttf`, which would load system fonts through font-kit
-# (fontconfig on Linux).
+# Only the pieces the prototype draws with, and no font feature: neither
+# `ab_glyph` nor `ttf` (font-kit, fontconfig), so no ttf-parser
+# (RUSTSEC-2026-0192). The prototype measures and draws every label itself
+# (`src/text.rs`, `src/backend.rs`).
 plotters = { version = "0.3.7", default-features = false, features = [
-    "ab_glyph",
     "bitmap_backend",
     "bitmap_encoder",
     "colormaps",
@@ -42,11 +42,16 @@ plotters = { version = "0.3.7", default-features = false, features = [
     "line_series",
     "svg_backend",
 ] }
+# The backend trait and text style types the text backend implements;
+# already in the tree through plotters.
+plotters-backend = "0.3.7"
 base64 = "0.22"
-# The glyph outlines of the SVG `Outlines` mode (#923). Already in the tree
-# through `plotters/ab_glyph`; named directly to read the same font with the
-# same metrics Plotters lays the chart out with.
-ab_glyph = "0.2.32"
+# The bundled font's character map, advances, metrics and glyph outlines.
+# skrifa (Google Fonts' fontations) is the replacement the ttf-parser
+# advisory names.
+skrifa = { version = "0.48", default-features = false, features = ["std"] }
+# Antialiased coverage of the glyph outlines for PNG text; no font parsing.
+ab_glyph_rasterizer = "0.1.10"
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 serde = { workspace = true }
@@ -58,6 +63,8 @@ tracing-subscriber = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 tempfile = { workspace = true }
+# Decodes the PNGs in the tests; already in the tree through plotters.
+png = "0.17.16"
 
 [[bench]]
 name = "native_export"

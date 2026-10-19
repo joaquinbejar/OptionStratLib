@@ -14,15 +14,15 @@
 //!
 //! # Layout
 //!
-//! Labels are laid out with the metrics Plotters measured the chart with,
-//! which are also the ones the PNG is drawn with: ab_glyph at the Plotters
-//! font size (the SVG `font-size` times `EM_RATIO`, the factor
-//! plotters-svg divided it by, applied once here), each character's
-//! horizontal advance plus ab_glyph's kerning, and the anchor box of
+//! Labels are laid out by the crate's `text` module with the metrics Plotters
+//! measured the chart with, which are also the ones the PNG is drawn with:
+//! the Plotters font size is the SVG `font-size` times `EM_RATIO`, the
+//! factor plotters-svg divided it by, applied once here; each character
+//! advances by its glyph's advance; the anchor box is that of
 //! `plotters-backend`'s default `draw_text`. The room the layout reserved
-//! (legend column, label areas) therefore fits the painted text. Unlike the
-//! PNG rasteriser, glyphs keep their left side bearings and sub-pixel pen
-//! positions. There is no shaping: one glyph per character, no ligatures.
+//! (legend column, label areas) therefore fits the painted text. Glyphs
+//! keep their side bearings and sub-pixel pen positions. There is no
+//! kerning and no shaping: one glyph per character, no ligatures.
 //!
 //! A tab, line feed or carriage return is whitespace, not a missing glyph:
 //! each advances like one space, on the same line. Plotters has no line
@@ -38,17 +38,12 @@
 //! copying, searching or editing the text is lost: that needs `<text>`.
 
 use crate::error::ExportError;
-use crate::render::{EM_RATIO, FONT_BYTES, FONT_FAMILY};
-use ab_glyph::{Font, FontRef, GlyphId, OutlineCurve, Point, PxScale, ScaleFont};
+use crate::render::{EM_RATIO, FONT_FAMILY};
+use crate::text::{BundledFont, InkBox, LINE_WHITESPACE, Missing, Segment, bundled_font};
 use serde::Serialize;
-use std::sync::OnceLock;
 
 const TEXT_OPEN: &str = "<text";
 const TEXT_CLOSE: &str = "</text>";
-/// Glyph 0 is `.notdef`, which ab_glyph returns for unmapped characters.
-const NOTDEF: GlyphId = GlyphId(0);
-/// Whitespace drawn as a space: Plotters lays text out on one line.
-const LINE_WHITESPACE: [char; 3] = ['\t', '\n', '\r'];
 /// Path coordinates are written with this many decimals (1/100 px).
 const DECIMALS: usize = 2;
 /// The entities plotters-svg escapes text with, and the only ones accepted.
@@ -131,61 +126,30 @@ struct TextElement<'a> {
     text: String,
 }
 
-/// An axis-aligned box in SVG user units.
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct InkBox {
-    left: f64,
-    top: f64,
-    right: f64,
-    bottom: f64,
-}
-
-impl InkBox {
-    fn union(self, other: InkBox) -> InkBox {
-        InkBox {
-            left: self.left.min(other.left),
-            top: self.top.min(other.top),
-            right: self.right.max(other.right),
-            bottom: self.bottom.max(other.bottom),
+/// `ink` after `rotation` about `(cx, cy)`, in SVG's y-down sense.
+fn rotated(ink: InkBox, rotation: Option<Rotation>, cx: f64, cy: f64) -> InkBox {
+    let turn = |(x, y): (f64, f64)| {
+        let (dx, dy) = (x - cx, y - cy);
+        match rotation {
+            None => (x, y),
+            Some(Rotation::Quarter) => (cx - dy, cy + dx),
+            Some(Rotation::Half) => (cx - dx, cy - dy),
+            Some(Rotation::ThreeQuarters) => (cx + dy, cy - dx),
         }
-    }
-
-    /// The box after `rotation` about `(cx, cy)`, in SVG's y-down sense.
-    fn rotated(self, rotation: Option<Rotation>, cx: f64, cy: f64) -> InkBox {
-        let turn = |(x, y): (f64, f64)| {
-            let (dx, dy) = (x - cx, y - cy);
-            match rotation {
-                None => (x, y),
-                Some(Rotation::Quarter) => (cx - dy, cy + dx),
-                Some(Rotation::Half) => (cx - dx, cy - dy),
-                Some(Rotation::ThreeQuarters) => (cx + dy, cy - dx),
-            }
-        };
-        let (x0, y0) = turn((self.left, self.top));
-        let (x1, y1) = turn((self.right, self.bottom));
-        InkBox {
-            left: x0.min(x1),
-            top: y0.min(y1),
-            right: x0.max(x1),
-            bottom: y0.max(y1),
-        }
+    };
+    let (x0, y0) = turn((ink.left, ink.top));
+    let (x1, y1) = turn((ink.right, ink.bottom));
+    InkBox {
+        left: x0.min(x1),
+        top: y0.min(y1),
+        right: x0.max(x1),
+        bottom: y0.max(y1),
     }
 }
 
 #[cold]
 fn unsupported(reason: impl Into<String>) -> ExportError {
     ExportError::UnsupportedSvgText(reason.into())
-}
-
-/// The bundled font, parsed once per process.
-fn bundled_font() -> Result<&'static FontRef<'static>, ExportError> {
-    static FONT: OnceLock<Result<FontRef<'static>, String>> = OnceLock::new();
-    FONT.get_or_init(|| {
-        FontRef::try_from_slice(FONT_BYTES)
-            .map_err(|_| "Open Sans Regular is not a valid OpenType font".to_string())
-    })
-    .as_ref()
-    .map_err(|reason| ExportError::Font(reason.clone()))
 }
 
 /// Replaces every `<text>` element of a plotters-svg `document` with the
@@ -470,50 +434,24 @@ fn push_point(out: &mut String, command: char, (x, y): (f64, f64)) {
     push_number(out, y);
 }
 
-/// Appends one glyph's contours as path data. ab_glyph lists contours as
-/// consecutive curves and closes each with a line back to its start; a new
-/// contour starts wherever a curve does not begin at the previous end.
-fn push_glyph(out: &mut String, curves: &[OutlineCurve], place: impl Fn(Point) -> (f64, f64)) {
-    let mut contour_start: Option<Point> = None;
-    let mut last: Option<Point> = None;
-    for curve in curves {
-        let (start, end) = match curve {
-            OutlineCurve::Line(p0, p1) | OutlineCurve::Quad(p0, _, p1) => (*p0, *p1),
-            OutlineCurve::Cubic(p0, _, _, p1) => (*p0, *p1),
-        };
-        if last != Some(start) {
-            if contour_start.is_some() {
-                out.push('Z');
-            }
-            push_point(out, 'M', place(start));
-            contour_start = Some(start);
+/// Appends one outline segment as path data.
+fn push_segment(out: &mut String, segment: Segment) {
+    match segment {
+        Segment::Move(p) => push_point(out, 'M', p),
+        Segment::Line(p) => push_point(out, 'L', p),
+        Segment::Quad(c, p) => {
+            push_point(out, 'Q', c);
+            out.push(' ');
+            push_number_pair(out, p);
         }
-        match curve {
-            OutlineCurve::Line(_, p1) if Some(*p1) == contour_start => {
-                // The closing line: `Z` draws it.
-                out.push('Z');
-                contour_start = None;
-                last = None;
-                continue;
-            }
-            OutlineCurve::Line(_, p1) => push_point(out, 'L', place(*p1)),
-            OutlineCurve::Quad(_, c, p1) => {
-                push_point(out, 'Q', place(*c));
-                out.push(' ');
-                push_number_pair(out, place(*p1));
-            }
-            OutlineCurve::Cubic(_, c0, c1, p1) => {
-                push_point(out, 'C', place(*c0));
-                out.push(' ');
-                push_number_pair(out, place(*c1));
-                out.push(' ');
-                push_number_pair(out, place(*p1));
-            }
+        Segment::Cubic(c0, c1, p) => {
+            push_point(out, 'C', c0);
+            out.push(' ');
+            push_number_pair(out, c1);
+            out.push(' ');
+            push_number_pair(out, p);
         }
-        last = Some(end);
-    }
-    if contour_start.is_some() {
-        out.push('Z');
+        Segment::Close => out.push('Z'),
     }
 }
 
@@ -528,94 +466,28 @@ fn push_number_pair(out: &mut String, (x, y): (f64, f64)) {
 /// label).
 fn layout(
     element: &TextElement<'_>,
-    font: &FontRef<'static>,
+    font: &BundledFont,
 ) -> Result<Option<(String, InkBox)>, ExportError> {
-    let plotters_size = element.css_size * EM_RATIO;
-    // ab_glyph scales in f32, as Plotters does.
-    let scale = plotters_size as f32;
-    let scaled = font.as_scaled(PxScale::from(scale));
-    let mut glyphs = Vec::with_capacity(element.text.len());
-    for character in element.text.chars() {
-        let drawn = if LINE_WHITESPACE.contains(&character) {
-            ' '
-        } else {
-            character
-        };
-        let id = font.glyph_id(drawn);
-        if id == NOTDEF {
-            return Err(ExportError::MissingGlyph {
-                character,
-                code: u32::from(character),
-                text: element.text.clone(),
-            });
-        }
-        glyphs.push(id);
-    }
-
-    // The anchor box, exactly as plotters' ab_glyph `estimate_layout` and
-    // plotters-backend's default `draw_text` compute it: the advance width
-    // truncated to whole pixels, the size in CSS pixels as the height.
-    let mut advance = 0_f32;
-    let mut previous = None;
-    for id in &glyphs {
-        advance += scaled.h_advance(*id);
-        if let Some(previous) = previous {
-            advance += scaled.kern(previous, *id);
-        }
-        previous = Some(*id);
-    }
-    let (width, height) = (advance as i32, element.css_size as i32);
+    // The height is the attribute's own: it is the height Plotters measured.
+    let layout = font
+        .layout(&element.text, element.css_size * EM_RATIO, Missing::Error)?
+        .with_height(element.css_size as i32);
     let dx = match element.anchor {
         Anchor::Start => 0,
-        Anchor::Middle => -width / 2,
-        Anchor::End => -width,
+        Anchor::Middle => -layout.width / 2,
+        Anchor::End => -layout.width,
     };
     let dy = match element.baseline {
         Baseline::Top => 0,
-        Baseline::Center => -height / 2,
-        Baseline::Bottom => -height,
+        Baseline::Center => -layout.height / 2,
+        Baseline::Bottom => -layout.height,
     };
-    let left = f64::from(element.x) + f64::from(dx);
-    // Plotters puts the baseline half the font size below the box's top.
-    let baseline = f64::from(element.y) + f64::from(dy) + f64::from(scale / 2.0);
-    let (h_factor, v_factor) = (
-        f64::from(scaled.h_scale_factor()),
-        f64::from(scaled.v_scale_factor()),
+    let origin = (
+        f64::from(element.x) + f64::from(dx),
+        f64::from(element.y) + f64::from(dy),
     );
-
     let mut path = String::new();
-    let mut ink: Option<InkBox> = None;
-    let mut pen = 0_f32;
-    let mut previous = None;
-    for id in glyphs {
-        if let Some(previous) = previous {
-            pen += scaled.kern(previous, id);
-        }
-        previous = Some(id);
-        let origin = left + f64::from(pen);
-        pen += scaled.h_advance(id);
-        // Glyphs without ink (spaces) only advance the pen.
-        let Some(outline) = font.outline(id) else {
-            continue;
-        };
-        let place = |point: Point| {
-            (
-                origin + f64::from(point.x) * h_factor,
-                baseline - f64::from(point.y) * v_factor,
-            )
-        };
-        push_glyph(&mut path, &outline.curves, place);
-        // ab_glyph's unscaled bounds: `min` is (x_min, y_max) and `max` is
-        // (x_max, y_min), y up.
-        let (left_top, right_bottom) = (place(outline.bounds.min), place(outline.bounds.max));
-        let glyph = InkBox {
-            left: left_top.0,
-            top: left_top.1,
-            right: right_bottom.0,
-            bottom: right_bottom.1,
-        };
-        ink = Some(ink.map_or(glyph, |ink| ink.union(glyph)));
-    }
+    let ink = font.trace(&layout, origin, |segment| push_segment(&mut path, segment))?;
     Ok(ink.map(|ink| (path, ink)))
 }
 
@@ -623,7 +495,7 @@ fn layout(
 /// nothing to paint or announce.
 fn outline_element(
     element: &TextElement<'_>,
-    font: &FontRef<'static>,
+    font: &BundledFont,
 ) -> Result<Option<(String, Label)>, ExportError> {
     let Some((path, ink)) = layout(element, font)? else {
         return Ok(None);
@@ -652,7 +524,8 @@ fn outline_element(
     markup.push_str("><path d=\"");
     markup.push_str(&path);
     markup.push_str("\"/></g>");
-    let ink = ink.rotated(
+    let ink = rotated(
+        ink,
         element.rotation.map(|(rotation, _)| rotation),
         f64::from(element.x),
         f64::from(element.y),
@@ -907,20 +780,22 @@ mod tests {
     }
 
     #[test]
-    fn test_bundled_font_kerns_nothing_through_ab_glyph() -> Result<(), ExportError> {
-        // Open Sans 3.003 keeps its kerning in GPOS only, and ab_glyph reads
-        // the legacy `kern` table: Plotters' layout, its PNG and these
-        // outlines kern no pair, while browsers apply GPOS to `<text>`.
+    fn test_pairs_are_not_kerned() -> Result<(), ExportError> {
+        // No kerning: a pair's label is exactly as wide as its two glyphs
+        // drawn apart, as with ab_glyph (Open Sans 3.003 keeps its kerning
+        // in GPOS only, which ab_glyph never read either).
+        let (Some(one), Some(two)) = (
+            convert(&text_element("", "A"))?.labels.first().cloned(),
+            convert(&text_element("", "AV"))?.labels.first().cloned(),
+        ) else {
+            panic!("labels");
+        };
         let font = bundled_font()?;
-        let scaled = font.as_scaled(PxScale::from(20.0));
-        for pair in ["AV", "To", "Te", "Yo", "LT", "P5", "VA"] {
-            let mut glyphs = pair.chars().map(|c| font.glyph_id(c));
-            let (Some(first), Some(second)) = (glyphs.next(), glyphs.next()) else {
-                panic!("two characters");
-            };
-            assert_ne!(first, NOTDEF);
-            assert_eq!(scaled.kern(first, second), 0.0, "{pair}");
-        }
+        let v = font.layout("V", 12.0 * EM_RATIO, Missing::Error)?;
+        let pair = font.layout("AV", 12.0 * EM_RATIO, Missing::Error)?;
+        let a = font.layout("A", 12.0 * EM_RATIO, Missing::Error)?;
+        assert!((pair.width - a.width - v.width).abs() <= 1, "{pair:?}");
+        assert!(two.right > one.right);
         Ok(())
     }
 

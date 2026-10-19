@@ -19,12 +19,14 @@
 //! [`GraphData`]: optionstratlib_visualization::visualization::GraphData
 //! [`GraphConfig`]: optionstratlib_visualization::visualization::GraphConfig
 
+mod backend;
 mod color;
 pub mod error;
 pub mod fixtures;
 pub mod outline;
 pub mod render;
 pub mod svg;
+mod text;
 
 pub use error::ExportError;
 pub use outline::{Label, Outlined};
