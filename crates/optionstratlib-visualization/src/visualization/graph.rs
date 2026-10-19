@@ -20,72 +20,7 @@ use {
 };
 
 #[cfg(feature = "static_export")]
-use {plotly::plotly_static::ImageFormat, std::sync::Mutex, tracing::debug};
-
-/// Serializes every static export in the process.
-///
-/// `Plot::write_image` builds a `StaticExporter` per call, which attaches to a
-/// chromedriver already listening on the default port or spawns its own. The
-/// exporter that spawned the driver SIGKILLs it on close, even while another
-/// exporter that attached to it still has a browser session open; that
-/// session's headless Chrome is then orphaned and never exits (#724). Holding
-/// this lock across the whole export, retries included, makes every
-/// spawn → session → close → stop cycle run alone.
-///
-/// The lock is per process: two test binaries running at once (parallel
-/// worktrees, or a runner with one process per test) still share the default
-/// chromedriver port.
-#[cfg(feature = "static_export")]
-static STATIC_EXPORT_LOCK: Mutex<()> = Mutex::new(());
-
-/// Writes `plot` to `path` as a static image, retrying up to three times.
-///
-/// Holds [`STATIC_EXPORT_LOCK`] for the whole call so no two exports share a
-/// chromedriver.
-#[cfg(feature = "static_export")]
-fn export_image(
-    plot: &Plot,
-    path: &std::path::Path,
-    format: ImageFormat,
-    width: u32,
-    height: u32,
-) -> Result<(), GraphError> {
-    const MAX_ATTEMPTS: u32 = 3;
-
-    prepare_file_path(path)?;
-    let label = format.to_string().to_uppercase();
-    debug!("Writing {label} to: {}", path.display());
-
-    // The guarded value is `()`, so a panic in another export leaves nothing
-    // inconsistent behind: recover the guard instead of failing every export
-    // after it.
-    let _guard = STATIC_EXPORT_LOCK
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-
-    let mut last_error = String::new();
-    for attempt in 1..=MAX_ATTEMPTS {
-        debug!("{label} export attempt {attempt} of {MAX_ATTEMPTS}");
-        match plot.write_image(path, format.clone(), width as usize, height as usize, 1.0) {
-            Ok(()) => {
-                debug!("Successfully wrote {label} to: {}", path.display());
-                return Ok(());
-            }
-            Err(e) => {
-                debug!("{label} export attempt {attempt} failed: {e}");
-                last_error = e.to_string();
-                if attempt < MAX_ATTEMPTS {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                }
-            }
-        }
-    }
-
-    Err(GraphError::Render(format!(
-        "Failed to write {label} after {MAX_ATTEMPTS} attempts: {last_error} on path: {}",
-        path.display()
-    )))
-}
+use crate::visualization::native;
 
 /// Chart contract of every type the library can draw: strategies, option
 /// chains' curves and surfaces, options, positions and simulations.
@@ -166,63 +101,34 @@ pub trait Graph {
         plot
     }
 
-    /// Writes the graph as a PNG image to the specified file path.
+    /// Writes the chart to `path` as a PNG of `graph_config().width` x
+    /// `graph_config().height` pixels, creating the parent directory when it
+    /// is missing.
     ///
-    /// # Arguments
-    ///
-    /// * `path` - A reference to a `std::path::Path` that specifies the destination
-    ///   file path where the PNG image will be written to.
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result`:
-    /// * `Ok(())` - If the PNG image is successfully generated and written to the specified file.
-    /// * `Err(GraphError)` - If there is an error during the process of preparing the file path
-    ///   or writing the image.
-    ///
-    /// # Behavior
-    ///
-    /// * Prepares the target file path using the `prepare_file_path` function. If the preparation fails,
-    ///   an error is returned.
-    ///
-    /// * Retrieves the graph configuration (such as dimensions) using `self.graph_config()`.
-    /// * Converts the graph data into a plot using `self.to_plot()`, then generates and writes a PNG
-    ///   image to the specified path using the provided dimensions, `ImageFormat::PNG`, and a scaling factor of `1.0`.
-    ///
-    /// # Logging
-    ///
-    /// Logs a debug message with the target file path using the `debug!` macro before writing the PNG.
+    /// The image is drawn natively from [`Graph::graph_data`] and
+    /// [`Graph::graph_config`]: no browser, WebDriver, network or installed
+    /// font is involved, and concurrent exports, in threads or processes,
+    /// are independent. Since 0.23 it no longer goes through
+    /// [`Graph::to_plot`], so an override of `to_plot` changes the HTML
+    /// outputs but not this image.
     ///
     /// # Errors
     ///
-    /// Errors that might occur during execution:
-    /// * Issues with preparing the file path (e.g., invalid path, permissions issue).
-    /// * Internal errors with the image writing process.
-    ///
-    /// # Concurrency
-    ///
-    /// Static exports run one at a time per process: concurrent calls in the
-    /// same process wait on a shared lock so they never share a chromedriver
-    /// (#724). Separate processes are not coordinated.
-    ///
-    /// # Blocking
-    ///
-    /// This is a synchronous call. It blocks the calling thread while it waits
-    /// for the lock, while the WebDriver renders, and, after a failed attempt,
-    /// for a short pause before the next of up to three attempts. From async
-    /// code, run it on a blocking thread (for example
-    /// `tokio::task::spawn_blocking`) rather than on an executor thread.
-    ///
+    /// * [`GraphError::Io`] when the file or its directory cannot be written.
+    /// * [`GraphError::InvalidDimensions`], [`GraphError::TooSmall`] or
+    ///   [`GraphError::NoRoom`] when the figure cannot hold the chart.
+    /// * [`GraphError::LengthMismatch`], [`GraphError::SurfaceLengthMismatch`],
+    ///   [`GraphError::DegenerateSurface`], [`GraphError::DuplicateSurfacePoint`],
+    ///   [`GraphError::IncompleteSurface`] or [`GraphError::NotRepresentable`]
+    ///   for data it cannot draw without inventing or dropping values.
+    /// * [`GraphError::InvalidLineWidth`] or [`GraphError::InvalidColor`] for
+    ///   a series style it cannot reproduce.
+    /// * [`GraphError::MissingGlyph`] or [`GraphError::UnsupportedText`] for
+    ///   a label the bundled font cannot draw.
+    /// * [`GraphError::Render`] when drawing or encoding fails.
     #[cfg(feature = "static_export")]
     fn write_png(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        let cfg = self.graph_config();
-        export_image(
-            &self.to_plot(),
-            path,
-            ImageFormat::PNG,
-            cfg.width,
-            cfg.height,
-        )
+        native::write_png(&self.graph_data(), &self.graph_config(), path)
     }
 
     /// Writes the graph data to an HTML file at the specified path.
@@ -297,56 +203,25 @@ pub trait Graph {
         Ok(())
     }
 
-    /// Writes the graph representation to an SVG file at the specified path.
+    /// Writes the chart to `path` as an SVG of `graph_config().width` x
+    /// `graph_config().height` user units, creating the parent directory
+    /// when it is missing.
     ///
-    /// # Arguments
-    ///
-    /// * `path` - A reference to a `std::path::Path` that specifies the location
-    ///   where the SVG file should be created.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<(), GraphError>` - Returns `Ok(())` if the SVG is successfully
-    ///   written to the specified path. Otherwise, returns a `GraphError` if an
-    ///   issue occurs during the file preparation or writing process.
-    ///
-    /// # Behavior
-    ///
-    /// - Prepares the file path by ensuring it exists and is accessible.
-    /// - Retrieves the graph configuration (such as width and height).
-    /// - Converts the graph representation into a format suitable for plotting.
-    /// - Writes the graph into an SVG file with the specified width, height, and scale.
+    /// Drawn natively like [`Graph::write_png`], with real vector shapes.
+    /// Every label is drawn as glyph outlines of the bundled Open Sans, so
+    /// the file looks the same in every viewer and needs no font. Each label
+    /// keeps its text as an accessible name (`<g role="img" aria-label>`)
+    /// and the document carries a `<title>` and `<desc>`; the text can no
+    /// longer be selected, searched or edited as text.
     ///
     /// # Errors
     ///
-    /// This function may return a `GraphError` in the following cases:
-    /// - The file path cannot be prepared (e.g., due to permissions issues or invalid path).
-    /// - An error occurs during the conversion or writing process.
-    ///
-    /// # Concurrency
-    ///
-    /// Static exports run one at a time per process: concurrent calls in the
-    /// same process wait on a shared lock so they never share a chromedriver
-    /// (#724). Separate processes are not coordinated.
-    ///
-    /// # Blocking
-    ///
-    /// This is a synchronous call. It blocks the calling thread while it waits
-    /// for the lock, while the WebDriver renders, and, after a failed attempt,
-    /// for a short pause before the next of up to three attempts. From async
-    /// code, run it on a blocking thread (for example
-    /// `tokio::task::spawn_blocking`) rather than on an executor thread.
-    ///
+    /// Everything [`Graph::write_png`] returns, and
+    /// [`GraphError::NotXmlText`] for a label, title or series name that
+    /// contains a character XML cannot carry.
     #[cfg(feature = "static_export")]
     fn write_svg(&self, path: &std::path::Path) -> Result<(), GraphError> {
-        let cfg = self.graph_config();
-        export_image(
-            &self.to_plot(),
-            path,
-            ImageFormat::SVG,
-            cfg.width,
-            cfg.height,
-        )
+        native::write_svg(&self.graph_data(), &self.graph_config(), path)
     }
 
     /// Show the plot in browser
@@ -366,30 +241,19 @@ pub trait Graph {
     ///
     /// # Errors
     ///
-    /// Returns `GraphError::Render` when the chosen `OutputType`
-    /// backend (PNG/SVG via `static_export`, HTML, etc.) fails to
-    /// serialize or render, or when a PNG or SVG is asked for in a build
-    /// without `static_export`, and `GraphError::Io` when the
-    /// destination path cannot be written.
+    /// A PNG or SVG target returns whatever [`Graph::write_png`] or
+    /// [`Graph::write_svg`] returns, unchanged; in a build without
+    /// `static_export` it is `GraphError::Render`. HTML and browser targets
+    /// return `GraphError::Render` when serialization fails and
+    /// `GraphError::Io` when the destination cannot be written.
     #[cfg(feature = "plotly")]
     fn render(&self, output: OutputType) -> Result<(), GraphError> {
         match output {
+            // The export's own error, typed, not folded into `Render`.
             #[cfg(feature = "static_export")]
-            OutputType::Png(path) => {
-                debug!("Rendering PNG to: {}", path.display());
-                match self.write_png(path) {
-                    Ok(_) => debug!("Successfully wrote PNG to: {}", path.display()),
-                    Err(e) => return Err(GraphError::Render(format!("Failed to write PNG: {e}"))),
-                }
-            }
+            OutputType::Png(path) => self.write_png(path)?,
             #[cfg(feature = "static_export")]
-            OutputType::Svg(path) => {
-                debug!("Rendering SVG to: {}", path.display());
-                match self.write_svg(path) {
-                    Ok(_) => debug!("Successfully wrote SVG to: {}", path.display()),
-                    Err(e) => return Err(GraphError::Render(format!("Failed to write SVG: {e}"))),
-                }
-            }
+            OutputType::Svg(path) => self.write_svg(path)?,
             #[cfg(not(feature = "static_export"))]
             OutputType::Png(_) | OutputType::Svg(_) => {
                 return Err(static_export_disabled());

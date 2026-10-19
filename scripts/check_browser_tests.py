@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """Report tests that start a browser without being `#[ignore]`d (#724).
 
-PNG / SVG export goes through `plotly_static`, which spawns chromedriver and a
-headless Chrome, and `show()` hands a chart to the default browser. A test
-that does either inside `make test` or CI leaves browser processes behind on
-every run, so those tests are `#[ignore]`d and run only by `make test-visual`
-/ `make test-export`. Five `curves.rs` tests slipped past that rule and kept
-exporting PNG on every run until #724; this script keeps it from happening
-again.
+`show()` hands a chart to the default browser, and plotly's own image export
+(`write_image`) spawns chromedriver and a headless Chrome. A test that does
+either inside `make test` or CI leaves browser processes behind on every run,
+so those tests are `#[ignore]`d and run only by `make test-visual`. Five
+`curves.rs` tests slipped past that rule and kept exporting PNG on every run
+until #724; this script keeps it from happening again.
+
+Since #927 `Graph::write_png`, `write_svg` and `render(OutputType::Png/Svg)`
+draw natively, with no browser, so ordinary tests may call them.
 
 A test is a `fn` whose attribute block carries `#[test]` or `#[tokio::test]`.
 It is reported when the block has no `#[ignore]` and the function body calls
 one of:
 
-* `.write_png(` / `.write_svg(`
 * `.write_image(` / `write_image_with_exporter(`
-* `render(OutputType::Png(` / `render(OutputType::Svg(`
+* `render(OutputType::Browser)`
 * `.show()`
 
 A call that provably never reaches a browser (for example a write to a path
@@ -46,11 +47,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 BROWSER_CALL_RE = re.compile(
-    r"\.write_png\("
-    r"|\.write_svg\("
-    r"|\.write_image\("
+    r"\.write_image\("
     r"|\bwrite_image_with_exporter\("
-    r"|\brender\(\s*OutputType::(?:Png|Svg)\("
+    r"|\brender\(\s*OutputType::Browser\b"
     r"|\.show\(\)"
 )
 TEST_ATTR_RE = re.compile(r"#\[\s*(?:tokio::)?test\b")
@@ -180,49 +179,54 @@ def sources(root: Path) -> list[Path]:
 def self_test() -> int:
     """Prove the scanner reports what it must and nothing else."""
     cases = {
-        "bad_png.rs": ("#[test]\nfn t() {\n    g.write_png(p).ok();\n}\n", 1),
+        "bad_image.rs": ("#[test]\nfn t() {\n    plot.write_image(p, f, 1, 1, 1.0);\n}\n", 1),
         "bad_render.rs": (
-            "#[test]\n#[cfg(feature = \"x\")]\nfn t() {\n    g.render(OutputType::Svg(&p));\n}\n",
+            "#[test]\n#[cfg(feature = \"x\")]\nfn t() {\n    g.render(OutputType::Browser);\n}\n",
             1,
         ),
         "bad_show.rs": ("#[tokio::test]\nasync fn t() {\n    g.show();\n}\n", 1),
         "ignored.rs": (
-            "#[test]\n#[ignore = \"browser\"]\nfn t() {\n    g.write_svg(p).ok();\n}\n",
+            "#[test]\n#[ignore = \"browser\"]\nfn t() {\n    g.show();\n}\n",
             0,
         ),
         "marked.rs": (
-            "#[test]\nfn t() {\n    g.write_png(bad); // browser-test: allow -- rejected path\n}\n",
+            "#[test]\nfn t() {\n    g.show(); // browser-test: allow -- headless opener fails first\n}\n",
             0,
         ),
         "marker_no_reason.rs": (
-            "#[test]\nfn t() {\n    g.write_png(bad); // browser-test: allow\n}\n",
+            "#[test]\nfn t() {\n    g.show(); // browser-test: allow\n}\n",
             2,
         ),
-        "not_a_test.rs": ("fn write(g: &G) {\n    g.write_png(p).ok();\n}\n", 0),
+        "not_a_test.rs": ("fn open(g: &G) {\n    g.show();\n}\n", 0),
         "comment_and_string.rs": (
-            "#[test]\nfn t() {\n    // g.write_png(p)\n    let s = \".write_png(\";\n}\n",
+            "#[test]\nfn t() {\n    // g.show()\n    let s = \".show()\";\n}\n",
             0,
         ),
         "construct_only.rs": (
-            "#[test]\nfn t() {\n    let o = OutputType::Png(&p);\n}\n",
+            "#[test]\nfn t() {\n    let o = OutputType::Browser;\n}\n",
+            0,
+        ),
+        "native_export.rs": (
+            "#[test]\nfn t() {\n    g.write_png(p).ok();\n    g.write_svg(p).ok();\n"
+            "    g.render(OutputType::Png(&p)).ok();\n    g.render(OutputType::Svg(&p)).ok();\n}\n",
             0,
         ),
         "next_fn_not_leaked.rs": (
-            "#[test]\n#[ignore]\nfn a() {\n}\n\n#[test]\nfn b() {\n    g.write_png(p);\n}\n",
+            "#[test]\n#[ignore]\nfn a() {\n}\n\n#[test]\nfn b() {\n    g.show();\n}\n",
             1,
         ),
-        "same_line_attr.rs": ("#[test] fn t() {\n    g.write_png(p);\n}\n", 1),
+        "same_line_attr.rs": ("#[test] fn t() {\n    g.show();\n}\n", 1),
         "multiline_attr.rs": (
-            "#[test]\n#[cfg_attr(\n    feature = \"x\",\n    allow(dead_code)\n)]\nfn t() {\n    g.write_svg(p);\n}\n",
+            "#[test]\n#[cfg_attr(\n    feature = \"x\",\n    allow(dead_code)\n)]\nfn t() {\n    g.show();\n}\n",
             1,
         ),
         "multiline_ignore.rs": (
-            "#[test]\n#[ignore = \"needs a\n browser\"]\nfn t() {\n    g.write_svg(p);\n}\n",
+            "#[test]\n#[ignore = \"needs a\n browser\"]\nfn t() {\n    g.show();\n}\n",
             0,
         ),
-        "unsafe_fn.rs": ("#[test]\nunsafe fn t() {\n    g.write_png(p);\n}\n", 1),
+        "unsafe_fn.rs": ("#[test]\nunsafe fn t() {\n    g.show();\n}\n", 1),
         "block_comment_brace.rs": (
-            "#[test]\nfn t() {\n    /* } */\n    let c = '}';\n    let r = r#\"}\"#;\n    g.write_png(p);\n}\n",
+            "#[test]\nfn t() {\n    /* } */\n    let c = '}';\n    let r = r#\"}\"#;\n    g.show();\n}\n",
             1,
         ),
     }

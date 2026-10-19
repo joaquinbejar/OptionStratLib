@@ -315,6 +315,9 @@ mod graph;
 mod interface;
 mod model;
 mod model_impls;
+/// The native PNG and SVG export behind `static_export`.
+#[cfg(feature = "static_export")]
+mod native;
 /// `Plottable` trait and `PlotBuilder`.
 mod plot_builder;
 mod simulation;

@@ -252,14 +252,15 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     /// A `Result` indicating success or containing an error if the save operation failed
     ///
     /// # Errors
-    /// Returns [`GraphError::Render`] if the plot cannot be rendered or
-    /// written to `path`.
+    /// Whatever [`Graph::write_png`] returns, unchanged: the typed variant
+    /// for data it cannot draw, [`GraphError::Io`] when `path` cannot be
+    /// written, [`GraphError::Render`] when drawing fails.
     ///
     #[cfg(feature = "static_export")]
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {
         let path = path.as_ref();
-        self.write_png(path).map_err(|e| {
-            GraphError::Render(format!("Failed to save plot to {} {}", path.display(), e))
+        self.write_png(path).inspect_err(|error| {
+            tracing::debug!(path = %path.display(), %error, "failed to save plot");
         })
     }
 }

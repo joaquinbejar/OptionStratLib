@@ -251,6 +251,22 @@ rust_decimal_macros = "1.40"
 # enables it, so `plotly` alone resolves no image-export or async package
 # (ADR-0002 section 3).
 plotly = { version = "0.14", default-features = false }
+# The native PNG/SVG export of `optionstratlib-visualization/static_export`
+# (#927): Plotters without any font feature (no ab_glyph, no ttf, so no
+# ttf-parser), its backend trait, skrifa for the bundled font and
+# ab_glyph_rasterizer for PNG text.
+plotters = { version = "0.3.7", default-features = false, features = [
+    "bitmap_backend",
+    "bitmap_encoder",
+    "colormaps",
+    # `colormaps` does not compile without it in 0.3.7.
+    "full_palette",
+    "line_series",
+    "svg_backend",
+] }
+plotters-backend = "0.3.7"
+skrifa = { version = "0.48", default-features = false, features = ["std"] }
+ab_glyph_rasterizer = "0.1.10"
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10" }
 statrs = "0.19"

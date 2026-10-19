@@ -24,10 +24,6 @@ mod plotly_tests {
             fn add_trace<T: plotly::Trace + 'static>(&mut self, trace: T) -> &mut Self;
             fn set_layout(&mut self, layout: plotly::Layout) -> &mut Self;
             fn write_html(&self, path: &std::path::Path);
-            // `plotly_static` exists only with `static_export`, which
-            // enables `plotly/static_export_default` (#542).
-            #[cfg(feature = "static_export")]
-            fn write_image(&self, path: &std::path::Path, format: plotly::plotly_static::ImageFormat, width: usize, height: usize, scale: f64);
             fn show(&self);
         }
     }
