@@ -222,6 +222,7 @@ def run_gate(gate: Gate) -> dict:
     tail = [line for line in text.splitlines() if line.strip()][-3:]
     return {
         "id": gate.id,
+        "commit": git("rev-parse", "HEAD"),
         "command": gate.command,
         "returncode": completed.returncode,
         "seconds": seconds,
@@ -296,6 +297,14 @@ def render(evidence: Path) -> str:
                 f"| `{gate.id}` | `{gate.command}` | {verdict(result, gate)} | {result['seconds']} s | {warnings} | {gate.purpose} |"
             )
         lines.append("")
+    gated = meta.get("commit", "")
+    elsewhere = sorted(
+        f"`{gate_id}` on " + (f"`{result['commit'][:8]}`" if result.get("commit") else "an unrecorded commit")
+        for gate_id, result in results.items()
+        if gate_id != "_meta" and result.get("commit") != gated
+    )
+    if elsewhere:
+        lines += ["", "**Gates run on a commit other than the one gated above:** " + ", ".join(elsewhere) + "."]
     notes = evidence.with_name("gates-notes.md")
     if notes.is_file():
         lines += ["", notes.read_text().rstrip("\n")]
@@ -379,6 +388,10 @@ def main() -> int:
     previous = results.get("_meta") or {}
     if previous.get("release", DEFAULT_RELEASE) != args.release or previous.get("crates", list(CRATES)) != args.crates:
         # A run for another release or crate set starts its evidence afresh.
+        results = {}
+    if not args.only and not args.skip:
+        # A complete run is the evidence of the commit it runs on: nothing of
+        # an earlier run, on another commit, may be kept under its header.
         results = {}
     results["_meta"] = results.get("_meta") or {
         "release": args.release,
