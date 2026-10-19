@@ -8,8 +8,11 @@
 // unignored nodes as JSON. Every step has a deadline. Whatever happens, it
 // then stops that browser: Browser.close, then SIGTERM and finally SIGKILL
 // to its process group, each with a bounded wait, until no process of the
-// group is left; and it removes the profile. It never signals any other
-// process. Needs Node 22+ (WebSocket).
+// group is left; and it removes the profile. SIGINT, SIGTERM or SIGHUP to
+// this script (Ctrl-C reaches it, not the browser's own group) run the same
+// cleanup once and exit with 128 + the signal number. Only SIGKILL to this
+// script, which nothing can handle, would leave the browser behind. It never
+// signals any other process. Needs Node 22+ (WebSocket).
 //
 // Usage: node accessibility_tree.mjs <svg> > tree.json
 //        node accessibility_tree.mjs --self-test
@@ -204,10 +207,38 @@ async function readTree(owned, svg) {
   }
 }
 
+/** Exit codes for the signals that run the cleanup: 128 + signal number. */
+const HANDLED_SIGNALS = [
+  ["SIGHUP", 129],
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+];
+
 async function main(svg) {
   const browser =
     process.env.BROWSER_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-  const owned = launch(browser);
+  let owned = null;
+  let cleaning = null;
+  // Idempotent: the normal path and any signal share one bounded cleanup.
+  const cleanUp = () => {
+    cleaning ??= (async () => {
+      if (owned === null) return true;
+      const gone = await stop(owned);
+      rmSync(owned.profile, { recursive: true, force: true });
+      if (!gone) {
+        console.error(`accessibility_tree: process group ${owned.child.pid} outlived SIGKILL`);
+      }
+      return gone;
+    })();
+    return cleaning;
+  };
+  for (const [signal, code] of HANDLED_SIGNALS) {
+    process.on(signal, () => {
+      console.error(`accessibility_tree: ${signal}, stopping the browser`);
+      cleanUp().finally(() => process.exit(code));
+    });
+  }
+  owned = launch(browser);
   let status = 0;
   try {
     const nodes = await within(readTree(owned, svg), TIMEOUT_MS, "reading the accessibility tree");
@@ -216,11 +247,7 @@ async function main(svg) {
     console.error(`accessibility_tree: ${error.message}`);
     status = 1;
   } finally {
-    if (!(await stop(owned))) {
-      console.error(`accessibility_tree: process group ${owned.child.pid} outlived SIGKILL`);
-      status = 1;
-    }
-    rmSync(owned.profile, { recursive: true, force: true });
+    if (!(await cleanUp())) status = 1;
   }
   return status;
 }
@@ -229,20 +256,22 @@ async function main(svg) {
  * Runs this script against stand-ins that misbehave, with no real browser:
  * a "browser" whose group ignores SIGTERM and never opens a DevTools port,
  * and a browser path that does not exist. Each run must fail within its
- * deadline, leave no process of the stand-in's group and no profile.
+ * deadline, leave no process of the stand-in's group and no profile. The
+ * stand-in also runs while this script itself gets SIGTERM, and SIGINT as a
+ * terminal's Ctrl-C sends it, with the same requirements and exit code
+ * 128 + signal.
  */
 async function selfTest() {
   const script = fileURLToPath(import.meta.url);
   const scratch = mkdtempSync(join(tmpdir(), "osl-a11y-self-test-"));
   const fake = join(scratch, "fake-browser.cjs");
-  const pids = join(scratch, "pids");
   writeFileSync(
     fake,
     `#!${process.execPath}
 process.on("SIGTERM", () => {});
 const { spawn } = require("node:child_process");
 const helper = spawn(process.execPath, ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);"], { stdio: "ignore" });
-require("node:fs").writeFileSync(${JSON.stringify(pids)}, process.pid + " " + helper.pid);
+require("node:fs").writeFileSync(process.env.OSL_FAKE_PIDS, process.pid + " " + helper.pid);
 setInterval(() => {}, 1000);
 `,
   );
@@ -255,11 +284,20 @@ setInterval(() => {}, 1000);
       return false;
     }
   };
-  const run = async (name, browserPath, budgetMs) => {
+  // One run of this script; `signal`, when given, goes to this script's
+  // process only, once the stand-in browser has started.
+  const run = async (name, browserPath, { budgetMs, timeoutMs = 1500, signal, expect = 1 }) => {
     const temp = mkdtempSync(join(scratch, "tmp-"));
+    const pids = join(temp, "pids");
     const started = Date.now();
     const child = spawn(process.execPath, [script, join(scratch, "missing.svg")], {
-      env: { ...process.env, BROWSER_PATH: browserPath, TMPDIR: temp, OSL_A11Y_TIMEOUT_MS: "1500" },
+      env: {
+        ...process.env,
+        BROWSER_PATH: browserPath,
+        TMPDIR: temp,
+        OSL_A11Y_TIMEOUT_MS: String(timeoutMs),
+        OSL_FAKE_PIDS: pids,
+      },
       stdio: ["ignore", "ignore", "pipe"],
       detached: true,
     });
@@ -267,11 +305,19 @@ setInterval(() => {}, 1000);
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
-    const code = await within(
-      new Promise((ok) => child.once("exit", ok)),
-      budgetMs,
-      `${name} run`,
-    ).catch((error) => {
+    const exited = new Promise((ok) => child.once("exit", (code, by) => ok(code ?? by)));
+    const problems = [];
+    if (signal) {
+      const deadline = Date.now() + 10000;
+      while (!existsSync(pids) && Date.now() < deadline) await sleep(50);
+      if (existsSync(pids)) {
+        await sleep(200);
+        process.kill(child.pid, signal);
+      } else {
+        problems.push("the stand-in browser never started");
+      }
+    }
+    const code = await within(exited, budgetMs, `${name} run`).catch((error) => {
       // The harness itself hung: stop its group (ours) and fail.
       try {
         process.kill(-child.pid, "SIGKILL");
@@ -279,28 +325,38 @@ setInterval(() => {}, 1000);
       return error.message;
     });
     const elapsed = Date.now() - started;
+    if (code !== expect) problems.push(`exit ${code}, expected ${expect}`);
     const leftovers = readdirSync(temp).filter((entry) => entry.startsWith(PROFILE_PREFIX));
-    const problems = [];
-    if (code !== 1) problems.push(`exit ${code}, expected 1`);
     if (leftovers.length) problems.push(`profile left: ${leftovers}`);
-    return { name, elapsed, stderr: stderr.trim(), problems };
+    if (existsSync(pids)) {
+      for (const pid of readFileSync(pids, "utf8").split(" ").map(Number)) {
+        if (alive(pid)) {
+          problems.push(`stand-in process ${pid} still alive`);
+          process.kill(pid, "SIGKILL");
+        }
+      }
+    } else if (browserPath === fake) {
+      problems.push("the stand-in browser never started");
+    }
+    return { name, elapsed, stderr: stderr.trim().replaceAll("\n", " | "), problems };
   };
 
-  const results = [];
-  const ignoring = await run("browser ignoring SIGTERM", fake, 20000);
-  if (existsSync(pids)) {
-    const [browserPid, helperPid] = readFileSync(pids, "utf8").split(" ").map(Number);
-    for (const pid of [browserPid, helperPid]) {
-      if (alive(pid)) {
-        ignoring.problems.push(`stand-in process ${pid} still alive`);
-        process.kill(pid, "SIGKILL");
-      }
-    }
-  } else {
-    ignoring.problems.push("the stand-in browser never started");
-  }
-  results.push(ignoring);
-  results.push(await run("missing browser", join(scratch, "no-such-browser"), 10000));
+  const results = [
+    await run("browser ignoring SIGTERM", fake, { budgetMs: 20000 }),
+    await run("missing browser", join(scratch, "no-such-browser"), { budgetMs: 10000 }),
+    await run("SIGTERM to this script", fake, {
+      budgetMs: 20000,
+      timeoutMs: 60000,
+      signal: "SIGTERM",
+      expect: 143,
+    }),
+    await run("SIGINT (Ctrl-C) to this script", fake, {
+      budgetMs: 20000,
+      timeoutMs: 60000,
+      signal: "SIGINT",
+      expect: 130,
+    }),
+  ];
   rmSync(scratch, { recursive: true, force: true });
 
   let failed = 0;

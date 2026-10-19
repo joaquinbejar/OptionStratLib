@@ -286,9 +286,12 @@ Chrome's accessibility tree was read with `accessibility_tree.mjs`
 are in `results/accessibility/`. The script owns its browser as a process
 group of its own: every step has a deadline, and it ends with
 `Browser.close`, then SIGTERM and SIGKILL to that group, each with a bounded
-wait, and removes the profile. `--self-test` checks this without a browser,
-against a stand-in whose group ignores SIGTERM and a browser path that does
-not exist.
+wait, and removes the profile. SIGINT (a terminal's Ctrl-C), SIGTERM or
+SIGHUP to the script runs the same cleanup once; only a SIGKILL to the
+script itself would leave its browser behind. `--self-test` checks this
+without a browser. It uses a stand-in whose group ignores SIGTERM, a
+browser path that does not exist, and SIGTERM and SIGINT sent to the script
+while the stand-in runs.
 
 | | Embedded-font SVG | Outlines SVG |
 |---|---|---|
