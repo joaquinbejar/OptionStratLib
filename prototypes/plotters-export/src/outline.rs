@@ -424,7 +424,27 @@ fn unescape(escaped: &str) -> Result<String, ExportError> {
     }
 }
 
-/// Appends `text` escaped for an attribute value or element content.
+/// Whether XML 1.0 can carry `character` at all: its `Char` production
+/// excludes the C0 controls other than tab, line feed and carriage return,
+/// and U+FFFE/U+FFFF (Rust `char`s are never surrogates).
+fn is_xml_char(character: char) -> bool {
+    matches!(character, '\t' | '\n' | '\r' | '\u{20}'..='\u{FFFD}' | '\u{10000}'..)
+}
+
+/// Fails for a string XML cannot carry, before any of it is written.
+fn ensure_xml_text(text: &str) -> Result<(), ExportError> {
+    match text.chars().find(|c| !is_xml_char(*c)) {
+        Some(character) => Err(ExportError::NotXmlText {
+            character,
+            code: u32::from(character),
+            text: text.to_string(),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// Appends `text` escaped for an attribute value or element content; the
+/// caller has checked it with [`ensure_xml_text`].
 fn push_escaped(out: &mut String, text: &str) {
     for character in text.chars() {
         match ENTITIES.iter().find(|(_, escaped)| *escaped == character) {
@@ -613,6 +633,7 @@ fn outline_element(
         .chars()
         .map(|c| if LINE_WHITESPACE.contains(&c) { ' ' } else { c })
         .collect();
+    ensure_xml_text(&text)?;
     let mut markup = String::with_capacity(path.len() + text.len() + 128);
     markup.push_str("<g role=\"img\" aria-label=\"");
     push_escaped(&mut markup, &text);
@@ -649,6 +670,10 @@ fn outline_element(
 /// Inserts `<title>` and `<desc>` as the first children of the `<svg>`
 /// element.
 fn with_chart_text(document: &str, chart: &ChartText) -> Result<String, ExportError> {
+    // The description names series that may not be drawn (no legend), so
+    // its text has not been through the glyph check.
+    ensure_xml_text(&chart.title)?;
+    ensure_xml_text(&chart.description)?;
     let tag_end = document
         .find("<svg")
         .and_then(|start| document.get(start..)?.find('>').map(|end| start + end + 1))
@@ -783,6 +808,26 @@ mod tests {
         assert!(blank.labels.is_empty());
         assert!(!blank.document.contains("<g role"));
         Ok(())
+    }
+
+    #[test]
+    fn test_metadata_xml_cannot_carry_is_an_error() {
+        for bad in ['\0', '\u{B}', '\u{1F}', '\u{FFFE}', '\u{FFFF}'] {
+            let chart = ChartText {
+                title: "Chart".to_string(),
+                description: format!("hidden{bad}series"),
+            };
+            let result = outline_text(&document(&text_element("", "a")), &chart);
+            assert!(
+                matches!(result, Err(ExportError::NotXmlText { character, .. }) if character == bad),
+                "{bad:?}: {result:?}"
+            );
+        }
+        let chart = ChartText {
+            title: "Tab\tand\nbreaks\r are XML".to_string(),
+            description: "\u{10FFFF} \u{FFFD}".to_string(),
+        };
+        assert!(outline_text(&document(&text_element("", "a")), &chart).is_ok());
     }
 
     #[test]

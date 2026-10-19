@@ -622,6 +622,46 @@ fn test_outlines_reject_a_character_the_font_lacks() -> Result<(), Box<dyn Error
 }
 
 #[test]
+fn test_outlines_reject_a_hidden_name_xml_cannot_carry() -> Result<(), Box<dyn Error>> {
+    // The name is never drawn (no legend), but it enters <desc>.
+    let Fixture {
+        mut data,
+        mut config,
+    } = Case::Curves.build()?;
+    let GraphData::MultiSeries(list) = &mut data else {
+        return Err("a multi-series fixture".into());
+    };
+    let first = list.first_mut().ok_or("no series")?;
+    first.name = "hidden\0series".to_string();
+    config.show_legend = false;
+    config.legend = None;
+    let result = render_svg_outlined(&data, &config);
+    assert!(
+        matches!(
+            result,
+            Err(ExportError::NotXmlText {
+                character: '\0',
+                code: 0,
+                ..
+            })
+        ),
+        "{result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_outlines_every_case_is_xml_text() -> Result<(), Box<dyn Error>> {
+    for case in Case::EVERY {
+        let Fixture { data, config } = case.build()?;
+        let document = render_svg(&data, &config, SvgText::Outlines)?;
+        let forbidden = |c: char| matches!(c, '\0'..='\u{8}' | '\u{B}' | '\u{C}' | '\u{E}'..='\u{1F}' | '\u{FFFE}' | '\u{FFFF}');
+        assert!(!document.chars().any(forbidden), "{}", case.slug());
+    }
+    Ok(())
+}
+
+#[test]
 fn test_outlines_small_figures_never_panic() -> Result<(), Box<dyn Error>> {
     const SIZES: [u32; 6] = [1, 5, 40, 120, 239, 240];
     for case in Case::EVERY {

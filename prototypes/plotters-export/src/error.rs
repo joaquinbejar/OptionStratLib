@@ -137,6 +137,21 @@ pub enum ExportError {
         text: String,
     },
 
+    /// A string the outlines SVG would carry (a label, or the chart title
+    /// or description in `<title>`/`<desc>`) contains a character XML 1.0
+    /// cannot represent, even as a character reference: a C0 control other
+    /// than tab, line feed and carriage return, U+FFFE or U+FFFF. Writing it
+    /// would make the document unparsable.
+    #[error("{character:?} (U+{code:04X}) cannot appear in XML; found in {text:?}")]
+    NotXmlText {
+        /// The character XML cannot carry.
+        character: char,
+        /// Its code point, for display.
+        code: u32,
+        /// The string it was found in.
+        text: String,
+    },
+
     /// A text element is outside the subset of SVG the outline conversion
     /// understands: the exact `<text>` elements plotters-svg 0.3.7 writes
     /// for the regular style of the bundled font.

@@ -41,6 +41,13 @@ All of it lives in `prototypes/plotters-export` (`publish = false`).
     plotters-svg 0.3.7 writes. That covers another family, bold or italic,
     a transform other than a quarter turn about the anchor, markup or an
     unknown entity in the text, and a missing or duplicate attribute.
+  - `ExportError::NotXmlText`: a label, title or description containing a
+    character XML 1.0 cannot carry (a C0 control other than tab, line feed
+    and carriage return, U+FFFE or U+FFFF). The description names series
+    that may never be drawn, such as a hidden legend's, so it is checked
+    before anything is written rather than relying on the glyph check.
+    Found in review: before the check, a NUL in a hidden series name gave
+    an unparsable SVG with `Ok`.
 
   Nothing falls back to a viewer font or a raster, and no label is
   dropped. The one exception is a label that is empty or only spaces: it
@@ -136,8 +143,9 @@ These comparisons are for information; the PNG is not the reference.
 | The PNG advances `\n` and `\t` by the `.notdef` advance, which is wider than a space | The payoff title differs after its first `\n` |
 | Other geometry crossing a label | Lines are rasterised differently. The worst "edge" in the table, 5 px for `-52.66`, is the current-price line crossing that label, not the text. |
 
-Label by label, the outlines renders and the PNG agree on 14/19, 19/22,
-18/22 and 20/23 labels. The other labels are the longer titles and the
+Label by label, the outlines renders and the PNG agree on 14/19, 19/22 and
+18/22 labels for the three charts in every engine, and on 20/23 (Blink) or
+19/23 (WebKit, librsvg) for the text fixture. The other labels are the longer titles and the
 rotated ones, explained by the table above.
 
 ### Differences from the embedded-font SVG
@@ -153,8 +161,9 @@ rotated ones, explained by the table above.
   collapse whitespace, so leading spaces disappear.
 - **Rasterisation.** WebKit visibly darkens stems.
 
-In every engine, no label of the embedded-font SVG matches its outlines
-render (see the second table below). This is the expected size and metric
+Almost no label of the embedded-font SVG matches its outlines render: none
+in any case or engine, except one of the text fixture's 23 labels in Blink
+(see the second table below). This is the expected size and metric
 difference, not a defect of either mode.
 
 ### Corrections to the #920 report
@@ -274,7 +283,12 @@ the finished SVGs.
 
 Chrome's accessibility tree was read with `accessibility_tree.mjs`
 (DevTools `Accessibility.getFullAXTree`, headless Chrome 155). The results
-are in `results/accessibility/`.
+are in `results/accessibility/`. The script owns its browser as a process
+group of its own: every step has a deadline, and it ends with
+`Browser.close`, then SIGTERM and SIGKILL to that group, each with a bounded
+wait, and removes the profile. `--self-test` checks this without a browser,
+against a stand-in whose group ignores SIGTERM and a browser path that does
+not exist.
 
 | | Embedded-font SVG | Outlines SVG |
 |---|---|---|
@@ -399,6 +413,7 @@ target/release/compare outlines /tmp/osl-923
 prototypes/plotters-export/render_svg_viewers.sh /tmp/osl-923 /tmp/osl-923-viewers
 python3 prototypes/plotters-export/compare_viewers.py /tmp/osl-923 /tmp/osl-923-viewers /tmp/osl-923-comparison
 node prototypes/plotters-export/accessibility_tree.mjs /tmp/osl-923/text.outlines.svg
+node prototypes/plotters-export/accessibility_tree.mjs --self-test   # no browser needed
 python3 -I prototypes/plotters-export/measure.py --native target/release/compare \
   --backends plotters --cases payoff,curves,surface,text --formats svg,svg-outlines \
   --cold 20 --warm 200 --sandbox --out /tmp/osl-923-timing --name timing-outlines
