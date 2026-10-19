@@ -1,0 +1,361 @@
+{
+  "svg": "text.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Δ per $1 (Γ = 1.5e−7)",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Strike − spot ($)",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−1.5e-6",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−1e-6",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−5e-7",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5e-7",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "1e-6",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "1.5e-6",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "2",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "4",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "6",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "8",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "10",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "AV To fi",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "café · ñandú · Ωμέγα αβγ",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "€ £ ¥ $ 1.5e−7",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Aa",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Δ per $1 (Γ = 1.5e−7)",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Strike − spot ($)",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−1.5e-6",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−1e-6",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−5e-7",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5e-7",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "1e-6",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "1.5e-6",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "2",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "4",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "6",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "8",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "10",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "& < > \" ' $",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "AV To fi",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "café · ñandú · Ωμέγα αβγ",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "€ £ ¥ $ 1.5e−7",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Aa",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "& < > \" ' $",
+      "description": null
+    }
+  ]
+}

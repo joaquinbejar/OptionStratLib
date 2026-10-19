@@ -1,0 +1,301 @@
+{
+  "svg": "payoff.svg",
+  "chrome": "Google Chrome 155.0.8059.85",
+  "nodes": [
+    {
+      "role": "RootWebArea",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "SvgRoot",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "generic",
+      "name": "",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Profit/Loss",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "Underlying Price",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−120",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−100",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−80",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−60",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−40",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "−20",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "20",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5650",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5700",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5750",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5800",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5850",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "5900",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "-52.66",
+      "description": null
+    },
+    {
+      "role": "StaticText",
+      "name": "BE: 5808.21",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "BullCallSpread Strategy: Underlying: SP500 @ $5820 Short Call European Option Underlying: SP500 @ $5750 Long Call European Option",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Profit/Loss",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "Underlying Price",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−120",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−100",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−80",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−60",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−40",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "−20",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "0",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "20",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5650",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5700",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5750",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5800",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5850",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "5900",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "-52.66",
+      "description": null
+    },
+    {
+      "role": "InlineTextBox",
+      "name": "BE: 5808.21",
+      "description": null
+    }
+  ]
+}

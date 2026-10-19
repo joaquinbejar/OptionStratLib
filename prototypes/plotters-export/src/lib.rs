@@ -12,13 +12,19 @@
 //! two renderers) and times them. Nothing here changes a published crate;
 //! the decision report is `REPORT.md`.
 //!
+//! #923 adds [`SvgText::Outlines`] ([`outline`]): SVG text drawn as glyph
+//! outlines, so the SVG needs no font in any viewer, with a text fixture
+//! and the viewer evidence of `REPORT-outlines.md`.
+//!
 //! [`GraphData`]: optionstratlib_visualization::visualization::GraphData
 //! [`GraphConfig`]: optionstratlib_visualization::visualization::GraphConfig
 
 pub mod error;
 pub mod fixtures;
+pub mod outline;
 pub mod render;
 pub mod svg;
 
 pub use error::ExportError;
-pub use render::{SvgText, render_svg, write_png, write_svg};
+pub use outline::{Label, Outlined};
+pub use render::{SvgText, render_svg, render_svg_outlined, write_png, write_svg};

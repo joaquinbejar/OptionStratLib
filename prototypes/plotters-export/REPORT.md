@@ -12,6 +12,13 @@ interactive HTML, under the conditions in
 [Migration conditions](#migration-conditions). SVG portability is one of
 those conditions and blocks the migration; it is not an optional follow-up.
 
+> **Update (#923).** That experiment is done: SVG text drawn as outlines met
+> the portability condition in Blink, WebKit and librsvg, with tradeoffs and
+> the remaining conditions in [REPORT-outlines.md](REPORT-outlines.md). The
+> rest of this report keeps its original measurements and provenance; the
+> only edits are this note, the cross-references and the corrected cause of
+> the loose PNG spacing below.
+
 This is the decision report of the prototype; nothing in a published crate
 changed. Measured on 2026-10-18 at `e4b3159` (Rust code unchanged since
 `8b742d8`; the binaries were built there), macOS 27.0.1
@@ -71,7 +78,7 @@ WEBDRIVER_PATH=<chromedriver 155> BROWSER_PATH=<chrome 155> \
 | Surface rendering | Smooth, lit WebGL surface, default red-blue scale | Flat-shaded cells with thin edges, Viridis scale; no lighting |
 | Surface SVG | **A PNG embedded in an SVG**: WebGL cannot be exported as vectors | Real vector polygons |
 | Tick labels | `20`, `−20` | Same format (`format_number`) |
-| Text in PNG | Chrome's text shaping | ab_glyph rasterisation: readable, but no kerning, so some glyph pairs (`52.66`, `SP 500`) look loosely spaced |
+| Text in PNG | Chrome's text shaping | ab_glyph rasterisation: readable, no kerning (the font's kerning is GPOS only, which ab_glyph does not read), and some glyph pairs (`52.66`, `SP 500`) look loosely spaced because the rasteriser drops side bearings and truncates pen positions (corrected in #923; the first version blamed the missing kerning) |
 | Margins, legend | Plotly layout | Close, not identical; pixel identity was not a goal |
 | `ColorScheme` on surfaces | Ignored (plotly default scale) | Ignored (Viridis) |
 | `LineStyle` | Ignored by `to_plot` | Ignored too, for parity |
@@ -194,7 +201,10 @@ criterion unmet") the criterion is **unmet**: librsvg still uses its own
 font. The Plotly baseline is unmet in all three engines. Converting text to
 outlines (paths) would meet it everywhere, at the cost of selectable and
 accessible text (an SVG `<title>`/`aria-label` can carry the strings); it is
-the next bounded experiment, and a condition of the migration.
+the next bounded experiment, and a condition of the migration. (#923 ran it:
+the outlines mode is portable in all three engines; see
+[REPORT-outlines.md](REPORT-outlines.md), which also replaces the Quick Look
+thumbnail used above with an exact-size WebKit render.)
 
 ## Dependencies
 
@@ -232,7 +242,7 @@ the next bounded experiment, and a condition of the migration.
 | All twelve reference artifacts available and valid | **met** | `artifacts/`, `tests/export.rs` (PNG signature and IHDR size, SVG structure) |
 | Values, axis meaning, units, series identity; readable, unclipped labels | **met** | visible differences table; Plotly itself loses the payoff title and the surface axis titles |
 | 3D surface keeps shape and interpretable height; projection, occlusion, colour scale documented | **met**, with limitations | fixed yaw 0.7 / pitch 0.5 / scale 0.8; painter's algorithm by cell centroid depth (correct for a single-valued surface over a grid, can misorder strongly folded ones); Viridis colour bar; flat shading, no lighting, no camera control |
-| SVG portability in independent environments | **unmet** | met in Blink and WebKit, unmet in librsvg; Plotly unmet in all three |
+| SVG portability in independent environments | **unmet** (met by the #923 outlines mode) | met in Blink and WebKit, unmet in librsvg; Plotly unmet in all three; #923: [REPORT-outlines.md](REPORT-outlines.md) |
 | Export without Chrome, ChromeDriver or network; no `plotly_static` in the native harness | **met** | sandbox runs, dependency tree |
 | Latency improves for every case and format | **met** | measurements table |
 
@@ -243,7 +253,8 @@ the next bounded experiment, and a condition of the migration.
   Every change to `GraphData`, `GraphConfig` or the Plotly mapping has to be
   mirrored, or one renderer drifts.
 - 3D is basic: one fixed camera, flat shading, painter's ordering.
-- Text quality in PNG is below Chrome's (no kerning).
+- Text quality in PNG is below Chrome's: no kerning, and uneven spacing from
+  the rasteriser dropping side bearings and truncating pen positions.
 - `ttf-parser` unmaintained advisory; Plotters' slow release cadence.
 - Colour names are not parsed yet.
 - Viewer-dependent SVG text in librsvg until text becomes outlines; this
@@ -256,6 +267,8 @@ Only after this report is accepted, and as #920 lists:
 1. **Gate: SVG text portability.** Render SVG text as outlines (or another
    approach) and show the same text in Blink, WebKit and librsvg on a
    machine without the font. Until then the migration is not approved.
+   *Met by the outlines mode in #923 ([REPORT-outlines.md](REPORT-outlines.md));
+   the migration decision and conditions 2 to 8 remain open.*
 2. Keep `Graph::write_png` / `write_svg` signatures and error contracts,
    `Graph::to_plot`, interactive HTML and the public Plotly helpers. Keep
    `static_export` implying `plotly` at component and facade level, and drop
