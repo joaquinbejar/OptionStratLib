@@ -19,6 +19,7 @@
 //! [`GraphData`]: optionstratlib_visualization::visualization::GraphData
 //! [`GraphConfig`]: optionstratlib_visualization::visualization::GraphConfig
 
+mod color;
 pub mod error;
 pub mod fixtures;
 pub mod outline;

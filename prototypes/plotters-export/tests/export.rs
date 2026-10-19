@@ -158,15 +158,20 @@ fn test_mismatched_series_lengths_are_rejected() {
 }
 
 #[test]
-fn test_named_colours_are_rejected() {
-    let mut red = series("red", vec![dec!(1)], vec![dec!(1)]);
-    red.line_color = Some("red".to_string());
-    let result = render_svg(
-        &GraphData::Series(red),
-        &small_config(),
-        SvgText::ViewerFont,
-    );
-    assert!(matches!(result, Err(ExportError::InvalidColor(ref c)) if c == "red"));
+fn test_unsupported_colours_are_rejected() {
+    for text in ["reddish", "currentColor", "#12", "hwb(0 0% 0%)"] {
+        let mut line = series("line", vec![dec!(1)], vec![dec!(1)]);
+        line.line_color = Some(text.to_string());
+        let result = render_svg(
+            &GraphData::Series(line),
+            &small_config(),
+            SvgText::ViewerFont,
+        );
+        assert!(
+            matches!(result, Err(ExportError::InvalidColor { ref color, .. }) if color == text),
+            "{text}: {result:?}"
+        );
+    }
 }
 
 fn surface(
@@ -750,5 +755,98 @@ fn test_outlines_keep_a_tiny_series_scale() -> Result<(), Box<dyn Error>> {
         "{labels:?}"
     );
     assert!(!labels.iter().any(|value| *value <= -0.5), "{labels:?}");
+    Ok(())
+}
+
+// Colours (#925).
+
+fn coloured(color: &str) -> GraphData {
+    let mut line = series(
+        "line",
+        vec![dec!(0), dec!(1), dec!(2)],
+        vec![dec!(0), dec!(2), dec!(1)],
+    );
+    line.line_color = Some(color.to_string());
+    GraphData::Series(line)
+}
+
+#[test]
+fn test_equivalent_colours_export_identically() -> Result<(), Box<dyn Error>> {
+    let dir = tempfile::tempdir()?;
+    let forms = [
+        "#FF0000",
+        "red",
+        "  Red ",
+        "#f00",
+        "rgb(255, 0, 0)",
+        "RGB(100% 0% 0%)",
+        "hsl(0 100% 50%)",
+    ];
+    let mut svgs = Vec::new();
+    let mut pngs = Vec::new();
+    for (index, form) in forms.into_iter().enumerate() {
+        svgs.push(render_svg(
+            &coloured(form),
+            &small_config(),
+            SvgText::ViewerFont,
+        )?);
+        let path = dir.path().join(format!("{index}.png"));
+        write_png(&coloured(form), &small_config(), &path)?;
+        pngs.push(std::fs::read(&path)?);
+    }
+    assert!(svgs.iter().all(|svg| *svg == svgs[0]));
+    assert!(svgs[0].contains("stroke=\"#FF0000\""));
+    assert!(pngs.iter().all(|png| *png == pngs[0]));
+    Ok(())
+}
+
+#[test]
+fn test_custom_scheme_names_and_explicit_colour_precedence() -> Result<(), Box<dyn Error>> {
+    let line = |name: &str, color: Option<&str>| Series2D {
+        line_color: color.map(str::to_string),
+        ..series(name, vec![dec!(0), dec!(1)], vec![dec!(0), dec!(1)])
+    };
+    let data = GraphData::MultiSeries(vec![
+        line("a", None),
+        line("b", None),
+        line("c", Some("black")),
+        line("d", None),
+    ]);
+    let config = GraphConfig {
+        color_scheme: optionstratlib_visualization::visualization::ColorScheme::Custom(vec![
+            "Tomato".to_string(),
+            "#1e90ff".to_string(),
+            "rgb(50, 205, 50)".to_string(),
+            "hsla(270, 50%, 40%, 1)".to_string(),
+        ]),
+        ..small_config()
+    };
+    let svg = render_svg(&data, &config, SvgText::ViewerFont)?;
+    // a and b take the scheme's first two entries; c keeps its own colour
+    // over the scheme's third; d takes the fourth.
+    for expected in ["#FF6347", "#1E90FF", "#000000", "#663399"] {
+        assert!(
+            svg.contains(&format!("stroke=\"{expected}\"")),
+            "{expected}"
+        );
+    }
+    assert!(!svg.contains("stroke=\"#32CD32\""));
+    Ok(())
+}
+
+#[test]
+fn test_alpha_reaches_the_svg() -> Result<(), Box<dyn Error>> {
+    let svg = render_svg(
+        &coloured("rgba(255, 0, 0, 0.5)"),
+        &small_config(),
+        SvgText::ViewerFont,
+    )?;
+    assert!(svg.contains("opacity=\"0.5\" stroke=\"#FF0000\""), "{svg}");
+    let clear = render_svg(
+        &coloured("transparent"),
+        &small_config(),
+        SvgText::ViewerFont,
+    )?;
+    assert!(!clear.contains("stroke=\"#000000\" stroke-width=\"2\""));
     Ok(())
 }

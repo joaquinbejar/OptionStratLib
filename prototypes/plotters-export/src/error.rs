@@ -115,9 +115,16 @@ pub enum ExportError {
     #[error("value {0} cannot be represented as f64")]
     NotRepresentable(Decimal),
 
-    /// A colour is not `#RGB` or `#RRGGBB`.
-    #[error("unsupported colour {0:?}: expected #RGB or #RRGGBB")]
-    InvalidColor(String),
+    /// A colour string is none of the CSS forms the native export accepts
+    /// (see the `color` module): a named colour, `#rgb`, `#rgba`,
+    /// `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()` or `hsl()`/`hsla()`.
+    #[error("unsupported colour {color:?}: {reason}")]
+    InvalidColor {
+        /// The string as given.
+        color: String,
+        /// Why it was rejected.
+        reason: &'static str,
+    },
 
     /// The embedded font could not be registered.
     #[error("embedded font rejected: {0}")]
