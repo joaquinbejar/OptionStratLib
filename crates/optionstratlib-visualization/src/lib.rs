@@ -208,8 +208,10 @@
 //! - `plotly` (off by default): Plotly rendering and the trace builders
 //!   (`visualization::make_scatter`, `visualization::make_surface`).
 //!   Resolves no image-export, WebDriver or async runtime package.
-//! - `static_export` (off by default, implies `plotly`): PNG and SVG export
-//!   through `plotly_static`, which needs a WebDriver at run time.
+//! - `static_export` (off by default, implies `plotly`): PNG and SVG export,
+//!   drawn natively with Plotters since 0.23: no browser, WebDriver, network
+//!   or installed font. SVG text is drawn as glyph outlines of the bundled
+//!   Open Sans (SIL OFL 1.1, `assets/OFL.txt`).
 
 /// Chart models, the `Graph` contract and its implementations.
 pub mod visualization;

@@ -13,7 +13,7 @@ license = "MIT"
 [dependencies]
 # Path plus version, as every OptionStratLib dependency is declared until the
 # crates are published (ADR-0001 D1).
-optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
-optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.22.0" }
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.23.0" }
+optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.23.0" }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"
