@@ -120,7 +120,7 @@ pub(crate) fn bundled_font() -> Result<&'static BundledFont, ExportError> {
         })
     })
     .as_ref()
-    .map_err(|reason| font_error(reason))
+    .map_err(font_error)
 }
 
 impl LineLayout {
