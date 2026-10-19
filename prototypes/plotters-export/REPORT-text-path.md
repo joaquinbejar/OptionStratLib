@@ -21,11 +21,12 @@ and let a backend wrapper measure and draw every label.
   artifacts. A test now fails if they ever differ.
 - **The PNG text gets better.** Glyphs keep their side bearings and
   sub-pixel positions. PNG text and the outlines SVG now agree on 85 of 86
-  labels, against 71 or 72 before.
+  labels, against 71 (Blink) or 70 (WebKit, librsvg) before.
 - **The outlines SVG keeps the same geometry.** It also drops the empty
   subpaths ab_glyph left behind, about 1 KB less per chart.
 - **Cost.** 8 more packages in the prototype's tree (113 instead of 105),
-  and +0.66 MB (+25 %) on the release binary. Export times did not change.
+  and +0.66 MB (+25 %) on the release binary. No export-time change beyond
+  the machine's noise was measured (see [Cost](#cost)).
 
 ## How it works
 
@@ -54,6 +55,15 @@ A wrapper backend therefore takes over both methods:
   - **PNG text** is filled from the outlines with `ab_glyph_rasterizer` (no
     font parsing; already in the tree), with Plotters' quarter-turn
     rotations.
+  - **Labels past the side of the canvas.** The rasterizer clips rows itself
+    but assumes every x lies within its width. Segments are therefore cut
+    where they cross a side edge, and the outer pieces are projected onto
+    that edge, which keeps the accumulated coverage of every visible pixel;
+    curves are flattened with the rasterizer's own subdivision first. The
+    rasterizer also gets a spare column for coverage at the right edge.
+    Labels inside the canvas skip all of this, so the PNG artifacts did not
+    change. A 46-character title at 640 px used to overflow the
+    rasterizer's index arithmetic before this; it was found in review.
   - **SVG text** still goes to plotters-svg as `<text>`, which needs no font
     data. The outline conversion (`src/outline.rs`) or the viewer draws it.
   - A character without a glyph in PNG or outlines is a typed
@@ -113,25 +123,42 @@ font-types, foldhash, stable_deref_trait, yoke and zerofrom, plus four
 proc-macro crates (bytemuck_derive, yoke-derive, zerofrom-derive,
 synstructure).
 
-**Binary.** The release `compare` binary grows from 2,649,728 to
-3,311,600 bytes (+661,872, +25 %). Turning off skrifa's default
-`autohint_shaping` feature does not change the size; it stays off because
-nothing uses it. The size is skrifa's outline code. The alternative below
-would avoid it.
+**Binary.** The release `compare` binary grows from 2,649,728 bytes at
+`cfa2ee6b` to 3,309,440 bytes (+659,712, +25 %). Turning off skrifa's
+default `autohint_shaping` feature does not change the size; it stays off
+because nothing uses it. The size is skrifa's outline code. The
+alternative below would avoid it.
 
-**Time.** Measured under the sandbox with network, process creation and
-font directories denied; 160 runs per binary, all succeeded. Results are in
-`results/timing-text-path-{base,head}.json`. The head binary is the code of
-this branch; the JSON's `git` field shows `547649db`, and only the skrifa
-feature flag changed after it.
+**Time.** All runs were under the sandbox with network, process creation
+and font directories denied, and all succeeded. The two binaries were
+built from `cfa2ee6b` (SHA-256 `03f86978…`) and from this branch at
+`0f98ec6b` (SHA-256 `10a7a3cf…`); the hashes are in
+`results/timing-text-path-interleaved.json`.
 
-- **In process.** Medians differ by at most 0.44 ms:
-  - PNG: 1.2 to 3.0 ms before, 1.3 to 3.0 ms after;
-  - outlines SVG: +0.01 to +0.08 ms;
-  - embedded-font SVG: unchanged.
-- **Cold, interleaved base and head runs (40 each).** Medians within
-  0.6 ms: PNG 18.9 and 19.3 ms; outlines SVG 17.4 ms both; embedded-font
-  SVG 15.4 and 16.0 ms.
+- **In process** (`results/timing-text-path-{base,head}.json`, 200
+  exports per case and format): medians differ by at most 0.21 ms per
+  export, either way.
+  - PNG: 2.0 to 2.9 ms before, 2.1 to 2.8 ms after.
+  - Outlines SVG and embedded-font SVG: within 0.12 ms.
+  - One earlier run showed the payoff PNG at 5.1 ms against 2.5 ms. A
+    direct rerun gave 2.95 and 3.09 ms, and the full rerun in the files
+    2.66 and 2.81 ms; warm timings on this machine are sensitive to
+    background load.
+- **Cold, separately** (same files, 240 runs per binary: 4 cases × 3
+  formats × 20). Medians per format, before and after:
+  - PNG 21.45 and 21.14 ms;
+  - embedded-font SVG 21.07 and 20.98 ms;
+  - outlines SVG 20.99 and 20.98 ms.
+- **Cold, interleaved** (`results/timing-text-path-interleaved.json`,
+  `measure.py --mode interleaved`). 40 rounds, alternating which binary
+  goes first, give 480 runs per binary. Medians per format, before and
+  after:
+  - PNG 21.41 and 21.42 ms;
+  - embedded-font SVG 21.42 and 21.50 ms;
+  - outlines SVG 21.48 and 21.36 ms.
+
+  The p90 of the head PNG runs is higher (31.7 against 26.2 ms), from a
+  few slow runs: tail noise, not a shifted median.
 
 ## Alternatives considered
 
@@ -170,4 +197,9 @@ python3 prototypes/plotters-export/compare_viewers.py /tmp/osl-text-path /tmp/os
 python3 -I prototypes/plotters-export/measure.py --native target/release/compare \
   --backends plotters --cases payoff,curves,surface,text --formats png,svg,svg-outlines \
   --cold 20 --warm 200 --sandbox --out /tmp/osl-text-path-timing --name timing-text-path
+# With a copy of the release binary built at cfa2ee6b as /tmp/compare-base:
+python3 -I prototypes/plotters-export/measure.py --mode interleaved \
+  --native target/release/compare --compare-native /tmp/compare-base \
+  --cases payoff,curves,surface,text --formats png,svg,svg-outlines \
+  --cold 40 --sandbox --out /tmp/osl-text-path-timing --name timing-text-path-interleaved
 ```
