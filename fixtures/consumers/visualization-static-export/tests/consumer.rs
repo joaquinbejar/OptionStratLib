@@ -64,7 +64,10 @@ fn test_png_and_svg_are_drawn_natively() -> Result<(), Box<dyn std::error::Error
 fn test_static_export_brings_the_interactive_api() -> Result<(), Box<dyn std::error::Error>> {
     // `to_plot`, HTML and the public Plotly helpers without naming `plotly`.
     let json = Probe.to_plot().to_json();
-    assert!(json.contains("probe"), "the series is in the figure: {json}");
+    assert!(
+        json.contains("probe"),
+        "the series is in the figure: {json}"
+    );
     let html = scratch("direct.html");
     Probe.write_html(&html)?;
     Probe.render(OutputType::Html(&html))?;
@@ -99,6 +102,9 @@ fn test_bad_data_is_a_typed_error_a_consumer_can_match() {
     };
     let path = scratch("lopsided.png");
     assert_eq!(mismatch(Lopsided.write_png(&path)), Some((2, 1)));
-    assert_eq!(mismatch(Lopsided.render(OutputType::Png(&path))), Some((2, 1)));
+    assert_eq!(
+        mismatch(Lopsided.render(OutputType::Png(&path))),
+        Some((2, 1))
+    );
     assert!(!path.exists());
 }
