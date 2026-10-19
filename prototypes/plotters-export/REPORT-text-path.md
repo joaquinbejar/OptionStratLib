@@ -138,7 +138,7 @@ built from `cfa2ee6b` (SHA-256 `03f86978…`) and from this branch at
 - **In process** (`results/timing-text-path-{base,head}.json`, 200
   exports per case and format): medians differ by at most 0.21 ms per
   export, either way.
-  - PNG: 2.0 to 2.9 ms before, 2.1 to 2.8 ms after.
+  - PNG: 1.3 to 2.9 ms before, 1.5 to 2.8 ms after.
   - Outlines SVG and embedded-font SVG: within 0.12 ms.
   - One earlier run showed the payoff PNG at 5.1 ms against 2.5 ms. A
     direct rerun gave 2.95 and 3.09 ms, and the full rerun in the files
