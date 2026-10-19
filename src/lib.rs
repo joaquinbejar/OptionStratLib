@@ -1822,3 +1822,12 @@ pub struct MigrationGuideDoctests;
 #[cfg(all(doctest, feature = "visualization"))]
 #[doc = include_str!("../docs/release/0.22/RELEASE-NOTES.md")]
 pub struct ReleaseNotesDoctests;
+
+/// Compiles and runs the Rust examples of the 0.23 release notes,
+/// `docs/release/0.23/RELEASE-NOTES.md`, as doctests (#938). Exists only
+/// under `cfg(doctest)`, with `static_export` on, which every example uses;
+/// `make check-release-notes` builds each one against exactly the manifest
+/// shown above it.
+#[cfg(all(doctest, feature = "static_export"))]
+#[doc = include_str!("../docs/release/0.23/RELEASE-NOTES.md")]
+pub struct ReleaseNotes023Doctests;

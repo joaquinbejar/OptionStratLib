@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and run every manifest example of the 0.22 release notes (#562).
+"""Build and run every manifest example of the release notes (#562).
 
 The notes show minimal `Cargo.toml` dependency sections, each followed by a
 Rust program. For every `toml` block this builds a standalone crate, outside
@@ -38,7 +38,9 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_NOTES = ROOT / "docs" / "release" / "0.22" / "RELEASE-NOTES.md"
+# The notes of the release being prepared (#938); an earlier release's
+# notes can still be checked by passing their path.
+DEFAULT_NOTES = ROOT / "docs" / "release" / "0.23" / "RELEASE-NOTES.md"
 COMPONENTS = (
     "core",
     "math",
