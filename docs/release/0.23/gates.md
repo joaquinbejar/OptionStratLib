@@ -117,10 +117,22 @@ Nothing here is hand-edited except the classification sections below the tables.
 
 The run above is of `e5084f33`: `main` at `45255be9` plus this branch's
 release notes, tooling changes, package fix and README update. The files
-changed after the run are this evidence (`gates.md`, these notes) and the
-CHANGELOG, which moves the `[Unreleased]` entries under `[0.23.0]`; no gate
-reads them. The crates are published from the merge of this branch, whose
-packaged sources are those of the gated commit.
+changed after the run are this evidence (`gates.md`, these notes), the
+CHANGELOG, which moves the `[Unreleased]` entries under `[0.23.0]`, and one
+sentence of the release notes (`3c4c2bbe`).
+
+- No gate reads the evidence or the CHANGELOG.
+- The release notes sentence is prose in "Dependencies and security": it
+  names `ttf-parser` instead of claiming that no font parser is resolved,
+  since `skrifa` reads fonts. No code block or program changed.
+- The `release-notes`, `package-archives` and `publish-dry-run` gates read the
+  notes. On `3c4c2bbe`, `make check-release-notes RELEASE=0.23.0` builds and
+  runs both manifest examples, and
+  `cargo test --doc --features static_export -p optionstratlib ReleaseNotes0`
+  passes both `ReleaseNotes023Doctests`.
+
+Apart from that sentence, the crates are published from the merge of this
+branch, whose packaged sources are those of the gated commit.
 
 ## Findings and fixes on the way to this run
 
