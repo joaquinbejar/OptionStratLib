@@ -18,6 +18,13 @@ those conditions and blocks the migration; it is not an optional follow-up.
 > rest of this report keeps its original measurements and provenance; the
 > only edits are this note, the cross-references and the corrected cause of
 > the loose PNG spacing below.
+>
+> **Update (condition 4).** On the owner's decision ttf-parser must not reach
+> a published crate. The prototype now reads the font with skrifa and builds
+> Plotters with no font feature, so neither ab_glyph nor ttf-parser is in the
+> tree and the RUSTSEC-2026-0192 waiver is gone; see
+> [REPORT-text-path.md](REPORT-text-path.md). The dependency and PNG-text
+> statements below describe the prototype as measured for #920.
 
 This is the decision report of the prototype; nothing in a published crate
 changed. Measured on 2026-10-18 at `e4b3159` (Rust code unchanged since
@@ -280,6 +287,8 @@ Only after this report is accepted, and as #920 lists:
 4. Re-evaluate the RUSTSEC-2026-0192 exception (added here for the
    unpublished prototype) for the published crate Plotters would enter, or
    choose a text path without `ttf-parser`.
+   *Resolved in the prototype: skrifa and a text backend, no ttf-parser
+   ([REPORT-text-path.md](REPORT-text-path.md)).*
 5. Native rendering tests in PR CI before retiring the browser workflow;
    keep every example `make smoke-examples SMOKE_EXPORT=1` covers.
 6. Recheck feature trees and consumer fixtures; remove the two exporter

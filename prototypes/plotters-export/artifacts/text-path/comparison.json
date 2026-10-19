@@ -1,0 +1,3317 @@
+{
+  "method": {
+    "margin_px": 3,
+    "ink_luminance_below": 160,
+    "edge_tolerance_px": 1,
+    "blur_px": 1.0,
+    "min_ncc": 0.9
+  },
+  "cases": {
+    "payoff": {
+      "labels": 19,
+      "modes": {
+        "embedded-font": {
+          "chrome-webkit": {
+            "passed": 3,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.8255,
+            "failures": [
+              {
+                "text": "−120",
+                "edge": 1,
+                "ncc": 0.8508,
+                "passed": false
+              },
+              {
+                "text": "−100",
+                "edge": 1,
+                "ncc": 0.8677,
+                "passed": false
+              },
+              {
+                "text": "−80",
+                "edge": 1,
+                "ncc": 0.8819,
+                "passed": false
+              },
+              {
+                "text": "−60",
+                "edge": 1,
+                "ncc": 0.8715,
+                "passed": false
+              },
+              {
+                "text": "−40",
+                "edge": 1,
+                "ncc": 0.8766,
+                "passed": false
+              },
+              {
+                "text": "−20",
+                "edge": 1,
+                "ncc": 0.844,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.885,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.8463,
+                "passed": false
+              },
+              {
+                "text": "5650",
+                "edge": 1,
+                "ncc": 0.8378,
+                "passed": false
+              },
+              {
+                "text": "5700",
+                "edge": 1,
+                "ncc": 0.8419,
+                "passed": false
+              },
+              {
+                "text": "5750",
+                "edge": 1,
+                "ncc": 0.8255,
+                "passed": false
+              },
+              {
+                "text": "5800",
+                "edge": 1,
+                "ncc": 0.8554,
+                "passed": false
+              },
+              {
+                "text": "5850",
+                "edge": 1,
+                "ncc": 0.8408,
+                "passed": false
+              },
+              {
+                "text": "5900",
+                "edge": 1,
+                "ncc": 0.852,
+                "passed": false
+              },
+              {
+                "text": "-52.66",
+                "edge": 1,
+                "ncc": 0.8512,
+                "passed": false
+              },
+              {
+                "text": "BE: 5808.21",
+                "edge": 1,
+                "ncc": 0.8448,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 13,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.4869,
+            "failures": [
+              {
+                "text": "BullCallSpread Strategy:   Underlying: SP500 @ $5820 Short Call European Option  Underlying: SP500 @ $5750 Long Call European Option",
+                "edge": 1,
+                "ncc": 0.4869,
+                "passed": false
+              },
+              {
+                "text": "Profit/Loss",
+                "edge": 1,
+                "ncc": 0.7002,
+                "passed": false
+              },
+              {
+                "text": "Underlying Price",
+                "edge": 1,
+                "ncc": 0.7206,
+                "passed": false
+              },
+              {
+                "text": "−120",
+                "edge": 1,
+                "ncc": 0.8869,
+                "passed": false
+              },
+              {
+                "text": "−20",
+                "edge": 1,
+                "ncc": 0.8921,
+                "passed": false
+              },
+              {
+                "text": "BE: 5808.21",
+                "edge": 0,
+                "ncc": 0.7829,
+                "passed": false
+              }
+            ]
+          },
+          "webkit-rsvg": {
+            "passed": 12,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.4927,
+            "failures": [
+              {
+                "text": "BullCallSpread Strategy:   Underlying: SP500 @ $5820 Short Call European Option  Underlying: SP500 @ $5750 Long Call European Option",
+                "edge": 1,
+                "ncc": 0.4927,
+                "passed": false
+              },
+              {
+                "text": "Profit/Loss",
+                "edge": 1,
+                "ncc": 0.7013,
+                "passed": false
+              },
+              {
+                "text": "Underlying Price",
+                "edge": 1,
+                "ncc": 0.7315,
+                "passed": false
+              },
+              {
+                "text": "−120",
+                "edge": 1,
+                "ncc": 0.8981,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.898,
+                "passed": false
+              },
+              {
+                "text": "-52.66",
+                "edge": 1,
+                "ncc": 0.8779,
+                "passed": false
+              },
+              {
+                "text": "BE: 5808.21",
+                "edge": 1,
+                "ncc": 0.7297,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "viewer-font": {
+          "chrome-webkit": {
+            "passed": 3,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.8437,
+            "failures": [
+              {
+                "text": "−120",
+                "edge": 1,
+                "ncc": 0.8609,
+                "passed": false
+              },
+              {
+                "text": "−100",
+                "edge": 1,
+                "ncc": 0.8684,
+                "passed": false
+              },
+              {
+                "text": "−80",
+                "edge": 1,
+                "ncc": 0.8875,
+                "passed": false
+              },
+              {
+                "text": "−60",
+                "edge": 1,
+                "ncc": 0.8872,
+                "passed": false
+              },
+              {
+                "text": "−40",
+                "edge": 1,
+                "ncc": 0.8803,
+                "passed": false
+              },
+              {
+                "text": "−20",
+                "edge": 1,
+                "ncc": 0.8618,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.892,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.8677,
+                "passed": false
+              },
+              {
+                "text": "5650",
+                "edge": 1,
+                "ncc": 0.8701,
+                "passed": false
+              },
+              {
+                "text": "5700",
+                "edge": 1,
+                "ncc": 0.8634,
+                "passed": false
+              },
+              {
+                "text": "5750",
+                "edge": 1,
+                "ncc": 0.8599,
+                "passed": false
+              },
+              {
+                "text": "5800",
+                "edge": 1,
+                "ncc": 0.876,
+                "passed": false
+              },
+              {
+                "text": "5850",
+                "edge": 1,
+                "ncc": 0.8722,
+                "passed": false
+              },
+              {
+                "text": "5900",
+                "edge": 1,
+                "ncc": 0.8745,
+                "passed": false
+              },
+              {
+                "text": "-52.66",
+                "edge": 1,
+                "ncc": 0.8604,
+                "passed": false
+              },
+              {
+                "text": "BE: 5808.21",
+                "edge": 1,
+                "ncc": 0.8437,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 19,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.9468,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 18,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.8991,
+            "failures": [
+              {
+                "text": "BE: 5808.21",
+                "edge": 1,
+                "ncc": 0.8991,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "outlines": {
+          "chrome-webkit": {
+            "passed": 19,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.9971,
+            "failures": []
+          },
+          "chrome-rsvg": {
+            "passed": 19,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.9964,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 19,
+            "labels": 19,
+            "worst_edge": 1,
+            "worst_ncc": 0.9993,
+            "failures": []
+          }
+        }
+      },
+      "versus_png": {
+        "chrome": {
+          "passed": 19,
+          "labels": 19,
+          "worst_edge": 1,
+          "worst_ncc": 0.9819,
+          "failures": []
+        },
+        "webkit": {
+          "passed": 19,
+          "labels": 19,
+          "worst_edge": 1,
+          "worst_ncc": 0.983,
+          "failures": []
+        },
+        "rsvg": {
+          "passed": 19,
+          "labels": 19,
+          "worst_edge": 1,
+          "worst_ncc": 0.9832,
+          "failures": []
+        }
+      },
+      "embedded_vs_outlines": {
+        "chrome": {
+          "passed": 0,
+          "labels": 19,
+          "worst_edge": 8,
+          "worst_ncc": 0.4057,
+          "failures": [
+            {
+              "text": "BullCallSpread Strategy:   Underlying: SP500 @ $5820 Short Call European Option  Underlying: SP500 @ $5750 Long Call European Option",
+              "edge": 3,
+              "ncc": 0.4057,
+              "passed": false
+            },
+            {
+              "text": "Profit/Loss",
+              "edge": 3,
+              "ncc": 0.4862,
+              "passed": false
+            },
+            {
+              "text": "Underlying Price",
+              "edge": 3,
+              "ncc": 0.7157,
+              "passed": false
+            },
+            {
+              "text": "−120",
+              "edge": 4,
+              "ncc": 0.5291,
+              "passed": false
+            },
+            {
+              "text": "−100",
+              "edge": 4,
+              "ncc": 0.5973,
+              "passed": false
+            },
+            {
+              "text": "−80",
+              "edge": 3,
+              "ncc": 0.7698,
+              "passed": false
+            },
+            {
+              "text": "−60",
+              "edge": 3,
+              "ncc": 0.7372,
+              "passed": false
+            },
+            {
+              "text": "−40",
+              "edge": 3,
+              "ncc": 0.7433,
+              "passed": false
+            },
+            {
+              "text": "−20",
+              "edge": 3,
+              "ncc": 0.6891,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.8322,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.7277,
+              "passed": false
+            },
+            {
+              "text": "5650",
+              "edge": 2,
+              "ncc": 0.7794,
+              "passed": false
+            },
+            {
+              "text": "5700",
+              "edge": 2,
+              "ncc": 0.7843,
+              "passed": false
+            },
+            {
+              "text": "5750",
+              "edge": 2,
+              "ncc": 0.774,
+              "passed": false
+            },
+            {
+              "text": "5800",
+              "edge": 2,
+              "ncc": 0.806,
+              "passed": false
+            },
+            {
+              "text": "5850",
+              "edge": 2,
+              "ncc": 0.7925,
+              "passed": false
+            },
+            {
+              "text": "5900",
+              "edge": 2,
+              "ncc": 0.8036,
+              "passed": false
+            },
+            {
+              "text": "-52.66",
+              "edge": 8,
+              "ncc": 0.6398,
+              "passed": false
+            },
+            {
+              "text": "BE: 5808.21",
+              "edge": 3,
+              "ncc": 0.4571,
+              "passed": false
+            }
+          ]
+        },
+        "webkit": {
+          "passed": 0,
+          "labels": 19,
+          "worst_edge": 8,
+          "worst_ncc": 0.3002,
+          "failures": [
+            {
+              "text": "BullCallSpread Strategy:   Underlying: SP500 @ $5820 Short Call European Option  Underlying: SP500 @ $5750 Long Call European Option",
+              "edge": 3,
+              "ncc": 0.4085,
+              "passed": false
+            },
+            {
+              "text": "Profit/Loss",
+              "edge": 3,
+              "ncc": 0.5572,
+              "passed": false
+            },
+            {
+              "text": "Underlying Price",
+              "edge": 3,
+              "ncc": 0.7135,
+              "passed": false
+            },
+            {
+              "text": "−120",
+              "edge": 4,
+              "ncc": 0.354,
+              "passed": false
+            },
+            {
+              "text": "−100",
+              "edge": 4,
+              "ncc": 0.4428,
+              "passed": false
+            },
+            {
+              "text": "−80",
+              "edge": 3,
+              "ncc": 0.5785,
+              "passed": false
+            },
+            {
+              "text": "−60",
+              "edge": 3,
+              "ncc": 0.545,
+              "passed": false
+            },
+            {
+              "text": "−40",
+              "edge": 3,
+              "ncc": 0.5307,
+              "passed": false
+            },
+            {
+              "text": "−20",
+              "edge": 3,
+              "ncc": 0.4735,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.6127,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.4838,
+              "passed": false
+            },
+            {
+              "text": "5650",
+              "edge": 2,
+              "ncc": 0.5305,
+              "passed": false
+            },
+            {
+              "text": "5700",
+              "edge": 2,
+              "ncc": 0.5194,
+              "passed": false
+            },
+            {
+              "text": "5750",
+              "edge": 2,
+              "ncc": 0.497,
+              "passed": false
+            },
+            {
+              "text": "5800",
+              "edge": 2,
+              "ncc": 0.5601,
+              "passed": false
+            },
+            {
+              "text": "5850",
+              "edge": 2,
+              "ncc": 0.537,
+              "passed": false
+            },
+            {
+              "text": "5900",
+              "edge": 2,
+              "ncc": 0.5594,
+              "passed": false
+            },
+            {
+              "text": "-52.66",
+              "edge": 8,
+              "ncc": 0.4352,
+              "passed": false
+            },
+            {
+              "text": "BE: 5808.21",
+              "edge": 3,
+              "ncc": 0.3002,
+              "passed": false
+            }
+          ]
+        },
+        "rsvg": {
+          "passed": 0,
+          "labels": 19,
+          "worst_edge": 8,
+          "worst_ncc": 0.3983,
+          "failures": [
+            {
+              "text": "BullCallSpread Strategy:   Underlying: SP500 @ $5820 Short Call European Option  Underlying: SP500 @ $5750 Long Call European Option",
+              "edge": 4,
+              "ncc": 0.3983,
+              "passed": false
+            },
+            {
+              "text": "Profit/Loss",
+              "edge": 2,
+              "ncc": 0.5757,
+              "passed": false
+            },
+            {
+              "text": "Underlying Price",
+              "edge": 3,
+              "ncc": 0.6217,
+              "passed": false
+            },
+            {
+              "text": "−120",
+              "edge": 3,
+              "ncc": 0.5246,
+              "passed": false
+            },
+            {
+              "text": "−100",
+              "edge": 3,
+              "ncc": 0.5672,
+              "passed": false
+            },
+            {
+              "text": "−80",
+              "edge": 2,
+              "ncc": 0.6972,
+              "passed": false
+            },
+            {
+              "text": "−60",
+              "edge": 2,
+              "ncc": 0.6922,
+              "passed": false
+            },
+            {
+              "text": "−40",
+              "edge": 2,
+              "ncc": 0.6837,
+              "passed": false
+            },
+            {
+              "text": "−20",
+              "edge": 2,
+              "ncc": 0.6291,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 1,
+              "ncc": 0.7726,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.6842,
+              "passed": false
+            },
+            {
+              "text": "5650",
+              "edge": 2,
+              "ncc": 0.7288,
+              "passed": false
+            },
+            {
+              "text": "5700",
+              "edge": 2,
+              "ncc": 0.6993,
+              "passed": false
+            },
+            {
+              "text": "5750",
+              "edge": 2,
+              "ncc": 0.6886,
+              "passed": false
+            },
+            {
+              "text": "5800",
+              "edge": 2,
+              "ncc": 0.7302,
+              "passed": false
+            },
+            {
+              "text": "5850",
+              "edge": 2,
+              "ncc": 0.7198,
+              "passed": false
+            },
+            {
+              "text": "5900",
+              "edge": 2,
+              "ncc": 0.7187,
+              "passed": false
+            },
+            {
+              "text": "-52.66",
+              "edge": 8,
+              "ncc": 0.6089,
+              "passed": false
+            },
+            {
+              "text": "BE: 5808.21",
+              "edge": 3,
+              "ncc": 0.4247,
+              "passed": false
+            }
+          ]
+        }
+      }
+    },
+    "curves": {
+      "labels": 22,
+      "modes": {
+        "embedded-font": {
+          "chrome-webkit": {
+            "passed": 3,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.8222,
+            "failures": [
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.885,
+                "passed": false
+              },
+              {
+                "text": "5",
+                "edge": 1,
+                "ncc": 0.8521,
+                "passed": false
+              },
+              {
+                "text": "10",
+                "edge": 1,
+                "ncc": 0.8784,
+                "passed": false
+              },
+              {
+                "text": "15",
+                "edge": 1,
+                "ncc": 0.8554,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.8463,
+                "passed": false
+              },
+              {
+                "text": "25",
+                "edge": 1,
+                "ncc": 0.8222,
+                "passed": false
+              },
+              {
+                "text": "30",
+                "edge": 1,
+                "ncc": 0.8633,
+                "passed": false
+              },
+              {
+                "text": "70",
+                "edge": 1,
+                "ncc": 0.8694,
+                "passed": false
+              },
+              {
+                "text": "80",
+                "edge": 1,
+                "ncc": 0.887,
+                "passed": false
+              },
+              {
+                "text": "90",
+                "edge": 1,
+                "ncc": 0.8807,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8827,
+                "passed": false
+              },
+              {
+                "text": "110",
+                "edge": 1,
+                "ncc": 0.8929,
+                "passed": false
+              },
+              {
+                "text": "120",
+                "edge": 1,
+                "ncc": 0.8672,
+                "passed": false
+              },
+              {
+                "text": "130",
+                "edge": 1,
+                "ncc": 0.8775,
+                "passed": false
+              },
+              {
+                "text": "σ = 10%",
+                "edge": 1,
+                "ncc": 0.8916,
+                "passed": false
+              },
+              {
+                "text": "σ = 20%",
+                "edge": 1,
+                "ncc": 0.8794,
+                "passed": false
+              },
+              {
+                "text": "σ = 30%",
+                "edge": 1,
+                "ncc": 0.8846,
+                "passed": false
+              },
+              {
+                "text": "σ = 40%",
+                "edge": 1,
+                "ncc": 0.8929,
+                "passed": false
+              },
+              {
+                "text": "Intrinsic value",
+                "edge": 1,
+                "ncc": 0.8776,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 17,
+            "labels": 22,
+            "worst_edge": 2,
+            "worst_ncc": 0.519,
+            "failures": [
+              {
+                "text": "Call value by implied volatility (K = 100, 30 days)",
+                "edge": 2,
+                "ncc": 0.519,
+                "passed": false
+              },
+              {
+                "text": "Call value",
+                "edge": 0,
+                "ncc": 0.8944,
+                "passed": false
+              },
+              {
+                "text": "Underlying price",
+                "edge": 2,
+                "ncc": 0.7217,
+                "passed": false
+              },
+              {
+                "text": "110",
+                "edge": 1,
+                "ncc": 0.8535,
+                "passed": false
+              },
+              {
+                "text": "Intrinsic value",
+                "edge": 1,
+                "ncc": 0.7681,
+                "passed": false
+              }
+            ]
+          },
+          "webkit-rsvg": {
+            "passed": 11,
+            "labels": 22,
+            "worst_edge": 2,
+            "worst_ncc": 0.5216,
+            "failures": [
+              {
+                "text": "Call value by implied volatility (K = 100, 30 days)",
+                "edge": 2,
+                "ncc": 0.5216,
+                "passed": false
+              },
+              {
+                "text": "Underlying price",
+                "edge": 2,
+                "ncc": 0.7308,
+                "passed": false
+              },
+              {
+                "text": "15",
+                "edge": 1,
+                "ncc": 0.8877,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.898,
+                "passed": false
+              },
+              {
+                "text": "25",
+                "edge": 1,
+                "ncc": 0.8659,
+                "passed": false
+              },
+              {
+                "text": "30",
+                "edge": 1,
+                "ncc": 0.8977,
+                "passed": false
+              },
+              {
+                "text": "110",
+                "edge": 1,
+                "ncc": 0.8979,
+                "passed": false
+              },
+              {
+                "text": "σ = 10%",
+                "edge": 1,
+                "ncc": 0.8969,
+                "passed": false
+              },
+              {
+                "text": "σ = 20%",
+                "edge": 1,
+                "ncc": 0.889,
+                "passed": false
+              },
+              {
+                "text": "σ = 30%",
+                "edge": 1,
+                "ncc": 0.8924,
+                "passed": false
+              },
+              {
+                "text": "Intrinsic value",
+                "edge": 1,
+                "ncc": 0.7508,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "viewer-font": {
+          "chrome-webkit": {
+            "passed": 3,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.7956,
+            "failures": [
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.892,
+                "passed": false
+              },
+              {
+                "text": "5",
+                "edge": 1,
+                "ncc": 0.8919,
+                "passed": false
+              },
+              {
+                "text": "10",
+                "edge": 1,
+                "ncc": 0.8835,
+                "passed": false
+              },
+              {
+                "text": "15",
+                "edge": 1,
+                "ncc": 0.881,
+                "passed": false
+              },
+              {
+                "text": "20",
+                "edge": 1,
+                "ncc": 0.8677,
+                "passed": false
+              },
+              {
+                "text": "25",
+                "edge": 1,
+                "ncc": 0.8612,
+                "passed": false
+              },
+              {
+                "text": "30",
+                "edge": 1,
+                "ncc": 0.8715,
+                "passed": false
+              },
+              {
+                "text": "70",
+                "edge": 1,
+                "ncc": 0.8876,
+                "passed": false
+              },
+              {
+                "text": "80",
+                "edge": 1,
+                "ncc": 0.8984,
+                "passed": false
+              },
+              {
+                "text": "90",
+                "edge": 1,
+                "ncc": 0.8955,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8757,
+                "passed": false
+              },
+              {
+                "text": "110",
+                "edge": 1,
+                "ncc": 0.7956,
+                "passed": false
+              },
+              {
+                "text": "120",
+                "edge": 1,
+                "ncc": 0.8688,
+                "passed": false
+              },
+              {
+                "text": "130",
+                "edge": 1,
+                "ncc": 0.8714,
+                "passed": false
+              },
+              {
+                "text": "σ = 10%",
+                "edge": 1,
+                "ncc": 0.8878,
+                "passed": false
+              },
+              {
+                "text": "σ = 20%",
+                "edge": 1,
+                "ncc": 0.8746,
+                "passed": false
+              },
+              {
+                "text": "σ = 30%",
+                "edge": 1,
+                "ncc": 0.8813,
+                "passed": false
+              },
+              {
+                "text": "σ = 40%",
+                "edge": 1,
+                "ncc": 0.8883,
+                "passed": false
+              },
+              {
+                "text": "Intrinsic value",
+                "edge": 1,
+                "ncc": 0.8922,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9471,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 20,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.8687,
+            "failures": [
+              {
+                "text": "25",
+                "edge": 1,
+                "ncc": 0.8957,
+                "passed": false
+              },
+              {
+                "text": "110",
+                "edge": 1,
+                "ncc": 0.8687,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "outlines": {
+          "chrome-webkit": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9959,
+            "failures": []
+          },
+          "chrome-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9958,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 0,
+            "worst_ncc": 0.9993,
+            "failures": []
+          }
+        }
+      },
+      "versus_png": {
+        "chrome": {
+          "passed": 22,
+          "labels": 22,
+          "worst_edge": 1,
+          "worst_ncc": 0.9961,
+          "failures": []
+        },
+        "webkit": {
+          "passed": 22,
+          "labels": 22,
+          "worst_edge": 1,
+          "worst_ncc": 0.9972,
+          "failures": []
+        },
+        "rsvg": {
+          "passed": 22,
+          "labels": 22,
+          "worst_edge": 1,
+          "worst_ncc": 0.9972,
+          "failures": []
+        }
+      },
+      "embedded_vs_outlines": {
+        "chrome": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.3955,
+          "failures": [
+            {
+              "text": "Call value by implied volatility (K = 100, 30 days)",
+              "edge": 4,
+              "ncc": 0.3955,
+              "passed": false
+            },
+            {
+              "text": "Call value",
+              "edge": 3,
+              "ncc": 0.4932,
+              "passed": false
+            },
+            {
+              "text": "Underlying price",
+              "edge": 3,
+              "ncc": 0.711,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.8322,
+              "passed": false
+            },
+            {
+              "text": "5",
+              "edge": 1,
+              "ncc": 0.8451,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 2,
+              "ncc": 0.683,
+              "passed": false
+            },
+            {
+              "text": "15",
+              "edge": 1,
+              "ncc": 0.6801,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.728,
+              "passed": false
+            },
+            {
+              "text": "25",
+              "edge": 2,
+              "ncc": 0.7258,
+              "passed": false
+            },
+            {
+              "text": "30",
+              "edge": 2,
+              "ncc": 0.7622,
+              "passed": false
+            },
+            {
+              "text": "70",
+              "edge": 2,
+              "ncc": 0.8918,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 1,
+              "ncc": 0.8802,
+              "passed": false
+            },
+            {
+              "text": "90",
+              "edge": 1,
+              "ncc": 0.8807,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.8004,
+              "passed": false
+            },
+            {
+              "text": "110",
+              "edge": 2,
+              "ncc": 0.8116,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 1,
+              "ncc": 0.7845,
+              "passed": false
+            },
+            {
+              "text": "130",
+              "edge": 1,
+              "ncc": 0.8028,
+              "passed": false
+            },
+            {
+              "text": "σ = 10%",
+              "edge": 3,
+              "ncc": 0.6648,
+              "passed": false
+            },
+            {
+              "text": "σ = 20%",
+              "edge": 3,
+              "ncc": 0.6693,
+              "passed": false
+            },
+            {
+              "text": "σ = 30%",
+              "edge": 3,
+              "ncc": 0.6942,
+              "passed": false
+            },
+            {
+              "text": "σ = 40%",
+              "edge": 3,
+              "ncc": 0.7066,
+              "passed": false
+            },
+            {
+              "text": "Intrinsic value",
+              "edge": 4,
+              "ncc": 0.6265,
+              "passed": false
+            }
+          ]
+        },
+        "webkit": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.3907,
+          "failures": [
+            {
+              "text": "Call value by implied volatility (K = 100, 30 days)",
+              "edge": 4,
+              "ncc": 0.3907,
+              "passed": false
+            },
+            {
+              "text": "Call value",
+              "edge": 3,
+              "ncc": 0.5793,
+              "passed": false
+            },
+            {
+              "text": "Underlying price",
+              "edge": 3,
+              "ncc": 0.7156,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.6127,
+              "passed": false
+            },
+            {
+              "text": "5",
+              "edge": 2,
+              "ncc": 0.6072,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 2,
+              "ncc": 0.4396,
+              "passed": false
+            },
+            {
+              "text": "15",
+              "edge": 2,
+              "ncc": 0.419,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.4838,
+              "passed": false
+            },
+            {
+              "text": "25",
+              "edge": 2,
+              "ncc": 0.4577,
+              "passed": false
+            },
+            {
+              "text": "30",
+              "edge": 2,
+              "ncc": 0.5346,
+              "passed": false
+            },
+            {
+              "text": "70",
+              "edge": 3,
+              "ncc": 0.6553,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 2,
+              "ncc": 0.661,
+              "passed": false
+            },
+            {
+              "text": "90",
+              "edge": 2,
+              "ncc": 0.6556,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.5864,
+              "passed": false
+            },
+            {
+              "text": "110",
+              "edge": 2,
+              "ncc": 0.6069,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 2,
+              "ncc": 0.5499,
+              "passed": false
+            },
+            {
+              "text": "130",
+              "edge": 2,
+              "ncc": 0.5936,
+              "passed": false
+            },
+            {
+              "text": "σ = 10%",
+              "edge": 3,
+              "ncc": 0.5446,
+              "passed": false
+            },
+            {
+              "text": "σ = 20%",
+              "edge": 3,
+              "ncc": 0.527,
+              "passed": false
+            },
+            {
+              "text": "σ = 30%",
+              "edge": 3,
+              "ncc": 0.5649,
+              "passed": false
+            },
+            {
+              "text": "σ = 40%",
+              "edge": 3,
+              "ncc": 0.5605,
+              "passed": false
+            },
+            {
+              "text": "Intrinsic value",
+              "edge": 4,
+              "ncc": 0.4439,
+              "passed": false
+            }
+          ]
+        },
+        "rsvg": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.409,
+          "failures": [
+            {
+              "text": "Call value by implied volatility (K = 100, 30 days)",
+              "edge": 4,
+              "ncc": 0.409,
+              "passed": false
+            },
+            {
+              "text": "Call value",
+              "edge": 3,
+              "ncc": 0.591,
+              "passed": false
+            },
+            {
+              "text": "Underlying price",
+              "edge": 2,
+              "ncc": 0.6663,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 1,
+              "ncc": 0.7726,
+              "passed": false
+            },
+            {
+              "text": "5",
+              "edge": 1,
+              "ncc": 0.7918,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 1,
+              "ncc": 0.6666,
+              "passed": false
+            },
+            {
+              "text": "15",
+              "edge": 1,
+              "ncc": 0.675,
+              "passed": false
+            },
+            {
+              "text": "20",
+              "edge": 2,
+              "ncc": 0.6842,
+              "passed": false
+            },
+            {
+              "text": "25",
+              "edge": 2,
+              "ncc": 0.6911,
+              "passed": false
+            },
+            {
+              "text": "30",
+              "edge": 2,
+              "ncc": 0.7263,
+              "passed": false
+            },
+            {
+              "text": "70",
+              "edge": 2,
+              "ncc": 0.7796,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 1,
+              "ncc": 0.7861,
+              "passed": false
+            },
+            {
+              "text": "90",
+              "edge": 1,
+              "ncc": 0.7662,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 1,
+              "ncc": 0.7421,
+              "passed": false
+            },
+            {
+              "text": "110",
+              "edge": 1,
+              "ncc": 0.755,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 1,
+              "ncc": 0.7242,
+              "passed": false
+            },
+            {
+              "text": "130",
+              "edge": 1,
+              "ncc": 0.7463,
+              "passed": false
+            },
+            {
+              "text": "σ = 10%",
+              "edge": 3,
+              "ncc": 0.5862,
+              "passed": false
+            },
+            {
+              "text": "σ = 20%",
+              "edge": 3,
+              "ncc": 0.6214,
+              "passed": false
+            },
+            {
+              "text": "σ = 30%",
+              "edge": 3,
+              "ncc": 0.6407,
+              "passed": false
+            },
+            {
+              "text": "σ = 40%",
+              "edge": 3,
+              "ncc": 0.6328,
+              "passed": false
+            },
+            {
+              "text": "Intrinsic value",
+              "edge": 3,
+              "ncc": 0.7322,
+              "passed": false
+            }
+          ]
+        }
+      }
+    },
+    "surface": {
+      "labels": 22,
+      "modes": {
+        "embedded-font": {
+          "chrome-webkit": {
+            "passed": 5,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.8254,
+            "failures": [
+              {
+                "text": "80",
+                "edge": 1,
+                "ncc": 0.8814,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8786,
+                "passed": false
+              },
+              {
+                "text": "120",
+                "edge": 1,
+                "ncc": 0.8638,
+                "passed": false
+              },
+              {
+                "text": "0.2",
+                "edge": 1,
+                "ncc": 0.8462,
+                "passed": false
+              },
+              {
+                "text": "0.25",
+                "edge": 1,
+                "ncc": 0.8254,
+                "passed": false
+              },
+              {
+                "text": "0.3",
+                "edge": 1,
+                "ncc": 0.8582,
+                "passed": false
+              },
+              {
+                "text": "0.35",
+                "edge": 1,
+                "ncc": 0.8377,
+                "passed": false
+              },
+              {
+                "text": "0.4",
+                "edge": 1,
+                "ncc": 0.8871,
+                "passed": false
+              },
+              {
+                "text": "0.45",
+                "edge": 1,
+                "ncc": 0.86,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8775,
+                "passed": false
+              },
+              {
+                "text": "200",
+                "edge": 1,
+                "ncc": 0.8422,
+                "passed": false
+              },
+              {
+                "text": "300",
+                "edge": 1,
+                "ncc": 0.8548,
+                "passed": false
+              },
+              {
+                "text": "0.17",
+                "edge": 1,
+                "ncc": 0.8801,
+                "passed": false
+              },
+              {
+                "text": "0.24",
+                "edge": 1,
+                "ncc": 0.8641,
+                "passed": false
+              },
+              {
+                "text": "0.31",
+                "edge": 1,
+                "ncc": 0.8627,
+                "passed": false
+              },
+              {
+                "text": "0.39",
+                "edge": 1,
+                "ncc": 0.865,
+                "passed": false
+              },
+              {
+                "text": "0.46",
+                "edge": 1,
+                "ncc": 0.8839,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 17,
+            "labels": 22,
+            "worst_edge": 4,
+            "worst_ncc": 0.6401,
+            "failures": [
+              {
+                "text": "Implied volatility surface",
+                "edge": 2,
+                "ncc": 0.6401,
+                "passed": false
+              },
+              {
+                "text": "Strike",
+                "edge": 1,
+                "ncc": 0.8556,
+                "passed": false
+              },
+              {
+                "text": "Days to expiry",
+                "edge": 2,
+                "ncc": 0.7675,
+                "passed": false
+              },
+              {
+                "text": "Implied volatility",
+                "edge": 4,
+                "ncc": 0.8212,
+                "passed": false
+              },
+              {
+                "text": "Implied volatility",
+                "edge": 3,
+                "ncc": 0.7959,
+                "passed": false
+              }
+            ]
+          },
+          "webkit-rsvg": {
+            "passed": 11,
+            "labels": 22,
+            "worst_edge": 4,
+            "worst_ncc": 0.6374,
+            "failures": [
+              {
+                "text": "Implied volatility surface",
+                "edge": 2,
+                "ncc": 0.6374,
+                "passed": false
+              },
+              {
+                "text": "0.2",
+                "edge": 1,
+                "ncc": 0.8934,
+                "passed": false
+              },
+              {
+                "text": "0.25",
+                "edge": 1,
+                "ncc": 0.8641,
+                "passed": false
+              },
+              {
+                "text": "0.3",
+                "edge": 1,
+                "ncc": 0.8975,
+                "passed": false
+              },
+              {
+                "text": "0.35",
+                "edge": 1,
+                "ncc": 0.8593,
+                "passed": false
+              },
+              {
+                "text": "0.45",
+                "edge": 1,
+                "ncc": 0.8921,
+                "passed": false
+              },
+              {
+                "text": "Strike",
+                "edge": 1,
+                "ncc": 0.8496,
+                "passed": false
+              },
+              {
+                "text": "Days to expiry",
+                "edge": 2,
+                "ncc": 0.769,
+                "passed": false
+              },
+              {
+                "text": "Implied volatility",
+                "edge": 4,
+                "ncc": 0.816,
+                "passed": false
+              },
+              {
+                "text": "0.24",
+                "edge": 1,
+                "ncc": 0.8993,
+                "passed": false
+              },
+              {
+                "text": "Implied volatility",
+                "edge": 3,
+                "ncc": 0.7981,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "viewer-font": {
+          "chrome-webkit": {
+            "passed": 6,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.848,
+            "failures": [
+              {
+                "text": "80",
+                "edge": 1,
+                "ncc": 0.8937,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8705,
+                "passed": false
+              },
+              {
+                "text": "120",
+                "edge": 1,
+                "ncc": 0.864,
+                "passed": false
+              },
+              {
+                "text": "0.2",
+                "edge": 1,
+                "ncc": 0.8616,
+                "passed": false
+              },
+              {
+                "text": "0.25",
+                "edge": 1,
+                "ncc": 0.848,
+                "passed": false
+              },
+              {
+                "text": "0.3",
+                "edge": 1,
+                "ncc": 0.8717,
+                "passed": false
+              },
+              {
+                "text": "0.35",
+                "edge": 1,
+                "ncc": 0.8528,
+                "passed": false
+              },
+              {
+                "text": "0.4",
+                "edge": 1,
+                "ncc": 0.8979,
+                "passed": false
+              },
+              {
+                "text": "0.45",
+                "edge": 1,
+                "ncc": 0.8719,
+                "passed": false
+              },
+              {
+                "text": "100",
+                "edge": 1,
+                "ncc": 0.8674,
+                "passed": false
+              },
+              {
+                "text": "200",
+                "edge": 1,
+                "ncc": 0.848,
+                "passed": false
+              },
+              {
+                "text": "300",
+                "edge": 1,
+                "ncc": 0.8578,
+                "passed": false
+              },
+              {
+                "text": "0.17",
+                "edge": 1,
+                "ncc": 0.897,
+                "passed": false
+              },
+              {
+                "text": "0.24",
+                "edge": 1,
+                "ncc": 0.8824,
+                "passed": false
+              },
+              {
+                "text": "0.31",
+                "edge": 1,
+                "ncc": 0.8847,
+                "passed": false
+              },
+              {
+                "text": "0.39",
+                "edge": 1,
+                "ncc": 0.8899,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9758,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 18,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.89,
+            "failures": [
+              {
+                "text": "0.2",
+                "edge": 1,
+                "ncc": 0.892,
+                "passed": false
+              },
+              {
+                "text": "0.25",
+                "edge": 1,
+                "ncc": 0.89,
+                "passed": false
+              },
+              {
+                "text": "0.3",
+                "edge": 1,
+                "ncc": 0.8947,
+                "passed": false
+              },
+              {
+                "text": "0.35",
+                "edge": 1,
+                "ncc": 0.8944,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "outlines": {
+          "chrome-webkit": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9963,
+            "failures": []
+          },
+          "chrome-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9966,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 22,
+            "labels": 22,
+            "worst_edge": 1,
+            "worst_ncc": 0.9987,
+            "failures": []
+          }
+        }
+      },
+      "versus_png": {
+        "chrome": {
+          "passed": 21,
+          "labels": 22,
+          "worst_edge": 3,
+          "worst_ncc": 0.9592,
+          "failures": [
+            {
+              "text": "Implied volatility",
+              "edge": 3,
+              "ncc": 0.9976,
+              "passed": false
+            }
+          ]
+        },
+        "webkit": {
+          "passed": 21,
+          "labels": 22,
+          "worst_edge": 3,
+          "worst_ncc": 0.9573,
+          "failures": [
+            {
+              "text": "Implied volatility",
+              "edge": 3,
+              "ncc": 0.9989,
+              "passed": false
+            }
+          ]
+        },
+        "rsvg": {
+          "passed": 21,
+          "labels": 22,
+          "worst_edge": 3,
+          "worst_ncc": 0.9631,
+          "failures": [
+            {
+              "text": "Implied volatility",
+              "edge": 3,
+              "ncc": 0.9991,
+              "passed": false
+            }
+          ]
+        }
+      },
+      "embedded_vs_outlines": {
+        "chrome": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.4747,
+          "failures": [
+            {
+              "text": "Implied volatility surface",
+              "edge": 4,
+              "ncc": 0.4747,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 1,
+              "ncc": 0.8731,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.7941,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 1,
+              "ncc": 0.7789,
+              "passed": false
+            },
+            {
+              "text": "0.2",
+              "edge": 2,
+              "ncc": 0.6655,
+              "passed": false
+            },
+            {
+              "text": "0.25",
+              "edge": 3,
+              "ncc": 0.5264,
+              "passed": false
+            },
+            {
+              "text": "0.3",
+              "edge": 2,
+              "ncc": 0.6785,
+              "passed": false
+            },
+            {
+              "text": "0.35",
+              "edge": 3,
+              "ncc": 0.5341,
+              "passed": false
+            },
+            {
+              "text": "0.4",
+              "edge": 2,
+              "ncc": 0.7452,
+              "passed": false
+            },
+            {
+              "text": "0.45",
+              "edge": 3,
+              "ncc": 0.5828,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.7929,
+              "passed": false
+            },
+            {
+              "text": "200",
+              "edge": 1,
+              "ncc": 0.7944,
+              "passed": false
+            },
+            {
+              "text": "300",
+              "edge": 1,
+              "ncc": 0.8131,
+              "passed": false
+            },
+            {
+              "text": "Strike",
+              "edge": 3,
+              "ncc": 0.6085,
+              "passed": false
+            },
+            {
+              "text": "Days to expiry",
+              "edge": 4,
+              "ncc": 0.5013,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 4,
+              "ncc": 0.6073,
+              "passed": false
+            },
+            {
+              "text": "0.17",
+              "edge": 2,
+              "ncc": 0.6298,
+              "passed": false
+            },
+            {
+              "text": "0.24",
+              "edge": 3,
+              "ncc": 0.6453,
+              "passed": false
+            },
+            {
+              "text": "0.31",
+              "edge": 2,
+              "ncc": 0.6422,
+              "passed": false
+            },
+            {
+              "text": "0.39",
+              "edge": 2,
+              "ncc": 0.6782,
+              "passed": false
+            },
+            {
+              "text": "0.46",
+              "edge": 2,
+              "ncc": 0.7444,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 4,
+              "ncc": 0.7093,
+              "passed": false
+            }
+          ]
+        },
+        "webkit": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.2874,
+          "failures": [
+            {
+              "text": "Implied volatility surface",
+              "edge": 4,
+              "ncc": 0.4817,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 2,
+              "ncc": 0.6477,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.5824,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 2,
+              "ncc": 0.5492,
+              "passed": false
+            },
+            {
+              "text": "0.2",
+              "edge": 2,
+              "ncc": 0.4021,
+              "passed": false
+            },
+            {
+              "text": "0.25",
+              "edge": 3,
+              "ncc": 0.2874,
+              "passed": false
+            },
+            {
+              "text": "0.3",
+              "edge": 2,
+              "ncc": 0.4425,
+              "passed": false
+            },
+            {
+              "text": "0.35",
+              "edge": 3,
+              "ncc": 0.3244,
+              "passed": false
+            },
+            {
+              "text": "0.4",
+              "edge": 2,
+              "ncc": 0.5328,
+              "passed": false
+            },
+            {
+              "text": "0.45",
+              "edge": 3,
+              "ncc": 0.3871,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 2,
+              "ncc": 0.5869,
+              "passed": false
+            },
+            {
+              "text": "200",
+              "edge": 2,
+              "ncc": 0.5552,
+              "passed": false
+            },
+            {
+              "text": "300",
+              "edge": 2,
+              "ncc": 0.5886,
+              "passed": false
+            },
+            {
+              "text": "Strike",
+              "edge": 3,
+              "ncc": 0.6039,
+              "passed": false
+            },
+            {
+              "text": "Days to expiry",
+              "edge": 4,
+              "ncc": 0.5157,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 4,
+              "ncc": 0.6063,
+              "passed": false
+            },
+            {
+              "text": "0.17",
+              "edge": 2,
+              "ncc": 0.485,
+              "passed": false
+            },
+            {
+              "text": "0.24",
+              "edge": 2,
+              "ncc": 0.4672,
+              "passed": false
+            },
+            {
+              "text": "0.31",
+              "edge": 2,
+              "ncc": 0.5016,
+              "passed": false
+            },
+            {
+              "text": "0.39",
+              "edge": 2,
+              "ncc": 0.5417,
+              "passed": false
+            },
+            {
+              "text": "0.46",
+              "edge": 2,
+              "ncc": 0.5708,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 4,
+              "ncc": 0.7117,
+              "passed": false
+            }
+          ]
+        },
+        "rsvg": {
+          "passed": 0,
+          "labels": 22,
+          "worst_edge": 4,
+          "worst_ncc": 0.5317,
+          "failures": [
+            {
+              "text": "Implied volatility surface",
+              "edge": 4,
+              "ncc": 0.5638,
+              "passed": false
+            },
+            {
+              "text": "80",
+              "edge": 1,
+              "ncc": 0.7765,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 1,
+              "ncc": 0.7394,
+              "passed": false
+            },
+            {
+              "text": "120",
+              "edge": 1,
+              "ncc": 0.7211,
+              "passed": false
+            },
+            {
+              "text": "0.2",
+              "edge": 2,
+              "ncc": 0.5969,
+              "passed": false
+            },
+            {
+              "text": "0.25",
+              "edge": 3,
+              "ncc": 0.5317,
+              "passed": false
+            },
+            {
+              "text": "0.3",
+              "edge": 2,
+              "ncc": 0.6241,
+              "passed": false
+            },
+            {
+              "text": "0.35",
+              "edge": 3,
+              "ncc": 0.5629,
+              "passed": false
+            },
+            {
+              "text": "0.4",
+              "edge": 2,
+              "ncc": 0.6851,
+              "passed": false
+            },
+            {
+              "text": "0.45",
+              "edge": 3,
+              "ncc": 0.5954,
+              "passed": false
+            },
+            {
+              "text": "100",
+              "edge": 1,
+              "ncc": 0.7403,
+              "passed": false
+            },
+            {
+              "text": "200",
+              "edge": 1,
+              "ncc": 0.7118,
+              "passed": false
+            },
+            {
+              "text": "300",
+              "edge": 1,
+              "ncc": 0.7322,
+              "passed": false
+            },
+            {
+              "text": "Strike",
+              "edge": 2,
+              "ncc": 0.7241,
+              "passed": false
+            },
+            {
+              "text": "Days to expiry",
+              "edge": 2,
+              "ncc": 0.6117,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 1,
+              "ncc": 0.7576,
+              "passed": false
+            },
+            {
+              "text": "0.17",
+              "edge": 2,
+              "ncc": 0.6536,
+              "passed": false
+            },
+            {
+              "text": "0.24",
+              "edge": 2,
+              "ncc": 0.7069,
+              "passed": false
+            },
+            {
+              "text": "0.31",
+              "edge": 2,
+              "ncc": 0.6506,
+              "passed": false
+            },
+            {
+              "text": "0.39",
+              "edge": 2,
+              "ncc": 0.7005,
+              "passed": false
+            },
+            {
+              "text": "0.46",
+              "edge": 2,
+              "ncc": 0.7272,
+              "passed": false
+            },
+            {
+              "text": "Implied volatility",
+              "edge": 2,
+              "ncc": 0.7967,
+              "passed": false
+            }
+          ]
+        }
+      }
+    },
+    "text": {
+      "labels": 23,
+      "modes": {
+        "embedded-font": {
+          "chrome-webkit": {
+            "passed": 10,
+            "labels": 23,
+            "worst_edge": 2,
+            "worst_ncc": 0.853,
+            "failures": [
+              {
+                "text": "−1.5e-6",
+                "edge": 1,
+                "ncc": 0.8618,
+                "passed": false
+              },
+              {
+                "text": "−1e-6",
+                "edge": 1,
+                "ncc": 0.8741,
+                "passed": false
+              },
+              {
+                "text": "−5e-7",
+                "edge": 1,
+                "ncc": 0.853,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.885,
+                "passed": false
+              },
+              {
+                "text": "5e-7",
+                "edge": 1,
+                "ncc": 0.8594,
+                "passed": false
+              },
+              {
+                "text": "1e-6",
+                "edge": 1,
+                "ncc": 0.891,
+                "passed": false
+              },
+              {
+                "text": "1.5e-6",
+                "edge": 1,
+                "ncc": 0.8655,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.8903,
+                "passed": false
+              },
+              {
+                "text": "2",
+                "edge": 1,
+                "ncc": 0.859,
+                "passed": false
+              },
+              {
+                "text": "10",
+                "edge": 1,
+                "ncc": 0.8851,
+                "passed": false
+              },
+              {
+                "text": "  AV To fi  ",
+                "edge": 1,
+                "ncc": 0.8969,
+                "passed": false
+              },
+              {
+                "text": "€ £ ¥ $ 1.5e−7",
+                "edge": 1,
+                "ncc": 0.8847,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 2,
+                "ncc": 0.9062,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 13,
+            "labels": 23,
+            "worst_edge": 2,
+            "worst_ncc": 0.5678,
+            "failures": [
+              {
+                "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+                "edge": 1,
+                "ncc": 0.5678,
+                "passed": false
+              },
+              {
+                "text": "Δ per $1 (Γ = 1.5e−7)",
+                "edge": 2,
+                "ncc": 0.872,
+                "passed": false
+              },
+              {
+                "text": "Strike − spot ($)",
+                "edge": 1,
+                "ncc": 0.8217,
+                "passed": false
+              },
+              {
+                "text": "−1e-6",
+                "edge": 1,
+                "ncc": 0.8852,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 0,
+                "ncc": 0.8722,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 0,
+                "ncc": 0.8464,
+                "passed": false
+              },
+              {
+                "text": "  AV To fi  ",
+                "edge": 2,
+                "ncc": 0.9004,
+                "passed": false
+              },
+              {
+                "text": "café · ñandú · Ωμέγα αβγ",
+                "edge": 1,
+                "ncc": 0.8723,
+                "passed": false
+              },
+              {
+                "text": "€ £ ¥ $ 1.5e−7",
+                "edge": 1,
+                "ncc": 0.5879,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 1,
+                "ncc": 0.8899,
+                "passed": false
+              }
+            ]
+          },
+          "webkit-rsvg": {
+            "passed": 16,
+            "labels": 23,
+            "worst_edge": 2,
+            "worst_ncc": 0.4914,
+            "failures": [
+              {
+                "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+                "edge": 1,
+                "ncc": 0.5757,
+                "passed": false
+              },
+              {
+                "text": "Δ per $1 (Γ = 1.5e−7)",
+                "edge": 2,
+                "ncc": 0.8666,
+                "passed": false
+              },
+              {
+                "text": "Strike − spot ($)",
+                "edge": 1,
+                "ncc": 0.8221,
+                "passed": false
+              },
+              {
+                "text": "−1e-6",
+                "edge": 1,
+                "ncc": 0.8828,
+                "passed": false
+              },
+              {
+                "text": "  AV To fi  ",
+                "edge": 2,
+                "ncc": 0.8688,
+                "passed": false
+              },
+              {
+                "text": "café · ñandú · Ωμέγα αβγ",
+                "edge": 2,
+                "ncc": 0.8507,
+                "passed": false
+              },
+              {
+                "text": "€ £ ¥ $ 1.5e−7",
+                "edge": 1,
+                "ncc": 0.4914,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "viewer-font": {
+          "chrome-webkit": {
+            "passed": 8,
+            "labels": 23,
+            "worst_edge": 1,
+            "worst_ncc": 0.6279,
+            "failures": [
+              {
+                "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+                "edge": 0,
+                "ncc": 0.6279,
+                "passed": false
+              },
+              {
+                "text": "−1.5e-6",
+                "edge": 1,
+                "ncc": 0.879,
+                "passed": false
+              },
+              {
+                "text": "−1e-6",
+                "edge": 1,
+                "ncc": 0.8586,
+                "passed": false
+              },
+              {
+                "text": "−5e-7",
+                "edge": 1,
+                "ncc": 0.8743,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.892,
+                "passed": false
+              },
+              {
+                "text": "5e-7",
+                "edge": 1,
+                "ncc": 0.8811,
+                "passed": false
+              },
+              {
+                "text": "1e-6",
+                "edge": 1,
+                "ncc": 0.8904,
+                "passed": false
+              },
+              {
+                "text": "1.5e-6",
+                "edge": 1,
+                "ncc": 0.8843,
+                "passed": false
+              },
+              {
+                "text": "0",
+                "edge": 1,
+                "ncc": 0.8726,
+                "passed": false
+              },
+              {
+                "text": "2",
+                "edge": 1,
+                "ncc": 0.868,
+                "passed": false
+              },
+              {
+                "text": "10",
+                "edge": 1,
+                "ncc": 0.8972,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 1,
+                "ncc": 0.8978,
+                "passed": false
+              },
+              {
+                "text": "€ £ ¥ $ 1.5e−7",
+                "edge": 1,
+                "ncc": 0.8973,
+                "passed": false
+              },
+              {
+                "text": "Aa",
+                "edge": 1,
+                "ncc": 0.891,
+                "passed": false
+              },
+              {
+                "text": "& < > \" ' $",
+                "edge": 1,
+                "ncc": 0.8987,
+                "passed": false
+              }
+            ]
+          },
+          "chrome-rsvg": {
+            "passed": 22,
+            "labels": 23,
+            "worst_edge": 2,
+            "worst_ncc": 0.9487,
+            "failures": [
+              {
+                "text": "Δ per $1 (Γ = 1.5e−7)",
+                "edge": 2,
+                "ncc": 0.9843,
+                "passed": false
+              }
+            ]
+          },
+          "webkit-rsvg": {
+            "passed": 20,
+            "labels": 23,
+            "worst_edge": 2,
+            "worst_ncc": 0.6105,
+            "failures": [
+              {
+                "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+                "edge": 0,
+                "ncc": 0.6105,
+                "passed": false
+              },
+              {
+                "text": "Δ per $1 (Γ = 1.5e−7)",
+                "edge": 2,
+                "ncc": 0.9979,
+                "passed": false
+              },
+              {
+                "text": "−1e-6",
+                "edge": 1,
+                "ncc": 0.8964,
+                "passed": false
+              }
+            ]
+          }
+        },
+        "outlines": {
+          "chrome-webkit": {
+            "passed": 23,
+            "labels": 23,
+            "worst_edge": 1,
+            "worst_ncc": 0.9961,
+            "failures": []
+          },
+          "chrome-rsvg": {
+            "passed": 23,
+            "labels": 23,
+            "worst_edge": 1,
+            "worst_ncc": 0.9952,
+            "failures": []
+          },
+          "webkit-rsvg": {
+            "passed": 23,
+            "labels": 23,
+            "worst_edge": 1,
+            "worst_ncc": 0.9993,
+            "failures": []
+          }
+        }
+      },
+      "versus_png": {
+        "chrome": {
+          "passed": 23,
+          "labels": 23,
+          "worst_edge": 1,
+          "worst_ncc": 0.9865,
+          "failures": []
+        },
+        "webkit": {
+          "passed": 23,
+          "labels": 23,
+          "worst_edge": 1,
+          "worst_ncc": 0.9876,
+          "failures": []
+        },
+        "rsvg": {
+          "passed": 23,
+          "labels": 23,
+          "worst_edge": 1,
+          "worst_ncc": 0.9877,
+          "failures": []
+        }
+      },
+      "embedded_vs_outlines": {
+        "chrome": {
+          "passed": 1,
+          "labels": 23,
+          "worst_edge": 4,
+          "worst_ncc": 0.2292,
+          "failures": [
+            {
+              "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+              "edge": 4,
+              "ncc": 0.2292,
+              "passed": false
+            },
+            {
+              "text": "Δ per $1 (Γ = 1.5e−7)",
+              "edge": 4,
+              "ncc": 0.4108,
+              "passed": false
+            },
+            {
+              "text": "Strike − spot ($)",
+              "edge": 4,
+              "ncc": 0.6463,
+              "passed": false
+            },
+            {
+              "text": "−1.5e-6",
+              "edge": 4,
+              "ncc": 0.5809,
+              "passed": false
+            },
+            {
+              "text": "−1e-6",
+              "edge": 4,
+              "ncc": 0.5472,
+              "passed": false
+            },
+            {
+              "text": "−5e-7",
+              "edge": 4,
+              "ncc": 0.7368,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.8322,
+              "passed": false
+            },
+            {
+              "text": "5e-7",
+              "edge": 2,
+              "ncc": 0.7405,
+              "passed": false
+            },
+            {
+              "text": "1e-6",
+              "edge": 2,
+              "ncc": 0.6835,
+              "passed": false
+            },
+            {
+              "text": "1.5e-6",
+              "edge": 3,
+              "ncc": 0.5934,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.8632,
+              "passed": false
+            },
+            {
+              "text": "2",
+              "edge": 1,
+              "ncc": 0.8501,
+              "passed": false
+            },
+            {
+              "text": "4",
+              "edge": 2,
+              "ncc": 0.9032,
+              "passed": false
+            },
+            {
+              "text": "6",
+              "edge": 2,
+              "ncc": 0.893,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 2,
+              "ncc": 0.8712,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.5899,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.5317,
+              "passed": false
+            },
+            {
+              "text": "  AV To fi  ",
+              "edge": 4,
+              "ncc": 0.2934,
+              "passed": false
+            },
+            {
+              "text": "café · ñandú · Ωμέγα αβγ",
+              "edge": 4,
+              "ncc": 0.6076,
+              "passed": false
+            },
+            {
+              "text": "€ £ ¥ $ 1.5e−7",
+              "edge": 3,
+              "ncc": 0.4133,
+              "passed": false
+            },
+            {
+              "text": "Aa",
+              "edge": 2,
+              "ncc": 0.8291,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 3,
+              "ncc": 0.5069,
+              "passed": false
+            }
+          ]
+        },
+        "webkit": {
+          "passed": 0,
+          "labels": 23,
+          "worst_edge": 4,
+          "worst_ncc": 0.1779,
+          "failures": [
+            {
+              "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+              "edge": 3,
+              "ncc": 0.2359,
+              "passed": false
+            },
+            {
+              "text": "Δ per $1 (Γ = 1.5e−7)",
+              "edge": 4,
+              "ncc": 0.4523,
+              "passed": false
+            },
+            {
+              "text": "Strike − spot ($)",
+              "edge": 4,
+              "ncc": 0.6554,
+              "passed": false
+            },
+            {
+              "text": "−1.5e-6",
+              "edge": 4,
+              "ncc": 0.4339,
+              "passed": false
+            },
+            {
+              "text": "−1e-6",
+              "edge": 4,
+              "ncc": 0.3654,
+              "passed": false
+            },
+            {
+              "text": "−5e-7",
+              "edge": 4,
+              "ncc": 0.5528,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.6127,
+              "passed": false
+            },
+            {
+              "text": "5e-7",
+              "edge": 2,
+              "ncc": 0.5407,
+              "passed": false
+            },
+            {
+              "text": "1e-6",
+              "edge": 2,
+              "ncc": 0.4929,
+              "passed": false
+            },
+            {
+              "text": "1.5e-6",
+              "edge": 3,
+              "ncc": 0.4117,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 2,
+              "ncc": 0.6538,
+              "passed": false
+            },
+            {
+              "text": "2",
+              "edge": 3,
+              "ncc": 0.5937,
+              "passed": false
+            },
+            {
+              "text": "4",
+              "edge": 3,
+              "ncc": 0.7193,
+              "passed": false
+            },
+            {
+              "text": "6",
+              "edge": 2,
+              "ncc": 0.7214,
+              "passed": false
+            },
+            {
+              "text": "8",
+              "edge": 2,
+              "ncc": 0.7659,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 2,
+              "ncc": 0.6404,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.5024,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.4208,
+              "passed": false
+            },
+            {
+              "text": "  AV To fi  ",
+              "edge": 4,
+              "ncc": 0.1779,
+              "passed": false
+            },
+            {
+              "text": "café · ñandú · Ωμέγα αβγ",
+              "edge": 4,
+              "ncc": 0.4917,
+              "passed": false
+            },
+            {
+              "text": "€ £ ¥ $ 1.5e−7",
+              "edge": 3,
+              "ncc": 0.3554,
+              "passed": false
+            },
+            {
+              "text": "Aa",
+              "edge": 3,
+              "ncc": 0.6273,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 3,
+              "ncc": 0.3884,
+              "passed": false
+            }
+          ]
+        },
+        "rsvg": {
+          "passed": 0,
+          "labels": 23,
+          "worst_edge": 4,
+          "worst_ncc": 0.1897,
+          "failures": [
+            {
+              "text": "Text: AV To fi, café, Ωμέγα, € £ ¥ $ & < > \" '",
+              "edge": 4,
+              "ncc": 0.2558,
+              "passed": false
+            },
+            {
+              "text": "Δ per $1 (Γ = 1.5e−7)",
+              "edge": 3,
+              "ncc": 0.3438,
+              "passed": false
+            },
+            {
+              "text": "Strike − spot ($)",
+              "edge": 4,
+              "ncc": 0.6283,
+              "passed": false
+            },
+            {
+              "text": "−1.5e-6",
+              "edge": 4,
+              "ncc": 0.5789,
+              "passed": false
+            },
+            {
+              "text": "−1e-6",
+              "edge": 3,
+              "ncc": 0.5101,
+              "passed": false
+            },
+            {
+              "text": "−5e-7",
+              "edge": 3,
+              "ncc": 0.6788,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 1,
+              "ncc": 0.7726,
+              "passed": false
+            },
+            {
+              "text": "5e-7",
+              "edge": 2,
+              "ncc": 0.7096,
+              "passed": false
+            },
+            {
+              "text": "1e-6",
+              "edge": 2,
+              "ncc": 0.678,
+              "passed": false
+            },
+            {
+              "text": "1.5e-6",
+              "edge": 3,
+              "ncc": 0.5951,
+              "passed": false
+            },
+            {
+              "text": "0",
+              "edge": 1,
+              "ncc": 0.7861,
+              "passed": false
+            },
+            {
+              "text": "2",
+              "edge": 2,
+              "ncc": 0.7539,
+              "passed": false
+            },
+            {
+              "text": "4",
+              "edge": 2,
+              "ncc": 0.8507,
+              "passed": false
+            },
+            {
+              "text": "6",
+              "edge": 1,
+              "ncc": 0.851,
+              "passed": false
+            },
+            {
+              "text": "8",
+              "edge": 1,
+              "ncc": 0.8474,
+              "passed": false
+            },
+            {
+              "text": "10",
+              "edge": 1,
+              "ncc": 0.7767,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.5123,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 4,
+              "ncc": 0.4109,
+              "passed": false
+            },
+            {
+              "text": "  AV To fi  ",
+              "edge": 4,
+              "ncc": 0.2622,
+              "passed": false
+            },
+            {
+              "text": "café · ñandú · Ωμέγα αβγ",
+              "edge": 4,
+              "ncc": 0.6076,
+              "passed": false
+            },
+            {
+              "text": "€ £ ¥ $ 1.5e−7",
+              "edge": 2,
+              "ncc": 0.1897,
+              "passed": false
+            },
+            {
+              "text": "Aa",
+              "edge": 2,
+              "ncc": 0.8256,
+              "passed": false
+            },
+            {
+              "text": "& < > \" ' $",
+              "edge": 3,
+              "ncc": 0.4369,
+              "passed": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "portable": {
+    "embedded-font": false,
+    "viewer-font": false,
+    "outlines": true
+  },
+  "discriminates": true
+}
