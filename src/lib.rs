@@ -398,7 +398,7 @@
 //!
 //! ## Workspace Crates
 //!
-//! OptionStratLib 0.22 is nine component crates and this facade. Each
+//! OptionStratLib is nine component crates and this facade (since 0.22). Each
 //! component owns one layer, and the facade (`optionstratlib`) re-exports
 //! them, so a path through the facade and the same path through the
 //! component name the same type.
@@ -418,7 +418,11 @@
 //! gives the defining crate, direct import, facade path and feature of every
 //! public concept.
 //!
-//! Moving from 0.21? The [0.22 architecture and adoption
+//! Moving from 0.22? The [0.23
+//! guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
+//! covers the one area that changed: PNG and SVG export, now drawn natively,
+//! and the typed `GraphError` it returns. Moving from 0.21? The [0.22
+//! architecture and adoption
 //! guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
 //! maps each redesign to its replacement workflow; 0.22 keeps no
 //! compatibility with 0.21.
@@ -1086,12 +1090,12 @@
 //! `make check-feature-trees` pins the resolved graph of the facade with no
 //! capability, of each capability alone and of the default.
 //!
-//! **The 0.22 default** is every capability that 0.21 shipped without a
+//! **The default** (unchanged since 0.22) is every capability that 0.21 shipped without a
 //! feature flag: `pricing`, `market`, `analytics`, `strategies`,
 //! `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
 //! plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
 //! Plotly, image-export, async-runtime or HTTP package. The default is a
-//! compatibility contract of the 0.22 line, not a statement that a consumer
+//! compatibility contract since the 0.22 line, not a statement that a consumer
 //! needs all of it: opt out with `default-features = false` and name only the
 //! capability you use, or depend on a component crate directly.
 //!
@@ -1822,3 +1826,12 @@ pub struct MigrationGuideDoctests;
 #[cfg(all(doctest, feature = "visualization"))]
 #[doc = include_str!("../docs/release/0.22/RELEASE-NOTES.md")]
 pub struct ReleaseNotesDoctests;
+
+/// Compiles and runs the Rust examples of the 0.23 release notes,
+/// `docs/release/0.23/RELEASE-NOTES.md`, as doctests (#938). Exists only
+/// under `cfg(doctest)`, with `static_export` on, which every example uses;
+/// `make check-release-notes` builds each one against exactly the manifest
+/// shown above it.
+#[cfg(all(doctest, feature = "static_export"))]
+#[doc = include_str!("../docs/release/0.23/RELEASE-NOTES.md")]
+pub struct ReleaseNotes023Doctests;

@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Run the 0.22 release gates and record the evidence (#557, ADR-0004 section 6).
+"""Run the release gates and record the evidence (#557, ADR-0004 section 6).
 
 Every gate is one shell command run from the repository root. For each one
 this records the exact command, its exit status, its wall time, the number of
 `warning:` lines it printed and the tail of its output, and writes the full
 log to `target/release-gates/<id>.log`. `render` turns the recorded results
-into the evidence file `docs/release/0.22/gates.md`, together with the
+into the evidence file `docs/release/0.MINOR/gates.md` (a patch:
+`docs/release/0.MINOR.N/gates.md`), together with the
 toolchain versions and the commit the gates ran on.
 
 A gate passes only with exit status 0 and no compiler or tool warning (the
 `ignoring test ...` / `ignoring benchmark ... not included in the published
 package` notices of `cargo package` are counted apart, because they describe
-package contents, which #559 owns and keeps on purpose). The semver reports are informational: they list what 0.22
-removes or reshapes against the published 0.21.3 and decide nothing (#606).
+package contents, which #559 owns and keeps on purpose). The semver reports are informational: they list what the
+release removes or reshapes against the last published release (`BASELINE`) and decide nothing (#606); the release's
+`api-classification.md` sorts them.
 
 Usage:
     release_gates.py run [--only ID ...] [--skip ID ...]
@@ -42,7 +44,7 @@ CRATES = (
     "optionstratlib-market", "optionstratlib-analytics", "optionstratlib-strategies",
     "optionstratlib-backtest", "optionstratlib-visualization", "optionstratlib",
 )
-DEFAULT_RELEASE = "0.22.0"
+DEFAULT_RELEASE = "0.23.0"
 RELEASE_RE = re.compile(r"^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
 
@@ -71,7 +73,8 @@ def crate_versions() -> dict[str, str]:
     except (ValueError, KeyError):
         return {}
     return {p["name"]: p["version"] for p in packages if p["name"] in CRATES}
-BASELINE = "v0.21.3"
+# The last published release: the semver reports compare against its tag.
+BASELINE = "v0.22.2"
 # The report parser needs Python 3.11 or newer, as the Makefile's PYTHON311.
 REPORT_PYTHON = "$(command -v python3.13 || command -v python3.12 || command -v python3.11 || echo python3)"
 SURFACES = ("none", "default", "plotly", "static_export", "async", "all")
@@ -125,10 +128,10 @@ GATES: tuple[Gate, ...] = (
     Gate("graph", "Architecture", "make check-graph",
          "layer DAG, error/utils partition, synthetic and Plotly gates, facade feature table, forbidden packages"),
     Gate("feature-trees", "Architecture", "make check-feature-trees",
-         "resolved dependency graph of 15 facade surfaces and what each may resolve"),
+         "resolved dependency graph of 16 facade surfaces and what each may resolve"),
     Gate("fixtures", "Consumers", "make check-fixtures", "resolved graph of every consumer fixture and direct example"),
-    Gate("consumers-022", "Consumers", "make test-022-consumers",
-         "every 0.22 consumer fixture, against the workspace and against the package archives"),
+    Gate("consumers", "Consumers", "make test-022-consumers",
+         "every consumer fixture, against the workspace and against the package archives"),
     Gate("direct-examples", "Consumers", "make test-direct-component-examples",
          "the direct-component examples: Clippy, tests, run"),
     Gate("direct-examples-packaged", "Consumers", "make check-direct-examples-packaged",
@@ -145,19 +148,20 @@ GATES: tuple[Gate, ...] = (
          "repository, then checked with the declared rust-version, Rust 1.89 (#559)"),
     Gate("publish-dry-run", "Packages", "make publish-dry-run",
          "`cargo package` with verification and `cargo publish --dry-run`, as a workspace and per crate in "
-         "dependency order (only core resolves until its siblings are on crates.io), then each archive "
-         "built and tested alone with default, no and all features but `static_export`; nothing is "
-         "uploaded; needs a committed tree and network access for the crates.io index (#558)"),
+         "dependency order (a crate whose siblings are not on crates.io yet at this version waits on them), "
+         "then each archive built and tested alone with default, no and all features, `static_export` "
+         "included (#929); nothing is uploaded; needs a committed tree and network access for the "
+         "crates.io index (#558)"),
     Gate("components", "Per crate", "make check-components",
          "each component alone with default, no and all features, named feature sets, Clippy, rustdoc "
          "`-D warnings` with and without features, package contents, and the packaged archives"),
     Gate("visualization", "Surfaces", "make check-visualization",
-         "backend-neutral, `plotly` and `static_export` compiled, linted, tested and documented independently, "
-         "for the crate and the facade"),
+         "backend-neutral, `plotly`, `static_export` alone and `static_export` with `plotly` compiled, linted, "
+         "tested (real PNG/SVG exports) and documented independently, for the crate and the facade"),
     *(
         Gate(f"semver-{surface}", "Informational",
              f"{REPORT_PYTHON} scripts/report_api_changes.py --surface {surface} --baseline {BASELINE}",
-             f"cargo-semver-checks against the published 0.21.3, surface `{surface}`",
+             f"cargo-semver-checks against `{BASELINE}`, surface `{surface}`",
              informational=True)
         for surface in SURFACES
     ),
@@ -218,6 +222,7 @@ def run_gate(gate: Gate) -> dict:
     tail = [line for line in text.splitlines() if line.strip()][-3:]
     return {
         "id": gate.id,
+        "commit": git("rev-parse", "HEAD"),
         "command": gate.command,
         "returncode": completed.returncode,
         "seconds": seconds,
@@ -292,6 +297,14 @@ def render(evidence: Path) -> str:
                 f"| `{gate.id}` | `{gate.command}` | {verdict(result, gate)} | {result['seconds']} s | {warnings} | {gate.purpose} |"
             )
         lines.append("")
+    gated = meta.get("commit", "")
+    elsewhere = sorted(
+        f"`{gate_id}` on " + (f"`{result['commit'][:8]}`" if result.get("commit") else "an unrecorded commit")
+        for gate_id, result in results.items()
+        if gate_id != "_meta" and result.get("commit") != gated
+    )
+    if elsewhere:
+        lines += ["", "**Gates run on a commit other than the one gated above:** " + ", ".join(elsewhere) + "."]
     notes = evidence.with_name("gates-notes.md")
     if notes.is_file():
         lines += ["", notes.read_text().rstrip("\n")]
@@ -375,6 +388,10 @@ def main() -> int:
     previous = results.get("_meta") or {}
     if previous.get("release", DEFAULT_RELEASE) != args.release or previous.get("crates", list(CRATES)) != args.crates:
         # A run for another release or crate set starts its evidence afresh.
+        results = {}
+    if not args.only and not args.skip:
+        # A complete run is the evidence of the commit it runs on: nothing of
+        # an earlier run, on another commit, may be kept under its header.
         results = {}
     results["_meta"] = results.get("_meta") or {
         "release": args.release,

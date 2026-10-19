@@ -32,6 +32,10 @@ OptionStratLib crate depends on it.
   map](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/ownership.md)
   lists every one with its feature.
 
+Moving from 0.22? PNG and SVG export changed in 0.23: see the
+[0.23 migration guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
+and the "Static export" section below.
+
 Moving from 0.21? The [0.22 architecture and adoption
 guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.22.md)
 maps each redesign to its replacement workflow; 0.22 keeps no

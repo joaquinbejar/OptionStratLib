@@ -18,6 +18,17 @@
 {{readme}}
 
 
+## Upgrading from 0.22
+
+0.23 changes one area: PNG and SVG export under `static_export` are drawn
+natively, with no browser, WebDriver or installed font, and `GraphError` is
+`#[non_exhaustive]` with typed variants for data the export will not repair.
+Every other API and result is unchanged. The [0.23 migration
+guide](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/migration-0.23.md)
+lists what to change, and the [0.23 release
+notes](https://github.com/joaquinbejar/OptionStratLib/blob/main/docs/release/0.23/RELEASE-NOTES.md)
+summarise the release.
+
 ## Upgrading from 0.21
 
 0.22 splits the library into nine component crates behind this facade and

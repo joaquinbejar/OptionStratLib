@@ -290,7 +290,8 @@ test-direct-component-examples:
 		cargo run -q -p $$package; \
 	done
 
-# Builds and runs every manifest example of the 0.22 release notes (#562) as
+# Builds and runs every manifest example of the release notes being prepared
+# (`docs/release/0.23/RELEASE-NOTES.md`, #562, #938) as
 # a standalone crate with exactly the `[dependencies]` shown, patched to this
 # checkout; the facade's doctests compile the same programs with every feature.
 # The self-test first proves that a facade-only manifest using the prelude's
@@ -480,18 +481,19 @@ check-api-report:
 	@$(PYTHON311) scripts/report_api_changes.py --self-test > /dev/null || ($(PYTHON311) scripts/report_api_changes.py --self-test; exit 1)
 	@echo "api-changes: parser self-test OK"
 
-# The 0.22 release gates (#557): every gate of ADR-0004 section 6 and the
+# The release gates (#557): every gate of ADR-0004 section 6 and the
 # per-crate and facade matrices, run from `scripts/release_gates.py`, which
 # records each command, result, time and warning count and writes the evidence
-# to docs/release/0.22/gates.md (`release-gates-render`). The run takes about
-# 40 minutes. A 0.22.x patch names its version and the crates it publishes
+# to docs/release/0.MINOR/gates.md (`release-gates-render`). The run takes about
+# an hour. A patch names its version and the crates it publishes
 # (docs/versioning-policy.md, #834), and its evidence goes to
-# docs/release/0.22.N/gates.md:
-#   make release-gates RELEASE=0.22.1 CRATES="optionstratlib-pricing optionstratlib"
-# The semver reports against 0.21.3 are informational and are classified in
-# docs/release/0.22/api-classification.md.
+# docs/release/0.MINOR.N/gates.md:
+#   make release-gates RELEASE=0.23.1 CRATES="optionstratlib-pricing optionstratlib"
+# The semver reports against the last published release (`BASELINE` in the
+# script) are informational and are classified in the release's
+# api-classification.md.
 .PHONY: release-gates release-gates-render
-RELEASE ?= 0.22.0
+RELEASE ?= 0.23.0
 RELEASE_GATES_ARGS = --release $(RELEASE) $(if $(CRATES),--crates $(CRATES))
 
 release-gates:
