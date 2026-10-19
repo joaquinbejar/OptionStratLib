@@ -285,3 +285,46 @@ impl<T: Plottable + Graph> Graph for PlotBuilder<T> {
         }
     }
 }
+
+#[cfg(all(test, feature = "static_export"))]
+mod tests {
+    use super::*;
+    use crate::visualization::{Series2D, TraceMode};
+    use rust_decimal_macros::dec;
+
+    /// A chart with more x than y values.
+    struct Lopsided;
+
+    impl Graph for Lopsided {
+        fn graph_data(&self) -> GraphData {
+            GraphData::Series(Series2D {
+                x: vec![dec!(1), dec!(2)],
+                y: vec![dec!(1)],
+                name: "lopsided".to_string(),
+                mode: TraceMode::Lines,
+                line_color: None,
+                line_width: None,
+            })
+        }
+    }
+
+    impl Plottable for Lopsided {
+        fn plot(&self) -> PlotBuilder<Self> {
+            PlotBuilder {
+                data: Lopsided,
+                options: GraphConfig::default(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_save_returns_the_export_error_typed() -> Result<(), Box<dyn std::error::Error>> {
+        let dir = tempfile::tempdir()?;
+        let result = Lopsided.plot().save(dir.path().join("lopsided.png"));
+        assert!(
+            matches!(result, Err(GraphError::LengthMismatch { x: 2, y: 1, .. })),
+            "{result:?}"
+        );
+        Ok(())
+    }
+}
