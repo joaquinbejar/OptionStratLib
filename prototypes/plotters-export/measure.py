@@ -3,7 +3,10 @@
 
 Two `compare` binaries are measured: the native one (built without
 `plotly-baseline`, so `plotly_static` is not even linked) for Plotters, and
-the baseline one (built with `plotly-baseline`) for Plotly.
+the baseline one (built with `plotly-baseline`) for Plotly. Since #927 the
+baseline binary must be built at 8484b42f, the last commit whose
+`static_export` was the browser export; a later `compare` refuses the
+`plotly` backend.
 
 * Cold: `compare export <backend> <case> <format> <file>` run `--cold` times
   per combination, each a fresh process; the wall time includes process

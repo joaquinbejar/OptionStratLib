@@ -17,8 +17,8 @@
 //!     <dir>/<case>.labels.json.
 //! ```
 //!
-//! `<backend>` is `plotters` or `plotly` (the latter needs the
-//! `plotly-baseline` feature and a matching chromedriver), `<case>` one of
+//! `<backend>` is `plotters`; `plotly` is refused since #927 (see
+//! [`PLOTLY_RETIRED`]). `<case>` is one of
 //! `payoff`, `curves`, `surface` or `text` (the #923 text fixture), and
 //! `<format>` `png`, `svg` (embedded font), `svg-plain` (Plotters SVG
 //! without the embedded font) or `svg-outlines` (Plotters SVG with text as
@@ -133,22 +133,18 @@ fn export(
     Ok(())
 }
 
-#[cfg(feature = "plotly-baseline")]
-fn plotly_export(fixture: &Fixture, format: Format, path: &Path) -> Result<(), Box<dyn Error>> {
-    use optionstratlib_visualization::visualization::Graph;
-    match format {
-        Format::Png => fixture.write_png(path)?,
-        Format::Svg => fixture.write_svg(path)?,
-        Format::SvgPlain | Format::SvgOutlines => {
-            return Err(format!("{} is a Plotters-only format", format.slug()).into());
-        }
-    }
-    Ok(())
-}
+/// Why the `plotly` backend is refused. It drove `Graph::write_png` and
+/// `write_svg` of `optionstratlib-visualization` with `static_export`, which
+/// were the `plotly_static` browser export when #920, #923 and #931 measured
+/// them. Since #927 those methods draw natively, so the same call would
+/// label this renderer's own output as Plotly's.
+const PLOTLY_RETIRED: &str = "the Plotly baseline is retired: since #927 Graph::write_png/write_svg \
+     draw natively, so they no longer measure plotly_static. Build `compare` with \
+     `--features plotly-baseline` at 8484b42f, the last commit with the browser export, \
+     to reproduce the baseline; the recorded results are under results/ and artifacts/";
 
-#[cfg(not(feature = "plotly-baseline"))]
 fn plotly_export(_: &Fixture, _: Format, _: &Path) -> Result<(), Box<dyn Error>> {
-    Err("built without the plotly-baseline feature".into())
+    Err(PLOTLY_RETIRED.into())
 }
 
 #[derive(Serialize)]
@@ -163,10 +159,7 @@ struct Artifact {
 
 fn artifacts(dir: &Path) -> Result<(), Box<dyn Error>> {
     let mut written = Vec::new();
-    let mut backends = vec![Backend::Plotters];
-    if cfg!(feature = "plotly-baseline") {
-        backends.push(Backend::Plotly);
-    }
+    let backends = [Backend::Plotters];
     for case in Case::ALL {
         let fixture = case.build()?;
         for backend in &backends {

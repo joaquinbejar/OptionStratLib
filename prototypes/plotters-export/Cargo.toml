@@ -7,22 +7,17 @@
 # neutral `GraphData` / `GraphConfig` the Plotly path reads, so the two
 # outputs come from identical inputs. See `REPORT.md` for the results.
 #
-# The Plotly baseline is behind `plotly-baseline`, which turns on
-# `optionstratlib-visualization/static_export`: building it runs the
-# `plotly_static` build script and running it needs a chromedriver of the
-# installed Chrome's major version (`WEBDRIVER_PATH`, `BROWSER_PATH`). The
-# default build needs neither.
+# The Plotly baseline was behind a `plotly-baseline` feature that turned on
+# `optionstratlib-visualization/static_export`, then the `plotly_static`
+# browser export. Since #927 that feature draws natively, so the baseline is
+# reproducible only at 8484b42f, the last commit with the browser export;
+# `compare` refuses the `plotly` backend here.
 [package]
 name = "osl-prototype-plotters-export"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "Prototype for #920: native PNG/SVG export with Plotters, compared with the Plotly static export."
-
-[features]
-default = []
-# The Plotly static export, for the comparison only.
-plotly-baseline = ["optionstratlib-visualization/static_export"]
+description = "Prototype for #920: native PNG/SVG export with Plotters, compared with the Plotly static export (baseline retired in #927)."
 
 [dependencies]
 optionstratlib-core = { workspace = true }
