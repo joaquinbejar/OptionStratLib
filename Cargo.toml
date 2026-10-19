@@ -182,6 +182,7 @@ exclude = [
     "fixtures/consumers/market-synthetic",
     "fixtures/consumers/pricing-only",
     "fixtures/consumers/simulation-only",
+    "fixtures/consumers/visualization-static-export",
 ]
 members = [
     "crates/optionstratlib-core",

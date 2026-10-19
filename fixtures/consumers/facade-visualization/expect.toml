@@ -18,4 +18,6 @@ absent = [
     "plotly_static", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
     "pretty-simple-display",
     "utoipa",
+    # The native image renderer comes only with `static_export` (#928).
+    "plotters", "skrifa", "ab_glyph_rasterizer",
 ]

@@ -112,7 +112,7 @@ VIS_FACADE_FLAGS_plotly := --no-default-features --features plotly
 VIS_FACADE_FLAGS_static_export := --no-default-features --features static_export,plotly
 VIS_FIXTURES_neutral := facade-visualization headless-full
 VIS_FIXTURES_plotly := facade-plotly
-VIS_FIXTURES_static_export := facade-static-export
+VIS_FIXTURES_static_export := facade-static-export visualization-static-export
 VIS_SURFACES := neutral plotly static_export
 
 .PHONY: check-visualization-surface

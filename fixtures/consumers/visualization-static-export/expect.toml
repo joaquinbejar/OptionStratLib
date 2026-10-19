@@ -1,0 +1,20 @@
+# `optionstratlib-visualization` alone with `default-features = false,
+# features = ["static_export"]`: packages the resolved normal graph must
+# contain, and packages it must not. `static_export` implies `plotly` and
+# draws PNG and SVG natively (#927): Plotly plus Plotters, plotters-backend,
+# skrifa and ab_glyph_rasterizer. The `plotly_static` browser exporter, its
+# WebDriver client and download stack, the HTTP client, the async runtime and
+# the font parsers Plotters' own font features would bring are absent, and so
+# is the facade. Checked by `make check-fixtures` (scripts/check_fixtures.py).
+present = [
+    "optionstratlib-visualization", "plotly", "plotters", "plotters-backend",
+    "skrifa", "ab_glyph_rasterizer",
+]
+absent = [
+    "optionstratlib",
+    "plotly_static", "fantoccini", "webdriver", "webdriver-downloader",
+    "reqwest", "hyper", "h2", "rustls-pemfile", "tokio", "futures", "async-trait",
+    "ttf-parser", "owned_ttf_parser", "ab_glyph", "font-kit",
+    "csv", "zip", "utoipa",
+    "tracing-subscriber", "indicatif", "pretty-simple-display",
+]
