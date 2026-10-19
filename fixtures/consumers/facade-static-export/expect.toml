@@ -11,6 +11,8 @@ present = [
     "skrifa", "ab_glyph_rasterizer",
 ]
 absent = ["plotly_static", "fantoccini", "webdriver", "reqwest", "async-trait",
+    # No async runtime on the host: Plotly names `tokio` only for `wasm32`.
+    "tokio", "hyper", "h2", "rustls-pemfile", "webdriver-downloader",
     "ttf-parser", "ab_glyph", "font-kit",
     "tracing-subscriber", "indicatif", "pretty-simple-display",
     "utoipa", "csv", "zip",

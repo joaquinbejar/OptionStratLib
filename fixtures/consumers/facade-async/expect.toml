@@ -13,4 +13,6 @@ absent = [
     "optionstratlib-backtest", "optionstratlib-visualization", "reqwest", "futures",
     "async-trait", "plotly", "plotly_static", "fantoccini", "webdriver",
     "tracing-subscriber", "indicatif", "prettytable-rs", "pretty-simple-display",
+    # `async` enables no rendering (#928).
+    "plotters", "skrifa", "ab_glyph_rasterizer",
 ]

@@ -1,0 +1,19 @@
+# Consumer fixture: `optionstratlib-visualization` used directly, without the
+# facade, with only its `static_export` feature (#928): native PNG and SVG
+# export (#927), which implies `plotly` and so the interactive API. Excluded
+# from the root workspace so feature unification with the other members (the
+# facade, the prototype) cannot widen its graph; built with `--manifest-path`.
+[package]
+name = "osl-fixture-visualization-static-export"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Consumer fixture: optionstratlib-visualization built with the static_export feature alone."
+license = "MIT"
+
+[dependencies]
+# Path plus version, as every OptionStratLib dependency is declared until the
+# crates are published (ADR-0001 D1).
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.23.0", default-features = false, features = ["static_export"] }
+rust_decimal = "1.43"
+rust_decimal_macros = "1.40"

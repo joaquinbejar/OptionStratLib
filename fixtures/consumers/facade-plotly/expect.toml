@@ -12,4 +12,6 @@ present = [
 absent = [
     "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "futures",
     "async-trait", "tracing-subscriber", "indicatif", "pretty-simple-display",
+    # The native image renderer comes only with `static_export` (#928).
+    "plotters", "skrifa", "ab_glyph_rasterizer",
 ]

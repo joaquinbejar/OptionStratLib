@@ -29,13 +29,16 @@ Normalisation, and what it costs:
   collapsing into one node, are invisible to this check. Pinning those needs
   a committed lockfile, which is a packaging decision, tracked in #616.
 
-The `visualization`, `plotly` and `static_export` surfaces also carry
-dependency assertions that do not depend on the fixtures, so an
-`--update` run cannot record a regression (#544): no surface below `plotly`
-resolves a Plotly, image-export, WebDriver or async-runtime package or the
-visualization crate where it does not belong, `plotly` resolves Plotly and no
-export stack, and `static_export` resolves Plotly and the native renderer
-(#927) but no browser exporter, HTTP client or `ttf-parser`.
+The `visualization`, `plotly`, `static_export` and `static_export,async`
+surfaces also carry dependency assertions that do not depend on the
+fixtures, so an `--update` run cannot record a regression (#544): no surface
+below `plotly` resolves a Plotly, image-export, WebDriver or async-runtime
+package or the visualization crate where it does not belong, `plotly`
+resolves Plotly and neither the native renderer nor any export stack,
+`static_export` resolves Plotly and the native renderer (#927) but no browser
+exporter, HTTP client or font parser, and `tokio` comes only from the market
+crate's `async` or Plotly's `wasm32` dependency (#928). No surface resolves a
+zip below 9, build dependencies included (#919, #928).
 
 Usage:
     check_feature_trees.py              compare against the fixtures
@@ -86,6 +89,9 @@ SURFACES = {
     # WebDriver client and the async runtime on top (#544).
     "plotly": ["--no-default-features", "--features", "plotly"],
     "static_export": ["--no-default-features", "--features", "static_export"],
+    # Both: the native renderer and the market's async runtime, each from its
+    # own feature (#833, #928).
+    "static_export_async": ["--no-default-features", "--features", "static_export,async"],
     # The facade default: the headless full domain, every capability and no
     # rendering backend, async runtime or HTTP client (#549).
     "default": [],
@@ -101,14 +107,14 @@ SURFACES = {
 # resolves the host and asserts `plotly` alone adds no `tokio` or `reqwest`
 # there.
 PLOTLY = {"plotly"}
-# The browser exporter `static_export` used before #927; no surface resolves
-# it any more.
-EXPORT_STACK = {"plotly_static", "fantoccini", "webdriver"}
+# The browser exporter `static_export` used before #927 and its webdriver
+# download stack; no surface resolves it any more.
+EXPORT_STACK = {"plotly_static", "fantoccini", "webdriver", "webdriver-downloader"}
 RUNTIME = {"tokio", "reqwest"}
 VISUALIZATION_CRATE = {"optionstratlib-visualization"}
 # The native renderer `static_export` brings since #927, and the font parsers
 # it must not bring (`ttf-parser` is unmaintained, RUSTSEC-2026-0192).
-NATIVE_EXPORT = {"plotters", "skrifa", "ab_glyph_rasterizer"}
+NATIVE_EXPORT = {"plotters", "plotters-backend", "skrifa", "ab_glyph_rasterizer"}
 FONT_PARSERS = {"ttf-parser", "owned_ttf_parser", "ab_glyph", "font-kit"}
 HEADLESS = PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE | NATIVE_EXPORT
 BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
@@ -135,6 +141,13 @@ BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
     # under `plotly` (`ONLY_VIA`).
     "static_export": (
         VISUALIZATION_CRATE | PLOTLY | NATIVE_EXPORT,
+        EXPORT_STACK | {"reqwest"} | FONT_PARSERS,
+    ),
+    # The two features side by side: `tokio` from the market crate's `async`
+    # (and Plotly's wasm dependency), still no browser exporter or HTTP
+    # client (`ONLY_VIA`).
+    "static_export_async": (
+        VISUALIZATION_CRATE | PLOTLY | NATIVE_EXPORT | {"tokio"},
         EXPORT_STACK | {"reqwest"} | FONT_PARSERS,
     ),
 }
@@ -166,6 +179,7 @@ COMPONENTS: dict[str, set[str]] = {
     "visualization": EVERYTHING,
     "plotly": EVERYTHING,
     "static_export": EVERYTHING,
+    "static_export_async": EVERYTHING,
     "default": EVERYTHING,
 }
 
@@ -184,6 +198,8 @@ NO_SCHEMA_COMPONENTS = {"optionstratlib-visualization"}
 ONLY_VIA: dict[str, dict[str, set[str]]] = {
     "plotly": {"tokio": {"wasm-bindgen-futures"}},
     "static_export": {"tokio": {"wasm-bindgen-futures"}},
+    "async": {"tokio": {"optionstratlib-market"}},
+    "static_export_async": {"tokio": {"optionstratlib-market", "wasm-bindgen-futures"}},
 }
 
 
@@ -244,14 +260,12 @@ def edges(flags: list[str]) -> list[str]:
     return graph
 
 
-# The zip advisories RUSTSEC-2026-0367/0368/0369 are waived in
-# `.cargo/audit.toml` only for the `plotly_static` build-dependency copies that
-# `static_export` brings (#919). cargo-audit ignores by advisory ID, not by
-# version, so this guard keeps the waiver from hiding a regression: no
-# surface without `static_export` may resolve a zip below the fixed line, and
-# the zip `optionstratlib-market` depends on must be on it on every surface.
+# The zip advisories RUSTSEC-2026-0367/0368/0369 affect zip below 9 (#919).
+# They were waived for the `plotly_static` build-dependency copies that
+# `static_export` brought until #927; since #928 nothing is waived, so no
+# surface may resolve a zip below the fixed line (build dependencies
+# included), and the zip `optionstratlib-market` depends on must be on it.
 ZIP_FIXED_MAJOR = 9
-ZIP_WAIVED_SURFACES = {"static_export"}
 ZIP_VERSION_RE = re.compile(r"^zip v(\d+)\.(\d+)\.(\d+)")
 
 
@@ -261,12 +275,11 @@ def zip_majors(lines: list[str]) -> list[int]:
 
 
 def zip_violations(surface: str, resolved: list[str], market_direct: list[str]) -> list[str]:
-    """A zip below the fixed line where the audit waiver does not cover it."""
+    """A zip below the fixed line anywhere in the surface's graph or the market crate."""
     problems = []
-    if surface not in ZIP_WAIVED_SURFACES:
-        old = sorted({major for major in zip_majors(resolved) if major < ZIP_FIXED_MAJOR})
-        if old:
-            problems.append(f"{surface}: resolves zip {old} below {ZIP_FIXED_MAJOR}, which RUSTSEC-2026-0367/0368/0369 affect")
+    old = sorted({major for major in zip_majors(resolved) if major < ZIP_FIXED_MAJOR})
+    if old:
+        problems.append(f"{surface}: resolves zip {old} below {ZIP_FIXED_MAJOR}, which RUSTSEC-2026-0367/0368/0369 affect")
     old_market = [major for major in zip_majors(market_direct) if major < ZIP_FIXED_MAJOR]
     if old_market:
         problems.append(f"{surface}: optionstratlib-market depends on zip {old_market}, below {ZIP_FIXED_MAJOR}")
@@ -402,12 +415,12 @@ def self_test() -> int:
         "static_export lost the native renderer": (
             "static_export",
             graph("optionstratlib-visualization", "plotly", "plotters"),
-            2,
+            len(NATIVE_EXPORT) - 1,
         ),
         "static_export brings back the browser exporter": (
             "static_export",
             graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT | EXPORT_STACK), "reqwest"),
-            4,
+            len(EXPORT_STACK) + 1,
         ),
         "static_export resolves ttf-parser": (
             "static_export",
@@ -417,6 +430,60 @@ def self_test() -> int:
         "plotly resolves the native renderer": (
             "plotly",
             graph("optionstratlib-visualization", "plotly", "plotters"),
+            1,
+        ),
+        "plotly resolves the native text stack": (
+            "plotly",
+            graph("optionstratlib-visualization", "plotly", "skrifa", "ab_glyph_rasterizer"),
+            2,
+        ),
+        "visualization resolves the native renderer": (
+            "visualization",
+            graph("optionstratlib-visualization", "plotters", "skrifa"),
+            2,
+        ),
+        "default resolves the native renderer": ("default", graph("plotters-backend"), 1),
+        "async resolves the native renderer": (
+            "async",
+            graph("tokio", "plotters") + ["optionstratlib-market -> tokio"],
+            1,
+        ),
+        "async resolves tokio outside the market crate": (
+            "async",
+            graph("tokio") + ["optionstratlib-market -> tokio", "optionstratlib -> tokio"],
+            1,
+        ),
+        "static_export brings back the webdriver downloader": (
+            "static_export",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT), "webdriver-downloader"),
+            1,
+        ),
+        "static_export,async is complete": (
+            "static_export_async",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT), "tokio")
+            + ["optionstratlib-market -> tokio", "wasm-bindgen-futures -> tokio"],
+            0,
+        ),
+        "static_export,async lost tokio": (
+            "static_export_async",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT)),
+            1,
+        ),
+        "static_export,async lost the native renderer": (
+            "static_export_async",
+            graph("optionstratlib-visualization", "plotly", "tokio") + ["optionstratlib-market -> tokio"],
+            len(NATIVE_EXPORT),
+        ),
+        "static_export,async gets tokio from the browser exporter": (
+            "static_export_async",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT), "tokio", "fantoccini")
+            + ["optionstratlib-market -> tokio", "fantoccini -> tokio"],
+            2,
+        ),
+        "static_export,async resolves reqwest": (
+            "static_export_async",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT), "tokio", "reqwest")
+            + ["optionstratlib-market -> tokio"],
             1,
         ),
         "an edge is not a package": ("minimal", graph("optionstratlib -> plotly"), 0),
@@ -442,8 +509,8 @@ def self_test() -> int:
     zip_cases = {
         "zip 9 everywhere is clean": ("default", ["zip v9.0.5"], ["zip v9.0.5"], 0),
         "zip 8 on a default surface fails": ("default", ["zip v8.6.0"], ["zip v8.6.0"], 2),
-        "an old build-time zip under static_export is waived": ("static_export", ["zip v4.6.1", "zip v9.0.5"], ["zip v9.0.5"], 0),
-        "market on zip 8 under static_export still fails": ("static_export", ["zip v8.6.0"], ["zip v8.6.0"], 1),
+        "an old build-time zip under static_export fails": ("static_export", ["zip v4.6.1", "zip v9.0.5"], ["zip v9.0.5"], 1),
+        "market on zip 8 under static_export fails twice": ("static_export", ["zip v8.6.0"], ["zip v8.6.0"], 2),
         "an old zip on the io surface fails": ("io", ["zip v0.6.6"], [], 1),
     }
     for name, (surface, resolved, market, expected) in zip_cases.items():

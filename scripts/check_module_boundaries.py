@@ -1019,6 +1019,12 @@ FOUNDATIONAL_DEPENDENTS = {"optionstratlib-core", "optionstratlib"}
 # `visualization::terminal`'s alone, and the JSON formatting the derive crate
 # generated is `optionstratlib_core::utils::json_format`.
 PRESENTATION_PACKAGES = frozenset({"indicatif", "prettytable-rs", "pretty-simple-display"})
+# The native PNG/SVG renderer `static_export` brings since #927, which no
+# other feature may bring; the font parsers it must never bring
+# (RUSTSEC-2026-0192 for `ttf-parser`); and the webdriver download stack of
+# the browser exporter it replaced (#928).
+NATIVE_EXPORT_PACKAGES = frozenset({"plotters", "plotters-backend", "skrifa", "ab_glyph_rasterizer"})
+FONT_PARSER_PACKAGES = frozenset({"ttf-parser", "owned_ttf_parser", "ab_glyph", "font-kit"})
 
 FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     "optionstratlib-core": frozenset({
@@ -1072,9 +1078,10 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     # is allowed: `visualization::terminal` is its one owner (M6-05).
     "optionstratlib-visualization": frozenset({
         "csv", "zip", "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
-        "plotters", "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "fantoccini", "webdriver", "webdriver-downloader", "tracing-subscriber", "indicatif",
         "pretty-simple-display",
         "utoipa",
+        *NATIVE_EXPORT_PACKAGES, *FONT_PARSER_PACKAGES,
     }),
     # The facade (#544): by default, and with `visualization` or `plotly`, it
     # resolves no image-export, WebDriver, runtime or HTTP package. It may
@@ -1085,8 +1092,9 @@ FORBIDDEN_PACKAGES: dict[str, frozenset[str]] = {
     # row, plus the JSON derive crate no crate uses since M6-05.
     "optionstratlib": frozenset({
         "tokio", "reqwest", "futures", "async-trait", "plotly", "plotly_static",
-        "fantoccini", "webdriver", "tracing-subscriber", "indicatif",
+        "fantoccini", "webdriver", "webdriver-downloader", "tracing-subscriber", "indicatif",
         "pretty-simple-display",
+        *NATIVE_EXPORT_PACKAGES, *FONT_PARSER_PACKAGES,
     }),
     # ADR-0002 §3 analytics row ("no strategies"): the minimal market set,
     # since analytics needs no market I/O and has no feature of its own that
@@ -1139,17 +1147,23 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
         # `async` forwards to the market crate's `tokio` and the facade declares
         # no async package of its own (ADR-0002 section 2, #549).
         "async": ("async", frozenset({"tokio"})),
-        "static_export": ("static_export", frozenset({"plotly", "plotters"})),
+        "static_export": ("static_export", frozenset({"plotly"}) | NATIVE_EXPORT_PACKAGES),
+        # Each from its own feature: the renderer from `static_export`, the
+        # runtime from `async` (#833, #928).
+        "static_export,async": (
+            "static_export,async",
+            frozenset({"plotly", "tokio"}) | NATIVE_EXPORT_PACKAGES,
+        ),
     },
     # ADR-0002 §3 visualization row (#542): `plotly` brings Plotly itself and
     # nothing for image export, which only `static_export` adds. Since #927
-    # that is the native renderer: Plotters (without a font feature), skrifa
-    # and ab_glyph_rasterizer; of the forbidden names only `plotters`. The
-    # `plotly_static` exporter, WebDriver and the async runtime stay
+    # that is the native renderer: Plotters (without a font feature),
+    # plotters-backend, skrifa and ab_glyph_rasterizer. The `plotly_static`
+    # exporter, WebDriver, the async runtime and the font parsers stay
     # forbidden on every surface.
     "optionstratlib-visualization": {
         "plotly": ("plotly", frozenset({"plotly"})),
-        "static_export": ("static_export", frozenset({"plotly", "plotters"})),
+        "static_export": ("static_export", frozenset({"plotly"}) | NATIVE_EXPORT_PACKAGES),
     },
 }
 
@@ -2451,6 +2465,45 @@ def self_test() -> int:
             5,
         ),
         "facade all features pulls tracing-subscriber": ({("optionstratlib", "all features"): {"tracing-subscriber"}}, 1),
+        "visualization plotly pulls the native renderer": (
+            {("optionstratlib-visualization", "plotly"): {"plotly", "skrifa", "plotters-backend"}},
+            2,
+        ),
+        "visualization default pulls the rasterizer": (
+            {("optionstratlib-visualization", "default"): {"ab_glyph_rasterizer"}},
+            1,
+        ),
+        "visualization static_export pulls a font parser": (
+            {("optionstratlib-visualization", "static_export"): {"plotly", "plotters", "ttf-parser", "ab_glyph"}},
+            2,
+        ),
+        "visualization static_export pulls the webdriver downloader": (
+            {("optionstratlib-visualization", "static_export"): {"plotly", "plotters", "webdriver-downloader"}},
+            1,
+        ),
+        "visualization all features pulls a font parser": (
+            {("optionstratlib-visualization", "all features"): {"plotly", "skrifa", "font-kit"}},
+            1,
+        ),
+        "facade plotly pulls the native renderer": (
+            {("optionstratlib", "plotly"): {"plotly", "plotters", "skrifa"}},
+            2,
+        ),
+        "facade default pulls the native renderer": ({("optionstratlib", "default"): {"plotters-backend"}}, 1),
+        "facade async pulls the native renderer": ({("optionstratlib", "async"): {"tokio", "skrifa"}}, 1),
+        "facade static_export pulls tokio": ({("optionstratlib", "static_export"): {"plotly", "plotters", "tokio"}}, 1),
+        "facade static_export,async": (
+            {("optionstratlib", "static_export,async"): {"plotly", "plotters", "skrifa", "tokio", "csv", "zip"}},
+            0,
+        ),
+        "facade static_export,async pulls the browser exporter": (
+            {("optionstratlib", "static_export,async"): {"plotly", "tokio", "plotly_static", "reqwest"}},
+            2,
+        ),
+        "facade static_export,async pulls a font parser": (
+            {("optionstratlib", "static_export,async"): {"plotly", "tokio", "skrifa", "ttf-parser"}},
+            1,
+        ),
         "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),
         "simulation pulls market io": ({("optionstratlib-simulation", "all features"): {"csv", "zip"}}, 2),
     }
