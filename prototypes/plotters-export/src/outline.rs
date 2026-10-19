@@ -14,7 +14,7 @@
 //!
 //! # Layout
 //!
-//! Labels are laid out by [`crate::text`] with the metrics Plotters
+//! Labels are laid out by the crate's `text` module with the metrics Plotters
 //! measured the chart with, which are also the ones the PNG is drawn with:
 //! the Plotters font size is the SVG `font-size` times `EM_RATIO`, the
 //! factor plotters-svg divided it by, applied once here; each character
