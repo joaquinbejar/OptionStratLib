@@ -9,6 +9,7 @@
 //! cases. Where Plotly would silently fix bad data, it returns an
 //! [`ExportError`] instead (see that type).
 
+use crate::backend::{TextBackend, TextErrors, TextMode};
 use crate::error::ExportError;
 use crate::outline::{self, ChartText, Outlined};
 use crate::svg;
@@ -19,14 +20,12 @@ use plotters::coord::Shift;
 use plotters::prelude::*;
 use plotters::style::colors::colormaps::ViridisRGB;
 use plotters::style::text_anchor::{HPos, Pos, VPos};
-use plotters::style::{FontStyle, register_font};
 use rust_decimal::Decimal;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
-use std::sync::OnceLock;
 
-/// Family name the embedded font is registered under, and the name every
-/// text element uses (SVG `font-family` included).
+/// Family name of the bundled font: every text style names it, and the SVG
+/// `font-family` of the embedded-font and viewer-font modes.
 pub const FONT_FAMILY: &str = "Open Sans";
 
 /// Open Sans Regular (SIL OFL 1.1, `assets/OFL.txt`): the first family in
@@ -119,12 +118,18 @@ pub enum SvgText {
 #[tracing::instrument(skip(data, config), fields(title = %config.title))]
 pub fn write_png(data: &GraphData, config: &GraphConfig, path: &Path) -> Result<(), ExportError> {
     let size = dimensions(config)?;
-    register_embedded_font()?;
     prepare_parent(path)?;
-    let root = BitMapBackend::new(path, size).into_drawing_area();
-    draw(&root, data, config)?;
-    root.present().map_err(render_error)?;
-    Ok(())
+    let errors = TextErrors::default();
+    let result = {
+        let backend = TextBackend::new(
+            BitMapBackend::new(path, size),
+            TextMode::Raster,
+            errors.clone(),
+        );
+        let root = backend.into_drawing_area();
+        draw(&root, data, config).and_then(|()| root.present().map_err(render_error))
+    };
+    typed_text_error_first(result, &errors)
 }
 
 /// Renders `data` as an SVG document of `config.width` x `config.height`.
@@ -170,14 +175,31 @@ pub fn render_svg_outlined(
 /// The document plotters-svg writes, before any text post-processing.
 fn render_plotters_svg(data: &GraphData, config: &GraphConfig) -> Result<String, ExportError> {
     let size = dimensions(config)?;
-    register_embedded_font()?;
+    let errors = TextErrors::default();
     let mut document = String::new();
-    {
-        let root = SVGBackend::with_string(&mut document, size).into_drawing_area();
-        draw(&root, data, config)?;
-        root.present().map_err(render_error)?;
-    }
+    let result = {
+        let backend = TextBackend::new(
+            SVGBackend::with_string(&mut document, size),
+            TextMode::Svg,
+            errors.clone(),
+        );
+        let root = backend.into_drawing_area();
+        draw(&root, data, config).and_then(|()| root.present().map_err(render_error))
+    };
+    typed_text_error_first(result, &errors)?;
     Ok(document)
+}
+
+/// A text failure reaches Plotters' error only as a message; the typed one
+/// the text backend stashed wins.
+fn typed_text_error_first(
+    result: Result<(), ExportError>,
+    errors: &TextErrors,
+) -> Result<(), ExportError> {
+    match errors.borrow_mut().take() {
+        Some(error) => Err(error),
+        None => result,
+    }
 }
 
 /// The chart's accessible name and description: its title, what it plots
@@ -237,18 +259,6 @@ pub fn write_svg(
     prepare_parent(path)?;
     std::fs::write(path, document)?;
     Ok(())
-}
-
-/// Registers the embedded font once per process.
-fn register_embedded_font() -> Result<(), ExportError> {
-    static REGISTERED: OnceLock<Result<(), String>> = OnceLock::new();
-    REGISTERED
-        .get_or_init(|| {
-            register_font(FONT_FAMILY, FontStyle::Normal, FONT_BYTES)
-                .map_err(|_| "Open Sans Regular is not a valid TrueType font".to_string())
-        })
-        .clone()
-        .map_err(ExportError::Font)
 }
 
 fn dimensions(config: &GraphConfig) -> Result<(u32, u32), ExportError> {
