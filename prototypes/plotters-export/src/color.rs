@@ -1,9 +1,11 @@
 //! Colour strings for the native export (#925, condition 3 of #920).
 //!
 //! `ColorScheme::Custom` documents "hex code, RGB, color name", and the
-//! Plotly path hands every colour string to plotly.js, whose parser accepts
-//! the CSS forms. The native renderer accepts the same forms, so moving a
-//! chart to it does not narrow what a caller may write:
+//! Plotly path hands every colour string to plotly.js. The native renderer
+//! accepts the CSS Color 4 forms listed below, which cover the documented
+//! ones; strings that only plotly.js's laxer parser takes (such as
+//! `hsl(0, 100, 50)`) become a typed error instead. That is a behaviour
+//! change of the migration, for #927 and #930 to document:
 //!
 //! * the 148 CSS Color 4 named colours, case-insensitive, `gray`/`grey`
 //!   spellings included, and `transparent` (black with alpha 0);
