@@ -1,12 +1,60 @@
 pub mod optionstratlib_visualization
 pub mod optionstratlib_visualization::error
-pub enum optionstratlib_visualization::error::GraphError
+#[non_exhaustive] pub enum optionstratlib_visualization::error::GraphError
 pub optionstratlib_visualization::error::GraphError::Backtest(alloc::boxed::Box<optionstratlib_backtest::error::backtesting::BacktestError>)
 pub optionstratlib_visualization::error::GraphError::Curve(optionstratlib_math::error::curves::CurveError)
 pub optionstratlib_visualization::error::GraphError::Decimal(alloc::boxed::Box<optionstratlib_core::error::decimal::DecimalError>)
+pub optionstratlib_visualization::error::GraphError::DegenerateSurface
+pub optionstratlib_visualization::error::GraphError::DegenerateSurface::columns: usize
+pub optionstratlib_visualization::error::GraphError::DegenerateSurface::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::DegenerateSurface::rows: usize
+pub optionstratlib_visualization::error::GraphError::DuplicateSurfacePoint
+pub optionstratlib_visualization::error::GraphError::DuplicateSurfacePoint::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::DuplicateSurfacePoint::x: rust_decimal::decimal::Decimal
+pub optionstratlib_visualization::error::GraphError::DuplicateSurfacePoint::y: rust_decimal::decimal::Decimal
+pub optionstratlib_visualization::error::GraphError::IncompleteSurface
+pub optionstratlib_visualization::error::GraphError::IncompleteSurface::expected: usize
+pub optionstratlib_visualization::error::GraphError::IncompleteSurface::found: usize
+pub optionstratlib_visualization::error::GraphError::IncompleteSurface::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::InvalidColor
+pub optionstratlib_visualization::error::GraphError::InvalidColor::color: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::InvalidColor::reason: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::InvalidDimensions
+pub optionstratlib_visualization::error::GraphError::InvalidDimensions::height: u32
+pub optionstratlib_visualization::error::GraphError::InvalidDimensions::width: u32
+pub optionstratlib_visualization::error::GraphError::InvalidLineWidth
+pub optionstratlib_visualization::error::GraphError::InvalidLineWidth::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::InvalidLineWidth::width: f64
 pub optionstratlib_visualization::error::GraphError::Io(core::io::error::Error)
+pub optionstratlib_visualization::error::GraphError::LengthMismatch
+pub optionstratlib_visualization::error::GraphError::LengthMismatch::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::LengthMismatch::x: usize
+pub optionstratlib_visualization::error::GraphError::LengthMismatch::y: usize
+pub optionstratlib_visualization::error::GraphError::MissingGlyph
+pub optionstratlib_visualization::error::GraphError::MissingGlyph::character: char
+pub optionstratlib_visualization::error::GraphError::MissingGlyph::code: u32
+pub optionstratlib_visualization::error::GraphError::MissingGlyph::text: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::NoRoom
+pub optionstratlib_visualization::error::GraphError::NoRoom::height: u32
+pub optionstratlib_visualization::error::GraphError::NoRoom::width: u32
+pub optionstratlib_visualization::error::GraphError::NotRepresentable(rust_decimal::decimal::Decimal)
+pub optionstratlib_visualization::error::GraphError::NotXmlText
+pub optionstratlib_visualization::error::GraphError::NotXmlText::character: char
+pub optionstratlib_visualization::error::GraphError::NotXmlText::code: u32
+pub optionstratlib_visualization::error::GraphError::NotXmlText::text: alloc::string::String
 pub optionstratlib_visualization::error::GraphError::Render(alloc::string::String)
 pub optionstratlib_visualization::error::GraphError::Surface(optionstratlib_math::error::surfaces::SurfaceError)
+pub optionstratlib_visualization::error::GraphError::SurfaceLengthMismatch
+pub optionstratlib_visualization::error::GraphError::SurfaceLengthMismatch::name: alloc::string::String
+pub optionstratlib_visualization::error::GraphError::SurfaceLengthMismatch::x: usize
+pub optionstratlib_visualization::error::GraphError::SurfaceLengthMismatch::y: usize
+pub optionstratlib_visualization::error::GraphError::SurfaceLengthMismatch::z: usize
+pub optionstratlib_visualization::error::GraphError::TooSmall
+pub optionstratlib_visualization::error::GraphError::TooSmall::height: u32
+pub optionstratlib_visualization::error::GraphError::TooSmall::min_height: u32
+pub optionstratlib_visualization::error::GraphError::TooSmall::min_width: u32
+pub optionstratlib_visualization::error::GraphError::TooSmall::width: u32
+pub optionstratlib_visualization::error::GraphError::UnsupportedText(alloc::string::String)
 impl core::convert::From<optionstratlib_backtest::error::backtesting::BacktestError> for optionstratlib_visualization::error::GraphError
 pub fn optionstratlib_visualization::error::GraphError::from(optionstratlib_backtest::error::backtesting::BacktestError) -> Self
 impl core::convert::From<optionstratlib_core::error::decimal::DecimalError> for optionstratlib_visualization::error::GraphError
