@@ -850,3 +850,32 @@ fn test_alpha_reaches_the_svg() -> Result<(), Box<dyn Error>> {
     assert!(!clear.contains("stroke=\"#000000\" stroke-width=\"2\""));
     Ok(())
 }
+
+#[test]
+fn test_built_in_schemes_keep_their_colours() -> Result<(), Box<dyn Error>> {
+    use optionstratlib_visualization::visualization::ColorScheme;
+    let data = GraphData::MultiSeries(vec![
+        series("a", vec![dec!(0), dec!(1)], vec![dec!(0), dec!(1)]),
+        series("b", vec![dec!(0), dec!(1)], vec![dec!(1), dec!(0)]),
+    ]);
+    for (scheme, first, second) in [
+        (ColorScheme::Viridis, "#481567", "#33638D"),
+        (ColorScheme::Plasma, "#0D0887", "#A01C9C"),
+        (ColorScheme::HighContrast, "#FF0000", "#00FF00"),
+        // No scheme colour: the plotly.js colourway.
+        (ColorScheme::Default, "#1F77B4", "#FF7F0E"),
+    ] {
+        let config = GraphConfig {
+            color_scheme: scheme,
+            ..small_config()
+        };
+        let svg = render_svg(&data, &config, SvgText::ViewerFont)?;
+        for expected in [first, second] {
+            assert!(
+                svg.contains(&format!("stroke=\"{expected}\"")),
+                "{expected}"
+            );
+        }
+    }
+    Ok(())
+}
