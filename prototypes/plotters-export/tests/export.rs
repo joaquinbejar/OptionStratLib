@@ -806,7 +806,9 @@ fn image_rows(path: &Path) -> Result<impl Fn(usize, usize) -> Option<u8>, Box<dy
         if x >= width || y >= height {
             return None;
         }
-        let start = y.checked_mul(stride)?.checked_add(x.checked_mul(channels)?)?;
+        let start = y
+            .checked_mul(stride)?
+            .checked_add(x.checked_mul(channels)?)?;
         let pixel = buffer.get(start..start.checked_add(3)?)?;
         let [r, g, b] = [pixel[0], pixel[1], pixel[2]].map(u32::from);
         u8::try_from((r * 299 + g * 587 + b * 114) / 1000).ok()
