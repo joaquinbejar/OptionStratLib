@@ -26,6 +26,10 @@ the baseline one (built with `plotly-baseline`) for Plotly.
   `sandbox-exec` with network access, process creation and reads of the
   system and user font directories denied, so a successful run proves the
   export opened no socket, spawned nothing and used no installed font.
+* Interleaved (`--mode interleaved`): two native binaries, `--native` and
+  `--compare-native`, timed cold in alternating rounds (the order flips
+  every round), so machine drift hits both alike. Every raw time is kept,
+  with each binary's SHA-256.
 * Leak scenarios (`--mode leaks`): the cases where an export does not get
   to close its WebDriver session. `concurrent`: several Plotly exports
   started at once, as separate processes (parallel test binaries or
@@ -42,6 +46,8 @@ Usage:
     (--baseline is needed only with the plotly backend; `--cases` may add
     `text`, the #923 fixture, and `--formats` limits the native formats:
     png, svg, svg-plain, svg-outlines.)
+    measure.py --mode interleaved --native BIN --compare-native BIN --out DIR
+               [--cold ROUNDS] [--cases ...] [--formats ...] [--sandbox] [--name N]
     measure.py --mode leaks --baseline BIN --out DIR [--repeat N]
     measure.py --self-test
 """
@@ -449,6 +455,53 @@ def timing(args: argparse.Namespace, out: Path, environment: dict) -> int:
     return 0
 
 
+def sha256(path: str) -> str:
+    import hashlib
+    with open(path, "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+
+def interleaved(args: argparse.Namespace, out: Path, environment: dict) -> int:
+    binaries = {"compare": args.compare_native, "native": args.native}
+    cases = args.cases.split(",")
+    formats = [fmt for fmt in NATIVE_FORMATS if fmt in args.formats.split(",")]
+    raw: dict[str, list[float]] = {}
+    failures: list[dict] = []
+    with tempfile.TemporaryDirectory(prefix="osl-interleaved-") as scratch:
+        for round_index in range(args.cold):
+            order = list(binaries.items())
+            if round_index % 2:
+                order.reverse()
+            for name, binary in order:
+                for case in cases:
+                    for fmt in formats:
+                        target = Path(scratch) / f"{name}-{case}.{EXTENSIONS[fmt]}"
+                        command = [binary, "export", "plotters", case, fmt, str(target)]
+                        if args.sandbox:
+                            command = ["sandbox-exec", "-p", SANDBOX_PROFILE, *command]
+                        (result,) = run_watched([command], None)
+                        key = f"{name}/{case}/{fmt}"
+                        if result["status"] != 0:
+                            failures.append({"round": round_index, "run": key,
+                                             "status": result["status"],
+                                             "stderr": result["stderr"]})
+                            continue
+                        raw.setdefault(key, []).append(result["millis"])
+    results = {
+        "environment": environment,
+        "binaries": {name: {"path": path, "sha256": sha256(path)}
+                     for name, path in binaries.items()},
+        "rounds": args.cold,
+        "stats": {key: stats(values) for key, values in raw.items()},
+        "millis": raw,
+        "failures": failures,
+    }
+    target = out / f"{args.name}.json"
+    target.write_text(json.dumps(results, indent=2))
+    print(f"wrote {target}; failures={len(failures)}", file=sys.stderr)
+    return 0
+
+
 def leaks(args: argparse.Namespace, out: Path, environment: dict) -> int:
     results = {"environment": environment, "scenarios": []}
     with tempfile.TemporaryDirectory(prefix="osl-920-leaks-") as scratch:
@@ -474,9 +527,10 @@ def leaks(args: argparse.Namespace, out: Path, environment: dict) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--mode", choices=("timing", "leaks"), default="timing")
+    parser.add_argument("--mode", choices=("timing", "interleaved", "leaks"), default="timing")
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--native")
+    parser.add_argument("--compare-native")
     parser.add_argument("--baseline")
     parser.add_argument("--out")
     parser.add_argument("--name", default="results")
@@ -493,10 +547,13 @@ def main() -> int:
         return self_test()
     if not args.out:
         parser.error("--out is required")
-    if not args.baseline and (args.mode == "leaks" or "plotly" in args.backends):
+    if not args.baseline and (args.mode == "leaks"
+                              or (args.mode == "timing" and "plotly" in args.backends)):
         parser.error("--baseline is required for the plotly backend and the leak scenarios")
     if args.mode == "timing" and "plotters" in args.backends and not args.native:
         parser.error("--native is required to time plotters")
+    if args.mode == "interleaved" and not (args.native and args.compare_native):
+        parser.error("--native and --compare-native are required for interleaved runs")
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -517,6 +574,8 @@ def main() -> int:
     }
     if args.mode == "leaks":
         return leaks(args, out, environment)
+    if args.mode == "interleaved":
+        return interleaved(args, out, environment)
     return timing(args, out, environment)
 
 
