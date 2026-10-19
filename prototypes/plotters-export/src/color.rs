@@ -8,19 +8,30 @@
 //! * the 148 CSS Color 4 named colours, case-insensitive, `gray`/`grey`
 //!   spellings included, and `transparent` (black with alpha 0);
 //! * `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa`;
-//! * `rgb()` and `rgba()` (the same function), with comma-separated or
-//!   space-separated channels, each a number from 0 to 255 or a percentage,
-//!   and an optional alpha after a comma or `/`, a number from 0 to 1 or a
-//!   percentage;
-//! * `hsl()` and `hsla()`, likewise: hue in degrees (an optional `deg`),
-//!   saturation and lightness as percentages or plain numbers.
+//! * `rgb()` and `rgba()` (the same function) and `hsl()` and `hsla()`, in
+//!   CSS Color 4's two syntaxes:
+//!   * legacy: `rgb(r, g, b[, a])`, the three channels all numbers (0 to
+//!     255) or all percentages; `hsl(h, s%, l%[, a])`;
+//!   * modern: `rgb(r g b[ / a])`, each channel a number or a percentage;
+//!     `hsl(h s l[ / a])`, saturation and lightness numbers or percentages;
 //!
-//! Whitespace around the string and inside functions is ignored, and
-//! function names are case-insensitive. Out-of-range channels are clamped
-//! as CSS clamps them. Anything else is [`ExportError::InvalidColor`], never
-//! a silent black: context-dependent keywords (`currentcolor`, `inherit`,
-//! `initial`, `unset`, `revert`), system colours, other functions such as
-//! `hwb()` or `color()`, and malformed numbers.
+//!   the hue is a number of degrees, optionally with `deg`; the alpha a
+//!   number from 0 to 1 or a percentage.
+//!
+//! Numbers follow CSS's own token grammar: an optional sign, digits with an
+//! optional fraction (digits must follow a point), an optional exponent; a
+//! percentage is a number immediately followed by `%`. A percentage channel
+//! is `p * 255 / 100`, so `50%` and `127.5` round alike.
+//!
+//! Whitespace around the string and between components is ignored, and
+//! names are case-insensitive; a function name must touch its parenthesis.
+//! Out-of-range channels are clamped as CSS clamps them. Anything else is
+//! [`ExportError::InvalidColor`], never a silent black: context-dependent
+//! keywords (`currentcolor`, `inherit`, `initial`, `unset`, `revert`),
+//! system colours, other functions such as `hwb()` or `color()`, hue units
+//! other than `deg`, and malformed numbers or component lists. plotly.js's
+//! own parser is more lenient than CSS (it takes `hsl(0, 100, 50)`); such
+//! strings are errors here, reported rather than guessed.
 
 use crate::error::ExportError;
 use plotters::style::RGBAColor;
@@ -215,7 +226,7 @@ pub(crate) fn parse_color(text: &str) -> Result<RGBAColor, ExportError> {
             .strip_prefix('(')
             .and_then(|inner| inner.strip_suffix(')'))
             .ok_or_else(|| invalid(text, "a function must end with its closing parenthesis"))?;
-        return match name.trim_end() {
+        return match name {
             "rgb" | "rgba" => parse_rgb(text, arguments),
             "hsl" | "hsla" => parse_hsl(text, arguments),
             _ => Err(invalid(
@@ -272,48 +283,106 @@ fn parse_hex(text: &str, digits: &str) -> Result<RGBAColor, ExportError> {
     }
 }
 
-/// The components of a colour function and its optional alpha, in either
-/// `a, b, c[, alpha]` or `a b c[ / alpha]` form.
+/// Which CSS Color 4 syntax a colour function uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Syntax {
+    /// `f(a, b, c[, alpha])`.
+    Legacy,
+    /// `f(a b c[ / alpha])`.
+    Modern,
+}
+
+/// The three channels of a colour function, its optional alpha and its
+/// syntax. Each syntax is checked on its own terms: the legacy one takes
+/// three or four comma-separated components, the modern one exactly three
+/// space-separated channels and an alpha only after a slash.
 fn components<'a>(
     text: &str,
     arguments: &'a str,
-) -> Result<([&'a str; 3], Option<&'a str>), ExportError> {
-    let parts: Vec<&str> = if arguments.contains(',') {
+) -> Result<(Syntax, [&'a str; 3], Option<&'a str>), ExportError> {
+    let malformed = || {
+        invalid(
+            text,
+            "expected `r, g, b[, a]` or `r g b[ / a]`: three channels and an optional alpha",
+        )
+    };
+    if arguments.contains(',') {
         if arguments.contains('/') {
             return Err(invalid(text, "mixes commas and a slash"));
         }
-        arguments.split(',').map(str::trim).collect()
-    } else {
-        let (channels, alpha) = match arguments.split_once('/') {
-            Some((channels, alpha)) => (channels, Some(alpha.trim())),
-            None => (arguments, None),
+        let parts: Vec<&str> = arguments.split(',').map(str::trim).collect();
+        return match parts.as_slice() {
+            [a, b, c] => Ok((Syntax::Legacy, [a, b, c], None)),
+            [a, b, c, alpha] => Ok((Syntax::Legacy, [a, b, c], Some(alpha))),
+            _ => Err(malformed()),
         };
-        let mut parts: Vec<&str> = channels.split_whitespace().collect();
-        if let Some(alpha) = alpha {
-            parts.push(alpha);
+    }
+    let (channels, alpha) = match arguments.split_once('/') {
+        Some((channels, alpha)) => {
+            let alpha = alpha.trim();
+            if alpha.is_empty() || alpha.contains(char::is_whitespace) || alpha.contains('/') {
+                return Err(malformed());
+            }
+            (channels, Some(alpha))
         }
-        parts
+        None => (arguments, None),
     };
-    match parts.as_slice() {
-        [a, b, c] => Ok(([a, b, c], None)),
-        [a, b, c, alpha] => Ok(([a, b, c], Some(alpha))),
-        _ => Err(invalid(
-            text,
-            "a colour function takes three channels and an optional alpha",
-        )),
+    let channels: Vec<&str> = channels.split_whitespace().collect();
+    match channels.as_slice() {
+        [a, b, c] => Ok((Syntax::Modern, [a, b, c], alpha)),
+        _ => Err(malformed()),
     }
 }
 
-/// A finite number, with `%` turned into a fraction of `full`.
-fn number(text: &str, part: &str, full: f64) -> Result<f64, ExportError> {
-    let (digits, scale) = match part.strip_suffix('%') {
-        Some(digits) => (digits, full / 100.0),
-        None => (part, 1.0),
+/// A CSS `<number>` token: an optional sign, then digits with an optional
+/// fraction, or a point and digits, then an optional exponent.
+fn css_number(token: &str) -> Option<f64> {
+    let mut chars = token.chars().peekable();
+    let digits = |chars: &mut std::iter::Peekable<std::str::Chars<'_>>| {
+        let mut count = 0_usize;
+        while chars.next_if(char::is_ascii_digit).is_some() {
+            count += 1;
+        }
+        count
     };
-    match digits.trim().parse::<f64>() {
-        Ok(value) if value.is_finite() && !digits.trim().is_empty() => Ok(value * scale),
-        _ => Err(invalid(text, "a channel is not a finite number")),
+    chars.next_if(|c| matches!(c, '+' | '-'));
+    let integer = digits(&mut chars);
+    let fraction = match chars.next_if_eq(&'.') {
+        // Digits must follow a point.
+        Some(_) => match digits(&mut chars) {
+            0 => return None,
+            count => count,
+        },
+        None => 0,
+    };
+    if integer == 0 && fraction == 0 {
+        return None;
     }
+    if chars.next_if(|c| matches!(c, 'e' | 'E')).is_some() {
+        chars.next_if(|c| matches!(c, '+' | '-'));
+        if digits(&mut chars) == 0 {
+            return None;
+        }
+    }
+    if chars.next().is_some() {
+        return None;
+    }
+    token.parse::<f64>().ok().filter(|value| value.is_finite())
+}
+
+/// A component's value: a CSS number or percentage.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Value {
+    Number(f64),
+    Percentage(f64),
+}
+
+fn value(text: &str, token: &str) -> Result<Value, ExportError> {
+    let parsed = match token.strip_suffix('%') {
+        Some(number) => css_number(number).map(Value::Percentage),
+        None => css_number(token).map(Value::Number),
+    };
+    parsed.ok_or_else(|| invalid(text, "a component is not a CSS number or percentage"))
 }
 
 /// A channel clamped to 0..=255 and rounded, as CSS does.
@@ -322,29 +391,66 @@ fn channel(value: f64) -> u8 {
     value.clamp(0.0, 255.0).round() as u8
 }
 
-fn alpha(text: &str, part: Option<&str>) -> Result<f64, ExportError> {
-    match part {
-        Some(part) => Ok(number(text, part, 1.0)?.clamp(0.0, 1.0)),
-        None => Ok(1.0),
+/// An rgb() channel in 0..=255: a number as is, a percentage of 255.
+fn rgb_channel(value: Value) -> u8 {
+    match value {
+        Value::Number(number) => channel(number),
+        // Multiplying first keeps `50%` exactly 127.5, as the number is.
+        Value::Percentage(percent) => channel(percent * 255.0 / 100.0),
     }
 }
 
+fn alpha(text: &str, token: Option<&str>) -> Result<f64, ExportError> {
+    let Some(token) = token else {
+        return Ok(1.0);
+    };
+    Ok(match value(text, token)? {
+        Value::Number(number) => number.clamp(0.0, 1.0),
+        Value::Percentage(percent) => (percent / 100.0).clamp(0.0, 1.0),
+    })
+}
+
 fn parse_rgb(text: &str, arguments: &str) -> Result<RGBAColor, ExportError> {
-    let ([r, g, b], a) = components(text, arguments)?;
+    let (syntax, [r, g, b], a) = components(text, arguments)?;
+    let [r, g, b] = [value(text, r)?, value(text, g)?, value(text, b)?];
+    let percentages = [r, g, b]
+        .iter()
+        .filter(|v| matches!(v, Value::Percentage(_)))
+        .count();
+    if syntax == Syntax::Legacy && percentages != 0 && percentages != 3 {
+        return Err(invalid(
+            text,
+            "legacy rgb() takes three numbers or three percentages, not a mix",
+        ));
+    }
     Ok(RGBAColor(
-        channel(number(text, r, 255.0)?),
-        channel(number(text, g, 255.0)?),
-        channel(number(text, b, 255.0)?),
+        rgb_channel(r),
+        rgb_channel(g),
+        rgb_channel(b),
         alpha(text, a)?,
     ))
 }
 
 fn parse_hsl(text: &str, arguments: &str) -> Result<RGBAColor, ExportError> {
-    let ([h, s, l], a) = components(text, arguments)?;
-    let hue = number(text, h.strip_suffix("deg").unwrap_or(h), 1.0)?.rem_euclid(360.0);
-    // Saturation and lightness as percentages; a plain number counts as one.
-    let saturation = number(text, s, 100.0)?.clamp(0.0, 100.0) / 100.0;
-    let lightness = number(text, l, 100.0)?.clamp(0.0, 100.0) / 100.0;
+    let (syntax, [h, s, l], a) = components(text, arguments)?;
+    let hue = match value(text, h.strip_suffix("deg").unwrap_or(h))? {
+        Value::Number(degrees) => degrees.rem_euclid(360.0),
+        Value::Percentage(_) => return Err(invalid(text, "a hue is a number of degrees")),
+    };
+    // Legacy syntax wants percentages; the modern one also takes numbers,
+    // read as percentages.
+    let percent = |token: &str| -> Result<f64, ExportError> {
+        match (value(text, token)?, syntax) {
+            (Value::Percentage(percent), _) | (Value::Number(percent), Syntax::Modern) => {
+                Ok(percent.clamp(0.0, 100.0) / 100.0)
+            }
+            (Value::Number(_), Syntax::Legacy) => Err(invalid(
+                text,
+                "legacy hsl() takes saturation and lightness as percentages",
+            )),
+        }
+    };
+    let (saturation, lightness) = (percent(s)?, percent(l)?);
     // CSS Color 4, `hslToRgb`.
     let convert = |n: f64| {
         let k = (n + hue / 30.0).rem_euclid(12.0);
@@ -447,11 +553,22 @@ mod tests {
     }
 
     #[test]
+    fn test_percentages_round_like_the_equivalent_numbers() {
+        assert_eq!(rgba("rgb(50%, 50%, 50%)"), rgba("rgb(127.5, 127.5, 127.5)"));
+        assert_eq!(rgba("rgb(50%, 50%, 50%)").0, 128);
+        assert_eq!(rgba("rgb(90%, 0%, 0%)").0, 230);
+        assert_eq!(rgba("rgb(10% 30% 90%)"), rgba("rgb(25.5 76.5 229.5)"));
+        // Modern syntax may mix numbers and percentages; CSS number tokens.
+        assert_eq!(rgba("rgb(100% 0 0)"), (255, 0, 0, 1.0));
+        assert_eq!(rgba("rgb(1e2 +.5 1E+1)"), (100, 1, 10, 1.0));
+    }
+
+    #[test]
     fn test_hsl_forms() {
         assert_eq!(rgba("hsl(0, 100%, 50%)"), (255, 0, 0, 1.0));
         assert_eq!(rgba("hsl(120deg 100% 25%)"), (0, 128, 0, 1.0));
         assert_eq!(rgba("hsla(240, 100%, 50%, 0.5)"), (0, 0, 255, 0.5));
-        assert_eq!(rgba("hsl(-120, 100, 50)"), (0, 0, 255, 1.0));
+        assert_eq!(rgba("hsl(-120 100 50)"), (0, 0, 255, 1.0));
         assert_eq!(rgba("hsl(270, 50%, 40%)"), rgba("rebeccapurple"));
     }
 
@@ -472,6 +589,26 @@ mod tests {
             "rgb(inf, 0, 0)",
             "hwb(0 0% 0%)",
             "color(srgb 1 0 0)",
+            // Component lists (CSS Color 4, legacy and modern syntax).
+            "rgb()",
+            "rgb(255 0 0 0.5)",
+            "rgb(255 0 / 50%)",
+            "hsl(0 100% / 50%)",
+            "rgb(255 0 0 / 0.5 1)",
+            "rgb(255 0 0 /)",
+            "rgb(100%, 0, 0)",
+            "hsl(0, 100, 50)",
+            "hsl(120%, 100%, 50%)",
+            "hsl(0.5turn 100% 50%)",
+            "rgb (0, 0, 0)",
+            // Number tokens.
+            "rgb(1., 0, 0)",
+            "rgb(1.e2, 0, 0)",
+            "rgb(50 %, 0%, 0%)",
+            "rgb(1e, 0, 0)",
+            "rgb(--1, 0, 0)",
+            "rgb(0x10, 0, 0)",
+            "rgb(1e309 0 0)",
             "currentColor",
             "inherit",
             "Canvas",
