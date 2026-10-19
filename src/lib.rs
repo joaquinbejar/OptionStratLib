@@ -1029,8 +1029,11 @@
 //!   `visualization`; forwards `optionstratlib-visualization/plotly`, which
 //!   resolves no image-export or async package)
 //! - `static_export`: PNG / SVG export, drawn natively with Plotters since
-//!   0.23 (no browser, WebDriver, network or installed font; implies
-//!   `plotly`; forwards `optionstratlib-visualization/static_export`)
+//!   0.23 (no browser, WebDriver, network or installed font; SVG text as
+//!   glyph outlines of the bundled font; implies `plotly`; forwards
+//!   `optionstratlib-visualization/static_export`). What the images are and
+//!   how they differ from Plotly's: the visualization crate's README,
+//!   section "Static export"
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
 //!   `default-features = false` drops it, and `csv` and `zip` with it

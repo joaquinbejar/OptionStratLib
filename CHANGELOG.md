@@ -57,6 +57,29 @@ Upgrading: see `docs/migration-0.23.md`.
   `PlotBuilder::save` now return the export's error unchanged instead of
   folding it into `GraphError::Render`.
 
+### Documentation
+
+- **Native static export documented** (#930).
+  - `doc/adr/ADR-0005-native-static-export.md` records the decision, the
+    feature matrix and the evidence.
+  - The visualization crate's README and docs gain a "Static export"
+    section: images versus Plotly's, text and accessibility limits, and the
+    typed errors, with a compiled example.
+  - `docs/migration-0.23.md` gains the feature matrix.
+  - The docs.rs metadata of the facade and the component selects
+    `static_export`. A local build with that selection and `--cfg docsrs`
+    passed offline with network access denied; the hosted docs.rs build
+    happens only when the crates are published.
+  - The direct visualization example uses `static_export` (HTML, PNG and
+    SVG, and a typed refusal). The facade example `native_export` exports
+    a payoff and handles a typed error.
+
+### Fixed
+
+- The published `optionstratlib-visualization` crate's tests compile with
+  `static_export` (#929): the colour reference table they read moved from
+  `tests/`, which the crate does not ship, into its sources.
+
 ### Security
 
 - **No advisory is waived** (#928). A fresh resolution of the workspace, every

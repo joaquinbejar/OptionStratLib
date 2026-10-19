@@ -635,7 +635,8 @@ The full version, with the report assertions, is
 
 Charts are `optionstratlib-visualization` (facade `visualization`); the
 `Graph` contract needs no backend, `plotly` adds rendering and
-`static_export` adds PNG/SVG export. `Plottable` has no `Error` type; drop
+`static_export` adds PNG/SVG export (drawn natively since 0.23, with no
+browser: see `docs/migration-0.23.md`). `Plottable` has no `Error` type; drop
 `type Error = ..;` from an implementation. `impl_graph_for_payoff_strategy!`
 names everything it expands to through `$crate` paths, so the caller no
 longer imports `Graph`, `GraphData` and the rest for it.
