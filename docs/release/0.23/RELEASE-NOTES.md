@@ -186,7 +186,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Dependencies and security
 
 - `static_export` no longer resolves `plotly_static`, `fantoccini`,
-  `webdriver`, an HTTP client or an async runtime, and no font parser:
+  `webdriver`, an HTTP client, an async runtime or `ttf-parser`:
   `ttf-parser` (RUSTSEC-2026-0192) is in no published path.
 - `cargo audit --deny warnings` passes with no advisory waived.
 
