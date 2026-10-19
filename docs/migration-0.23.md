@@ -2,7 +2,22 @@
 
 0.23 changes how `static_export` draws images. The `Graph` methods keep their
 signatures; what changes is what draws them and which charts they accept.
-The full list is in `CHANGELOG.md`.
+The full list is in `CHANGELOG.md`; the decision and its evidence are in
+`doc/adr/ADR-0005-native-static-export.md`, and the
+`optionstratlib-visualization` README's "Static export" section describes
+the images in detail.
+
+## Which feature gives what
+
+| Feature | Chart data, `Graph`, terminal tables | `to_plot`, HTML, `show`, Plotly helpers | `write_png`, `write_svg` |
+|---|---|---|---|
+| `visualization` (facade) / none (component) | yes | | |
+| `plotly` | yes | yes | |
+| `static_export` | yes | yes (implies `plotly`) | yes |
+
+`static_export` still brings the Plotly Rust crate, for HTML; the images do
+not use it. It does not imply `async`. docs.rs now documents `static_export`
+for both the facade and the component.
 
 ## Nothing to install
 

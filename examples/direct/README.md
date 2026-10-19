@@ -16,7 +16,7 @@ a workspace member with `publish = false`.
 | [`strategies`](strategies) | `osl-example-direct-strategies` | core, strategies | `features = ["strategies"]` | `facade-strategies` |
 | [`simulation`](simulation) | `osl-example-direct-simulation` | core, simulation | `features = ["simulation"]` | `simulation-only` |
 | [`backtest`](backtest) | `osl-example-direct-backtest` | core, simulation, strategies, backtest | `features = ["backtest"]` | `full-backtest` |
-| [`visualization`](visualization) | `osl-example-direct-visualization` | core, strategies, visualization (`plotly`) | `features = ["plotly"]` | `facade-plotly` |
+| [`visualization`](visualization) | `osl-example-direct-visualization` | core, strategies, visualization (`static_export`) | `features = ["static_export"]` | `facade-static-export` (the component alone: `visualization-static-export`) |
 
 Every published component has a program: `math` is the curve and
 interpolation one, and `optionstratlib-core` (the domain model every other

@@ -1,4 +1,4 @@
-# Direct-component example: a strategy charted to HTML with optionstratlib-visualization and Plotly.
+# Direct-component example: a strategy charted to HTML, PNG and SVG with optionstratlib-visualization.
 # Layout and naming follow ADR-0004 section 8: `examples/direct/<scenario>/`,
 # package `osl-example-direct-<scenario>`, a workspace member, `publish = false`.
 #
@@ -15,12 +15,13 @@ name = "osl-example-direct-visualization"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "Direct-component example: a strategy charted to HTML with optionstratlib-visualization and Plotly."
+description = "Direct-component example: a strategy charted to HTML, PNG and SVG with optionstratlib-visualization."
 
 [dependencies]
 optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.23.0" }
 optionstratlib-strategies = { path = "../../../crates/optionstratlib-strategies", version = "0.23.0" }
-optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.23.0", features = ["plotly"] }
+# `static_export` draws PNG and SVG natively and implies `plotly`.
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.23.0", features = ["static_export"] }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"
 tracing = "0.1"
@@ -30,4 +31,4 @@ tracing-subscriber = "0.3"
 # but every default capability resolves unless you opt out; the paths in the
 # source then read `optionstratlib::...`):
 #
-#   optionstratlib = { version = "0.23.0", default-features = false, features = ["plotly"] }
+#   optionstratlib = { version = "0.23.0", default-features = false, features = ["static_export"] }

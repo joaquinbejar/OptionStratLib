@@ -12,9 +12,11 @@ present = [
     "optionstratlib-analytics", "optionstratlib-strategies",
     "optionstratlib-backtest", "optionstratlib-visualization", "plotly",
     "prettytable-rs",
+    # `static_export`: the native renderer (#927).
+    "plotters", "skrifa", "ab_glyph_rasterizer",
 ]
 absent = [
     "optionstratlib", "csv", "zip", "tokio", "reqwest", "futures",
     "async-trait", "plotly_static", "fantoccini", "webdriver", "indicatif",
-    "utoipa",
+    "utoipa", "ttf-parser", "ab_glyph", "font-kit",
 ]
