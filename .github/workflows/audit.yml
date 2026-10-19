@@ -5,10 +5,12 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - '.cargo/audit.toml'
   pull_request:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - '.cargo/audit.toml'
   schedule:
     - cron: '0 0 * * *'
 
@@ -26,8 +28,8 @@ jobs:
           # source of truth.
           ignore: ''
           # Informational advisories (unmaintained / unsound / notice) must fail
-          # the run: with the three known-unreachable ones waived in
-          # `.cargo/audit.toml`, anything new is a real finding.
+          # the run: `.cargo/audit.toml` waives nothing since #928, so any
+          # finding is a real one.
           denyWarnings: 'true'
           # Issue creation needs `issues: write`, which this workflow
           # deliberately does not grant. A failing run is the signal.

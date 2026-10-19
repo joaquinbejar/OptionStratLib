@@ -57,6 +57,18 @@ Upgrading: see `docs/migration-0.23.md`.
   `PlotBuilder::save` now return the export's error unchanged instead of
   folding it into `GraphError::Render`.
 
+### Security
+
+- **No advisory is waived** (#928). A fresh resolution of the workspace, every
+  member, feature and target, no longer contains the packages the
+  `.cargo/audit.toml` waivers covered: the `plotly_static` download stack
+  (`rustls-pemfile`, RUSTSEC-2025-0134; `h2` 0.3, RUSTSEC-2026-0258; zip below
+  9, RUSTSEC-2026-0367/0368/0369) left with #927, rust_decimal 1.43 has no
+  `rkyv` feature (RUSTSEC-2026-0235) and indicatif 0.18 no `number_prefix`
+  (RUSTSEC-2025-0119). `cargo audit --deny warnings` passes with an empty
+  ignore list, and `make check-feature-trees` now fails on a zip below 9 on
+  every surface, `static_export` included.
+
 ### Removed
 
 - `static_export` no longer resolves `plotly_static`, `fantoccini`,

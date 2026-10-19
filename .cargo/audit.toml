@@ -7,136 +7,30 @@
 # review date. Every entry MUST be re-evaluated on or before its review date;
 # an entry whose upstream fix has shipped must be removed, not extended.
 #
-# ---------------------------------------------------------------------------
-# RUSTSEC-2026-0235 — rkyv 0.7.46, out-of-bounds read validating archives that
-#                     contain Rc/Arc. Fixed in rkyv >= 0.8.17.
+# None is ignored since #928. A fresh resolution of the workspace
+# (`cargo generate-lockfile`: every member, feature and target, optional
+# dependencies included) left every former waiver without a package to
+# cover:
 #
-# Reachability : NOT REACHABLE. `rkyv` enters Cargo.lock only as an *optional*
-#                dependency of `rust_decimal`. This crate depends on
-#                rust_decimal with `features = ["maths", "serde"]` and never
-#                enables its `rkyv` feature, so the crate is never compiled or
-#                linked. Verified with:
-#                    cargo tree --all-features --target all -i rkyv
-#                which reports "nothing to print" — no path from
-#                `optionstratlib` to `rkyv` exists under any feature or target
-#                combination. Cargo records optional dependencies in the
-#                lockfile regardless of feature selection, which is why
-#                `cargo audit` still sees it.
-# Upgrade path : Blocked upstream. rust_decimal 1.42.1 (the latest release)
-#                pins the 0.7 line for its optional `rkyv` feature; moving to
-#                rkyv 0.8 is a breaking change that must land in rust_decimal
-#                first. There is no version of rust_decimal we can select that
-#                resolves this.
-# Tracking     : https://github.com/paupino/rust-decimal/issues
-# Owner        : @joaquinbejar
-# Review by    : 2027-02-15
-# ---------------------------------------------------------------------------
-# RUSTSEC-2025-0119 — number_prefix 0.4.0, unmaintained.
+# * RUSTSEC-2025-0134 (rustls-pemfile), RUSTSEC-2026-0258 (h2) and
+#   RUSTSEC-2026-0367/0368/0369 (zip < 9) covered the build-time download
+#   stack of the `plotly_static` browser exporter. Since #927 `static_export`
+#   draws natively: Cargo.lock records no `plotly_static`,
+#   `webdriver-downloader`, `fantoccini`, `reqwest`, `hyper`, `h2` or
+#   `rustls-pemfile`, and a single zip, 9.0.5, the market crate's.
+# * RUSTSEC-2026-0235 (rkyv 0.7) covered an optional dependency of
+#   `rust_decimal`. The workspace requires rust_decimal 1.43, which has no
+#   `rkyv` feature (only a dev-dependency on rkyv 0.8), so rkyv is not in
+#   Cargo.lock.
+# * RUSTSEC-2025-0119 (number_prefix) covered an optional dependency of
+#   `indicatif`. The examples require indicatif 0.18, which uses
+#   `unit-prefix` instead, so number_prefix is not in Cargo.lock.
 #
-# Reachability : NOT REACHABLE. Lockfile-only, exactly like the rkyv entry
-#                above: `cargo tree --all-features --target all -i
-#                number_prefix` reports that the package is not in the graph
-#                at all. It is recorded as an optional dependency of
-#                `indicatif`, whose feature this crate does not enable. Since
-#                #538 `indicatif` is used only by the `examples_simulation`
-#                binaries, not by any library crate.
-# Upgrade path : None to take — an unmaintained advisory has no fixed release.
-#                It would disappear on its own once `indicatif` drops the
-#                dependency.
-# Tracking     : https://github.com/console-rs/indicatif
-# Owner        : @joaquinbejar
-# Review by    : 2027-02-15
-# ---------------------------------------------------------------------------
-# RUSTSEC-2025-0134 — rustls-pemfile 1.0.4, unmaintained.
-#
-# Reachability : NOT LINKED INTO THIS CRATE. It arrives through
-#                `reqwest 0.11`, which is a *build*-dependency of
-#                `plotly_static` (via `webdriver-downloader`), itself pulled in
-#                only by the `static_export` feature:
-#                    optionstratlib -> optionstratlib-visualization
-#                      -> plotly -> plotly_static
-#                      -> [build-dependencies] webdriver-downloader
-#                      -> reqwest 0.11 -> rustls-pemfile 1.0.4
-#                It runs on the build machine while downloading a webdriver, is
-#                absent from the library and from every default-feature build,
-#                and never parses attacker-supplied PEM at runtime.
-# Upgrade path : Blocked upstream: it needs `plotly_static` to move off
-#                `reqwest` 0.11, which is the crate that pins the old
-#                `rustls-pemfile` line.
-# Tracking     : https://github.com/plotly/plotly.rs
-# Owner        : @joaquinbejar
-# Review by    : 2027-02-15
-# ---------------------------------------------------------------------------
-# RUSTSEC-2026-0258 — h2 0.3.27, unbounded empty DATA frames. A hostile HTTP/2
-#                     peer can keep a connection busy with empty DATA frames.
-#                     Fixed in h2 >= 0.4.16.
-#
-# Reachability : NOT LINKED INTO THIS CRATE, and not present at all in a
-#                default-feature build. `cargo tree -i h2@0.3.27` reports the
-#                package is not in the graph; it appears only under
-#                `--all-features`, on the same build-machine path as the
-#                `rustls-pemfile` entry above:
-#                    optionstratlib -> optionstratlib-visualization
-#                      -> plotly -> plotly_static
-#                      -> [build-dependencies] webdriver-downloader
-#                      -> fantoccini / reqwest 0.11 -> hyper 0.14 -> h2 0.3.27
-#                It is the HTTP/2 client used to download a webdriver while
-#                building with `static_export`, talking to a known release
-#                endpoint. It never serves connections, never faces an
-#                untrusted peer, and is absent from the shipped library.
-# Upgrade path : Blocked upstream. The fix is in the 0.4 line, so escaping it
-#                requires `plotly_static` to move off `reqwest` 0.11 /
-#                `hyper` 0.14; there is no h2 0.3.x release that resolves it.
-#                Note this crate ships no Cargo.lock, so a fresh resolution
-#                already selects a fixed h2 for the 0.4 copy in the graph
-#                (0.4.19 at the time of writing, above the 0.4.16 fix). Only
-#                the build-time 0.3 copy, which cannot move, is waived here —
-#                if the 0.4 copy ever regresses below 0.4.16 this entry would
-#                hide it, since cargo-audit ignores by advisory ID and not by
-#                version.
-# Tracking     : https://github.com/plotly/plotly.rs
-# Owner        : @joaquinbejar
-# Review by    : 2026-11-28
-# ---------------------------------------------------------------------------
-# RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369 — zip < 9.0.0:
-#                     SUID/SGID bits kept, symlinks outside the destination,
-#                     and Unix permissions applied through symlinks, all in
-#                     the archive *extraction* API. Fixed in zip >= 9.0.0.
-#
-# Reachability : NOT LINKED INTO THIS CRATE, and absent from every surface
-#                without `static_export`. The library's own copy is zip 9
-#                since #919 (`optionstratlib-market`, feature `io`, which
-#                only opens archives and reads entries). The flagged copies
-#                are build-time only, on the same path as the entries above:
-#                    optionstratlib -> optionstratlib-visualization
-#                      -> plotly -> plotly_static
-#                      -> [build-dependencies] zip 4.6
-#                      -> [build-dependencies] webdriver-downloader -> zip 0.6
-#                They unpack a webdriver downloaded from its release endpoint
-#                on the build machine while building with `static_export`.
-# Guard        : cargo-audit ignores by ID, not by version, so this waiver
-#                alone would hide `optionstratlib-market` falling back below
-#                zip 9. `make check-feature-trees` fails when any surface
-#                without `static_export` resolves a zip below 9, or when the
-#                market crate's own zip is below 9 (#919).
-# Upgrade path : Blocked upstream: plotly_static 0.1.0 (the latest) requires
-#                zip ^4.0 and webdriver-downloader ^0.16.
-# Tracking     : https://github.com/plotly/plotly.rs
-# Owner        : @joaquinbejar
-# Review by    : 2027-01-18
-# ---------------------------------------------------------------------------
-ignore = [
-    "RUSTSEC-2026-0235",
-    "RUSTSEC-2025-0119",
-    "RUSTSEC-2025-0134",
-    "RUSTSEC-2026-0258",
-    "RUSTSEC-2026-0367",
-    "RUSTSEC-2026-0368",
-    "RUSTSEC-2026-0369",
-]
+# A new waiver needs the same rationale, owner and review date as before.
+ignore = []
 
 # Every other advisory class fails the run, so a new unmaintained or unsound
-# dependency cannot slip in as a silent warning: with these three waived, the
+# dependency cannot slip in as a silent warning: with nothing waived, the
 # audit is expected to be clean, and `denyWarnings` in the workflow can be
 # turned on without turning the gate into noise.
 informational_warnings = ["unmaintained", "unsound", "notice"]
