@@ -491,9 +491,11 @@ mod tests {
 
     #[test]
     fn test_named_table_matches_an_independent_reference() -> Result<(), serde_json::Error> {
-        // Generated from Pillow's CSS colour table, not from `NAMED`.
+        // Generated from Pillow's CSS colour table, not from `NAMED`. It sits
+        // beside this module rather than under `tests/`, which the published
+        // crate leaves out, so the packaged crate's tests have it too (#929).
         let reference: serde_json::Value =
-            serde_json::from_str(include_str!("../../../tests/data/css-named-colors.json"))?;
+            serde_json::from_str(include_str!("css-named-colors.json"))?;
         let Some(colors) = reference.get("colors").and_then(|c| c.as_object()) else {
             panic!("reference without colours");
         };
