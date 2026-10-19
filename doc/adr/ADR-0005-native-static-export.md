@@ -113,8 +113,10 @@ implied by `static_export`.
   fixtures; the examples workflow runs every example with its real exports,
   and an export error fails it.
 - The publication dry run builds and tests every archive with all features,
-  `static_export` included, and docs.rs documents `static_export` for both
-  crates.
+  `static_export` included. The docs.rs metadata of both crates selects
+  `static_export`; a local build with that selection, `--cfg docsrs` and
+  warnings denied passes offline with network access denied (#930). The
+  hosted docs.rs build happens only on publication.
 
 ## Consequences
 

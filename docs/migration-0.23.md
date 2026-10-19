@@ -16,8 +16,9 @@ the images in detail.
 | `static_export` | yes | yes (implies `plotly`) | yes |
 
 `static_export` still brings the Plotly Rust crate, for HTML; the images do
-not use it. It does not imply `async`. docs.rs now documents `static_export`
-for both the facade and the component.
+not use it. It does not imply `async`. From 0.23 the docs.rs metadata of
+both the facade and the component selects `static_export`, so the published
+documentation includes `write_png` and `write_svg`.
 
 ## Nothing to install
 

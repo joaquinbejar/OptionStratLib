@@ -66,8 +66,10 @@ Upgrading: see `docs/migration-0.23.md`.
     section: images versus Plotly's, text and accessibility limits, and the
     typed errors, with a compiled example.
   - `docs/migration-0.23.md` gains the feature matrix.
-  - docs.rs now documents `static_export` for the facade and the component;
-    the build was checked offline with network access denied.
+  - The docs.rs metadata of the facade and the component selects
+    `static_export`. A local build with that selection and `--cfg docsrs`
+    passed offline with network access denied; the hosted docs.rs build
+    happens only when the crates are published.
   - The direct visualization example uses `static_export` (HTML, PNG and
     SVG, and a typed refusal). The facade example `native_export` exports
     a payoff and handles a typed error.
