@@ -89,10 +89,11 @@ What the images are, and how they differ from the Plotly chart:
   looks the same in every viewer and needs no font. The label's text is
   kept as its accessible name (`<g role="img" aria-label>`), and the
   document carries a `<title>` and a `<desc>` naming the series and axes.
-  The text cannot be selected, copied, found or edited as text, and a
-  screen reader announces each label as an image. Chrome's accessibility
-  tree was checked when the design was chosen; WebKit and screen readers
-  were not. Use `write_html` for a text-searchable, interactive chart.
+  The text cannot be selected, copied, found or edited as text. In Chrome's
+  accessibility tree, checked when the design was chosen, each label is an
+  `image` node named by its text, and the document is named by its title;
+  how WebKit or a screen reader presents them was not checked. Use
+  `write_html` for a text-searchable, interactive chart.
 - **Surfaces.** A 3D surface is drawn from a fixed viewpoint with
   flat-shaded cells, no lighting and a Viridis colour bar (a `ColorScheme`
   does not apply to surfaces), and shows its three axis titles. It must be a

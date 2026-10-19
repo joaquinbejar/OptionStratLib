@@ -132,11 +132,11 @@ implied by `static_export`.
   shows the three axis titles the Plotly export lost.
 - **Text.** Labels are single lines with no kerning, ligatures or
   right-to-left shaping; a character outside the bundled font is
-  `MissingGlyph`. SVG text cannot be selected, copied, found or edited, and
-  a screen reader announces each label as an image. Chrome's accessibility
-  tree exposes every label's name and the chart's title and description
-  (#923); WebKit and screen readers were not checked, and the chart as a
-  whole is not claimed to be accessible.
+  `MissingGlyph`. SVG text cannot be selected, copied, found or edited. In
+  Chrome's accessibility tree each label is an `image` node named by its
+  text, and the chart is named and described by its `<title>` and `<desc>`
+  (#923); how WebKit or a screen reader presents them was not checked, and
+  the chart as a whole is not claimed to be accessible.
 - **Stricter input.** Incomplete or repeated surface points, mismatched
   arrays, non-CSS colours, line widths outside 0 to 100 pixels or not
   finite, sizes outside 1 to 16384 pixels and text XML cannot carry are
