@@ -197,7 +197,9 @@ fn bundled_font() -> Result<&'static FontRef<'static>, ExportError> {
 /// [`ExportError::UnsupportedSvgText`] for a text element outside the
 /// plotters-svg subset (or a document with no `<svg>` element),
 /// [`ExportError::MissingGlyph`] for a character the bundled font cannot
-/// draw, and [`ExportError::Font`] if the bundled font does not parse.
+/// draw, [`ExportError::NotXmlText`] for a label, title or description
+/// with a character XML 1.0 cannot carry, and [`ExportError::Font`] if the
+/// bundled font does not parse.
 pub fn outline_text(document: &str, chart: &ChartText) -> Result<Outlined, ExportError> {
     let font = bundled_font()?;
     let mut converted = String::with_capacity(document.len());

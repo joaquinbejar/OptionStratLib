@@ -133,7 +133,9 @@ pub fn write_png(data: &GraphData, config: &GraphConfig, path: &Path) -> Result<
 ///
 /// [`ExportError`] for invalid dimensions or data, a failed font
 /// registration or a drawing failure; with [`SvgText::Outlines`], also a
-/// character the font has no glyph for.
+/// character the font has no glyph for ([`ExportError::MissingGlyph`]) or
+/// a label, title or description XML cannot carry
+/// ([`ExportError::NotXmlText`]).
 #[tracing::instrument(skip(data, config), fields(title = %config.title))]
 pub fn render_svg(
     data: &GraphData,
