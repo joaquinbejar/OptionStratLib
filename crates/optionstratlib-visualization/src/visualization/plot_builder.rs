@@ -252,14 +252,15 @@ impl<T: Plottable + Graph> PlotBuilder<T> {
     /// A `Result` indicating success or containing an error if the save operation failed
     ///
     /// # Errors
-    /// Returns [`GraphError::Render`] if the plot cannot be rendered or
-    /// written to `path`.
+    /// Whatever [`Graph::write_png`] returns, unchanged: the typed variant
+    /// for data it cannot draw, [`GraphError::Io`] when `path` cannot be
+    /// written, [`GraphError::Render`] when drawing fails.
     ///
     #[cfg(feature = "static_export")]
     pub fn save(self, path: impl AsRef<Path>) -> Result<(), GraphError> {
         let path = path.as_ref();
-        self.write_png(path).map_err(|e| {
-            GraphError::Render(format!("Failed to save plot to {} {}", path.display(), e))
+        self.write_png(path).inspect_err(|error| {
+            tracing::debug!(path = %path.display(), %error, "failed to save plot");
         })
     }
 }
@@ -282,5 +283,48 @@ impl<T: Plottable + Graph> Graph for PlotBuilder<T> {
             legend: self.options.legend.clone(),
             show_legend: self.options.show_legend,
         }
+    }
+}
+
+#[cfg(all(test, feature = "static_export"))]
+mod tests {
+    use super::*;
+    use crate::visualization::{Series2D, TraceMode};
+    use rust_decimal_macros::dec;
+
+    /// A chart with more x than y values.
+    struct Lopsided;
+
+    impl Graph for Lopsided {
+        fn graph_data(&self) -> GraphData {
+            GraphData::Series(Series2D {
+                x: vec![dec!(1), dec!(2)],
+                y: vec![dec!(1)],
+                name: "lopsided".to_string(),
+                mode: TraceMode::Lines,
+                line_color: None,
+                line_width: None,
+            })
+        }
+    }
+
+    impl Plottable for Lopsided {
+        fn plot(&self) -> PlotBuilder<Self> {
+            PlotBuilder {
+                data: Lopsided,
+                options: GraphConfig::default(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_save_returns_the_export_error_typed() -> Result<(), Box<dyn std::error::Error>> {
+        let dir = tempfile::tempdir()?;
+        let result = Lopsided.plot().save(dir.path().join("lopsided.png"));
+        assert!(
+            matches!(result, Err(GraphError::LengthMismatch { x: 2, y: 1, .. })),
+            "{result:?}"
+        );
+        Ok(())
     }
 }

@@ -1130,27 +1130,26 @@ FEATURE_SETS: dict[str, dict[str, tuple[str, frozenset[str]]]] = {
     },
     # The facade routes `plotly` and `static_export` to the visualization
     # crate's features, so each set adds what that crate's set adds: for
-    # `static_export`, the export stack `plotly_static` brings (ADR-0002
-    # section 2, #544, #833).
+    # `static_export`, Plotly and the native renderer (#927). It no longer
+    # brings the `plotly_static` exporter, WebDriver or an async runtime, so
+    # those stay forbidden (ADR-0002 section 2, #544, #833).
     "optionstratlib": {
         "visualization": ("visualization", frozenset()),
         "plotly": ("plotly", frozenset({"plotly"})),
         # `async` forwards to the market crate's `tokio` and the facade declares
         # no async package of its own (ADR-0002 section 2, #549).
         "async": ("async", frozenset({"tokio"})),
-        "static_export": ("static_export", frozenset({
-            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait",
-        })),
+        "static_export": ("static_export", frozenset({"plotly", "plotters"})),
     },
     # ADR-0002 §3 visualization row (#542): `plotly` brings Plotly itself and
-    # nothing for image export, which only `static_export` adds: the
-    # `plotly_static` exporter, its WebDriver client and the async runtime it
-    # runs on.
+    # nothing for image export, which only `static_export` adds. Since #927
+    # that is the native renderer: Plotters (without a font feature), skrifa
+    # and ab_glyph_rasterizer; of the forbidden names only `plotters`. The
+    # `plotly_static` exporter, WebDriver and the async runtime stay
+    # forbidden on every surface.
     "optionstratlib-visualization": {
         "plotly": ("plotly", frozenset({"plotly"})),
-        "static_export": ("static_export", frozenset({
-            "plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait",
-        })),
+        "static_export": ("static_export", frozenset({"plotly", "plotters"})),
     },
 }
 
@@ -1309,12 +1308,18 @@ def crate_graph_violations(packages: list[dict]) -> list[str]:
 PLOTLY_BACKENDS = frozenset({"plotly", "plotly_static"})
 PLOTLY_OWNER = "optionstratlib-visualization"
 # The visualization crate's backend features, exactly: `plotly` enables the
-# optional dependency and nothing else, and `static_export` adds only the
-# export feature of that dependency, which is what pulls `plotly_static`,
-# WebDriver and the async runtime.
+# optional dependency and nothing else, and `static_export` adds `plotly` and
+# the native renderer's dependencies (#927), never `plotly`'s own export
+# feature, which would pull `plotly_static`, WebDriver and an async runtime.
 PLOTLY_OWNER_FEATURES = {
     "plotly": frozenset({"dep:plotly"}),
-    "static_export": frozenset({"plotly", "plotly/static_export_default"}),
+    "static_export": frozenset({
+        "plotly",
+        "dep:plotters",
+        "dep:plotters-backend",
+        "dep:skrifa",
+        "dep:ab_glyph_rasterizer",
+    }),
 }
 # Facade features that may name the visualization crate, with the one value
 # each may use.
@@ -2091,7 +2096,17 @@ def self_test() -> int:
         "optionstratlib-visualization",
         dep("plotly", optional=True),
         dep("optionstratlib-core"),
-        features={"default": [], "plotly": ["dep:plotly"], "static_export": ["plotly", "plotly/static_export_default"]},
+        features={
+            "default": [],
+            "plotly": ["dep:plotly"],
+            "static_export": [
+                "plotly",
+                "dep:plotters",
+                "dep:plotters-backend",
+                "dep:skrifa",
+                "dep:ab_glyph_rasterizer",
+            ],
+        },
     )
     facade_ok = gated(
         "optionstratlib",
@@ -2387,8 +2402,12 @@ def self_test() -> int:
             2,
         ),
         "visualization static export": (
-            {("optionstratlib-visualization", "static_export"): {"plotly", "plotly_static", "webdriver", "tokio"}},
+            {("optionstratlib-visualization", "static_export"): {"plotly", "plotters", "skrifa"}},
             0,
+        ),
+        "visualization static export pulls the browser exporter": (
+            {("optionstratlib-visualization", "static_export"): {"plotly", "plotly_static", "webdriver", "tokio"}},
+            3,
         ),
         "visualization csv under all features": ({("optionstratlib-visualization", "all features"): {"plotly", "csv"}}, 1),
         "core pulls utoipa by default": ({("optionstratlib-core", "default"): {"utoipa"}}, 1),
@@ -2409,19 +2428,27 @@ def self_test() -> int:
             5,
         ),
         "facade static_export": (
-            {("optionstratlib", "static_export"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
+            {("optionstratlib", "static_export"): {"plotly", "plotters", "skrifa"}},
             0,
         ),
+        "facade static_export pulls the browser exporter": (
+            {("optionstratlib", "static_export"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
+            6,
+        ),
         "facade static_export pulls futures": (
-            {("optionstratlib", "static_export"): {"plotly", "tokio", "futures"}},
+            {("optionstratlib", "static_export"): {"plotly", "futures"}},
             1,
         ),
         "facade async alone pulls reqwest": ({("optionstratlib", "async"): {"tokio", "reqwest"}}, 1),
         "facade async alone": ({("optionstratlib", "async"): {"tokio", "csv"}}, 0),
         "facade async pulls plotly": ({("optionstratlib", "async"): {"tokio", "plotly"}}, 1),
         "facade all features": (
-            {("optionstratlib", "all features"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
+            {("optionstratlib", "all features"): {"plotly", "plotters", "tokio"}},
             0,
+        ),
+        "facade all features pulls the browser exporter": (
+            {("optionstratlib", "all features"): {"plotly", "plotly_static", "fantoccini", "webdriver", "tokio", "reqwest", "async-trait"}},
+            5,
         ),
         "facade all features pulls tracing-subscriber": ({("optionstratlib", "all features"): {"tracing-subscriber"}}, 1),
         "simulation pulls prettytable": ({("optionstratlib-simulation", "default"): {"prettytable-rs"}}, 1),

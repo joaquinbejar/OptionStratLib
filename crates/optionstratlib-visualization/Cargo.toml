@@ -11,7 +11,7 @@ description = "Backend-neutral chart models, the Graph contract and its implemen
 readme = "README.md"
 keywords = ["finance", "options", "visualization", "charts", "plotly"]
 categories = ["finance", "visualization"]
-include = ["/src/**/*", "/Cargo.toml", "/README.md", "/LICENSE"]
+include = ["/src/**/*", "/assets/OpenSans-Regular.ttf", "/assets/OFL.txt", "/Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = []
@@ -20,13 +20,24 @@ default = []
 # this feature resolves no WebDriver, image export or async runtime package
 # (ADR-0002 section 3).
 plotly = ["dep:plotly"]
-# PNG and SVG export (`Graph::write_png`, `write_svg`) through
-# `plotly_static`, which brings the WebDriver client and its async runtime.
-static_export = ["plotly", "plotly/static_export_default"]
+# PNG and SVG export (`Graph::write_png`, `write_svg`), drawn natively with
+# Plotters: no browser, WebDriver, network or installed font (#927). It
+# still implies `plotly`, so a `static_export` build keeps the interactive
+# API. The text is read from the bundled Open Sans (SIL OFL 1.1,
+# `assets/OFL.txt`) with skrifa; Plotters has no font feature, so no
+# ttf-parser is resolved.
+static_export = [
+    "plotly",
+    "dep:plotters",
+    "dep:plotters-backend",
+    "dep:skrifa",
+    "dep:ab_glyph_rasterizer",
+]
 
 [package.metadata.docs.rs]
 # docs.rs builds the default features, empty for this crate, so name the
-# optional ones the API documents. `static_export` is left out: its build script needs a browser, which docs.rs does not have.
+# optional ones the API documents. `static_export` no longer needs a browser
+# (#927); adding it waits for the browser-free docs build evidence of #930.
 features = ["plotly"]
 
 [dependencies]
@@ -39,6 +50,13 @@ optionstratlib-strategies = { workspace = true }
 optionstratlib-backtest = { workspace = true }
 num-traits = { workspace = true }
 plotly = { workspace = true, optional = true }
+# The native PNG/SVG export (`static_export`), approved by the owner on
+# 2026-10-19 (#926): Plotters without a font feature, its backend trait,
+# skrifa for the bundled font and ab_glyph_rasterizer for PNG text.
+plotters = { workspace = true, optional = true }
+plotters-backend = { workspace = true, optional = true }
+skrifa = { workspace = true, optional = true }
+ab_glyph_rasterizer = { workspace = true, optional = true }
 # Terminal tables for chain and simulation reports (`visualization::terminal`,
 # M6-05): the presentation crate is their only owner, so no lower crate
 # resolves a terminal-table package.
@@ -57,6 +75,8 @@ serde_json = { workspace = true }
 static_assertions = "1.1"
 tempfile = { workspace = true }
 criterion = { workspace = true }
+# Decodes PNGs in the native export tests; already in the tree through plotters.
+png = "0.17.16"
 
 [[bench]]
 name = "visualization"

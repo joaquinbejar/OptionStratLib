@@ -26,16 +26,24 @@ fn main() -> Result<(), optionstratlib::error::Error> {
 
     info!("Curve saved");
 
+    // Delta of every strike at each of these volatilities: a complete
+    // strike x volatility grid. Without the list each strike gives one point
+    // at its own implied volatility, a scatter that is not a surface, and the
+    // image export refuses it as `GraphError::IncompleteSurface`.
+    let volatilities = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
+        .into_iter()
+        .map(|volatility| pos_or_panic!(volatility))
+        .collect();
     let surface = option_chain.surface(
         &BasicAxisTypes::Delta,
         &OptionStyle::Call,
-        None,
+        Some(volatilities),
         &Side::Long,
     )?;
 
     surface
         .plot()
-        .title("Volatility Surface")
+        .title("Delta Surface")
         .x_label("strike")
         .y_label("Volatility")
         .z_label("Delta")

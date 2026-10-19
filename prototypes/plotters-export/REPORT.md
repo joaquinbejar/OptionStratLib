@@ -70,6 +70,10 @@ the Plotters SVG without an embedded font, under `artifacts/`:
 `<case>-<renderer>.<ext>`, `<case>-plotters.plain.svg`, and `artifacts.json`
 with sizes. Regenerate with:
 
+> **Since #927 (2026-10-19)** `Graph::write_png`/`write_svg` draw natively and
+> the `plotly-baseline` feature is gone: build the baseline at `8484b42f`, the
+> last commit with the `plotly_static` export. The results below are unchanged.
+
 ```sh
 WEBDRIVER_PATH=<chromedriver 155> BROWSER_PATH=<chrome 155> \
   cargo run --release -p osl-prototype-plotters-export --features plotly-baseline \
@@ -303,6 +307,10 @@ Only after this report is accepted, and as #920 lists:
    surface lighting.
 
 ## Reproduce
+
+> **Since #927 (2026-10-19)** `Graph::write_png`/`write_svg` draw natively and
+> the `plotly-baseline` feature is gone: build the baseline at `8484b42f`, the
+> last commit with the `plotly_static` export. The results below are unchanged.
 
 ```sh
 # Native binary (no plotly_static linked) and baseline binary.

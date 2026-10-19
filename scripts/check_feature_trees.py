@@ -34,7 +34,8 @@ dependency assertions that do not depend on the fixtures, so an
 `--update` run cannot record a regression (#544): no surface below `plotly`
 resolves a Plotly, image-export, WebDriver or async-runtime package or the
 visualization crate where it does not belong, `plotly` resolves Plotly and no
-export stack, and `static_export` resolves all of it.
+export stack, and `static_export` resolves Plotly and the native renderer
+(#927) but no browser exporter, HTTP client or `ttf-parser`.
 
 Usage:
     check_feature_trees.py              compare against the fixtures
@@ -100,10 +101,16 @@ SURFACES = {
 # resolves the host and asserts `plotly` alone adds no `tokio` or `reqwest`
 # there.
 PLOTLY = {"plotly"}
+# The browser exporter `static_export` used before #927; no surface resolves
+# it any more.
 EXPORT_STACK = {"plotly_static", "fantoccini", "webdriver"}
 RUNTIME = {"tokio", "reqwest"}
 VISUALIZATION_CRATE = {"optionstratlib-visualization"}
-HEADLESS = PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE
+# The native renderer `static_export` brings since #927, and the font parsers
+# it must not bring (`ttf-parser` is unmaintained, RUSTSEC-2026-0192).
+NATIVE_EXPORT = {"plotters", "skrifa", "ab_glyph_rasterizer"}
+FONT_PARSERS = {"ttf-parser", "owned_ttf_parser", "ab_glyph", "font-kit"}
+HEADLESS = PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE | NATIVE_EXPORT
 BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
     "none": (set(), HEADLESS),
     "schema": (set(), HEADLESS),
@@ -114,16 +121,22 @@ BACKEND_RULES: dict[str, tuple[set[str], set[str]]] = {
     "strategies": (set(), HEADLESS),
     # `async` is `tokio` in the market crate and nothing else: no HTTP client
     # or export stack.
-    "async": ({"tokio"}, PLOTLY | EXPORT_STACK | {"reqwest"} | VISUALIZATION_CRATE),
+    "async": ({"tokio"}, PLOTLY | EXPORT_STACK | {"reqwest"} | VISUALIZATION_CRATE | NATIVE_EXPORT),
     # Every capability and no backend: the visualization crate is in, Plotly,
     # the exporter and the async runtime are not.
-    "default": (VISUALIZATION_CRATE, PLOTLY | EXPORT_STACK | RUNTIME),
-    "minimal": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
-    "synthetic": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
-    "backtest": (set(), PLOTLY | EXPORT_STACK | RUNTIME | VISUALIZATION_CRATE),
-    "visualization": (VISUALIZATION_CRATE, PLOTLY | EXPORT_STACK | RUNTIME),
-    "plotly": (VISUALIZATION_CRATE | PLOTLY, EXPORT_STACK | {"reqwest"}),
-    "static_export": (VISUALIZATION_CRATE | PLOTLY | EXPORT_STACK | RUNTIME, set()),
+    "default": (VISUALIZATION_CRATE, PLOTLY | EXPORT_STACK | RUNTIME | NATIVE_EXPORT),
+    "minimal": (set(), HEADLESS),
+    "synthetic": (set(), HEADLESS),
+    "backtest": (set(), HEADLESS),
+    "visualization": (VISUALIZATION_CRATE, PLOTLY | EXPORT_STACK | RUNTIME | NATIVE_EXPORT),
+    "plotly": (VISUALIZATION_CRATE | PLOTLY, EXPORT_STACK | {"reqwest"} | NATIVE_EXPORT),
+    # Plotly and the native renderer; no browser exporter, HTTP client or
+    # font parser beyond skrifa. `tokio` only as Plotly's wasm dependency, as
+    # under `plotly` (`ONLY_VIA`).
+    "static_export": (
+        VISUALIZATION_CRATE | PLOTLY | NATIVE_EXPORT,
+        EXPORT_STACK | {"reqwest"} | FONT_PARSERS,
+    ),
 }
 
 # The `optionstratlib-*` packages each surface resolves, exactly: a capability
@@ -170,6 +183,7 @@ NO_SCHEMA_COMPONENTS = {"optionstratlib-visualization"}
 # Packages a surface tolerates only as a child of the named parents.
 ONLY_VIA: dict[str, dict[str, set[str]]] = {
     "plotly": {"tokio": {"wasm-bindgen-futures"}},
+    "static_export": {"tokio": {"wasm-bindgen-futures"}},
 }
 
 
@@ -336,7 +350,7 @@ def self_test() -> int:
         "visualization resolves utoipa without schema": ("visualization", graph("utoipa"), 1),
         "static_export resolves utoipa without schema": (
             "static_export",
-            graph("utoipa", "plotly", *sorted(EXPORT_STACK | RUNTIME)),
+            graph("utoipa", "plotly", *sorted(NATIVE_EXPORT)),
             1,
         ),
         "schema alone resolves pricing": ("schema", graph("optionstratlib-pricing"), 1),
@@ -382,17 +396,27 @@ def self_test() -> int:
         "visualization resolves tokio": ("visualization", graph("optionstratlib-visualization", "tokio"), 1),
         "static_export is complete": (
             "static_export",
-            graph("optionstratlib-visualization", "plotly", *sorted(EXPORT_STACK | RUNTIME)),
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT)),
             0,
         ),
-        "static_export lost the runtime": (
+        "static_export lost the native renderer": (
             "static_export",
-            graph("optionstratlib-visualization", "plotly", "plotly_static", "fantoccini", "webdriver", "reqwest"),
-            1,
+            graph("optionstratlib-visualization", "plotly", "plotters"),
+            2,
         ),
-        "static_export lost the exporter": (
+        "static_export brings back the browser exporter": (
             "static_export",
-            graph("optionstratlib-visualization", "plotly", "fantoccini", "webdriver", "reqwest", "tokio"),
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT | EXPORT_STACK), "reqwest"),
+            4,
+        ),
+        "static_export resolves ttf-parser": (
+            "static_export",
+            graph("optionstratlib-visualization", "plotly", *sorted(NATIVE_EXPORT), "ttf-parser", "ab_glyph"),
+            2,
+        ),
+        "plotly resolves the native renderer": (
+            "plotly",
+            graph("optionstratlib-visualization", "plotly", "plotters"),
             1,
         ),
         "an edge is not a package": ("minimal", graph("optionstratlib -> plotly"), 0),

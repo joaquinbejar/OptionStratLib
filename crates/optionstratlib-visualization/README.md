@@ -48,7 +48,7 @@ asserts its resolved graph.
 | Feature         | Default | Effect                                                                 |
 |-----------------|---------|------------------------------------------------------------------------|
 | `plotly`        | no      | Plotly rendering: `to_plot`, `write_html`, `show`, `render`, trace builders. Resolves no image-export or async package |
-| `static_export` | no      | PNG and SVG export (`write_png`, `write_svg`) through `plotly_static`; implies `plotly` |
+| `static_export` | no      | PNG and SVG export (`write_png`, `write_svg`), drawn natively with Plotters: no browser, WebDriver or installed font; implies `plotly` |
 
 Without either feature the crate builds the chart data (`graph_data`,
 `graph_config`) and the terminal tables, and resolves no Plotly package.

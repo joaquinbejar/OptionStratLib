@@ -1,6 +1,7 @@
 # Consumer fixture: the `optionstratlib` facade with only its `static_export` feature
-# (ADR-0002 Decision 2, #544): PNG and SVG export, which brings Plotly, the
-# `plotly_static` exporter, its WebDriver client and the async runtime. Excluded from the root workspace so feature
+# (ADR-0002 Decision 2, #544): PNG and SVG export, drawn natively since #927,
+# which brings Plotly and the native renderer but no browser exporter, WebDriver
+# client or async runtime. Excluded from the root workspace so feature
 # unification with the other members cannot widen its graph; built with
 # `--manifest-path`.
 [package]
@@ -14,9 +15,9 @@ license = "MIT"
 [dependencies]
 # Path plus version, as every OptionStratLib dependency is declared until the
 # crates are published (ADR-0001 D1).
-optionstratlib = { path = "../../..", version = "0.22.0", default-features = false, features = ["static_export"] }
+optionstratlib = { path = "../../..", version = "0.23.0", default-features = false, features = ["static_export"] }
 # The defining crate, named directly only to prove the facade paths are the
 # same items.
-optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.22.0" }
+optionstratlib-visualization = { path = "../../../crates/optionstratlib-visualization", version = "0.23.0" }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"

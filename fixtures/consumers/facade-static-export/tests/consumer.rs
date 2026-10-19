@@ -1,10 +1,9 @@
 //! A downstream chart consumer on the `optionstratlib` facade with
 //! `default-features = false, features = ["static_export"]` (#544): the PNG
 //! and SVG writers are on `Graph`, and `static_export` implies `plotly`, so
-//! the interactive methods are too. Rendering an image needs a WebDriver that
-//! matches the installed browser, which a dependency-graph fixture cannot
-//! assume; `make test-visual` runs the real export, and this fixture proves
-//! the surface compiles and routes to it.
+//! the interactive methods are too. Since #927 the images are drawn natively,
+//! with no browser or WebDriver, so this fixture runs the real export and
+//! checks the typed error a downstream crate can match on.
 
 use optionstratlib::error::Error;
 use optionstratlib::error::GraphError;
@@ -87,8 +86,46 @@ fn scratch(name: &str) -> PathBuf {
 fn test_the_image_writers_are_on_the_contract() {
     let png: fn(&Probe, &Path) -> Result<(), GraphError> = <Probe as Graph>::write_png;
     let svg: fn(&Probe, &Path) -> Result<(), GraphError> = <Probe as Graph>::write_svg;
-    // Never called: the exporter drives a browser.
-    let _ = (png, svg);
+    let (png_path, svg_path) = (
+        scratch("facade-static-export.png"),
+        scratch("facade-static-export.svg"),
+    );
+    assert!(png(&Probe, &png_path).is_ok());
+    assert!(svg(&Probe, &svg_path).is_ok());
+    let bytes = std::fs::read(&png_path).unwrap_or_default();
+    assert!(bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
+    let document = std::fs::read_to_string(&svg_path).unwrap_or_default();
+    assert!(document.contains("<svg") && !document.contains("<text"));
+    assert!(Probe.render(OutputType::Png(&png_path)).is_ok());
+    assert!(long_call().write_svg(&svg_path).is_ok());
+}
+
+/// A chart whose series has more x than y values.
+struct Lopsided;
+
+impl Graph for Lopsided {
+    fn graph_data(&self) -> GraphData {
+        GraphData::Series(Series2D {
+            x: vec![dec!(1), dec!(2)],
+            y: vec![dec!(1)],
+            name: "lopsided".to_string(),
+            mode: TraceMode::Lines,
+            line_color: None,
+            line_width: None,
+        })
+    }
+}
+
+#[test]
+fn test_bad_data_is_a_typed_error_a_consumer_can_match() {
+    let result = Lopsided.write_png(&scratch("lopsided.png"));
+    // `GraphError` is `#[non_exhaustive]` since 0.23: a consumer matches the
+    // variants it handles and keeps a wildcard arm.
+    let mismatch = match result {
+        Err(GraphError::LengthMismatch { x, y, .. }) => Some((x, y)),
+        Err(_) | Ok(()) => None,
+    };
+    assert_eq!(mismatch, Some((2, 1)));
 }
 
 #[test]

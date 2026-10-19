@@ -7,7 +7,7 @@
 # `fixtures/consumers` with OSL_PACKAGED_SOURCE) this copies the manifest, the
 # sources and the tests (with any data under them) out of the repository into
 # a scratch directory, removes the `path = "..."` from the OptionStratLib
-# dependencies (leaving `version = "0.22.0"`, the registry form), and adds a
+# dependencies (leaving `version = "0.MINOR.N"`, the registry form), and adds a
 # `[patch.crates-io]` that points the facade and every component at the
 # unpacked `.crate` file `cargo package` produced in `<target>/package/`. It then tests
 # the copy, and runs it when it is a binary. The copy sees no workspace, no

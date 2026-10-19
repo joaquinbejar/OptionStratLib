@@ -18,8 +18,8 @@ publish = false
 description = "Direct-component example: options priced and read through optionstratlib-core and optionstratlib-pricing alone."
 
 [dependencies]
-optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.22.0" }
-optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.22.0" }
+optionstratlib-core = { path = "../../../crates/optionstratlib-core", version = "0.23.0" }
+optionstratlib-pricing = { path = "../../../crates/optionstratlib-pricing", version = "0.23.0" }
 rust_decimal = "1.43"
 rust_decimal_macros = "1.40"
 tracing = "0.1"
@@ -29,4 +29,4 @@ tracing-subscriber = "0.3"
 # but every default capability resolves unless you opt out; the paths in the
 # source then read `optionstratlib::...`):
 #
-#   optionstratlib = { version = "0.22", default-features = false, features = ["pricing"] }
+#   optionstratlib = { version = "0.23.0", default-features = false, features = ["pricing"] }

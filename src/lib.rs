@@ -34,7 +34,7 @@
 // the success path too (#857), so it is built in a closure.
 #![deny(clippy::or_fun_call)]
 
-//! # OptionStratLib v0.22.1: Financial Options Library
+//! # OptionStratLib v0.23.0: Financial Options Library
 //!
 //! ## Table of Contents
 //! 1. [Introduction](#introduction)
@@ -445,7 +445,7 @@
 //! ```toml
 //! [dependencies]
 //! # pricing, greeks and volatility, without market data, I/O or charts
-//! optionstratlib = { version = "0.22.1", default-features = false, features = ["pricing"] }
+//! optionstratlib = { version = "0.23.0", default-features = false, features = ["pricing"] }
 //! rust_decimal = "1.43" # for `dec!`
 //! ```
 //!
@@ -453,8 +453,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib-core = "0.22.1"
-//! optionstratlib-pricing = "0.22.1"
+//! optionstratlib-core = "0.23.0"
+//! optionstratlib-pricing = "0.23.0"
 //! ```
 //!
 //! ## Canonical paths
@@ -982,7 +982,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = "0.22.1"
+//! optionstratlib = "0.23.0"
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1002,7 +1002,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! optionstratlib = { version = "0.22.1", features = ["plotly"] }
+//! optionstratlib = { version = "0.23.0", features = ["plotly"] }
 //! rust_decimal = "1.43"
 //! ```
 //!
@@ -1028,8 +1028,9 @@
 //! - `plotly`: Enables interactive visualization using plotly.rs (implies
 //!   `visualization`; forwards `optionstratlib-visualization/plotly`, which
 //!   resolves no image-export or async package)
-//! - `static_export`: PNG / SVG export via `plotly_static` (implies `plotly`
-//!   and `async`; forwards `optionstratlib-visualization/static_export`)
+//! - `static_export`: PNG / SVG export, drawn natively with Plotters since
+//!   0.23 (no browser, WebDriver, network or installed font; implies
+//!   `plotly`; forwards `optionstratlib-visualization/static_export`)
 //! - `io` (default): CSV, JSON and ZIP file I/O for chains and OHLCV candles
 //!   (`OptionChain::save_to_csv` and friends, `read_ohlcv_from_zip`, `OhlcvError`);
 //!   `default-features = false` drops it, and `csv` and `zip` with it
@@ -1085,7 +1086,7 @@
 //! **The 0.22 default** is every capability that 0.21 shipped without a
 //! feature flag: `pricing`, `market`, `analytics`, `strategies`,
 //! `simulation`, `backtest`, `visualization`, `synthetic`, `io` and `schema`, so a
-//! plain `optionstratlib = "0.22.1"` keeps the whole library and resolves no
+//! plain `optionstratlib = "0.23.0"` keeps the whole library and resolves no
 //! Plotly, image-export, async-runtime or HTTP package. The default is a
 //! compatibility contract of the 0.22 line, not a statement that a consumer
 //! needs all of it: opt out with `default-features = false` and name only the
@@ -1100,9 +1101,8 @@
 //!   every capability below it.
 //! - There is no `plotly` or `static_export` without `visualization`.
 //!   `static_export` no longer implies `async` as it did in 0.21 (#833): it
-//!   resolves no `io`, `csv` or `zip`, and the async runtime it needs comes
-//!   with `plotly_static`. Name `async` too for the market `*_async`
-//!   wrappers.
+//!   resolves no `io`, `csv` or `zip`, and since 0.23 no async runtime either.
+//!   Name `async` too for the market `*_async` wrappers.
 //! - There is no `synthetic` without `simulation`, no `async` without `io`,
 //!   and no capability above `pricing` without `pricing` and `math`.
 //! - There is no sequential build: the parallel code paths use `rayon`
@@ -1542,7 +1542,7 @@
 //!
 //! ---
 //!
-//! **OptionStratLib v0.22.1** - Built with ❤️ in Rust for the financial community
+//! **OptionStratLib v0.23.0** - Built with ❤️ in Rust for the financial community
 //!
 
 /// # OptionsStratLib: Financial Options Trading Library

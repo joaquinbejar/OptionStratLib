@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Opens the **0.23** line (every crate at `0.23.0`, `docs/versioning-policy.md`):
+`GraphError` gained variants, a breaking change for an exhaustive match.
+Upgrading: see `docs/migration-0.23.md`.
+
+### Changed — breaking
+
+- **PNG and SVG export are drawn natively** (#927, #926, #925; prototypes
+  #920, #923). `Graph::write_png`, `write_svg` and `render(OutputType::Png |
+  Svg)` under `static_export` no longer drive a headless Chrome through
+  `plotly_static` and chromedriver: they draw with Plotters, with no
+  browser, WebDriver, network or installed font, so exports are fast (about
+  ten milliseconds cold, most of it process start-up, instead of one to two
+  seconds), run in parallel and leave no browser process behind. The
+  public signatures are unchanged.
+  - The images are drawn from `graph_data()` and `graph_config()`. A
+    downstream override of `Graph::to_plot` keeps changing the HTML outputs
+    (`write_html`, `show`, `render` to HTML) but **no longer the images**.
+  - SVG text is drawn as glyph outlines of the bundled Open Sans (SIL OFL
+    1.1): the file looks the same in every viewer and needs no font, and
+    each label keeps its text as an accessible name, but the text can no
+    longer be selected, searched or edited as text.
+  - Data the export cannot draw faithfully is now an error instead of a
+    silent repair: a surface with missing grid points (Plotly filled them
+    with zero), repeated grid points (Plotly kept the last) or coordinate
+    arrays of different lengths, and a 2D series whose x and y lengths
+    differ (Plotly drew the shorter length).
+  - Colour strings follow CSS Color 4: the 148 named colours, `#rgb`,
+    `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb()`/`rgba()` and `hsl()`/`hsla()`.
+    Spellings only plotly.js's laxer parser took (for example
+    `hsl(0, 100, 50)`) are an error.
+  - A label character the bundled font has no glyph for (for example CJK)
+    is an error in PNG and SVG; tab, line feed and carriage return advance
+    like a space.
+  - A width or height above 16384 pixels is `GraphError::InvalidDimensions`,
+    like zero.
+  - The file is written next to its destination and renamed over it once
+    complete, so a failed export leaves no partial image, and a symlink at
+    the destination is replaced rather than written through.
+  - The 3D surface is drawn with flat shading from a fixed viewpoint, with
+    a Viridis colour bar; it shows its axis titles, which the Plotly export
+    lost.
+- **`GraphError` is `#[non_exhaustive]`** and has new variants for those
+  cases: `InvalidDimensions`, `TooSmall`, `NoRoom`, `InvalidLineWidth`,
+  `LengthMismatch`, `SurfaceLengthMismatch`, `DegenerateSurface`,
+  `DuplicateSurfacePoint`, `IncompleteSurface`, `NotRepresentable`,
+  `InvalidColor`, `MissingGlyph`, `NotXmlText` and `UnsupportedText`. A
+  `match` on it needs a wildcard arm. `Graph::render` and
+  `PlotBuilder::save` now return the export's error unchanged instead of
+  folding it into `GraphError::Render`.
+
+### Removed
+
+- `static_export` no longer resolves `plotly_static`, `fantoccini`,
+  `webdriver`, an async runtime or an HTTP client, and no longer enables
+  `plotly/static_export_default`. It adds `plotters` (without a font
+  feature), `plotters-backend`, `skrifa` and `ab_glyph_rasterizer`, and the
+  visualization crate ships the Open Sans font and its licence. No
+  `ttf-parser` is resolved (RUSTSEC-2026-0192).
+
 ## [0.22.2] - 2026-10-18
 
 Only `optionstratlib-market` is released at 0.22.2; the other nine crates
