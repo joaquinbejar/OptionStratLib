@@ -10,6 +10,7 @@
 //! [`ExportError`] instead (see that type).
 
 use crate::backend::{TextBackend, TextErrors, TextMode};
+use crate::color::parse_color;
 use crate::error::ExportError;
 use crate::outline::{self, ChartText, Outlined};
 use crate::svg;
@@ -296,39 +297,15 @@ fn to_f64(value: Decimal) -> Result<f64, ExportError> {
     f64::try_from(value).map_err(|_| ExportError::NotRepresentable(value))
 }
 
-/// Parses `#RGB` or `#RRGGBB`.
-fn parse_color(text: &str) -> Result<RGBColor, ExportError> {
-    let invalid = || ExportError::InvalidColor(text.to_string());
-    let hex = text.strip_prefix('#').ok_or_else(invalid)?;
-    let channel = |digits: &str| u8::from_str_radix(digits, 16).map_err(|_| invalid());
-    match hex.len() {
-        3 => {
-            let mut channels = [0_u8; 3];
-            for (slot, index) in channels.iter_mut().zip(0..3) {
-                let digit = hex.get(index..=index).ok_or_else(invalid)?;
-                *slot = channel(&format!("{digit}{digit}"))?;
-            }
-            let [r, g, b] = channels;
-            Ok(RGBColor(r, g, b))
-        }
-        6 => {
-            let part = |range: std::ops::Range<usize>| hex.get(range).ok_or_else(invalid);
-            Ok(RGBColor(
-                channel(part(0..2)?)?,
-                channel(part(2..4)?)?,
-                channel(part(4..6)?)?,
-            ))
-        }
-        _ => Err(invalid()),
-    }
-}
-
 /// The plotly.js colourway entry for the `index`-th trace.
-fn default_color(index: usize) -> Result<RGBColor, ExportError> {
+fn default_color(index: usize) -> Result<RGBAColor, ExportError> {
     let entry = index
         .checked_rem(COLORWAY.len())
         .and_then(|slot| COLORWAY.get(slot))
-        .ok_or_else(|| ExportError::InvalidColor(format!("colourway entry {index}")))?;
+        .ok_or_else(|| ExportError::InvalidColor {
+            color: format!("colourway entry {index}"),
+            reason: "the colourway is empty",
+        })?;
     parse_color(entry)
 }
 
@@ -397,7 +374,7 @@ struct Trace {
     name: String,
     points: Vec<(f64, f64)>,
     mode: TraceMode,
-    color: RGBColor,
+    color: RGBAColor,
     line_width: u32,
     marker_radius: u32,
 }
@@ -1043,22 +1020,6 @@ fn tick_step(range: &std::ops::Range<f64>, count: u32) -> f64 {
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;
-
-    #[test]
-    fn test_parse_color_accepts_short_and_long_hex() {
-        assert!(matches!(parse_color("#fff"), Ok(RGBColor(255, 255, 255))));
-        assert!(matches!(parse_color("#2ca02c"), Ok(RGBColor(44, 160, 44))));
-    }
-
-    #[test]
-    fn test_parse_color_rejects_names_and_bad_digits() {
-        for text in ["red", "#12", "#gggggg", "2ca02c", "#2ca02cff"] {
-            assert!(
-                matches!(parse_color(text), Err(ExportError::InvalidColor(_))),
-                "{text} should be rejected"
-            );
-        }
-    }
 
     #[test]
     fn test_axis_range_pads_and_widens_flat_axes() {

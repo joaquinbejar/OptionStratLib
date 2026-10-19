@@ -20,6 +20,7 @@
 //! [`GraphConfig`]: optionstratlib_visualization::visualization::GraphConfig
 
 mod backend;
+mod color;
 pub mod error;
 pub mod fixtures;
 pub mod outline;

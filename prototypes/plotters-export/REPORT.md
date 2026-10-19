@@ -263,7 +263,7 @@ thumbnail used above with an exact-size WebKit render.)
 - Text quality in PNG is below Chrome's: no kerning, and uneven spacing from
   the rasteriser dropping side bearings and truncating pen positions.
 - `ttf-parser` unmaintained advisory; Plotters' slow release cadence.
-- Colour names are not parsed yet.
+- Colour names are not parsed yet (since #925 they are; see condition 3).
 - Viewer-dependent SVG text in librsvg until text becomes outlines; this
   blocks the migration (condition 1 below).
 
@@ -284,6 +284,9 @@ Only after this report is accepted, and as #920 lists:
    are zero-filled today) and document it in the release notes.
 3. Parse CSS colour names (`ColorScheme::Custom` and `line_color` accept them
    with Plotly today).
+   *Done in the prototype (#925): `src/color.rs` accepts the CSS named
+   colours, hex with or without alpha, `rgb()`/`rgba()` and `hsl()`/`hsla()`,
+   and rejects anything else with a typed error.*
 4. Re-evaluate the RUSTSEC-2026-0192 exception (added here for the
    unpublished prototype) for the published crate Plotters would enter, or
    choose a text path without `ttf-parser`.
