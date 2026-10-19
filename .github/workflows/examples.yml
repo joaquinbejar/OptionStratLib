@@ -1,11 +1,10 @@
 name: Examples and benches
 
 # Every example binary and every Criterion bench builds and runs once (#787),
-# so neither rots unnoticed. Examples run with no WebDriver (`WEBDRIVER_PATH`
-# points nowhere), so a program that fails only because image export could not
-# start is reported as `needs-webdriver` instead of failing the job; the
-# weekly `static_export.yml` workflow runs them all again with a matching
-# Chrome and chromedriver, where an export failure is a bug.
+# so neither rots unnoticed. The examples' PNG/SVG exports are native since
+# #927, so every program runs to the end with its real exports and any
+# failure, an export error included, fails the job (#929): this replaced the
+# weekly `static_export.yml` browser run.
 
 on:
   push:
@@ -31,8 +30,6 @@ jobs:
     name: Run every example
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      WEBDRIVER_PATH: /nonexistent
 
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +51,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-examples-
 
+      # No fontconfig or font package: the examples' exports read the font
+      # the visualization crate bundles (#927).
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y make libfontconfig1-dev pkg-config build-essential
+        run: sudo apt-get update && sudo apt-get install -y make build-essential
 
       - name: Build and run every example
         run: make smoke-examples

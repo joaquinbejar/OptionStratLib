@@ -8,18 +8,17 @@ runs them all, so CI and the release gates can.
 * Examples: every `bin` target of the workspace packages `examples_*` and
   `osl-example-direct-*`, built beforehand by `cargo build --workspace --bins`
   (`make smoke-examples` does it), run from the repository root with a
-  timeout. A run passes with exit status 0 and no panic message. Image export
-  needs a chromedriver of the same major version as the installed Chrome
-  (`WEBDRIVER_PATH`): without `--export`, a program that fails only because the
-  export could not start is reported as `needs-webdriver` and does not fail
-  the run; with `--export` it fails, so a machine that has a matching driver
-  proves the export itself works.
+  timeout. A run passes with exit status 0 and no panic message; anything
+  else fails it. The examples' PNG and SVG exports are drawn natively since
+  #927, with no browser or WebDriver, so an export failure is a failure like
+  any other: the `needs-webdriver` result and the `--export` switch that
+  turned it into a failure are gone (#929).
 * Benches: every `bench` target of the workspace packages, run once through
   `cargo bench -p <package> --bench <target> -- --test` (Criterion's test mode:
   each benchmark runs one iteration and must succeed).
 
 Usage:
-    smoke_examples.py [--export] [--timeout SECONDS] [--only PACKAGE ...]
+    smoke_examples.py [--timeout SECONDS] [--only PACKAGE ...]
     smoke_examples.py --benches [--timeout SECONDS]
     smoke_examples.py --list
     smoke_examples.py --markdown RESULTS.json [RESULTS.json ...]
@@ -41,9 +40,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 EXAMPLE_PREFIXES = ("examples_", "osl-example-direct-")
 PANIC = re.compile(r"panicked at|thread '.*' panicked|stack overflow", re.I)
-EXPORT_FAILURE = re.compile(
-    r"StaticExporter|chromedriver|WebDriver|Failed to write (PNG|SVG)|Failed to save plot", re.I
-)
 
 
 def metadata() -> dict:
@@ -78,16 +74,14 @@ def workspace_targets_with_features(
     return sorted(found)
 
 
-def classify(returncode: int | str, log: str, export: bool) -> str:
-    """`pass`, `needs-webdriver`, `timeout` or `FAIL` for one finished run."""
+def classify(returncode: int | str, log: str) -> str:
+    """`pass`, `timeout` or `FAIL` for one finished run."""
     if returncode == "timeout":
         return "timeout"
     if PANIC.search(log):
         return "FAIL"
     if returncode == 0:
         return "pass"
-    if not export and EXPORT_FAILURE.search(log):
-        return "needs-webdriver"
     return "FAIL"
 
 
@@ -105,21 +99,20 @@ def run(command: list[str], timeout: int, log_path: Path) -> tuple[int | str, fl
     return code, round(time.time() - started, 1)
 
 
-def smoke(items: list[tuple[str, str, list[str]]], timeout: int, export: bool, out: Path) -> int:
+def smoke(items: list[tuple[str, str, list[str]]], timeout: int, out: Path) -> int:
     out.mkdir(parents=True, exist_ok=True)
     rows = []
     for package, target, command in items:
         code, seconds = run(command, timeout, out / f"{package}__{target}.log")
         log = (out / f"{package}__{target}.log").read_text(errors="replace")
-        verdict = classify(code, log, export)
+        verdict = classify(code, log)
         tail = [line for line in log.splitlines() if line.strip()][-1:]
         rows.append({"package": package, "target": target, "result": verdict, "code": code, "seconds": seconds,
                      "tail": tail[0][-160:] if tail else ""})
         print(f"{verdict:16} {package} {target} ({seconds} s)", flush=True)
     (out / "results.json").write_text(json.dumps(rows, indent=1))
-    bad = [r for r in rows if r["result"] in ("FAIL", "timeout")]
-    waiting = [r for r in rows if r["result"] == "needs-webdriver"]
-    print(f"{len(rows)} run: {len(rows) - len(bad) - len(waiting)} pass, {len(waiting)} need a WebDriver, {len(bad)} fail")
+    bad = [r for r in rows if r["result"] != "pass"]
+    print(f"{len(rows)} run: {len(rows) - len(bad)} pass, {len(bad)} fail")
     for row in bad:
         print(f"FAIL {row['package']} {row['target']}: exit {row['code']}: {row['tail']}")
     return 1 if bad else 0
@@ -153,14 +146,17 @@ def self_test() -> int:
         failures += 0 if ok else 1
         print(f"self-test {'ok' if ok else 'FAIL'}: {name} (expected {expected!r}, got {got!r})")
 
-    check("a clean exit passes", classify(0, "INFO done", False), "pass")
-    check("a panic fails even with status 0", classify(0, "thread 'main' panicked at src/x.rs:1:1", False), "FAIL")
-    check("an error exit fails", classify(1, "Error: ConstructionError(..)", False), "FAIL")
-    check("a timeout is reported", classify("timeout", "", False), "timeout")
-    export_log = "Error: Render(\"Failed to write PNG after 3 attempts: Failed to create StaticExporter\")"
-    check("an export failure without a driver waits", classify(1, export_log, False), "needs-webdriver")
-    check("an export failure with --export fails", classify(1, export_log, True), "FAIL")
-    check("a panic inside an export failure still fails", classify(1, export_log + "\npanicked at", False), "FAIL")
+    check("a clean exit passes", classify(0, "INFO done"), "pass")
+    check("a panic fails even with status 0", classify(0, "thread 'main' panicked at src/x.rs:1:1"), "FAIL")
+    check("an error exit fails", classify(1, "Error: ConstructionError(..)"), "FAIL")
+    check("a timeout is reported", classify("timeout", ""), "timeout")
+    # Since #929 no export failure waits for a driver: the old browser
+    # exporter's message and the native exporter's typed errors both fail.
+    browser_log = "Error: Render(\"Failed to write PNG after 3 attempts: Failed to create StaticExporter\")"
+    check("the old exporter's failure fails", classify(1, browser_log), "FAIL")
+    native_log = 'Error: Graph(IncompleteSurface { name: "Volatility Surface", expected: 1980, found: 45 })'
+    check("a native export error fails", classify(1, native_log), "FAIL")
+    check("a run that times out is a timeout whatever it logged", classify("timeout", native_log), "timeout")
     data = {
         "workspace_members": ["a", "b", "c"],
         "packages": [
@@ -187,7 +183,6 @@ def self_test() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--benches", action="store_true")
-    parser.add_argument("--export", action="store_true", help="a matching chromedriver is installed: export failures fail")
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--only", nargs="*", default=[])
     parser.add_argument("--list", action="store_true")
@@ -220,7 +215,7 @@ def main() -> int:
         if missing:
             print(f"not built: {', '.join(missing)}; run `cargo build --workspace --bins` first", file=sys.stderr)
             return 1
-    return smoke(items, args.timeout, args.export, out / ("benches" if args.benches else "examples"))
+    return smoke(items, args.timeout, out / ("benches" if args.benches else "examples"))
 
 
 if __name__ == "__main__":

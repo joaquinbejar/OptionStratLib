@@ -69,8 +69,22 @@ Upgrading: see `docs/migration-0.23.md`.
   ignore list, and `make check-feature-trees` now fails on a zip below 9 on
   every surface, `static_export` included.
 
+### Changed
+
+- **Native exports run in every PR** (#929). The PNG/SVG export tests that
+  waited for a WebDriver are ordinary tests now, and `visualization.yml`
+  checks `static_export` alone as well as with `plotly`, with no browser or
+  font package installed. The examples workflow runs every example with its
+  real exports, and any failure fails it (`needs-webdriver` and
+  `SMOKE_EXPORT` are gone). `make test-export` needs no browser, and the
+  publication dry run builds every archive with `static_export` too. Only the
+  test that opens the default browser stays `#[ignore]`d (`make test-visual`).
+
 ### Removed
 
+- The weekly `static_export.yml` browser workflow (#929): PR CI covers what it
+  ran. `check-browser-tests` drops its rules for the browser exporter's
+  `write_image`, which no crate can reach any more.
 - `static_export` no longer resolves `plotly_static`, `fantoccini`,
   `webdriver`, an async runtime or an HTTP client, and no longer enables
   `plotly/static_export_default`. It adds `plotters` (without a font
