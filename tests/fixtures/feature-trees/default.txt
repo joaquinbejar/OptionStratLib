@@ -399,6 +399,7 @@ zip -> ppmd-rust
 zip -> sha1
 zip -> time
 zip -> typed-path
+zip -> windows-sys
 zip -> zeroize
 zip -> zopfli
 zip -> zstd
@@ -540,7 +541,7 @@ time-core []
 tracing [attributes,default,std,tracing-attributes]
 tracing-attributes []
 tracing-core [once_cell,std]
-typed-path [default,std]
+typed-path []
 typenum [const-generics]
 unicode-ident []
 unicode-width [cjk,default]
@@ -562,9 +563,9 @@ windows-interface []
 windows-link []
 windows-result [std]
 windows-strings [std]
-windows-sys [Win32,Win32_Foundation,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,default]
+windows-sys [Win32,Win32_Foundation,Win32_Security,Win32_Security_Authorization,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,default]
 zeroize [alloc,default]
-zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,getrandom,lzma,ppmd,time,xz,zstd]
+zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,lzma,ppmd,time,xz,zstd]
 zlib-rs [rust-allocator]
 zmij []
 zopfli [default,gzip,std,zlib]

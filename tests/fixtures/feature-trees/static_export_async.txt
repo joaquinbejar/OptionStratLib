@@ -535,6 +535,7 @@ zip -> ppmd-rust
 zip -> sha1
 zip -> time
 zip -> typed-path
+zip -> windows-sys
 zip -> zeroize
 zip -> zopfli
 zip -> zstd
@@ -729,7 +730,7 @@ tokio-macros []
 tracing [attributes,default,std,tracing-attributes]
 tracing-attributes []
 tracing-core [once_cell,std]
-typed-path [default,std]
+typed-path []
 typeid []
 typenum [const-generics]
 unicode-ident []
@@ -752,14 +753,14 @@ windows-interface []
 windows-link []
 windows-result [std]
 windows-strings [std]
-windows-sys [Wdk,Wdk_Foundation,Wdk_Storage,Wdk_Storage_FileSystem,Wdk_System,Wdk_System_IO,Win32,Win32_Foundation,Win32_Networking,Win32_Networking_WinSock,Win32_Security,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,Win32_System_Diagnostics,Win32_System_Diagnostics_Debug,Win32_System_IO,Win32_System_Pipes,Win32_System_SystemServices,Win32_System_Threading,Win32_System_WindowsProgramming,default]
+windows-sys [Wdk,Wdk_Foundation,Wdk_Storage,Wdk_Storage_FileSystem,Wdk_System,Wdk_System_IO,Win32,Win32_Foundation,Win32_Networking,Win32_Networking_WinSock,Win32_Security,Win32_Security_Authorization,Win32_Storage,Win32_Storage_FileSystem,Win32_System,Win32_System_Console,Win32_System_Diagnostics,Win32_System_Diagnostics_Debug,Win32_System_IO,Win32_System_Pipes,Win32_System_SystemServices,Win32_System_Threading,Win32_System_WindowsProgramming,default]
 winnow [alloc,ascii,binary,default,parser,simd,std]
 yoke [alloc,default,derive,zerofrom]
 yoke-derive []
 zerofrom [alloc,derive]
 zerofrom-derive []
 zeroize [alloc,default]
-zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,getrandom,lzma,ppmd,time,xz,zstd]
+zip [_bzip2_any,_deflate-any,aes-crypto,bzip2,default,deflate,deflate-flate2,deflate-flate2-zlib-rs,deflate-zopfli,deflate64,lzma,ppmd,time,xz,zstd]
 zlib-rs [rust-allocator,std]
 zmij []
 zopfli [default,gzip,std,zlib]

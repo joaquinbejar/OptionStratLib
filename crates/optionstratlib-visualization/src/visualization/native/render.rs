@@ -18,6 +18,7 @@ use crate::visualization::{
 };
 use num_traits::ToPrimitive;
 use plotters::coord::Shift;
+use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use plotters::style::colors::colormaps::ViridisRGB;
 use plotters::style::text_anchor::{HPos, Pos, VPos};
@@ -84,6 +85,10 @@ const LEGEND_TEXT_X: i32 = LEGEND_MARGIN_PX + LEGEND_SAMPLE_PX + LEGEND_GAP_PX;
 const SURFACE_YAW: f64 = 0.7;
 const SURFACE_PITCH: f64 = 0.5;
 const SURFACE_SCALE: f64 = 0.8;
+/// Tick labels per surface axis.
+const SURFACE_TICKS: usize = 6;
+/// Clearance kept between two surface tick labels, in pixels.
+const LABEL_GAP_PX: f64 = 2.0;
 const COLORBAR_WIDTH_PX: u32 = 110;
 /// Smallest figure a surface is laid out in: the colour bar plus room for
 /// the 3D axes, and a height that leaves an area under the title.
@@ -887,15 +892,24 @@ where
     let z_step = tick_step(&z_range, 6);
     let x_format = move |value: &f64| format_number(*value, x_step);
     let height_format = move |value: &f64| format_number(*value, z_step);
-    let depth_format = move |value: &f64| format_number(*value, y_step);
+    let hidden_depth = corner_clash(
+        &plot_area,
+        chart.as_coord_spec(),
+        (&x_range, &y_range, z_low),
+        (&x_format, &|value: &f64| format_number(*value, y_step)),
+    )?;
+    let depth_format = move |value: &f64| match hidden_depth {
+        Some(hidden) if (value - hidden).abs() <= y_step * 1e-9 => String::new(),
+        _ => format_number(*value, y_step),
+    };
     chart
         .configure_axes()
         .x_formatter(&x_format)
         .y_formatter(&height_format)
         .z_formatter(&depth_format)
-        .x_labels(6)
-        .y_labels(6)
-        .z_labels(6)
+        .x_labels(SURFACE_TICKS)
+        .y_labels(SURFACE_TICKS)
+        .z_labels(SURFACE_TICKS)
         .light_grid_style(GRID)
         .bold_grid_style(GRID.mix(0.0))
         .axis_panel_style(RGBColor(248, 248, 250).filled())
@@ -1140,6 +1154,55 @@ fn axis_scale(range: &std::ops::Range<f64>) -> f64 {
     } else {
         1.0
     }
+}
+
+/// How an axis writes a tick value.
+type TickFormat<'a> = &'a dyn Fn(&f64) -> String;
+
+/// The depth tick whose label would land on the last x tick's label at the
+/// front corner of the surface (#937), so it can be left blank.
+///
+/// Plotters draws the x and depth axes into the same front corner, each
+/// label hanging off its tick. When both axes have a tick at or near that
+/// corner, their labels are drawn over each other; the x label is kept and
+/// the depth one dropped, which leaves every other label where it was.
+///
+/// # Errors
+///
+/// [`GraphError`] when a label cannot be measured.
+fn corner_clash<DB: DrawingBackend>(
+    area: &DrawingArea<DB, Shift>,
+    coord: &impl CoordTranslate<From = (f64, f64, f64)>,
+    (x_range, depth_range, height): (&std::ops::Range<f64>, &std::ops::Range<f64>, f64),
+    (x_format, depth_format): (TickFormat<'_>, TickFormat<'_>),
+) -> Result<Option<f64>, GraphError>
+where
+    DB::ErrorType: 'static,
+{
+    // The ticks Plotters draws: the same key points `configure_axes` asks
+    // for with six labels per axis.
+    let last_tick = |range: &std::ops::Range<f64>| {
+        RangedCoordf64::from(range.clone())
+            .key_points(SURFACE_TICKS)
+            .into_iter()
+            .reduce(f64::max)
+    };
+    let (Some(x_tick), Some(depth_tick)) = (last_tick(x_range), last_tick(depth_range)) else {
+        return Ok(None);
+    };
+    // From the fixed viewpoint the two axes meet at (x end, depth end), on
+    // the floor of the box.
+    let x_anchor = coord.translate(&(x_tick, height, depth_range.end));
+    let depth_anchor = coord.translate(&(x_range.end, height, depth_tick));
+    let style = TextStyle::from(font(TICK_PX));
+    let measure = |text: &str| area.estimate_text_size(text, &style).map_err(render_error);
+    let (x_width, x_height) = measure(&x_format(&x_tick))?;
+    let (depth_width, depth_height) = measure(&depth_format(&depth_tick))?;
+    let apart_x = (f64::from(x_anchor.0) - f64::from(depth_anchor.0)).abs();
+    let apart_y = (f64::from(x_anchor.1) - f64::from(depth_anchor.1)).abs();
+    let room_x = (f64::from(x_width) + f64::from(depth_width)) / 2.0 + LABEL_GAP_PX;
+    let room_y = f64::from(x_height.max(depth_height)) + LABEL_GAP_PX;
+    Ok((apart_x < room_x && apart_y < room_y).then_some(depth_tick))
 }
 
 /// Tick spacing Plotters will use for `range` with about `count` ticks.
