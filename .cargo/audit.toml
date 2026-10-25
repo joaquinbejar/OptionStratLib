@@ -27,11 +27,39 @@
 #   `unit-prefix` instead, so number_prefix is not in Cargo.lock.
 #
 # A new waiver needs the same rationale, owner and review date as before.
-ignore = []
+#
+# ---------------------------------------------------------------------------
+# RUSTSEC-2026-0374 — basic-toml 0.1.10, unmaintained. Published after the
+#                     0.23.0 release; the nightly audit has failed on it since
+#                     2026-10-21.
+#
+# Reachability : COMPILE TIME ONLY, and only with `plotly` (so also with
+#                `static_export`, which implies it). It is a dependency of
+#                the `askama_derive` proc-macro, which reads askama's own
+#                template configuration while compiling `plotly`:
+#                    optionstratlib -> optionstratlib-visualization
+#                      -> plotly 0.14 -> askama 0.15 -> askama_macros
+#                      (proc-macro) -> askama_derive -> basic-toml
+#                It parses TOML that ships inside those crates, runs on the
+#                build machine, and is not linked into any library or binary.
+#                `cargo tree -p optionstratlib -i basic-toml -e normal,build`
+#                finds nothing for the default and the no-default surfaces.
+# Upgrade path : None to take. An unmaintained advisory has no fixed release,
+#                and every askama_derive release, 0.16.1 included, still
+#                requires basic-toml ^0.1; plotly 0.14.1 (the latest)
+#                requires askama ^0.15. It goes away when askama moves to
+#                another TOML parser and plotly takes that release.
+# Tracking     : https://github.com/askama-rs/askama
+# Owner        : @joaquinbejar
+# Review by    : 2027-01-25
+# ---------------------------------------------------------------------------
+ignore = [
+    "RUSTSEC-2026-0374",
+]
 
 # Every other advisory class fails the run, so a new unmaintained or unsound
-# dependency cannot slip in as a silent warning: with nothing waived, the
-# audit is expected to be clean, and `denyWarnings` in the workflow can be
+# dependency cannot slip in as a silent warning: with only the entries above
+# waived, the audit is expected to be clean, and `denyWarnings` in the workflow can be
 # turned on without turning the gate into noise.
 informational_warnings = ["unmaintained", "unsound", "notice"]
 severity_threshold = "none"

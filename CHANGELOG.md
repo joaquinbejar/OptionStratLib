@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the two labels over each other. The depth label at that corner is now
   left out; the x label and every other tick label stay where they were.
 
+### Security
+
+- **RUSTSEC-2026-0374 (`basic-toml` unmaintained) is waived** in
+  `.cargo/audit.toml`, with its rationale, owner and review date. It is a
+  compile-time dependency of the `askama_derive` proc-macro that `plotly`
+  pulls in, only with `plotly` or `static_export`; no askama release
+  drops it yet.
+- The feature-tree fixtures follow `zip` 9.1.0, which changed its own
+  dependencies (`windows-sys`, `typed-path`); no OptionStratLib requirement
+  moved.
+
 ## [0.23.0] - 2026-10-19
 
 Release notes: `docs/release/0.23/RELEASE-NOTES.md`; gate evidence and API
