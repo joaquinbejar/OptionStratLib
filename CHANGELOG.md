@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a volatility range ending on 0.4 do, the native PNG and SVG export drew
   the two labels over each other. The depth label at that corner is now
   left out; the x label and every other tick label stay where they were.
+- **Surface axis titles no longer cover a tick label of their own axis**
+  (#940). The x and y titles of a native surface export sat at a fixed
+  offset beyond the box, and at some figure sizes and ranges a tick near
+  the middle of the axis landed under them. A title keeps that offset when
+  it clears every tick label and moves out along the same direction, in
+  small steps and never past the plot area, when it does not.
 
 ### Security
 

@@ -132,7 +132,9 @@ implied by `static_export`.
   no lighting and a Viridis colour bar, and requires a complete grid; it
   shows the three axis titles the Plotly export lost. When the x and depth
   axes both have a tick at the front corner where they meet, the depth
-  label there is left out so the two do not overprint (#937).
+  label there is left out so the two do not overprint (#937), and the x
+  and y axis titles move outward when they would cover a tick label
+  (#940).
 - **Text.** Labels are single lines with no kerning, ligatures or
   right-to-left shaping; a character outside the bundled font is
   `MissingGlyph`. SVG text cannot be selected, copied, found or edited. In
