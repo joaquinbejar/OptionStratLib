@@ -130,7 +130,9 @@ implied by `static_export`.
   pixel-identical.
   The 3D surface is drawn from one fixed viewpoint with flat-shaded cells,
   no lighting and a Viridis colour bar, and requires a complete grid; it
-  shows the three axis titles the Plotly export lost.
+  shows the three axis titles the Plotly export lost. When the x and depth
+  axes both have a tick at the front corner where they meet, the depth
+  label there is left out so the two do not overprint (#937).
 - **Text.** Labels are single lines with no kerning, ligatures or
   right-to-left shaping; a character outside the bundled font is
   `MissingGlyph`. SVG text cannot be selected, copied, found or edited. In

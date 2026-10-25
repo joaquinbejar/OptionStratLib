@@ -472,4 +472,123 @@ mod tests {
         }
         Ok(())
     }
+    /// A complete grid over `xs` x `ys`, rising along both axes.
+    fn grid(xs: &[Decimal], ys: &[Decimal]) -> GraphData {
+        let (mut x, mut y, mut z) = (Vec::new(), Vec::new(), Vec::new());
+        for (i, strike) in xs.iter().enumerate() {
+            for (j, depth) in ys.iter().enumerate() {
+                x.push(*strike);
+                y.push(*depth);
+                z.push(Decimal::from(i) * dec!(0.1) + Decimal::from(j) * dec!(0.05));
+            }
+        }
+        GraphData::GraphSurface(Surface3D {
+            x,
+            y,
+            z,
+            name: "Delta".to_string(),
+        })
+    }
+
+    /// Every pair of tick labels (anything but the chart and axis titles)
+    /// whose ink boxes intersect. A title over a tick is #940.
+    fn overlapping_ticks(labels: &[outline::Label], config: &GraphConfig) -> Vec<(String, String)> {
+        let titles = [
+            Some(&config.title),
+            config.x_label.as_ref(),
+            config.y_label.as_ref(),
+            config.z_label.as_ref(),
+        ];
+        let ticks: Vec<&outline::Label> = labels
+            .iter()
+            .filter(|label| !titles.contains(&Some(&label.text)))
+            .collect();
+        let mut pairs = Vec::new();
+        for (index, a) in ticks.iter().enumerate() {
+            for b in ticks.iter().skip(index + 1) {
+                let apart = a.right <= b.left
+                    || b.right <= a.left
+                    || a.bottom <= b.top
+                    || b.bottom <= a.top;
+                if !apart {
+                    pairs.push((a.text.clone(), b.text.clone()));
+                }
+            }
+        }
+        pairs
+    }
+
+    #[test]
+    fn test_surface_tick_labels_never_overlap() -> TestResult {
+        let strikes = |end: Decimal| [dec!(5600), dec!(5800), dec!(6000), end];
+        let vols = |end: Decimal| [dec!(0.10), dec!(0.20), dec!(0.30), end];
+        let mut cases = vec![("fixture".to_string(), surface())];
+        for x_end in [dec!(6200), dec!(6190), dec!(6210), dec!(6250)] {
+            for y_end in [dec!(0.40), dec!(0.39), dec!(0.41), dec!(0.45)] {
+                cases.push((
+                    format!("{x_end} x {y_end}"),
+                    grid(&strikes(x_end), &vols(y_end)),
+                ));
+            }
+        }
+        cases.push((
+            "0..1".to_string(),
+            grid(
+                &[dec!(0), dec!(0.5), dec!(1)],
+                &[dec!(0), dec!(0.5), dec!(1)],
+            ),
+        ));
+        cases.push((
+            "days".to_string(),
+            grid(
+                &[dec!(80), dec!(100), dec!(120)],
+                &[dec!(1), dec!(180), dec!(365)],
+            ),
+        ));
+        cases.push((
+            "negative".to_string(),
+            grid(&[dec!(-3), dec!(2), dec!(7)], &[dec!(-1), dec!(0), dec!(1)]),
+        ));
+        let mut found = Vec::new();
+        for (width, height) in [(800, 480), (1280, 720), (640, 420)] {
+            let config = GraphConfig {
+                width,
+                height,
+                ..config()
+            };
+            for (name, data) in &cases {
+                let outlined = render_svg(data, &config)?;
+                for pair in overlapping_ticks(&outlined.labels, &config) {
+                    found.push(format!("{name} at {width}x{height}: {pair:?}"));
+                }
+            }
+        }
+        assert!(found.is_empty(), "{found:#?}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_surface_corner_drops_only_the_depth_label() -> TestResult {
+        // #937: both axes end on a tick, so their last labels meet at the
+        // front corner; the strike stays and so does every other tick.
+        let data = grid(
+            &[dec!(5600), dec!(5800), dec!(6000), dec!(6200)],
+            &[dec!(0.10), dec!(0.20), dec!(0.30), dec!(0.40)],
+        );
+        let config = GraphConfig {
+            z_label: None,
+            ..config()
+        };
+        let outlined = render_svg(&data, &config)?;
+        let count = |text: &str| outlined.labels.iter().filter(|l| l.text == text).count();
+        for strike in ["5600", "5800", "6000", "6200"] {
+            assert_eq!(count(strike), 1, "{strike}");
+        }
+        // 0.1 to 0.3 on the depth axis, the height axis and the colour bar;
+        // 0.4 only on the height axis, its depth twin at the corner dropped.
+        for (tick, painted) in [("0.1", 3), ("0.2", 3), ("0.3", 3), ("0.4", 1)] {
+            assert_eq!(count(tick), painted, "{tick}");
+        }
+        Ok(())
+    }
 }
