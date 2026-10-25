@@ -490,19 +490,10 @@ mod tests {
         })
     }
 
-    /// Every pair of tick labels (anything but the chart and axis titles)
-    /// whose ink boxes intersect. A title over a tick is #940.
-    fn overlapping_ticks(labels: &[outline::Label], config: &GraphConfig) -> Vec<(String, String)> {
-        let titles = [
-            Some(&config.title),
-            config.x_label.as_ref(),
-            config.y_label.as_ref(),
-            config.z_label.as_ref(),
-        ];
-        let ticks: Vec<&outline::Label> = labels
-            .iter()
-            .filter(|label| !titles.contains(&Some(&label.text)))
-            .collect();
+    /// Every pair of painted labels whose ink boxes intersect: tick labels,
+    /// axis titles and colour bar labels alike (#937, #940).
+    fn overlapping(labels: &[outline::Label]) -> Vec<(String, String)> {
+        let ticks: Vec<&outline::Label> = labels.iter().collect();
         let mut pairs = Vec::new();
         for (index, a) in ticks.iter().enumerate() {
             for b in ticks.iter().skip(index + 1) {
@@ -519,7 +510,7 @@ mod tests {
     }
 
     #[test]
-    fn test_surface_tick_labels_never_overlap() -> TestResult {
+    fn test_surface_labels_never_overlap() -> TestResult {
         let strikes = |end: Decimal| [dec!(5600), dec!(5800), dec!(6000), end];
         let vols = |end: Decimal| [dec!(0.10), dec!(0.20), dec!(0.30), end];
         let mut cases = vec![("fixture".to_string(), surface())];
@@ -558,8 +549,21 @@ mod tests {
             };
             for (name, data) in &cases {
                 let outlined = render_svg(data, &config)?;
-                for pair in overlapping_ticks(&outlined.labels, &config) {
+                for pair in overlapping(&outlined.labels) {
                     found.push(format!("{name} at {width}x{height}: {pair:?}"));
+                }
+                let (right, bottom) = (f64::from(width), f64::from(height));
+                for label in &outlined.labels {
+                    let inside = label.left >= 0.0
+                        && label.top >= 0.0
+                        && label.right <= right
+                        && label.bottom <= bottom;
+                    if !inside {
+                        found.push(format!(
+                            "{name} at {width}x{height}: {} off the image",
+                            label.text
+                        ));
+                    }
                 }
             }
         }

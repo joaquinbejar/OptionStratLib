@@ -87,8 +87,16 @@ const SURFACE_PITCH: f64 = 0.5;
 const SURFACE_SCALE: f64 = 0.8;
 /// Tick labels per surface axis.
 const SURFACE_TICKS: usize = 6;
-/// Clearance kept between two surface tick labels, in pixels.
+/// Clearance kept between two surface labels, in pixels.
 const LABEL_GAP_PX: f64 = 2.0;
+/// Length of a surface axis tick, in pixels.
+const SURFACE_TICK_PX: i32 = 4;
+/// Where the x and y axis titles sit beyond the box, as a fraction of the
+/// span they are offset along, and how far out they may move, in steps,
+/// to clear the tick labels (#940).
+const TITLE_OFFSET: f64 = 0.22;
+const TITLE_STEP: f64 = 0.02;
+const TITLE_STEPS: u32 = 40;
 const COLORBAR_WIDTH_PX: u32 = 110;
 /// Smallest figure a surface is laid out in: the colour bar plus room for
 /// the 3D axes, and a height that leaves an area under the title.
@@ -915,7 +923,7 @@ where
         .axis_panel_style(RGBColor(248, 248, 250).filled())
         .label_style(font(TICK_PX).color(&TEXT))
         .max_light_lines(4)
-        .tick_size(4)
+        .tick_size(SURFACE_TICK_PX)
         .draw()
         .map_err(render_error)?;
 
@@ -979,12 +987,41 @@ where
     let y_mid = (y_range.start + y_range.end) / 2.0;
     let y_span = y_range.end - y_range.start;
     let x_span = x_range.end - x_range.start;
+    let coord = chart.as_coord_spec();
+    let ticks = surface_tick_boxes(
+        &plot_area,
+        coord,
+        chart.plotting_area().get_pixel_range(),
+        (&x_range, &y_range, z_low),
+        (&x_format, &depth_format),
+    )?;
+    let (area_x, area_y) = plot_area.get_pixel_range();
+    let area = PixelBox {
+        left: f64::from(area_x.start),
+        top: f64::from(area_y.start),
+        right: f64::from(area_x.end),
+        bottom: f64::from(area_y.end),
+    };
+    let title_style = TextStyle::from(font(AXIS_TITLE_PX));
+    // An axis title fits at an offset when its box stays in the plot area
+    // and clear of every tick label.
+    let fits = |label: &str, at: (f64, f64, f64)| -> Result<bool, GraphError> {
+        let size = plot_area
+            .estimate_text_size(label, &title_style)
+            .map_err(render_error)?;
+        let title = PixelBox::centred(coord.translate(&at), size);
+        Ok(title.inside(&area) && ticks.iter().all(|tick| title.clear_of(tick)))
+    };
     let mut titles = Vec::with_capacity(3);
     if let Some(label) = &config.x_label {
-        titles.push((label, (x_mid, z_low, y_range.end + y_span * 0.22)));
+        let at = |offset: f64| (x_mid, z_low, y_range.end + y_span * offset);
+        let offset = title_offset(|offset| fits(label, at(offset)))?;
+        titles.push((label, at(offset)));
     }
     if let Some(label) = &config.y_label {
-        titles.push((label, (x_range.end + x_span * 0.22, z_low, y_mid)));
+        let at = |offset: f64| (x_range.end + x_span * offset, z_low, y_mid);
+        let offset = title_offset(|offset| fits(label, at(offset)))?;
+        titles.push((label, at(offset)));
     }
     if let Some(label) = &config.z_label {
         titles.push((
@@ -1205,6 +1242,173 @@ where
     Ok((apart_x < room_x && apart_y < room_y).then_some(depth_tick))
 }
 
+/// A label's box in pixels.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct PixelBox {
+    left: f64,
+    top: f64,
+    right: f64,
+    bottom: f64,
+}
+
+impl PixelBox {
+    /// A box of `size` centred on `at`.
+    fn centred(at: (i32, i32), (width, height): (u32, u32)) -> Self {
+        let (x, y) = (f64::from(at.0), f64::from(at.1));
+        let (half_width, half_height) = (f64::from(width) / 2.0, f64::from(height) / 2.0);
+        Self {
+            left: x - half_width,
+            top: y - half_height,
+            right: x + half_width,
+            bottom: y + half_height,
+        }
+    }
+
+    /// At least [`LABEL_GAP_PX`] away from `other` on some side.
+    fn clear_of(&self, other: &Self) -> bool {
+        self.right + LABEL_GAP_PX <= other.left
+            || other.right + LABEL_GAP_PX <= self.left
+            || self.bottom + LABEL_GAP_PX <= other.top
+            || other.bottom + LABEL_GAP_PX <= self.top
+    }
+
+    /// Wholly within `area`.
+    fn inside(&self, area: &Self) -> bool {
+        self.left >= area.left
+            && self.top >= area.top
+            && self.right <= area.right
+            && self.bottom <= area.bottom
+    }
+}
+
+/// Where Plotters puts the x and depth tick labels of a surface, in pixels.
+///
+/// Mirrors `draw_axis_ticks`: each label hangs off its tick, two tick
+/// lengths away, on the side of the axis that faces away from the centre of
+/// the plotting area. From the fixed viewpoint the x axis runs along the
+/// front edge (depth end) and the depth axis along the right edge (x end),
+/// both on the floor of the box. Blank labels are left out.
+///
+/// # Errors
+///
+/// [`GraphError`] when a label cannot be measured.
+fn surface_tick_boxes<DB: DrawingBackend>(
+    area: &DrawingArea<DB, Shift>,
+    coord: &impl CoordTranslate<From = (f64, f64, f64)>,
+    (pixels_x, pixels_y): (std::ops::Range<i32>, std::ops::Range<i32>),
+    (x_range, depth_range, height): (&std::ops::Range<f64>, &std::ops::Range<f64>, f64),
+    (x_format, depth_format): (TickFormat<'_>, TickFormat<'_>),
+) -> Result<Vec<PixelBox>, GraphError>
+where
+    DB::ErrorType: 'static,
+{
+    let style = TextStyle::from(font(TICK_PX));
+    let pixel = |at: (i32, i32)| (f64::from(at.0), f64::from(at.1));
+    let centre = (
+        (f64::from(pixels_x.start) + f64::from(pixels_x.end)) / 2.0,
+        (f64::from(pixels_y.start) + f64::from(pixels_y.end)) / 2.0,
+    );
+    let tick = f64::from(SURFACE_TICK_PX);
+    let x_axis: [(f64, f64, f64); 2] = [
+        (x_range.start, height, depth_range.end),
+        (x_range.end, height, depth_range.end),
+    ];
+    let depth_axis: [(f64, f64, f64); 2] = [
+        (x_range.end, height, depth_range.start),
+        (x_range.end, height, depth_range.end),
+    ];
+    let x_ticks: Vec<((f64, f64, f64), String)> = RangedCoordf64::from(x_range.clone())
+        .key_points(SURFACE_TICKS)
+        .into_iter()
+        .map(|x| ((x, height, depth_range.end), x_format(&x)))
+        .collect();
+    let depth_ticks: Vec<((f64, f64, f64), String)> = RangedCoordf64::from(depth_range.clone())
+        .key_points(SURFACE_TICKS)
+        .into_iter()
+        .map(|depth| ((x_range.end, height, depth), depth_format(&depth)))
+        .collect();
+    let mut boxes = Vec::new();
+    for ([begin, end], ticks) in [(x_axis, x_ticks), (depth_axis, depth_ticks)] {
+        let (begin, end) = (pixel(coord.translate(&begin)), pixel(coord.translate(&end)));
+        let axis = (end.0 - begin.0, end.1 - begin.1);
+        let x_dir = if begin.0 < centre.0 {
+            (-tick, 0.0)
+        } else {
+            (tick, 0.0)
+        };
+        let y_dir = if begin.1 < centre.1 {
+            (0.0, -tick)
+        } else {
+            (0.0, tick)
+        };
+        let score = |dir: (f64, f64)| (dir.0 * axis.0 + dir.1 * axis.1).abs();
+        let dir = if score(x_dir) < score(y_dir) {
+            x_dir
+        } else {
+            y_dir
+        };
+        for (at, text) in ticks {
+            if text.is_empty() {
+                continue;
+            }
+            let (width, label_height) = area
+                .estimate_text_size(&text, &style)
+                .map_err(render_error)?;
+            let anchor = pixel(coord.translate(&at));
+            let (x, y) = (anchor.0 + dir.0 * 2.0, anchor.1 + dir.1 * 2.0);
+            let (width, label_height) = (f64::from(width), f64::from(label_height));
+            boxes.push(if dir.0 == 0.0 && dir.1 > 0.0 {
+                PixelBox {
+                    left: x - width / 2.0,
+                    top: y,
+                    right: x + width / 2.0,
+                    bottom: y + label_height,
+                }
+            } else if dir.0 == 0.0 {
+                PixelBox {
+                    left: x - width / 2.0,
+                    top: y - label_height,
+                    right: x + width / 2.0,
+                    bottom: y,
+                }
+            } else if dir.0 < 0.0 {
+                PixelBox {
+                    left: x - width,
+                    top: y - label_height / 2.0,
+                    right: x,
+                    bottom: y + label_height / 2.0,
+                }
+            } else {
+                PixelBox {
+                    left: x,
+                    top: y - label_height / 2.0,
+                    right: x + width,
+                    bottom: y + label_height / 2.0,
+                }
+            });
+        }
+    }
+    Ok(boxes)
+}
+
+/// How far beyond the box an axis title sits, as a fraction of the span it
+/// is offset along: [`TITLE_OFFSET`] when that `fits`, otherwise the
+/// nearest step out that does (#940). When none does, the title stays at
+/// [`TITLE_OFFSET`].
+///
+/// # Errors
+///
+/// What `fits` returns.
+fn title_offset(fits: impl Fn(f64) -> Result<bool, GraphError>) -> Result<f64, GraphError> {
+    for step in 0..=TITLE_STEPS {
+        let offset = TITLE_OFFSET + f64::from(step) * TITLE_STEP;
+        if fits(offset)? {
+            return Ok(offset);
+        }
+    }
+    Ok(TITLE_OFFSET)
+}
+
 /// Tick spacing Plotters will use for `range` with about `count` ticks.
 fn tick_step(range: &std::ops::Range<f64>, count: u32) -> f64 {
     (range.end - range.start) / f64::from(count.max(1))
@@ -1312,6 +1516,34 @@ mod tests {
         assert_eq!(grid.z_at(1, 0), Some(3.0));
         assert_eq!(grid.z_at(1, 1), Some(4.0));
         Ok(())
+    }
+
+    #[test]
+    fn test_title_offset_keeps_the_usual_offset_when_it_fits() -> Result<(), GraphError> {
+        assert_eq!(title_offset(|_| Ok(true))?, TITLE_OFFSET);
+        Ok(())
+    }
+
+    #[test]
+    fn test_title_offset_steps_out_to_the_first_fit() -> Result<(), GraphError> {
+        let offset = title_offset(|offset| Ok(offset > 0.3))?;
+        assert!((offset - 0.32).abs() < 1e-12, "{offset}");
+        // Nothing fits: the title stays where it always was.
+        assert_eq!(title_offset(|_| Ok(false))?, TITLE_OFFSET);
+        assert!(title_offset(|_| Err(GraphError::Render("x".to_string()))).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_pixel_box_clearance_and_containment() {
+        let a = PixelBox::centred((10, 10), (10, 4));
+        let touching = PixelBox::centred((20, 10), (10, 4));
+        let apart = PixelBox::centred((23, 10), (10, 4));
+        assert!(!a.clear_of(&touching));
+        assert!(a.clear_of(&apart) && apart.clear_of(&a));
+        let area = PixelBox::centred((10, 10), (20, 20));
+        assert!(a.inside(&area));
+        assert!(!apart.inside(&area));
     }
 
     #[test]
