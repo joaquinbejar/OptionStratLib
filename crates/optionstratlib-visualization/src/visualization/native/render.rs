@@ -1156,6 +1156,9 @@ fn axis_scale(range: &std::ops::Range<f64>) -> f64 {
     }
 }
 
+/// How an axis writes a tick value.
+type TickFormat<'a> = &'a dyn Fn(&f64) -> String;
+
 /// The depth tick whose label would land on the last x tick's label at the
 /// front corner of the surface (#937), so it can be left blank.
 ///
@@ -1171,7 +1174,7 @@ fn corner_clash<DB: DrawingBackend>(
     area: &DrawingArea<DB, Shift>,
     coord: &impl CoordTranslate<From = (f64, f64, f64)>,
     (x_range, depth_range, height): (&std::ops::Range<f64>, &std::ops::Range<f64>, f64),
-    (x_format, depth_format): (&dyn Fn(&f64) -> String, &dyn Fn(&f64) -> String),
+    (x_format, depth_format): (TickFormat<'_>, TickFormat<'_>),
 ) -> Result<Option<f64>, GraphError>
 where
     DB::ErrorType: 'static,
