@@ -1,6 +1,6 @@
 [package]
 name = "optionstratlib-visualization"
-version.workspace = true
+version = "0.23.1"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

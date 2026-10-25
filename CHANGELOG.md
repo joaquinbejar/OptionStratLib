@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.1] - 2026-10-26
+
+Only `optionstratlib-visualization` is released at 0.23.1; the other nine
+crates stay at 0.23.0 (`docs/versioning-policy.md`, #834). A consumer picks
+it up with `cargo update -p optionstratlib-visualization`.
+
 ### Fixed
 
 - **Surface exports no longer draw two tick labels on top of each other at
@@ -6276,7 +6282,8 @@ post-migration example layout.
 - `README.tpl` passthrough regenerates `README.md` with the updated
   module docs.
 
-[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.1...HEAD
+[0.23.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/joaquinbejar/OptionStratLib/compare/v0.22.0...v0.22.1
