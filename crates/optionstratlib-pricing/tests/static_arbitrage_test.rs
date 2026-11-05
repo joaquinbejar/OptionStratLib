@@ -7,8 +7,9 @@ use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::{d_sqrt, decimal_to_f64};
 use optionstratlib_pricing::error::{StaticArbitrageError, SviError};
 use optionstratlib_pricing::volatility::{
-    StaticArbitrageReport, StaticArbitrageViolation, SviParameters, SviSlice, TotalVarianceSlice,
-    check_butterfly, check_calendar, check_static_arbitrage,
+    StaticArbitrageReport, StaticArbitrageUnevaluatedPoint, StaticArbitrageViolation,
+    SviParameters, SviSlice, TotalVarianceSlice, check_butterfly, check_calendar,
+    check_static_arbitrage,
 };
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -456,6 +457,91 @@ fn test_calendar_noise_at_the_last_place_is_not_a_violation() {
 }
 
 #[test]
+fn test_calendar_tiny_sigma_no_longer_hides_a_real_decrease() {
+    // b = 1, rho = m = 0 and equal sigma, at k = 0: the band of 4e-28 * b / R said up
+    // to 4 at sigma = 1e-28, where the clamp leaves the root at most 0.42 * R off.
+    let wide = |a, sigma, expiry| {
+        with_forward_and_expiry(
+            slice(a, dec!(1), dec!(0), dec!(0), sigma),
+            dec!(100),
+            expiry,
+        )
+    };
+    for (sigma, decrease) in [
+        (dec!(0.0000000000000000000000000001), dec!(0.4)),
+        (dec!(0.00000000000000000001), dec!(0.00000004)),
+        (dec!(0.00000000000001), dec!(0.00000000000001)),
+    ] {
+        let earlier = wide(dec!(1) + decrease, sigma, dec!(0.5));
+        let later = wide(dec!(1), sigma, dec!(1));
+        let report = check_calendar(&[earlier, later], &[dec!(0)]).unwrap();
+        assert!(
+            report.unevaluated().is_empty(),
+            "sigma = {sigma}: {report:?}"
+        );
+        match report.violations() {
+            [violation] => assert_eq!(violation.size(), pos(decrease), "sigma = {sigma}"),
+            other => panic!("sigma = {sigma}: expected a violation, got {other:?}"),
+        }
+    }
+
+    // With no level to compare against, the same decrease has no verdict at the
+    // peak of the band, and never a pass.
+    let sigma = dec!(0.00000000000001);
+    let decrease = dec!(0.00000000000001);
+    let earlier = wide(decrease, sigma, dec!(0.5));
+    let later = wide(dec!(0), sigma, dec!(1));
+    let report = check_calendar(&[earlier, later], &[dec!(0)]).unwrap();
+    assert!(!report.passed(), "{report:?}");
+    assert!(matches!(
+        report.unevaluated(),
+        [StaticArbitrageUnevaluatedPoint::Calendar { .. }]
+    ));
+}
+
+#[test]
+fn test_calendar_tiny_total_variance_is_unevaluated_not_a_pass() {
+    // Two zero minimums at the same vertex: zero against zero with a rounding of
+    // their own has no verdict, and neither does a tiny flat pair.
+    let touching = slice(dec!(-0.01), dec!(0.1), dec!(0), dec!(0), dec!(0.1));
+    let slices = [
+        with_forward_and_expiry(touching, dec!(100), dec!(0.5)),
+        with_forward_and_expiry(touching, dec!(100), dec!(1)),
+    ];
+    let report = check_calendar(&slices, &[dec!(0), dec!(1)]).unwrap();
+    assert!(report.violations().is_empty(), "{report:?}");
+    match report.unevaluated() {
+        [point] => assert_eq!(point.log_moneyness(), dec!(0)),
+        other => panic!("expected one unevaluated point, got {other:?}"),
+    }
+
+    let tiny = [
+        flat(dec!(0.00000000000000000002), dec!(0.5)),
+        flat(dec!(0.00000000000000000001), dec!(1)),
+    ];
+    let report = check_calendar(&tiny, &[dec!(0)]).unwrap();
+    assert!(report.violations().is_empty(), "{report:?}");
+    assert_eq!(report.unevaluated().len(), 1, "{report:?}");
+}
+
+#[test]
+fn test_calendar_bands_accumulate_along_a_chain_of_expiries() {
+    // The docs state this limit. At a = 1 the band is about 2e-24, so each step below
+    // passes although the first expiry is 3e-24 above the last, which alone would be
+    // reported.
+    let step = dec!(0.0000000000000000000000015);
+    let chain = [
+        flat(dec!(1) + step + step, dec!(0.25)),
+        flat(dec!(1) + step, dec!(0.5)),
+        flat(dec!(1), dec!(1)),
+    ];
+    assert!(check_calendar(&chain, &[dec!(0)]).unwrap().passed());
+    let ends = [chain[0], chain[2]];
+    let report = check_calendar(&ends, &[dec!(0)]).unwrap();
+    assert_eq!(report.violations().len(), 1, "{report:?}");
+}
+
+#[test]
 fn test_static_arbitrage_uncheckable_input_is_a_typed_error() {
     let slices = crossing();
     assert!(matches!(
@@ -527,12 +613,21 @@ fn test_butterfly_at_a_zero_vertex_is_unevaluated_not_a_violation_or_a_pass() {
     assert!(report.violations().is_empty(), "{report:?}");
     assert!(!report.passed());
     match report.unevaluated() {
-        [point] => {
-            assert_eq!(point.time_to_expiry, Positive::ONE);
-            assert_eq!(point.log_moneyness, dec!(0));
-            assert_eq!(point.strike, Positive::HUNDRED);
-            assert_eq!(point.total_variance, Positive::ZERO);
-            assert!(point.rounding > Positive::ZERO);
+        [
+            StaticArbitrageUnevaluatedPoint::Butterfly {
+                time_to_expiry,
+                log_moneyness,
+                strike,
+                total_variance,
+                rounding,
+                ..
+            },
+        ] => {
+            assert_eq!(*time_to_expiry, Positive::ONE);
+            assert_eq!(*log_moneyness, dec!(0));
+            assert_eq!(*strike, Positive::HUNDRED);
+            assert_eq!(*total_variance, Positive::ZERO);
+            assert!(*rounding > Positive::ZERO);
         }
         other => panic!("expected one unevaluated point, got {other:?}"),
     }
@@ -560,9 +655,10 @@ fn test_butterfly_at_a_rounded_zero_vertex_is_unevaluated() {
 
 #[test]
 fn test_butterfly_beside_a_zero_vertex_at_the_money_matches_the_closed_form() {
-    // The true g is negative beside this vertex, so every point is a violation
-    // of the size the closed form gives or, once w is too small to resolve, an
-    // unevaluated point. None of them passes, and none has a wild value.
+    // The true g is negative beside this vertex. Away from it each point is a
+    // violation of the size the closed form gives, and close to it each is an
+    // unevaluated point. None of these has a wild value. Between the two lies a
+    // window that passes, pinned by the next test.
     let (b, sigma) = (dec!(0.1), dec!(0.1));
     let touching = slice(-(b * sigma), b, dec!(0), dec!(0), sigma);
     let evaluated = [
@@ -598,6 +694,38 @@ fn test_butterfly_beside_a_zero_vertex_at_the_money_matches_the_closed_form() {
         let report = check_butterfly(&touching, &[k]).unwrap();
         assert!(report.violations().is_empty(), "k = {k}: {report:?}");
         assert_eq!(report.unevaluated().len(), 1, "k = {k}: {report:?}");
+    }
+}
+
+#[test]
+fn test_butterfly_beside_a_zero_vertex_has_a_window_within_the_band() {
+    // The docs state this limit: w resolves at about 2.04e-7, while |g| only leaves
+    // its band of about 4.16e-12 at about 3.3e-7. Between them the true g is negative
+    // and the point passes, since the band is an upper bound on the rounding.
+    let (b, sigma) = (dec!(0.1), dec!(0.1));
+    let touching = slice(-(b * sigma), b, dec!(0), dec!(0), sigma);
+    let classify = |k: Decimal| {
+        let report = check_butterfly(&touching, &[k]).unwrap();
+        (report.violations().len(), report.unevaluated().len())
+    };
+    for k in [dec!(0.0000002), dec!(0.000000203)] {
+        assert_eq!(classify(k), (0, 1), "k = {k}");
+        assert_eq!(classify(-k), (0, 1), "k = {k}");
+    }
+    for k in [
+        dec!(0.000000205),
+        dec!(0.00000025),
+        dec!(0.0000003),
+        dec!(0.000000316),
+        dec!(0.00000032),
+    ] {
+        assert_eq!(classify(k), (0, 0), "k = {k}");
+        assert_eq!(classify(-k), (0, 0), "k = {k}");
+        assert!(zero_vertex_g(k, b, sigma) < dec!(0), "k = {k}");
+    }
+    for k in [dec!(0.00000033), dec!(0.0000004)] {
+        assert_eq!(classify(k), (1, 0), "k = {k}");
+        assert_eq!(classify(-k), (1, 0), "k = {k}");
     }
 }
 

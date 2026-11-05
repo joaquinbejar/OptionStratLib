@@ -10,17 +10,23 @@
 //! A check that returns must also keep its promises: a finding has a positive
 //! size and a positive strike, and a surface the theorems of the paper clear has
 //! nothing to report, so rounding cannot create a violation on it.
+//!
+//! The trait says its values are stable, but nothing enforces that, so a slice that
+//! gives a different value on every call is in here too: sorting more than 20 of
+//! those by re-reading the expiry panics inside the standard library.
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::d_sqrt;
 use optionstratlib_pricing::error::StaticArbitrageError;
 use optionstratlib_pricing::volatility::{
-    StaticArbitrageReport, StaticArbitrageViolation, SviParameters, SviSlice, check_butterfly,
-    check_calendar, check_static_arbitrage,
+    StaticArbitrageReport, StaticArbitrageUnevaluatedPoint, StaticArbitrageViolation,
+    SviParameters, SviSlice, TotalVarianceSlice, check_butterfly, check_calendar,
+    check_static_arbitrage,
 };
 use proptest::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::cell::Cell;
 
 /// The smallest representable positive `Decimal`.
 const TINY: Decimal = Decimal::from_parts(1, 0, 0, false, 28);
@@ -140,8 +146,107 @@ fn assert_consistent(report: &StaticArbitrageReport) {
         }
     }
     for point in report.unevaluated() {
-        assert!(point.strike > Positive::ZERO, "{point:?}");
+        match point {
+            StaticArbitrageUnevaluatedPoint::Butterfly { strike, .. } => {
+                assert!(*strike > Positive::ZERO, "{point:?}");
+            }
+            StaticArbitrageUnevaluatedPoint::Calendar {
+                earlier_expiry,
+                later_expiry,
+                earlier_strike,
+                later_strike,
+                ..
+            } => {
+                assert!(earlier_expiry < later_expiry, "{point:?}");
+                assert!(*earlier_strike > Positive::ZERO, "{point:?}");
+                assert!(*later_strike > Positive::ZERO, "{point:?}");
+            }
+            other => panic!("unknown kind: {other:?}"),
+        }
     }
+}
+
+/// A slice whose every value changes on every read, which the trait forbids and
+/// nothing prevents. A linear congruential step keeps it deterministic.
+struct Unstable {
+    state: Cell<u64>,
+}
+
+impl Unstable {
+    fn next(&self) -> Decimal {
+        let state = self
+            .state
+            .get()
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        self.state.set(state);
+        Decimal::from((state >> 40) % 1_000)
+    }
+}
+
+impl TotalVarianceSlice for Unstable {
+    fn time_to_expiry(&self) -> Positive {
+        positive(self.next() + Decimal::ONE)
+    }
+    fn forward(&self) -> Positive {
+        positive(self.next() + Decimal::ONE)
+    }
+    fn total_variance(&self, _k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        Ok(positive(self.next()))
+    }
+    fn total_variance_slope(&self, _k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        Ok(self.next() - dec!(500))
+    }
+    fn total_variance_curvature(&self, _k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        Ok(self.next() - dec!(500))
+    }
+    fn total_variance_rounding(&self, _k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        Ok(positive(self.next() * dec!(0.0000000001)))
+    }
+}
+
+/// A slice whose expiry falls by two on every read of any slice of the set. Read once
+/// in turn, the slices differ. Read again, as a sort or a comparison would, two of
+/// them can read equal.
+struct Drifting<'a> {
+    base: u32,
+    clock: &'a Cell<u32>,
+}
+
+impl TotalVarianceSlice for Drifting<'_> {
+    fn time_to_expiry(&self) -> Positive {
+        self.clock.set(self.clock.get() + 1);
+        positive(Decimal::from(self.base + 100_000 - 2 * self.clock.get()))
+    }
+    fn forward(&self) -> Positive {
+        Positive::HUNDRED
+    }
+    fn total_variance(&self, _k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        Ok(Positive::ONE)
+    }
+    fn total_variance_slope(&self, _k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        Ok(Decimal::ZERO)
+    }
+    fn total_variance_curvature(&self, _k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        Ok(Decimal::ZERO)
+    }
+    fn total_variance_rounding(&self, _k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        Ok(Positive::ZERO)
+    }
+}
+
+#[test]
+fn test_drifting_expiry_reads_once_and_is_not_a_spurious_duplicate() {
+    let clock = Cell::new(0);
+    let slices: Vec<Drifting> = (0..64)
+        .map(|base| Drifting {
+            base,
+            clock: &clock,
+        })
+        .collect();
+    let report = check_calendar(&slices, &[dec!(0)]).unwrap();
+    assert!(report.passed(), "{report:?}");
+    assert_eq!(clock.get(), 64);
 }
 
 /// An SSVI slice at the power law `phi = eta / sqrt(theta)`, in raw parameters.
@@ -161,6 +266,26 @@ fn ssvi(theta: Decimal, rho: Decimal, eta: Decimal, expiry: Decimal) -> SviSlice
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// More slices than the standard sort handles without a total order check, so
+    /// re-reading a changing expiry would panic in it on nearly every run.
+    #[test]
+    fn test_unstable_slices_never_panic(
+        seeds in prop::collection::vec(any::<u64>(), 21..64),
+        grid in any_grid(),
+    ) {
+        let slices: Vec<Unstable> = seeds
+            .iter()
+            .map(|&seed| Unstable { state: Cell::new(seed) })
+            .collect();
+        if let Ok(report) = check_calendar(&slices, &grid) {
+            prop_assert!(!grid.is_empty());
+            prop_assert!(report.violations().len() <= (slices.len() - 1) * grid.len());
+        }
+        if check_static_arbitrage(&slices, &grid).is_ok() {
+            prop_assert!(!grid.is_empty());
+        }
+    }
 
     #[test]
     fn test_check_butterfly_extreme_inputs_never_panic(slice in any_slice(), grid in any_grid()) {
@@ -183,7 +308,6 @@ proptest! {
             Ok(report) => {
                 prop_assert!(!grid.is_empty());
                 prop_assert!(slices.len() >= 2);
-                prop_assert!(report.unevaluated().is_empty());
                 assert_consistent(&report);
             }
             Err(StaticArbitrageError::EmptyGrid) => prop_assert!(grid.is_empty()),

@@ -46,12 +46,15 @@
 //!
 //! Total variance must not decrease with expiry at fixed log moneyness. The
 //! check sorts the slices by expiry, so the order of the input does not matter,
-//! and compares each with the next at every grid point. Comparing adjacent
-//! expiries is enough for the points tested, because the condition is transitive
-//! along a sorted list. A point where the earlier expiry has more total variance
-//! beyond the rounding of both is a [`StaticArbitrageViolation::Calendar`], and
-//! its `size` is the difference, in total variance (annualized variance times
-//! years).
+//! and compares each with the next at every grid point. A point where the earlier
+//! expiry has more total variance beyond the rounding of both is a
+//! [`StaticArbitrageViolation::Calendar`], and its `size` is the difference, in
+//! total variance (annualized variance times years).
+//!
+//! Comparing adjacent expiries is enough for the points tested only up to the
+//! bands, which accumulate along the chain: every step can decrease by just less
+//! than its band and report nothing, while the first expiry is above the last by
+//! the sum of those bands.
 //!
 //! The comparison is at equal log moneyness, not at equal strike, and each slice
 //! has its own forward, so the same point is two different strikes. A calendar
@@ -78,28 +81,44 @@
 //! - It deserves the attention. A zero total variance at a strike means that an
 //!   option there has no time value, while options further out have some, so the
 //!   option prices are not monotone in the strike. The check finds the negative
-//!   `g` this implies only if the grid has a point where it happens: right beside
-//!   the vertex when `k* = 0`, but out in the wing when `k* != 0`.
+//!   `g` this implies only at a grid point where `g` is negative beyond its band:
+//!   beside the vertex when `k* = 0`, past the window below, and out in the wing
+//!   when `k* != 0`.
 //!
-//! A point with a tiny `w` gets the same entry when its value cannot be told from
+//! A point with a tiny `w` gets the same entry when its value is swamped by its
 //! rounding: when the rounding [`TotalVarianceSlice::total_variance_rounding`]
-//! declares exceeds `1e-12` of `w`. For a raw SVI slice with `a = -0.01`, `b = 0.1`
-//! and `sigma = 0.1`, which has a zero minimum, that is `w` below about `2e-14`, an
-//! implied volatility below about `0.00002%` at one year, within about `2e-7` of
-//! the vertex.
+//! declares exceeds `1e-12` of `w`.
+//!
+//! This leaves a window where a real violation goes unreported. For a raw SVI
+//! slice with `a = -0.01`, `b = 0.1` and `sigma = 0.1`, which has a zero minimum at
+//! `k = 0`, points closer than about `2e-7` have `w` below about `2e-14` and are
+//! unevaluated, an implied volatility below about `0.00002%` at one year. Points
+//! from there to about `3.2e-7` pass, although the true `g` is negative there,
+//! because it is within its band: about `-4e-12` against a band of about `4e-12`.
+//! Points further out are reported.
+//!
+//! The calendar check has the same limit on a different reference. A pair of
+//! expiries is a [`StaticArbitrageUnevaluatedPoint::Calendar`] when either declared
+//! rounding exceeds `1e-12` of the larger of their two total variances, because a
+//! band that wide could hide a real decrease. This compares neither slice with its
+//! own `w`, so a zero `w` beside a large one is still a resolved comparison.
 //!
 //! # Tolerances
 //!
-//! Each tolerance is a bound on the rounding of the arithmetic at that point, so
-//! at an evaluated point a violation larger than it is always reported, and one
-//! smaller than it cannot be told from rounding. The one choice made is the
-//! `1e-12` above, which only moves points between evaluated and unevaluated.
+//! Each tolerance is an upper bound on the rounding of the arithmetic at that point,
+//! so at an evaluated point a violation larger than it is always reported. A
+//! violation smaller than it is not reported, although it may be real, because the
+//! bounds are conservative: rounding could explain it, but need not. Their
+//! margins are choices: `1e-24` is about `1e4` units in the last place at a `w` near
+//! one, `1e-26` is 100 of them, and `1e-12` moves points between evaluated and
+//! unevaluated.
 //!
 //! - Calendar: the sum of the rounding each slice declares at the point. Equal
 //!   total variances differ by zero, which is not a violation at any tolerance.
 //!   For a raw SVI slice the rounding is
-//!   `1e-24 * (|a| + b * R) + 4e-28 * b / R + 4e-28` with
+//!   `1e-24 * (|a| + b * R) + b * min(4e-28 / R, 0.42 * R) + 4e-28 * (1 + b)` with
 //!   `R = sqrt((k - m)^2 + sigma^2)`: about `2e-25` at `a = 0.1`, `b = 0.1`, `R = 1`.
+//!   The minimum peaks at about `1.3e-14 * b`, at `R` near `3e-14`.
 //! - Butterfly: `g` is a sum of terms that each carry the rounding of `w`, in
 //!   proportion to their size, so its band is
 //!   `((1 + |q| + |k|)^2 + w'^2 / (4 * w) + w'^2 / 16 + |w''| / 2) * (2 * r + 1e-26)`
@@ -149,10 +168,11 @@ use tracing::{debug, instrument};
 /// Slices the calendar check needs to compare one expiry with another.
 const MIN_CALENDAR_SLICES: usize = 2;
 
-/// The largest rounding of `w`, relative to `w`, at which `g` is still evaluated:
-/// `w` then carries at least 12 significant digits. Above it the point is
-/// reported as unevaluated. Lowering it evaluates fewer points; raising it would
-/// let the rounding of `w` grow into the terms of `g` that cancel near a vertex.
+/// The largest rounding of `w`, relative to `w`, at which a point is still evaluated:
+/// `w` then carries at least 12 significant digits. Above it the point is reported
+/// as unevaluated. Lowering it evaluates fewer points; raising it would let the
+/// rounding of `w` grow into the terms of `g` that cancel near a vertex, and into
+/// the difference a calendar comparison reads.
 const MAX_RELATIVE_ROUNDING: Decimal = Decimal::from_parts(1, 0, 0, false, 12);
 
 /// Rounding of the arithmetic of `g` itself, relative to the size of its terms:
@@ -165,6 +185,10 @@ const G_ARITHMETIC_ROUNDING: Decimal = Decimal::from_parts(1, 0, 0, false, 26);
 /// Total variance is annualized variance times years, a function of the log
 /// moneyness `k = ln(K / F)`. An implementor gives it and its first two
 /// derivatives in `k`, and says how much of it is rounding.
+///
+/// Every method must be stable: the same value on each call with the same argument.
+/// A check reads each expiry and forward once, so a slice that breaks this cannot
+/// make it panic, but what it reports about such a slice means nothing.
 pub trait TotalVarianceSlice {
     /// The time to expiry of the slice, in years. Must be positive.
     fn time_to_expiry(&self) -> Positive;
@@ -201,14 +225,47 @@ pub trait TotalVarianceSlice {
     ///
     /// This is what keeps the arithmetic from creating a violation, so it should
     /// be a true bound and a small one: too small and rounding can read as a
-    /// violation, too large and a small violation can read as rounding. A slice
-    /// whose values are exact returns zero.
+    /// violation, too large and a small violation can read as rounding, until a
+    /// point above `1e-12` of `w` is reported as unevaluated. A slice whose values
+    /// are exact returns zero.
+    ///
+    /// The butterfly band also assumes that the relative rounding of `w''(k)` is
+    /// within the same factor it applies to the other terms of `g`:
+    /// `2 * rounding / w + 1e-26`.
     ///
     /// # Errors
     ///
     /// A [`StaticArbitrageError`] if the bound cannot be computed at `k`. The
     /// check then fails rather than skip the point.
     fn total_variance_rounding(&self, k: Decimal) -> Result<Positive, StaticArbitrageError>;
+}
+
+impl<T: TotalVarianceSlice + ?Sized> TotalVarianceSlice for &T {
+    #[inline]
+    fn time_to_expiry(&self) -> Positive {
+        (**self).time_to_expiry()
+    }
+
+    #[inline]
+    fn forward(&self) -> Positive {
+        (**self).forward()
+    }
+
+    fn total_variance(&self, k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        (**self).total_variance(k)
+    }
+
+    fn total_variance_slope(&self, k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        (**self).total_variance_slope(k)
+    }
+
+    fn total_variance_curvature(&self, k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+        (**self).total_variance_curvature(k)
+    }
+
+    fn total_variance_rounding(&self, k: Decimal) -> Result<Positive, StaticArbitrageError> {
+        (**self).total_variance_rounding(k)
+    }
 }
 
 impl TotalVarianceSlice for SviSlice {
@@ -303,34 +360,91 @@ impl StaticArbitrageViolation {
     }
 }
 
-/// A grid point where `g` has no value: `w` is zero, or smaller than its rounding
-/// can resolve. See the module docs for what this means and why it is reported.
+/// A grid point a check could not resolve, because the declared rounding is too
+/// large against the total variance there. It is neither a violation nor a pass.
+/// See the module docs for what this means and why it is reported.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
-pub struct StaticArbitrageUnevaluatedPoint {
-    /// The expiry of the slice, in years.
-    pub time_to_expiry: Positive,
-    /// The grid point `k`.
-    pub log_moneyness: Decimal,
-    /// `F * exp(k)` with the forward of the slice.
-    pub strike: Positive,
-    /// The total variance `w(k)`, as computed.
-    pub total_variance: Positive,
-    /// The rounding of `w(k)` the slice declares.
-    pub rounding: Positive,
+pub enum StaticArbitrageUnevaluatedPoint {
+    /// `g` has no value here: `w` is zero, or smaller than its rounding can resolve.
+    /// The calendar check does not depend on `g`, and still runs at this point.
+    #[non_exhaustive]
+    Butterfly {
+        /// The expiry of the slice, in years.
+        time_to_expiry: Positive,
+        /// The grid point `k`.
+        log_moneyness: Decimal,
+        /// `F * exp(k)` with the forward of the slice.
+        strike: Positive,
+        /// The total variance `w(k)`, as computed.
+        total_variance: Positive,
+        /// The rounding of `w(k)` the slice declares.
+        rounding: Positive,
+    },
+    /// A decrease could be hidden within the rounding of one of these two expiries.
+    #[non_exhaustive]
+    Calendar {
+        /// The earlier of the two expiries, in years.
+        earlier_expiry: Positive,
+        /// The later of the two expiries, in years.
+        later_expiry: Positive,
+        /// The grid point `k`, at which both slices are compared.
+        log_moneyness: Decimal,
+        /// `F * exp(k)` with the forward of the earlier expiry.
+        earlier_strike: Positive,
+        /// `F * exp(k)` with the forward of the later expiry.
+        later_strike: Positive,
+        /// `w(k)` of the earlier expiry, as computed.
+        earlier_total_variance: Positive,
+        /// `w(k)` of the later expiry, as computed.
+        later_total_variance: Positive,
+        /// The rounding of `w(k)` the earlier expiry declares.
+        earlier_rounding: Positive,
+        /// The rounding of `w(k)` the later expiry declares.
+        later_rounding: Positive,
+    },
+}
+
+impl StaticArbitrageUnevaluatedPoint {
+    /// The grid point that could not be resolved.
+    #[must_use]
+    #[inline]
+    pub fn log_moneyness(&self) -> Decimal {
+        match self {
+            Self::Butterfly { log_moneyness, .. } | Self::Calendar { log_moneyness, .. } => {
+                *log_moneyness
+            }
+        }
+    }
 }
 
 /// What the static arbitrage checks found, point by point.
 ///
 /// An empty report means only that these checks found nothing at the grid points
 /// tested: see the module docs. It does not say the slices are free of arbitrage.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+///
+/// Only a check builds a report, so one always says a check ran:
+///
+/// ```compile_fail
+/// use optionstratlib_pricing::volatility::StaticArbitrageReport;
+///
+/// let _ = StaticArbitrageReport::default();
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticArbitrageReport {
     violations: Vec<StaticArbitrageViolation>,
     unevaluated: Vec<StaticArbitrageUnevaluatedPoint>,
 }
 
 impl StaticArbitrageReport {
+    /// A report of a check about to run.
+    fn empty() -> Self {
+        Self {
+            violations: Vec::new(),
+            unevaluated: Vec::new(),
+        }
+    }
+
     /// The violations found: those of the butterfly check, by expiry and then in
     /// the order of the grid, then those of the calendar check, by pair of
     /// expiries and then in the order of the grid.
@@ -340,8 +454,11 @@ impl StaticArbitrageReport {
         &self.violations
     }
 
-    /// The grid points where `g` has no value, by expiry and then in the order of
-    /// the grid. These are not violations, and they were not tested either.
+    /// The grid points a check could not resolve: those of the butterfly check, by
+    /// expiry and then in the order of the grid, then those of the calendar check,
+    /// by pair of expiries and then in the order of the grid. These are not
+    /// violations, and that check did not clear them either. Each entry names only
+    /// its own check: the other check can still have run at the same point.
     #[must_use]
     #[inline]
     pub fn unevaluated(&self) -> &[StaticArbitrageUnevaluatedPoint] {
@@ -382,9 +499,9 @@ pub fn check_butterfly<S: TotalVarianceSlice>(
     grid: &[Decimal],
 ) -> Result<StaticArbitrageReport, StaticArbitrageError> {
     check_grid(grid)?;
-    check_slice(slice)?;
-    let mut report = StaticArbitrageReport::default();
-    butterfly_into(slice, grid, &mut report)?;
+    let read = read_slice(slice)?;
+    let mut report = StaticArbitrageReport::empty();
+    butterfly_into(&read, grid, &mut report)?;
     debug!(
         violations = report.violations.len(),
         unevaluated = report.unevaluated.len(),
@@ -397,7 +514,9 @@ pub fn check_butterfly<S: TotalVarianceSlice>(
 /// log moneyness grid.
 ///
 /// The slices may come in any order: they are sorted by expiry, and each is
-/// compared with the next. See the module docs.
+/// compared with the next. A pair whose declared rounding is too large against
+/// its total variance at a point is reported as unevaluated there. See the module
+/// docs.
 ///
 /// # Errors
 ///
@@ -418,10 +537,11 @@ pub fn check_calendar<S: TotalVarianceSlice>(
 ) -> Result<StaticArbitrageReport, StaticArbitrageError> {
     check_grid(grid)?;
     let sorted = sorted_by_expiry(slices)?;
-    let mut report = StaticArbitrageReport::default();
+    let mut report = StaticArbitrageReport::empty();
     calendar_into(&sorted, grid, &mut report)?;
     debug!(
         violations = report.violations.len(),
+        unevaluated = report.unevaluated.len(),
         "calendar check finished"
     );
     Ok(report)
@@ -445,9 +565,9 @@ pub fn check_static_arbitrage<S: TotalVarianceSlice>(
 ) -> Result<StaticArbitrageReport, StaticArbitrageError> {
     check_grid(grid)?;
     let sorted = sorted_by_expiry(slices)?;
-    let mut report = StaticArbitrageReport::default();
-    for slice in &sorted {
-        butterfly_into(*slice, grid, &mut report)?;
+    let mut report = StaticArbitrageReport::empty();
+    for read in &sorted {
+        butterfly_into(read, grid, &mut report)?;
     }
     calendar_into(&sorted, grid, &mut report)?;
     debug!(
@@ -466,24 +586,41 @@ fn check_grid(grid: &[Decimal]) -> Result<(), StaticArbitrageError> {
     Ok(())
 }
 
-/// Rejects a slice whose strikes or expiry would mean nothing.
-fn check_slice<S: TotalVarianceSlice>(slice: &S) -> Result<(), StaticArbitrageError> {
-    let invalid = |reason| StaticArbitrageError::InvalidSlice {
-        time_to_expiry: slice.time_to_expiry(),
-        forward: slice.forward(),
-        reason,
-    };
-    if slice.forward().is_zero() {
-        return Err(invalid("the forward must be positive"));
-    }
-    if slice.time_to_expiry().is_zero() {
-        return Err(invalid("the time to expiry must be positive"));
-    }
-    Ok(())
+/// A slice with the expiry and the forward it gave when read, once, so that sorting
+/// and reporting cannot see two different values of either.
+struct ReadSlice<'a, S> {
+    expiry: Positive,
+    forward: Positive,
+    slice: &'a S,
 }
 
-/// The slices by increasing expiry, each of them checked and no two sharing one.
-fn sorted_by_expiry<S: TotalVarianceSlice>(slices: &[S]) -> Result<Vec<&S>, StaticArbitrageError> {
+/// Reads a slice, rejecting one whose strikes or expiry would mean nothing.
+fn read_slice<S: TotalVarianceSlice>(slice: &S) -> Result<ReadSlice<'_, S>, StaticArbitrageError> {
+    let expiry = slice.time_to_expiry();
+    let forward = slice.forward();
+    let invalid = |reason| StaticArbitrageError::InvalidSlice {
+        time_to_expiry: expiry,
+        forward,
+        reason,
+    };
+    if forward.is_zero() {
+        return Err(invalid("the forward must be positive"));
+    }
+    if expiry.is_zero() {
+        return Err(invalid("the time to expiry must be positive"));
+    }
+    Ok(ReadSlice {
+        expiry,
+        forward,
+        slice,
+    })
+}
+
+/// The slices by increasing expiry, each of them read once, checked, and no two
+/// sharing an expiry.
+fn sorted_by_expiry<S: TotalVarianceSlice>(
+    slices: &[S],
+) -> Result<Vec<ReadSlice<'_, S>>, StaticArbitrageError> {
     if slices.len() < MIN_CALENDAR_SLICES {
         return Err(StaticArbitrageError::TooFewSlices {
             got: slices.len(),
@@ -492,16 +629,15 @@ fn sorted_by_expiry<S: TotalVarianceSlice>(slices: &[S]) -> Result<Vec<&S>, Stat
     }
     let mut sorted = Vec::with_capacity(slices.len());
     for slice in slices {
-        check_slice(slice)?;
-        sorted.push(slice);
+        sorted.push(read_slice(slice)?);
     }
-    sorted.sort_by_key(|slice| slice.time_to_expiry());
+    sorted.sort_by_key(|read| read.expiry);
     for pair in sorted.windows(2) {
         if let [earlier, later] = pair
-            && earlier.time_to_expiry() == later.time_to_expiry()
+            && earlier.expiry == later.expiry
         {
             return Err(StaticArbitrageError::DuplicateExpiry {
-                time_to_expiry: earlier.time_to_expiry(),
+                time_to_expiry: earlier.expiry,
             });
         }
     }
@@ -581,23 +717,26 @@ fn density_factor(
 
 /// Adds what one slice shows on the grid to the report.
 fn butterfly_into<S: TotalVarianceSlice>(
-    slice: &S,
+    read: &ReadSlice<'_, S>,
     grid: &[Decimal],
     report: &mut StaticArbitrageReport,
 ) -> Result<(), StaticArbitrageError> {
+    let slice = read.slice;
     for &k in grid {
         let total_variance = slice.total_variance(k)?;
         let rounding = slice.total_variance_rounding(k)?;
         let w = total_variance.to_dec();
         let limit = d_mul(MAX_RELATIVE_ROUNDING, w, "arbitrage::g::limit")?;
         if w.is_zero() || rounding.to_dec() > limit {
-            report.unevaluated.push(StaticArbitrageUnevaluatedPoint {
-                time_to_expiry: slice.time_to_expiry(),
-                log_moneyness: k,
-                strike: strike_at(slice.forward(), k)?,
-                total_variance,
-                rounding,
-            });
+            report
+                .unevaluated
+                .push(StaticArbitrageUnevaluatedPoint::Butterfly {
+                    time_to_expiry: read.expiry,
+                    log_moneyness: k,
+                    strike: strike_at(read.forward, k)?,
+                    total_variance,
+                    rounding,
+                });
             continue;
         }
         let factor = density_factor(
@@ -609,9 +748,9 @@ fn butterfly_into<S: TotalVarianceSlice>(
         )?;
         if factor.g < -factor.band {
             report.violations.push(StaticArbitrageViolation::Butterfly {
-                time_to_expiry: slice.time_to_expiry(),
+                time_to_expiry: read.expiry,
                 log_moneyness: k,
-                strike: strike_at(slice.forward(), k)?,
+                strike: strike_at(read.forward, k)?,
                 g: factor.g,
                 size: Positive::new_decimal(-factor.g)?,
             });
@@ -621,8 +760,12 @@ fn butterfly_into<S: TotalVarianceSlice>(
 }
 
 /// Adds what each pair of adjacent expiries shows on the grid to the report.
+///
+/// Each rounding is held to the limit before the two are summed, so any declared
+/// rounding, however large, ends here as an unevaluated point. The reference is the
+/// larger `w`: a comparison of a zero `w` with a large one is resolved.
 fn calendar_into<S: TotalVarianceSlice>(
-    sorted: &[&S],
+    sorted: &[ReadSlice<'_, S>],
     grid: &[Decimal],
     report: &mut StaticArbitrageReport,
 ) -> Result<(), StaticArbitrageError> {
@@ -632,24 +775,40 @@ fn calendar_into<S: TotalVarianceSlice>(
             continue;
         };
         for &k in grid {
-            let earlier_w = earlier.total_variance(k)?;
-            let later_w = later.total_variance(k)?;
-            let decrease = d_sub(earlier_w.to_dec(), later_w.to_dec(), OP)?;
-            if decrease.is_sign_negative() || decrease.is_zero() {
-                continue;
-            }
-            let band = d_add(
-                earlier.total_variance_rounding(k)?.to_dec(),
-                later.total_variance_rounding(k)?.to_dec(),
+            let earlier_w = earlier.slice.total_variance(k)?;
+            let later_w = later.slice.total_variance(k)?;
+            let earlier_rounding = earlier.slice.total_variance_rounding(k)?;
+            let later_rounding = later.slice.total_variance_rounding(k)?;
+            let limit = d_mul(
+                MAX_RELATIVE_ROUNDING,
+                earlier_w.to_dec().max(later_w.to_dec()),
                 OP,
             )?;
+            if earlier_rounding.to_dec() > limit || later_rounding.to_dec() > limit {
+                report
+                    .unevaluated
+                    .push(StaticArbitrageUnevaluatedPoint::Calendar {
+                        earlier_expiry: earlier.expiry,
+                        later_expiry: later.expiry,
+                        log_moneyness: k,
+                        earlier_strike: strike_at(earlier.forward, k)?,
+                        later_strike: strike_at(later.forward, k)?,
+                        earlier_total_variance: earlier_w,
+                        later_total_variance: later_w,
+                        earlier_rounding,
+                        later_rounding,
+                    });
+                continue;
+            }
+            let decrease = d_sub(earlier_w.to_dec(), later_w.to_dec(), OP)?;
+            let band = d_add(earlier_rounding.to_dec(), later_rounding.to_dec(), OP)?;
             if decrease > band {
                 report.violations.push(StaticArbitrageViolation::Calendar {
-                    earlier_expiry: earlier.time_to_expiry(),
-                    later_expiry: later.time_to_expiry(),
+                    earlier_expiry: earlier.expiry,
+                    later_expiry: later.expiry,
                     log_moneyness: k,
-                    earlier_strike: strike_at(earlier.forward(), k)?,
-                    later_strike: strike_at(later.forward(), k)?,
+                    earlier_strike: strike_at(earlier.forward, k)?,
+                    later_strike: strike_at(later.forward, k)?,
                     earlier_total_variance: earlier_w,
                     later_total_variance: later_w,
                     size: Positive::new_decimal(decrease)?,
@@ -811,6 +970,34 @@ mod tests {
     }
 
     #[test]
+    fn test_density_factor_far_from_a_tiny_sigma_matches_the_reference() {
+        // k - m = -1.04e-20 and sigma = 6.64e-26, where `sigma / R` keeps only 23
+        // digits at 28 places and would put g outside its band. Same script.
+        let parameters = SviParameters::try_new(
+            dec!(0.684),
+            dec!(0.000001652),
+            dec!(0),
+            dec!(-1.153),
+            dec!(0.0000000000000000000000000664),
+        )
+        .unwrap();
+        let slice = SviSlice::try_new(parameters, Positive::HUNDRED, Positive::ONE).unwrap();
+        let k = dec!(-1.1530000000000000000104);
+        let factor = density_factor(
+            k,
+            SviSlice::total_variance(&slice, k).unwrap().to_dec(),
+            SviSlice::total_variance_slope(&slice, k).unwrap(),
+            SviSlice::total_variance_curvature(&slice, k).unwrap(),
+            TotalVarianceSlice::total_variance_rounding(&slice, k)
+                .unwrap()
+                .to_dec(),
+        )
+        .unwrap();
+        let difference = (factor.g - dec!(3238.5477894615521609485374)).abs();
+        assert!(difference < factor.band, "{difference} vs {}", factor.band);
+    }
+
+    #[test]
     fn test_density_factor_small_slope_is_not_lost_below_the_last_place() {
         // w' = 1e-15 squares to 1e-30, below the last place of a `Decimal`.
         // w'^2 / (4 * w) must still be 2.5e-17 at w = 1e-14, so g = 1 - 2.5e-17.
@@ -874,7 +1061,10 @@ mod tests {
         let report = check_butterfly(&above, &[dec!(0)]).unwrap();
         assert!(report.violations().is_empty(), "{report:?}");
         assert_eq!(report.unevaluated().len(), 1, "{report:?}");
-        assert_eq!(report.unevaluated()[0].rounding, pos(above.rounding));
+        assert!(matches!(
+            report.unevaluated(),
+            [StaticArbitrageUnevaluatedPoint::Butterfly { rounding, .. }] if *rounding == pos(above.rounding)
+        ));
     }
 
     #[test]
@@ -885,6 +1075,103 @@ mod tests {
         assert!(report.violations().is_empty());
         assert_eq!(report.unevaluated().len(), 2);
         assert!(!report.passed());
+    }
+
+    #[test]
+    fn test_calendar_resolution_limit_is_pinned_from_both_sides() {
+        // At a larger w of 1, each rounding may reach 1e-12. The band is then 2e-12,
+        // so a decrease of 3e-12 is reported and one of 1e-12 passes.
+        let at = dec!(0.000000000001);
+        let later = |rounding| Fixed {
+            expiry: pos(dec!(2)),
+            ..Fixed::new(dec!(1), dec!(0), dec!(0), rounding)
+        };
+        for (w, reported) in [(dec!(1.000000000001), false), (dec!(1.000000000003), true)] {
+            let earlier = Fixed::new(w, dec!(0), dec!(0), at);
+            let report = check_calendar(&[earlier, later(at)], &[dec!(0)]).unwrap();
+            assert!(report.unevaluated().is_empty(), "w = {w}: {report:?}");
+            assert_eq!(report.violations().len(), usize::from(reported), "w = {w}");
+        }
+
+        // Just above the limit, on either slice, the same comparison is unevaluated.
+        let above = dec!(0.00000000000100001);
+        for (earlier_rounding, later_rounding) in [(above, at), (at, above)] {
+            let earlier = Fixed::new(dec!(1), dec!(0), dec!(0), earlier_rounding);
+            let report = check_calendar(&[earlier, later(later_rounding)], &[dec!(0)]).unwrap();
+            assert!(report.violations().is_empty(), "{report:?}");
+            assert!(!report.passed());
+            assert!(matches!(
+                report.unevaluated(),
+                [StaticArbitrageUnevaluatedPoint::Calendar {
+                    earlier_rounding: found_earlier,
+                    later_rounding: found_later,
+                    ..
+                }] if found_earlier.to_dec() == earlier_rounding && found_later.to_dec() == later_rounding
+            ));
+        }
+    }
+
+    #[test]
+    fn test_calendar_large_declared_rounding_is_unevaluated_not_a_pass() {
+        // These hid a decrease from 0.5 to 0.1, while the butterfly check marked the
+        // same slices unevaluated. The largest one must not overflow in the sum.
+        for rounding in [dec!(0.5), dec!(1000000), Decimal::MAX] {
+            let earlier = Fixed {
+                expiry: pos(dec!(0.5)),
+                ..Fixed::new(dec!(0.5), dec!(0), dec!(0), rounding)
+            };
+            let later = Fixed::new(dec!(0.1), dec!(0), dec!(0), rounding);
+            let report = check_calendar(&[earlier, later], &[dec!(0.25)]).unwrap();
+            assert!(!report.passed(), "{report:?}");
+            assert!(report.violations().is_empty(), "{report:?}");
+            match report.unevaluated() {
+                [point] => assert_eq!(point.log_moneyness(), dec!(0.25)),
+                other => panic!("expected one unevaluated point, got {other:?}"),
+            }
+
+            let both = check_static_arbitrage(&[earlier, later], &[dec!(0)]).unwrap();
+            assert_eq!(both.unevaluated().len(), 3, "{both:?}");
+            assert!(matches!(
+                both.unevaluated().last(),
+                Some(StaticArbitrageUnevaluatedPoint::Calendar { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn test_calendar_exact_zero_total_variances_are_resolved() {
+        // Declaring no rounding at all, there is nothing to swamp, and zero against
+        // zero is not a decrease.
+        let earlier = Fixed::new(dec!(0), dec!(0), dec!(0), dec!(0));
+        let later = Fixed {
+            expiry: pos(dec!(2)),
+            ..earlier
+        };
+        assert!(
+            check_calendar(&[earlier, later], &[dec!(0)])
+                .unwrap()
+                .passed()
+        );
+    }
+
+    #[test]
+    fn test_calendar_zero_beside_a_large_total_variance_is_resolved() {
+        // The rounding is small against the larger `w`, in either direction.
+        let tiny = dec!(0.000000000000000000000000001);
+        let zero = Fixed::new(dec!(0), dec!(0), dec!(0), tiny);
+        let one = Fixed::new(dec!(1), dec!(0), dec!(0), tiny);
+        let later = |slice| Fixed {
+            expiry: pos(dec!(2)),
+            ..slice
+        };
+        assert!(
+            check_calendar(&[zero, later(one)], &[dec!(0)])
+                .unwrap()
+                .passed()
+        );
+        let report = check_calendar(&[one, later(zero)], &[dec!(0)]).unwrap();
+        assert_eq!(report.violations().len(), 1, "{report:?}");
+        assert!(report.unevaluated().is_empty(), "{report:?}");
     }
 
     #[test]
@@ -957,6 +1244,79 @@ mod tests {
                 Err(StaticArbitrageError::StrikeOutOfRange { .. })
             ));
         }
+    }
+
+    #[test]
+    fn test_read_slice_reads_the_expiry_and_the_forward_once() {
+        use std::cell::Cell;
+
+        /// Counts how often the two are read.
+        struct Counting<'a> {
+            expiry: Positive,
+            reads: &'a Cell<u32>,
+        }
+        impl TotalVarianceSlice for Counting<'_> {
+            fn time_to_expiry(&self) -> Positive {
+                self.reads.set(self.reads.get() + 1);
+                self.expiry
+            }
+            fn forward(&self) -> Positive {
+                self.reads.set(self.reads.get() + 1);
+                Positive::HUNDRED
+            }
+            fn total_variance(&self, _k: Decimal) -> Result<Positive, StaticArbitrageError> {
+                // Each later expiry has less: a violation at every point.
+                Ok(pos(dec!(10) - self.expiry.to_dec()))
+            }
+            fn total_variance_slope(&self, _k: Decimal) -> Result<Decimal, StaticArbitrageError> {
+                Ok(dec!(0))
+            }
+            fn total_variance_curvature(
+                &self,
+                _k: Decimal,
+            ) -> Result<Decimal, StaticArbitrageError> {
+                Ok(dec!(-4))
+            }
+            fn total_variance_rounding(
+                &self,
+                _k: Decimal,
+            ) -> Result<Positive, StaticArbitrageError> {
+                Ok(Positive::ZERO)
+            }
+        }
+
+        let reads = Cell::new(0);
+        let slices: Vec<Counting> = (1..=5)
+            .rev()
+            .map(|expiry| Counting {
+                expiry: pos(Decimal::from(expiry)),
+                reads: &reads,
+            })
+            .collect();
+        let report = check_static_arbitrage(&slices, &[dec!(0), dec!(0.1)]).unwrap();
+        // g = 1 - 2 = -1 on each of the 5 slices, and each of the 4 steps decreases.
+        assert_eq!(report.violations().len(), 2 * 5 + 2 * 4);
+        assert_eq!(reads.get(), 2 * 5);
+    }
+
+    #[test]
+    fn test_references_to_slices_are_slices_themselves() {
+        let earlier = Fixed::new(dec!(0.5), dec!(0), dec!(0), dec!(0));
+        let later = Fixed {
+            expiry: pos(dec!(2)),
+            ..Fixed::new(dec!(0.1), dec!(0), dec!(0), dec!(0))
+        };
+        let by_value = check_calendar(&[earlier, later], &[dec!(0)]).unwrap();
+        assert_eq!(by_value.violations().len(), 1);
+
+        let by_reference = check_calendar(&[&earlier, &later], &[dec!(0)]).unwrap();
+        assert_eq!(by_reference, by_value);
+        let by_object: [&dyn TotalVarianceSlice; 2] = [&earlier, &later];
+        assert_eq!(check_calendar(&by_object, &[dec!(0)]).unwrap(), by_value);
+        assert_eq!(
+            check_butterfly(&&earlier, &[dec!(0)]).unwrap(),
+            check_butterfly(&earlier, &[dec!(0)]).unwrap()
+        );
     }
 
     #[test]

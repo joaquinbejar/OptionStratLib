@@ -142,8 +142,15 @@ const ROUNDING_REPAIR_FLOOR: Decimal = Decimal::from_parts(1, 0, 0, false, 26);
 /// matters at a small root: see [`SviParameters::total_variance`].
 const RADICAND_ROUNDING: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
 
-/// Rounding of the sum itself at the 28 places of a `Decimal`. For a small `a`
-/// and `b` every band relative to them falls below one unit in the last place.
+/// The most the root can be off, relative to its clamped value, whatever the
+/// radicand rounded to. The true root lies between `max(|x|, sigma)` and `sqrt(2)`
+/// times that, and the clamp keeps the value used at or above the first, so it is
+/// off by at most `sqrt(2) - 1 = 0.4142...` of it.
+const ROOT_RELATIVE_ERROR: Decimal = Decimal::from_parts(42, 0, 0, false, 2);
+
+/// Rounding of the sum itself at the 28 places of a `Decimal`, and of `b` times
+/// the shape once `b` scales it. For a small `a` and `b` every band relative to
+/// them falls below one unit in the last place.
 const SUM_ROUNDING: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
 
 /// Largest [`SviCalibrationConfig::tolerance`]. The tolerance bounds how far the
@@ -332,20 +339,26 @@ impl SviParameters {
     pub fn total_variance_curvature(&self, k: Decimal) -> Result<Decimal, SviError> {
         const OP: &str = "svi::total_variance_curvature";
         let shape = unit_shape(d_sub(k, self.m, OP)?, self.sigma)?;
-        // `sigma / R^2` is divided by the scale and the unit root in turn: rounding
-        // `R` itself would cost a tiny `R` its relative precision. Taking it before
-        // the second `sigma / R` also keeps what squaring that ratio would lose
-        // below the 28th place.
-        let over_root = d_div(
-            d_div(shape.sigma_over_root, shape.unit_root, OP)?,
-            shape.scale,
+        // `R / sigma` is at least one, so it keeps 28 significant digits where
+        // `sigma / R` would keep few of them far from the vertex. Past the range of
+        // a `Decimal` it means `sigma / R` is below 1e-28 with `R` above 7, so the
+        // curvature is below anything the 28 places can hold.
+        let Some(root_over_sigma) = shape
+            .scale
+            .checked_div(self.sigma)
+            .and_then(|ratio| ratio.checked_mul(shape.unit_root))
+        else {
+            return Ok(Decimal::ZERO);
+        };
+        // `1 / R` is taken through its parts: rounding `R` itself would cost a tiny
+        // `R` its relative precision.
+        let one_over_root = d_div(d_div(Decimal::ONE, shape.scale, OP)?, shape.unit_root, OP)?;
+        let curvature = d_div(
+            d_div(one_over_root, root_over_sigma, OP)?,
+            root_over_sigma,
             OP,
         )?;
-        Ok(d_mul(
-            d_mul(self.b, over_root, OP)?,
-            shape.sigma_over_root,
-            OP,
-        )?)
+        Ok(d_mul(self.b, curvature, OP)?)
     }
 
     /// An upper bound on the rounding of [`SviParameters::total_variance`] at
@@ -399,22 +412,30 @@ fn check_negative_within_rounding(
 
 /// The rounding that can reach a total variance: the terms summed carry a
 /// relative rounding, and the radicand's rounding reaches the root divided by
-/// about twice the root, which `b` then scales. `hypotenuse` is positive, since
-/// it is at least `sigma`.
+/// about twice the root, which `b` then scales. At a small root that division
+/// says more than the clamp in [`rounded_hypotenuse`] leaves possible, so the root
+/// is charged the smaller of the two. `hypotenuse` is positive, since it is at
+/// least `sigma`.
 fn rounding_band(a: Decimal, b: Decimal, hypotenuse: Decimal) -> Result<Decimal, SviError> {
     const OP: &str = "svi::total_variance::band";
     let magnitude = d_add(a.abs(), d_mul(b, hypotenuse, OP)?, OP)?;
     let relative = d_mul(TOTAL_VARIANCE_ROUNDING_BAND, magnitude, OP)?;
-    let radicand = d_mul(d_div(RADICAND_ROUNDING, hypotenuse, OP)?, b, OP)?;
-    Ok(d_add(d_add(relative, radicand, OP)?, SUM_ROUNDING, OP)?)
+    let root_error =
+        d_div(RADICAND_ROUNDING, hypotenuse, OP)?.min(d_mul(ROOT_RELATIVE_ERROR, hypotenuse, OP)?);
+    let radicand = d_mul(root_error, b, OP)?;
+    let scaled = d_mul(SUM_ROUNDING, b, OP)?;
+    Ok(d_add(
+        d_add(d_add(relative, radicand, OP)?, scaled, OP)?,
+        SUM_ROUNDING,
+        OP,
+    )?)
 }
 
-/// `x / R` and `sigma / R` for the derivatives, with `R = sqrt(x^2 + sigma^2)` kept
-/// apart as `scale * unit_root`.
+/// `x / R` for the slope, with `R = sqrt(x^2 + sigma^2)` kept apart as
+/// `scale * unit_root` for the curvature.
 #[derive(Debug, Clone, Copy)]
 struct UnitShape {
     shift_over_root: Decimal,
-    sigma_over_root: Decimal,
     scale: Decimal,
     unit_root: Decimal,
 }
@@ -437,7 +458,6 @@ fn unit_shape(x: Decimal, sigma: Decimal) -> Result<UnitShape, SviError> {
     )?;
     Ok(UnitShape {
         shift_over_root: d_div(unit_x, unit_root, OP)?,
-        sigma_over_root: d_div(unit_sigma, unit_root, OP)?,
         scale,
         unit_root,
     })
@@ -1894,6 +1914,26 @@ mod tests {
     }
 
     #[test]
+    fn test_total_variance_curvature_beyond_the_range_of_the_ratio_is_zero() {
+        // R / sigma overflows at x = 1e10 and sigma = 1e-28, and the curvature is
+        // about 1e-66, which nothing at 28 places can hold. It is not an error.
+        let parameters = SviParameters::try_new(
+            dec!(1),
+            dec!(1),
+            dec!(0),
+            dec!(0),
+            dec!(0.0000000000000000000000000001),
+        )
+        .unwrap();
+        assert_eq!(
+            parameters
+                .total_variance_curvature(dec!(10000000000))
+                .unwrap(),
+            dec!(0)
+        );
+    }
+
+    #[test]
     fn test_total_variance_derivatives_of_a_flat_slice_are_zero() {
         let flat =
             SviParameters::try_new(dec!(0.04), dec!(0), dec!(0.3), dec!(0.1), dec!(0.2)).unwrap();
@@ -1942,6 +1982,52 @@ mod tests {
             at_one.total_variance_rounding(dec!(0)).unwrap().to_dec(),
             dec!(0.0000000000000000000000002004)
         );
+    }
+
+    #[test]
+    fn test_total_variance_rounding_is_capped_by_what_the_clamp_leaves_possible() {
+        // At x = sigma = 1e-20 the radicand rounds to zero, so the root is clamped to
+        // 1e-20 against a true 1.41421356...e-20: off by 0.41421356...e-20. That is
+        // what the band must cover and about all it should: 4e-28 / R would be 4e-8.
+        let sigma = dec!(0.00000000000000000001);
+        let parameters = SviParameters::try_new(dec!(0), dec!(1), dec!(0), dec!(0), sigma).unwrap();
+        let rounding = parameters.total_variance_rounding(sigma).unwrap().to_dec();
+        assert_eq!(parameters.total_variance(sigma).unwrap().to_dec(), sigma);
+        assert!(rounding > dec!(0.0000000000000000000041422), "{rounding}");
+        assert!(rounding < dec!(0.0000000000000000000043), "{rounding}");
+    }
+
+    #[test]
+    fn test_total_variance_rounding_keeps_the_radicand_term_above_the_crossover() {
+        // Above R of about 3e-14 the division is the smaller one: 4e-28 / 1e-10.
+        let parameters =
+            SviParameters::try_new(dec!(0), dec!(1), dec!(0), dec!(0), dec!(0.0000000001)).unwrap();
+        assert_eq!(
+            parameters
+                .total_variance_rounding(dec!(0))
+                .unwrap()
+                .to_dec(),
+            dec!(0.0000000000000000040000000008)
+        );
+    }
+
+    #[test]
+    fn test_total_variance_rounding_covers_the_slope_at_a_large_b_and_tiny_root() {
+        // The slope rounds at about b * 1e-28 however small the root is, so the band
+        // keeps a term in b when the capped radicand term has gone below it.
+        let parameters = SviParameters::try_new(
+            dec!(0),
+            dec!(1000),
+            dec!(0),
+            dec!(0),
+            dec!(0.0000000000000000000000000001),
+        )
+        .unwrap();
+        let rounding = parameters
+            .total_variance_rounding(dec!(0))
+            .unwrap()
+            .to_dec();
+        assert!(rounding >= dec!(0.0000000000000000000000004), "{rounding}");
     }
 
     #[test]

@@ -194,8 +194,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let report = check_butterfly(&touching, &[dec!(0), dec!(0.1)])?;
     for point in report.unevaluated() {
         info!(
-            k = %point.log_moneyness,
-            total_variance = %point.total_variance,
+            k = %point.log_moneyness(),
             "unevaluated: neither a violation nor a pass"
         );
     }

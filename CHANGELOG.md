@@ -57,12 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   between grid points or between expiries is not detected, the wing limit of Lemma
   2.2 is not tested, and no slice or surface is declared free of arbitrage. A check
   that cannot be evaluated never reads as clean. A point whose total variance is
-  zero or smaller than its rounding can resolve has no `g`: it is reported as a
-  `StaticArbitrageUnevaluatedPoint`, neither a violation nor a pass. An empty grid,
+  zero or smaller than its rounding can resolve has no `g`, and a pair of expiries
+  whose declared rounding could hide a decrease has no verdict: each is reported as
+  a `StaticArbitrageUnevaluatedPoint`, neither a violation nor a pass. An empty grid,
   fewer than two slices for a calendar check, two slices sharing an expiry and
   `Decimal` overflow are a new `#[non_exhaustive]` `StaticArbitrageError`; slices
-  may come in any order and are sorted by expiry. The tolerances are bounds on the
-  rounding of the arithmetic, declared and pinned from both sides by the tests. The
+  may come in any order and are sorted by expiry. The tolerances are conservative
+  bounds on the rounding of the arithmetic, declared and pinned from both sides by
+  the tests, so a violation smaller than its band goes unreported. The
   aggregate `optionstratlib::error::Error` has no variant for this error yet; #944
   adds it with the 0.24.0 bump. Runnable example: `static_arbitrage` in
   `examples_pricing`.
