@@ -91,8 +91,8 @@ pub struct SettlementTerms {
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct SettlementObligation {
     /// The option quantity the event ends, in contracts: not multiplied by the
-    /// contract size, never negative and the same for both sides.
-    pub extinguished_quantity: Decimal,
+    /// contract size and the same for both sides.
+    pub extinguished_quantity: Positive,
     /// Cash in account currency. Positive is received, negative is paid.
     pub cash: Decimal,
     /// Underlying in units of the underlying. Positive is received, negative
@@ -103,18 +103,19 @@ pub struct SettlementObligation {
 /// Computes what `terms` oblige the position in `option` to pay, receive or
 /// deliver.
 ///
-/// A pure function: it reads no clock and books nothing. It reads the side,
-/// style, strike, quantity and contract size of `option`; the
-/// `underlying_price` and `expiration_date` are not consulted, because the
-/// price comes from `terms` and the caller decides when the event happens.
+/// A pure function: it reads no clock and books nothing. It reads the option
+/// type, side, call or put style, strike, quantity and contract size of
+/// `option`; the `underlying_price` and `expiration_date` are not consulted,
+/// because the price comes from `terms` and the caller decides when the event
+/// happens.
 /// Which short position gets assigned, whether an American option should be
 /// exercised early, and the ledger and margin consequences of the result all
 /// belong to the caller.
 ///
-/// # Supported styles
+/// # Supported option types
 ///
-/// [`OptionType::European`] and [`OptionType::American`]. Every other style is
-/// rejected with [`SettlementError::UnsupportedStyle`].
+/// [`OptionType::European`] and [`OptionType::American`]. Every other option
+/// type is rejected with [`SettlementError::UnsupportedOptionType`].
 ///
 /// # Rules
 ///
@@ -131,7 +132,9 @@ pub struct SettlementObligation {
 /// | Exercise or assignment | physical | any moneyness | `K·q·m` | `q·m` |
 ///
 /// Every row extinguishes the `q` contracts. A position is in the money when it
-/// is a call with `S > K` or a put with `S < K`; `S = K` is at the money.
+/// is a call with `S > K` or a put with `S < K`; `S = K` is at the money. This
+/// differs from [`Options::is_in_the_money`], which counts `S = K` as in the
+/// money.
 ///
 /// The signs say who receives, positive meaning the position receives:
 ///
@@ -166,7 +169,7 @@ pub struct SettlementObligation {
 ///
 /// # Errors
 ///
-/// - [`SettlementError::UnsupportedStyle`] when `option` is neither European
+/// - [`SettlementError::UnsupportedOptionType`] when `option` is neither European
 ///   nor American.
 /// - [`SettlementError::EventSideMismatch`] for an exercise of a short
 ///   position or an assignment of a long one.
@@ -222,7 +225,7 @@ pub struct SettlementObligation {
 /// };
 ///
 /// let obligation = settlement_obligation(&option, &terms)?;
-/// assert_eq!(obligation.extinguished_quantity, dec!(2));
+/// assert_eq!(obligation.extinguished_quantity, pos_or_panic!(2.0));
 /// assert_eq!(obligation.underlying, dec!(200));
 /// assert_eq!(obligation.cash, dec!(-20000));
 /// # Ok(())
@@ -233,7 +236,7 @@ pub fn settlement_obligation(
     option: &Options,
     terms: &SettlementTerms,
 ) -> Result<SettlementObligation, SettlementError> {
-    check_style(&option.option_type)?;
+    check_option_type(&option.option_type)?;
     check_event_side(terms.event, option.side)?;
     let intrinsic = match observed_price(terms)? {
         Some(price) => Some(intrinsic_per_unit(
@@ -280,17 +283,17 @@ pub fn settlement_obligation(
     };
 
     Ok(SettlementObligation {
-        extinguished_quantity: option.quantity.to_dec(),
+        extinguished_quantity: option.quantity,
         cash,
         underlying,
     })
 }
 
-/// Rejects every style with no settlement rule.
-fn check_style(style: &OptionType) -> Result<(), SettlementError> {
-    match style {
+/// Rejects every option type with no settlement rule.
+fn check_option_type(option_type: &OptionType) -> Result<(), SettlementError> {
+    match option_type {
         OptionType::European | OptionType::American => Ok(()),
-        unsupported => Err(unsupported_style(unsupported)),
+        unsupported => Err(unsupported_option_type(unsupported)),
     }
 }
 
@@ -362,9 +365,9 @@ fn signed(magnitude: Decimal, received: bool) -> Decimal {
 
 #[cold]
 #[inline(never)]
-fn unsupported_style(style: &OptionType) -> SettlementError {
-    SettlementError::UnsupportedStyle {
-        style: style.clone(),
+fn unsupported_option_type(option_type: &OptionType) -> SettlementError {
+    SettlementError::UnsupportedOptionType {
+        option_type: option_type.clone(),
     }
 }
 
@@ -384,6 +387,7 @@ mod tests {
     use crate::model::types::{AsianAveragingType, BarrierType};
     use chrono::TimeDelta;
     use rust_decimal_macros::dec;
+    use serde::de::DeserializeOwned;
 
     const STRIKE: Decimal = dec!(100);
     const IN_THE_MONEY_CALL: Decimal = dec!(110);
@@ -489,7 +493,7 @@ mod tests {
 
     fn obligation(cash: Decimal, underlying: Decimal) -> SettlementObligation {
         SettlementObligation {
-            extinguished_quantity: QUANTITY,
+            extinguished_quantity: pos(QUANTITY),
             cash,
             underlying,
         }
@@ -659,7 +663,7 @@ mod tests {
         assert_eq!(
             settlement_obligation(&option, &physical),
             Ok(SettlementObligation {
-                extinguished_quantity: dec!(3),
+                extinguished_quantity: pos(dec!(3)),
                 cash: dec!(-3000),
                 underlying: dec!(30),
             })
@@ -672,7 +676,7 @@ mod tests {
         assert_eq!(
             settlement_obligation(&option, &cash),
             Ok(SettlementObligation {
-                extinguished_quantity: dec!(3),
+                extinguished_quantity: pos(dec!(3)),
                 cash: dec!(300),
                 underlying: Decimal::ZERO,
             })
@@ -693,7 +697,7 @@ mod tests {
         assert_eq!(
             settlement_obligation(&option, &terms),
             Ok(SettlementObligation {
-                extinguished_quantity: dec!(5),
+                extinguished_quantity: pos(dec!(5)),
                 cash: dec!(-500),
                 underlying: dec!(5),
             })
@@ -742,7 +746,7 @@ mod tests {
         assert_eq!(
             settlement_obligation(&option, &terms),
             Ok(SettlementObligation {
-                extinguished_quantity: dec!(0.125),
+                extinguished_quantity: pos(dec!(0.125)),
                 cash: dec!(-33.34),
                 underlying: Decimal::ONE,
             })
@@ -854,13 +858,13 @@ mod tests {
     }
 
     #[test]
-    fn test_settlement_unsupported_style_is_rejected() {
+    fn test_settlement_unsupported_option_type_is_rejected() {
         let terms = terms(
             SettlementType::Cash,
             SettlementEvent::Expiry,
             Some(IN_THE_MONEY_CALL),
         );
-        for style in [
+        for option_type in [
             OptionType::Bermuda {
                 exercise_dates: vec![Positive::ONE],
             },
@@ -877,7 +881,7 @@ mod tests {
             },
         ] {
             let option = contract(
-                style.clone(),
+                option_type.clone(),
                 Side::Long,
                 OptionStyle::Call,
                 STRIKE,
@@ -886,7 +890,7 @@ mod tests {
             );
             assert_eq!(
                 settlement_obligation(&option, &terms),
-                Err(SettlementError::UnsupportedStyle { style })
+                Err(SettlementError::UnsupportedOptionType { option_type })
             );
         }
     }
@@ -1085,7 +1089,35 @@ mod tests {
 
     #[test]
     fn test_settlement_terms_reject_unknown_fields() {
-        let parsed = serde_json::from_str::<CashRounding>(r#"{"scale":2,"mode":"up"}"#);
-        assert!(parsed.is_err());
+        let terms = terms(
+            SettlementType::Cash,
+            SettlementEvent::Expiry,
+            Some(IN_THE_MONEY_CALL),
+        );
+        assert_rejects_unknown_field(&CashRounding { scale: 2 });
+        assert_rejects_unknown_field(&observed(IN_THE_MONEY_CALL));
+        assert_rejects_unknown_field(&terms);
+    }
+
+    /// Asserts that `value` parses back from JSON and stops parsing once its
+    /// object gains a field the type does not declare.
+    fn assert_rejects_unknown_field<T>(value: &T)
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let mut json = serde_json::to_value(value).unwrap_or_default();
+        assert!(serde_json::from_value::<T>(json.clone()).is_ok());
+        if let Some(fields) = json.as_object_mut() {
+            fields.insert("unexpected".to_string(), serde_json::Value::Bool(true));
+        }
+        let error = serde_json::from_value::<T>(json)
+            .err()
+            .map(|e| e.to_string());
+        assert!(
+            error
+                .as_deref()
+                .is_some_and(|text| text.contains("unknown field")),
+            "{error:?}"
+        );
     }
 }

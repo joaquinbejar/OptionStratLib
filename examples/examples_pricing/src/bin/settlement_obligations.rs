@@ -114,11 +114,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &settlement_obligation(&long_put, &exercise)?,
     );
 
-    info!("=== Cash settlement: multiplier 50, settlement 103.333 rounded to cents ===");
+    info!("=== Cash settlement: 3.3333 x 50 = 166.665, a midpoint rounding to 166.66 ===");
     let cash = terms(
         SettlementType::Cash,
         SettlementEvent::Expiry,
-        Some(103.333),
+        Some(103.3333),
         cutoff,
     );
     let long_index_call = contract(Side::Long, OptionStyle::Call, 1.0, 50.0);

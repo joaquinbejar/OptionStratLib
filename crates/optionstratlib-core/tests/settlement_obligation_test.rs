@@ -194,7 +194,7 @@ fn test_settlement_option_held_by_a_position_settles() {
     assert_eq!(
         result,
         Ok(SettlementObligation {
-            extinguished_quantity: dec!(3),
+            extinguished_quantity: pos(dec!(3)),
             cash: dec!(-15000),
             underlying: dec!(300),
         })
@@ -204,7 +204,7 @@ fn test_settlement_option_held_by_a_position_settles() {
 #[test]
 fn test_settlement_obligation_round_trips_through_json() {
     let obligation = SettlementObligation {
-        extinguished_quantity: dec!(2),
+        extinguished_quantity: pos(dec!(2)),
         cash: dec!(-20000),
         underlying: dec!(200),
     };

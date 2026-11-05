@@ -50,16 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   observation time, a cutoff and a `CashRounding`) and returns a
   `SettlementObligation`: the extinguished contracts, plus signed cash and
   underlying where positive means received. At expiry an in-the-money position
-  executes and any other extinguishes with no flows; an explicit exercise (long
-  only) or assignment (short only) also executes at the money. Physical
-  settlement moves `q·m` of underlying against `K·q·m` of cash; cash settlement
-  moves only the intrinsic value. Cash is rounded to the given scale with
-  `MidpointNearestEven`. European and American are the supported styles.
-  Failures are a new `#[non_exhaustive]` `SettlementError`: unsupported style,
-  missing price, price observed after the cutoff, event incompatible with the
-  side, and arithmetic overflow. The aggregate `optionstratlib::error::Error`
-  has no variant for it yet, since adding one to that exhaustive enum is
-  breaking. Runnable example: `settlement_obligations` in `examples_pricing`.
+  executes and any other extinguishes with no flows. An explicit exercise (long
+  only) or assignment (short only) that is physically settled executes at any
+  moneyness, out of the money included, and needs no settlement price; a
+  cash-settled one pays the intrinsic value, so nothing at or out of the money.
+  Physical settlement moves `q·m` of underlying against `K·q·m` of cash; cash
+  settlement moves only the intrinsic value. Cash is rounded to the given scale
+  with `MidpointNearestEven`. European and American are the supported option
+  types. Failures are a new `#[non_exhaustive]` `SettlementError`: unsupported
+  option type, missing price, price observed after the cutoff, event
+  incompatible with the side, and arithmetic overflow. The aggregate
+  `optionstratlib::error::Error` has no variant for it yet, since adding one to
+  that exhaustive enum is breaking. Runnable example: `settlement_obligations`
+  in `examples_pricing`.
 
 ### Changed — breaking
 

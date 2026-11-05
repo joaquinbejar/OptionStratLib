@@ -16,12 +16,14 @@ use thiserror::Error;
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SettlementError {
-    /// The contract's exercise style has no settlement rule. Only European
-    /// and American options are supported.
-    #[error("unsupported option style for settlement: {style} (supported: European, American)")]
-    UnsupportedStyle {
-        /// The rejected style.
-        style: OptionType,
+    /// The contract's option type has no settlement rule. Only European and
+    /// American options are supported.
+    #[error(
+        "unsupported option type for settlement: {option_type} (supported: European, American)"
+    )]
+    UnsupportedOptionType {
+        /// The rejected option type.
+        option_type: OptionType,
     },
 
     /// The event needs a settlement price and none was supplied.
@@ -72,15 +74,15 @@ mod tests_settlement_error {
     use chrono::TimeZone;
 
     #[test]
-    fn test_settlement_error_unsupported_style_names_the_style() {
-        let error = SettlementError::UnsupportedStyle {
-            style: OptionType::Cliquet {
+    fn test_settlement_error_unsupported_option_type_names_the_type() {
+        let error = SettlementError::UnsupportedOptionType {
+            option_type: OptionType::Cliquet {
                 reset_dates: Vec::new(),
             },
         };
         assert_eq!(
             error.to_string(),
-            "unsupported option style for settlement: Cliquet Option (Reset Dates: []) (supported: European, American)"
+            "unsupported option type for settlement: Cliquet Option (Reset Dates: []) (supported: European, American)"
         );
     }
 

@@ -16,7 +16,7 @@
 //!
 //! * `option` - Implementation of the core Options structure and related functionality
 //! * `position` - Management of financial positions and their properties
-//! * `settlement_obligation` - What expiry, exercise or assignment obliges a position to pay, receive or deliver
+//! * `settlement` - What expiry, exercise or assignment obliges a position to pay, receive or deliver
 //! * `types` - Essential type definitions and enums
 //! * `utils` - Utility functions for model operations and calculations
 //! * `format` - Display and Debug implementations for model types

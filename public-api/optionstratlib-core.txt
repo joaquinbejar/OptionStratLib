@@ -172,8 +172,8 @@ pub optionstratlib_core::error::SettlementError::MissingPrice::settlement_type: 
 pub optionstratlib_core::error::SettlementError::PriceAfterCutoff
 pub optionstratlib_core::error::SettlementError::PriceAfterCutoff::cutoff: chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub optionstratlib_core::error::SettlementError::PriceAfterCutoff::observed_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
-pub optionstratlib_core::error::SettlementError::UnsupportedStyle
-pub optionstratlib_core::error::SettlementError::UnsupportedStyle::style: option_type::option_type::OptionType
+pub optionstratlib_core::error::SettlementError::UnsupportedOptionType
+pub optionstratlib_core::error::SettlementError::UnsupportedOptionType::option_type: option_type::option_type::OptionType
 pub enum optionstratlib_core::error::TradeError
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow
 pub optionstratlib_core::error::TradeError::ArithmeticOverflow::operation: &'static str
@@ -990,7 +990,7 @@ impl utoipa::__dev::ComposeSchema for optionstratlib_core::model::position::Posi
 pub fn optionstratlib_core::model::position::Position::compose(alloc::vec::Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>
 pub struct optionstratlib_core::model::SettlementObligation
 pub optionstratlib_core::model::SettlementObligation::cash: rust_decimal::decimal::Decimal
-pub optionstratlib_core::model::SettlementObligation::extinguished_quantity: rust_decimal::decimal::Decimal
+pub optionstratlib_core::model::SettlementObligation::extinguished_quantity: positive::positive::Positive
 pub optionstratlib_core::model::SettlementObligation::underlying: rust_decimal::decimal::Decimal
 impl utoipa::ToSchema for optionstratlib_core::model::SettlementObligation
 pub fn optionstratlib_core::model::SettlementObligation::name() -> alloc::borrow::Cow<'static, str>

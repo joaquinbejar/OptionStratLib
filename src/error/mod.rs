@@ -142,7 +142,7 @@
 //!
 //! | Target crate | Files |
 //! | --- | --- |
-//! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `trade.rs`, now in `optionstratlib-core` |
+//! | core | `common.rs`, `decimal.rs`, `options.rs`, `position.rs`, `settlement.rs`, `trade.rs`, now in `optionstratlib-core` |
 //! | math | `interpolation.rs`, `curves.rs`, `surfaces.rs`, `metrics.rs`, now in `optionstratlib-math` |
 //! | pricing | `greeks.rs`, `volatility.rs`, `pricing.rs`, `svi.rs`, now in `optionstratlib-pricing` |
 //! | simulation | `simulation.rs`, now in `optionstratlib-simulation` |
