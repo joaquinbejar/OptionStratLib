@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — breaking
+
+- **`ImpliedVolatilitySurface::iv_surface` is now
+  `HorizonVolatilitySurface::horizon_volatility_surface`** (#948). It
+  multiplied each annualized implied volatility by `sqrt(days / 365)`, so 20%
+  at 30 days came back as about 5.73%, under a name and an axis label that
+  said implied volatility. Those values are correct as the volatility over the
+  horizon, and every horizon comes from one chain, so it has no observed term
+  structure. The numbers do not change; the name and the documentation now say
+  what they are. The `implied_volatility_surface` example is now
+  `horizon_volatility_surface`.
+  - Migration: rename the trait and the method. A caller that wants annualized
+    implied volatility by strike reads `ImpliedVolatilityCurve::iv_curve`.
+
 ## [0.23.1] - 2026-10-26
 
 Only `optionstratlib-visualization` is released at 0.23.1; the other nine

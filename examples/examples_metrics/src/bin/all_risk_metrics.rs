@@ -9,7 +9,7 @@
 //! This comprehensive example demonstrates all risk metrics available in
 //! OptionStratLib:
 //! - Implied Volatility Curve (by strike)
-//! - Implied Volatility Surface (strike vs time)
+//! - Horizon Volatility Surface (strike vs horizon, not annualized)
 //! - Risk Reversal Curve (by strike)
 //! - Dollar Gamma Curve (by strike)
 //!
@@ -18,7 +18,7 @@
 
 use optionstratlib::error::CurveError;
 use optionstratlib::metrics::{
-    DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
+    DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve, RiskReversalCurve,
 };
 use optionstratlib::model::OptionStyle;
 use optionstratlib::prelude::*;
@@ -81,12 +81,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("   Saved: implied_volatility_curve.png/html\n");
 
     // ========================================
-    // 2. Implied Volatility Surface
+    // 2. Horizon Volatility Surface
     // ========================================
-    tracing::info!("2. IMPLIED VOLATILITY SURFACE");
-    tracing::info!("   Shows IV across strikes AND time horizons");
+    tracing::info!("2. HORIZON VOLATILITY SURFACE");
+    tracing::info!(
+        "   Projects IV over time horizons: the volatility over each one, not annualized"
+    );
 
-    let days_to_expiry = vec![
+    let horizon_days = vec![
         pos_or_panic!(7.0),
         pos_or_panic!(14.0),
         pos_or_panic!(21.0),
@@ -96,27 +98,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         pos_or_panic!(90.0),
     ];
 
-    let iv_surface = option_chain
-        .iv_surface(days_to_expiry)
+    let horizon_volatility_surface = option_chain
+        .horizon_volatility_surface(horizon_days)
         .map_err(|e| CurveError::ConstructionError(e.to_string()))?;
 
-    tracing::info!("   Generated {} surface points", iv_surface.points.len());
+    tracing::info!(
+        "   Generated {} surface points",
+        horizon_volatility_surface.points.len()
+    );
 
-    iv_surface
+    horizon_volatility_surface
         .plot()
-        .title("Implied Volatility Surface (SP500)")
+        .title("Volatility over the Horizon (SP500)")
         .x_label("Strike Price")
-        .y_label("Days to Expiration")
-        .z_label("Implied Volatility")
+        .y_label("Horizon (days)")
+        .z_label("Volatility over the horizon")
         .dimensions(1600, 1200)
-        .save("./Draws/Metrics/implied_volatility_surface.png")
+        .save("./Draws/Metrics/horizon_volatility_surface.png")
         .map_err(|e| CurveError::ConstructionError(e.to_string()))?;
 
-    iv_surface
-        .write_html("./Draws/Metrics/implied_volatility_surface.html".as_ref())
+    horizon_volatility_surface
+        .write_html("./Draws/Metrics/horizon_volatility_surface.html".as_ref())
         .map_err(|e| CurveError::ConstructionError(e.to_string()))?;
 
-    tracing::info!("   Saved: implied_volatility_surface.png/html\n");
+    tracing::info!("   Saved: horizon_volatility_surface.png/html\n");
 
     // ========================================
     // 3. Risk Reversal Curve
@@ -250,7 +255,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("");
     tracing::info!("Files created:");
     tracing::info!("  - implied_volatility_curve.png/html");
-    tracing::info!("  - implied_volatility_surface.png/html");
+    tracing::info!("  - horizon_volatility_surface.png/html");
     tracing::info!("  - risk_reversal_curve.png/html");
     tracing::info!("  - dollar_gamma_curve_call.png/html");
     tracing::info!("  - dollar_gamma_curve_put.png/html");

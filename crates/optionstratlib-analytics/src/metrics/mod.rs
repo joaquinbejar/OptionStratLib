@@ -27,7 +27,8 @@
 //!
 //! ### Risk Metrics
 //!
-//! - **Implied Volatility**: IV curves by strike and surfaces (strike vs time)
+//! - **Implied Volatility**: IV curves by strike, and the volatility they imply
+//!   over a time horizon (strike vs horizon, not annualized)
 //! - **Risk Reversal**: Difference between call and put IV at same strike
 //! - **Dollar Gamma**: Gamma exposure in dollar terms (Gamma × Spot² × 0.01)
 //!
@@ -170,7 +171,7 @@ pub use liquidity::{
 };
 pub use price::{PutCallRatioCurve, StrikeConcentrationCurve, VolatilitySkewCurve};
 pub use risk::{
-    DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface, RiskReversalCurve,
+    DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve, RiskReversalCurve,
 };
 pub use stress::{
     PriceShockCurve, PriceShockSurface, TimeDecayCurve, TimeDecaySurface,

@@ -6,6 +6,7 @@
 aes -> cipher
 aes -> cpubits
 aes -> cpufeatures
+aes -> zeroize
 android_system_properties -> libc
 approx -> num-traits
 block-buffer -> hybrid-array
@@ -273,7 +274,6 @@ tracing-core -> once_cell
 uuid -> getrandom
 uuid -> serde_core
 wasm-bindgen -> cfg-if
-wasm-bindgen -> once_cell
 wasm-bindgen -> rustversion
 wasm-bindgen -> wasm-bindgen-macro
 wasm-bindgen -> wasm-bindgen-shared
@@ -310,6 +310,7 @@ zip -> flate2
 zip -> getrandom
 zip -> hmac
 zip -> indexmap
+zip -> libc
 zip -> lzma-rust2
 zip -> memchr
 zip -> nix
@@ -331,7 +332,7 @@ zstd-safe -> zstd-sys
 zstd-sys -> cc
 zstd-sys -> pkg-config
 
-aes []
+aes [zeroize]
 android_system_properties []
 approx [default,std]
 arrayvec [std]

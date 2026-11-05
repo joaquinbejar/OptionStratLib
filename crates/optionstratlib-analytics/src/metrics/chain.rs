@@ -13,7 +13,7 @@
 
 use crate::metrics::{
     BidAskSpreadCurve, CharmCurve, CharmSurface, ColorCurve, ColorSurface, DeltaGammaProfileCurve,
-    DeltaGammaProfileSurface, DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface,
+    DeltaGammaProfileSurface, DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve,
     OpenInterestCurve, PriceShockCurve, PriceShockSurface, PutCallRatioCurve, RiskReversalCurve,
     SmileDynamicsCurve, SmileDynamicsSurface, StrikeConcentrationCurve, ThetaCurve, ThetaSurface,
     TimeDecayCurve, TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivityCurve,
@@ -360,34 +360,38 @@ impl StrikeConcentrationCurve for OptionChain {
     }
 }
 
-impl ImpliedVolatilitySurface for OptionChain {
-    /// Computes the implied volatility surface (strike vs time) for this option chain.
+impl HorizonVolatilitySurface for OptionChain {
+    /// Projects the implied volatility of this chain over each horizon.
     ///
-    /// Creates a 3D surface showing how implied volatility varies across both strike
-    /// prices and time to expiration. The IV is scaled using the square root of time
-    /// rule to project values across different time horizons.
+    /// Scales each option's annualized implied volatility by `√(days / 365)`,
+    /// the square root of time rule. All horizons come from this one chain, so
+    /// the result has no observed term structure and is not annualized.
     ///
     /// # Parameters
     ///
-    /// - `days_to_expiry`: Vector of days to expiration values to include in the surface
+    /// - `horizon_days`: The horizons, in days, to include in the surface
     ///
     /// # Returns
     ///
-    /// - `Ok(Surface)`: A surface with strike on x-axis, days on y-axis, and IV on z-axis
+    /// - `Ok(Surface)`: A surface with strike on x-axis, horizon in days on
+    ///   y-axis, and the non-annualized volatility over that horizon on z-axis
     /// - `Err(SurfaceError)`: If no valid points can be generated
     ///
     /// # Example
     ///
     /// ```ignore
     /// use optionstratlib_market::chains::chain::OptionChain;
-    /// use optionstratlib_analytics::metrics::ImpliedVolatilitySurface;
+    /// use optionstratlib_analytics::metrics::HorizonVolatilitySurface;
     /// use optionstratlib_core::pos_or_panic;
     ///
     /// let chain = OptionChain::new("SPY", pos_or_panic!(450.0), "2024-03-15".to_string(), None, None);
     /// let days = vec![pos_or_panic!(7.0), pos_or_panic!(14.0), pos_or_panic!(30.0), pos_or_panic!(60.0)];
-    /// let iv_surface = chain.iv_surface(days)?;
+    /// let surface = chain.horizon_volatility_surface(days)?;
     /// ```
-    fn iv_surface(&self, days_to_expiry: Vec<Positive>) -> Result<Surface, SurfaceError> {
+    fn horizon_volatility_surface(
+        &self,
+        horizon_days: Vec<Positive>,
+    ) -> Result<Surface, SurfaceError> {
         let mut points = BTreeSet::new();
 
         for opt in self.options.iter() {
@@ -395,34 +399,38 @@ impl ImpliedVolatilitySurface for OptionChain {
                 continue;
             }
 
-            for days in &days_to_expiry {
-                // Scale IV using square root of time rule
-                // This projects the current IV to different time horizons
+            for days in &horizon_days {
+                // Scale the annualized IV by the square root of time rule,
+                // which gives the volatility over the horizon, not an IV.
                 // Dividing by a constant above one cannot leave the range.
                 let time_factor = d_sqrt(
-                    d_div(days.to_dec(), dec!(365.0), "metrics::chain::iv_time_factor")
-                        .map_err(surface_math)?,
-                    "metrics::chain::iv_time_factor",
+                    d_div(
+                        days.to_dec(),
+                        dec!(365.0),
+                        "metrics::chain::horizon_time_factor",
+                    )
+                    .map_err(surface_math)?,
+                    "metrics::chain::horizon_time_factor",
                 )
                 .map_err(surface_math)?;
-                let adjusted_iv = d_mul(
+                let horizon_volatility = d_mul(
                     opt.implied_volatility.to_dec(),
                     time_factor,
-                    "metrics::chain::iv_surface",
+                    "metrics::chain::horizon_volatility_surface",
                 )
                 .map_err(surface_math)?;
 
                 points.insert(Point3D::new(
                     opt.strike_price.to_dec(),
                     days.to_dec(),
-                    adjusted_iv,
+                    horizon_volatility,
                 ));
             }
         }
 
         if points.is_empty() {
             return Err(SurfaceError::ConstructionError(
-                "No valid points for IV surface".to_string(),
+                "No valid points for horizon volatility surface".to_string(),
             ));
         }
 
@@ -2196,7 +2204,7 @@ mod tests_panic_freedom {
     }
 
     #[test]
-    fn test_volume_and_iv_surfaces_overflow_return_error() {
+    fn test_volume_and_horizon_volatility_surfaces_overflow_return_error() {
         let chain = chain_with(
             Positive::HUNDRED,
             &[(
@@ -2233,7 +2241,7 @@ mod tests_panic_freedom {
             None,
         );
         assert!(matches!(
-            max_iv.iv_surface(vec![Positive::MAX]),
+            max_iv.horizon_volatility_surface(vec![Positive::MAX]),
             Err(SurfaceError::AnalysisError(_))
         ));
     }

@@ -14,7 +14,7 @@ use optionstratlib_analytics::analytics::{
     calculate_price_probability, calculate_single_point_probability,
 };
 use optionstratlib_analytics::metrics::{
-    DeltaGammaProfileCurve, DollarGammaCurve, ImpliedVolatilityCurve, ImpliedVolatilitySurface,
+    DeltaGammaProfileCurve, DollarGammaCurve, HorizonVolatilitySurface, ImpliedVolatilityCurve,
     PriceShockCurve, PutCallRatioCurve, RiskReversalCurve, ThetaCurve, ThetaSurface,
     TimeDecaySurface, VannaVolgaSurface, VolatilitySensitivitySurface, VolatilitySkewCurve,
 };
@@ -268,9 +268,11 @@ fn bench_metrics(c: &mut Criterion) {
     bench_ok(&mut group, &format!("price_shock_curve/{strikes}"), || {
         black_box(&chain).price_shock_curve(dec!(-0.1))
     });
-    bench_ok(&mut group, &format!("iv_surface/{strikes}x5"), || {
-        black_box(&chain).iv_surface(days.clone())
-    });
+    bench_ok(
+        &mut group,
+        &format!("horizon_volatility_surface/{strikes}x5"),
+        || black_box(&chain).horizon_volatility_surface(days.clone()),
+    );
 
     // The stress surfaces re-price across a grid: grid size is the knob.
     for steps in [10_usize, 20] {
