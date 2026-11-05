@@ -51,23 +51,22 @@
 //!
 //! # Failure
 //!
-//! A fit never falls back to a flat smile. The least squares can land on
-//! `b = 0` by itself, because a raw SVI slice is convex in `k`: quotes shaped
-//! like a frown, or alternating around a level, have no better slice than a
-//! flat one. That result is only returned when the observations are flat too.
-//! Observations count as flat when the weighted standard deviation of their
-//! total variance is within `0.1%` of its weighted mean, which at a volatility
-//! of 20% is about one basis point of volatility. Otherwise, a fit whose total
-//! variance over the observed strikes varies by no more than a tenth of the
-//! observations' is rejected with [`SviError::DegenerateFit`], whatever its
-//! error. Quotes that are flat but noisier than that tolerance can be rejected
-//! the same way, since noise has no slice to explain it.
+//! There is no flat fallback. A fit is checked against one declared limit,
+//! [`SviCalibrationConfig::max_relative_rmse`]: its weighted RMSE in implied
+//! volatility, divided by the weighted mean observed implied volatility over
+//! the points with a positive weight. Above it the fit is rejected with
+//! [`SviError::RmseAboveLimit`]. Being relative, the limit means the same at
+//! any level of volatility.
 //!
-//! A fit whose error is above [`SviCalibrationConfig::max_rmse`] is rejected
-//! with [`SviError::RmseAboveLimit`]. That limit is absolute, in implied
-//! volatility, so it says little about a slice whose volatility is of the same
-//! size or lower: at a volatility of 2%, the default of two volatility points
-//! accepts any fit. Lower it for such a slice.
+//! The least squares can still land on `b = 0` by itself, because a raw SVI
+//! slice is convex in `k`: quotes shaped like a frown, or alternating around a
+//! level, have no better slice than a flat one. So a flat result can only be
+//! returned when the quotes are flat within this limit.
+//!
+//! The limit is the only judgement made. There is no heuristic on curvature or
+//! structure, so a fit within the limit is not otherwise judged good, and quotes
+//! with structure smaller than the limit can come back without it. The caller
+//! tightens or loosens the limit to say how close is close enough.
 //!
 //! # Out of scope
 //!
@@ -140,19 +139,15 @@ const ROUNDING_REPAIR_FLOOR: Decimal = Decimal::from_parts(1, 0, 0, false, 26);
 /// matters at a small root: see [`SviParameters::total_variance`].
 const RADICAND_ROUNDING: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
 
-/// Largest [`SviCalibrationConfig::tolerance`]. Above it a start stops before
-/// the search has done any real work and returns a wrong fit as a success.
+/// Rounding of the sum itself at the 28 places of a `Decimal`. For a small `a`
+/// and `b` every band relative to them falls below one unit in the last place.
+const SUM_ROUNDING: Decimal = Decimal::from_parts(4, 0, 0, false, 28);
+
+/// Largest [`SviCalibrationConfig::tolerance`]. The tolerance bounds how far the
+/// search stops from the optimum, and the parameters are off accordingly: on an
+/// equity skew, `rho` is `8e-5` off at this value and `0.13` off at a tolerance
+/// of one, where a start stops after a single iteration.
 const MAX_TOLERANCE: Decimal = Decimal::from_parts(1, 0, 0, false, 3);
-
-/// Observations whose total variance has a weighted standard deviation within
-/// this fraction of its weighted mean count as flat. At a volatility of 20%
-/// this is about one basis point of volatility.
-const FLAT_VARIANCE_TOLERANCE: f64 = 1e-3;
-
-/// A fit whose total variance varies over the observed strikes by no more than
-/// this fraction of what the observations do has explained nothing: the share
-/// of the observations' variance it accounts for is about the square of this.
-const DEGENERATE_EXPLAINED_RATIO: f64 = 0.1;
 
 /// Default [`SviCalibrationConfig::max_iterations`], for each search start.
 /// Generous: the searches of the calibration tests stop well before it.
@@ -164,8 +159,9 @@ const DEFAULT_MAX_ITERATIONS: NonZeroU64 = match NonZeroU64::new(500) {
 /// Default [`SviCalibrationConfig::tolerance`].
 const DEFAULT_TOLERANCE: Decimal = Decimal::from_parts(1, 0, 0, false, 9);
 
-/// Default [`SviCalibrationConfig::max_rmse`]: two volatility points.
-const DEFAULT_MAX_RMSE: Decimal = Decimal::from_parts(2, 0, 0, false, 2);
+/// Default [`SviCalibrationConfig::max_relative_rmse`]: 3% of the weighted mean
+/// observed implied volatility.
+const DEFAULT_MAX_RELATIVE_RMSE: Decimal = Decimal::from_parts(3, 0, 0, false, 2);
 
 /// Validated raw SVI parameters of Gatheral and Jacquier (arXiv:1204.0646).
 ///
@@ -329,7 +325,8 @@ fn check_negative_within_rounding(
     let magnitude = d_add(a.abs(), d_mul(b, hypotenuse, OP)?, OP)?;
     let relative = d_mul(TOTAL_VARIANCE_ROUNDING_BAND, magnitude, OP)?;
     let radicand = d_mul(d_div(RADICAND_ROUNDING, hypotenuse, OP)?, b, OP)?;
-    if variance.abs() > d_add(relative, radicand, OP)? {
+    let band = d_add(d_add(relative, radicand, OP)?, SUM_ROUNDING, OP)?;
+    if variance.abs() > band {
         return Err(SviError::NegativeTotalVariance {
             log_moneyness: k,
             total_variance: variance,
@@ -503,27 +500,31 @@ pub struct SviCalibrationConfig {
     /// in total variance over its weighted mean) are at or below this value.
     /// A start whose whole simplex fits the observations to the precision of
     /// the arithmetic has also converged. A smaller value takes more iterations
-    /// and recovers the parameters more closely. At most `1e-3`: above it a
-    /// start stops before the search has done any real work.
+    /// and recovers the parameters more closely. At most `1e-3`: the parameters
+    /// are off in proportion to it, so `rho` of an equity skew is already `8e-5`
+    /// off at that value.
     pub tolerance: Positive,
-    /// The largest weighted RMSE of the fit, in implied volatility (`0.02` is
-    /// two volatility points). A fit above it is an error. The limit is
-    /// absolute, so it is weak for a slice whose volatility is of the same size
-    /// or lower, and it does not excuse a flat fit of observations that are
-    /// not flat: see [`SviError::DegenerateFit`].
-    pub max_rmse: Positive,
+    /// The largest relative error of the fit: its weighted RMSE in implied
+    /// volatility over the weighted mean observed implied volatility, across
+    /// the points with a positive weight (`0.03` is 3%). A fit above it is an
+    /// error. This is the only judgement of the fit, and a flat result can only
+    /// be returned when the quotes are flat within it; a fit within it is not
+    /// otherwise judged good. Tighten or loosen it to say how close is close
+    /// enough.
+    pub max_relative_rmse: Positive,
 }
 
 impl Default for SviCalibrationConfig {
-    /// 500 iterations for each start, a tolerance of `1e-9` and a limit of two
-    /// volatility points.
+    /// 500 iterations for each start, a tolerance of `1e-9` and a relative RMSE
+    /// limit of 3%.
     fn default() -> Self {
         // Both constants are positive, so neither fallback is taken. Were one
         // taken, zero would reject the fit: the failure stays loud.
         Self {
             max_iterations: DEFAULT_MAX_ITERATIONS,
             tolerance: Positive::new_decimal(DEFAULT_TOLERANCE).unwrap_or(Positive::ZERO),
-            max_rmse: Positive::new_decimal(DEFAULT_MAX_RMSE).unwrap_or(Positive::ZERO),
+            max_relative_rmse: Positive::new_decimal(DEFAULT_MAX_RELATIVE_RMSE)
+                .unwrap_or(Positive::ZERO),
         }
     }
 }
@@ -550,6 +551,7 @@ pub struct SviFit {
     slice: SviSlice,
     residuals: Vec<SviResidual>,
     rmse: Positive,
+    relative_rmse: Positive,
     iterations: u64,
 }
 
@@ -576,6 +578,15 @@ impl SviFit {
         self.rmse
     }
 
+    /// [`SviFit::rmse`] over the weighted mean observed implied volatility of
+    /// the points with a positive weight. This is what
+    /// [`SviCalibrationConfig::max_relative_rmse`] limits.
+    #[must_use]
+    #[inline]
+    pub fn relative_rmse(&self) -> Positive {
+        self.relative_rmse
+    }
+
     /// The Nelder-Mead iterations run, summed over every search start.
     #[must_use]
     #[inline]
@@ -590,9 +601,10 @@ impl SviFit {
 /// The fit minimizes the weighted squared error in total variance, as the
 /// module docs describe, so at equal weights a wing point counts for more in
 /// implied volatility than its neighbours near the vertex: `dw = 2 * iv * T *
-/// d(iv)`. [`SviFit::rmse`] and the limit it is checked against are in implied
-/// volatility. See the module docs for the declared tolerances, and for why
-/// the result is not claimed free of arbitrage.
+/// d(iv)`. [`SviFit::rmse`] is in implied volatility, and the limit is on it
+/// relative to the weighted mean observed implied volatility. See the module
+/// docs for the declared tolerances, for what the limit does and does not say
+/// about a fit, and for why the result is not claimed free of arbitrage.
 ///
 /// # Errors
 ///
@@ -607,11 +619,8 @@ impl SviFit {
 ///   than five distinct strikes among the weighted observations.
 /// - [`SviError::NoConvergence`]: no search start converged.
 /// - [`SviError::NoFeasibleFit`]: the optimum is not valid once rounded.
-/// - [`SviError::RmseAboveLimit`]: the best fit is worse than
-///   [`SviCalibrationConfig::max_rmse`].
-/// - [`SviError::DegenerateFit`]: the best fit is flat, or close to it, over
-///   observations that are not, as the module docs define. It is checked after
-///   the limit and no limit excuses it.
+/// - [`SviError::RmseAboveLimit`]: the relative RMSE of the best fit is above
+///   [`SviCalibrationConfig::max_relative_rmse`].
 /// - [`SviError::NonFinite`]: the `f64` kernel produced a non-finite value.
 /// - [`SviError::Decimal`], [`SviError::Positive`]: an input or a result is
 ///   outside the range of its type.
@@ -682,21 +691,18 @@ pub fn calibrate_svi(
         });
     }
 
-    let solution = kernel::calibrate(
+    let (solution, parameters) = kernel::calibrate(
         &raw_points,
         config.max_iterations,
         decimal_to_f64(config.tolerance.to_dec())?,
     )
-    .inspect_err(|error| {
-        if let SviError::NoConvergence { iterations, limit } = error {
-            warn!(iterations, limit, "svi calibration did not converge");
-        }
-    })?;
-    let parameters = parameters_from_kernel(&solution)?;
+    .and_then(|solution| parameters_from_kernel(&solution).map(|parameters| (solution, parameters)))
+    .inspect_err(|error| warn!(%error, "svi calibration failed"))?;
     let slice = SviSlice::try_new(parameters, forward, time_to_expiry)?;
 
     let mut residuals = Vec::with_capacity(observations.len());
     let mut weighted_squares = 0.0_f64;
+    let mut weighted_volatility = 0.0_f64;
     for (observation, k) in observations.iter().zip(log_moneyness_values) {
         let fitted = slice.implied_volatility(k)?;
         let residual = d_sub(
@@ -705,8 +711,9 @@ pub fn calibrate_svi(
             "svi::calibrate::residual",
         )?;
         let residual_f64 = decimal_to_f64(residual)?;
-        weighted_squares +=
-            decimal_to_f64(observation.weight.to_dec())? * residual_f64 * residual_f64;
+        let weight = decimal_to_f64(observation.weight.to_dec())?;
+        weighted_squares += weight * residual_f64 * residual_f64;
+        weighted_volatility += weight * decimal_to_f64(observation.implied_volatility.to_dec())?;
         residuals.push(SviResidual {
             strike: observation.strike,
             log_moneyness: k,
@@ -717,33 +724,25 @@ pub fn calibrate_svi(
     }
     let rmse_f64 = kernel::root(weighted_squares / total_weight);
     let rmse = Positive::new_decimal(kernel_value(rmse_f64, "svi::calibrate::rmse")?)?;
+    // A zero weight adds nothing to either sum, so the mean is over the points
+    // with a positive weight, each of which has a positive implied volatility.
+    let relative_rmse_f64 = rmse_f64 / (weighted_volatility / total_weight);
+    let relative_rmse = Positive::new_decimal(kernel_value(
+        relative_rmse_f64,
+        "svi::calibrate::relative_rmse",
+    )?)?;
 
-    if rmse > config.max_rmse {
-        warn!(rmse = %rmse, limit = %config.max_rmse, "svi fit rejected: rmse above the limit");
-        return Err(SviError::RmseAboveLimit {
-            rmse,
-            limit: config.max_rmse,
-        });
-    }
-    if is_degenerate(solution.observed_dispersion, solution.fitted_dispersion) {
-        let observed_dispersion = Positive::new_decimal(kernel_value(
-            solution.observed_dispersion,
-            "svi::calibrate::observed_dispersion",
-        )?)?;
-        let fitted_dispersion = Positive::new_decimal(kernel_value(
-            solution.fitted_dispersion,
-            "svi::calibrate::fitted_dispersion",
-        )?)?;
+    if relative_rmse > config.max_relative_rmse {
         warn!(
+            relative_rmse = %relative_rmse,
+            limit = %config.max_relative_rmse,
             rmse = %rmse,
-            observed_dispersion = %observed_dispersion,
-            fitted_dispersion = %fitted_dispersion,
-            "svi fit rejected: flat over observations that are not"
+            "svi fit rejected: relative rmse above the limit"
         );
-        return Err(SviError::DegenerateFit {
+        return Err(SviError::RmseAboveLimit {
+            relative_rmse,
+            limit: config.max_relative_rmse,
             rmse,
-            observed_dispersion,
-            fitted_dispersion,
         });
     }
 
@@ -752,17 +751,9 @@ pub fn calibrate_svi(
         slice,
         residuals,
         rmse,
+        relative_rmse,
         iterations: solution.iterations,
     })
-}
-
-/// Whether a fit is flat over observations that are not, from the relative
-/// weighted standard deviations of the observed and the fitted total variance.
-#[must_use]
-#[inline]
-fn is_degenerate(observed_dispersion: f64, fitted_dispersion: f64) -> bool {
-    observed_dispersion > FLAT_VARIANCE_TOLERANCE
-        && fitted_dispersion <= DEGENERATE_EXPLAINED_RATIO * observed_dispersion
 }
 
 /// Brings a value of the kernel to a `Decimal`: a non-finite value is
@@ -929,12 +920,6 @@ mod kernel {
         pub(super) m: f64,
         pub(super) sigma: f64,
         pub(super) iterations: u64,
-        /// Weighted standard deviation of the observed total variance, over
-        /// its weighted mean.
-        pub(super) observed_dispersion: f64,
-        /// Weighted standard deviation of the fitted total variance at the
-        /// observed strikes, over the same mean.
-        pub(super) fitted_dispersion: f64,
     }
 
     /// The solution of the linear problem at one `(m, sigma)`, with its
@@ -959,7 +944,6 @@ mod kernel {
         xy: f64,
         xv: f64,
         yv: f64,
-        vv: f64,
     }
 
     /// A vertex of the search simplex.
@@ -1062,18 +1046,13 @@ mod kernel {
             limit: limit.get(),
         })?;
 
-        let sigma = exponential(best.log_sigma);
-        let final_moments = moments(&normalized, best.m, sigma);
         Ok(Solution {
             a: best.fit.a * mean_variance,
             b: best.fit.b * mean_variance / span,
             rho: best.fit.rho,
             m: centre + best.m * span,
-            sigma: sigma * span,
+            sigma: exponential(best.log_sigma) * span,
             iterations,
-            observed_dispersion: root(final_moments.vv),
-            fitted_dispersion: best.fit.b
-                * root(shape_variance(&final_moments, best.fit.rho).max(0.0)),
         })
     }
 
@@ -1251,7 +1230,6 @@ mod kernel {
             moments.xy += point.weight * dx * dy;
             moments.xv += point.weight * dx * dv;
             moments.yv += point.weight * dy * dv;
-            moments.vv += point.weight * dv * dv;
         }
         moments
     }
@@ -1335,16 +1313,10 @@ mod kernel {
         })
     }
 
-    /// The weighted variance of the shape `rho * x + y`.
-    #[inline]
-    fn shape_variance(moments: &Moments, rho: f64) -> f64 {
-        rho * rho * moments.xx + 2.0 * rho * moments.xy + moments.yy
-    }
-
     /// The face `rho = +-RHO_LIMIT`: the least squares in `(a, b)`, if its
     /// solution is feasible, as `(a, b)`.
     fn extreme_skew(moments: &Moments, sigma: f64, rho: f64) -> Option<(f64, f64)> {
-        let column_variance = shape_variance(moments, rho);
+        let column_variance = rho * rho * moments.xx + 2.0 * rho * moments.xy + moments.yy;
         if column_variance <= 0.0 {
             return None;
         }
@@ -1674,8 +1646,6 @@ mod tests {
             m: 0.1,
             sigma,
             iterations: 1,
-            observed_dispersion: 0.0,
-            fitted_dispersion: 0.0,
         }
     }
 
@@ -1853,7 +1823,7 @@ mod tests {
         let config = SviCalibrationConfig::default();
         assert_eq!(config.max_iterations.get(), 500);
         assert_eq!(config.tolerance.to_dec(), dec!(0.000000001));
-        assert_eq!(config.max_rmse.to_dec(), dec!(0.02));
+        assert_eq!(config.max_relative_rmse.to_dec(), dec!(0.03));
     }
 
     #[test]
@@ -1917,6 +1887,17 @@ mod tests {
     }
 
     #[test]
+    fn test_parameters_from_kernel_rejects_a_violation_just_beyond_the_band() {
+        // At rho = -0.9999 the band is 1e-12 / 2e-4 = 5e-9 of `a`.
+        let (b, rho, sigma) = (0.3_f64, -0.9999_f64, 0.2_f64);
+        let floor = -b * sigma * ((1.0 - rho) * (1.0 + rho)).sqrt();
+        assert!(matches!(
+            parameters_from_kernel(&kernel_solution(floor * (1.0 + 1e-6), b, rho, sigma)),
+            Err(SviError::NoFeasibleFit { .. })
+        ));
+    }
+
+    #[test]
     fn test_parameters_from_kernel_repairs_rounding_of_a_tiny_slice() {
         // Here the 28 places of a Decimal are what rounds, not the 15 or so
         // digits that survive the f64.
@@ -1926,22 +1907,11 @@ mod tests {
     }
 
     #[test]
-    fn test_is_degenerate_needs_observations_that_are_not_flat_and_a_fit_that_is() {
-        // Flat observations may fit flat, up to and including the tolerance.
-        assert!(!is_degenerate(0.0, 0.0));
-        assert!(!is_degenerate(FLAT_VARIANCE_TOLERANCE, 0.0));
-        // Observations that are not flat may not.
-        assert!(is_degenerate(FLAT_VARIANCE_TOLERANCE * 1.01, 0.0));
-        assert!(is_degenerate(0.5, 0.0));
-        assert!(is_degenerate(0.5, 0.5 * DEGENERATE_EXPLAINED_RATIO));
-        assert!(!is_degenerate(0.5, 0.5 * DEGENERATE_EXPLAINED_RATIO * 1.01));
-    }
-
-    #[test]
     fn test_svi_total_variance_at_the_vertex_of_a_small_sigma_is_zero_not_an_error() {
         // The minimum of each slice is exactly zero. Rounding the radicand
         // moves the root by about 1e-28 / (2 * root), which grows as `sigma`
-        // shrinks; below 1e-14 the radicand rounds to zero altogether.
+        // shrinks; below 1e-14 the radicand rounds to zero altogether. That
+        // bounds what is left at the vertex at about `b * 1e-14`.
         for sigma in [
             dec!(0.00123456789012345),
             dec!(0.000000123456789),
@@ -1952,16 +1922,41 @@ mod tests {
             dec!(0.0000000000000000000000000001),
         ] {
             for rho in [dec!(0), dec!(-0.5), dec!(0.9), dec!(-0.9999)] {
-                for b in [dec!(1), dec!(0.3), dec!(1000)] {
-                    let root = d_sqrt(dec!(1) - rho * rho, "test").unwrap();
-                    let a = -(b * sigma * root);
-                    let parameters = SviParameters::try_new(a, b, rho, dec!(0.1), sigma).unwrap();
-                    let vertex = dec!(0.1) - rho * sigma / root;
-                    let variance = parameters.total_variance(vertex);
-                    assert!(
-                        variance.is_ok(),
-                        "sigma {sigma} rho {rho} b {b}: {variance:?}"
-                    );
+                for b in [dec!(1), dec!(0.3), dec!(1000), dec!(0.001), dec!(0.0001)] {
+                    assert_vertex_is_near_zero(a_at_zero_minimum(b, rho, sigma), b, rho, sigma);
+                }
+            }
+        }
+    }
+
+    /// `a` of a slice whose minimum is exactly zero.
+    fn a_at_zero_minimum(b: Decimal, rho: Decimal, sigma: Decimal) -> Decimal {
+        -(b * sigma * d_sqrt(dec!(1) - rho * rho, "test").unwrap())
+    }
+
+    fn assert_vertex_is_near_zero(a: Decimal, b: Decimal, rho: Decimal, sigma: Decimal) {
+        let root = d_sqrt(dec!(1) - rho * rho, "test").unwrap();
+        let parameters = SviParameters::try_new(a, b, rho, dec!(0.1), sigma).unwrap();
+        let vertex = dec!(0.1) - rho * sigma / root;
+        let variance = parameters.total_variance(vertex);
+        assert!(
+            variance
+                .as_ref()
+                .is_ok_and(|value| value.to_dec() <= b * dec!(1e-13) + dec!(1e-26)),
+            "sigma {sigma} rho {rho} b {b}: {variance:?}"
+        );
+    }
+
+    #[test]
+    fn test_svi_total_variance_at_the_vertex_of_a_small_slice_is_zero_not_an_error() {
+        // With `a` and `b` this small, every band relative to them is below one
+        // unit in the last place, which is what the rounding of the sum can be.
+        for (b, sigma_base) in [(dec!(0.001), dec!(0.011)), (dec!(0.0001), dec!(0.0011))] {
+            for sigma_node in 0..40 {
+                for rho_node in 0..40 {
+                    let sigma = sigma_base + Decimal::from(sigma_node) * sigma_base * dec!(0.00137);
+                    let rho = dec!(-0.95) + Decimal::from(rho_node) * dec!(0.0487);
+                    assert_vertex_is_near_zero(a_at_zero_minimum(b, rho, sigma), b, rho, sigma);
                 }
             }
         }

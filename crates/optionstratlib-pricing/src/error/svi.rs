@@ -16,8 +16,9 @@ use thiserror::Error;
 /// Raised by [`SviParameters::try_new`](crate::volatility::SviParameters::try_new),
 /// [`SviSlice`](crate::volatility::SviSlice) and
 /// [`calibrate_svi`](crate::volatility::calibrate_svi). A failed calibration
-/// always comes back as one of these: a flat fit of observations that are not
-/// flat is [`SviError::DegenerateFit`], whatever its error.
+/// always comes back as one of these, and there is no flat fallback: a flat
+/// result can only be returned when the quotes are flat within
+/// [`SviCalibrationConfig::max_relative_rmse`](crate::volatility::SviCalibrationConfig::max_relative_rmse).
 #[derive(Error, Debug)]
 #[non_exhaustive]
 pub enum SviError {
@@ -131,36 +132,24 @@ pub enum SviError {
         reason: String,
     },
 
-    /// The best fit misses the observations by more than the configured
-    /// limit. The fit is rejected rather than returned.
-    #[error("svi fit rmse {rmse} exceeds the limit {limit}, in implied volatility")]
+    /// The best fit misses the observations by more than the configured limit,
+    /// relative to their level. The fit is rejected rather than returned.
+    ///
+    /// The limit is the only judgement of a fit: a fit within it is not
+    /// otherwise judged good, and the caller tightens or loosens it.
+    #[error(
+        "svi fit relative rmse {relative_rmse} exceeds the limit {limit} (rmse {rmse} in implied volatility)"
+    )]
     RmseAboveLimit {
+        /// The weighted root mean square error of the best fit, in implied
+        /// volatility, over the weighted mean observed implied volatility of
+        /// the points with a positive weight.
+        relative_rmse: Positive,
+        /// The configured limit on that ratio.
+        limit: Positive,
         /// The weighted root mean square error of the best fit, in implied
         /// volatility.
         rmse: Positive,
-        /// The configured limit, in implied volatility.
-        limit: Positive,
-    },
-
-    /// The best fit is flat, or close to it, over observations that are not.
-    ///
-    /// A raw SVI slice is convex in log moneyness, so quotes shaped like a
-    /// frown or alternating around a level have no better slice than a flat
-    /// one. Such a fit can have a small RMSE and still has explained nothing,
-    /// so it is rejected. Both dispersions are weighted standard deviations of
-    /// total variance over the observed strikes, relative to the observed
-    /// weighted mean.
-    #[error(
-        "svi fit is flat over observations that are not: rmse {rmse}, relative dispersion {fitted_dispersion} fitted against {observed_dispersion} observed"
-    )]
-    DegenerateFit {
-        /// The weighted root mean square error of the fit, in implied
-        /// volatility.
-        rmse: Positive,
-        /// The relative dispersion of the observed total variance.
-        observed_dispersion: Positive,
-        /// The relative dispersion of the fitted total variance.
-        fitted_dispersion: Positive,
     },
 
     /// A step of the `f64` kernel produced a non-finite value.
@@ -198,26 +187,16 @@ mod tests_svi_error {
     use rust_decimal_macros::dec;
 
     #[test]
-    fn test_svi_error_rmse_above_limit_names_both_values() {
+    fn test_svi_error_rmse_above_limit_names_all_three_values() {
         let error = SviError::RmseAboveLimit {
-            rmse: Positive::new_decimal(dec!(0.15)).unwrap(),
-            limit: Positive::new_decimal(dec!(0.02)).unwrap(),
+            relative_rmse: Positive::new_decimal(dec!(0.15)).unwrap(),
+            limit: Positive::new_decimal(dec!(0.03)).unwrap(),
+            rmse: Positive::new_decimal(dec!(0.0173)).unwrap(),
         };
         let message = error.to_string();
         assert!(message.contains("0.15"), "{message}");
-        assert!(message.contains("0.02"), "{message}");
-    }
-
-    #[test]
-    fn test_svi_error_degenerate_fit_names_rmse_and_both_dispersions() {
-        let message = SviError::DegenerateFit {
-            rmse: Positive::new_decimal(dec!(0.0173)).unwrap(),
-            observed_dispersion: Positive::new_decimal(dec!(0.25)).unwrap(),
-            fitted_dispersion: Positive::ZERO,
-        }
-        .to_string();
+        assert!(message.contains("0.03"), "{message}");
         assert!(message.contains("0.0173"), "{message}");
-        assert!(message.contains("0.25"), "{message}");
     }
 
     #[test]

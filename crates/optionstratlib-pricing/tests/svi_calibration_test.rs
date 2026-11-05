@@ -408,6 +408,32 @@ fn test_calibrate_svi_rmse_is_weighted_in_implied_volatility() {
 }
 
 #[test]
+fn test_calibrate_svi_relative_rmse_divides_by_the_weighted_mean_of_weighted_points() {
+    // Weights that favour the low quotes, and a zero-weight quote far above the
+    // rest: an unweighted mean or one over every point gives another figure.
+    let (slice, mut observations, _) = bumped_quotes(dec!(3));
+    for (index, observation) in observations.iter_mut().enumerate() {
+        observation.weight = pos(Decimal::from(1 + index % 4) * dec!(0.5));
+    }
+    observations[0].implied_volatility = pos(dec!(5));
+    observations[0].weight = Positive::ZERO;
+    let fit = calibrate(&observations, &slice);
+
+    let (mut weighted, mut total) = (Decimal::ZERO, Decimal::ZERO);
+    for observation in &observations {
+        weighted += observation.weight.to_dec() * observation.implied_volatility.to_dec();
+        total += observation.weight.to_dec();
+    }
+    let expected = fit.rmse().to_dec() / (weighted / total);
+    assert!(fit.relative_rmse().to_dec() > dec!(0));
+    assert!(
+        (fit.relative_rmse().to_dec() - expected).abs() < dec!(1e-12),
+        "{} against {expected}",
+        fit.relative_rmse()
+    );
+}
+
+#[test]
 fn test_calibrate_svi_identical_input_gives_identical_output() {
     let (slice, observations, _) = bumped_quotes(dec!(2));
     let first = calibrate(&observations, &slice);
@@ -441,20 +467,6 @@ fn test_calibrate_svi_flat_input_comes_out_flat_from_the_fit() {
     }
 }
 
-#[test]
-fn test_calibrate_svi_input_flat_within_the_tolerance_comes_out_flat() {
-    // A frown small enough that total variance stays within 0.1% of its mean.
-    let observations = quotes_from_function(|k, _| dec!(0.2) - dec!(0.0005) * k * k);
-    let fit = calibrate_svi(
-        &observations,
-        Positive::HUNDRED,
-        Positive::ONE,
-        &SviCalibrationConfig::default(),
-    )
-    .unwrap();
-    assert!(fit.rmse() < pos(dec!(0.0001)), "rmse {}", fit.rmse());
-}
-
 /// Thirteen quotes in `|k| <= 0.5`, from `implied_volatility(k, node)`.
 fn quotes_from_function(
     implied_volatility: impl Fn(Decimal, i32) -> Decimal,
@@ -471,100 +483,231 @@ fn quotes_from_function(
         .collect()
 }
 
-/// A raw SVI slice is convex in `k`, so each of these has no better slice than
-/// a flat one, and each is within the default limit of two volatility points.
-fn assert_degenerate_under_the_default_limit(
-    name: &str,
-    implied_volatility: impl Fn(Decimal, i32) -> Decimal,
-) {
-    let observations = quotes_from_function(implied_volatility);
-    let result = calibrate_svi(
-        &observations,
+/// The difference between the highest and lowest fitted implied volatility over
+/// the observed strikes.
+fn fitted_spread(fit: &SviFit) -> Decimal {
+    let fitted = fit
+        .residuals()
+        .iter()
+        .map(|residual| residual.fitted_implied_volatility.to_dec());
+    let (low, high) = fitted.fold((Decimal::MAX, Decimal::MIN), |(low, high), value| {
+        (low.min(value), high.max(value))
+    });
+    high - low
+}
+
+fn calibrate_at_the_hundred_forward(observations: &[SviObservation]) -> Result<SviFit, SviError> {
+    calibrate_svi(
+        observations,
         Positive::HUNDRED,
         Positive::ONE,
         &SviCalibrationConfig::default(),
-    );
+    )
+}
+
+/// Asserts a rejection above the default limit, with figures that agree.
+fn assert_above_the_default_limit(name: &str, result: Result<SviFit, SviError>) -> Positive {
     match result {
-        Err(SviError::DegenerateFit {
+        Err(SviError::RmseAboveLimit {
+            relative_rmse,
+            limit,
             rmse,
-            observed_dispersion,
-            fitted_dispersion,
         }) => {
-            assert!(rmse < pos(dec!(0.02)), "{name}: rmse {rmse}");
-            assert!(
-                observed_dispersion > pos(dec!(0.001)),
-                "{name}: observed {observed_dispersion}"
-            );
-            assert!(
-                fitted_dispersion.to_dec() <= observed_dispersion.to_dec() * dec!(0.1),
-                "{name}: fitted {fitted_dispersion}, observed {observed_dispersion}"
-            );
+            assert_eq!(limit.to_dec(), dec!(0.03), "{name}");
+            assert!(relative_rmse > limit, "{name}: {relative_rmse}");
+            assert!(rmse < relative_rmse, "{name}: rmse {rmse}");
+            rmse
         }
-        other => panic!("{name}: expected DegenerateFit, got {other:?}"),
+        other => panic!("{name}: expected RmseAboveLimit, got {other:?}"),
     }
 }
 
+// A raw SVI slice is convex in `k`, so none of these shapes has a slice close
+// to it, and the best fit is flat or nearly linear. Each is pinned from the
+// measurements behind the default limit.
+
 #[test]
-fn test_calibrate_svi_frown_is_a_degenerate_fit_not_a_flat_smile() {
-    assert_degenerate_under_the_default_limit("frown", |k, _| dec!(0.20) - dec!(0.2) * k * k);
+fn test_calibrate_svi_frown_is_rejected_by_the_relative_limit() {
+    let observations = quotes_from_function(|k, _| dec!(0.20) - dec!(0.2) * k * k);
+    assert_above_the_default_limit("frown", calibrate_at_the_hundred_forward(&observations));
 }
 
 #[test]
-fn test_calibrate_svi_low_level_frown_is_a_degenerate_fit_not_a_flat_smile() {
-    // The absolute limit of two volatility points is above the whole smile.
-    assert_degenerate_under_the_default_limit("low level frown", |k, _| {
-        dec!(0.015) - dec!(0.02) * k * k
-    });
+fn test_calibrate_svi_tilted_frown_is_rejected_by_the_relative_limit() {
+    // The small tilt gives the fit a non-zero slope and leaves the error alone.
+    let observations =
+        quotes_from_function(|k, _| dec!(0.20) - dec!(0.2) * k * k - dec!(0.0075) * k);
+    assert_above_the_default_limit(
+        "tilted frown",
+        calibrate_at_the_hundred_forward(&observations),
+    );
 }
 
 #[test]
-fn test_calibrate_svi_low_amplitude_zigzag_is_a_degenerate_fit_not_a_flat_smile() {
-    assert_degenerate_under_the_default_limit("zigzag", |_, node| {
+fn test_calibrate_svi_low_level_frown_is_rejected_by_the_relative_limit() {
+    // The error is well below two volatility points, which is more than the
+    // whole smile: only a limit relative to the level sees it.
+    let observations = quotes_from_function(|k, _| dec!(0.015) - dec!(0.02) * k * k);
+    let rmse = assert_above_the_default_limit(
+        "low level frown",
+        calibrate_at_the_hundred_forward(&observations),
+    );
+    assert!(rmse < pos(dec!(0.002)), "rmse {rmse}");
+}
+
+#[test]
+fn test_calibrate_svi_zigzag_is_rejected_by_the_relative_limit() {
+    let swing = |node: i32| {
         if node % 2 == 0 {
-            dec!(0.19)
+            dec!(-0.01)
         } else {
-            dec!(0.21)
+            dec!(0.01)
         }
-    });
+    };
+    let plain = quotes_from_function(|_, node| dec!(0.2) + swing(node));
+    assert_above_the_default_limit("zigzag", calibrate_at_the_hundred_forward(&plain));
+    let tilted = quotes_from_function(|k, node| dec!(0.2) + swing(node) - dec!(0.0075) * k);
+    assert_above_the_default_limit("tilted zigzag", calibrate_at_the_hundred_forward(&tilted));
 }
 
 #[test]
-fn test_calibrate_svi_negligibly_curved_fit_is_a_degenerate_fit() {
-    // Here the best slice is not exactly flat: the gate reads what the fit
-    // does over the observed strikes, not whether `b` is zero.
-    let shape = |_: Decimal, node: i32| dec!(0.2) + dec!(0.01) * Decimal::from(node % 3);
-    assert_degenerate_under_the_default_limit("sawtooth", shape);
+fn test_calibrate_svi_frown_on_uneven_strikes_is_rejected_by_the_relative_limit() {
+    // The uneven strikes make the best fit a near line rather than flat.
+    let forward = pos(dec!(5000));
+    let observations: Vec<SviObservation> = [
+        3000, 3500, 4000, 4300, 4600, 4800, 5000, 5200, 5500, 6000, 6500,
+    ]
+    .iter()
+    .map(|&strike| {
+        let strike = Decimal::from(strike);
+        let k = (strike - dec!(5000)) / dec!(5000);
+        observation(strike, dec!(0.2) - dec!(0.2) * k * k, dec!(1))
+    })
+    .collect();
     let result = calibrate_svi(
-        &quotes_from_function(shape),
-        Positive::HUNDRED,
-        Positive::ONE,
+        &observations,
+        forward,
+        pos(dec!(0.5)),
         &SviCalibrationConfig::default(),
     );
+    assert_above_the_default_limit("uneven strikes", result);
+}
+
+#[test]
+fn test_calibrate_svi_relative_rmse_does_not_depend_on_the_level() {
+    // The same shape at a tenth of the volatility has the same relative error,
+    // and the same rejection.
+    let high = quotes_from_function(|k, _| dec!(0.2) - dec!(0.2) * k * k);
+    let low = quotes_from_function(|k, _| dec!(0.02) - dec!(0.02) * k * k);
+    let relative =
+        |observations: &[SviObservation]| match calibrate_at_the_hundred_forward(observations) {
+            Err(SviError::RmseAboveLimit { relative_rmse, .. }) => relative_rmse.to_dec(),
+            other => panic!("expected RmseAboveLimit, got {other:?}"),
+        };
+    assert!((relative(&high) - relative(&low)).abs() < dec!(0.0000001));
+}
+
+#[test]
+fn test_calibrate_svi_quotes_flat_within_the_limit_may_come_out_flat() {
+    // This is the contract: the frown is below the limit, so the flat slice,
+    // which is the best one, is returned. A caller who wants it rejected
+    // tightens the limit.
+    let observations = quotes_from_function(|k, _| dec!(0.2) - dec!(0.02) * k * k);
+    let fit = calibrate_at_the_hundred_forward(&observations).unwrap();
+    assert!(fitted_spread(&fit) < dec!(0.000000001), "{fit:?}");
+    assert!(fit.relative_rmse() < pos(dec!(0.01)), "{fit:?}");
+
+    let tight = SviCalibrationConfig {
+        max_relative_rmse: pos(dec!(0.005)),
+        ..SviCalibrationConfig::default()
+    };
+    let result = calibrate_svi(&observations, Positive::HUNDRED, Positive::ONE, &tight);
     assert!(
-        matches!(
-            result,
-            Err(SviError::DegenerateFit { fitted_dispersion, .. }) if !fitted_dispersion.is_zero()
-        ),
+        matches!(result, Err(SviError::RmseAboveLimit { .. })),
         "{result:?}"
     );
 }
 
 #[test]
-fn test_calibrate_svi_loose_limit_does_not_excuse_a_degenerate_fit() {
+fn test_calibrate_svi_loose_limit_admits_a_poor_fit_because_the_caller_said_so() {
     let loose = SviCalibrationConfig {
-        max_rmse: Positive::TEN,
+        max_relative_rmse: Positive::TEN,
         ..SviCalibrationConfig::default()
     };
-    let result = calibrate_svi(
+    let fit = calibrate_svi(
         &zigzag(dec!(0.1), dec!(0.6)),
         Positive::HUNDRED,
         Positive::ONE,
         &loose,
-    );
-    assert!(
-        matches!(result, Err(SviError::DegenerateFit { .. })),
-        "{result:?}"
-    );
+    )
+    .unwrap();
+    assert!(fit.relative_rmse() > pos(dec!(0.03)), "{fit:?}");
+}
+
+#[test]
+fn test_calibrate_svi_noisy_flat_quotes_are_within_the_limit() {
+    // A deterministic pattern of the given size, on each of the strike counts
+    // and volatility levels that a limit on structure must not reject.
+    for (level, noise, count) in [
+        (dec!(0.2), dec!(0.0001), 13),
+        (dec!(0.2), dec!(0.0005), 61),
+        (dec!(0.2), dec!(0.0025), 61),
+        (dec!(0.2), dec!(0.0025), 120),
+        (dec!(0.07), dec!(0.0005), 13),
+        (dec!(0.07), dec!(0.001), 61),
+    ] {
+        let observations: Vec<SviObservation> = (0..count)
+            .map(|node| {
+                let step = Decimal::from(node * 7 % 5) - dec!(2);
+                SviObservation {
+                    strike: strike_at(
+                        Positive::HUNDRED,
+                        dec!(-0.5) + Decimal::from(node) / Decimal::from(count - 1),
+                    ),
+                    implied_volatility: pos(level + step * noise / dec!(1.414)),
+                    weight: Positive::ONE,
+                }
+            })
+            .collect();
+        let result = calibrate_at_the_hundred_forward(&observations);
+        assert!(
+            result.is_ok(),
+            "level {level} noise {noise} count {count}: {result:?}"
+        );
+    }
+}
+
+#[test]
+fn test_calibrate_svi_one_bad_quote_in_a_flat_market_is_within_the_limit() {
+    for bump in [dec!(0.0005), dec!(-0.0005), dec!(0.01), dec!(-0.01)] {
+        for bad in 0..=12 {
+            let observations = quotes_from_function(|_, node| {
+                if node == bad {
+                    dec!(0.2) + bump
+                } else {
+                    dec!(0.2)
+                }
+            });
+            let result = calibrate_at_the_hundred_forward(&observations);
+            assert!(result.is_ok(), "bump {bump} at {bad}: {result:?}");
+        }
+    }
+}
+
+#[test]
+fn test_calibrate_svi_limit_is_relative_not_absolute_at_a_high_level() {
+    // Five volatility points of noise at 300% is more than an absolute 3%, and
+    // under 2% of the level.
+    let observations = quotes_from_function(|_, node| {
+        if node % 2 == 0 {
+            dec!(2.95)
+        } else {
+            dec!(3.05)
+        }
+    });
+    let fit = calibrate_at_the_hundred_forward(&observations).unwrap();
+    assert!(fit.rmse() > pos(dec!(0.03)), "rmse {}", fit.rmse());
+    assert!(fit.relative_rmse() < pos(dec!(0.03)), "{fit:?}");
 }
 
 #[test]
@@ -599,28 +742,32 @@ fn zigzag(low: Decimal, high: Decimal) -> Vec<SviObservation> {
 }
 
 #[test]
-fn test_calibrate_svi_unfittable_input_is_an_error_naming_rmse_and_limit() {
-    let result = calibrate_svi(
-        &zigzag(dec!(0.1), dec!(0.6)),
-        Positive::HUNDRED,
-        Positive::ONE,
-        &SviCalibrationConfig::default(),
-    );
+fn test_calibrate_svi_unfittable_input_is_an_error_naming_the_figures() {
+    let result = calibrate_at_the_hundred_forward(&zigzag(dec!(0.1), dec!(0.6)));
     match result {
-        Err(error @ SviError::RmseAboveLimit { rmse, limit }) => {
-            assert!(rmse > limit);
-            assert_eq!(limit.to_dec(), dec!(0.02));
+        Err(error @ SviError::RmseAboveLimit { .. }) => {
+            let SviError::RmseAboveLimit {
+                relative_rmse,
+                limit,
+                rmse,
+            } = &error
+            else {
+                unreachable!();
+            };
+            assert!(relative_rmse > limit);
+            assert_eq!(limit.to_dec(), dec!(0.03));
             let message = error.to_string();
+            assert!(message.contains(&relative_rmse.to_string()), "{message}");
             assert!(message.contains(&rmse.to_string()), "{message}");
-            assert!(message.contains("0.02"), "{message}");
+            assert!(message.contains("0.03"), "{message}");
         }
         other => panic!("expected RmseAboveLimit, got {other:?}"),
     }
 }
 
 #[test]
-fn test_calibrate_svi_max_rmse_limit_is_what_decides() {
-    // A smile with one quote far below it: the fit is not flat, and is poor.
+fn test_calibrate_svi_max_relative_rmse_limit_is_what_decides() {
+    // A smile with one quote far below it: the fit is poor.
     let slice = slice_of(
         [dec!(0.02), dec!(0.2), dec!(-0.4), dec!(0.02), dec!(0.2)],
         Positive::HUNDRED,
@@ -629,24 +776,19 @@ fn test_calibrate_svi_max_rmse_limit_is_what_decides() {
     let mut observations = quotes(&slice, &grid(dec!(-0.5), dec!(0.5), 12));
     observations[6].implied_volatility = pos(dec!(0.02));
 
-    let strict = calibrate_svi(
-        &observations,
-        Positive::HUNDRED,
-        Positive::ONE,
-        &SviCalibrationConfig::default(),
-    );
+    let strict = calibrate_at_the_hundred_forward(&observations);
     assert!(
         matches!(strict, Err(SviError::RmseAboveLimit { .. })),
         "{strict:?}"
     );
 
     let loose = SviCalibrationConfig {
-        max_rmse: Positive::TEN,
+        max_relative_rmse: Positive::TEN,
         ..SviCalibrationConfig::default()
     };
     let fit = calibrate_svi(&observations, Positive::HUNDRED, Positive::ONE, &loose).unwrap();
-    assert!(fit.rmse() > pos(dec!(0.02)), "rmse {}", fit.rmse());
-    assert!(fit.rmse() < Positive::TEN);
+    assert!(fit.relative_rmse() > pos(dec!(0.03)), "{fit:?}");
+    assert!(fit.relative_rmse() < Positive::TEN);
 }
 
 #[test]

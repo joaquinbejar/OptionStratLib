@@ -155,10 +155,6 @@ impl core::convert::From<optionstratlib_pricing::error::PricingError> for option
 pub fn optionstratlib_pricing::error::greeks::GreeksError::from(optionstratlib_pricing::error::PricingError) -> Self
 #[non_exhaustive] pub enum optionstratlib_pricing::error::SviError
 pub optionstratlib_pricing::error::SviError::Decimal(optionstratlib_core::error::decimal::DecimalError)
-pub optionstratlib_pricing::error::SviError::DegenerateFit
-pub optionstratlib_pricing::error::SviError::DegenerateFit::fitted_dispersion: positive::positive::Positive
-pub optionstratlib_pricing::error::SviError::DegenerateFit::observed_dispersion: positive::positive::Positive
-pub optionstratlib_pricing::error::SviError::DegenerateFit::rmse: positive::positive::Positive
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::distinct: usize
 pub optionstratlib_pricing::error::SviError::InsufficientDistinctStrikes::required: usize
@@ -190,6 +186,7 @@ pub optionstratlib_pricing::error::SviError::NonPositiveTotalWeight
 pub optionstratlib_pricing::error::SviError::Positive(positive::error::PositiveError)
 pub optionstratlib_pricing::error::SviError::RmseAboveLimit
 pub optionstratlib_pricing::error::SviError::RmseAboveLimit::limit: positive::positive::Positive
+pub optionstratlib_pricing::error::SviError::RmseAboveLimit::relative_rmse: positive::positive::Positive
 pub optionstratlib_pricing::error::SviError::RmseAboveLimit::rmse: positive::positive::Positive
 pub optionstratlib_pricing::error::SviError::TooFewObservations
 pub optionstratlib_pricing::error::SviError::TooFewObservations::got: usize
@@ -627,13 +624,14 @@ pub type optionstratlib_pricing::pricing::ClosedFormEngine = optionstratlib_pric
 pub mod optionstratlib_pricing::volatility
 pub struct optionstratlib_pricing::volatility::SviCalibrationConfig
 pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_iterations: core::num::nonzero::NonZeroU64
-pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_rmse: positive::positive::Positive
+pub optionstratlib_pricing::volatility::SviCalibrationConfig::max_relative_rmse: positive::positive::Positive
 pub optionstratlib_pricing::volatility::SviCalibrationConfig::tolerance: positive::positive::Positive
 impl core::default::Default for optionstratlib_pricing::volatility::SviCalibrationConfig
 pub fn optionstratlib_pricing::volatility::SviCalibrationConfig::default() -> Self
 pub struct optionstratlib_pricing::volatility::SviFit
 impl optionstratlib_pricing::volatility::SviFit
 pub fn optionstratlib_pricing::volatility::SviFit::iterations(&self) -> u64
+pub fn optionstratlib_pricing::volatility::SviFit::relative_rmse(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SviFit::residuals(&self) -> &[optionstratlib_pricing::volatility::SviResidual]
 pub fn optionstratlib_pricing::volatility::SviFit::rmse(&self) -> positive::positive::Positive
 pub fn optionstratlib_pricing::volatility::SviFit::slice(&self) -> &optionstratlib_pricing::volatility::SviSlice

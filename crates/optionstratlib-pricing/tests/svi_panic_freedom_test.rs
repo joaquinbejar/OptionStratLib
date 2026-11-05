@@ -11,8 +11,8 @@
 //! weights zero, repeated strikes) and the limits of the configuration (one
 //! iteration, a tolerance of zero or above its bound, an RMSE limit of zero). A
 //! calibration that succeeds must also keep its promises: the error it reports
-//! is within the limit, every observation has a residual, and a fit is not flat
-//! over observations that are not.
+//! is within the limit, every observation has a residual, and a flat result only
+//! comes from quotes that are flat within the limit.
 
 use optionstratlib_core::model::Positive;
 use optionstratlib_core::model::decimal::decimal_to_f64;
@@ -96,11 +96,13 @@ fn config() -> impl Strategy<Value = SviCalibrationConfig> {
             Just(positive(Decimal::MAX)),
         ],
     )
-        .prop_map(|(iterations, tolerance, max_rmse)| SviCalibrationConfig {
-            max_iterations: NonZeroU64::new(iterations).unwrap_or(NonZeroU64::MIN),
-            tolerance,
-            max_rmse,
-        })
+        .prop_map(
+            |(iterations, tolerance, max_relative_rmse)| SviCalibrationConfig {
+                max_iterations: NonZeroU64::new(iterations).unwrap_or(NonZeroU64::MIN),
+                tolerance,
+                max_relative_rmse,
+            },
+        )
 }
 
 fn extreme_decimal() -> impl Strategy<Value = Decimal> {
@@ -118,26 +120,20 @@ fn extreme_decimal() -> impl Strategy<Value = Decimal> {
     ]
 }
 
-/// The relative weighted standard deviation of `values` and the same deviation
-/// of `fitted` over the mean of `values`, with equal weights.
-fn dispersions(values: &[f64], fitted: &[f64]) -> (f64, f64) {
-    let deviation = |series: &[f64]| {
-        let mean = series.iter().sum::<f64>() / series.len() as f64;
-        let variance = series
-            .iter()
-            .map(|value| (value - mean) * (value - mean))
-            .sum::<f64>()
-            / series.len() as f64;
-        (mean, variance.sqrt())
-    };
-    let (mean, observed) = deviation(values);
-    let (_, fit) = deviation(fitted);
-    (observed / mean, fit / mean)
+/// The mean and the standard deviation of `series`, with equal weights.
+fn mean_and_deviation(series: &[f64]) -> (f64, f64) {
+    let mean = series.iter().sum::<f64>() / series.len() as f64;
+    let variance = series
+        .iter()
+        .map(|value| (value - mean) * (value - mean))
+        .sum::<f64>()
+        / series.len() as f64;
+    (mean, variance.sqrt())
 }
 
 proptest! {
     #[test]
-    fn calibrate_svi_is_never_flat_over_observations_that_are_not(
+    fn calibrate_svi_flat_result_only_comes_from_quotes_flat_within_the_limit(
         volatilities in prop::collection::vec(1_u32..80, 7..16),
     ) {
         let observations: Vec<SviObservation> = volatilities
@@ -149,33 +145,33 @@ proptest! {
                 weight: Positive::ONE,
             })
             .collect();
-        let config = SviCalibrationConfig {
-            max_rmse: positive(Decimal::MAX),
-            ..SviCalibrationConfig::default()
-        };
+        let config = SviCalibrationConfig::default();
         if let Ok(fit) = calibrate_svi(&observations, Positive::HUNDRED, Positive::ONE, &config) {
-            let mut observed = Vec::with_capacity(observations.len());
-            let mut fitted = Vec::with_capacity(observations.len());
-            for (observation, residual) in observations.iter().zip(fit.residuals()) {
-                let volatility = decimal_to_f64(observation.implied_volatility.to_dec()).unwrap();
-                observed.push(volatility * volatility);
-                fitted.push(
-                    decimal_to_f64(
-                        fit.slice()
-                            .total_variance(residual.log_moneyness)
-                            .unwrap()
-                            .to_dec(),
-                    )
-                    .unwrap(),
+            let limit = decimal_to_f64(config.max_relative_rmse.to_dec()).unwrap();
+            let relative = decimal_to_f64(fit.relative_rmse().to_dec()).unwrap();
+            prop_assert!(relative <= limit, "relative rmse {relative}");
+
+            let observed: Vec<f64> = observations
+                .iter()
+                .map(|observation| {
+                    decimal_to_f64(observation.implied_volatility.to_dec()).unwrap()
+                })
+                .collect();
+            let fitted: Vec<f64> = fit
+                .residuals()
+                .iter()
+                .map(|residual| {
+                    decimal_to_f64(residual.fitted_implied_volatility.to_dec()).unwrap()
+                })
+                .collect();
+            let (mean, deviation) = mean_and_deviation(&observed);
+            let (_, fitted_deviation) = mean_and_deviation(&fitted);
+            if fitted_deviation <= 1e-9 {
+                prop_assert!(
+                    deviation / mean <= limit * (1.0 + 1e-9),
+                    "flat fit of quotes {deviation} around {mean}"
                 );
             }
-            let (observed_dispersion, fitted_dispersion) = dispersions(&observed, &fitted);
-            prop_assert!(
-                observed_dispersion <= 1e-3 || fitted_dispersion > 0.09 * observed_dispersion,
-                "observed {} fitted {}",
-                observed_dispersion,
-                fitted_dispersion
-            );
         }
     }
 
@@ -187,7 +183,7 @@ proptest! {
         config in config(),
     ) {
         if let Ok(fit) = calibrate_svi(&observations, forward, time_to_expiry, &config) {
-            prop_assert!(fit.rmse() <= config.max_rmse);
+            prop_assert!(fit.relative_rmse() <= config.max_relative_rmse);
             prop_assert_eq!(fit.residuals().len(), observations.len());
         }
     }
@@ -198,7 +194,7 @@ proptest! {
         config in config(),
     ) {
         if let Ok(fit) = calibrate_svi(&observations, Positive::HUNDRED, Positive::ONE, &config) {
-            prop_assert!(fit.rmse() <= config.max_rmse);
+            prop_assert!(fit.relative_rmse() <= config.max_relative_rmse);
             prop_assert_eq!(fit.residuals().len(), observations.len());
         }
     }
